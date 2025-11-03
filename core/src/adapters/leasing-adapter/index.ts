@@ -177,7 +177,8 @@ const getContactForPnr = async (
 }
 
 const getContactsDataBySearchQuery = async (
-  q: string
+  q: string,
+  contactType?: 'company' | 'person'
 ): Promise<
   AdapterResult<
     Array<
@@ -187,9 +188,12 @@ const getContactsDataBySearchQuery = async (
   >
 > => {
   try {
-    const response = await axios.get<{ content: Array<Contact> }>(
-      `${tenantsLeasesServiceUrl}/contacts/search?q=${q}`
-    )
+    let url = `${tenantsLeasesServiceUrl}/contacts/search?q=${q}`
+    if (contactType) {
+      url += `&contactType=${contactType}`
+    }
+
+    const response = await axios.get<{ content: Array<Contact> }>(url)
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }

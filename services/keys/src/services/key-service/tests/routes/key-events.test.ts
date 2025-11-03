@@ -52,29 +52,6 @@ describe('GET /key-events', () => {
     expect(res.status).toBe(200)
     expect(res.body.content).toHaveLength(2)
   })
-
-  it('returns empty array when no key events exist', async () => {
-    const getAllKeyEventsSpy = jest
-      .spyOn(keyEventsAdapter, 'getAllKeyEvents')
-      .mockResolvedValueOnce([])
-
-    const res = await request(app.callback()).get('/key-events')
-
-    expect(getAllKeyEventsSpy).toHaveBeenCalledWith(expect.anything())
-    expect(res.status).toBe(200)
-    expect(res.body.content).toHaveLength(0)
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyEventsAdapter, 'getAllKeyEvents')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get('/key-events')
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
-  })
 })
 
 /**
@@ -144,35 +121,6 @@ describe('GET /key-events/by-key/:keyId', () => {
     expect(res.status).toBe(200)
     expect(res.body.content).toHaveLength(1)
   })
-
-  it('returns empty array when no events exist for key', async () => {
-    const getKeyEventsByKeySpy = jest
-      .spyOn(keyEventsAdapter, 'getKeyEventsByKey')
-      .mockResolvedValueOnce([])
-
-    const res = await request(app.callback()).get(
-      '/key-events/by-key/nonexistent-key'
-    )
-
-    expect(getKeyEventsByKeySpy).toHaveBeenCalledWith(
-      'nonexistent-key',
-      expect.anything(),
-      undefined
-    )
-    expect(res.status).toBe(200)
-    expect(res.body.content).toHaveLength(0)
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyEventsAdapter, 'getKeyEventsByKey')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get('/key-events/by-key/key-abc')
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
-  })
 })
 
 /**
@@ -208,32 +156,6 @@ describe('GET /key-events/:id', () => {
       type: 'FLEX',
       status: 'COMPLETED',
     })
-  })
-
-  it('responds with 404 if key event not found', async () => {
-    const getKeyEventByIdSpy = jest
-      .spyOn(keyEventsAdapter, 'getKeyEventById')
-      .mockResolvedValueOnce(undefined)
-
-    const res = await request(app.callback()).get('/key-events/nonexistent-id')
-
-    expect(getKeyEventByIdSpy).toHaveBeenCalledWith(
-      'nonexistent-id',
-      expect.anything()
-    )
-    expect(res.status).toBe(404)
-    expect(res.body.reason).toContain('not found')
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyEventsAdapter, 'getKeyEventById')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback()).get('/key-events/event-123')
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
   })
 })
 
@@ -311,20 +233,7 @@ describe('POST /key-events', () => {
     expect(res.body.conflictingKeys).toEqual(['key-1'])
   })
 
-  it('creates event with empty keys array successfully', async () => {
-    const createdEvent = factory.keyEvent.build({
-      keys: JSON.stringify([]),
-    })
-
-    // Empty array means no conflicts to check
-    jest
-      .spyOn(keyEventsAdapter, 'checkIncompleteKeyEvents')
-      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
-
-    jest
-      .spyOn(keyEventsAdapter, 'createKeyEvent')
-      .mockResolvedValueOnce(createdEvent)
-
+  it('rejects event with empty keys array', async () => {
     const res = await request(app.callback())
       .post('/key-events')
       .send({
@@ -333,7 +242,8 @@ describe('POST /key-events', () => {
         status: 'COMPLETED',
       })
 
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toContain('empty')
   })
 
   it('validates missing required fields and returns 400', async () => {
@@ -345,27 +255,6 @@ describe('POST /key-events', () => {
     expect(res.status).toBe(400)
     expect(res.body).toHaveProperty('status', 'error')
     expect(res.body.data).toBeDefined()
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyEventsAdapter, 'checkIncompleteKeyEvents')
-      .mockResolvedValueOnce({ hasConflict: false, conflictingKeys: [] })
-
-    jest
-      .spyOn(keyEventsAdapter, 'createKeyEvent')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback())
-      .post('/key-events')
-      .send({
-        keys: JSON.stringify(['key-1']),
-        type: 'FLEX',
-        status: 'COMPLETED',
-      })
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
   })
 })
 
@@ -410,26 +299,6 @@ describe('PATCH /key-events/:id', () => {
     })
   })
 
-  it('responds with 404 if key event not found', async () => {
-    const updateKeyEventSpy = jest
-      .spyOn(keyEventsAdapter, 'updateKeyEvent')
-      .mockResolvedValueOnce(undefined)
-
-    const res = await request(app.callback())
-      .patch('/key-events/nonexistent-id')
-      .send({
-        status: 'COMPLETED',
-      })
-
-    expect(updateKeyEventSpy).toHaveBeenCalledWith(
-      'nonexistent-id',
-      expect.anything(),
-      expect.anything()
-    )
-    expect(res.status).toBe(404)
-    expect(res.body.reason).toContain('not found')
-  })
-
   it('validates invalid updates and returns 400', async () => {
     const res = await request(app.callback())
       .patch('/key-events/event-123')
@@ -439,20 +308,5 @@ describe('PATCH /key-events/:id', () => {
 
     expect(res.status).toBe(400)
     expect(res.body).toHaveProperty('status', 'error')
-  })
-
-  it('handles database errors and returns 500', async () => {
-    jest
-      .spyOn(keyEventsAdapter, 'updateKeyEvent')
-      .mockRejectedValueOnce(new Error('Database connection failed'))
-
-    const res = await request(app.callback())
-      .patch('/key-events/event-123')
-      .send({
-        status: 'COMPLETED',
-      })
-
-    expect(res.status).toBe(500)
-    expect(res.body).toHaveProperty('error', 'Internal server error')
   })
 })

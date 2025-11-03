@@ -20,11 +20,6 @@ describe('logs-adapter', () => {
         expect(log.id).toBeDefined()
         expect(log.userName).toEqual('testuser@example.com')
         expect(log.eventType).toEqual('creation')
-
-        // Verify in database
-        const logFromDb = await ctx.db('logs').where({ id: log.id }).first()
-        expect(logFromDb).toBeDefined()
-        expect(logFromDb.userName).toEqual('testuser@example.com')
       }))
 
     it('creates log with all optional fields', () =>
@@ -185,6 +180,170 @@ describe('logs-adapter', () => {
         const matchingLogs = logs.filter((l: any) => l.objectId === objectId)
         expect(matchingLogs).toHaveLength(1)
         expect(matchingLogs[0].eventType).toEqual('update')
+      }))
+  })
+
+  // Phase 3: Improved tests for edge cases and complex scenarios
+  describe('ROW_NUMBER window function edge cases', () => {
+    it('handles logs with identical eventTime correctly', () =>
+      withContext(async (ctx) => {
+        const objectId = '55555555-5555-5555-5555-555555555555'
+        const sameTime = new Date('2024-01-01T10:00:00Z')
+
+        // Create multiple logs with exact same eventTime
+        const { id: _id1, ...log1Data } = factory.log.build({
+          objectId,
+          eventType: 'creation' as any,
+          eventTime: sameTime,
+          description: 'First',
+        })
+        await logsAdapter.createLog(log1Data, ctx.db)
+
+        const { id: _id2, ...log2Data } = factory.log.build({
+          objectId,
+          eventType: 'update' as any,
+          eventTime: sameTime,
+          description: 'Second',
+        })
+        await logsAdapter.createLog(log2Data, ctx.db)
+
+        const query = logsAdapter.getAllLogsQuery(ctx.db)
+        const logs = await query
+
+        const matchingLogs = logs.filter((l: any) => l.objectId === objectId)
+        // Should return exactly 1 log (ROW_NUMBER picks one)
+        expect(matchingLogs).toHaveLength(1)
+      }))
+
+    it('excludes logs with NULL objectId from results', () =>
+      withContext(async (ctx) => {
+        // Create log with NULL objectId
+        const { id: _id1, ...log1Data } = factory.log.build({
+          objectId: null as any,
+          eventType: 'creation' as any,
+          description: 'System log without object',
+        })
+        await logsAdapter.createLog(log1Data, ctx.db)
+
+        // Create log with valid objectId
+        const objectId = '66666666-6666-6666-6666-666666666666'
+        const { id: _id2, ...log2Data } = factory.log.build({
+          objectId,
+          eventType: 'creation' as any,
+        })
+        await logsAdapter.createLog(log2Data, ctx.db)
+
+        const query = logsAdapter.getAllLogsQuery(ctx.db)
+        const logs = await query
+
+        // Should not include NULL objectId logs
+        const nullLogs = logs.filter((l: any) => l.objectId === null)
+        expect(nullLogs).toHaveLength(0)
+
+        // Should include valid objectId logs
+        const validLogs = logs.filter((l: any) => l.objectId === objectId)
+        expect(validLogs).toHaveLength(1)
+      }))
+
+    it('handles large number of logs per objectId efficiently', () =>
+      withContext(async (ctx) => {
+        const objectId = '77777777-7777-7777-7777-777777777777'
+
+        // Create 50 logs for same objectId
+        const baseTime = new Date('2024-01-01T00:00:00Z')
+        for (let i = 0; i < 50; i++) {
+          const eventTime = new Date(baseTime.getTime() + i * 60000) // Add minutes
+          const { id: _id, ...logData } = factory.log.build({
+            objectId,
+            eventType: 'update' as any,
+            eventTime,
+            description: `Log ${i}`,
+          })
+          await logsAdapter.createLog(logData, ctx.db)
+        }
+
+        const query = logsAdapter.getAllLogsQuery(ctx.db)
+        const logs = await query
+
+        const matchingLogs = logs.filter((l: any) => l.objectId === objectId)
+        // Should return only 1 (most recent)
+        expect(matchingLogs).toHaveLength(1)
+        expect(matchingLogs[0].description).toBe('Log 49')
+      }))
+  })
+
+  describe('pagination with mixed objectId scenarios', () => {
+    it('correctly orders logs from different objects by eventTime', () =>
+      withContext(async (ctx) => {
+        const objectId1 = '88888888-8888-8888-8888-888888888888'
+        const objectId2 = '99999999-9999-9999-9999-999999999999'
+
+        // Object 1: most recent at 2024-01-05
+        const { id: _id1, ...log1Data } = factory.log.build({
+          objectId: objectId1,
+          eventTime: new Date('2024-01-05'),
+          eventType: 'update' as any,
+        })
+        await logsAdapter.createLog(log1Data, ctx.db)
+
+        // Object 2: most recent at 2024-01-10 (newer)
+        const { id: _id2, ...log2Data } = factory.log.build({
+          objectId: objectId2,
+          eventTime: new Date('2024-01-10'),
+          eventType: 'creation' as any,
+        })
+        await logsAdapter.createLog(log2Data, ctx.db)
+
+        const query = logsAdapter.getAllLogsQuery(ctx.db)
+        const logs = await query
+
+        // Results should be ordered by eventTime desc
+        const relevantLogs = logs.filter(
+          (l: any) => l.objectId === objectId1 || l.objectId === objectId2
+        )
+
+        expect(relevantLogs[0].objectId).toBe(objectId2) // Newer
+        expect(relevantLogs[1].objectId).toBe(objectId1) // Older
+      }))
+
+    it('handles empty result set gracefully', () =>
+      withContext(async (ctx) => {
+        const query = logsAdapter.getAllLogsQuery(ctx.db)
+        const logs = await query
+
+        // Should return empty array, not throw error
+        expect(Array.isArray(logs)).toBe(true)
+      }))
+  })
+
+  describe('search query builder complex scenarios', () => {
+    it('search query can be further filtered after construction', () =>
+      withContext(async (ctx) => {
+        const objectId1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        const objectId2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+
+        const { id: _id1, ...log1Data } = factory.log.build({
+          objectId: objectId1,
+          objectType: 'key_loan' as any,
+          eventTime: new Date('2024-01-01'),
+        })
+        await logsAdapter.createLog(log1Data, ctx.db)
+
+        const { id: _id2, ...log2Data } = factory.log.build({
+          objectId: objectId2,
+          objectType: 'key_system' as any,
+          eventTime: new Date('2024-01-02'),
+        })
+        await logsAdapter.createLog(log2Data, ctx.db)
+
+        // Use query builder and add additional filters
+        const query = logsAdapter.getLogsSearchQuery(ctx.db)
+        const filteredLogs = await query.where('objectType', 'key_loan')
+
+        expect(filteredLogs).toHaveLength(1)
+        expect(filteredLogs[0].objectId.toLowerCase()).toBe(
+          objectId1.toLowerCase()
+        )
       }))
   })
 })

@@ -5,6 +5,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import * as keyLoansAdapter from '../adapters/key-loans-adapter'
+import * as keyLoanService from '../key-loan-service'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { buildSearchQuery } from '../../../utils/search-builder'
@@ -491,37 +492,37 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyLoanRequest = ctx.request.body
 
-        // Parse and validate the keys array
-        let keyIds: string[] = []
-        try {
-          keyIds = JSON.parse(payload.keys)
-          if (!Array.isArray(keyIds)) {
-            ctx.status = 400
+        // Validate keys using service layer
+        const validationResult = await keyLoanService.validateKeyLoanCreation(
+          payload.keys,
+          db
+        )
+
+        if (!validationResult.ok) {
+          // Map service errors to HTTP responses
+          if (validationResult.err === 'active-loan-conflict') {
+            ctx.status = 409
             ctx.body = {
-              reason: 'Keys must be a JSON array',
+              reason:
+                'Cannot create loan. One or more keys already have active loans.',
+              conflictingKeys: validationResult.details?.conflictingKeys,
               ...metadata,
             }
             return
           }
-        } catch (_err) {
+
+          // All other errors are 400 Bad Request
+          const errorMessages = {
+            'invalid-keys-format':
+              'Invalid keys format. Must be a valid JSON array.',
+            'keys-not-array': 'Keys must be a JSON array',
+            'empty-keys-array': 'Keys array cannot be empty',
+          }
+
           ctx.status = 400
           ctx.body = {
-            reason: 'Invalid keys format. Must be a valid JSON array.',
-            ...metadata,
-          }
-          return
-        }
-
-        // Check for conflicting active loans
-        const { hasConflict, conflictingKeys } =
-          await keyLoansAdapter.checkActiveKeyLoans(keyIds, undefined, db)
-
-        if (hasConflict) {
-          ctx.status = 409
-          ctx.body = {
             reason:
-              'Cannot create loan. One or more keys already have active loans.',
-            conflictingKeys,
+              errorMessages[validationResult.err] || 'Invalid keys format',
             ...metadata,
           }
           return
@@ -598,38 +599,39 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: UpdateKeyLoanRequest = ctx.request.body
 
-        // If updating keys, check for conflicts
+        // If updating keys, validate using service layer
         if (payload.keys) {
-          let keyIds: string[] = []
-          try {
-            keyIds = JSON.parse(payload.keys)
-            if (!Array.isArray(keyIds)) {
-              ctx.status = 400
+          const validationResult = await keyLoanService.validateKeyLoanUpdate(
+            ctx.params.id,
+            payload.keys,
+            db
+          )
+
+          if (!validationResult.ok) {
+            // Map service errors to HTTP responses
+            if (validationResult.err === 'active-loan-conflict') {
+              ctx.status = 409
               ctx.body = {
-                reason: 'Keys must be a JSON array',
+                reason:
+                  'Cannot update loan. One or more keys already have active loans.',
+                conflictingKeys: validationResult.details?.conflictingKeys,
                 ...metadata,
               }
               return
             }
-          } catch (_err) {
+
+            // All other errors are 400 Bad Request
+            const errorMessages = {
+              'invalid-keys-format':
+                'Invalid keys format. Must be a valid JSON array.',
+              'keys-not-array': 'Keys must be a JSON array',
+              'empty-keys-array': 'Keys array cannot be empty',
+            }
+
             ctx.status = 400
             ctx.body = {
-              reason: 'Invalid keys format. Must be a valid JSON array.',
-              ...metadata,
-            }
-            return
-          }
-
-          // Check for conflicting active loans, excluding the current loan
-          const { hasConflict, conflictingKeys } =
-            await keyLoansAdapter.checkActiveKeyLoans(keyIds, ctx.params.id, db)
-
-          if (hasConflict) {
-            ctx.status = 409
-            ctx.body = {
               reason:
-                'Cannot update loan. One or more keys already have active loans.',
-              conflictingKeys,
+                errorMessages[validationResult.err] || 'Invalid keys format',
               ...metadata,
             }
             return

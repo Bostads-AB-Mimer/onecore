@@ -218,6 +218,52 @@ export interface paths {
       };
     };
   };
+  "/key-bundles/{id}/keys-with-loan-status": {
+    /**
+     * Get all keys in a bundle with their maintenance loan status
+     * @description Returns all keys that belong to this bundle along with information about
+     * any active maintenance loans they are currently part of.
+     * This endpoint is optimized for displaying keys in a table with loan status.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Bundle information and keys with loan status */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                bundle?: components["schemas"]["KeyBundle"];
+                keys?: (components["schemas"]["Key"] & ({
+                    /** @description ID of active maintenance loan, null if not loaned */
+                    maintenanceLoanId?: string | null;
+                    maintenanceLoanCompany?: string | null;
+                    maintenanceLoanContactPerson?: string | null;
+                    /** Format: date-time */
+                    maintenanceLoanPickedUpAt?: string | null;
+                    /** Format: date-time */
+                    maintenanceLoanCreatedAt?: string | null;
+                  }))[];
+              };
+            };
+          };
+        };
+        /** @description Key bundle not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-events": {
     /**
      * Get all key events
@@ -513,6 +559,82 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys/by-company/{company}/with-keys": {
+    /**
+     * Get maintenance key loans for a company with full key details
+     * @description Returns all maintenance key loan records for the specified company with joined key data.
+     * Supports filtering by returned status via query parameter.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The company name to filter by */
+          company: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-loan-maintenance-keys/by-bundle/{bundleId}/with-keys": {
+    /**
+     * Get maintenance key loans for a key bundle with full key details
+     * @description Returns all maintenance key loan records containing keys from the specified bundle.
+     * Supports filtering by returned status via query parameter.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The key bundle ID to filter by */
+          bundleId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
             };
           };
         };
@@ -2456,6 +2578,38 @@ export interface components {
     CreateKeyLoanMaintenanceKeysRequest: components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
     UpdateKeyLoanMaintenanceKeysRequest: components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
     KeyLoanMaintenanceKeys: components["schemas"]["KeyLoanMaintenanceKeys"];
+    KeyLoanMaintenanceKeysWithDetails: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      company?: string | null;
+      contactPerson?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      description?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      keysArray: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
+    };
     Signature: {
       /** Format: uuid */
       id: string;

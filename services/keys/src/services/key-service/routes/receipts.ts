@@ -12,6 +12,7 @@ import {
 import { uploadFile, deleteFile } from '../adapters/minio'
 import { keys } from '@onecore/types'
 import * as receiptsAdapter from '../adapters/receipts-adapter'
+import * as receiptActivationService from '../receipt-activation-service'
 
 const {
   CreateReceiptRequestSchema,
@@ -253,42 +254,28 @@ export const routes = (router: KoaRouter) => {
         'key-loan-id': receipt.keyLoanId,
       }),
       // Business logic: If this is a LOAN receipt, activate the key loan
-      onUploadSuccess: async (receipt, _fileId, db) => {
+      onUploadSuccess: async (receipt, fileId, db) => {
         if (receipt.receiptType === 'LOAN') {
-          const keyLoanAlreadyActivated =
-            await receiptsAdapter.isKeyLoanActivated(receipt.keyLoanId, db)
+          const result = await receiptActivationService.activateLoanReceipt(
+            { receiptId: receipt.id, fileId },
+            db
+          )
 
-          if (!keyLoanAlreadyActivated) {
-            await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, db)
-
+          if (result.ok) {
             logger.info(
-              { keyLoanId: receipt.keyLoanId, receiptId: receipt.id },
+              {
+                keyLoanId: receipt.keyLoanId,
+                receiptId: receipt.id,
+                keyLoanActivated: result.data.keyLoanActivated,
+                keyEventsCompleted: result.data.keyEventsCompleted,
+              },
               'Key loan activated after signed receipt uploaded'
             )
-
-            // Complete any incomplete events for the keys in this loan
-            const keyLoan = await receiptsAdapter.getKeyLoanById(
-              receipt.keyLoanId,
-              db
+          } else {
+            logger.error(
+              { receiptId: receipt.id, error: result.err },
+              'Failed to activate loan receipt'
             )
-
-            if (keyLoan?.keys) {
-              let keyIds: string[] = []
-              try {
-                keyIds = JSON.parse(keyLoan.keys)
-              } catch {
-                // Fallback if not JSON
-                keyIds = []
-              }
-
-              // For each key, find and complete any incomplete events
-              await receiptsAdapter.completeKeyEventsForKeys(keyIds, db)
-
-              logger.info(
-                { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
-                'Completed key events for picked up keys'
-              )
-            }
           }
         }
       },
@@ -395,40 +382,26 @@ export const routes = (router: KoaRouter) => {
 
         // If this is a LOAN receipt, activate the key loan by setting pickedUpAt
         if (receipt.receiptType === 'LOAN') {
-          const keyLoanAlreadyActivated =
-            await receiptsAdapter.isKeyLoanActivated(receipt.keyLoanId, db)
+          const result = await receiptActivationService.activateLoanReceipt(
+            { receiptId: parse.data.id, fileId },
+            db
+          )
 
-          if (!keyLoanAlreadyActivated) {
-            await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, db)
-
+          if (result.ok) {
             logger.info(
-              { keyLoanId: receipt.keyLoanId, receiptId: parse.data.id },
+              {
+                keyLoanId: receipt.keyLoanId,
+                receiptId: parse.data.id,
+                keyLoanActivated: result.data.keyLoanActivated,
+                keyEventsCompleted: result.data.keyEventsCompleted,
+              },
               'Key loan activated after signed receipt uploaded via base64'
             )
-
-            // Complete any incomplete events for the keys in this loan
-            const keyLoan = await receiptsAdapter.getKeyLoanById(
-              receipt.keyLoanId,
-              db
+          } else {
+            logger.error(
+              { receiptId: parse.data.id, error: result.err },
+              'Failed to activate loan receipt via base64 upload'
             )
-
-            if (keyLoan?.keys) {
-              let keyIds: string[] = []
-              try {
-                keyIds = JSON.parse(keyLoan.keys)
-              } catch {
-                // Fallback if not JSON
-                keyIds = []
-              }
-
-              // For each key, find and complete any incomplete events
-              await receiptsAdapter.completeKeyEventsForKeys(keyIds, db)
-
-              logger.info(
-                { keyLoanId: receipt.keyLoanId, keyCount: keyIds.length },
-                'Completed key events for picked up keys (base64 upload)'
-              )
-            }
           }
         }
 

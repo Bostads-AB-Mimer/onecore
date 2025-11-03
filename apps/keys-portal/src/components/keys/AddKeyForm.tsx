@@ -1,6 +1,4 @@
-import { useState, useEffect } from 'react'
-import { useSearch } from '@/hooks/useSearch'
-import { useDebounce } from '@/utils/debounce'
+import { useState } from 'react'
 import {
   parseSequenceNumberInput,
   checkForDuplicates,
@@ -26,6 +24,7 @@ import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import type { KeySystem } from '@/services/types'
 import { X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { SearchDropdown } from '@/components/ui/search-dropdown'
 
 interface AddKeyFormProps {
   onSave: (key: Omit<Key, 'id' | 'createdAt' | 'updatedAt'>) => void
@@ -56,17 +55,17 @@ export function AddKeyForm({
     disposed: editingKey?.disposed || false,
   })
 
-  // Search functionality state
-  const [searchResults, setSearchResults] = useState<
-    RentalObjectSearchResult[]
-  >([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  // Search state
+  const [rentalObjectSearch, setRentalObjectSearch] = useState(
+    editingKey?.rentalObjectCode || ''
+  )
+  const [selectedRentalObject, setSelectedRentalObject] =
+    useState<RentalObjectSearchResult | null>(null)
 
-  // Key system search functionality state with debouncing
-  const [keySystemSearchQuery, setKeySystemSearchQuery] = useState('')
-  const [debouncedKeySystemQuery, setDebouncedKeySystemQuery] = useState('')
-  const [keySystemSelected, setKeySystemSelected] = useState(false)
+  const [keySystemSearch, setKeySystemSearch] = useState('')
+  const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
+    null
+  )
 
   // Sequence number validation error
   const [sequenceNumberError, setSequenceNumberError] = useState<string>('')
@@ -74,92 +73,52 @@ export function AddKeyForm({
   // Order event creation checkbox (only for create mode, not edit mode)
   const [shouldCreateEvent, setShouldCreateEvent] = useState(false)
 
-  // Debounce key system search query (500ms delay like internal portal)
-  const updateDebouncedQuery = useDebounce((query: string) => {
-    setDebouncedKeySystemQuery(query)
-  }, 500)
-
-  // Use the reusable search hook
-  console.log(
-    '🔍 Debounced query:',
-    debouncedKeySystemQuery,
-    'Length:',
-    debouncedKeySystemQuery.length
-  )
-  const keySystemsQuery = useSearch(
-    (query: string) =>
-      keySystemSearchService.search({ q: query, fields: ['systemCode'] }),
-    'search-key-systems',
-    debouncedKeySystemQuery
-  )
-
-  // Effect hook that triggers rental object search when searchQuery changes
-  useEffect(() => {
-    const performSearch = async () => {
-      // Clear results if search query is empty
-      if (searchQuery.trim().length === 0) {
-        setSearchResults([])
-        setIsSearching(false)
-        return
-      }
-
-      // Only search if the rental ID looks complete (has minimum length and valid format)
-      if (!rentalObjectSearchService.isValidRentalId(searchQuery)) {
-        setSearchResults([])
-        setIsSearching(false)
-        return
-      }
-
-      // Perform the actual search
-      setIsSearching(true)
-      try {
-        const results =
-          await rentalObjectSearchService.searchByRentalId(searchQuery)
-        setSearchResults(results)
-      } catch (error) {
-        console.error('Search error:', error)
-        setSearchResults([])
-      } finally {
-        setIsSearching(false)
-      }
+  // Rental object search function
+  const searchRentalObjects = async (
+    query: string
+  ): Promise<RentalObjectSearchResult[]> => {
+    // The service has built-in validation (min 5 chars, digits/dashes only)
+    // If invalid, it returns empty array
+    try {
+      return await rentalObjectSearchService.searchByRentalId(query)
+    } catch (error) {
+      console.error('Rental object search error:', error)
+      return []
     }
-
-    performSearch()
-  }, [searchQuery])
-
-  // Trigger debounced search when query changes
-  useEffect(() => {
-    updateDebouncedQuery(keySystemSearchQuery)
-  }, [keySystemSearchQuery, updateDebouncedQuery])
-
-  // Handle rental object input changes and trigger search
-  const handleRentalObjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setFormData((prev) => ({ ...prev, rentalObject: value }))
-    setSearchQuery(value)
   }
 
-  // Handle selection of a search result from the dropdown
-  const handleSelectSearchResult = (result: RentalObjectSearchResult) => {
-    setFormData((prev) => ({ ...prev, rentalObject: result.rentalId }))
-    setSearchResults([])
-    setSearchQuery('')
+  // Key system search function
+  const searchKeySystems = async (query: string): Promise<KeySystem[]> => {
+    return await keySystemSearchService.search({
+      q: query,
+      fields: ['systemCode'],
+    })
   }
 
-  // Handle key system input changes and trigger search
-  const handleKeySystemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setFormData((prev) => ({ ...prev, keySystemId: value }))
-    setKeySystemSearchQuery(value)
-    setKeySystemSelected(false) // Clear selection when user types
+  // Handle rental object selection
+  const handleSelectRentalObject = (
+    result: RentalObjectSearchResult | null
+  ) => {
+    if (result) {
+      setSelectedRentalObject(result)
+      setRentalObjectSearch(result.rentalId)
+      setFormData((prev) => ({ ...prev, rentalObject: result.rentalId }))
+    } else {
+      setSelectedRentalObject(null)
+      setFormData((prev) => ({ ...prev, rentalObject: '' }))
+    }
   }
 
-  // Handle selection of a key system search result from the dropdown
-  const handleSelectKeySystemResult = (result: KeySystem) => {
-    setFormData((prev) => ({ ...prev, keySystemId: result.id }))
-    setKeySystemSearchQuery(result.systemCode)
-    setDebouncedKeySystemQuery('')
-    setKeySystemSelected(true) // Mark that user selected from dropdown
+  // Handle key system selection
+  const handleSelectKeySystem = (result: KeySystem | null) => {
+    if (result) {
+      setSelectedKeySystem(result)
+      setKeySystemSearch(result.systemCode)
+      setFormData((prev) => ({ ...prev, keySystemId: result.id }))
+    } else {
+      setSelectedKeySystem(null)
+      setFormData((prev) => ({ ...prev, keySystemId: '' }))
+    }
   }
 
   // Handle form submission and validation
@@ -276,11 +235,10 @@ export function AddKeyForm({
       keySystemId: '',
       disposed: false,
     })
-    setSearchResults([])
-    setSearchQuery('')
-    setIsSearching(false)
-    setKeySystemSearchQuery('')
-    setDebouncedKeySystemQuery('')
+    setRentalObjectSearch('')
+    setSelectedRentalObject(null)
+    setKeySystemSearch('')
+    setSelectedKeySystem(null)
     setSequenceNumberError('')
     setShouldCreateEvent(false)
   }
@@ -298,11 +256,10 @@ export function AddKeyForm({
       keySystemId: '',
       disposed: false,
     })
-    setSearchResults([])
-    setSearchQuery('')
-    setIsSearching(false)
-    setKeySystemSearchQuery('')
-    setDebouncedKeySystemQuery('')
+    setRentalObjectSearch('')
+    setSelectedRentalObject(null)
+    setKeySystemSearch('')
+    setSelectedKeySystem(null)
     setSequenceNumberError('')
     setShouldCreateEvent(false)
   }
@@ -394,90 +351,58 @@ export function AddKeyForm({
           </div>
 
           <div className="space-y-3">
-            <div className="space-y-1 relative">
+            <div className="space-y-1">
               <Label htmlFor="rentalObject" className="text-xs">
                 Objekt
               </Label>
-              <div className="relative">
-                <Input
-                  id="rentalObject"
-                  className="h-8"
-                  value={formData.rentalObject}
-                  onChange={handleRentalObjectChange}
-                  placeholder="t.ex. 811-039-05-0347"
-                />
-                {isSearching && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
-                  </div>
-                )}
-              </div>
-
-              {searchResults.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                  {searchResults.map((result, index) => (
-                    <button
-                      key={`${result.rentalId}-${index}`}
-                      type="button"
-                      className="w-full text-left px-3 py-1 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-xs"
-                      onClick={() => handleSelectSearchResult(result)}
-                    >
-                      <div className="font-medium">{result.rentalId}</div>
-                      <div className="text-xs text-gray-600">
-                        {result.address}
-                      </div>
-                      <div className="text-xs text-gray-500 capitalize">
-                        {result.type}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <SearchDropdown
+                preSuggestions={[]}
+                searchFn={searchRentalObjects}
+                minSearchLength={5}
+                debounceMs={300}
+                formatItem={(result) => ({
+                  primaryText: result.rentalId,
+                  secondaryText: `${result.address} · ${result.type}`,
+                  searchableText: `${result.rentalId} ${result.address}`,
+                })}
+                getKey={(result) => result.rentalId}
+                value={rentalObjectSearch}
+                onChange={setRentalObjectSearch}
+                onSelect={handleSelectRentalObject}
+                selectedValue={selectedRentalObject}
+                placeholder="t.ex. 811-039-05-0347"
+                emptyMessage="Inga objekt hittades"
+                loadingMessage="Söker..."
+                showClearButton={false}
+                className="h-8"
+              />
             </div>
 
-            <div className="space-y-1 relative">
+            <div className="space-y-1">
               <Label htmlFor="keySystemId" className="text-xs">
                 Låssystem
               </Label>
-              <div className="relative">
-                <Input
-                  id="keySystemId"
-                  className={`h-8 ${keySystemSelected ? 'bg-blue-50' : ''}`}
-                  value={keySystemSearchQuery}
-                  onChange={handleKeySystemChange}
-                  placeholder="t.ex. ABC123"
-                />
-                {keySystemsQuery.isFetching && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
-                  </div>
-                )}
-              </div>
-
-              {!keySystemsQuery.isFetching &&
-                !keySystemSelected &&
-                keySystemsQuery.data &&
-                keySystemsQuery.data.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                    {keySystemsQuery.data.map((result, index) => (
-                      <button
-                        key={`${result.id}-${index}`}
-                        type="button"
-                        className="w-full text-left px-3 py-1 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-xs"
-                        onClick={() => handleSelectKeySystemResult(result)}
-                      >
-                        <div className="font-medium">{result.systemCode}</div>
-                        <div className="text-xs text-gray-600">
-                          {result.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {result.manufacturer && `${result.manufacturer} • `}
-                          {result.type}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <SearchDropdown
+                preSuggestions={[]}
+                searchFn={searchKeySystems}
+                minSearchLength={3}
+                debounceMs={500}
+                formatItem={(result) => ({
+                  primaryText: result.systemCode,
+                  secondaryText: `${result.name}${result.manufacturer ? ` · ${result.manufacturer}` : ''} · ${result.type}`,
+                  searchableText: `${result.systemCode} ${result.name} ${result.manufacturer || ''}`,
+                })}
+                getKey={(result) => result.id}
+                value={keySystemSearch}
+                onChange={setKeySystemSearch}
+                onSelect={handleSelectKeySystem}
+                selectedValue={selectedKeySystem}
+                placeholder="t.ex. ABC123"
+                emptyMessage="Inga låssystem hittades"
+                loadingMessage="Söker..."
+                showClearButton={false}
+                className="h-8"
+              />
             </div>
 
             <div className="space-y-1">
