@@ -104,17 +104,8 @@ export const LogSchema = z.object({
   objectId: z.string().uuid().nullable().optional(),
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
-  // Context fields for better filtering and grouping
-  rentalObjectCode: z.string().nullable().optional(),
-  contactId: z.string().nullable().optional(), // Contact code (e.g., P079586, F123456)
-  // Key event fields from JOIN (for grouping flex/order/lost operations)
-  keyEventId: z.string().uuid().nullable().optional(),
-  keyEventType: z.enum(['order', 'flex', 'lost']).nullable().optional(),
-  keyEventStatus: z
-    .enum(['ordered', 'received', 'cancelled'])
-    .nullable()
-    .optional(),
-  keyEventWorkOrderId: z.string().nullable().optional(),
+  // All context (rentalObjectCode, contactId, keyEvent data) is now fetched via JOINs
+  // when filtering/displaying logs - not stored in the logs table
 })
 
 export const KeyNoteSchema = z.object({
@@ -237,8 +228,7 @@ export const CreateLogRequestSchema = z.object({
   ]),
   objectId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
-  rentalObjectCode: z.string().nullable().optional(),
-  contactId: z.string().nullable().optional(),
+  // rentalObjectCode and contactId removed - context fetched via JOINs when needed
 })
 
 // Receipt schemas

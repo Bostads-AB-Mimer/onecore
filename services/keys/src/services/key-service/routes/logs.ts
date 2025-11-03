@@ -358,7 +358,16 @@ export const routes = (router: KoaRouter) => {
    * /logs/rental-object/{rentalObjectCode}:
    *   get:
    *     summary: Get all logs for a specific rental object
-   *     description: Returns all log entries for a given rental object code, ordered by most recent first
+   *     description: |
+   *       Returns all log entries for a given rental object code by JOINing across multiple tables.
+   *
+   *       Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+   *
+   *       Excluded: keySystem logs (infrastructure-level, not property-specific)
+   *
+   *       Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+   *
+   *       Results ordered by most recent first
    *     tags: [Logs]
    *     parameters:
    *       - in: path
@@ -366,7 +375,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The rental object code (e.g., apartment code)
+   *         description: The rental object code (e.g., "705-011-03-0102")
    *       - in: query
    *         name: page
    *         schema:
@@ -418,7 +427,16 @@ export const routes = (router: KoaRouter) => {
    * /logs/contact/{contactId}:
    *   get:
    *     summary: Get all logs for a specific contact
-   *     description: Returns all log entries for a given contact code, ordered by most recent first
+   *     description: |
+   *       Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+   *
+   *       Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+   *
+   *       Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+   *
+   *       Note: Matches both contact and contact2 fields (co-tenants supported)
+   *
+   *       Results ordered by most recent first
    *     tags: [Logs]
    *     parameters:
    *       - in: path
@@ -426,7 +444,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The contact code (e.g., P079586, F123456)
+   *         description: The contact code (e.g., "P079586", "F123456")
    *       - in: query
    *         name: page
    *         schema:
