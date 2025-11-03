@@ -147,9 +147,7 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyLoan'])
       )
     })
-    .innerJoin(
-      db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`)
-    )
+    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
   // 3. objectType='receipt' - Via keyLoan chain
@@ -163,9 +161,7 @@ export function getLogsByRentalObjectCodeQuery(
       )
     })
     .innerJoin('key_loans as kl', 'r.keyLoanId', 'kl.id')
-    .innerJoin(
-      db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`)
-    )
+    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
   // 4. objectType='keyEvent' - Extract first key from JSON
@@ -178,9 +174,7 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyEvent'])
       )
     })
-    .innerJoin(
-      db.raw(`keys ON keys.id = JSON_VALUE(ke.keys, '$[0]')`)
-    )
+    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(ke.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
   // 5. objectType='keyNote' - Direct rentalObjectCode field
@@ -205,9 +199,7 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyBundle'])
       )
     })
-    .innerJoin(
-      db.raw(`keys ON keys.id = JSON_VALUE(kb.keys, '$[0]')`)
-    )
+    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kb.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
   // 7. objectType='keyLoanMaintenanceKeys' - Extract first key from JSON
@@ -220,9 +212,7 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyLoanMaintenanceKeys'])
       )
     })
-    .innerJoin(
-      db.raw(`keys ON keys.id = JSON_VALUE(klmk.keys, '$[0]')`)
-    )
+    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(klmk.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
   // 8. objectType='signature' - Via receipt → keyLoan chain
@@ -243,9 +233,7 @@ export function getLogsByRentalObjectCodeQuery(
       )
     })
     .innerJoin('key_loans as kl', 'r.keyLoanId', 'kl.id')
-    .innerJoin(
-      db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`)
-    )
+    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
   // NOTE: objectType='keySystem' is explicitly excluded - keySystem logs are
