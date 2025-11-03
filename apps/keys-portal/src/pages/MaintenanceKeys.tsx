@@ -14,8 +14,9 @@ import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { InlineTextareaEditor } from '@/components/ui/inline-textarea-editor'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
-import { getKeyBundleWithLoanStatus } from '@/services/api/keyBundleService'
+import { getKeyBundleWithLoanStatus, updateKeyBundle } from '@/services/api/keyBundleService'
 import { keyService } from '@/services/api/keyService'
 import type {
   KeyLoanMaintenanceKeysWithDetails,
@@ -319,11 +320,30 @@ export default function MaintenanceKeys() {
                       <CardTitle>{searchResult.bundle.name}</CardTitle>
                       <Badge variant="outline">Nyckelsamling</Badge>
                     </div>
-                    {searchResult.bundle.description && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {searchResult.bundle.description}
-                      </p>
-                    )}
+                    <InlineTextareaEditor
+                      value={searchResult.bundle.description ?? ''}
+                      onSave={async (newValue) => {
+                        const updatedBundle = await updateKeyBundle(
+                          searchResult.bundle!.id,
+                          {
+                            description: newValue,
+                          }
+                        )
+                        setSearchResult({
+                          ...searchResult,
+                          bundle: updatedBundle,
+                        })
+                        toast({
+                          title: 'Beskrivning uppdaterad',
+                          description:
+                            'Nyckelsamlingens beskrivning har uppdaterats',
+                        })
+                      }}
+                      placeholder="Lägg till beskrivning..."
+                      emptyText="Klicka för att lägga till beskrivning"
+                      rows={4}
+                      className="mt-2 text-sm text-muted-foreground hover:text-foreground"
+                    />
                   </CardHeader>
                 </Card>
                 <AddKeysToBundleCard
