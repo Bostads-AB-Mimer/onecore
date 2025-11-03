@@ -2,6 +2,7 @@ import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { WorkOrder } from '@/services/api/core'
+import { linkToWorkOrderInOdoo } from '@/utils/odooUtils'
 import { useState } from 'react'
 
 interface WorkOrdersTableProps {
@@ -48,10 +49,6 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
       default:
         return null
     }
-  }
-
-  const handleOpenOrder = (url: string) => {
-    window.open(url, '_blank')
   }
 
   return (
@@ -106,11 +103,11 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
             label: 'Åtgärd',
             render: (order: WorkOrder) =>
               order._tag === 'internal' &&
-              order.url && (
+              order.code && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleOpenOrder(order.url ?? '')}
+                  onClick={() => linkToWorkOrderInOdoo(order)}
                 >
                   Öppna
                 </Button>
@@ -128,11 +125,11 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
               {getStatusBadge(order.status)}
             </div>
             <div className="flex justify-end">
-              {order._tag === 'internal' && order.url && (
+              {order._tag === 'internal' && order.code && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleOpenOrder(order.url ?? '')}
+                  onClick={() => linkToWorkOrderInOdoo(order)}
                 >
                   Öppna
                 </Button>
