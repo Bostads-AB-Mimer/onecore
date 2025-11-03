@@ -114,7 +114,7 @@ export async function getKeyLoanMaintenanceKeysWithKeysByCompany(
       let keyIds: string[] = []
       try {
         keyIds = JSON.parse(loan.keys)
-      } catch (e) {
+      } catch (_e) {
         // If parsing fails, return empty array
         keyIds = []
       }
@@ -161,7 +161,7 @@ export async function getKeyLoanMaintenanceKeysWithKeysByBundle(
   let bundleKeyIds: string[] = []
   try {
     bundleKeyIds = JSON.parse(bundle.keys)
-  } catch (e) {
+  } catch (_e) {
     return []
   }
 
@@ -194,7 +194,7 @@ export async function getKeyLoanMaintenanceKeysWithKeysByBundle(
       let keyIds: string[] = []
       try {
         keyIds = JSON.parse(loan.keys)
-      } catch (e) {
+      } catch (_e) {
         keyIds = []
       }
 

@@ -19,6 +19,7 @@ export function getAllLogsQuery(db: Knex) {
     .select(
       db.raw(
         'ROW_NUMBER() OVER (PARTITION BY objectId ORDER BY eventTime DESC) as rn'
+      )
     )
 
   return db
