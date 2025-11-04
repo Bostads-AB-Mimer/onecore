@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { X, ChevronDown, ChevronUp, Plus } from 'lucide-react'
+import { X, ChevronDown, ChevronUp } from 'lucide-react'
 import { UnifiedMaintenanceSearch } from '@/components/maintenance/UnifiedMaintenanceSearch'
 import {
   useUnifiedMaintenanceSearch,
@@ -8,7 +8,8 @@ import {
 } from '@/components/maintenance/UnifiedMaintenanceSearchHook'
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
-import { CreateMaintenanceLoanDialog } from '@/components/maintenance/CreateMaintenanceLoanDialog'
+import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
+import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
 import { ContactBundlesWithLoanedKeysCard } from '@/components/maintenance/ContactBundlesWithLoanedKeysCard'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
@@ -25,6 +26,7 @@ import { keyService } from '@/services/api/keyService'
 import type {
   KeyLoanMaintenanceKeysWithDetails,
   KeyWithMaintenanceLoanStatus,
+  Contact,
 } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -51,6 +53,12 @@ export default function MaintenanceKeys() {
   const [loansKeySystemMap, setLoansKeySystemMap] = useState<
     Record<string, string>
   >({})
+  const [preSelectedKeys, setPreSelectedKeys] = useState<
+    KeyWithMaintenanceLoanStatus[]
+  >([])
+  const [preSelectedCompany, setPreSelectedCompany] = useState<Contact | null>(
+    null
+  )
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
 
@@ -292,28 +300,31 @@ export default function MaintenanceKeys() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-tight">Sökresultat</h2>
-              <div className="flex items-center gap-2">
-                {searchResult.type === 'contact' && searchResult.contact && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setCreateDialogOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nytt lån
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={handleClearSearch}>
-                  <X className="h-4 w-4 mr-2" />
-                  Rensa sökning
-                </Button>
-              </div>
+              <Button variant="outline" size="sm" onClick={handleClearSearch}>
+                <X className="h-4 w-4 mr-2" />
+                Rensa sökning
+              </Button>
             </div>
 
             {/* Search Result Info */}
             {searchResult.type === 'contact' && searchResult.contact && (
               <div className="space-y-6">
-                <ContactInfoCard contacts={[searchResult.contact]} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ContactInfoCard contacts={[searchResult.contact]} />
+                  <CreateLoanWithKeysCard
+                    onKeysSelected={(keys) => {
+                      // Cast keys to KeyWithMaintenanceLoanStatus[] - they don't have loan status since they're being selected for a new loan
+                      const keysWithStatus = keys.map((k) => ({
+                        ...k,
+                        maintenanceLoan: null,
+                        latestEvent: null,
+                      })) as KeyWithMaintenanceLoanStatus[]
+                      setPreSelectedKeys(keysWithStatus)
+                      setPreSelectedCompany(searchResult.contact!)
+                      setCreateDialogOpen(true)
+                    }}
+                  />
+                </div>
                 <ContactBundlesWithLoanedKeysCard
                   contactCode={searchResult.contact.contactCode}
                   onBundleClick={(bundleId) => {
@@ -511,6 +522,10 @@ export default function MaintenanceKeys() {
                               key={loan.id}
                               loan={loan}
                               keySystemMap={loansKeySystemMap}
+                              onRefresh={() => {
+                                // Refetch active loans to update UI
+                                setHasLoadedActive(false)
+                              }}
                             />
                           ))}
                         </CardContent>
@@ -552,6 +567,10 @@ export default function MaintenanceKeys() {
                               key={loan.id}
                               loan={loan}
                               keySystemMap={loansKeySystemMap}
+                              onRefresh={() => {
+                                // Refetch returned loans to update UI
+                                setHasLoadedReturned(false)
+                              }}
                             />
                           ))}
                         </CardContent>
@@ -589,17 +608,24 @@ export default function MaintenanceKeys() {
 
       {/* Create Loan Dialog - only for contact searches */}
       {searchResult?.type === 'contact' && searchResult.contact && (
-        <CreateMaintenanceLoanDialog
+        <LoanMaintenanceKeysDialog
           open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          companyContactCode={searchResult.contact.contactCode}
-          companyName={
-            searchResult.contact.fullName || searchResult.contact.contactCode
-          }
+          onOpenChange={(open) => {
+            setCreateDialogOpen(open)
+            if (!open) {
+              // Clear pre-selected keys and company when dialog closes
+              setPreSelectedKeys([])
+              setPreSelectedCompany(null)
+            }
+          }}
+          keys={preSelectedKeys}
+          preSelectedCompany={preSelectedCompany || undefined}
           onSuccess={() => {
             // Refresh active loans after creating a new one
             setHasLoadedActive(false)
             setActiveLoansOpen(true)
+            setPreSelectedKeys([])
+            setPreSelectedCompany(null)
           }}
         />
       )}

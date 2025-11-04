@@ -5,6 +5,9 @@ import {
   type LoanGroup,
 } from '@/components/shared/dialogs/ReturnKeysDialogBase'
 import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
+import { receiptService } from '@/services/api/receiptService'
+import { keyService } from '@/services/api/keyService'
+import { generateMaintenanceReturnReceiptBlob } from '@/lib/pdf-receipts'
 import { useToast } from '@/hooks/use-toast'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -103,13 +106,78 @@ export function ReturnMaintenanceKeysDialog({
     setIsProcessing(true)
 
     try {
-      // Update all loans to mark them as returned
+      // Update all loans to mark them as returned and create return receipts
       await Promise.all(
         loanGroups.map(async (loanGroup) => {
+          // Get the loan details
+          const loan = await maintenanceKeysService.get(loanGroup.loanId)
+
+          // Update loan to mark as returned
           await maintenanceKeysService.update(loanGroup.loanId, {
-            returnedAt: new Date(),
+            returnedAt: new Date().toISOString(),
             description: returnNote.trim() || undefined,
           })
+
+          // Create return receipt
+          try {
+            const receipt = await receiptService.create({
+              keyLoanId: loanGroup.loanId,
+              loanType: 'MAINTENANCE',
+              receiptType: 'RETURN',
+              type: 'PHYSICAL',
+            })
+
+            // Generate and upload PDF automatically
+            try {
+              // Fetch all key objects for this loan
+              const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
+              const loanKeys: Key[] = await Promise.all(
+                loanKeyIds.map((keyId) => keyService.getKey(keyId))
+              )
+
+              // Categorize keys into returned/missing/disposed
+              const returned: Key[] = []
+              const missing: Key[] = []
+              const disposed: Key[] = []
+
+              loanKeys.forEach((key) => {
+                if (key.disposed) {
+                  disposed.push(key)
+                } else if (selectedKeyIds.has(key.id)) {
+                  returned.push(key)
+                } else {
+                  missing.push(key)
+                }
+              })
+
+              // Generate PDF
+              const { blob } = await generateMaintenanceReturnReceiptBlob(
+                {
+                  company: loan.company || 'Unknown',
+                  contactPerson: loan.contactPerson,
+                  keys: returned,
+                  receiptType: 'RETURN',
+                  operationDate: new Date(),
+                  missingKeys: missing.length > 0 ? missing : undefined,
+                  disposedKeys: disposed.length > 0 ? disposed : undefined,
+                },
+                receipt.id
+              )
+
+              // Convert blob to File and upload
+              const fileName = `return-receipt-${receipt.id}.pdf`
+              const file = new File([blob], fileName, {
+                type: 'application/pdf',
+              })
+              await receiptService.uploadFile(receipt.id, file)
+            } catch (pdfErr) {
+              console.error('Failed to generate/upload PDF:', pdfErr)
+              // Don't fail the return if PDF generation fails
+            }
+          } catch (receiptErr) {
+            console.error('Failed to create return receipt:', receiptErr)
+            // Don't fail the return if receipt creation fails
+          }
         })
       )
 

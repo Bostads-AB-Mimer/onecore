@@ -17,6 +17,7 @@ interface LoanMaintenanceKeysDialogProps {
   onOpenChange: (open: boolean) => void
   keys: KeyWithMaintenanceLoanStatus[] // Keys to loan out
   allBundleKeys?: KeyWithMaintenanceLoanStatus[] // All keys in bundle for pre-suggestions
+  preSelectedCompany?: Contact // Pre-selected company (e.g. from contact search page)
   onSuccess: () => void
 }
 
@@ -25,6 +26,7 @@ export function LoanMaintenanceKeysDialog({
   onOpenChange,
   keys,
   allBundleKeys,
+  preSelectedCompany,
   onSuccess,
 }: LoanMaintenanceKeysDialogProps) {
   const { toast } = useToast()
@@ -38,6 +40,13 @@ export function LoanMaintenanceKeysDialog({
 
   // Pre-suggestions state
   const [recentCompanies, setRecentCompanies] = useState<Contact[]>([])
+
+  // Set pre-selected company when dialog opens
+  useEffect(() => {
+    if (open && preSelectedCompany) {
+      handleSelectCompany(preSelectedCompany)
+    }
+  }, [open, preSelectedCompany])
 
   // Fetch companies that have active loans on keys in the bundle (for pre-suggestions)
   useEffect(() => {
@@ -61,10 +70,14 @@ export function LoanMaintenanceKeysDialog({
       setRecentCompanies(companies.filter((c): c is Contact => c !== null))
     }
 
-    if (open && (allBundleKeys?.length || keys.length > 0)) {
+    if (
+      open &&
+      (allBundleKeys?.length || keys.length > 0) &&
+      !preSelectedCompany
+    ) {
       fetchRecentCompanies()
     }
-  }, [open, keys, allBundleKeys])
+  }, [open, keys, allBundleKeys, preSelectedCompany])
 
   const handleSelectCompany = (company: Contact | null) => {
     setSelectedCompany(company)

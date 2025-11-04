@@ -4,6 +4,7 @@ import {
   KeySystemTypeSchema,
   ReceiptTypeSchema,
   ReceiptFormatSchema,
+  LoanTypeSchema,
   KeyEventTypeSchema,
   KeyEventStatusSchema,
   SignatureResourceTypeSchema,
@@ -93,6 +94,7 @@ export type CreateLogRequest = z.infer<typeof CreateLogRequestSchema>
 // Receipt types
 export type ReceiptType = z.infer<typeof ReceiptTypeSchema>
 export type ReceiptFormat = z.infer<typeof ReceiptFormatSchema>
+export type LoanType = z.infer<typeof LoanTypeSchema>
 export type Receipt = z.infer<typeof ReceiptSchema>
 export type CreateReceiptRequest = z.infer<typeof CreateReceiptRequestSchema>
 export type UpdateReceiptRequest = z.infer<typeof UpdateReceiptRequestSchema>

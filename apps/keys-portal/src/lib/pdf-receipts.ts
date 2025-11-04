@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { ReceiptData } from '@/services/types'
+import type { ReceiptData, MaintenanceReceiptData } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
@@ -35,14 +35,26 @@ function loadLogo(): Promise<HTMLImageElement | null> {
   return _logoPromise
 }
 
-const generateReceiptNumber = (type: 'loan' | 'return'): string => {
+const generateReceiptNumber = (
+  type: 'loan' | 'return',
+  loanType: 'regular' | 'maintenance' = 'regular'
+): string => {
   const now = new Date()
-  const prefix = type === 'loan' ? 'NYL' : 'NYÅ'
+  let prefix: string
+  if (loanType === 'maintenance') {
+    prefix = type === 'loan' ? 'NMU' : 'NMÅ'
+  } else {
+    prefix = type === 'loan' ? 'NYL' : 'NYÅ'
+  }
   const timestamp = format(now, 'yyyyMMdd-HHmmss')
   return `${prefix}-${timestamp}`
 }
 
-const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
+const addHeader = async (
+  doc: jsPDF,
+  receiptType: 'loan' | 'return',
+  loanType: 'regular' | 'maintenance' = 'regular'
+) => {
   // Blue bar
   doc.setFillColor(BLUE.r, BLUE.g, BLUE.b)
   doc.rect(0, 0, PAGE_W, BAR_H, 'F')
@@ -88,7 +100,7 @@ const addHeader = async (doc: jsPDF, receiptType: 'loan' | 'return') => {
   doc.setTextColor(0, 0, 0)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  const receiptNumber = generateReceiptNumber(receiptType)
+  const receiptNumber = generateReceiptNumber(receiptType, loanType)
   const metaY1 = BAR_H + 11
   const metaY2 = metaY1 + 7
   const metaY3 = metaY2 + 7
@@ -184,6 +196,31 @@ const addTenantInfo = async (
 
   // Return the max Y position from both columns + spacing
   return Math.max(leftY, rightY) + 7
+}
+
+const addCompanyInfo = (
+  doc: jsPDF,
+  company: string,
+  contactPerson: string | null,
+  y: number
+) => {
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text('FÖRETAG', MARGIN_X, y)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  let cy = y + 8
+
+  doc.text(`Företagskod: ${company}`, MARGIN_X, cy)
+  cy += 7
+
+  if (contactPerson) {
+    doc.text(`Kontaktperson: ${contactPerson}`, MARGIN_X, cy)
+    cy += 7
+  }
+
+  return cy + 7
 }
 
 /**
@@ -514,6 +551,92 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   return { doc, fileName }
 }
 
+async function buildMaintenanceLoanDoc(
+  data: MaintenanceReceiptData,
+  receiptId?: string
+) {
+  const doc = new jsPDF()
+  let y = await addHeader(doc, 'loan', 'maintenance')
+  y = addCompanyInfo(doc, data.company, data.contactPerson, y)
+  y = addKeysTable(doc, data.keys, y, 42)
+
+  // Add simple signature section for maintenance receipts
+  const bottom = contentBottom(doc)
+  const need = 35
+  if (y + need <= bottom) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.text('BEKRÄFTELSE', MARGIN_X, y)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    const text =
+      'Jag bekräftar att jag har mottagit ovanstående nycklar för underhållsändamål.'
+    const lines = doc.splitTextToSize(text, 170)
+    let cy = y + 10
+    lines.forEach((line) => {
+      doc.text(line, MARGIN_X, cy)
+      cy += 5.5
+    })
+
+    cy += 5
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.2)
+    doc.line(MARGIN_X, cy, 100, cy)
+    cy += 5
+    doc.setFontSize(9)
+    doc.text(
+      `Datum och underskrift - ${data.contactPerson || data.company}`,
+      MARGIN_X,
+      cy
+    )
+  }
+
+  addFooter(doc, 'loan', receiptId)
+  const fileName = `nyckelutlaning_underhall_${data.company}_${format(
+    new Date(),
+    'yyyyMMdd'
+  )}.pdf`
+  return { doc, fileName }
+}
+
+async function buildMaintenanceReturnDoc(
+  data: MaintenanceReceiptData,
+  receiptId?: string
+) {
+  const doc = new jsPDF()
+  let y = await addHeader(doc, 'return', 'maintenance')
+  y = addCompanyInfo(doc, data.company, data.contactPerson, y)
+  y = addKeysTable(doc, data.keys, y, 22, data.missingKeys, data.disposedKeys)
+
+  const bottom = contentBottom(doc)
+  const need = 18
+  if (y + need <= bottom) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('BEKRÄFTELSE', MARGIN_X, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9.5)
+    const confirmText =
+      data.missingKeys && data.missingKeys.length > 0
+        ? 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar saknas (se lista ovan).'
+        : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+    const lines = doc.splitTextToSize(confirmText, 170)
+    let cy = y + 7
+    lines.forEach((line) => {
+      doc.text(line, MARGIN_X, cy)
+      cy += 5.5
+    })
+  }
+
+  addFooter(doc, 'return', receiptId)
+  const fileName = `nyckelaterlamning_underhall_${data.company}_${format(
+    new Date(),
+    'yyyyMMdd'
+  )}.pdf`
+  return { doc, fileName }
+}
+
 /* ---------------- Public API: Downloaders (existing behavior) ---------------- */
 
 export const generateLoanReceipt = async (
@@ -548,6 +671,42 @@ export const generateReturnReceiptBlob = async (
   receiptId?: string
 ): Promise<{ blob: Blob; fileName: string }> => {
   const { doc, fileName } = await buildReturnDoc(data, receiptId)
+  const blob = doc.output('blob') as Blob
+  return { blob, fileName }
+}
+
+/* ---------------- Public API: Maintenance receipts ---------------- */
+
+export const generateMaintenanceLoanReceipt = async (
+  data: MaintenanceReceiptData,
+  receiptId?: string
+): Promise<void> => {
+  const { doc, fileName } = await buildMaintenanceLoanDoc(data, receiptId)
+  doc.save(fileName)
+}
+
+export const generateMaintenanceReturnReceipt = async (
+  data: MaintenanceReceiptData,
+  receiptId?: string
+): Promise<void> => {
+  const { doc, fileName } = await buildMaintenanceReturnDoc(data, receiptId)
+  doc.save(fileName)
+}
+
+export const generateMaintenanceLoanReceiptBlob = async (
+  data: MaintenanceReceiptData,
+  receiptId?: string
+): Promise<{ blob: Blob; fileName: string }> => {
+  const { doc, fileName } = await buildMaintenanceLoanDoc(data, receiptId)
+  const blob = doc.output('blob') as Blob
+  return { blob, fileName }
+}
+
+export const generateMaintenanceReturnReceiptBlob = async (
+  data: MaintenanceReceiptData,
+  receiptId?: string
+): Promise<{ blob: Blob; fileName: string }> => {
+  const { doc, fileName } = await buildMaintenanceReturnDoc(data, receiptId)
   const blob = doc.output('blob') as Blob
   return { blob, fileName }
 }

@@ -8,6 +8,7 @@ export const ReceiptFactory = Factory.define<Receipt>(({ sequence }) => {
   return {
     id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
     keyLoanId: `00000000-0000-0000-0000-${String(1000 + sequence).padStart(12, '0')}`,
+    loanType: 'REGULAR',
     receiptType: sequence % 2 === 0 ? 'LOAN' : 'RETURN',
     type: 'DIGITAL',
     fileId: undefined,

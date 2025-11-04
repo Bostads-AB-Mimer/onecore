@@ -84,7 +84,7 @@ export function MaintenanceKeysTable({ keys, keySystemMap }: Props) {
               </TableCell>
               <TableCell className="w-[15%]">
                 {key.disposed ? (
-                  <Badge variant="destructive">Avyttrad</Badge>
+                  <Badge variant="destructive">Kasserad</Badge>
                 ) : (
                   <Badge variant="secondary">Aktiv</Badge>
                 )}
