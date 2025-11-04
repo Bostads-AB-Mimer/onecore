@@ -111,7 +111,6 @@ export function getLogsSearchQuery(db: Knex) {
  * - keyEvent: logs → key_events → extract first key from JSON → keys
  * - keyNote: logs → key_notes (direct rentalObjectCode field)
  * - keyBundle: logs → key_bundles → extract first key from JSON → keys
- * - keyLoanMaintenanceKeys: logs → key_loan_maintenance_keys → extract first key → keys
  * - signature: logs → signatures → receipts → key_loans → extract first key → keys
  * - keySystem: EXCLUDED (infrastructure-level, no single rental object relationship)
  *
@@ -202,20 +201,7 @@ export function getLogsByRentalObjectCodeQuery(
     .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kb.keys, '$[0]')`))
     .where('keys.rentalObjectCode', rentalObjectCode)
 
-  // 7. objectType='keyLoanMaintenanceKeys' - Extract first key from JSON
-  const maintenanceLogs = db(`${TABLE} as logs`)
-    .select('logs.*')
-    .innerJoin('key_loan_maintenance_keys as klmk', function () {
-      this.on('logs.objectId', '=', 'klmk.id').andOn(
-        'logs.objectType',
-        '=',
-        db.raw('?', ['keyLoanMaintenanceKeys'])
-      )
-    })
-    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(klmk.keys, '$[0]')`))
-    .where('keys.rentalObjectCode', rentalObjectCode)
-
-  // 8. objectType='signature' - Via receipt → keyLoan chain
+  // 7. objectType='signature' - Via receipt → keyLoan chain
   const signatureLogs = db(`${TABLE} as logs`)
     .select('logs.*')
     .innerJoin('signatures as s', function () {
@@ -248,7 +234,6 @@ export function getLogsByRentalObjectCodeQuery(
       keyEventLogs,
       keyNoteLogs,
       keyBundleLogs,
-      maintenanceLogs,
       signatureLogs,
     ])
     .orderBy('eventTime', 'desc')
@@ -267,7 +252,7 @@ export function getLogsByRentalObjectCodeQuery(
  * - key: logs → keys → find active loans → contact/contact2 (complex)
  *
  * Excluded objectTypes (no contact relationship):
- * - keyEvent, keyBundle, keyNote, keySystem, keyLoanMaintenanceKeys
+ * - keyEvent, keyBundle, keyNote, keySystem
  *
  * Note: Matches both contact and contact2 fields (co-tenants supported)
  *
@@ -348,7 +333,7 @@ export function getLogsByContactIdQuery(contactId: string, db: Knex) {
         .whereNull('kl.returnedAt') // Only active loans
     })
 
-  // NOTE: Other objectTypes (keyEvent, keyBundle, keyNote, keySystem, keyLoanMaintenanceKeys)
+  // NOTE: Other objectTypes (keyEvent, keyBundle, keyNote, keySystem)
   // don't have contact relationships and are excluded
 
   // UNION all queries and sort by eventTime

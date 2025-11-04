@@ -3,14 +3,14 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 
 type KeyBundle = keys.v1.KeyBundle
-type KeyWithMaintenanceLoanStatus = keys.v1.KeyWithMaintenanceLoanStatus
+type KeyWithLoanAndEvent = keys.v1.KeyWithLoanAndEvent
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
 type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
 
 const TABLE = 'key_bundles'
 const KEYS_TABLE = 'keys'
-const MAINTENANCE_LOANS_TABLE = 'key_loan_maintenance_keys'
+const KEY_LOANS_TABLE = 'key_loans'
 const KEY_EVENTS_TABLE = 'key_events'
 
 /**
@@ -79,8 +79,8 @@ export function getKeyBundlesSearchQuery(
 }
 
 /**
- * Get all keys in a bundle with their current maintenance loan status
- * Returns all keys in the bundle with information about any active maintenance loans
+ * Get all keys in a bundle with their current loan status
+ * Returns all keys in the bundle with information about any active loans (both TENANT and MAINTENANCE)
  *
  * @param bundleId - The key bundle ID
  * @param dbConnection - Database connection
@@ -91,7 +91,7 @@ export async function getKeyBundleWithLoanStatus(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<{
   bundle: KeyBundle
-  keys: KeyWithMaintenanceLoanStatus[]
+  keys: KeyWithLoanAndEvent[]
 }> {
   // 1. Get the bundle
   const bundle = await dbConnection(TABLE).where({ id: bundleId }).first()
@@ -112,8 +112,8 @@ export async function getKeyBundleWithLoanStatus(
     return { bundle, keys: [] }
   }
 
-  // 3. For each key, find if it's in any active maintenance loan
-  const keys: (KeyWithMaintenanceLoanStatus | null)[] = await Promise.all(
+  // 3. For each key, find if it's in any active loan (TENANT or MAINTENANCE)
+  const keys: (KeyWithLoanAndEvent | null)[] = await Promise.all(
     keyIds.map(async (keyId) => {
       const key = await dbConnection(KEYS_TABLE).where({ id: keyId }).first()
 
@@ -122,8 +122,8 @@ export async function getKeyBundleWithLoanStatus(
         return null
       }
 
-      // Find active loan containing this specific key
-      const activeLoan = await dbConnection(MAINTENANCE_LOANS_TABLE)
+      // Find active loan containing this specific key (unified key_loans table)
+      const activeLoan = await dbConnection(KEY_LOANS_TABLE)
         .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
         .whereNull('returnedAt')
         .first()
@@ -136,16 +136,14 @@ export async function getKeyBundleWithLoanStatus(
 
       return {
         ...key,
-        maintenanceLoan: activeLoan || null,
+        loan: activeLoan || null,
         latestEvent: latestEvent || null,
-      } as KeyWithMaintenanceLoanStatus
+      } as KeyWithLoanAndEvent
     })
   )
 
   // Filter out nulls (keys that weren't found)
-  const validKeys = keys.filter(
-    (k): k is KeyWithMaintenanceLoanStatus => k !== null
-  )
+  const validKeys = keys.filter((k): k is KeyWithLoanAndEvent => k !== null)
 
   return { bundle, keys: validKeys }
 }
@@ -157,9 +155,9 @@ export async function getKeyBundlesByContactWithLoanedKeys(
   contactCode: string,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<BundleWithLoanedKeysInfo[]> {
-  // Find all active loans for this contact
-  const activeLoans = await dbConnection(MAINTENANCE_LOANS_TABLE)
-    .where({ company: contactCode })
+  // Find all active MAINTENANCE loans for this contact (using unified key_loans table)
+  const activeLoans = await dbConnection(KEY_LOANS_TABLE)
+    .where({ contact: contactCode, loanType: 'MAINTENANCE' })
     .whereNull('returnedAt')
 
   if (activeLoans.length === 0) {
