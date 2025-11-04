@@ -13,6 +13,7 @@ import {
   RadioGroup,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from '@onecore/types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
@@ -32,6 +33,14 @@ import { ContactInfo } from './ContactInfo'
 import { Tab, Tabs } from '../../../../components'
 import { RequestError } from '../../../../types'
 import { ContactInfoLoading } from './ContactInfoLoading'
+import {
+  useCreateNonScoredLease,
+  CreateNonScoredLeaseErrorCodes,
+  CreateNonScoredLeaseParams,
+} from '../../hooks/useCreateNonScoredLease'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
+import { Contact } from '@onecore/types'
 
 export interface Props {
   listing: Listing
@@ -39,7 +48,11 @@ export interface Props {
 }
 
 export const CreateApplicantForListing = (props: Props) => {
+  const isNonScored = props.listing.rentalRule === 'NON_SCORED'
+
   const createNoteOfInterest = useCreateNoteOfInterest(props.listing.id)
+  const createNonScoredLease = useCreateNonScoredLease(props.listing.id)
+
   const [open, setOpen] = useState(false)
   const [selectedContact, setSelectedContact] =
     useState<ContactSearchData | null>(null)
@@ -48,12 +61,38 @@ export const CreateApplicantForListing = (props: Props) => {
   const [applicationType, setApplicationType] = useState<
     'Replace' | 'Additional'
   >()
+  const [showSuccessState, setShowSuccessState] = useState(false)
 
+  // For SCORED listings: validate tenant with housing contract requirements
   const tenantQuery = useTenantWithValidation(
-    selectedContact?.contactCode,
+    !isNonScored ? selectedContact?.contactCode : undefined,
     props.listing.rentalObject.residentialAreaCode,
     props.listing.rentalObjectCode
   )
+
+  // For NON_SCORED listings: fetch contact to validate address
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
+  const contactQuery = useQuery<Contact>({
+    queryKey: ['contact', selectedContact?.contactCode],
+    enabled: isNonScored && Boolean(selectedContact?.contactCode),
+    queryFn: () =>
+      axios
+        .get(`${backendUrl}/contacts/${selectedContact?.contactCode}`, {
+          headers: {
+            Accept: 'application/json',
+            'Access-Control-Allow-Credentials': true,
+          },
+          withCredentials: true,
+        })
+        .then((res) => res.data.content),
+  })
+
+  // Check if contact has valid address for NON_SCORED
+  const hasValidAddress =
+    isNonScored &&
+    contactQuery.data?.address?.street &&
+    contactQuery.data?.address?.city &&
+    contactQuery.data?.address?.postalCode
 
   const onCreate = (params: CreateNoteOfInterestRequestParams) =>
     createNoteOfInterest.mutate(params, {
@@ -66,10 +105,26 @@ export const CreateApplicantForListing = (props: Props) => {
       },
     })
 
+  const onCreateNonScoredLease = (params: CreateNonScoredLeaseParams) =>
+    createNonScoredLease.mutate(params, {
+      onSuccess: () => {
+        setShowSuccessState(true)
+      },
+    })
+
   const onCloseModal = () => {
     setOpen(false)
     setSelectedContact(null)
     setApplicationType(undefined)
+    setShowSuccessState(false)
+
+    // Show toast if we're closing after success
+    if (showSuccessState) {
+      toast('Bilplatskontrakt skapat och tilldelat', {
+        type: 'success',
+        hideProgressBar: true,
+      })
+    }
   }
 
   const handleChange = (_e: React.SyntheticEvent, tab: string) =>
@@ -113,16 +168,32 @@ export const CreateApplicantForListing = (props: Props) => {
         fullWidth
         TransitionProps={{ exit: false }}
       >
-        {createNoteOfInterest.error ? (
+        {createNoteOfInterest.error || createNonScoredLease.error ? (
           <CreateApplicantError
-            reset={createNoteOfInterest.reset}
-            error={createNoteOfInterest.error}
+            reset={
+              isNonScored
+                ? createNonScoredLease.reset
+                : createNoteOfInterest.reset
+            }
+            error={
+              isNonScored
+                ? createNonScoredLease.error!
+                : createNoteOfInterest.error!
+            }
+          />
+        ) : showSuccessState && isNonScored ? (
+          <SuccessState
+            onClose={onCloseModal}
+            contactName={selectedContact?.fullName || ''}
+            parkingSpaceAddress={props.listing.rentalObject.address}
           />
         ) : (
           <Box paddingTop="0.5rem">
             <Box display="flex">
               <DialogTitle variant="h1" fontSize={24} textAlign="left">
-                Ny intresseanmälan, {props.listing.rentalObject.address}
+                {isNonScored
+                  ? `Tilldela bilplats, ${props.listing.rentalObject.address}`
+                  : `Ny intresseanmälan, ${props.listing.rentalObject.address}`}
               </DialogTitle>
               <Box
                 display="flex"
@@ -161,24 +232,44 @@ export const CreateApplicantForListing = (props: Props) => {
                       onSelect={setSelectedContact}
                       contact={selectedContact}
                     />
-                    {!tenantQuery.isLoading && (
-                      <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
+                    {isNonScored ? (
+                      <>
+                        {contactQuery.isLoading && <ContactInfoLoading />}
+                        {contactQuery.data && !hasValidAddress && (
+                          <Box paddingTop="1rem">
+                            <Typography color="error">
+                              Kontakten saknar adress (gatuadress, stad eller postnummer). Uppdatera kontaktuppgifterna före tilldelning.
+                            </Typography>
+                          </Box>
+                        )}
+                        {contactQuery.error && <DefaultError />}
+                        <Box>
+                          <Divider />
+                        </Box>
+                      </>
+                    ) : (
+                      <>
+                        {!tenantQuery.isLoading && (
+                          <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
+                        )}
+                        {tenantQuery.isLoading && <ContactInfoLoading />}
+                        {renderTenantQueryError(tenantQuery.error)}
+                        {tenantQuery.data &&
+                          tenantQuery.data.validationResult == 'ok' &&
+                          tenantQuery.data.tenant.isAboutToLeave && (
+                            <ValidLeaseMissingError />
+                          )}
+                        <Box>
+                          <Divider />
+                        </Box>
+                      </>
                     )}
-                    {tenantQuery.isLoading && <ContactInfoLoading />}
-                    {renderTenantQueryError(tenantQuery.error)}
-                    {tenantQuery.data &&
-                      tenantQuery.data.validationResult == 'ok' &&
-                      tenantQuery.data.tenant.isAboutToLeave && (
-                        <ValidLeaseMissingError />
-                      )}
-                    <Box>
-                      <Divider />
-                    </Box>
                   </TabPanel>
                   {/*<Contracts leases={leases} />*/}
                 </TabContext>
               </Box>
-              {tenantQuery.data &&
+              {!isNonScored &&
+                tenantQuery.data &&
                 tenantQuery.data.validationResult !== 'ok' && (
                   <Box>
                     <Box
@@ -221,7 +312,7 @@ export const CreateApplicantForListing = (props: Props) => {
                     </Box>
                   </Box>
                 )}
-              {tenantQuery.data && (
+              {!isNonScored && tenantQuery.data && (
                 <Box paddingX="0.5rem" paddingTop="1rem">
                   <Typography color="error">
                     {renderWarningIfDistrictsMismatch(
@@ -239,31 +330,55 @@ export const CreateApplicantForListing = (props: Props) => {
                 <Button onClick={onCloseModal} variant="dark-outlined">
                   Avbryt
                 </Button>
-                {tenantQuery.data ? (
-                  <LoadingButton
-                    disabled={
-                      tenantQuery.data.validationResult === 'no-contract' ||
-                      !tenantHasValidContractForTheDiscrict(
-                        tenantQuery.data.tenant,
-                        props.listing
-                      )
-                    }
-                    loading={createNoteOfInterest.isPending}
-                    variant="dark"
-                    onClick={() =>
-                      onCreate({
-                        applicationType,
-                        contactCode: tenantQuery.data.tenant.contactCode,
-                        parkingSpaceId: props.listing.rentalObjectCode,
-                      })
-                    }
-                  >
-                    Lägg till
-                  </LoadingButton>
+                {isNonScored ? (
+                  // NON_SCORED: Show "Tilldela" button if contact has valid address
+                  selectedContact && hasValidAddress ? (
+                    <LoadingButton
+                      disabled={false}
+                      loading={createNonScoredLease.isPending}
+                      variant="dark"
+                      onClick={() =>
+                        onCreateNonScoredLease({
+                          contactCode: selectedContact.contactCode,
+                          parkingSpaceId: props.listing.rentalObjectCode,
+                        })
+                      }
+                    >
+                      Tilldela
+                    </LoadingButton>
+                  ) : (
+                    <Button disabled variant="dark">
+                      Tilldela
+                    </Button>
+                  )
                 ) : (
-                  <Button disabled variant="dark">
-                    Lägg till
-                  </Button>
+                  // SCORED: Show "Lägg till" button based on tenant validation
+                  tenantQuery.data ? (
+                    <LoadingButton
+                      disabled={
+                        tenantQuery.data.validationResult === 'no-contract' ||
+                        !tenantHasValidContractForTheDiscrict(
+                          tenantQuery.data.tenant,
+                          props.listing
+                        )
+                      }
+                      loading={createNoteOfInterest.isPending}
+                      variant="dark"
+                      onClick={() =>
+                        onCreate({
+                          applicationType,
+                          contactCode: tenantQuery.data.tenant.contactCode,
+                          parkingSpaceId: props.listing.rentalObjectCode,
+                        })
+                      }
+                    >
+                      Lägg till
+                    </LoadingButton>
+                  ) : (
+                    <Button disabled variant="dark">
+                      Lägg till
+                    </Button>
+                  )
                 )}
               </Box>
             </DialogContent>
@@ -320,7 +435,7 @@ function renderWarningIfDistrictsMismatch(listing: Listing, tenant: Tenant) {
 
 const CreateApplicantError = (props: {
   reset: () => void
-  error: RequestError<CreateNoteOfInterestErrorCodes>
+  error: RequestError<CreateNoteOfInterestErrorCodes | CreateNonScoredLeaseErrorCodes>
 }) => (
   <Box
     padding="1rem"
@@ -354,3 +469,47 @@ const DefaultError = () => (
     Något gick fel. Försök igen eller kontakta support
   </Typography>
 )
+
+const SuccessState = (props: {
+  onClose: () => void
+  contactName: string
+  parkingSpaceAddress: string
+}) => {
+  const { onClose, contactName, parkingSpaceAddress } = props
+
+  return (
+    <Box
+      padding="2rem"
+      minHeight="300px"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+    >
+      <CheckCircleIcon
+        sx={{ fontSize: 80, color: 'success.main', marginBottom: 2 }}
+      />
+      <Typography variant="h1" textAlign="center" marginBottom={2}>
+        Bilplatskontrakt skapat och tilldelat
+      </Typography>
+      <Box textAlign="center" marginBottom={3}>
+        <Typography variant="body1" marginBottom={1}>
+          <strong>{contactName}</strong> har nu tilldelats bilplatsen på:
+        </Typography>
+        <Typography variant="body1">
+          <strong>{parkingSpaceAddress}</strong>
+        </Typography>
+      </Box>
+      <Box marginTop={2}>
+        <Typography variant="body2" color="text.secondary" textAlign="center">
+          Kontraktet har skapats i systemet och annonsens status har uppdaterats till tilldelad.
+        </Typography>
+      </Box>
+      <Box paddingTop={4}>
+        <Button variant="dark" onClick={onClose}>
+          Stäng
+        </Button>
+      </Box>
+    </Box>
+  )
+}

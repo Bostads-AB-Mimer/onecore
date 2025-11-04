@@ -68,6 +68,32 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { error: result.err, ...metadata }
   })
 
+  router.post('(.*)/listings/non-scored-lease', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+
+    const result = await coreAdapter.createLeaseForNonScoredParkingSpace({
+      parkingSpaceId: params.parkingSpaceId,
+      contactCode: params.contactCode,
+    })
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = result.statusCode
+    ctx.body = {
+      error: result.err,
+      errorMessage: result.err,
+      ...metadata
+    }
+  })
+
   router.delete('(.*)/listings/applicants/:applicantId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await coreAdapter.removeApplicant(ctx.params.applicantId)

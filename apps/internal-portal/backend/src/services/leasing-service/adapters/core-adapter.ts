@@ -665,6 +665,50 @@ async function getLeasesByContactCode(contactCode: string) {
   return { ok: true, data: response.data.content }
 }
 
+const createLeaseForNonScoredParkingSpace = async (params: {
+  parkingSpaceId: string
+  contactCode: string
+}): Promise<
+  AdapterResult<
+    unknown,
+    | 'internal-credit-check-failed'
+    | 'external-credit-check-failed'
+    | 'invalid-address'
+    | 'already-has-lease'
+    | 'unknown'
+  >
+> => {
+  try {
+    const response = await getFromCore<any>({
+      method: 'post',
+      url: `${coreBaseUrl}/parking-spaces/${params.parkingSpaceId}/leases`,
+      data: { contactCode: params.contactCode },
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === HttpStatusCode.BadRequest) {
+      const errorCode = err.response.data?.content?.errorCode || err.response.data?.error
+
+      // Map error codes from core service
+      if (errorCode === 'internal-credit-check-failed') {
+        return { ok: false, err: 'internal-credit-check-failed', statusCode: 400 }
+      }
+      if (errorCode === 'external-credit-check-failed') {
+        return { ok: false, err: 'external-credit-check-failed', statusCode: 400 }
+      }
+      if (errorCode === 'invalid-address') {
+        return { ok: false, err: 'invalid-address', statusCode: 400 }
+      }
+      if (errorCode === 'already-has-lease') {
+        return { ok: false, err: 'already-has-lease', statusCode: 400 }
+      }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   addComment,
   removeComment,
@@ -693,4 +737,5 @@ export {
   getVacantParkingSpaces,
   getInvoicesByContactCode,
   getLeasesByContactCode,
+  createLeaseForNonScoredParkingSpace,
 }
