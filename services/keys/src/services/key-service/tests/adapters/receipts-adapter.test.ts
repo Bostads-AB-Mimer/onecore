@@ -48,6 +48,7 @@ describe('receipts-adapter', () => {
 
         const receiptData = {
           keyLoanId: keyLoan.id,
+          loanType: 'REGULAR' as const,
           receiptType: 'LOAN' as const,
           type: 'DIGITAL' as const,
           fileId: undefined,
@@ -236,6 +237,7 @@ describe('receipts-adapter', () => {
 
         const isActivated = await receiptsAdapter.isKeyLoanActivated(
           keyLoan.id,
+          'REGULAR',
           ctx.db
         )
         expect(isActivated).toBe(true)
@@ -252,7 +254,7 @@ describe('receipts-adapter', () => {
 
         expect(keyLoan.pickedUpAt).toBeNull()
 
-        await receiptsAdapter.activateKeyLoan(keyLoan.id, ctx.db)
+        await receiptsAdapter.activateKeyLoan(keyLoan.id, 'REGULAR', ctx.db)
 
         const updated = await keyLoansAdapter.getKeyLoanById(keyLoan.id, ctx.db)
         expect(updated?.pickedUpAt).not.toBeNull()
