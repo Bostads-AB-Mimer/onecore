@@ -5,13 +5,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Calendar, User, FileText, AlertCircle, Undo2 } from 'lucide-react'
-import type { KeyLoanMaintenanceKeysWithDetails } from '@/services/types'
+import type { KeyLoanWithDetails } from '@/services/types'
 import { MaintenanceKeysTable } from './MaintenanceKeysTable'
 import { MaintenanceReceiptActions } from './MaintenanceReceiptActions'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
 
 type Props = {
-  loan: KeyLoanMaintenanceKeysWithDetails
+  loan: KeyLoanWithDetails
   keySystemMap: Record<string, string>
   onRefresh?: () => void
 }
