@@ -8,7 +8,11 @@ import { KeyBundle, Key } from '@/services/types'
 import { KeyAutocomplete } from '@/components/maintenance/KeyAutocomplete'
 import { keyService } from '@/services/api/keyService'
 
-type KeyBundleFormData = Omit<KeyBundle, 'id'> & { keys: string[] }
+type KeyBundleFormData = {
+  name: string
+  description: string | null
+  keys: string[]
+}
 
 interface AddKeyBundleFormProps {
   onSave: (keyBundle: KeyBundleFormData) => void | Promise<void>
