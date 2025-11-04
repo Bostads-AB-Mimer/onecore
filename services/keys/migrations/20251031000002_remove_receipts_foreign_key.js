@@ -7,12 +7,20 @@
  * @returns { Promise<void> }
  */
 exports.up = async function up(knex) {
-  // Drop the foreign key constraint
+  // Drop the foreign key constraint if it exists
   // Note: Knex doesn't have a direct method to drop constraints by name in MSSQL,
-  // so we need to use raw SQL
+  // so we need to use raw SQL with conditional check
   await knex.raw(`
-    ALTER TABLE receipts
-    DROP CONSTRAINT receipts_keyloanid_foreign
+    IF EXISTS (
+      SELECT 1
+      FROM sys.foreign_keys
+      WHERE name = 'receipts_keyloanid_foreign'
+      AND parent_object_id = OBJECT_ID('receipts')
+    )
+    BEGIN
+      ALTER TABLE receipts
+      DROP CONSTRAINT receipts_keyloanid_foreign
+    END
   `)
 }
 
