@@ -7,7 +7,6 @@ import { routes as receiptRoutes } from './routes/receipts'
 import { routes as keyNoteRoutes } from './routes/key-notes'
 import { routes as keyEventRoutes } from './routes/key-events'
 import { routes as keyBundleRoutes } from './routes/key-bundles'
-import { routes as keyLoanMaintenanceKeysRoutes } from './routes/key-loan-maintenance-keys'
 import { routes as signatureRoutes } from './routes/signatures'
 
 export const routes = (router: KoaRouter) => {
@@ -19,6 +18,5 @@ export const routes = (router: KoaRouter) => {
   keyNoteRoutes(router)
   keyEventRoutes(router)
   keyBundleRoutes(router)
-  keyLoanMaintenanceKeysRoutes(router)
   signatureRoutes(router)
 }
