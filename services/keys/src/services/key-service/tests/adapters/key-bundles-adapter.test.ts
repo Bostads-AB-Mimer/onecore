@@ -1,6 +1,6 @@
 import * as keyBundlesAdapter from '../../adapters/key-bundles-adapter'
 import * as keysAdapter from '../../adapters/keys-adapter'
-import * as maintenanceLoansAdapter from '../../adapters/key-loan-maintenance-keys-adapter'
+import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
 import * as factory from '../factories'
 import { withContext } from '../testUtils'
 
@@ -200,10 +200,10 @@ describe('key-bundles-adapter', () => {
         )
 
         // Create maintenance loan for key2
-        await maintenanceLoansAdapter.createKeyLoanMaintenanceKey(
+        await keyLoansAdapter.createKeyLoan(
           factory.keyLoanMaintenanceKey.build({
             keys: JSON.stringify([key2.id]),
-            company: 'ABC Company',
+            contact: 'ABC Company',
             contactPerson: 'John Doe',
             pickedUpAt: new Date(),
             returnedAt: null, // Active loan
@@ -223,16 +223,17 @@ describe('key-bundles-adapter', () => {
         // Find key2 in results
         const key2Result = result.keys.find((k) => k.id === key2.id)
         expect(key2Result).toBeDefined()
-        expect(key2Result?.maintenanceLoan).toBeDefined()
-        expect(key2Result?.maintenanceLoan?.company).toBe('ABC Company')
-        expect(key2Result?.maintenanceLoan?.contactPerson).toBe('John Doe')
+        expect(key2Result?.loan).toBeDefined()
+        expect(key2Result?.loan?.loanType).toBe('MAINTENANCE')
+        expect(key2Result?.loan?.contact).toBe('ABC Company')
+        expect(key2Result?.loan?.contactPerson).toBe('John Doe')
 
         // Check key1 and key3 have no loan
         const key1Result = result.keys.find((k) => k.id === key1.id)
-        expect(key1Result?.maintenanceLoan).toBeFalsy()
+        expect(key1Result?.loan).toBeFalsy()
 
         const key3Result = result.keys.find((k) => k.id === key3.id)
-        expect(key3Result?.maintenanceLoan).toBeFalsy()
+        expect(key3Result?.loan).toBeFalsy()
       }))
   })
 })
