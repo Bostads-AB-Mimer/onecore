@@ -3039,6 +3039,78 @@ export interface paths {
       }
     }
   }
+  '/key-loans/by-contact/{contact}/with-keys': {
+    /**
+     * Get key loans by contact with keys
+     * @description Returns all key loans for a specific contact with full key details, optionally filtered by loan type and return status
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type (TENANT or MAINTENANCE) */
+          loanType?: 'TENANT' | 'MAINTENANCE'
+          /** @description Filter by return status (true = returned, false = not returned) */
+          returned?: boolean
+        }
+        path: {
+          /** @description The contact identifier to search for */
+          contact: string
+        }
+      }
+      responses: {
+        /** @description Array of key loans with full key details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyLoanWithDetails'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/by-bundle/{bundleId}/with-keys': {
+    /**
+     * Get key loans by bundle with keys
+     * @description Returns all key loans for a specific bundle with full key details, optionally filtered by loan type and return status
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type (TENANT or MAINTENANCE) */
+          loanType?: 'TENANT' | 'MAINTENANCE'
+          /** @description Filter by return status (true = returned, false = not returned) */
+          returned?: boolean
+        }
+        path: {
+          /** @description The bundle ID to search for */
+          bundleId: string
+        }
+      }
+      responses: {
+        /** @description Array of key loans with full key details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyLoanWithDetails'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/key-loans/{id}': {
     /**
      * Get key loan by ID

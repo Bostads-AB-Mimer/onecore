@@ -3,9 +3,8 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "/key-bundles": {
+  '/key-bundles': {
     /**
      * List all key bundles
      * @description Fetches a list of all key bundles ordered by name.
@@ -15,22 +14,22 @@ export interface paths {
         /** @description A list of key bundles. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyBundle"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyBundle'][]
+            }
+          }
+        }
         /** @description An error occurred while listing key bundles. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Create a new key bundle
      * @description Create a new key bundle record.
@@ -38,30 +37,30 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyBundleRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyBundleRequest']
+        }
+      }
       responses: {
         /** @description Key bundle created successfully. */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyBundle"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyBundle']
+            }
+          }
+        }
         /** @description Invalid request body */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while creating the key bundle. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-bundles/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles/search': {
     /**
      * Search key bundles
      * @description Search key bundles with flexible filtering.
@@ -72,32 +71,32 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          q?: string;
+          q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to name and description. */
-          fields?: string;
-        };
-      };
+          fields?: string
+        }
+      }
       responses: {
         /** @description Search results */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyBundle"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyBundle'][]
+            }
+          }
+        }
         /** @description Invalid search parameters */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-bundles/by-key/{keyId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles/by-key/{keyId}': {
     /**
      * Get all bundles containing a specific key
      * @description Returns all bundle records containing the specified key ID, ordered by name
@@ -106,26 +105,26 @@ export interface paths {
       parameters: {
         path: {
           /** @description The key ID to search for */
-          keyId: string;
-        };
-      };
+          keyId: string
+        }
+      }
       responses: {
         /** @description Array of bundles containing this key */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyBundle"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyBundle'][]
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-bundles/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles/{id}': {
     /**
      * Get key bundle by ID
      * @description Fetch a specific key bundle by its ID.
@@ -134,28 +133,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key bundle to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description A key bundle object. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyBundle"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyBundle']
+            }
+          }
+        }
         /** @description Key bundle not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while fetching the key bundle. */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Delete a key bundle
      * @description Delete a key bundle by ID.
@@ -164,20 +163,20 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key bundle to delete. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key bundle deleted successfully. */
         204: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while deleting the key bundle. */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Update a key bundle
      * @description Partially update an existing key bundle.
@@ -186,39 +185,39 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key bundle to update. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyBundleRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyBundleRequest']
+        }
+      }
       responses: {
         /** @description Key bundle updated successfully. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyBundle"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyBundle']
+            }
+          }
+        }
         /** @description Invalid request body */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key bundle not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while updating the key bundle. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-bundles/{id}/keys-with-loan-status": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles/{id}/keys-with-loan-status': {
     /**
      * Get all keys in a bundle with their maintenance loan status
      * @description Returns all keys that belong to this bundle along with information about
@@ -229,42 +228,42 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key bundle */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Bundle information and keys with loan status */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                bundle?: components["schemas"]["KeyBundle"];
-                keys?: (components["schemas"]["Key"] & ({
-                    /** @description ID of active maintenance loan, null if not loaned */
-                    maintenanceLoanId?: string | null;
-                    maintenanceLoanCompany?: string | null;
-                    maintenanceLoanContactPerson?: string | null;
-                    /** Format: date-time */
-                    maintenanceLoanPickedUpAt?: string | null;
-                    /** Format: date-time */
-                    maintenanceLoanCreatedAt?: string | null;
-                  }))[];
-              };
-            };
-          };
-        };
+                bundle?: components['schemas']['KeyBundle']
+                keys?: (components['schemas']['Key'] & {
+                  /** @description ID of active maintenance loan, null if not loaned */
+                  maintenanceLoanId?: string | null
+                  maintenanceLoanCompany?: string | null
+                  maintenanceLoanContactPerson?: string | null
+                  /** Format: date-time */
+                  maintenanceLoanPickedUpAt?: string | null
+                  /** Format: date-time */
+                  maintenanceLoanCreatedAt?: string | null
+                })[]
+              }
+            }
+          }
+        }
         /** @description Key bundle not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-bundles/by-contact/{contactCode}/with-loaned-keys": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles/by-contact/{contactCode}/with-loaned-keys': {
     /**
      * Get key bundles with keys loaned to a contact
      * @description Fetches all key bundles that have keys currently loaned to a specific contact.
@@ -273,26 +272,26 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code (F-number) to find bundles for */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description A list of bundles with loaned keys info */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["BundleWithLoanedKeysInfo"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['BundleWithLoanedKeysInfo'][]
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-events": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-events': {
     /**
      * Get all key events
      * @description Returns all key events ordered by creation date.
@@ -302,17 +301,17 @@ export interface paths {
         /** @description List of key events. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyEvent"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyEvent'][]
+            }
+          }
+        }
         /** @description An error occurred while fetching key events. */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Create a key event
      * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
@@ -320,34 +319,34 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyEventRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyEventRequest']
+        }
+      }
       responses: {
         /** @description Key event created successfully. */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyEvent"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Conflict - one or more keys have incomplete events. */
         409: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while creating the key event. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-events/by-key/{keyId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-events/by-key/{keyId}': {
     /**
      * Get all key events for a specific key
      * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
@@ -356,30 +355,30 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Optional limit on number of results (e.g., 1 for latest event only). */
-          limit?: number;
-        };
+          limit?: number
+        }
         path: {
           /** @description The key ID to filter events by. */
-          keyId: string;
-        };
-      };
+          keyId: string
+        }
+      }
       responses: {
         /** @description List of key events for the key. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyEvent"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyEvent'][]
+            }
+          }
+        }
         /** @description An error occurred while fetching key events. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-events/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-events/{id}': {
     /**
      * Get key event by ID
      * @description Fetch a specific key event by its ID.
@@ -388,28 +387,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key event to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description A key event object. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyEvent"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
         /** @description Key event not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while fetching the key event. */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Update a key event
      * @description Update an existing key event.
@@ -418,355 +417,39 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key event to update. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyEventRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyEventRequest']
+        }
+      }
       responses: {
         /** @description Key event updated successfully. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyEvent"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key event not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while updating the key event. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys": {
-    /**
-     * List all maintenance key loans
-     * @description Fetches a list of all maintenance key loans ordered by creation date.
-     */
-    get: {
-      responses: {
-        /** @description A list of maintenance key loans. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description An error occurred while listing maintenance key loans. */
-        500: {
-          content: {
-            "application/json": {
-              /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new maintenance key loan
-     * @description Create a new maintenance key loan record.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
-        };
-      };
-      responses: {
-        /** @description Maintenance key loan created successfully. */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: never;
-        };
-        /** @description An error occurred while creating the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/search": {
-    /**
-     * Search maintenance key loans
-     * @description Search maintenance key loans with flexible filtering.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any field parameter for filtering
-     */
-    get: {
-      parameters: {
-        query?: {
-          q?: string;
-          /** @description Comma-separated list of fields for OR search. Defaults to company and contactPerson. */
-          fields?: string;
-        };
-      };
-      responses: {
-        /** @description Search results */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description Invalid search parameters */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-key/{keyId}": {
-    /**
-     * Get all maintenance key loans for a specific key
-     * @description Returns all maintenance key loan records for the specified key ID
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The key ID to search for */
-          keyId: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans containing this key */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-company/{company}": {
-    /**
-     * Get all maintenance key loans for a specific company
-     * @description Returns all maintenance key loan records for the specified company
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The company name to filter by */
-          company: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans for this company */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-company/{company}/with-keys": {
-    /**
-     * Get maintenance key loans for a company with full key details
-     * @description Returns all maintenance key loan records for the specified company with joined key data.
-     * Supports filtering by returned status via query parameter.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /**
-           * @description Filter by return status:
-           * - true: Only returned loans (returnedAt IS NOT NULL)
-           * - false: Only active loans (returnedAt IS NULL)
-           * - omitted: All loans (no filter)
-           */
-          returned?: boolean;
-        };
-        path: {
-          /** @description The company name to filter by */
-          company: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans with full key details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-bundle/{bundleId}/with-keys": {
-    /**
-     * Get maintenance key loans for a key bundle with full key details
-     * @description Returns all maintenance key loan records containing keys from the specified bundle.
-     * Supports filtering by returned status via query parameter.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /**
-           * @description Filter by return status:
-           * - true: Only returned loans (returnedAt IS NOT NULL)
-           * - false: Only active loans (returnedAt IS NULL)
-           * - omitted: All loans (no filter)
-           */
-          returned?: boolean;
-        };
-        path: {
-          /** @description The key bundle ID to filter by */
-          bundleId: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans with full key details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/{id}": {
-    /**
-     * Get maintenance key loan by ID
-     * @description Fetch a specific maintenance key loan by its ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the maintenance key loan to retrieve. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description A maintenance key loan object. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
-            };
-          };
-        };
-        /** @description Maintenance key loan not found. */
-        404: {
-          content: never;
-        };
-        /** @description An error occurred while fetching the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a maintenance key loan
-     * @description Delete a maintenance key loan by ID.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the maintenance key loan to delete. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Maintenance key loan deleted successfully. */
-        204: {
-          content: never;
-        };
-        /** @description An error occurred while deleting the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a maintenance key loan
-     * @description Partially update an existing maintenance key loan.
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the maintenance key loan to update. */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
-        };
-      };
-      responses: {
-        /** @description Maintenance key loan updated successfully. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: never;
-        };
-        /** @description Maintenance key loan not found. */
-        404: {
-          content: never;
-        };
-        /** @description An error occurred while updating the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loans": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-loans': {
     /**
      * List all key loans
      * @description Fetches a list of all key loans ordered by creation date.
@@ -776,60 +459,60 @@ export interface paths {
         /** @description A list of key loans. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                  /** @description The unique ID of the key loan. */
-                  id?: string;
-                  /** @description JSON string array of key IDs. */
-                  keys?: string;
-                  /** @description Contact information. */
-                  contact?: string;
-                  /** @description Second contact information. */
-                  contact2?: string;
-                  /**
-                   * Format: date-time
-                   * @description When keys were returned.
-                   */
-                  returnedAt?: string;
-                  /**
-                   * Format: date-time
-                   * @description When keys become available for next tenant if early return.
-                   */
-                  availableToNextTenantFrom?: string;
-                  /**
-                   * Format: date-time
-                   * @description When keys were picked up.
-                   */
-                  pickedUpAt?: string;
-                  /**
-                   * Format: date-time
-                   * @description When the record was created.
-                   */
-                  createdAt?: string;
-                  /**
-                   * Format: date-time
-                   * @description When the record was last updated.
-                   */
-                  updatedAt?: string;
-                  /** @description Who created this record. */
-                  createdBy?: string;
-                  /** @description Who last updated this record. */
-                  updatedBy?: string;
-                }[];
-            };
-          };
-        };
+                /** @description The unique ID of the key loan. */
+                id?: string
+                /** @description JSON string array of key IDs. */
+                keys?: string
+                /** @description Contact information. */
+                contact?: string
+                /** @description Second contact information. */
+                contact2?: string
+                /**
+                 * Format: date-time
+                 * @description When keys were returned.
+                 */
+                returnedAt?: string
+                /**
+                 * Format: date-time
+                 * @description When keys become available for next tenant if early return.
+                 */
+                availableToNextTenantFrom?: string
+                /**
+                 * Format: date-time
+                 * @description When keys were picked up.
+                 */
+                pickedUpAt?: string
+                /**
+                 * Format: date-time
+                 * @description When the record was created.
+                 */
+                createdAt?: string
+                /**
+                 * Format: date-time
+                 * @description When the record was last updated.
+                 */
+                updatedAt?: string
+                /** @description Who created this record. */
+                createdBy?: string
+                /** @description Who last updated this record. */
+                updatedBy?: string
+              }[]
+            }
+          }
+        }
         /** @description An error occurred while listing key loans. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Create a new key loan
      * @description Create a new key loan record.
@@ -837,32 +520,32 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyLoanRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyLoanRequest']
+        }
+      }
       responses: {
         /** @description Key loan created successfully. */
         201: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The created key loan object. */
-              content?: Record<string, never>;
-            };
-          };
-        };
+              content?: Record<string, never>
+            }
+          }
+        }
         /** @description An error occurred while creating the key loan. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/key-loans/search": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/search': {
     /**
      * Search key loans
      * @description Search key loans with flexible filtering.
@@ -874,41 +557,41 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          q?: string;
+          q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to contact and contact2. */
-          fields?: string;
-          id?: string;
-          keys?: string;
-          contact?: string;
-          contact2?: string;
-          returnedAt?: string;
-          availableToNextTenantFrom?: string;
-          pickedUpAt?: string;
-          createdAt?: string;
-          updatedAt?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          keys?: string
+          contact?: string
+          contact2?: string
+          returnedAt?: string
+          availableToNextTenantFrom?: string
+          pickedUpAt?: string
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved search results */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan'][]
+            }
+          }
+        }
         /** @description Bad request */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loans/by-key/{keyId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-loans/by-key/{keyId}': {
     /**
      * Get all loans for a specific key
      * @description Returns all loan records for the specified key ID, ordered by creation date DESC
@@ -917,31 +600,31 @@ export interface paths {
       parameters: {
         path: {
           /** @description The key ID to fetch loans for */
-          keyId: string;
-        };
-      };
+          keyId: string
+        }
+      }
       responses: {
         /** @description Array of loans for this key */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoan"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoan'][]
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/key-loans/by-rental-object/{rentalObjectCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/key-loans/by-rental-object/{rentalObjectCode}': {
     /**
      * Get key loans with enriched keys and receipts
      * @description Returns all key loans for a rental object with their keys and receipts
@@ -952,30 +635,110 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Optional contact code to filter by (checks contact or contact2). */
-          contact?: string;
-        };
+          contact?: string
+        }
         path: {
           /** @description The rental object code to filter key loans by. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description List of key loans with enriched keys and receipts data. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanWithDetails"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyLoanWithDetails'][]
+            }
+          }
+        }
         /** @description An error occurred while fetching key loans. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loans/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-loans/by-contact/{contact}/with-keys': {
+    /**
+     * Get key loans for a contact with full key details
+     * @description Returns all key loan records for the specified contact with joined key data.
+     * Supports filtering by loanType and returned status via query parameters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type */
+          loanType?: 'TENANT' | 'MAINTENANCE'
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean
+        }
+        path: {
+          /** @description The contact code to filter by (company name or contact code) */
+          contact: string
+        }
+      }
+      responses: {
+        /** @description Array of loans with full key details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyLoanWithDetails'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-loans/by-bundle/{bundleId}/with-keys': {
+    /**
+     * Get key loans for a key bundle with full key details
+     * @description Returns all key loan records containing keys from the specified bundle.
+     * Supports filtering by loanType and returned status via query parameters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type */
+          loanType?: 'TENANT' | 'MAINTENANCE'
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean
+        }
+        path: {
+          /** @description The key bundle ID to filter by */
+          bundleId: string
+        }
+      }
+      responses: {
+        /** @description Array of loans with full key details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyLoanWithDetails'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-loans/{id}': {
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.
@@ -984,76 +747,76 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key loan to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description A key loan object. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** @description The unique ID of the key loan. */
-                id?: string;
+                id?: string
                 /** @description JSON string array of key IDs. */
-                keys?: string;
+                keys?: string
                 /** @description Contact information. */
-                contact?: string;
+                contact?: string
                 /** @description Second contact information. */
-                contact2?: string;
+                contact2?: string
                 /**
                  * Format: date-time
                  * @description When keys were returned.
                  */
-                returnedAt?: string;
+                returnedAt?: string
                 /**
                  * Format: date-time
                  * @description When keys become available for next tenant.
                  */
-                availableToNextTenantFrom?: string;
+                availableToNextTenantFrom?: string
                 /**
                  * Format: date-time
                  * @description When keys were picked up.
                  */
-                pickedUpAt?: string;
+                pickedUpAt?: string
                 /**
                  * Format: date-time
                  * @description When the record was created.
                  */
-                createdAt?: string;
+                createdAt?: string
                 /**
                  * Format: date-time
                  * @description When the record was last updated.
                  */
-                updatedAt?: string;
+                updatedAt?: string
                 /** @description Who created this record. */
-                createdBy?: string;
+                createdBy?: string
                 /** @description Who last updated this record. */
-                updatedBy?: string;
-              };
-            };
-          };
-        };
+                updatedBy?: string
+              }
+            }
+          }
+        }
         /** @description Key loan not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Key loan with provided id not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while fetching the key loan. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Delete a key loan
      * @description Delete an existing key loan by ID.
@@ -1062,36 +825,36 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key loan to delete. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key loan deleted successfully. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Key loan not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Key loan with id 12345678-1234-1234-1234-123456789abc not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while deleting the key loan. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Update a key loan
      * @description Partially update an existing key loan.
@@ -1100,46 +863,46 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key loan to update. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyLoanRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyLoanRequest']
+        }
+      }
       responses: {
         /** @description Key loan updated successfully. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description The updated key loan object. */
-              content?: Record<string, never>;
-            };
-          };
-        };
+              content?: Record<string, never>
+            }
+          }
+        }
         /** @description Key loan not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Key loan with id 12345678-1234-1234-1234-123456789abc not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while updating the key loan. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/key-notes/by-rental-object/{rentalObjectCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/key-notes/by-rental-object/{rentalObjectCode}': {
     /**
      * Get all key notes by rental object code
      * @description Returns all key notes associated with a specific rental object code.
@@ -1148,26 +911,26 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental object code to filter key notes by. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description List of key notes for the rental object code. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote'][]
+            }
+          }
+        }
         /** @description An error occurred while fetching key notes. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-notes/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-notes/{id}': {
     /**
      * Get key note by ID
      * @description Fetch a specific key note by its ID.
@@ -1176,28 +939,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key note to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description A key note object. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Key note not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while fetching the key note. */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Update a key note
      * @description Update the description of an existing key note.
@@ -1206,39 +969,39 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key note to update. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyNoteRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyNoteRequest']
+        }
+      }
       responses: {
         /** @description Key note updated successfully. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key note not found. */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while updating the key note. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-notes": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-notes': {
     /**
      * Create a key note
      * @description Create a new key note record.
@@ -1246,30 +1009,30 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyNoteRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyNoteRequest']
+        }
+      }
       responses: {
         /** @description Key note created successfully. */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyNote"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description An error occurred while creating the key note. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-systems': {
     /**
      * List all key systems with pagination
      * @description Retrieve a paginated list of all key systems
@@ -1278,24 +1041,24 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
-      };
+          limit?: number
+        }
+      }
       responses: {
         /** @description Successfully retrieved key systems */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeySystemsResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Create a new key system
      * @description Create a new key system
@@ -1303,35 +1066,35 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeySystemRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeySystemRequest']
+        }
+      }
       responses: {
         /** @description Key system created successfully */
         201: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description Created key system details */
-              content?: Record<string, never>;
-            };
-          };
-        };
+              content?: Record<string, never>
+            }
+          }
+        }
         /** @description Invalid type */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key system with this system code already exists */
         409: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-systems/search': {
     /**
      * Search key systems
      * @description Search key systems with flexible filtering.
@@ -1348,48 +1111,48 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
+          limit?: number
           /** @description Search query for OR search across fields specified in 'fields' parameter */
-          q?: string;
+          q?: string
           /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
-          fields?: string;
-          id?: string;
-          systemCode?: string;
-          name?: string;
-          manufacturer?: string;
-          managingSupplier?: string;
-          type?: string;
-          propertyIds?: string;
-          installationDate?: string;
-          isActive?: string;
-          description?: string;
-          createdAt?: string;
-          updatedAt?: string;
-          createdBy?: string;
-          updatedBy?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          systemCode?: string
+          name?: string
+          manufacturer?: string
+          managingSupplier?: string
+          type?: string
+          propertyIds?: string
+          installationDate?: string
+          isActive?: string
+          description?: string
+          createdAt?: string
+          updatedAt?: string
+          createdBy?: string
+          updatedBy?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeySystemsResponse']
+          }
+        }
         /** @description Bad request. Invalid parameters or field names */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-systems/{id}': {
     /**
      * Get key system by ID
      * @description Retrieve a specific key system by its ID
@@ -1398,29 +1161,29 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key system */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved key system */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description Key system details */
-              content?: Record<string, never>;
-            };
-          };
-        };
+              content?: Record<string, never>
+            }
+          }
+        }
         /** @description Key system not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Delete a key system
      * @description Delete a key system by ID
@@ -1429,24 +1192,24 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key system to delete */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key system deleted successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key system not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /**
      * Update a key system
      * @description Partially update a key system
@@ -1455,44 +1218,44 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the key system to update */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeySystemRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeySystemRequest']
+        }
+      }
       responses: {
         /** @description Key system updated successfully */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description Updated key system details */
-              content?: Record<string, never>;
-            };
-          };
-        };
+              content?: Record<string, never>
+            }
+          }
+        }
         /** @description Invalid type */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key system not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Key system with this system code already exists */
         409: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/keys": {
+          content: never
+        }
+      }
+    }
+  }
+  '/keys': {
     /**
      * List keys with pagination
      * @description Returns paginated keys ordered by createdAt (desc).
@@ -1501,29 +1264,29 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
-      };
+          limit?: number
+        }
+      }
       responses: {
         /** @description A paginated list of keys. */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeysResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedKeysResponse']
+          }
+        }
         /** @description An error occurred while listing keys. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Create a key
      * @description Create a new key record.
@@ -1531,40 +1294,40 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateKeyRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateKeyRequest']
+        }
+      }
       responses: {
         /** @description Key created successfully. */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid request body */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description An error occurred while creating the key. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/keys/search": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/keys/search': {
     /**
      * Search keys with pagination
      * @description Search keys with flexible filtering and pagination support.
@@ -1584,45 +1347,45 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
+          limit?: number
           /** @description Search query for OR search across fields specified in 'fields' parameter */
-          q?: string;
+          q?: string
           /** @description Comma-separated list of fields for OR search (e.g., "keyName,keyType"). Defaults to keyName. */
-          fields?: string;
-          id?: string;
-          keyName?: string;
-          keySequenceNumber?: string;
-          flexNumber?: string;
-          rentalObjectCode?: string;
-          keyType?: string;
-          keySystemId?: string;
-          createdAt?: string;
-          updatedAt?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          keyName?: string
+          keySequenceNumber?: string
+          flexNumber?: string
+          rentalObjectCode?: string
+          keyType?: string
+          keySystemId?: string
+          createdAt?: string
+          updatedAt?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved search results */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key'][]
+            }
+          }
+        }
         /** @description Bad request. Invalid parameters or field names */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/keys/by-rental-object/{rentalObjectCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/keys/by-rental-object/{rentalObjectCode}': {
     /**
      * Get all keys by rental object code
      * @description Returns all keys associated with a specific rental object code without pagination.
@@ -1631,31 +1394,31 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental object code to filter keys by. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description List of keys for the rental object code. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key'][]
+            }
+          }
+        }
         /** @description An error occurred while fetching keys. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/keys/with-loan-status/{rentalObjectCode}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/keys/with-loan-status/{rentalObjectCode}': {
     /**
      * Get keys with active loan status enriched
      * @description Returns all relevant keys for a rental object with their active loan information
@@ -1669,35 +1432,35 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Include the latest key event for each key in the response. */
-          includeLatestEvent?: boolean;
-        };
+          includeLatestEvent?: boolean
+        }
         path: {
           /** @description The rental object code to filter keys by. */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description List of keys with enriched active loan data. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeyWithLoanStatus"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeyWithLoanStatus'][]
+            }
+          }
+        }
         /** @description An error occurred while fetching keys. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/keys/{id}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/keys/{id}': {
     /**
      * Get key by ID
      * @description Fetch a specific key by its ID.
@@ -1706,38 +1469,38 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key to retrieve. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description A key object. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
         /** @description Key not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Key not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while fetching the key. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Delete a key
      * @description Delete an existing key by ID.
@@ -1746,36 +1509,36 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key to delete. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Key deleted successfully. */
         200: {
           content: {
-            "application/json": Record<string, never>;
-          };
-        };
+            'application/json': Record<string, never>
+          }
+        }
         /** @description Key not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Key not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while deleting the key. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Update a key
      * @description Partially update an existing key.
@@ -1784,54 +1547,54 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique ID of the key to update. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateKeyRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateKeyRequest']
+        }
+      }
       responses: {
         /** @description Key updated successfully. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid request body */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Key not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Key not found */
-              reason?: string;
-            };
-          };
-        };
+              reason?: string
+            }
+          }
+        }
         /** @description An error occurred while updating the key. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/keys/bulk-update-flex": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/keys/bulk-update-flex': {
     /**
      * Bulk update flex number for all keys on a rental object
      * @description Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
@@ -1839,43 +1602,43 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["BulkUpdateFlexRequest"];
-        };
-      };
+          'application/json': components['schemas']['BulkUpdateFlexRequest']
+        }
+      }
       responses: {
         /** @description Flex numbers updated successfully. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** @description Number of keys updated */
-                updatedCount?: number;
-              };
-            };
-          };
-        };
+                updatedCount?: number
+              }
+            }
+          }
+        }
         /** @description Invalid request body. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid request body */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description An error occurred while updating keys. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/logs": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/logs': {
     /**
      * List logs with pagination
      * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
@@ -1884,58 +1647,58 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
-      };
+          limit?: number
+        }
+      }
       responses: {
         /** @description A paginated list of logs */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedLogsResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
     /** Create a log */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateLogRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateLogRequest']
+        }
+      }
       responses: {
         /** @description Created */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
         /** @description Invalid or missing fields */
         400: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/search": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/search': {
     /**
      * Search logs with pagination
      * @description Search logs with flexible filtering and pagination.
@@ -1948,40 +1711,40 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-          q?: string;
+          limit?: number
+          q?: string
           /** @description Comma-separated list of fields for OR search. Defaults to objectId and userName. */
-          fields?: string;
-          id?: string;
-          userName?: string;
-          eventType?: string;
-          eventTime?: string;
-          objectType?: string;
-          objectId?: string;
-          description?: string;
-        };
-      };
+          fields?: string
+          id?: string
+          userName?: string
+          eventType?: string
+          eventTime?: string
+          objectType?: string
+          objectId?: string
+          description?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedLogsResponse']
+          }
+        }
         /** @description Bad request */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/logs/object/{objectId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/logs/object/{objectId}': {
     /**
      * Get all logs for a specific objectId
      * @description Returns all log entries for a given objectId, ordered by most recent first
@@ -1989,60 +1752,60 @@ export interface paths {
     get: {
       parameters: {
         path: {
-          objectId: string;
-        };
-      };
+          objectId: string
+        }
+      }
       responses: {
         /** @description List of logs for the objectId */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/{id}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/{id}': {
     /** Get log by ID */
     get: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Log found */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Log"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
         /** @description Not found */
         404: {
           content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/rental-object/{rentalObjectCode}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/rental-object/{rentalObjectCode}': {
     /**
      * Get all logs for a specific rental object
      * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
@@ -2059,32 +1822,32 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
+          limit?: number
+        }
         path: {
           /** @description The rental object code (e.g., "705-011-03-0102") */
-          rentalObjectCode: string;
-        };
-      };
+          rentalObjectCode: string
+        }
+      }
       responses: {
         /** @description Paginated list of logs for the rental object */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedLogsResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/logs/contact/{contactId}": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/contact/{contactId}': {
     /**
      * Get all logs for a specific contact
      * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
@@ -2101,630 +1864,610 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number (starts from 1) */
-          page?: number;
+          page?: number
           /** @description Number of records per page */
-          limit?: number;
-        };
+          limit?: number
+        }
         path: {
           /** @description The contact code (e.g., "P079586", "F123456") */
-          contactId: string;
-        };
-      };
+          contactId: string
+        }
+      }
       responses: {
         /** @description Paginated list of logs for the contact */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
-          };
-        };
+            'application/json': components['schemas']['PaginatedLogsResponse']
+          }
+        }
         /** @description Server error */
         500: {
           content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts": {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts': {
     /** Create a receipt */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateReceiptRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateReceiptRequest']
+        }
+      }
       responses: {
         /** @description Receipt created */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Receipt"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
         /** @description Receipt already exists for this keyLoanId */
         409: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/{id}': {
     /** Get a receipt by ID */
     get: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Receipt */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Receipt"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
         /** @description Receipt not found */
         404: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /** Delete a receipt by id (and associated file) */
     delete: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Deleted */
         204: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Receipt not found */
         404: {
-          content: never;
-        };
-      };
-    };
+          content: never
+        }
+      }
+    }
     /** Update a receipt (allows marking as signed) */
     patch: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateReceiptRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateReceiptRequest']
+        }
+      }
       responses: {
         /** @description Receipt updated */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Receipt"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
         /** @description Receipt not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/by-key-loan/{keyLoanId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/by-key-loan/{keyLoanId}': {
     /** Get receipt by keyLoanId */
     get: {
       parameters: {
         path: {
-          keyLoanId: string;
-        };
-      };
+          keyLoanId: string
+        }
+      }
       responses: {
         /** @description Receipt */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Receipt not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload": {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/{id}/upload': {
     /** Upload PDF file for a receipt */
     post: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "multipart/form-data": {
+          'multipart/form-data': {
             /** Format: binary */
-            file?: string;
-          };
-        };
-      };
+            file?: string
+          }
+        }
+      }
       responses: {
         /** @description File uploaded successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Invalid file or receipt not found */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Receipt not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description File too large */
         413: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload-base64": {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/{id}/upload-base64': {
     /** Upload PDF file for a receipt (base64 encoded - for Power Automate) */
     post: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UploadBase64Request"];
-        };
-      };
+          'application/json': components['schemas']['UploadBase64Request']
+        }
+      }
       responses: {
         /** @description File uploaded successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Invalid base64 content or receipt not found */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Receipt not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description File too large (max 10MB) */
         413: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}/download": {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/{id}/download': {
     /** Get presigned download URL for receipt PDF */
     get: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Download URL generated */
         200: {
           content: {
-            "application/json": {
-              url?: string;
-              expiresIn?: number;
-            };
-          };
-        };
+            'application/json': {
+              url?: string
+              expiresIn?: number
+            }
+          }
+        }
         /** @description Receipt or file not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/signatures/send": {
+          content: never
+        }
+      }
+    }
+  }
+  '/signatures/send': {
     /** Send a document for digital signature via SimpleSign */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["SendSignatureRequest"];
-        };
-      };
+          'application/json': components['schemas']['SendSignatureRequest']
+        }
+      }
       responses: {
         /** @description Signature request sent successfully */
         201: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Signature"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Signature']
+            }
+          }
+        }
         /** @description Resource not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/signatures/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/signatures/{id}': {
     /** Get a signature by ID */
     get: {
       parameters: {
         path: {
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Signature details */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Signature"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Signature']
+            }
+          }
+        }
         /** @description Signature not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/signatures/resource/{resourceType}/{resourceId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/signatures/resource/{resourceType}/{resourceId}': {
     /** Get all signatures for a resource */
     get: {
       parameters: {
         path: {
-          resourceType: string;
-          resourceId: string;
-        };
-      };
+          resourceType: string
+          resourceId: string
+        }
+      }
       responses: {
         /** @description List of signatures */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Signature"][];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/webhooks/simplesign": {
+            'application/json': {
+              content?: components['schemas']['Signature'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/webhooks/simplesign': {
     /** Webhook endpoint for SimpleSign status updates */
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["SimpleSignWebhookPayload"];
-        };
-      };
+          'application/json': components['schemas']['SimpleSignWebhookPayload']
+        }
+      }
       responses: {
         /** @description Webhook processed successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Signature not found */
         404: {
-          content: never;
-        };
-      };
-    };
-  };
+          content: never
+        }
+      }
+    }
+  }
 }
 
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
-    CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
-    UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
+    CreateKeyRequest: components['schemas']['CreateKeyRequest']
+    UpdateKeyRequest: components['schemas']['UpdateKeyRequest']
     BulkUpdateFlexRequest: {
-      rentalObjectCode: string;
-      flexNumber: number;
-    };
-    Key: components["schemas"]["Key"];
+      rentalObjectCode: string
+      flexNumber: number
+    }
+    Key: components['schemas']['Key']
     KeyWithLoanStatus: {
       /** Format: uuid */
-      id: string;
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number | null;
-      rentalObjectCode?: string;
+      id: string
+      keyName: string
+      keySequenceNumber?: number
+      flexNumber?: number | null
+      rentalObjectCode?: string
       /** @enum {string} */
-      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      keyType:
+        | 'HN'
+        | 'FS'
+        | 'MV'
+        | 'LGH'
+        | 'PB'
+        | 'GAR'
+        | 'LOK'
+        | 'HL'
+        | 'FÖR'
+        | 'SOP'
+        | 'ÖVR'
       /** Format: uuid */
-      keySystemId?: string | null;
+      keySystemId?: string | null
       /** @default false */
-      disposed?: boolean;
+      disposed?: boolean
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
+      updatedAt: string
       /** Format: uuid */
-      activeLoanId: string | null;
-      activeLoanContact: string | null;
-      activeLoanContact2: string | null;
+      activeLoanId: string | null
+      activeLoanContact: string | null
+      activeLoanContact2: string | null
       /** Format: date-time */
-      activeLoanPickedUpAt: string | null;
+      activeLoanPickedUpAt: string | null
       /** Format: date-time */
-      activeLoanAvailableFrom: string | null;
+      activeLoanAvailableFrom: string | null
       /** Format: date-time */
-      prevLoanAvailableFrom: string | null;
-      prevLoanContact: string | null;
-      prevLoanContact2: string | null;
-      latestEvent?: ({
+      prevLoanAvailableFrom: string | null
+      prevLoanContact: string | null
+      prevLoanContact2: string | null
+      latestEvent?: {
         /** Format: uuid */
-        id: string;
-        keys: string;
+        id: string
+        keys: string
         /** @enum {string} */
-        type: "FLEX" | "ORDER" | "LOST";
+        type: 'FLEX' | 'ORDER' | 'LOST'
         /** @enum {string} */
-        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
         /** Format: uuid */
-        workOrderId?: string | null;
+        workOrderId?: string | null
         /** Format: date-time */
-        createdAt: string;
+        createdAt: string
         /** Format: date-time */
-        updatedAt: string;
-      }) | null;
-    };
+        updatedAt: string
+      } | null
+    }
     PaginationMeta: {
-      totalRecords: number;
-      page: number;
-      limit: number;
-      count: number;
-    };
+      totalRecords: number
+      page: number
+      limit: number
+      count: number
+    }
     PaginationLinks: {
-      href: string;
+      href: string
       /** @enum {string} */
-      rel: "self" | "first" | "last" | "prev" | "next";
-    };
+      rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+    }
     PaginatedKeysResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number | null;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
+      content: {
+        /** Format: uuid */
+        id: string
+        keyName: string
+        keySequenceNumber?: number
+        flexNumber?: number | null
+        rentalObjectCode?: string
+        /** @enum {string} */
+        keyType:
+          | 'HN'
+          | 'FS'
+          | 'MV'
+          | 'LGH'
+          | 'PB'
+          | 'GAR'
+          | 'LOK'
+          | 'HL'
+          | 'FÖR'
+          | 'SOP'
+          | 'ÖVR'
+        /** Format: uuid */
+        keySystemId?: string | null
+        /** @default false */
+        disposed?: boolean
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
       _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
-    CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
-    UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
-    KeySystem: components["schemas"]["KeySystem"];
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+      }
+      _links: {
+        href: string
+        /** @enum {string} */
+        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+      }[]
+    }
+    CreateKeySystemRequest: components['schemas']['CreateKeySystemRequest']
+    UpdateKeySystemRequest: components['schemas']['UpdateKeySystemRequest']
+    KeySystem: components['schemas']['KeySystem']
     PaginatedKeySystemsResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          systemCode: string;
-          name: string;
-          manufacturer: string;
-          managingSupplier?: string | null;
-          /** @enum {string} */
-          type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-          propertyIds?: string;
-          /** Format: date-time */
-          installationDate?: string | null;
-          isActive?: boolean;
-          description?: string | null;
-          schemaFileId?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-          createdBy?: string | null;
-          updatedBy?: string | null;
-        })[];
+      content: {
+        /** Format: uuid */
+        id: string
+        systemCode: string
+        name: string
+        manufacturer: string
+        managingSupplier?: string | null
+        /** @enum {string} */
+        type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+        propertyIds?: string
+        /** Format: date-time */
+        installationDate?: string | null
+        isActive?: boolean
+        description?: string | null
+        schemaFileId?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+        createdBy?: string | null
+        updatedBy?: string | null
+      }[]
       _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
-    CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
-    UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
-    KeyLoan: components["schemas"]["KeyLoan"];
-    CreateLogRequest: components["schemas"]["CreateLogRequest"];
-    Log: components["schemas"]["Log"];
-    PaginatedLogsResponse: components["schemas"]["PaginatedLogsResponse"];
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+      }
+      _links: {
+        href: string
+        /** @enum {string} */
+        rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+      }[]
+    }
+    CreateKeyLoanRequest: components['schemas']['CreateKeyLoanRequest']
+    UpdateKeyLoanRequest: components['schemas']['UpdateKeyLoanRequest']
+    KeyLoan: components['schemas']['KeyLoan']
+    CreateLogRequest: components['schemas']['CreateLogRequest']
+    Log: components['schemas']['Log']
+    PaginatedLogsResponse: components['schemas']['PaginatedLogsResponse']
     CreateReceiptRequest: {
       /** Format: uuid */
-      keyLoanId: string;
-      /**
-       * @default REGULAR
-       * @enum {string}
-       */
-      loanType?: "REGULAR" | "MAINTENANCE";
+      keyLoanId: string
       /** @enum {string} */
-      receiptType: "LOAN" | "RETURN";
+      receiptType: 'LOAN' | 'RETURN'
       /** @enum {string} */
-      type?: "DIGITAL" | "PHYSICAL";
-      fileId?: string;
-    };
+      type?: 'DIGITAL' | 'PHYSICAL'
+      fileId?: string
+    }
     UpdateReceiptRequest: {
-      fileId?: string;
-    };
+      fileId?: string
+    }
     UploadBase64Request: {
-      fileContent: string;
-      fileName?: string;
+      fileContent: string
+      fileName?: string
       metadata?: {
-        [key: string]: string;
-      };
-    };
+        [key: string]: string
+      }
+    }
     ErrorResponse: {
-      error?: string;
-      reason?: string;
-    };
+      error?: string
+      reason?: string
+    }
     NotFoundResponse: {
-      reason: string;
-    };
+      reason: string
+    }
     BadRequestResponse: {
-      reason: string;
-    };
+      reason: string
+    }
     Receipt: {
       /** Format: uuid */
-      id: string;
+      id: string
       /** Format: uuid */
-      keyLoanId: string;
+      keyLoanId: string
       /** @enum {string} */
-      loanType: "REGULAR" | "MAINTENANCE";
+      receiptType: 'LOAN' | 'RETURN'
       /** @enum {string} */
-      receiptType: "LOAN" | "RETURN";
-      /** @enum {string} */
-      type: "DIGITAL" | "PHYSICAL";
-      fileId?: string | null;
+      type: 'DIGITAL' | 'PHYSICAL'
+      fileId?: string | null
       /** Format: date-time */
-      createdAt: string;
+      createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-    };
-    CreateKeyNoteRequest: components["schemas"]["CreateKeyNoteRequest"];
-    UpdateKeyNoteRequest: components["schemas"]["UpdateKeyNoteRequest"];
-    KeyNote: components["schemas"]["KeyNote"];
-    CreateKeyEventRequest: components["schemas"]["CreateKeyEventRequest"];
-    UpdateKeyEventRequest: components["schemas"]["UpdateKeyEventRequest"];
-    KeyEvent: components["schemas"]["KeyEvent"];
-    CreateKeyBundleRequest: components["schemas"]["CreateKeyBundleRequest"];
-    UpdateKeyBundleRequest: components["schemas"]["UpdateKeyBundleRequest"];
-    KeyBundle: components["schemas"]["KeyBundle"];
+      updatedAt: string
+    }
+    CreateKeyNoteRequest: components['schemas']['CreateKeyNoteRequest']
+    UpdateKeyNoteRequest: components['schemas']['UpdateKeyNoteRequest']
+    KeyNote: components['schemas']['KeyNote']
+    CreateKeyEventRequest: components['schemas']['CreateKeyEventRequest']
+    UpdateKeyEventRequest: components['schemas']['UpdateKeyEventRequest']
+    KeyEvent: components['schemas']['KeyEvent']
+    CreateKeyBundleRequest: components['schemas']['CreateKeyBundleRequest']
+    UpdateKeyBundleRequest: components['schemas']['UpdateKeyBundleRequest']
+    KeyBundle: components['schemas']['KeyBundle']
     BundleWithLoanedKeysInfo: {
       /** Format: uuid */
-      id: string;
-      name: string;
-      description: string | null;
-      loanedKeyCount: number;
-      totalKeyCount: number;
-    };
-    CreateKeyLoanMaintenanceKeysRequest: components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
-    UpdateKeyLoanMaintenanceKeysRequest: components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
-    KeyLoanMaintenanceKeys: components["schemas"]["KeyLoanMaintenanceKeys"];
-    KeyLoanMaintenanceKeysWithDetails: {
-      /** Format: uuid */
-      id: string;
-      keys: string;
-      company?: string | null;
-      contactPerson?: string | null;
-      /** Format: date-time */
-      returnedAt?: string | null;
-      /** Format: date-time */
-      pickedUpAt?: string | null;
-      description?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      keysArray: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number | null;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
-    };
+      id: string
+      name: string
+      description: string | null
+      loanedKeyCount: number
+      totalKeyCount: number
+    }
     Signature: {
       /** Format: uuid */
-      id: string;
+      id: string
       /** @enum {string} */
-      resourceType: "receipt";
+      resourceType: 'receipt'
       /** Format: uuid */
-      resourceId: string;
-      simpleSignDocumentId: number;
+      resourceId: string
+      simpleSignDocumentId: number
       /** Format: email */
-      recipientEmail: string;
-      recipientName?: string | null;
-      status: string;
+      recipientEmail: string
+      recipientName?: string | null
+      status: string
       /** Format: date-time */
-      sentAt: string;
+      sentAt: string
       /** Format: date-time */
-      completedAt?: string | null;
+      completedAt?: string | null
       /** Format: date-time */
-      lastSyncedAt?: string | null;
-    };
+      lastSyncedAt?: string | null
+    }
     CreateSignatureRequest: {
       /** @enum {string} */
-      resourceType: "receipt";
+      resourceType: 'receipt'
       /** Format: uuid */
-      resourceId: string;
-      simpleSignDocumentId: number;
+      resourceId: string
+      simpleSignDocumentId: number
       /** Format: email */
-      recipientEmail: string;
-      recipientName?: string | null;
+      recipientEmail: string
+      recipientName?: string | null
       /** @default sent */
-      status?: string;
-    };
+      status?: string
+    }
     SendSignatureRequest: {
       /** @enum {string} */
-      resourceType: "receipt";
+      resourceType: 'receipt'
       /** Format: uuid */
-      resourceId: string;
+      resourceId: string
       /** Format: email */
-      recipientEmail: string;
-      recipientName?: string;
-      pdfBase64: string;
-    };
+      recipientEmail: string
+      recipientName?: string
+      pdfBase64: string
+    }
     SimpleSignWebhookPayload: {
-      id: number;
-      status: string;
-      status_updated_at: string;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+      id: number
+      status: string
+      status_updated_at: string
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
 
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 
-export type external = Record<string, never>;
+export type external = Record<string, never>
 
-export type operations = Record<string, never>;
+export type operations = Record<string, never>
