@@ -520,7 +520,7 @@ describe('PATCH /key-loan-maintenance-keys/:id', () => {
     // Mock the validation service to return success
     jest
       .spyOn(maintenanceKeyLoanService, 'validateMaintenanceKeyLoanUpdate')
-      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, data: { keyIds: [] } })
 
     const updateSpy = jest
       .spyOn(keyLoanMaintenanceKeysAdapter, 'updateKeyLoanMaintenanceKey')
@@ -579,7 +579,7 @@ describe('PATCH /key-loan-maintenance-keys/:id', () => {
     // Mock the validation service to return success
     jest
       .spyOn(maintenanceKeyLoanService, 'validateMaintenanceKeyLoanUpdate')
-      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, data: { keyIds: [] } })
 
     jest
       .spyOn(keyLoanMaintenanceKeysAdapter, 'updateKeyLoanMaintenanceKey')
