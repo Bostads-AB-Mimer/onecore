@@ -312,7 +312,7 @@ export default function MaintenanceKeys() {
 
             {/* Search Result Info */}
             {searchResult.type === 'contact' && searchResult.contact && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <ContactInfoCard contacts={[searchResult.contact]} />
                 <ContactBundlesWithLoanedKeysCard
                   contactCode={searchResult.contact.contactCode}
