@@ -45,6 +45,18 @@ exports.up = async function (knex) {
   await knex.schema.dropTableIfExists('key_loan_maintenance_keys')
 
   // Step 4: Remove loanType column from receipts (no longer needed - can look it up from key_loans)
+  // First drop the index
+  await knex.schema.alterTable('receipts', (table) => {
+    table.dropIndex('loanType', 'idx_receipts_loan_type')
+  })
+
+  // Then drop the check constraint
+  await knex.raw(`
+    ALTER TABLE receipts
+    DROP CONSTRAINT IF EXISTS receipts_loan_type_check
+  `)
+
+  // Finally drop the column
   await knex.schema.alterTable('receipts', (table) => {
     table.dropColumn('loanType')
   })
