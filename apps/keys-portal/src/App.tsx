@@ -3,7 +3,12 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Navigation } from '@/components/Navigation'
+import { AppSidebar } from '@/components/Navigation'
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
 import Keys from './pages/Keys'
 import KeySystems from './pages/KeySystems'
 import KeySystemDetail from './pages/KeySystemDetail'
@@ -25,21 +30,28 @@ const queryClient = new QueryClient({
 })
 
 const AppContent = () => (
-  <>
-    <Navigation />
-    <Routes>
-      <Route path="/" element={<Navigate to="/KeyLoan" replace />} />
-      <Route path="/Keys" element={<Keys />} />
-      <Route path="/key-systems" element={<KeySystems />} />
-      <Route path="/key-systems/:id" element={<KeySystemDetail />} />
-      <Route path="/key-bundles" element={<KeyBundles />} />
-      <Route path="/KeyLoan" element={<KeyLoan />} />
-      <Route path="/maintenance-keys" element={<MaintenanceKeys />} />
-      <Route path="/activity-log" element={<ActivityLog />} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </>
+  <SidebarProvider>
+    <AppSidebar />
+    <SidebarInset>
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <SidebarTrigger />
+      </header>
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        <Routes>
+          <Route path="/" element={<Navigate to="/KeyLoan" replace />} />
+          <Route path="/Keys" element={<Keys />} />
+          <Route path="/key-systems" element={<KeySystems />} />
+          <Route path="/key-systems/:id" element={<KeySystemDetail />} />
+          <Route path="/key-bundles" element={<KeyBundles />} />
+          <Route path="/KeyLoan" element={<KeyLoan />} />
+          <Route path="/maintenance-keys" element={<MaintenanceKeys />} />
+          <Route path="/activity-log" element={<ActivityLog />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+    </SidebarInset>
+  </SidebarProvider>
 )
 
 const App = () => (
