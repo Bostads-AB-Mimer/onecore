@@ -100,6 +100,62 @@ export const keyLoanService = {
   },
 
   /**
+   * Get key loans by contact with full key details
+   * @param contact - The contact identifier to filter by
+   * @param loanType - Optional filter by loan type: 'TENANT' or 'MAINTENANCE'
+   * @param returned - Optional filter: true = returned loans, false = active loans, undefined = all
+   * @returns Array of key loans with keysArray containing full key objects
+   */
+  async getByContactWithKeys(
+    contact: string,
+    loanType?: 'TENANT' | 'MAINTENANCE',
+    returned?: boolean
+  ): Promise<KeyLoanWithDetails[]> {
+    const { data, error } = await GET(
+      '/key-loans/by-contact/{contact}/with-keys',
+      {
+        params: {
+          path: { contact },
+          query: {
+            ...(loanType !== undefined ? { loanType } : {}),
+            ...(returned !== undefined ? { returned } : {}),
+          },
+        },
+      }
+    )
+    if (error) throw error
+    return data?.content ?? []
+  },
+
+  /**
+   * Get all key loans that contain any key from a bundle with full key details
+   * @param bundleId - The bundle ID to filter by
+   * @param loanType - Optional filter by loan type: 'TENANT' or 'MAINTENANCE'
+   * @param returned - Optional filter: true = returned loans, false = active loans, undefined = all
+   * @returns Array of key loans with keysArray containing full key objects
+   */
+  async getByBundleWithKeys(
+    bundleId: string,
+    loanType?: 'TENANT' | 'MAINTENANCE',
+    returned?: boolean
+  ): Promise<KeyLoanWithDetails[]> {
+    const { data, error } = await GET(
+      '/key-loans/by-bundle/{bundleId}/with-keys',
+      {
+        params: {
+          path: { bundleId },
+          query: {
+            ...(loanType !== undefined ? { loanType } : {}),
+            ...(returned !== undefined ? { returned } : {}),
+          },
+        },
+      }
+    )
+    if (error) throw error
+    return data?.content ?? []
+  },
+
+  /**
    * Get key loans by rental object code with keys and optional receipts (OPTIMIZED)
    * This uses a single optimized endpoint that eliminates N+1 queries
    * @param rentalObjectCode - The rental object code
