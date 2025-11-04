@@ -18,6 +18,7 @@ import { registerSchema } from '../../utils/openapi'
 const {
   KeySchema,
   KeyWithLoanStatusSchema,
+  KeyWithLoanAndEventSchema,
   KeyLoanSchema,
   KeyLoanWithDetailsSchema,
   KeySystemSchema,
@@ -91,6 +92,7 @@ export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('Key', KeySchema)
   registerSchema('KeyWithLoanStatus', KeyWithLoanStatusSchema)
+  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema)
   registerSchema('KeyLoan', KeyLoanSchema)
   registerSchema('KeyLoanWithDetails', KeyLoanWithDetailsSchema)
   registerSchema('KeySystem', KeySystemSchema)
