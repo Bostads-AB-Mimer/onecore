@@ -31,6 +31,7 @@ import {
   reviewStatusFieldMatrix,
 } from './model/conditional'
 import { setConditionalFields } from '../../utils/transform-model'
+import { useProfile } from '../../common/hooks/useProfile'
 
 type HousingTypes = z.infer<
   typeof schemas.v1.ApplicationProfileHousingTypeSchema
@@ -87,6 +88,8 @@ const ResidencesPage: React.FC = () => {
       ...formDefaults(),
     },
   })
+
+  useProfile() // makeshift solution to force auth
 
   const { handleSubmit, reset } = formMethods
 
