@@ -10,7 +10,6 @@ import {
   ReceiptsApi,
   KeyEventsApi,
   KeyBundlesApi,
-  KeyLoanMaintenanceKeysApi,
   SignaturesApi,
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
@@ -25,9 +24,6 @@ const {
   LogSchema,
   KeyNoteSchema,
   KeyBundleSchema,
-  KeyLoanMaintenanceKeysSchema,
-  KeyLoanMaintenanceKeysWithDetailsSchema,
-  KeyWithMaintenanceLoanStatusSchema,
   KeyBundleWithLoanStatusResponseSchema,
   BundleWithLoanedKeysInfoSchema,
   ReceiptSchema,
@@ -45,8 +41,6 @@ const {
   UpdateKeyNoteRequestSchema,
   CreateKeyBundleRequestSchema,
   UpdateKeyBundleRequestSchema,
-  CreateKeyLoanMaintenanceKeysRequestSchema,
-  UpdateKeyLoanMaintenanceKeysRequestSchema,
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
   CreateSignatureRequestSchema,
@@ -120,26 +114,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('BundleWithLoanedKeysInfo', BundleWithLoanedKeysInfoSchema)
   registerSchema('CreateKeyBundleRequest', CreateKeyBundleRequestSchema)
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
-  registerSchema('KeyLoanMaintenanceKeys', KeyLoanMaintenanceKeysSchema)
-  registerSchema(
-    'KeyLoanMaintenanceKeysWithDetails',
-    KeyLoanMaintenanceKeysWithDetailsSchema
-  )
-  registerSchema(
-    'KeyWithMaintenanceLoanStatus',
-    KeyWithMaintenanceLoanStatusSchema
-  )
   registerSchema(
     'KeyBundleWithLoanStatusResponse',
     KeyBundleWithLoanStatusResponseSchema
-  )
-  registerSchema(
-    'CreateKeyLoanMaintenanceKeysRequest',
-    CreateKeyLoanMaintenanceKeysRequestSchema
-  )
-  registerSchema(
-    'UpdateKeyLoanMaintenanceKeysRequest',
-    UpdateKeyLoanMaintenanceKeysRequestSchema
   )
   registerSchema('CreateKeyEventRequest', CreateKeyEventRequestSchema)
   registerSchema('UpdateKeyEventRequest', UpdateKeyEventRequestSchema)
@@ -539,6 +516,178 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { err: result.err, metadata },
         'Error fetching key loans by rental object'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/by-contact/{contact}/with-keys:
+   *   get:
+   *     summary: Get key loans by contact with keys
+   *     description: Returns all key loans for a specific contact with full key details, optionally filtered by loan type and return status
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: contact
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact identifier to search for
+   *       - in: query
+   *         name: loanType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *         description: Filter by loan type (TENANT or MAINTENANCE)
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by return status (true = returned, false = not returned)
+   *     responses:
+   *       200:
+   *         description: Array of key loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-contact/:contact/with-keys', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+
+    const loanTypeParam = ctx.query.loanType as string | undefined
+    const returnedParam = ctx.query.returned
+
+    let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
+    if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
+      loanType = loanTypeParam
+    }
+
+    let returned: boolean | undefined = undefined
+    if (returnedParam === 'true') {
+      returned = true
+    } else if (returnedParam === 'false') {
+      returned = false
+    }
+
+    const result = await KeyLoansApi.getByContactWithKeys(
+      ctx.params.contact,
+      loanType,
+      returned
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching key loans with keys by contact'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/by-bundle/{bundleId}/with-keys:
+   *   get:
+   *     summary: Get key loans by bundle with keys
+   *     description: Returns all key loans for a specific bundle with full key details, optionally filtered by loan type and return status
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: bundleId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The bundle ID to search for
+   *       - in: query
+   *         name: loanType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *         description: Filter by loan type (TENANT or MAINTENANCE)
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by return status (true = returned, false = not returned)
+   *     responses:
+   *       200:
+   *         description: Array of key loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-bundle/:bundleId/with-keys', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+
+    const loanTypeParam = ctx.query.loanType as string | undefined
+    const returnedParam = ctx.query.returned
+
+    let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
+    if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
+      loanType = loanTypeParam
+    }
+
+    let returned: boolean | undefined = undefined
+    if (returnedParam === 'true') {
+      returned = true
+    } else if (returnedParam === 'false') {
+      returned = false
+    }
+
+    const result = await KeyLoansApi.getByBundleWithKeys(
+      ctx.params.bundleId,
+      loanType,
+      returned
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching key loans with keys by bundle'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
