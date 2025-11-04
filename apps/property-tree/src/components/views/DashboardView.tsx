@@ -63,14 +63,15 @@ export function DashboardView() {
       isDisabled: false,
     },
     {
-      id: 'keys',
-      title: 'Nycklar',
-      icon: Key,
-      description: 'Nyckelhantering',
-      path: resolve('VITE_KEYS_URL', ''),
+      id: 'tenants',
+      title: 'Kunder',
+      icon: Contact,
+      description: 'Kundregister och hyresgästinformation',
+      path: resolve('VITE_CLIENTS_URL', ''),
       isExternal: true,
-      isDisabled: true,
+      isDisabled: false,
     },
+
     {
       id: 'xledger',
       title: 'Ekonomi',
@@ -118,12 +119,12 @@ export function DashboardView() {
     },
     // Disabled cards (not yet implemented)
     {
-      id: 'tenants',
-      title: 'Kunder',
-      icon: Contact,
-      description: 'Kundregister och hyresgästinformation',
-      path: '/tenants/all',
-      isExternal: false,
+      id: 'keys',
+      title: 'Nycklar',
+      icon: Key,
+      description: 'Nyckelhantering',
+      path: resolve('VITE_KEYS_URL', ''),
+      isExternal: true,
       isDisabled: true,
     },
     {

@@ -11,9 +11,9 @@ const SiteHeader = () => (
     justifyContent="space-between"
     alignItems="center"
   >
-    <Link to={'/'}>
+    <a href="https://onecore.mimer.nu">
       <img src={mimerLogo} width="160" alt="Mimer logotyp" />
-    </Link>
+    </a>
 
     <SiteMenu />
   </Stack>
