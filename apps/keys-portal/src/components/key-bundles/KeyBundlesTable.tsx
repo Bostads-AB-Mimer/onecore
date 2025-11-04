@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import {
   Table,
   TableBody,
@@ -23,15 +23,10 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react'
-import {
-  KeyBundle,
-  KeyWithMaintenanceLoanStatus,
-  KeyTypeLabels,
-} from '@/services/types'
+import { KeyBundle, KeyWithMaintenanceLoanStatus } from '@/services/types'
 import { groupAndSortKeys } from '@/utils/groupKeys'
-import { formatAbsoluteTime } from '@/lib/dateUtils'
 import { fetchContactByContactCode } from '@/services/api/contactService'
-import { getKeyEventDisplayLabel } from '@/services/types'
+import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
 
 interface KeyBundlesTableProps {
   keyBundles: KeyBundle[]
@@ -213,10 +208,10 @@ export function KeyBundlesTable({
                               <h3 className="text-lg font-semibold mb-3 text-green-600">
                                 Aktiva nycklar
                               </h3>
-                              {renderGroupedKeysTable(
-                                grouped.nonDisposed,
-                                companyNames
-                              )}
+                              <KeyBundleKeysList
+                                group={grouped.nonDisposed}
+                                companyNames={companyNames}
+                              />
                             </div>
                           )}
 
@@ -226,10 +221,10 @@ export function KeyBundlesTable({
                               <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
                                 Kasserade nycklar
                               </h3>
-                              {renderGroupedKeysTable(
-                                grouped.disposed,
-                                companyNames
-                              )}
+                              <KeyBundleKeysList
+                                group={grouped.disposed}
+                                companyNames={companyNames}
+                              />
                             </div>
                           )}
                         </div>
@@ -240,127 +235,6 @@ export function KeyBundlesTable({
               </>
             )
           })}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
-
-/**
- * Renders a key row
- */
-function renderKeyRow(
-  key: KeyWithMaintenanceLoanStatus,
-  indent: boolean = false
-) {
-  return (
-    <TableRow key={key.id}>
-      <TableCell className={`font-medium w-[22%] ${indent ? 'pl-8' : ''}`}>
-        {key.keyName}
-      </TableCell>
-      <TableCell className="w-[8%]">{key.keySequenceNumber ?? '-'}</TableCell>
-      <TableCell className="w-[8%]">{key.flexNumber ?? '-'}</TableCell>
-      <TableCell className="w-[22%]">
-        {key.latestEvent && key.latestEvent.status !== 'COMPLETED' ? (
-          <Badge variant="outline">
-            {getKeyEventDisplayLabel(key.latestEvent)}
-          </Badge>
-        ) : (
-          '-'
-        )}
-      </TableCell>
-      <TableCell className="w-[15%]">
-        <Badge variant="secondary">
-          {KeyTypeLabels[key.keyType as keyof typeof KeyTypeLabels]}
-        </Badge>
-      </TableCell>
-      <TableCell className="w-[25%]">{key.rentalObjectCode ?? '-'}</TableCell>
-    </TableRow>
-  )
-}
-
-/**
- * Renders grouped keys table with company and loan headers
- */
-function renderGroupedKeysTable(
-  group: { loaned: any[]; unloaned: KeyWithMaintenanceLoanStatus[] },
-  companyNames: Record<string, string>
-) {
-  return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[22%]">Nyckelnamn</TableHead>
-            <TableHead className="w-[8%]">Löpnr</TableHead>
-            <TableHead className="w-[8%]">Flex</TableHead>
-            <TableHead className="w-[22%]">Status</TableHead>
-            <TableHead className="w-[15%]">Typ</TableHead>
-            <TableHead className="w-[25%]">Hyresobjekt</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {/* Loaned keys grouped by company then loan */}
-          {group.loaned.map((companyGroup) => (
-            <>
-              {/* Company header row */}
-              <TableRow
-                key={`company-${companyGroup.company}`}
-                className="bg-muted hover:bg-muted"
-              >
-                <TableCell colSpan={6} className="font-semibold py-4">
-                  {companyNames[companyGroup.company] || companyGroup.company}
-                </TableCell>
-              </TableRow>
-
-              {/* Loans within this company */}
-              {companyGroup.loans.map((loan: any) => (
-                <>
-                  {/* Loan header row */}
-                  <TableRow
-                    key={`loan-${loan.loanId}`}
-                    className="bg-muted/50 hover:bg-muted/50"
-                  >
-                    <TableCell colSpan={6} className="font-medium text-sm pl-8">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">Lånad</Badge>
-                        {loan.loanContactPerson && (
-                          <span className="text-muted-foreground">
-                            Kontakt: {loan.loanContactPerson}
-                          </span>
-                        )}
-                        {loan.loanPickedUpAt && (
-                          <span className="text-muted-foreground">
-                            Upphämtad: {formatAbsoluteTime(loan.loanPickedUpAt)}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
-                  {/* Key data rows for this loan */}
-                  {loan.keys.map((key: KeyWithMaintenanceLoanStatus) =>
-                    renderKeyRow(key, true)
-                  )}
-                </>
-              ))}
-            </>
-          ))}
-
-          {/* Unloaned keys section */}
-          {group.unloaned.length > 0 && (
-            <>
-              {/* Unloaned header row */}
-              <TableRow className="bg-muted hover:bg-muted">
-                <TableCell colSpan={6} className="font-semibold py-4">
-                  Ej utlånade
-                </TableCell>
-              </TableRow>
-
-              {/* Key data rows for unloaned keys */}
-              {group.unloaned.map((key) => renderKeyRow(key, true))}
-            </>
-          )}
         </TableBody>
       </Table>
     </div>
