@@ -130,11 +130,12 @@ export function ContactBundlesWithLoanedKeysCard({
                 const details = bundleDetails[bundle.id]
 
                 // Filter keys that are loaned to this contact
-                const loanedKeys = details?.keys.filter(
-                  (key) =>
-                    key.maintenanceLoan &&
-                    key.maintenanceLoan.company === contactCode
-                ) || []
+                const loanedKeys =
+                  details?.keys.filter(
+                    (key) =>
+                      key.maintenanceLoan &&
+                      key.maintenanceLoan.company === contactCode
+                  ) || []
 
                 // Build key system map from the keys array
                 const keySystemMap: Record<string, string> = {}
