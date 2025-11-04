@@ -57,7 +57,10 @@ export function TenantCard({ tenant }: TenantCardProps) {
     postalCode: string
     city: string
   }) => {
-    return `${address.street} ${address.number}, ${address.postalCode} ${address.city}`
+    const streetPart = address.number?.trim()
+      ? `${address.street} ${address.number.trim()}`
+      : address.street
+    return `${streetPart}, ${address.postalCode} ${address.city}`
   }
 
   // Map contract status number to Swedish text
