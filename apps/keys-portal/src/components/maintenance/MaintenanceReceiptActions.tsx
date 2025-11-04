@@ -15,26 +15,29 @@ type Props = {
 
 export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
   const [loading, setLoading] = useState(false)
-  const [receipt, setReceipt] = useState<any>(null)
-  const [loadingReceipt, setLoadingReceipt] = useState(true)
+  const [loanReceipt, setLoanReceipt] = useState<any>(null)
+  const [returnReceipt, setReturnReceipt] = useState<any>(null)
+  const [loadingReceipts, setLoadingReceipts] = useState(true)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Load receipt info on mount
   useEffect(() => {
-    const loadReceipt = async () => {
+    const loadReceipts = async () => {
       try {
         const receipts = await receiptService.getByKeyLoan(loanId)
-        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-        setReceipt(loanReceipt || null)
+        setLoanReceipt(receipts.find((r) => r.receiptType === 'LOAN') || null)
+        setReturnReceipt(
+          receipts.find((r) => r.receiptType === 'RETURN') || null
+        )
       } catch (error) {
-        console.error('Failed to load receipt:', error)
+        console.error('Failed to load receipts:', error)
       } finally {
-        setLoadingReceipt(false)
+        setLoadingReceipts(false)
       }
     }
-    loadReceipt()
+    loadReceipts()
   }, [loanId])
 
   /**
@@ -69,19 +72,19 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
    * If signed receipt exists (has fileId), downloads from MinIO
    * Otherwise, generates PDF client-side and opens in new tab
    */
-  const handlePrintReceipt = async () => {
+  const handlePrintLoanReceipt = async () => {
     setLoading(true)
     try {
       // If a signed receipt exists (has fileId), download it from MinIO
-      if (receipt && receipt.fileId) {
-        await receiptService.downloadFile(receipt.id)
+      if (loanReceipt && loanReceipt.fileId) {
+        await receiptService.downloadFile(loanReceipt.id)
         return
       }
 
       // Otherwise, generate the receipt PDF client-side
       const receiptData = await fetchReceiptData()
 
-      let receiptId = receipt?.id
+      let receiptId = loanReceipt?.id
       if (!receiptId) {
         // Create receipt record if it doesn't exist
         const newReceipt = await receiptService.create({
@@ -94,8 +97,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
 
         // Refresh receipt state
         const receipts = await receiptService.getByKeyLoan(loanId)
-        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-        setReceipt(loanReceipt || null)
+        setLoanReceipt(receipts.find((r) => r.receiptType === 'LOAN') || null)
       }
 
       // Generate PDF blob and open in new tab with print dialog
@@ -136,6 +138,24 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
     }
   }
 
+  const handleViewReturnReceipt = async () => {
+    if (!returnReceipt?.fileId) return
+
+    setLoading(true)
+    try {
+      await receiptService.downloadFile(returnReceipt.id)
+    } catch (error) {
+      console.error('Error viewing return receipt:', error)
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte öppna återlämningskvittens',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   /**
    * Handles uploading a signed receipt file
    */
@@ -153,7 +173,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
       }
 
       // Create receipt record if it doesn't exist
-      let receiptId = receipt?.id
+      let receiptId = loanReceipt?.id
       if (!receiptId) {
         const newReceipt = await receiptService.create({
           keyLoanId: loanId,
@@ -173,8 +193,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
 
       // Refresh receipt info
       const receipts = await receiptService.getByKeyLoan(loanId)
-      const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-      setReceipt(loanReceipt || null)
+      setLoanReceipt(receipts.find((r) => r.receiptType === 'LOAN') || null)
 
       onRefresh?.()
     } catch (err: any) {
@@ -207,17 +226,17 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleViewReceipt = async () => {
-    if (!receipt?.fileId) return
+  const handleViewLoanReceipt = async () => {
+    if (!loanReceipt?.fileId) return
 
     setLoading(true)
     try {
-      await receiptService.downloadFile(receipt.id)
+      await receiptService.downloadFile(loanReceipt.id)
     } catch (error) {
       console.error('Error viewing receipt:', error)
       toast({
         title: 'Fel',
-        description: 'Kunde inte öppna kvittens',
+        description: 'Kunde inte öppna utlåningskvittens',
         variant: 'destructive',
       })
     } finally {
@@ -225,7 +244,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
     }
   }
 
-  if (loadingReceipt) {
+  if (loadingReceipts) {
     return null
   }
 
@@ -240,20 +259,25 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
         onChange={onFileInputChange}
       />
 
-      <div className="flex gap-1">
-        {/* Print Receipt Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePrintReceipt}
-          disabled={loading}
-        >
-          <Printer className="h-3 w-3 mr-1" />
-          Skriv ut
-        </Button>
+      <div className="flex gap-1 flex-wrap items-center">
+        <span className="text-xs text-muted-foreground">Kvittenser:</span>
+
+        {/* Loan Receipt Actions */}
+        {/* Show Print button only if no signed receipt exists */}
+        {!loanReceipt?.fileId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintLoanReceipt}
+            disabled={loading}
+          >
+            <Printer className="h-3 w-3 mr-1" />
+            Skriv ut
+          </Button>
+        )}
 
         {/* Upload Receipt Button - show if no file uploaded */}
-        {!receipt?.fileId && (
+        {!loanReceipt?.fileId && (
           <Button
             variant="outline"
             size="sm"
@@ -265,16 +289,29 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
           </Button>
         )}
 
-        {/* View Receipt Button - show if file uploaded */}
-        {receipt?.fileId && (
+        {/* View Loan Receipt Button - show if file uploaded */}
+        {loanReceipt?.fileId && (
           <Button
             variant="outline"
             size="sm"
-            onClick={handleViewReceipt}
+            onClick={handleViewLoanReceipt}
             disabled={loading}
           >
             <Eye className="h-3 w-3 mr-1" />
-            Visa
+            Lån
+          </Button>
+        )}
+
+        {/* Return Receipt Actions - only show if return receipt exists */}
+        {returnReceipt?.fileId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleViewReturnReceipt}
+            disabled={loading}
+          >
+            <Eye className="h-3 w-3 mr-1" />
+            Retur
           </Button>
         )}
       </div>

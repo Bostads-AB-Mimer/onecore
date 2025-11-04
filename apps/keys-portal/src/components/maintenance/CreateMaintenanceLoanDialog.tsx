@@ -20,6 +20,7 @@ interface CreateMaintenanceLoanDialogProps {
   onOpenChange: (open: boolean) => void
   companyContactCode: string
   companyName: string
+  preSelectedKeys?: Key[]
   onSuccess: () => void
 }
 
@@ -28,12 +29,13 @@ export function CreateMaintenanceLoanDialog({
   onOpenChange,
   companyContactCode,
   companyName,
+  preSelectedKeys = [],
   onSuccess,
 }: CreateMaintenanceLoanDialogProps) {
   const { toast } = useToast()
   const [contactPerson, setContactPerson] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
+  const [selectedKeys, setSelectedKeys] = useState<Key[]>(preSelectedKeys)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleAddKey = (key: Key) => {

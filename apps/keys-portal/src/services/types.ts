@@ -247,7 +247,9 @@ export interface ReceiptData {
 export interface MaintenanceReceiptData {
   company: string
   contactPerson: string | null
-  keys: Key[]
+  keys: Key[] // For RETURN: keys that were returned (checked in dialog)
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
+  missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
+  disposedKeys?: Key[] // For RETURN: keys that were disposed
 }

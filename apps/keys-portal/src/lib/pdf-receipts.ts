@@ -607,7 +607,7 @@ async function buildMaintenanceReturnDoc(
   const doc = new jsPDF()
   let y = await addHeader(doc, 'return', 'maintenance')
   y = addCompanyInfo(doc, data.company, data.contactPerson, y)
-  y = addKeysTable(doc, data.keys, y, 22)
+  y = addKeysTable(doc, data.keys, y, 22, data.missingKeys, data.disposedKeys)
 
   const bottom = contentBottom(doc)
   const need = 18
@@ -618,7 +618,9 @@ async function buildMaintenanceReturnDoc(
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9.5)
     const confirmText =
-      'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+      data.missingKeys && data.missingKeys.length > 0
+        ? 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar saknas (se lista ovan).'
+        : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
     const lines = doc.splitTextToSize(confirmText, 170)
     let cy = y + 7
     lines.forEach((line) => {
