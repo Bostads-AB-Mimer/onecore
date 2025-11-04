@@ -153,6 +153,10 @@ describe('keys-service', () => {
           prevLoanAvailableFrom: null,
           prevLoanContact: null,
           prevLoanContact2: null,
+          maintenanceLoanId: null,
+          maintenanceLoanCompany: null,
+          maintenanceLoanPickedUpAt: null,
+          maintenanceLoanReturnedAt: null,
         },
       ]
 

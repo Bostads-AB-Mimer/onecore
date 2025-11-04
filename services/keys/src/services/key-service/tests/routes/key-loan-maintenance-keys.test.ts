@@ -6,6 +6,7 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../../routes/key-loan-maintenance-keys'
 import * as factory from '../factories'
 import * as keyLoanMaintenanceKeysAdapter from '../../adapters/key-loan-maintenance-keys-adapter'
+import * as maintenanceKeyLoanService from '../../key-loan-maintenance-keys-service'
 
 // Set up a Koa app with the key-loan-maintenance-keys routes for testing
 const app = new Koa()
@@ -516,6 +517,11 @@ describe('PATCH /key-loan-maintenance-keys/:id', () => {
       keys: JSON.stringify(['key-3', 'key-4']),
     })
 
+    // Mock the validation service to return success
+    jest
+      .spyOn(maintenanceKeyLoanService, 'validateMaintenanceKeyLoanUpdate')
+      .mockResolvedValueOnce({ ok: true })
+
     const updateSpy = jest
       .spyOn(keyLoanMaintenanceKeysAdapter, 'updateKeyLoanMaintenanceKey')
       .mockResolvedValueOnce(mockUpdatedLoan)
@@ -546,6 +552,7 @@ describe('PATCH /key-loan-maintenance-keys/:id', () => {
       company: 'New Company Only',
     })
 
+    // No validation mock needed when keys are not being updated
     jest
       .spyOn(keyLoanMaintenanceKeysAdapter, 'updateKeyLoanMaintenanceKey')
       .mockResolvedValueOnce(mockUpdatedLoan)
@@ -568,6 +575,11 @@ describe('PATCH /key-loan-maintenance-keys/:id', () => {
       id: 'loan-123',
       keys: newKeys,
     })
+
+    // Mock the validation service to return success
+    jest
+      .spyOn(maintenanceKeyLoanService, 'validateMaintenanceKeyLoanUpdate')
+      .mockResolvedValueOnce({ ok: true })
 
     jest
       .spyOn(keyLoanMaintenanceKeysAdapter, 'updateKeyLoanMaintenanceKey')
