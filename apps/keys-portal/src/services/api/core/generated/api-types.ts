@@ -5783,6 +5783,62 @@ export interface components {
         updatedAt: string;
       }) | null;
     };
+    KeyWithLoanAndEvent: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      loan: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        loanType: "TENANT" | "MAINTENANCE";
+        contact?: string;
+        contact2?: string;
+        contactPerson?: string | null;
+        description?: string | null;
+        /** Format: date-time */
+        returnedAt?: string | null;
+        /** Format: date-time */
+        availableToNextTenantFrom?: string | null;
+        /** Format: date-time */
+        pickedUpAt?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        createdBy?: string | null;
+        updatedBy?: string | null;
+      }) | null;
+      latestEvent: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
+    };
     KeyLoan: {
       /** Format: uuid */
       id: string;
