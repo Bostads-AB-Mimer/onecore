@@ -59,11 +59,11 @@ export function KeySelectionCard({
   }
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex-1 flex flex-col justify-center">
         <KeyAutocomplete
           selectedKeys={selectedKeys}
           onAddKey={handleAddKey}
@@ -75,7 +75,7 @@ export function KeySelectionCard({
           <Button
             onClick={handleAccept}
             disabled={disabled || isProcessing}
-            className="w-full"
+            className="w-full mt-4"
           >
             <Icon className="h-4 w-4 mr-2" />
             {buttonText.replace(
