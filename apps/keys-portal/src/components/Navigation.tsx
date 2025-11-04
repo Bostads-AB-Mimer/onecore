@@ -141,3 +141,5 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
+
+export { Navigation as AppSidebar }
