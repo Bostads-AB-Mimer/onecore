@@ -7,8 +7,10 @@ import { AddKeyBundleForm } from '@/components/key-bundles/AddKeyBundleForm'
 import { KeyBundle, KeyWithMaintenanceLoanStatus } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import * as keyBundleService from '@/services/api/keyBundleService'
+import { useUrlPagination } from '@/hooks/useUrlPagination'
 
 export default function KeyBundles() {
+  const pagination = useUrlPagination()
   const [keyBundles, setKeyBundles] = useState<KeyBundle[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -22,8 +24,11 @@ export default function KeyBundles() {
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const { toast } = useToast()
 
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('')
+  // Read search query from URL
+  const searchQuery = pagination.searchParams.get('q') || ''
+
+  // Local state for search input (to allow typing without triggering URL changes)
+  const [searchInput, setSearchInput] = useState(searchQuery)
 
   // Load key bundles from API
   const loadKeyBundles = useCallback(async () => {
@@ -49,15 +54,29 @@ export default function KeyBundles() {
     }
   }, [searchQuery, toast])
 
+  // Sync local search input with URL query
+  useEffect(() => {
+    setSearchInput(searchQuery)
+  }, [searchQuery])
+
   // Fetch data whenever search query changes
   useEffect(() => {
     loadKeyBundles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
-  const handleSearchChange = useCallback((query: string) => {
-    setSearchQuery(query)
-  }, [])
+  const handleSearchChange = useCallback(
+    (query: string) => {
+      setSearchInput(query)
+      // Update URL with search query
+      if (query.trim().length >= 3 || query.trim().length === 0) {
+        pagination.updateUrlParams({
+          q: query.trim().length > 0 ? query.trim() : null,
+        })
+      }
+    },
+    [pagination]
+  )
 
   const handleAddNew = () => {
     if (showAddForm && !editingKeyBundle) {
@@ -75,9 +94,11 @@ export default function KeyBundles() {
     setShowAddForm(true)
   }
 
-  const handleSave = async (
-    keyBundleData: Omit<KeyBundle, 'id'> & { keys: string[] }
-  ) => {
+  const handleSave = async (keyBundleData: {
+    name: string
+    description: string | null
+    keys: string[]
+  }) => {
     try {
       // Convert keys array to JSON string
       const bundleWithStringKeys = {
@@ -187,7 +208,7 @@ export default function KeyBundles() {
       />
 
       <KeyBundlesToolbar
-        searchQuery={searchQuery}
+        searchQuery={searchInput}
         onSearchChange={handleSearchChange}
         onAddNew={handleAddNew}
       />
