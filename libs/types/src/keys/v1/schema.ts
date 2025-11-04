@@ -41,6 +41,9 @@ export const KeySystemTypeSchema = z.enum([
   'HYBRID',
 ])
 
+// Loan type schema (defined early for use in KeyLoanSchema)
+export const LoanTypeSchema = z.enum(['TENANT', 'MAINTENANCE'])
+
 export const KeySchema = z.object({
   id: z.string().uuid(),
   keyName: z.string(),
@@ -57,8 +60,11 @@ export const KeySchema = z.object({
 export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
   keys: z.string(),
+  loanType: LoanTypeSchema,
   contact: z.string().optional(),
   contact2: z.string().optional(),
+  contactPerson: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
@@ -121,23 +127,8 @@ export const KeyBundleSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
-export const KeyLoanMaintenanceKeysSchema = z.object({
-  id: z.string().uuid(),
-  keys: z.string(),
-  company: z.string().nullable().optional(),
-  contactPerson: z.string().nullable().optional(),
-  returnedAt: z.coerce.date().nullable().optional(),
-  pickedUpAt: z.coerce.date().nullable().optional(),
-  description: z.string().nullable().optional(),
-  createdAt: z.coerce.date(),
-})
-
-// Key loan maintenance keys with enriched keys data (for optimized endpoint)
-export const KeyLoanMaintenanceKeysWithDetailsSchema =
-  KeyLoanMaintenanceKeysSchema.extend({
-    // Array of full key objects instead of just IDs
-    keysArray: z.array(KeySchema),
-  })
+// Removed: KeyLoanMaintenanceKeysSchema - unified into KeyLoanSchema
+// Removed: KeyLoanMaintenanceKeysWithDetailsSchema - use KeyLoanWithDetailsSchema instead
 
 // Key Event schemas (defined here before usage in KeyWithMaintenanceLoanStatusSchema)
 export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
@@ -153,16 +144,16 @@ export const KeyEventSchema = z.object({
   updatedAt: z.coerce.date(),
 })
 
-// Key with maintenance loan status (for key bundle table view)
-export const KeyWithMaintenanceLoanStatusSchema = KeySchema.extend({
-  maintenanceLoan: KeyLoanMaintenanceKeysSchema.nullable(),
+// Key with loan and event status (for key bundle table view)
+export const KeyWithLoanAndEventSchema = KeySchema.extend({
+  loan: KeyLoanSchema.nullable(),
   latestEvent: KeyEventSchema.nullable(),
 })
 
 // Response schema for key bundle with loan status endpoint
 export const KeyBundleWithLoanStatusResponseSchema = z.object({
   bundle: KeyBundleSchema,
-  keys: z.array(KeyWithMaintenanceLoanStatusSchema),
+  keys: z.array(KeyWithLoanAndEventSchema),
 })
 
 // Response schema for bundles with keys loaned to a specific contact
@@ -222,8 +213,11 @@ export const UpdateKeySystemRequestSchema = z.object({
 
 export const CreateKeyLoanRequestSchema = z.object({
   keys: z.string(),
+  loanType: LoanTypeSchema,
   contact: z.string().optional(),
   contact2: z.string().optional(),
+  contactPerson: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
@@ -232,8 +226,11 @@ export const CreateKeyLoanRequestSchema = z.object({
 
 export const UpdateKeyLoanRequestSchema = z.object({
   keys: z.string().optional(),
+  loanType: LoanTypeSchema.optional(),
   contact: z.string().optional(),
   contact2: z.string().optional(),
+  contactPerson: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
@@ -265,7 +262,6 @@ export const CreateLogRequestSchema = z.object({
 
 export const ReceiptTypeSchema = z.enum(['LOAN', 'RETURN'])
 export const ReceiptFormatSchema = z.enum(['DIGITAL', 'PHYSICAL'])
-export const LoanTypeSchema = z.enum(['REGULAR', 'MAINTENANCE'])
 
 export const ReceiptSchema = z.object({
   id: z.string().uuid(),
@@ -280,7 +276,7 @@ export const ReceiptSchema = z.object({
 
 export const CreateReceiptRequestSchema = z.object({
   keyLoanId: z.string().uuid(),
-  loanType: LoanTypeSchema.default('REGULAR'),
+  loanType: LoanTypeSchema.default('TENANT'),
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema.optional(),
   fileId: z.string().optional(),
@@ -342,25 +338,8 @@ export const UpdateKeyBundleRequestSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
-// Request schemas for key loan maintenance keys
-
-export const CreateKeyLoanMaintenanceKeysRequestSchema = z.object({
-  keys: z.string(),
-  company: z.string().nullable().optional(),
-  contactPerson: z.string().nullable().optional(),
-  returnedAt: z.coerce.date().nullable().optional(),
-  pickedUpAt: z.coerce.date().nullable().optional(),
-  description: z.string().nullable().optional(),
-})
-
-export const UpdateKeyLoanMaintenanceKeysRequestSchema = z.object({
-  keys: z.string().optional(),
-  company: z.string().nullable().optional(),
-  contactPerson: z.string().nullable().optional(),
-  returnedAt: z.coerce.date().nullable().optional(),
-  pickedUpAt: z.coerce.date().nullable().optional(),
-  description: z.string().nullable().optional(),
-})
+// Removed: CreateKeyLoanMaintenanceKeysRequestSchema - use CreateKeyLoanRequestSchema with loanType: 'MAINTENANCE'
+// Removed: UpdateKeyLoanMaintenanceKeysRequestSchema - use UpdateKeyLoanRequestSchema
 
 // Request schemas for key events
 
