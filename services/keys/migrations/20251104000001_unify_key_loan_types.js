@@ -9,7 +9,10 @@
 exports.up = async function (knex) {
   // Step 1: Add new columns to key_loans table
   await knex.schema.alterTable('key_loans', (table) => {
-    table.enum('loanType', ['TENANT', 'MAINTENANCE']).notNullable().defaultTo('TENANT')
+    table
+      .enum('loanType', ['TENANT', 'MAINTENANCE'])
+      .notNullable()
+      .defaultTo('TENANT')
     table.string('contactPerson').nullable()
     table.text('description').nullable()
   })
@@ -18,7 +21,7 @@ exports.up = async function (knex) {
   const maintenanceLoans = await knex('key_loan_maintenance_keys').select('*')
 
   if (maintenanceLoans.length > 0) {
-    const migratedLoans = maintenanceLoans.map(loan => ({
+    const migratedLoans = maintenanceLoans.map((loan) => ({
       id: loan.id,
       keys: loan.keys || '[]',
       contact: loan.company, // company becomes contact
@@ -32,7 +35,7 @@ exports.up = async function (knex) {
       updatedAt: loan.createdAt, // Use createdAt since updatedAt doesn't exist
       createdBy: null,
       updatedBy: null,
-      loanType: 'MAINTENANCE'
+      loanType: 'MAINTENANCE',
     }))
 
     await knex('key_loans').insert(migratedLoans)
@@ -87,7 +90,7 @@ exports.down = async function (knex) {
     .select('*')
 
   if (maintenanceLoans.length > 0) {
-    const restoredLoans = maintenanceLoans.map(loan => ({
+    const restoredLoans = maintenanceLoans.map((loan) => ({
       id: loan.id,
       keys: loan.keys,
       company: loan.contact, // contact becomes company again
@@ -95,7 +98,7 @@ exports.down = async function (knex) {
       description: loan.description,
       returnedAt: loan.returnedAt,
       pickedUpAt: loan.pickedUpAt,
-      createdAt: loan.createdAt
+      createdAt: loan.createdAt,
     }))
 
     await knex('key_loan_maintenance_keys').insert(restoredLoans)
