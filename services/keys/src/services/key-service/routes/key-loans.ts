@@ -346,6 +346,176 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loans/by-contact/{contact}/with-keys:
+   *   get:
+   *     summary: Get key loans for a contact with full key details
+   *     description: |
+   *       Returns all key loan records for the specified contact with joined key data.
+   *       Supports filtering by loanType and returned status via query parameters.
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: contact
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to filter by (company name or contact code)
+   *       - in: query
+   *         name: loanType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *         description: Filter by loan type
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
+   *     responses:
+   *       200:
+   *         description: Array of loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/key-loans/by-contact/:contact/with-keys', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+    try {
+      const { contact } = ctx.params
+      const loanTypeParam = ctx.query.loanType as string | undefined
+      const returnedParam = ctx.query.returned
+
+      // Parse loanType query param
+      let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
+      if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
+        loanType = loanTypeParam
+      }
+
+      // Parse returned query param: 'true' => true, 'false' => false, undefined => undefined
+      let returned: boolean | undefined = undefined
+      if (returnedParam === 'true') {
+        returned = true
+      } else if (returnedParam === 'false') {
+        returned = false
+      }
+
+      const loans = await keyLoansAdapter.getKeyLoansWithKeysByContact(
+        contact,
+        loanType,
+        returned,
+        db
+      )
+
+      ctx.status = 200
+      ctx.body = { content: loans, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching key loans with keys by contact')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/by-bundle/{bundleId}/with-keys:
+   *   get:
+   *     summary: Get key loans for a key bundle with full key details
+   *     description: |
+   *       Returns all key loan records containing keys from the specified bundle.
+   *       Supports filtering by loanType and returned status via query parameters.
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: bundleId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The key bundle ID to filter by
+   *       - in: query
+   *         name: loanType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *         description: Filter by loan type
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
+   *     responses:
+   *       200:
+   *         description: Array of loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/key-loans/by-bundle/:bundleId/with-keys', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+    try {
+      const { bundleId } = ctx.params
+      const loanTypeParam = ctx.query.loanType as string | undefined
+      const returnedParam = ctx.query.returned
+
+      // Parse loanType query param
+      let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
+      if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
+        loanType = loanTypeParam
+      }
+
+      // Parse returned query param: 'true' => true, 'false' => false, undefined => undefined
+      let returned: boolean | undefined = undefined
+      if (returnedParam === 'true') {
+        returned = true
+      } else if (returnedParam === 'false') {
+        returned = false
+      }
+
+      const loans = await keyLoansAdapter.getKeyLoansWithKeysByBundle(
+        bundleId,
+        loanType,
+        returned,
+        db
+      )
+
+      ctx.status = 200
+      ctx.body = { content: loans, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching key loans with keys by bundle')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID
