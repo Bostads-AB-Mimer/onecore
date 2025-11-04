@@ -38,9 +38,13 @@ const SiteMenu = () => (
               sx={{ width: '200px' }}
               disabled
             >
-              <Typography variant="h1">Aktuellt</Typography>
+              <Typography variant="h1">OneCore</Typography>
             </MenuItem>
-
+            <Link to="https://onecore.mimer.nu">
+              <MenuItem onClick={popupState.close}>
+                <Typography>OneCore startsida</Typography>
+              </MenuItem>
+            </Link>
             <Link to="/bilplatser">
               <MenuItem onClick={popupState.close}>
                 <Typography>Bilplatser</Typography>
