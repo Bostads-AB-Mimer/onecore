@@ -9,6 +9,7 @@ import { mdTheme } from '../../theme'
 import { ContactCard } from './components/ContactCard'
 import apiClient from '../../utils/api-client'
 import { Contact } from '@onecore/types'
+import { useProfile } from '../../common/hooks/useProfile'
 
 const FormSchema = z.object({
   searchInput: z.string().nonempty('Kundnummer eller personnummer saknas'),
@@ -18,6 +19,7 @@ export function ContactPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const searchValue = searchParams.get('search')
   const [contactCode, setContactCode] = useState<string | null>(null)
+  useProfile() // makeshift solution to force auth
 
   const { handleSubmit, register, formState, setError } = useForm({
     resolver: zodResolver(FormSchema),
