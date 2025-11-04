@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from 'react'
-import type { KeyWithMaintenanceLoanStatus, Contact } from '@/services/types'
+import type { KeyWithLoanAndEvent, Contact } from '@/services/types'
 import { groupAndSortKeys, type GroupedKeys } from '@/utils/groupKeys'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fetchContactByContactCode } from '@/services/api/contactService'
@@ -16,7 +16,7 @@ import { handleDisposeKeys } from '@/services/loanHandlers'
 import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
 
 interface KeyBundleKeysTableProps {
-  keys: KeyWithMaintenanceLoanStatus[]
+  keys: KeyWithLoanAndEvent[]
   bundleName: string
   bundleId: string
   onRefresh: () => void
@@ -45,12 +45,12 @@ export function KeyBundleKeysTable({
     const fetchCompanyNames = async () => {
       const uniqueCompanyCodes = new Set<string>()
 
-      // Collect all unique company codes from loaned keys
-      grouped.nonDisposed.loaned.forEach((companyGroup) => {
-        if (companyGroup.company) uniqueCompanyCodes.add(companyGroup.company)
+      // Collect all unique contact codes from loaned keys
+      grouped.nonDisposed.loaned.forEach((contactGroup) => {
+        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
       })
-      grouped.disposed.loaned.forEach((companyGroup) => {
-        if (companyGroup.company) uniqueCompanyCodes.add(companyGroup.company)
+      grouped.disposed.loaned.forEach((contactGroup) => {
+        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
       })
 
       // Fetch contact info for each company code
@@ -94,14 +94,14 @@ export function KeyBundleKeysTable({
   // Get selected keys data
   const selectedKeysData = keys.filter((k) => selectedKeys.includes(k.id))
 
-  // Determine which keys can be returned (currently loaned)
+  // Determine which keys can be returned (currently loaned with MAINTENANCE type)
   const returnableKeys = selectedKeysData.filter(
-    (k) => k.maintenanceLoan !== null
+    (k) => k.loan !== null && k.loan.loanType === 'MAINTENANCE'
   )
 
-  // Determine which keys can be loaned (not currently loaned)
+  // Determine which keys can be loaned (not currently loaned or not a maintenance loan)
   const loanableKeys = selectedKeysData.filter(
-    (k) => k.maintenanceLoan === null
+    (k) => k.loan === null || k.loan.loanType !== 'MAINTENANCE'
   )
 
   // Action handlers

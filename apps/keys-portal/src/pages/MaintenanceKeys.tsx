@@ -16,15 +16,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { InlineTextareaEditor } from '@/components/ui/inline-textarea-editor'
-import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import {
   getKeyBundleWithLoanStatus,
   updateKeyBundle,
 } from '@/services/api/keyBundleService'
 import { keyService } from '@/services/api/keyService'
 import type {
-  KeyLoanMaintenanceKeysWithDetails,
-  KeyWithMaintenanceLoanStatus,
+  KeyLoanWithDetails,
+  KeyWithLoanAndEvent,
   Contact,
 } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
@@ -32,29 +32,23 @@ import { useToast } from '@/hooks/use-toast'
 export default function MaintenanceKeys() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
-  const [activeLoans, setActiveLoans] = useState<
-    KeyLoanMaintenanceKeysWithDetails[]
-  >([])
-  const [returnedLoans, setReturnedLoans] = useState<
-    KeyLoanMaintenanceKeysWithDetails[]
-  >([])
+  const [activeLoans, setActiveLoans] = useState<KeyLoanWithDetails[]>([])
+  const [returnedLoans, setReturnedLoans] = useState<KeyLoanWithDetails[]>([])
   const [loansLoading, setLoansLoading] = useState(false)
   const [activeLoansOpen, setActiveLoansOpen] = useState(false)
   const [returnedLoansOpen, setReturnedLoansOpen] = useState(false)
   const [hasLoadedActive, setHasLoadedActive] = useState(false)
   const [hasLoadedReturned, setHasLoadedReturned] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [bundleKeys, setBundleKeys] = useState<KeyWithMaintenanceLoanStatus[]>(
-    []
-  )
+  const [bundleKeys, setBundleKeys] = useState<KeyWithLoanAndEvent[]>([])
   const [bundleKeysLoading, setBundleKeysLoading] = useState(false)
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [loansKeySystemMap, setLoansKeySystemMap] = useState<
     Record<string, string>
   >({})
-  const [preSelectedKeys, setPreSelectedKeys] = useState<
-    KeyWithMaintenanceLoanStatus[]
-  >([])
+  const [preSelectedKeys, setPreSelectedKeys] = useState<KeyWithLoanAndEvent[]>(
+    []
+  )
   const [preSelectedCompany, setPreSelectedCompany] = useState<Contact | null>(
     null
   )
@@ -100,16 +94,18 @@ export default function MaintenanceKeys() {
     const fetchActiveLoans = async () => {
       setLoansLoading(true)
       try {
-        let active: KeyLoanMaintenanceKeysWithDetails[] = []
+        let active: KeyLoanWithDetails[] = []
 
         if (searchResult.type === 'contact' && searchResult.contact) {
-          active = await maintenanceKeysService.getByCompanyWithKeys(
+          active = await keyLoanService.getByContactWithKeys(
             searchResult.contact.contactCode,
+            'MAINTENANCE',
             false
           )
         } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          active = await maintenanceKeysService.getAllLoansForBundle(
+          active = await keyLoanService.getByBundleWithKeys(
             searchResult.bundle.id,
+            'MAINTENANCE',
             false
           )
         }
@@ -164,16 +160,18 @@ export default function MaintenanceKeys() {
 
     const fetchReturnedLoans = async () => {
       try {
-        let returned: KeyLoanMaintenanceKeysWithDetails[] = []
+        let returned: KeyLoanWithDetails[] = []
 
         if (searchResult.type === 'contact' && searchResult.contact) {
-          returned = await maintenanceKeysService.getByCompanyWithKeys(
+          returned = await keyLoanService.getByContactWithKeys(
             searchResult.contact.contactCode,
+            'MAINTENANCE',
             true
           )
         } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          returned = await maintenanceKeysService.getAllLoansForBundle(
+          returned = await keyLoanService.getByBundleWithKeys(
             searchResult.bundle.id,
+            'MAINTENANCE',
             true
           )
         }
@@ -311,12 +309,12 @@ export default function MaintenanceKeys() {
                 <ContactInfoCard contacts={[searchResult.contact]} />
                 <CreateLoanWithKeysCard
                   onKeysSelected={(keys) => {
-                    // Cast keys to KeyWithMaintenanceLoanStatus[] - they don't have loan status since they're being selected for a new loan
+                    // Cast keys to KeyWithLoanAndEvent[] - they don't have loan status since they're being selected for a new loan
                     const keysWithStatus = keys.map((k) => ({
                       ...k,
-                      maintenanceLoan: null,
+                      loan: null,
                       latestEvent: null,
-                    })) as KeyWithMaintenanceLoanStatus[]
+                    })) as KeyWithLoanAndEvent[]
                     setPreSelectedKeys(keysWithStatus)
                     setPreSelectedCompany(searchResult.contact!)
                     setCreateDialogOpen(true)

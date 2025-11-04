@@ -2,21 +2,21 @@ import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import type { KeyWithMaintenanceLoanStatus, Contact } from '@/services/types'
+import type { KeyWithLoanAndEvent, Contact } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import {
   searchContacts,
   fetchContactByContactCode,
 } from '@/services/api/contactService'
-import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import { BeforeAfterDialogBase } from '@/components/loan/dialogs/BeforeAfterDialogBase'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 
 interface LoanMaintenanceKeysDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  keys: KeyWithMaintenanceLoanStatus[] // Keys to loan out
-  allBundleKeys?: KeyWithMaintenanceLoanStatus[] // All keys in bundle for pre-suggestions
+  keys: KeyWithLoanAndEvent[] // Keys to loan out
+  allBundleKeys?: KeyWithLoanAndEvent[] // All keys in bundle for pre-suggestions
   preSelectedCompany?: Contact // Pre-selected company (e.g. from contact search page)
   onSuccess: () => void
 }
@@ -57,8 +57,8 @@ export function LoanMaintenanceKeysDialog({
       // Get unique company codes from keys that have active maintenance loans
       const companyCodes = new Set<string>()
       keysToCheck.forEach((key) => {
-        if (key.maintenanceLoan?.company) {
-          companyCodes.add(key.maintenanceLoan.company)
+        if (key.loan?.loanType === 'MAINTENANCE' && key.loan?.contact) {
+          companyCodes.add(key.loan.contact)
         }
       })
 
@@ -110,9 +110,10 @@ export function LoanMaintenanceKeysDialog({
     try {
       const keyIds = keys.map((k) => k.id)
 
-      await maintenanceKeysService.create({
+      await keyLoanService.create({
         keys: JSON.stringify(keyIds),
-        company: selectedCompany.contactCode,
+        loanType: 'MAINTENANCE',
+        contact: selectedCompany.contactCode,
         contactPerson: contactPerson.trim() || null,
         description: description.trim() || null,
       })
