@@ -38,16 +38,13 @@ exports.up = async function (knex) {
     await knex('key_loans').insert(migratedLoans)
   }
 
-  // Step 3: Update receipts table to point to unified table
-  // Update any receipts that referenced maintenance loans
-  await knex('receipts')
-    .where('loanType', 'MAINTENANCE')
-    .update({
-      loanType: 'MAINTENANCE' // Still MAINTENANCE but now points to key_loans table
-    })
-
-  // Step 4: Drop the key_loan_maintenance_keys table
+  // Step 3: Drop the key_loan_maintenance_keys table
   await knex.schema.dropTableIfExists('key_loan_maintenance_keys')
+
+  // Step 4: Remove loanType column from receipts (no longer needed - can look it up from key_loans)
+  await knex.schema.alterTable('receipts', (table) => {
+    table.dropColumn('loanType')
+  })
 }
 
 /**
@@ -57,7 +54,22 @@ exports.up = async function (knex) {
  */
 
 exports.down = async function (knex) {
-  // Step 1: Recreate key_loan_maintenance_keys table
+  // Step 1: Re-add loanType column to receipts
+  await knex.schema.alterTable('receipts', (table) => {
+    table.enum('loanType', ['TENANT', 'MAINTENANCE'])
+  })
+
+  // Step 2: Populate loanType in receipts from key_loans
+  await knex.raw(`
+    UPDATE receipts
+    SET loanType = (
+      SELECT loanType
+      FROM key_loans
+      WHERE key_loans.id = receipts.keyLoanId
+    )
+  `)
+
+  // Step 3: Recreate key_loan_maintenance_keys table
   await knex.schema.createTable('key_loan_maintenance_keys', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('NEWID()'))
     table.text('keys').defaultTo('[]')
@@ -69,7 +81,7 @@ exports.down = async function (knex) {
     table.timestamp('createdAt').defaultTo(knex.fn.now())
   })
 
-  // Step 2: Migrate MAINTENANCE loans back to key_loan_maintenance_keys
+  // Step 4: Migrate MAINTENANCE loans back to key_loan_maintenance_keys
   const maintenanceLoans = await knex('key_loans')
     .where('loanType', 'MAINTENANCE')
     .select('*')
@@ -89,10 +101,10 @@ exports.down = async function (knex) {
     await knex('key_loan_maintenance_keys').insert(restoredLoans)
   }
 
-  // Step 3: Delete MAINTENANCE loans from key_loans
+  // Step 5: Delete MAINTENANCE loans from key_loans
   await knex('key_loans').where('loanType', 'MAINTENANCE').delete()
 
-  // Step 4: Remove new columns from key_loans
+  // Step 6: Remove new columns from key_loans
   await knex.schema.alterTable('key_loans', (table) => {
     table.dropColumn('loanType')
     table.dropColumn('contactPerson')

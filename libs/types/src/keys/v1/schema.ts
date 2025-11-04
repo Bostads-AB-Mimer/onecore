@@ -257,7 +257,6 @@ export const ReceiptFormatSchema = z.enum(['DIGITAL', 'PHYSICAL'])
 export const ReceiptSchema = z.object({
   id: z.string().uuid(),
   keyLoanId: z.string().uuid(),
-  loanType: LoanTypeSchema,
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema,
   fileId: z.string().nullable().optional(),
@@ -267,7 +266,6 @@ export const ReceiptSchema = z.object({
 
 export const CreateReceiptRequestSchema = z.object({
   keyLoanId: z.string().uuid(),
-  loanType: LoanTypeSchema.default('TENANT'),
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema.optional(),
   fileId: z.string().optional(),
