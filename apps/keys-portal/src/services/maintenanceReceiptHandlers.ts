@@ -3,7 +3,7 @@ import {
   generateMaintenanceReturnReceiptBlob,
 } from '@/lib/pdf-receipts'
 
-import { maintenanceKeysService } from './api/maintenanceKeysService'
+import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
 import type { MaintenanceReceiptData, Key } from './types'
@@ -11,13 +11,13 @@ import type { MaintenanceReceiptData, Key } from './types'
 /**
  * Fetch all data needed to generate a maintenance key receipt
  * @param loanId - Maintenance key loan ID
- * @returns Receipt data including company, contact person, and keys
+ * @returns Receipt data including contact, contact person, and keys
  */
 export async function fetchMaintenanceReceiptData(
   loanId: string
 ): Promise<MaintenanceReceiptData> {
   // Fetch the maintenance loan
-  const loan = await maintenanceKeysService.get(loanId)
+  const loan = await keyLoanService.get(loanId)
 
   // Parse the keys JSON field to get key IDs
   let keyIds: string[] = []
@@ -34,8 +34,9 @@ export async function fetchMaintenanceReceiptData(
   )
 
   return {
-    company: loan.company || 'Unknown',
+    contact: loan.contact || 'Unknown',
     contactPerson: loan.contactPerson,
+    description: loan.description,
     keys: keysArray,
     receiptType: loan.returnedAt ? 'RETURN' : 'LOAN',
     operationDate: loan.returnedAt ? new Date(loan.returnedAt) : new Date(),

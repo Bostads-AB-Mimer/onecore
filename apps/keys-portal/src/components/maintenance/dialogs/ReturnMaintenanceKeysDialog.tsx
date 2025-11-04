@@ -4,7 +4,7 @@ import {
   ReturnKeysDialogBase,
   type LoanGroup,
 } from '@/components/shared/dialogs/ReturnKeysDialogBase'
-import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import { receiptService } from '@/services/api/receiptService'
 import { keyService } from '@/services/api/keyService'
 import { generateMaintenanceReturnReceiptBlob } from '@/lib/pdf-receipts'
@@ -52,7 +52,7 @@ export function ReturnMaintenanceKeysDialog({
         const loansMap = new Map<string, LoanGroup>()
 
         for (const key of keysToReturn) {
-          const loans = await maintenanceKeysService.getByKeyId(key.id)
+          const loans = await keyLoanService.getByKeyId(key.id)
           const activeLoan = loans.find((loan) => !loan.returnedAt)
 
           if (activeLoan) {
@@ -63,7 +63,7 @@ export function ReturnMaintenanceKeysDialog({
 
               loansMap.set(activeLoan.id, {
                 loanId: activeLoan.id,
-                loanLabel: activeLoan.company || '',
+                loanLabel: activeLoan.contact || '',
                 keys: loanKeys,
                 disposedKeys: loanKeys.filter((k) => k.disposed),
                 nonDisposedKeys: loanKeys.filter((k) => !k.disposed),
@@ -110,10 +110,10 @@ export function ReturnMaintenanceKeysDialog({
       await Promise.all(
         loanGroups.map(async (loanGroup) => {
           // Get the loan details
-          const loan = await maintenanceKeysService.get(loanGroup.loanId)
+          const loan = await keyLoanService.get(loanGroup.loanId)
 
           // Update loan to mark as returned
-          await maintenanceKeysService.update(loanGroup.loanId, {
+          await keyLoanService.update(loanGroup.loanId, {
             returnedAt: new Date().toISOString(),
             description: returnNote.trim() || undefined,
           })
@@ -122,7 +122,6 @@ export function ReturnMaintenanceKeysDialog({
           try {
             const receipt = await receiptService.create({
               keyLoanId: loanGroup.loanId,
-              loanType: 'MAINTENANCE',
               receiptType: 'RETURN',
               type: 'PHYSICAL',
             })
@@ -153,8 +152,9 @@ export function ReturnMaintenanceKeysDialog({
               // Generate PDF
               const { blob } = await generateMaintenanceReturnReceiptBlob(
                 {
-                  company: loan.company || 'Unknown',
+                  contact: loan.contact || 'Unknown',
                   contactPerson: loan.contactPerson,
+                  description: loan.description,
                   keys: returned,
                   receiptType: 'RETURN',
                   operationDate: new Date(),

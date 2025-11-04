@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Printer, Upload, Eye } from 'lucide-react'
 import { receiptService } from '@/services/api/receiptService'
-import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
 import { useToast } from '@/hooks/use-toast'
 import type { MaintenanceReceiptData, Key } from '@/services/types'
@@ -44,7 +44,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
    * Fetch receipt data for PDF generation
    */
   const fetchReceiptData = async (): Promise<MaintenanceReceiptData> => {
-    const loan = await maintenanceKeysService.get(loanId)
+    const loan = await keyLoanService.get(loanId)
 
     let keyIds: string[] = []
     try {
@@ -59,8 +59,9 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
     )
 
     return {
-      company: loan.company || 'Unknown',
+      contact: loan.contact || 'Unknown',
       contactPerson: loan.contactPerson,
+      description: loan.description,
       keys: keysArray,
       receiptType: loan.returnedAt ? 'RETURN' : 'LOAN',
       operationDate: loan.returnedAt ? new Date(loan.returnedAt) : new Date(),
@@ -89,7 +90,6 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
         // Create receipt record if it doesn't exist
         const newReceipt = await receiptService.create({
           keyLoanId: loanId,
-          loanType: 'MAINTENANCE',
           receiptType: 'LOAN',
           type: 'PHYSICAL',
         })
@@ -177,7 +177,6 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
       if (!receiptId) {
         const newReceipt = await receiptService.create({
           keyLoanId: loanId,
-          loanType: 'MAINTENANCE',
           receiptType: 'LOAN',
           type: 'DIGITAL',
         })

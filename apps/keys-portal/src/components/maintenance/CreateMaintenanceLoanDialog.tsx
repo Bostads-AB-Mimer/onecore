@@ -62,15 +62,14 @@ export function CreateMaintenanceLoanDialog({
 
     try {
       // Import the service dynamically to avoid circular dependencies
-      const { maintenanceKeysService } = await import(
-        '@/services/api/maintenanceKeysService'
-      )
+      const { keyLoanService } = await import('@/services/api/keyLoanService')
 
       const keyIds = selectedKeys.map((k) => k.id)
 
-      await maintenanceKeysService.create({
+      await keyLoanService.create({
         keys: JSON.stringify(keyIds),
-        company: companyContactCode,
+        loanType: 'MAINTENANCE',
+        contact: companyContactCode,
         contactPerson: contactPerson.trim() || null,
         description: description.trim() || null,
       })
