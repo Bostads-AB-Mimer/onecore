@@ -18,6 +18,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       it('returns ok with created receipt on 201', async () => {
         const createPayload = {
           keyLoanId: '00000000-0000-0000-0000-000000000001',
+          loanType: 'REGULAR' as const,
           receiptType: 'LOAN' as const,
           type: 'DIGITAL' as const,
         }
@@ -45,6 +46,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
         const result = await keysAdapter.ReceiptsApi.create({
           keyLoanId: '00000000-0000-0000-0000-000000000001',
+          loanType: 'REGULAR',
           receiptType: 'LOAN',
         })
 
@@ -56,6 +58,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
         const result = await keysAdapter.ReceiptsApi.create({
           keyLoanId: '00000000-0000-0000-0000-000000000001',
+          loanType: 'REGULAR',
           receiptType: 'LOAN',
         })
 
