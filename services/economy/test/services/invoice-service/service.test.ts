@@ -71,5 +71,39 @@ describe('Rental Invoice Service', () => {
       expect(addAccountInformation).toHaveBeenCalled()
       expect(saveInvoiceRows).toHaveBeenCalled()
     })
+
+    it('Should add ledger and total accounts to rows', async () => {
+      const processedRows = await processInvoiceRows(
+        mockInvoiceDataRows,
+        '1337'
+      )
+      expect(saveInvoiceRows).toHaveBeenCalledWith([
+        {
+          rentArticle: 'HYRAB',
+          invoiceRowText: 'Hyra bostad',
+          totalAmount: 999.57,
+          amount: 999.57,
+          vat: 0,
+          deduction: 0,
+          company: '001',
+          invoiceDate: '20250515',
+          invoiceDueDate: '20250531',
+          invoiceNumber: '55123456',
+          contactCode: 'P999999',
+          tenantName: 'Test A Ren',
+          account: '3012',
+          projectCode: '12345',
+          freeCode: '54321',
+          roundoff: 0.43,
+          fromDate: '20250601',
+          toDate: '20250630',
+          printGroup: 'A',
+          contractCode: '000-000-000/01',
+          printGroupLabel: 'Hyra bostad',
+          invoiceTotalAmount: 1000,
+          rowType: 1,
+        },
+      ])
+    })
   })
 })
