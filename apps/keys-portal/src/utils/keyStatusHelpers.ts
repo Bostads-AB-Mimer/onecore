@@ -141,6 +141,21 @@ export function getKeyDisplayStatus(
       KeyEventTypeLabels[latestEvent.type as keyof typeof KeyEventTypeLabels] ||
       latestEvent.type
 
+    if (latestEvent.type === 'FLEX') {
+      const dateToUse =
+        latestEvent.status === 'ORDERED'
+          ? latestEvent.createdAt
+          : latestEvent.updatedAt
+      const formattedDate = formatSwedishDate(dateToUse)
+
+      return {
+        status: formattedDate
+          ? `${eventType} ${statusText.toLowerCase()} ${formattedDate}`
+          : `${eventType} ${statusText.toLowerCase()}`,
+        isAvailable: false, // Keys with incomplete events are not available
+      }
+    }
+
     return {
       status: `${eventType} ${statusText.toLowerCase()}`,
       isAvailable: false, // Keys with incomplete events are not available
