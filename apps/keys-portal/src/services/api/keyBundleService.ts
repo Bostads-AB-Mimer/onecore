@@ -1,9 +1,24 @@
-import { GET, PATCH } from './core/base-api'
+import { GET, PATCH, POST, DELETE } from './core/base-api'
 import type {
   KeyBundle,
   KeyBundleWithLoanStatusResponse,
   BundleWithLoanedKeysInfo,
+  CreateKeyBundleRequest,
+  UpdateKeyBundleRequest,
 } from '../types'
+
+/**
+ * Get all key bundles
+ */
+export async function getAllKeyBundles(): Promise<KeyBundle[]> {
+  const { data, error } = await GET('/key-bundles', {})
+
+  if (error) {
+    throw new Error('Failed to fetch key bundles')
+  }
+
+  return data?.content ?? []
+}
 
 /**
  * Search for key bundles by name
@@ -43,11 +58,28 @@ export async function getKeyBundleById(id: string): Promise<KeyBundle | null> {
 }
 
 /**
+ * Create a new key bundle
+ */
+export async function createKeyBundle(
+  bundle: CreateKeyBundleRequest
+): Promise<KeyBundle> {
+  const { data, error } = await POST('/key-bundles', {
+    body: bundle,
+  })
+
+  if (error) {
+    throw new Error('Failed to create key bundle')
+  }
+
+  return data?.content as KeyBundle
+}
+
+/**
  * Update a key bundle
  */
 export async function updateKeyBundle(
   id: string,
-  updates: Partial<Omit<KeyBundle, 'id'>>
+  updates: UpdateKeyBundleRequest
 ): Promise<KeyBundle> {
   const { data, error } = await PATCH('/key-bundles/{id}', {
     params: {
@@ -61,6 +93,21 @@ export async function updateKeyBundle(
   }
 
   return data?.content as KeyBundle
+}
+
+/**
+ * Delete a key bundle
+ */
+export async function deleteKeyBundle(id: string): Promise<void> {
+  const { error } = await DELETE('/key-bundles/{id}', {
+    params: {
+      path: { id },
+    },
+  })
+
+  if (error) {
+    throw new Error('Failed to delete key bundle')
+  }
 }
 
 /**
