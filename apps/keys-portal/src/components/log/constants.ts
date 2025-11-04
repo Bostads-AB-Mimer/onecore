@@ -12,8 +12,6 @@ export const objectTypeColors: Record<string, string> = {
   keyLoan: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20',
   keyBundle:
     'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
-  keyLoanMaintenanceKeys:
-    'bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20',
   receipt:
     'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20',
   keyEvent:
