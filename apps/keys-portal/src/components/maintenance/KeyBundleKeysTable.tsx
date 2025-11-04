@@ -1,19 +1,7 @@
 import { useMemo, useEffect, useState } from 'react'
 import type { KeyWithMaintenanceLoanStatus, Contact } from '@/services/types'
 import { groupAndSortKeys, type GroupedKeys } from '@/utils/groupKeys'
-import { KeyTypeLabels, getKeyEventDisplayLabel } from '@/services/types'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { formatAbsoluteTime } from '@/lib/dateUtils'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
@@ -23,8 +11,9 @@ import { FlexMenu } from '@/components/loan/dialogs/FlexMenu'
 import { IncomingFlexMenu } from '@/components/loan/dialogs/IncomingFlexMenu'
 import { updateKeyBundle } from '@/services/api/keyBundleService'
 import { useToast } from '@/hooks/use-toast'
-import { Trash2, Minus } from 'lucide-react'
+import { Minus } from 'lucide-react'
 import { handleDisposeKeys } from '@/services/loanHandlers'
+import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
 
 interface KeyBundleKeysTableProps {
   keys: KeyWithMaintenanceLoanStatus[]
@@ -227,12 +216,19 @@ export function KeyBundleKeysTable({
               <h3 className="text-lg font-semibold mb-3 text-green-600">
                 Aktiva nycklar
               </h3>
-              {renderUnifiedTable(
-                grouped.nonDisposed,
-                companyNames,
-                selectedKeys,
-                setSelectedKeys
-              )}
+              <KeyBundleKeysList
+                group={grouped.nonDisposed}
+                companyNames={companyNames}
+                selectable={true}
+                selectedKeys={selectedKeys}
+                onKeySelectionChange={(keyId, checked) => {
+                  setSelectedKeys((prev) =>
+                    checked
+                      ? [...prev, keyId]
+                      : prev.filter((id) => id !== keyId)
+                  )
+                }}
+              />
             </div>
           )}
 
@@ -242,12 +238,19 @@ export function KeyBundleKeysTable({
               <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
                 Kasserade nycklar
               </h3>
-              {renderUnifiedTable(
-                grouped.disposed,
-                companyNames,
-                selectedKeys,
-                setSelectedKeys
-              )}
+              <KeyBundleKeysList
+                group={grouped.disposed}
+                companyNames={companyNames}
+                selectable={true}
+                selectedKeys={selectedKeys}
+                onKeySelectionChange={(keyId, checked) => {
+                  setSelectedKeys((prev) =>
+                    checked
+                      ? [...prev, keyId]
+                      : prev.filter((id) => id !== keyId)
+                  )
+                }}
+              />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground py-4">
@@ -318,141 +321,5 @@ export function KeyBundleKeysTable({
         onSuccess={onRefresh}
       />
     </Card>
-  )
-}
-
-/**
- * Renders a single key row with all columns
- */
-function renderKeyRow(
-  key: KeyWithMaintenanceLoanStatus,
-  selectedKeys: string[],
-  setSelectedKeys: React.Dispatch<React.SetStateAction<string[]>>,
-  indent: boolean = false
-) {
-  return (
-    <TableRow key={key.id}>
-      <TableCell className={`w-[50px] ${indent ? 'pl-8' : ''}`}>
-        <Checkbox
-          checked={selectedKeys.includes(key.id)}
-          onCheckedChange={(checked) => {
-            setSelectedKeys((prev) =>
-              checked ? [...prev, key.id] : prev.filter((id) => id !== key.id)
-            )
-          }}
-        />
-      </TableCell>
-      <TableCell className="font-medium w-[22%]">{key.keyName}</TableCell>
-      <TableCell className="w-[8%]">{key.keySequenceNumber ?? '-'}</TableCell>
-      <TableCell className="w-[8%]">{key.flexNumber ?? '-'}</TableCell>
-      <TableCell className="w-[22%]">
-        {key.latestEvent && key.latestEvent.status !== 'COMPLETED' ? (
-          <Badge variant="outline">
-            {getKeyEventDisplayLabel(key.latestEvent)}
-          </Badge>
-        ) : (
-          '-'
-        )}
-      </TableCell>
-      <TableCell className="w-[15%]">
-        <Badge variant="secondary">
-          {KeyTypeLabels[key.keyType as keyof typeof KeyTypeLabels]}
-        </Badge>
-      </TableCell>
-      <TableCell className="w-[25%]">{key.rentalObjectCode ?? '-'}</TableCell>
-    </TableRow>
-  )
-}
-
-/**
- * Renders a unified table with grouping rows for companies, loans, and unloaned keys
- */
-function renderUnifiedTable(
-  group: GroupedKeys['nonDisposed'],
-  companyNames: Record<string, string>,
-  selectedKeys: string[],
-  setSelectedKeys: React.Dispatch<React.SetStateAction<string[]>>
-) {
-  return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[50px]"></TableHead>
-            <TableHead className="w-[22%]">Nyckelnamn</TableHead>
-            <TableHead className="w-[8%]">Löpnr</TableHead>
-            <TableHead className="w-[8%]">Flex</TableHead>
-            <TableHead className="w-[22%]">Status</TableHead>
-            <TableHead className="w-[15%]">Typ</TableHead>
-            <TableHead className="w-[25%]">Hyresobjekt</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {/* Loaned keys grouped by company then loan */}
-          {group.loaned.map((companyGroup) => (
-            <>
-              {/* Company header row */}
-              <TableRow
-                key={`company-${companyGroup.company}`}
-                className="bg-muted hover:bg-muted"
-              >
-                <TableCell colSpan={7} className="font-semibold py-4">
-                  {companyNames[companyGroup.company] || companyGroup.company}
-                </TableCell>
-              </TableRow>
-
-              {/* Loans within this company */}
-              {companyGroup.loans.map((loan) => (
-                <>
-                  {/* Loan header row */}
-                  <TableRow
-                    key={`loan-${loan.loanId}`}
-                    className="bg-muted/50 hover:bg-muted/50"
-                  >
-                    <TableCell colSpan={7} className="font-medium text-sm pl-8">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">Lånad</Badge>
-                        {loan.loanContactPerson && (
-                          <span className="text-muted-foreground">
-                            Kontakt: {loan.loanContactPerson}
-                          </span>
-                        )}
-                        {loan.loanPickedUpAt && (
-                          <span className="text-muted-foreground">
-                            Upphämtad: {formatAbsoluteTime(loan.loanPickedUpAt)}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
-                  {/* Key data rows for this loan */}
-                  {loan.keys.map((key) =>
-                    renderKeyRow(key, selectedKeys, setSelectedKeys, true)
-                  )}
-                </>
-              ))}
-            </>
-          ))}
-
-          {/* Unloaned keys section */}
-          {group.unloaned.length > 0 && (
-            <>
-              {/* Unloaned header row */}
-              <TableRow className="bg-muted hover:bg-muted">
-                <TableCell colSpan={7} className="font-semibold py-4">
-                  Ej utlånade
-                </TableCell>
-              </TableRow>
-
-              {/* Key data rows for unloaned keys */}
-              {group.unloaned.map((key) =>
-                renderKeyRow(key, selectedKeys, setSelectedKeys, true)
-              )}
-            </>
-          )}
-        </TableBody>
-      </Table>
-    </div>
   )
 }
