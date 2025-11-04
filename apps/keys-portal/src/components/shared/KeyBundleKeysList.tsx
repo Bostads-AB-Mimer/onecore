@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import {
-  KeyWithMaintenanceLoanStatus,
+  KeyWithLoanAndEvent,
   KeyTypeLabels,
   getKeyEventDisplayLabel,
 } from '@/services/types'
@@ -37,9 +37,9 @@ export function KeyBundleKeysList({
   selectedKeys = [],
   onKeySelectionChange,
 }: KeyBundleKeysListProps) {
-  // State to track which companies are expanded (default: all expanded)
+  // State to track which contacts are expanded (default: all expanded)
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(
-    new Set(group.loaned.map((cg) => cg.company))
+    new Set(group.loaned.map((cg) => cg.contact))
   )
 
   // State to track if unloaned section is expanded (default: expanded)
@@ -74,15 +74,15 @@ export function KeyBundleKeysList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {/* Loaned keys grouped by company then loan */}
-          {group.loaned.map((companyGroup) => {
-            const isExpanded = expandedCompanies.has(companyGroup.company)
+          {/* Loaned keys grouped by contact then loan */}
+          {group.loaned.map((contactGroup) => {
+            const isExpanded = expandedCompanies.has(contactGroup.contact)
             return (
-              <React.Fragment key={`company-${companyGroup.company}`}>
-                {/* Company header row - clickable to expand/collapse */}
+              <React.Fragment key={`contact-${contactGroup.contact}`}>
+                {/* Contact header row - clickable to expand/collapse */}
                 <TableRow
                   className="bg-muted hover:bg-muted/80 cursor-pointer"
-                  onClick={() => toggleCompany(companyGroup.company)}
+                  onClick={() => toggleCompany(contactGroup.contact)}
                 >
                   <TableCell colSpan={colSpan} className="font-semibold py-4">
                     <div className="flex items-center gap-2">
@@ -91,15 +91,15 @@ export function KeyBundleKeysList({
                       ) : (
                         <ChevronRight className="h-4 w-4" />
                       )}
-                      {companyNames[companyGroup.company] ||
-                        companyGroup.company}
+                      {companyNames[contactGroup.contact] ||
+                        contactGroup.contact}
                     </div>
                   </TableCell>
                 </TableRow>
 
-                {/* Loans within this company - only show if expanded */}
+                {/* Loans within this contact - only show if expanded */}
                 {isExpanded &&
-                  companyGroup.loans.map((loan: any) => (
+                  contactGroup.loans.map((loan: any) => (
                     <React.Fragment key={`loan-${loan.loanId}`}>
                       {/* Loan header row */}
                       <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -125,7 +125,7 @@ export function KeyBundleKeysList({
                       </TableRow>
 
                       {/* Key data rows for this loan */}
-                      {loan.keys.map((key: KeyWithMaintenanceLoanStatus) => (
+                      {loan.keys.map((key: KeyWithLoanAndEvent) => (
                         <KeyRow
                           key={key.id}
                           keyData={key}
@@ -185,7 +185,7 @@ export function KeyBundleKeysList({
  * Individual key row component
  */
 interface KeyRowProps {
-  keyData: KeyWithMaintenanceLoanStatus
+  keyData: KeyWithLoanAndEvent
   indent?: boolean
   selectable?: boolean
   isSelected?: boolean
