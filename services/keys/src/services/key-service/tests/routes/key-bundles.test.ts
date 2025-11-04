@@ -476,7 +476,7 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.content.keys).toHaveLength(1)
-    expect(res.body.content.keys[0].maintenanceLoan).toBeNull()
+    expect(res.body.content.keys[0].loan).toBeNull()
   })
 
   it('returns bundle with empty keys array when bundle has no keys', async () => {
@@ -552,11 +552,9 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
     expect(res.body.content.keys).toHaveLength(3)
 
     // Check that we have both loaned and available keys
-    const loanedKeys = res.body.content.keys.filter(
-      (k: any) => k.maintenanceLoan !== null
-    )
+    const loanedKeys = res.body.content.keys.filter((k: any) => k.loan !== null)
     const availableKeys = res.body.content.keys.filter(
-      (k: any) => k.maintenanceLoan === null
+      (k: any) => k.loan === null
     )
 
     expect(loanedKeys).toHaveLength(2)
