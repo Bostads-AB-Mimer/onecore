@@ -51,6 +51,7 @@ async function createKeyLoanAndReceipt(ctx: any, receiptData: any = {}) {
   const keyLoan = await keyLoansAdapter.createKeyLoan(
     {
       keys: JSON.stringify([key.id]),
+      loanType: 'TENANT' as const,
       contact: 'test@example.com',
     },
     ctx.db

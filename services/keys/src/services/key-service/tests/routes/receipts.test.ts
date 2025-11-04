@@ -538,6 +538,7 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
     const keyLoan = {
       id: keyLoanId,
       keys: JSON.stringify(['key-20', 'key-21']),
+      loanType: 'TENANT' as const,
       pickedUpAt: null,
     }
 

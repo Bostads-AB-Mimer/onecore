@@ -407,19 +407,21 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
     const mockKeysWithStatus = [
       {
         ...factory.key.build({ id: 'key-1' }),
-        maintenanceLoan: {
+        loan: {
           id: 'loan-1',
           keys: JSON.stringify(['key-1']),
-          company: 'ACME Corp',
+          loanType: 'MAINTENANCE' as const,
+          contact: 'ACME Corp',
           contactPerson: 'John Doe',
           pickedUpAt: new Date(),
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
         latestEvent: null,
       },
       {
         ...factory.key.build({ id: 'key-2' }),
-        maintenanceLoan: null,
+        loan: null,
         latestEvent: null,
       },
     ]
@@ -445,9 +447,10 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
     expect(res.body.content).toHaveProperty('bundle')
     expect(res.body.content).toHaveProperty('keys')
     expect(res.body.content.keys).toHaveLength(2)
-    expect(res.body.content.keys[0]).toHaveProperty('maintenanceLoan')
-    expect(res.body.content.keys[0].maintenanceLoan.id).toBe('loan-1')
-    expect(res.body.content.keys[1].maintenanceLoan).toBeNull()
+    expect(res.body.content.keys[0]).toHaveProperty('loan')
+    expect(res.body.content.keys[0].loan.id).toBe('loan-1')
+    expect(res.body.content.keys[0].loan.loanType).toBe('MAINTENANCE')
+    expect(res.body.content.keys[1].loan).toBeNull()
   })
 
   it('returns bundle with keys that have no active maintenance loans', async () => {
@@ -455,7 +458,7 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
     const mockKeysNoLoans = [
       {
         ...factory.key.build(),
-        maintenanceLoan: null,
+        loan: null,
         latestEvent: null,
       },
     ]
@@ -501,30 +504,34 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
     const mockKeysWithMixedStatus = [
       {
         ...factory.key.build({ id: 'key-1', keyName: 'Key with loan' }),
-        maintenanceLoan: {
+        loan: {
           id: 'loan-1',
           keys: JSON.stringify(['key-1']),
-          company: 'Company A',
+          loanType: 'MAINTENANCE' as const,
+          contact: 'Company A',
           contactPerson: 'Person A',
           pickedUpAt: new Date('2025-01-01'),
           createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
         },
         latestEvent: null,
       },
       {
         ...factory.key.build({ id: 'key-2', keyName: 'Available key' }),
-        maintenanceLoan: null,
+        loan: null,
         latestEvent: null,
       },
       {
         ...factory.key.build({ id: 'key-3', keyName: 'Another loaned key' }),
-        maintenanceLoan: {
+        loan: {
           id: 'loan-2',
           keys: JSON.stringify(['key-3']),
-          company: 'Company B',
+          loanType: 'MAINTENANCE' as const,
+          contact: 'Company B',
           contactPerson: 'Person B',
           pickedUpAt: new Date('2025-01-15'),
           createdAt: new Date('2025-01-15'),
+          updatedAt: new Date('2025-01-15'),
         },
         latestEvent: null,
       },
