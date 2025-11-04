@@ -7,6 +7,7 @@ import { Navigation } from '@/components/Navigation'
 import Keys from './pages/Keys'
 import KeySystems from './pages/KeySystems'
 import KeySystemDetail from './pages/KeySystemDetail'
+import KeyBundles from './pages/KeyBundles'
 import NotFound from './pages/NotFound'
 import { AuthCallback } from './auth/AuthCallback'
 import { ProtectedRoute } from './auth/ProtectedRoute'
@@ -31,6 +32,7 @@ const AppContent = () => (
       <Route path="/Keys" element={<Keys />} />
       <Route path="/key-systems" element={<KeySystems />} />
       <Route path="/key-systems/:id" element={<KeySystemDetail />} />
+      <Route path="/key-bundles" element={<KeyBundles />} />
       <Route path="/KeyLoan" element={<KeyLoan />} />
       <Route path="/maintenance-keys" element={<MaintenanceKeys />} />
       <Route path="/activity-log" element={<ActivityLog />} />
