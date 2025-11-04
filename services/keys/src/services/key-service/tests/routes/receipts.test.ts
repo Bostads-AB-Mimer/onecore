@@ -10,17 +10,28 @@ jest.mock('../../adapters/minio', () => ({
   deleteFile: jest.fn(),
 }))
 
+// Mock database connection (like signatures.test.ts)
+const mockTransaction: any = {
+  transaction: jest.fn((callback: any) => callback(mockTransaction)),
+}
+jest.mock('../../adapters/db', () => ({
+  db: mockTransaction,
+}))
+
+// Import after mocking external dependencies
 import { routes } from '../../routes/receipts'
 import * as factory from '../factories'
 import * as receiptsAdapter from '../../adapters/receipts-adapter'
 import * as receiptActivationService from '../../receipt-activation-service'
 
+// Set up a Koa app with the receipts routes for testing
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
+// Reset all mocks before each test
 beforeEach(jest.clearAllMocks)
 
 /**
@@ -34,26 +45,26 @@ describe('POST /receipts', () => {
     const loanReceipt = factory.receipt.build({
       id: validUuid,
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
 
     // Mock key loan exists
     jest.spyOn(receiptsAdapter, 'keyLoanExists').mockResolvedValueOnce(true)
-
-    const createReceiptSpy = jest
-      .spyOn(receiptsAdapter, 'createReceipt')
-      .mockResolvedValueOnce(loanReceipt)
+    jest.spyOn(receiptsAdapter, 'createReceipt').mockResolvedValueOnce(loanReceipt)
 
     const res = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
 
-    expect(createReceiptSpy).toHaveBeenCalledWith(
+    expect(receiptsAdapter.createReceipt).toHaveBeenCalledWith(
       expect.objectContaining({
         keyLoanId: validUuid,
+        loanType: 'REGULAR',
         receiptType: 'LOAN',
         type: 'DIGITAL',
       }),
@@ -68,18 +79,17 @@ describe('POST /receipts', () => {
     const returnReceipt = factory.receipt.build({
       id: validUuid,
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'RETURN',
       type: 'PHYSICAL',
     })
 
     jest.spyOn(receiptsAdapter, 'keyLoanExists').mockResolvedValueOnce(true)
-
-    jest
-      .spyOn(receiptsAdapter, 'createReceipt')
-      .mockResolvedValueOnce(returnReceipt)
+    jest.spyOn(receiptsAdapter, 'createReceipt').mockResolvedValueOnce(returnReceipt)
 
     const res = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'RETURN',
       type: 'PHYSICAL',
     })
@@ -91,11 +101,13 @@ describe('POST /receipts', () => {
 
   it('returns 404 when creating receipt for non-existent key loan', async () => {
     const validUuid = '00000000-0000-0000-0000-000000000003'
+
     // Mock key loan does not exist
     jest.spyOn(receiptsAdapter, 'keyLoanExists').mockResolvedValueOnce(false)
 
     const res = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
@@ -109,22 +121,23 @@ describe('POST /receipts', () => {
     // Business rule: multiple receipts allowed (e.g., LOAN + RETURN)
     const loanReceipt = factory.receipt.build({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'LOAN',
     })
     const returnReceipt = factory.receipt.build({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'RETURN',
     })
 
     jest.spyOn(receiptsAdapter, 'keyLoanExists').mockResolvedValue(true)
 
     // Create first receipt
-    jest
-      .spyOn(receiptsAdapter, 'createReceipt')
-      .mockResolvedValueOnce(loanReceipt)
+    jest.spyOn(receiptsAdapter, 'createReceipt').mockResolvedValueOnce(loanReceipt)
 
     const res1 = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
@@ -132,12 +145,11 @@ describe('POST /receipts', () => {
     expect(res1.status).toBe(201)
 
     // Create second receipt for same loan
-    jest
-      .spyOn(receiptsAdapter, 'createReceipt')
-      .mockResolvedValueOnce(returnReceipt)
+    jest.spyOn(receiptsAdapter, 'createReceipt').mockResolvedValueOnce(returnReceipt)
 
     const res2 = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
+      loanType: 'REGULAR',
       receiptType: 'RETURN',
       type: 'DIGITAL',
     })
@@ -155,13 +167,11 @@ describe('GET /receipts/:id', () => {
       receiptType: 'LOAN',
     })
 
-    const getReceiptByIdSpy = jest
-      .spyOn(receiptsAdapter, 'getReceiptById')
-      .mockResolvedValueOnce(mockReceipt)
+    jest.spyOn(receiptsAdapter, 'getReceiptById').mockResolvedValueOnce(mockReceipt)
 
     const res = await request(app.callback()).get(`/receipts/${validUuid}`)
 
-    expect(getReceiptByIdSpy).toHaveBeenCalledWith(validUuid, expect.anything())
+    expect(receiptsAdapter.getReceiptById).toHaveBeenCalledWith(validUuid, expect.anything())
     expect(res.status).toBe(200)
     expect(res.body.content.id).toBe(validUuid)
   })
@@ -183,15 +193,13 @@ describe('GET /receipts/by-key-loan/:keyLoanId', () => {
       }),
     ]
 
-    const getReceiptsByKeyLoanIdSpy = jest
-      .spyOn(receiptsAdapter, 'getReceiptsByKeyLoanId')
-      .mockResolvedValueOnce(receipts)
+    jest.spyOn(receiptsAdapter, 'getReceiptsByKeyLoanId').mockResolvedValueOnce(receipts)
 
     const res = await request(app.callback()).get(
       `/receipts/by-key-loan/${validUuid}`
     )
 
-    expect(getReceiptsByKeyLoanIdSpy).toHaveBeenCalledWith(
+    expect(receiptsAdapter.getReceiptsByKeyLoanId).toHaveBeenCalledWith(
       validUuid,
       expect.anything()
     )
@@ -217,9 +225,7 @@ describe('GET /receipts/by-key-loan/:keyLoanId', () => {
       }),
     ]
 
-    jest
-      .spyOn(receiptsAdapter, 'getReceiptsByKeyLoanId')
-      .mockResolvedValueOnce(receipts)
+    jest.spyOn(receiptsAdapter, 'getReceiptsByKeyLoanId').mockResolvedValueOnce(receipts)
 
     const res = await request(app.callback()).get(
       `/receipts/by-key-loan/${validUuid}`
@@ -254,26 +260,20 @@ describe('POST /receipts/:id/upload-base64 - Business Logic', () => {
     })
 
     // Mock receipt lookup
-    jest
-      .spyOn(receiptsAdapter, 'getReceiptById')
-      .mockResolvedValueOnce(loanReceipt)
+    jest.spyOn(receiptsAdapter, 'getReceiptById').mockResolvedValueOnce(loanReceipt)
 
     // Mock file upload
-    const { uploadFile } = require('../../adapters/minio')
-    uploadFile.mockResolvedValueOnce('file-123')
+    const minioModule = require('../../adapters/minio')
+    minioModule.uploadFile.mockResolvedValueOnce('file-123')
 
     // Mock update receipt with fileId
-    const updateReceiptFileIdSpy = jest
-      .spyOn(receiptsAdapter, 'updateReceiptFileId')
-      .mockResolvedValueOnce(undefined)
+    jest.spyOn(receiptsAdapter, 'updateReceiptFileId').mockResolvedValueOnce(undefined)
 
     // Mock the service call
-    const activateLoanReceiptSpy = jest
-      .spyOn(receiptActivationService, 'activateLoanReceipt')
-      .mockResolvedValueOnce({
-        ok: true,
-        data: { keyLoanActivated: true, keyEventsCompleted: 2 },
-      })
+    jest.spyOn(receiptActivationService, 'activateLoanReceipt').mockResolvedValueOnce({
+      ok: true,
+      data: { keyLoanActivated: true, keyEventsCompleted: 2 },
+    })
 
     // Valid PDF base64 (minimal PDF header)
     const pdfBase64 = Buffer.from('%PDF-1.4\n%test').toString('base64')
@@ -286,12 +286,12 @@ describe('POST /receipts/:id/upload-base64 - Business Logic', () => {
       })
 
     expect(res.status).toBe(200)
-    expect(updateReceiptFileIdSpy).toHaveBeenCalledWith(
+    expect(receiptsAdapter.updateReceiptFileId).toHaveBeenCalledWith(
       receiptId,
       'file-123',
       expect.anything()
     )
-    expect(activateLoanReceiptSpy).toHaveBeenCalledWith(
+    expect(receiptActivationService.activateLoanReceipt).toHaveBeenCalledWith(
       { receiptId, fileId: 'file-123' },
       expect.anything()
     )
@@ -308,31 +308,21 @@ describe('POST /receipts/:id/upload-base64 - Business Logic', () => {
       fileId: null,
     })
 
-    jest
-      .spyOn(receiptsAdapter, 'getReceiptById')
-      .mockResolvedValueOnce(loanReceipt)
+    jest.spyOn(receiptsAdapter, 'getReceiptById').mockResolvedValueOnce(loanReceipt)
 
-    const { uploadFile } = require('../../adapters/minio')
-    uploadFile.mockResolvedValueOnce('file-456')
+    const minioModule = require('../../adapters/minio')
+    minioModule.uploadFile.mockResolvedValueOnce('file-456')
 
-    jest
-      .spyOn(receiptsAdapter, 'updateReceiptFileId')
-      .mockResolvedValueOnce(undefined)
+    jest.spyOn(receiptsAdapter, 'updateReceiptFileId').mockResolvedValueOnce(undefined)
 
     // Key loan ALREADY activated
-    jest
-      .spyOn(receiptsAdapter, 'isKeyLoanActivated')
-      .mockResolvedValueOnce(true)
+    jest.spyOn(receiptsAdapter, 'isKeyLoanActivated').mockResolvedValueOnce(true)
 
     // Mock activate key loan (should NOT be called)
-    const activateKeyLoanSpy = jest
-      .spyOn(receiptsAdapter, 'activateKeyLoan')
-      .mockResolvedValueOnce(undefined)
+    const activateKeyLoanSpy = jest.spyOn(receiptsAdapter, 'activateKeyLoan').mockResolvedValueOnce(undefined)
 
     // Mock complete key events (should NOT be called)
-    const completeKeyEventsSpy = jest
-      .spyOn(receiptsAdapter, 'completeKeyEventsForKeys')
-      .mockResolvedValueOnce(undefined)
+    const completeKeyEventsSpy = jest.spyOn(receiptsAdapter, 'completeKeyEventsForKeys').mockResolvedValueOnce(undefined)
 
     const pdfBase64 = Buffer.from('%PDF-1.4\n%test').toString('base64')
 
@@ -623,11 +613,12 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
       if (receipt.receiptType === 'LOAN') {
         const alreadyActivated = await receiptsAdapter.isKeyLoanActivated(
           receipt.keyLoanId,
+          receipt.loanType,
           {} as any
         )
 
         if (!alreadyActivated) {
-          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, {} as any)
+          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, receipt.loanType, {} as any)
 
           const loan = await receiptsAdapter.getKeyLoanById(
             receipt.keyLoanId,
@@ -661,6 +652,7 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
     expect(res.status).toBe(200)
     expect(activateKeyLoanSpy).toHaveBeenCalledWith(
       keyLoanId,
+      'REGULAR',
       expect.anything()
     )
     expect(completeKeyEventsSpy).toHaveBeenCalledWith(
@@ -728,10 +720,11 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
       if (receipt.receiptType === 'LOAN') {
         const alreadyActivated = await receiptsAdapter.isKeyLoanActivated(
           receipt.keyLoanId,
+          receipt.loanType,
           {} as any
         )
         if (!alreadyActivated) {
-          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, {} as any)
+          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, receipt.loanType, {} as any)
         }
       }
 
