@@ -46,6 +46,10 @@ export type CreateKeySystemRequest =
   components['schemas']['CreateKeySystemRequest']
 export type UpdateKeySystemRequest =
   components['schemas']['UpdateKeySystemRequest']
+export type CreateKeyBundleRequest =
+  components['schemas']['CreateKeyBundleRequest']
+export type UpdateKeyBundleRequest =
+  components['schemas']['UpdateKeyBundleRequest']
 export type CreateKeyLoanRequest = components['schemas']['CreateKeyLoanRequest']
 export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
 export type RentalPropertyResponse =
