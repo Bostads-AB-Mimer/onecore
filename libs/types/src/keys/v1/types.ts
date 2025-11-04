@@ -19,6 +19,7 @@ import {
   KeyLoanMaintenanceKeysWithDetailsSchema,
   KeyWithMaintenanceLoanStatusSchema,
   KeyBundleWithLoanStatusResponseSchema,
+  BundleWithLoanedKeysInfoSchema,
   KeyEventSchema,
   ReceiptSchema,
   KeyWithLoanStatusSchema,
@@ -127,6 +128,9 @@ export type KeyLoanMaintenanceKeysWithDetails = z.infer<
 >
 export type KeyWithMaintenanceLoanStatus = z.infer<
   typeof KeyWithMaintenanceLoanStatusSchema
+>
+export type BundleWithLoanedKeysInfo = z.infer<
+  typeof BundleWithLoanedKeysInfoSchema
 >
 export type KeyBundleWithLoanStatusResponse = z.infer<
   typeof KeyBundleWithLoanStatusResponseSchema

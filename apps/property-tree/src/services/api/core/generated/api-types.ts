@@ -5136,6 +5136,36 @@ export interface paths {
       };
     };
   };
+  "/key-bundles/by-contact/{contactCode}/with-loaned-keys": {
+    /**
+     * Get key bundles with keys loaned to a contact
+     * @description Fetches all key bundles that have keys currently loaned to a specific contact.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The contact code (F-number) to find bundles for */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description A list of bundles with loaned keys info. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BundleWithLoanedKeysInfo"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching bundles. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/key-loan-maintenance-keys": {
     /**
      * List all maintenance key loans
@@ -6289,6 +6319,14 @@ export interface components {
       name: string;
       keys: string;
       description?: string | null;
+    };
+    BundleWithLoanedKeysInfo: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: string | null;
+      loanedKeyCount: number;
+      totalKeyCount: number;
     };
     CreateKeyBundleRequest: {
       name: string;

@@ -10,6 +10,7 @@ import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
 import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
+import { ContactBundlesWithLoanedKeysCard } from '@/components/maintenance/ContactBundlesWithLoanedKeysCard'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
@@ -307,19 +308,28 @@ export default function MaintenanceKeys() {
 
             {/* Search Result Info */}
             {searchResult.type === 'contact' && searchResult.contact && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ContactInfoCard contacts={[searchResult.contact]} />
-                <CreateLoanWithKeysCard
-                  onKeysSelected={(keys) => {
-                    // Cast keys to KeyWithMaintenanceLoanStatus[] - they don't have loan status since they're being selected for a new loan
-                    const keysWithStatus = keys.map((k) => ({
-                      ...k,
-                      maintenanceLoan: null,
-                      latestEvent: null,
-                    })) as KeyWithMaintenanceLoanStatus[]
-                    setPreSelectedKeys(keysWithStatus)
-                    setPreSelectedCompany(searchResult.contact!)
-                    setCreateDialogOpen(true)
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ContactInfoCard contacts={[searchResult.contact]} />
+                  <CreateLoanWithKeysCard
+                    onKeysSelected={(keys) => {
+                      // Cast keys to KeyWithMaintenanceLoanStatus[] - they don't have loan status since they're being selected for a new loan
+                      const keysWithStatus = keys.map((k) => ({
+                        ...k,
+                        maintenanceLoan: null,
+                        latestEvent: null,
+                      })) as KeyWithMaintenanceLoanStatus[]
+                      setPreSelectedKeys(keysWithStatus)
+                      setPreSelectedCompany(searchResult.contact!)
+                      setCreateDialogOpen(true)
+                    }}
+                  />
+                </div>
+                <ContactBundlesWithLoanedKeysCard
+                  contactCode={searchResult.contact.contactCode}
+                  onBundleClick={(bundleId) => {
+                    // Navigate to bundle by setting URL params
+                    setSearchParams({ bundle: bundleId })
                   }}
                 />
               </div>

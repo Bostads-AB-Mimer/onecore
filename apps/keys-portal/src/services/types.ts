@@ -23,6 +23,8 @@ export type KeyWithMaintenanceLoanStatus =
   components['schemas']['KeyWithMaintenanceLoanStatus']
 export type KeyBundleWithLoanStatusResponse =
   components['schemas']['KeyBundleWithLoanStatusResponse']
+export type BundleWithLoanedKeysInfo =
+  components['schemas']['BundleWithLoanedKeysInfo']
 export type Log = components['schemas']['Log']
 export type KeyNote = components['schemas']['KeyNote']
 export type Receipt = components['schemas']['Receipt']

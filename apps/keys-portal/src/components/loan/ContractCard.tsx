@@ -115,7 +115,8 @@ export function ContractCard({
   const refetchKeys = useCallback(async () => {
     try {
       const keysWithStatus = await keyService.getKeysWithLoanStatus(
-        lease.rentalPropertyId
+        lease.rentalPropertyId,
+        true
       )
       setKeys(keysWithStatus)
     } catch (err) {

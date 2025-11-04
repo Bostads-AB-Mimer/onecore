@@ -165,6 +165,15 @@ export const KeyBundleWithLoanStatusResponseSchema = z.object({
   keys: z.array(KeyWithMaintenanceLoanStatusSchema),
 })
 
+// Response schema for bundles with keys loaned to a specific contact
+export const BundleWithLoanedKeysInfoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  loanedKeyCount: z.number(),
+  totalKeyCount: z.number(),
+})
+
 // Request schemas for API endpoints
 export const CreateKeyRequestSchema = z.object({
   keyName: z.string(),
