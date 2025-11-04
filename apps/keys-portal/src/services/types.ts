@@ -15,12 +15,7 @@ export type KeySystem = components['schemas']['KeySystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
 export type KeyBundle = components['schemas']['KeyBundle']
-export type KeyLoanMaintenanceKeys =
-  components['schemas']['KeyLoanMaintenanceKeys']
-export type KeyLoanMaintenanceKeysWithDetails =
-  components['schemas']['KeyLoanMaintenanceKeysWithDetails']
-export type KeyWithMaintenanceLoanStatus =
-  components['schemas']['KeyWithMaintenanceLoanStatus']
+export type KeyWithLoanAndEvent = components['schemas']['KeyWithLoanAndEvent']
 export type KeyBundleWithLoanStatusResponse =
   components['schemas']['KeyBundleWithLoanStatusResponse']
 export type Log = components['schemas']['Log']
@@ -61,8 +56,6 @@ export type CreateKeyEventRequest =
   components['schemas']['CreateKeyEventRequest']
 export type UpdateKeyEventRequest =
   components['schemas']['UpdateKeyEventRequest']
-export type CreateKeyLoanMaintenanceKeysRequest =
-  components['schemas']['CreateKeyLoanMaintenanceKeysRequest']
 
 // Get by key loan (GET /receipts/by-key-loan/{keyLoanId}) -> single "content"
 export type ReceiptByKeyLoan = NonNullable<
@@ -162,6 +155,23 @@ export const leaseTypes = {
 
 export type LeaseType = keyof typeof leaseTypes
 
+// ----- Key Loans (UI/domain) -----
+// Loan type labels in Swedish
+export const LoanTypeLabels = {
+  TENANT: 'Hyresgäst',
+  MAINTENANCE: 'Underhåll',
+} as const
+
+export type LoanType = keyof typeof LoanTypeLabels
+
+// Helper to get filter options for loan types
+export function getLoanTypeFilterOptions() {
+  return Object.entries(LoanTypeLabels).map(([value, label]) => ({
+    value,
+    label,
+  }))
+}
+
 // ----- Logs (UI/domain) -----
 // Event type labels in Swedish
 export const LogEventTypeLabels = {
@@ -178,7 +188,6 @@ export const LogObjectTypeLabels = {
   keySystem: 'Nyckelsystem',
   keyLoan: 'Nyckellån',
   keyBundle: 'Nyckelknippe',
-  keyLoanMaintenanceKeys: 'Servicenycklar',
   receipt: 'Kvitto',
   keyEvent: 'Nyckelhändelse',
   signature: 'Signatur',
@@ -249,8 +258,9 @@ export interface ReceiptData {
 }
 
 export interface MaintenanceReceiptData {
-  company: string
+  contact: string
   contactPerson: string | null
+  description?: string | null
   keys: Key[] // For RETURN: keys that were returned (checked in dialog)
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
