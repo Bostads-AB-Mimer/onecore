@@ -60,8 +60,14 @@ export function KeyLoanTransferDialog({
         ...newKeys.map((k) => k.id),
         ...transferredKeyIds,
       ]
+      const transferredKeys = existingLoans.flatMap(
+        (loanInfo) => loanInfo.keysToTransfer
+      )
+      const allKeys = [...newKeys, ...transferredKeys]
+
       const loanResult = await handleLoanKeys({
         keyIds: allNewLoanKeyIds,
+        keys: allKeys, // Pass basic key objects for error messages
         contact,
         contact2,
       })

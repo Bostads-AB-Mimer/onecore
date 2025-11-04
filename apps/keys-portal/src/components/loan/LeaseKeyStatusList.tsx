@@ -285,6 +285,7 @@ export function LeaseKeyStatusList({
     setIsProcessing(true)
     const result = await handleLoanKeys({
       keyIds,
+      keys: keysWithLoanStatus,
       contact: tenantContactCodes[0],
       contact2: tenantContactCodes[1],
     })
@@ -474,14 +475,16 @@ export function LeaseKeyStatusList({
           <div className="space-y-1">
             {sortedKeys.map((key, index) => {
               const isLoaned = !!key.activeLoanId
-              const canRent = !isLoaned && leaseIsNotPast
+              const hasMaintenanceLoan =
+                !!key.maintenanceLoanId && !key.maintenanceLoanReturnedAt
+              const canRent = !isLoaned && !hasMaintenanceLoan && leaseIsNotPast
               const canReturn = isLoaned && key.matchesCurrentTenant
               const isSelectable = canRent || canReturn
 
               // Use isAvailable flag for color: green if available, red if blocked, muted otherwise
               const statusColor = key.isAvailable
                 ? 'text-green-600 dark:text-green-400'
-                : isLoaned
+                : isLoaned || hasMaintenanceLoan
                   ? 'text-destructive'
                   : 'text-muted-foreground'
 

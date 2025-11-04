@@ -109,6 +109,81 @@ export async function checkActiveKeyLoans(
 }
 
 /**
+ * Check if any of the provided keys have active loans in EITHER regular loans OR maintenance loans
+ * @param keyIds - Array of key IDs to check
+ * @param excludeRegularLoanId - Optional regular loan ID to exclude from the check (for updates)
+ * @param excludeMaintenanceLoanId - Optional maintenance loan ID to exclude from the check (for updates)
+ * @param dbConnection - Database connection
+ * @returns Object with hasConflict flag, conflicting key IDs, and details about conflict types
+ */
+export async function checkActiveKeyLoansAcrossAllTypes(
+  keyIds: string[],
+  excludeRegularLoanId?: string,
+  excludeMaintenanceLoanId?: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<{
+  hasConflict: boolean
+  conflictingKeys: string[]
+  conflictDetails: { keyId: string; conflictType: 'regular' | 'maintenance' }[]
+}> {
+  if (keyIds.length === 0) {
+    return { hasConflict: false, conflictingKeys: [], conflictDetails: [] }
+  }
+
+  const conflictDetails: {
+    keyId: string
+    conflictType: 'regular' | 'maintenance'
+  }[] = []
+
+  // Check each key ID for active loans in both tables
+  for (const keyId of keyIds) {
+    // Check regular loans (key_loans table)
+    let regularQuery = dbConnection('key_loans')
+      .select('id')
+      .whereNotNull('pickedUpAt') // Only activated loans
+      .whereNull('returnedAt') // Not yet returned
+      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+
+    if (excludeRegularLoanId) {
+      regularQuery = regularQuery.whereNot('id', excludeRegularLoanId)
+    }
+
+    const regularLoan = await regularQuery.first()
+
+    // Check maintenance loans (key_loan_maintenance_keys table)
+    let maintenanceQuery = dbConnection('key_loan_maintenance_keys')
+      .select('id')
+      .whereNull('returnedAt') // Not yet returned
+      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+
+    if (excludeMaintenanceLoanId) {
+      maintenanceQuery = maintenanceQuery.whereNot(
+        'id',
+        excludeMaintenanceLoanId
+      )
+    }
+
+    const maintenanceLoan = await maintenanceQuery.first()
+
+    // Record conflicts
+    if (regularLoan) {
+      conflictDetails.push({ keyId, conflictType: 'regular' })
+    }
+    if (maintenanceLoan) {
+      conflictDetails.push({ keyId, conflictType: 'maintenance' })
+    }
+  }
+
+  const conflictingKeys = [...new Set(conflictDetails.map((d) => d.keyId))]
+
+  return {
+    hasConflict: conflictDetails.length > 0,
+    conflictingKeys,
+    conflictDetails,
+  }
+}
+
+/**
  * Get key loans search query builder for pagination
  * Returns a query builder that can be used with buildSearchQuery() and paginate()
  */

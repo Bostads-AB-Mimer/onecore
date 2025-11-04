@@ -6010,6 +6010,13 @@ export interface components {
       prevLoanAvailableFrom: string | null;
       prevLoanContact: string | null;
       prevLoanContact2: string | null;
+      /** Format: uuid */
+      maintenanceLoanId: string | null;
+      maintenanceLoanCompany: string | null;
+      /** Format: date-time */
+      maintenanceLoanPickedUpAt: string | null;
+      /** Format: date-time */
+      maintenanceLoanReturnedAt: string | null;
       latestEvent?: ({
         /** Format: uuid */
         id: string;

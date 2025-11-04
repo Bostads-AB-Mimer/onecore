@@ -390,7 +390,10 @@ describe('POST /key-loans', () => {
       .mockResolvedValueOnce({
         ok: false,
         err: 'active-loan-conflict',
-        details: { conflictingKeys: ['key-1'] },
+        details: {
+          conflictingKeys: ['key-1'],
+          conflictDetails: [{ keyId: 'key-1', conflictType: 'regular' }],
+        },
       })
 
     const res = await request(app.callback())
@@ -568,7 +571,10 @@ describe('PATCH /key-loans/:id', () => {
     jest.spyOn(keyLoanService, 'validateKeyLoanUpdate').mockResolvedValueOnce({
       ok: false,
       err: 'active-loan-conflict',
-      details: { conflictingKeys: ['key-5'] },
+      details: {
+        conflictingKeys: ['key-5'],
+        conflictDetails: [{ keyId: 'key-5', conflictType: 'regular' }],
+      },
     })
 
     const res = await request(app.callback())
@@ -827,7 +833,10 @@ describe('Key Loans Lifecycle', () => {
       .mockResolvedValueOnce({
         ok: false,
         err: 'active-loan-conflict',
-        details: { conflictingKeys: ['key-1'] },
+        details: {
+          conflictingKeys: ['key-1'],
+          conflictDetails: [{ keyId: 'key-1', conflictType: 'regular' }],
+        },
       })
 
     const res = await request(app.callback())

@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { KeyAutocomplete } from './KeyAutocomplete'
 import type { Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
+import { handleCreateMaintenanceLoan } from '@/services/maintenanceLoanHandlers'
 
 interface CreateMaintenanceLoanDialogProps {
   open: boolean
@@ -59,36 +60,42 @@ export function CreateMaintenanceLoanDialog({
     setIsSubmitting(true)
 
     try {
-      // Import the service dynamically to avoid circular dependencies
-      const { maintenanceKeysService } = await import(
-        '@/services/api/maintenanceKeysService'
-      )
-
       const keyIds = selectedKeys.map((k) => k.id)
 
-      await maintenanceKeysService.create({
-        keys: JSON.stringify(keyIds),
+      const result = await handleCreateMaintenanceLoan({
+        keyIds,
+        keys: selectedKeys, // Pass basic key objects for error messages
         company: companyContactCode,
-        contactPerson: contactPerson.trim() || null,
-        description: description.trim() || null,
+        contactPerson: contactPerson.trim() || undefined,
+        description: description.trim() || undefined,
       })
 
-      toast({
-        title: 'Lån skapat',
-        description: `${selectedKeys.length} ${selectedKeys.length === 1 ? 'nyckel' : 'nycklar'} har lånats ut`,
-      })
+      if (result.success) {
+        toast({
+          title: result.title,
+          description:
+            result.message ||
+            `${selectedKeys.length} ${selectedKeys.length === 1 ? 'nyckel' : 'nycklar'} har lånats ut`,
+        })
 
-      // Reset form
-      setContactPerson('')
-      setDescription('')
-      setSelectedKeys([])
-      onOpenChange(false)
-      onSuccess()
+        // Reset form
+        setContactPerson('')
+        setDescription('')
+        setSelectedKeys([])
+        onOpenChange(false)
+        onSuccess()
+      } else {
+        toast({
+          title: result.title,
+          description: result.message,
+          variant: 'destructive',
+        })
+      }
     } catch (error) {
       console.error('Error creating maintenance loan:', error)
       toast({
         title: 'Kunde inte skapa lån',
-        description: 'Ett fel uppstod när lånet skulle skapas',
+        description: 'Ett oväntat fel uppstod',
         variant: 'destructive',
       })
     } finally {

@@ -506,6 +506,7 @@ export const routes = (router: KoaRouter) => {
               reason:
                 'Cannot create loan. One or more keys already have active loans.',
               conflictingKeys: validationResult.details?.conflictingKeys,
+              conflictDetails: validationResult.details?.conflictDetails,
               ...metadata,
             }
             return
@@ -615,6 +616,7 @@ export const routes = (router: KoaRouter) => {
                 reason:
                   'Cannot update loan. One or more keys already have active loans.',
                 conflictingKeys: validationResult.details?.conflictingKeys,
+                conflictDetails: validationResult.details?.conflictDetails,
                 ...metadata,
               }
               return

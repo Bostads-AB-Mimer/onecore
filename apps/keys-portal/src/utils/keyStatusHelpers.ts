@@ -131,7 +131,7 @@ export function getKeyDisplayStatus(
   matchesTenant: boolean,
   latestEvent?: KeyEvent
 ): { status: string; date?: string; isAvailable?: boolean } {
-  // If there's an incomplete event, show event status
+  // Priority 1: If there's an incomplete event, show event status
   if (latestEvent && latestEvent.status !== 'COMPLETED') {
     const statusText =
       KeyEventStatusLabels[
@@ -146,6 +146,20 @@ export function getKeyDisplayStatus(
       isAvailable: false, // Keys with incomplete events are not available
     }
   }
+
+  // Priority 2: Check if key has an active maintenance loan (returnedAt IS NULL)
+  if (key.maintenanceLoanId && !key.maintenanceLoanReturnedAt) {
+    const company = key.maintenanceLoanCompany || 'Okänd'
+
+    // Show as loaned out regardless of pickup status
+    // This prevents confusion and clearly indicates the key is not available for regular loans
+    return {
+      status: `Utlånad till ${company}`,
+      isAvailable: false, // Maintenance loans are blocking
+    }
+  }
+
+  // Priority 3: Check for regular loan
   const isLoaned = !!key.activeLoanId
   const availabilityDate = getAvailabilityDate(key)
 

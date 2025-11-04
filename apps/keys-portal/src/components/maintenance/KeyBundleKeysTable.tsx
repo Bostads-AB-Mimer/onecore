@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react'
 import type { KeyWithMaintenanceLoanStatus, Contact } from '@/services/types'
 import { groupAndSortKeys, type GroupedKeys } from '@/utils/groupKeys'
 import { KeyTypeLabels, getKeyEventDisplayLabel } from '@/services/types'
+import { getMaintenanceKeyDisplayStatus } from '@/utils/maintenanceKeyStatusHelpers'
 import {
   Table,
   TableBody,
@@ -346,13 +347,10 @@ function renderKeyRow(
       <TableCell className="w-[8%]">{key.keySequenceNumber ?? '-'}</TableCell>
       <TableCell className="w-[8%]">{key.flexNumber ?? '-'}</TableCell>
       <TableCell className="w-[22%]">
-        {key.latestEvent && key.latestEvent.status !== 'COMPLETED' ? (
-          <Badge variant="outline">
-            {getKeyEventDisplayLabel(key.latestEvent)}
-          </Badge>
-        ) : (
-          '-'
-        )}
+        {(() => {
+          const { status, statusColor } = getMaintenanceKeyDisplayStatus(key)
+          return <span className={`font-medium ${statusColor}`}>{status}</span>
+        })()}
       </TableCell>
       <TableCell className="w-[15%]">
         <Badge variant="secondary">

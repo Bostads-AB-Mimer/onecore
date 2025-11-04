@@ -1,19 +1,19 @@
 /**
- * Business logic service for key loan validation
+ * Business logic service for maintenance key loan validation
  *
- * This service handles validation logic for creating and updating key loans:
+ * This service handles validation logic for creating and updating maintenance key loans:
  * 1. Parse and validate keys JSON array format
- * 2. Check for active loan conflicts (keys already loaned out)
+ * 2. Check for active loan conflicts across BOTH regular loans and maintenance loans
  * 3. Ensure keys array is not empty
  *
- * This extracts business logic from route handlers for better testability
- * and maintainability.
+ * This mirrors the pattern in key-loan-service.ts for consistency and
+ * extracts business logic from route handlers for better testability.
  */
 
 import { Knex } from 'knex'
 import * as keyLoansAdapter from './adapters/key-loans-adapter'
 
-export type KeyLoanValidationError =
+export type MaintenanceKeyLoanValidationError =
   | 'invalid-keys-format'
   | 'empty-keys-array'
   | 'keys-not-array'
@@ -36,7 +36,7 @@ export type Result<T, E = string> =
  */
 export function parseKeysArray(
   keys: string
-): Result<string[], KeyLoanValidationError> {
+): Result<string[], MaintenanceKeyLoanValidationError> {
   // Try to parse JSON
   let parsed: unknown
   try {
@@ -65,9 +65,9 @@ export function parseKeysArray(
 }
 
 /**
- * Validate key loan creation request
+ * Validate maintenance key loan creation request
  *
- * Performs validation checks before creating a new key loan:
+ * Performs validation checks before creating a new maintenance key loan:
  * - Parses keys JSON array
  * - Checks that no keys have active loans in EITHER regular loans OR maintenance loans
  *
@@ -75,10 +75,10 @@ export function parseKeysArray(
  * @param dbConnection - Database connection or transaction
  * @returns Result with validated key IDs or error with details
  */
-export async function validateKeyLoanCreation(
+export async function validateMaintenanceKeyLoanCreation(
   keys: string,
   dbConnection: Knex | Knex.Transaction
-): Promise<Result<{ keyIds: string[] }, KeyLoanValidationError>> {
+): Promise<Result<{ keyIds: string[] }, MaintenanceKeyLoanValidationError>> {
   // Step 1: Parse keys array
   const parseResult = parseKeysArray(keys)
   if (!parseResult.ok) {
@@ -108,22 +108,22 @@ export async function validateKeyLoanCreation(
 }
 
 /**
- * Validate key loan update request
+ * Validate maintenance key loan update request
  *
- * Performs validation checks before updating an existing key loan:
+ * Performs validation checks before updating an existing maintenance key loan:
  * - Parses keys JSON array
- * - Checks that no keys have active loans (excluding current regular loan)
+ * - Checks that no keys have active loans (excluding current maintenance loan)
  *
- * @param loanId - ID of the loan being updated
+ * @param loanId - ID of the maintenance loan being updated
  * @param keys - JSON string of key IDs
  * @param dbConnection - Database connection or transaction
  * @returns Result with validated key IDs or error with details
  */
-export async function validateKeyLoanUpdate(
+export async function validateMaintenanceKeyLoanUpdate(
   loanId: string,
   keys: string,
   dbConnection: Knex | Knex.Transaction
-): Promise<Result<{ keyIds: string[] }, KeyLoanValidationError>> {
+): Promise<Result<{ keyIds: string[] }, MaintenanceKeyLoanValidationError>> {
   // Step 1: Parse keys array
   const parseResult = parseKeysArray(keys)
   if (!parseResult.ok) {
@@ -132,12 +132,12 @@ export async function validateKeyLoanUpdate(
 
   const keyIds = parseResult.data
 
-  // Step 2: Check for active loan conflicts (excluding current regular loan)
+  // Step 2: Check for active loan conflicts (excluding current maintenance loan)
   const { hasConflict, conflictingKeys, conflictDetails } =
     await keyLoansAdapter.checkActiveKeyLoansAcrossAllTypes(
       keyIds,
-      loanId, // exclude current regular loan
-      undefined, // no maintenance loan to exclude
+      undefined, // no regular loan to exclude
+      loanId, // exclude current maintenance loan
       dbConnection
     )
 

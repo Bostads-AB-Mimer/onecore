@@ -141,7 +141,12 @@ export async function getKeysWithLoanStatus(
       -- Previous loan data (for returned keys)
       prev.availableToNextTenantFrom as prevLoanAvailableFrom,
       prev.contact as prevLoanContact,
-      prev.contact2 as prevLoanContact2${eventFields}
+      prev.contact2 as prevLoanContact2,
+      -- Most recent maintenance loan data (from OUTER APPLY subquery)
+      mkl.id as maintenanceLoanId,
+      mkl.company as maintenanceLoanCompany,
+      mkl.pickedUpAt as maintenanceLoanPickedUpAt,
+      mkl.returnedAt as maintenanceLoanReturnedAt${eventFields}
 
     FROM keys k
 
@@ -154,6 +159,23 @@ export async function getKeysWithLoanStatus(
       )
       AND kl.returnedAt IS NULL
     )
+
+    -- LEFT JOIN most recent maintenance loan (active or returned)
+    -- Using OUTER APPLY to get only ONE loan per key (the most recent one)
+    OUTER APPLY (
+      SELECT TOP 1
+        mkl.id,
+        mkl.company,
+        mkl.pickedUpAt,
+        mkl.returnedAt
+      FROM key_loan_maintenance_keys mkl
+      WHERE EXISTS (
+        SELECT 1
+        FROM OPENJSON(mkl.keys)
+        WHERE value = CAST(k.id AS NVARCHAR(36))
+      )
+      ORDER BY mkl.createdAt DESC
+    ) mkl
 
     -- OUTER APPLY for most recent returned loan data
     -- OUTER APPLY is SQL Server's equivalent to Postgres LATERAL

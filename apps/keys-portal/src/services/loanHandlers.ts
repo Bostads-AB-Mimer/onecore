@@ -6,6 +6,7 @@ import type { Key, Lease } from './types'
 
 export type LoanKeysParams = {
   keyIds: string[]
+  keys?: Key[] // Optional: full key objects for better error messages
   contact?: string
   contact2?: string
 }
@@ -21,12 +22,14 @@ export type LoanKeysResult = {
 /**
  * Handler for loaning out keys
  * @param keyIds - Array of key IDs to loan (can be single key)
+ * @param keys - Optional: full key objects for better error messages
  * @param contact - Primary contact code
  * @param contact2 - Secondary contact code (optional)
  * @returns Result with success status and keyLoanId
  */
 export async function handleLoanKeys({
   keyIds,
+  keys,
   contact,
   contact2,
 }: LoanKeysParams): Promise<LoanKeysResult> {
@@ -70,6 +73,48 @@ export async function handleLoanKeys({
     }
   } catch (err: any) {
     const is409 = err?.status === 409 || err?.message?.includes('409')
+
+    // Build detailed error message for 409 conflicts
+    if (is409 && err?.data) {
+      const conflictingKeyIds: string[] = err.data.conflictingKeys || []
+      const conflictDetails: Array<{
+        keyId: string
+        conflictType: 'regular' | 'maintenance'
+      }> = err.data.conflictDetails || []
+
+      if (conflictingKeyIds.length > 0 && keys) {
+        // Build specific error messages for each conflicting key
+        const messages = conflictingKeyIds.map((keyId) => {
+          const key = keys.find((k) => k.id === keyId)
+          const detail = conflictDetails.find((d) => d.keyId === keyId)
+
+          if (!key) {
+            return `Nyckel ${keyId.substring(0, 8)}... är redan utlånad`
+          }
+
+          if (detail?.conflictType === 'maintenance') {
+            return `${key.keyName} är utlånad som fastighetsnyckel`
+          } else {
+            // Regular loan
+            return `${key.keyName} är redan utlånad`
+          }
+        })
+
+        return {
+          success: false,
+          title: 'Kan inte låna ut',
+          message: messages.join('\n'),
+        }
+      }
+
+      // Fallback if we don't have key details
+      return {
+        success: false,
+        title: 'Kan inte låna ut',
+        message: 'En eller flera nycklar är redan utlånade.',
+      }
+    }
+
     return {
       success: false,
       title: is409 ? 'Kan inte låna ut' : 'Fel',

@@ -3,6 +3,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import * as keyLoanMaintenanceKeysAdapter from '../adapters/key-loan-maintenance-keys-adapter'
+import * as maintenanceKeyLoanService from '../key-loan-maintenance-keys-service'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { buildSearchQuery } from '../../../utils/search-builder'
@@ -529,21 +530,38 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyLoanMaintenanceKeysRequest = ctx.request.body
 
-        // Validate the keys array format
-        try {
-          const keyIds = JSON.parse(payload.keys)
-          if (!Array.isArray(keyIds)) {
-            ctx.status = 400
+        // Validate keys using service layer
+        const validationResult =
+          await maintenanceKeyLoanService.validateMaintenanceKeyLoanCreation(
+            payload.keys,
+            db
+          )
+
+        if (!validationResult.ok) {
+          if (validationResult.err === 'active-loan-conflict') {
+            ctx.status = 409
             ctx.body = {
-              reason: 'Keys must be a JSON array',
+              reason:
+                'Cannot create maintenance loan. One or more keys already have active loans.',
+              conflictingKeys: validationResult.details?.conflictingKeys,
+              conflictDetails: validationResult.details?.conflictDetails,
               ...metadata,
             }
             return
           }
-        } catch (_err) {
+
+          // Handle other validation errors (format issues)
+          const errorMessages = {
+            'invalid-keys-format':
+              'Invalid keys format. Must be a valid JSON array.',
+            'keys-not-array': 'Keys must be a JSON array',
+            'empty-keys-array': 'Keys array cannot be empty',
+          }
+
           ctx.status = 400
           ctx.body = {
-            reason: 'Invalid keys format. Must be a valid JSON array.',
+            reason:
+              errorMessages[validationResult.err] || 'Invalid keys format',
             ...metadata,
           }
           return
@@ -612,22 +630,40 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: UpdateKeyLoanMaintenanceKeysRequest = ctx.request.body
 
-        // Validate the keys array format if provided
+        // Validate the keys array if provided
         if (payload.keys) {
-          try {
-            const keyIds = JSON.parse(payload.keys)
-            if (!Array.isArray(keyIds)) {
-              ctx.status = 400
+          const validationResult =
+            await maintenanceKeyLoanService.validateMaintenanceKeyLoanUpdate(
+              ctx.params.id,
+              payload.keys,
+              db
+            )
+
+          if (!validationResult.ok) {
+            if (validationResult.err === 'active-loan-conflict') {
+              ctx.status = 409
               ctx.body = {
-                reason: 'Keys must be a JSON array',
+                reason:
+                  'Cannot update maintenance loan. One or more keys already have active loans.',
+                conflictingKeys: validationResult.details?.conflictingKeys,
+                conflictDetails: validationResult.details?.conflictDetails,
                 ...metadata,
               }
               return
             }
-          } catch (_err) {
+
+            // Handle other validation errors (format issues)
+            const errorMessages = {
+              'invalid-keys-format':
+                'Invalid keys format. Must be a valid JSON array.',
+              'keys-not-array': 'Keys must be a JSON array',
+              'empty-keys-array': 'Keys array cannot be empty',
+            }
+
             ctx.status = 400
             ctx.body = {
-              reason: 'Invalid keys format. Must be a valid JSON array.',
+              reason:
+                errorMessages[validationResult.err] || 'Invalid keys format',
               ...metadata,
             }
             return

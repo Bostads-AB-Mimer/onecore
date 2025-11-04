@@ -7,6 +7,12 @@ import type {
 
 import { GET, POST, PATCH } from './core/base-api'
 
+type ApiError = {
+  status?: number
+  message?: string
+  data?: any
+}
+
 export const maintenanceKeysService = {
   /**
    * Get maintenance key loans by company with full key details
@@ -51,7 +57,18 @@ export const maintenanceKeysService = {
     const { data, error } = await POST('/key-loan-maintenance-keys', {
       body: payload,
     })
-    if (error) throw error
+    if (error) {
+      // Normalize error shape so callers can check error.status and error.data
+      const apiError: ApiError =
+        typeof error === 'object' && error
+          ? {
+              status: (error as any).status ?? (error as any).code,
+              message: (error as any).message,
+              data: (error as any).data ?? (error as any).response?.data,
+            }
+          : { message: String(error) }
+      throw apiError
+    }
     return data?.content as KeyLoanMaintenanceKeys
   },
 
