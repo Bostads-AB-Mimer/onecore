@@ -1,10 +1,7 @@
-import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { KeyAutocomplete } from '@/components/maintenance/KeyAutocomplete'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { updateKeyBundle } from '@/services/api/keyBundleService'
+import { KeySelectionCard } from '@/components/shared/KeySelectionCard'
 import type { Key, KeyBundle } from '@/services/types'
 
 interface AddKeysToBundleCardProps {
@@ -15,18 +12,16 @@ interface AddKeysToBundleCardProps {
 
 /**
  * Card component for adding keys to a bundle
- * Shows a search bar to find and add keys
+ * Uses the generic KeySelectionCard component
  */
 export function AddKeysToBundleCard({
   bundle,
   currentKeyIds,
   onKeysAdded,
 }: AddKeysToBundleCardProps) {
-  const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
-  const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
 
-  const handleAddKey = (key: Key) => {
+  const handleValidateKey = (key: Key) => {
     // Don't add if already in the bundle
     if (currentKeyIds.includes(key.id)) {
       toast({
@@ -34,20 +29,12 @@ export function AddKeysToBundleCard({
         description: `${key.keyName} är redan en del av ${bundle.name}`,
         variant: 'destructive',
       })
-      return
+      return { valid: false }
     }
-
-    setSelectedKeys((prev) => [...prev, key])
+    return { valid: true }
   }
 
-  const handleRemoveKey = (keyId: string) => {
-    setSelectedKeys((prev) => prev.filter((k) => k.id !== keyId))
-  }
-
-  const handleSave = async () => {
-    if (selectedKeys.length === 0) return
-
-    setIsSaving(true)
+  const handleAccept = async (selectedKeys: Key[]) => {
     try {
       // Parse existing keys
       const existingKeyIds = JSON.parse(bundle.keys) as string[]
@@ -66,7 +53,6 @@ export function AddKeysToBundleCard({
         description: `${selectedKeys.length} nyckel${selectedKeys.length > 1 ? 'ar' : ''} tillagda i ${bundle.name}`,
       })
 
-      setSelectedKeys([])
       onKeysAdded()
     } catch (error) {
       console.error('Error adding keys to bundle:', error)
@@ -75,34 +61,17 @@ export function AddKeysToBundleCard({
         description: 'Ett fel uppstod när nycklarna skulle läggas till',
         variant: 'destructive',
       })
-    } finally {
-      setIsSaving(false)
+      throw error // Re-throw to let KeySelectionCard handle the state
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">
-          Lägg till nycklar i samlingen
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <KeyAutocomplete
-          selectedKeys={selectedKeys}
-          onAddKey={handleAddKey}
-          onRemoveKey={handleRemoveKey}
-          disabled={isSaving}
-        />
-
-        {selectedKeys.length > 0 && (
-          <Button onClick={handleSave} disabled={isSaving} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
-            Lägg till {selectedKeys.length} nyckel
-            {selectedKeys.length > 1 ? 'ar' : ''}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+    <KeySelectionCard
+      title="Lägg till nycklar i samlingen"
+      buttonText="Lägg till {count}"
+      buttonIcon={Plus}
+      onValidateKey={handleValidateKey}
+      onAccept={handleAccept}
+    />
   )
 }
