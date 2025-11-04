@@ -8,6 +8,7 @@ type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
 
 const TABLE = 'key_loans'
+const KEYS_TABLE = 'keys'
 
 /**
  * Database adapter functions for key loans.
@@ -237,4 +238,170 @@ export async function getKeyLoansByRentalObject(
       receipts: loanReceipts,
     }
   })
+}
+
+/**
+ * Get key loans by contact (works for both TENANT and MAINTENANCE loan types)
+ * For MAINTENANCE loans, company name is stored in the contact field
+ * @param contact - The contact/company name
+ * @param loanType - Optional loan type filter ('TENANT' or 'MAINTENANCE')
+ * @param dbConnection - Database connection
+ * @returns Array of key loans
+ */
+export async function getKeyLoansByContact(
+  contact: string,
+  loanType?: 'TENANT' | 'MAINTENANCE',
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<KeyLoan[]> {
+  let query = dbConnection(TABLE).where({ contact })
+
+  if (loanType) {
+    query = query.where({ loanType })
+  }
+
+  return await query.orderBy('id', 'desc')
+}
+
+/**
+ * Get key loans by contact with full key details
+ * @param contact - The contact/company name to filter by
+ * @param loanType - Optional loan type filter ('TENANT' or 'MAINTENANCE')
+ * @param returned - Optional filter: true = only returned loans, false = only active loans, undefined = all loans
+ * @param dbConnection - Database connection
+ * @returns Array of loans with keysArray containing full key objects
+ */
+export async function getKeyLoansWithKeysByContact(
+  contact: string,
+  loanType: 'TENANT' | 'MAINTENANCE' | undefined,
+  returned: boolean | undefined,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<KeyLoanWithDetails[]> {
+  // Build base query
+  let query = dbConnection(TABLE).where({ contact })
+
+  if (loanType) {
+    query = query.where({ loanType })
+  }
+
+  if (returned === true) {
+    query = query.whereNotNull('returnedAt')
+  } else if (returned === false) {
+    query = query.whereNull('returnedAt')
+  }
+
+  const loans = await query.orderBy('id', 'desc')
+
+  // For each loan, parse the keys JSON and fetch full key details
+  const loansWithKeys = await Promise.all(
+    loans.map(async (loan) => {
+      let keyIds: string[] = []
+      try {
+        keyIds = JSON.parse(loan.keys)
+      } catch (_e) {
+        // If parsing fails, return empty array
+        keyIds = []
+      }
+
+      // Fetch all keys for this loan
+      const keysArray =
+        keyIds.length > 0
+          ? await dbConnection(KEYS_TABLE).whereIn('id', keyIds).select('*')
+          : []
+
+      return {
+        ...loan,
+        keysArray,
+        receipts: [], // Include empty receipts array to match type
+      } as KeyLoanWithDetails
+    })
+  )
+
+  return loansWithKeys
+}
+
+/**
+ * Get key loans by key bundle with full key details (works for all loan types)
+ * Finds all loans that contain at least one key from the specified bundle
+ * @param bundleId - The key bundle ID to filter by
+ * @param loanType - Optional loan type filter ('TENANT' or 'MAINTENANCE')
+ * @param returned - Optional filter: true = only returned loans, false = only active loans, undefined = all loans
+ * @param dbConnection - Database connection
+ * @returns Array of loans with keysArray containing full key objects
+ */
+export async function getKeyLoansWithKeysByBundle(
+  bundleId: string,
+  loanType: 'TENANT' | 'MAINTENANCE' | undefined,
+  returned: boolean | undefined,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<KeyLoanWithDetails[]> {
+  // First, get the key bundle to find which keys it contains
+  const bundle = await dbConnection('key_bundles')
+    .where({ id: bundleId })
+    .first()
+
+  if (!bundle) {
+    return []
+  }
+
+  // Parse the bundle's keys
+  let bundleKeyIds: string[] = []
+  try {
+    bundleKeyIds = JSON.parse(bundle.keys)
+  } catch (_e) {
+    return []
+  }
+
+  if (bundleKeyIds.length === 0) {
+    return []
+  }
+
+  // Build base query to find loans containing any of these keys
+  let query = dbConnection(TABLE)
+
+  // Filter by loan type if specified
+  if (loanType) {
+    query = query.where({ loanType })
+  }
+
+  // Use OR conditions to match any key in the bundle
+  query = query.where(function () {
+    bundleKeyIds.forEach((keyId) => {
+      this.orWhereRaw('keys LIKE ?', [`%"${keyId}"%`])
+    })
+  })
+
+  // Apply returnedAt filter
+  if (returned === true) {
+    query = query.whereNotNull('returnedAt')
+  } else if (returned === false) {
+    query = query.whereNull('returnedAt')
+  }
+
+  const loans = await query.orderBy('id', 'desc')
+
+  // For each loan, parse the keys JSON and fetch full key details
+  const loansWithKeys = await Promise.all(
+    loans.map(async (loan) => {
+      let keyIds: string[] = []
+      try {
+        keyIds = JSON.parse(loan.keys)
+      } catch (_e) {
+        keyIds = []
+      }
+
+      // Fetch all keys for this loan
+      const keysArray =
+        keyIds.length > 0
+          ? await dbConnection(KEYS_TABLE).whereIn('id', keyIds).select('*')
+          : []
+
+      return {
+        ...loan,
+        keysArray,
+        receipts: [], // Include empty receipts array to match type
+      } as KeyLoanWithDetails
+    })
+  )
+
+  return loansWithKeys
 }
