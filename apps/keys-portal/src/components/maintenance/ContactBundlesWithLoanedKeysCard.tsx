@@ -8,8 +8,15 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { getBundlesByContactWithLoanedKeys } from '@/services/api/keyBundleService'
-import type { BundleWithLoanedKeysInfo } from '@/services/types'
+import {
+  getBundlesByContactWithLoanedKeys,
+  getKeyBundleWithLoanStatus,
+} from '@/services/api/keyBundleService'
+import type {
+  BundleWithLoanedKeysInfo,
+  KeyBundleWithLoanStatusResponse,
+} from '@/services/types'
+import { MaintenanceKeysTable } from './MaintenanceKeysTable'
 
 type Props = {
   contactCode: string
@@ -24,6 +31,13 @@ export function ContactBundlesWithLoanedKeysCard({
   const [bundles, setBundles] = useState<BundleWithLoanedKeysInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+
+  // State for nested bundle expansion
+  const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
+  const [bundleDetails, setBundleDetails] = useState<
+    Record<string, KeyBundleWithLoanStatusResponse>
+  >({})
+  const [loadingBundleId, setLoadingBundleId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen || hasLoaded) {
@@ -47,6 +61,34 @@ export function ContactBundlesWithLoanedKeysCard({
 
     fetchBundles()
   }, [isOpen, hasLoaded, contactCode])
+
+  const handleBundleExpand = async (bundleId: string) => {
+    // Toggle expansion
+    if (expandedBundleId === bundleId) {
+      setExpandedBundleId(null)
+      return
+    }
+
+    setExpandedBundleId(bundleId)
+
+    // If we already have the data, don't fetch again
+    if (bundleDetails[bundleId]) {
+      return
+    }
+
+    // Fetch detailed bundle data
+    setLoadingBundleId(bundleId)
+    try {
+      const data = await getKeyBundleWithLoanStatus(bundleId)
+      if (data) {
+        setBundleDetails((prev) => ({ ...prev, [bundleId]: data }))
+      }
+    } catch (error) {
+      console.error('Error fetching bundle details:', error)
+    } finally {
+      setLoadingBundleId(null)
+    }
+  }
 
   return (
     <Card>
@@ -82,29 +124,97 @@ export function ContactBundlesWithLoanedKeysCard({
             </p>
           ) : (
             <div className="space-y-2">
-              {bundles.map((bundle) => (
-                <div
-                  key={bundle.id}
-                  onClick={() => onBundleClick(bundle.id)}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors group"
-                >
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{bundle.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {bundle.loanedKeyCount}/{bundle.totalKeyCount} nycklar
-                        utlånade
-                      </Badge>
+              {bundles.map((bundle) => {
+                const isExpanded = expandedBundleId === bundle.id
+                const isLoadingDetails = loadingBundleId === bundle.id
+                const details = bundleDetails[bundle.id]
+
+                // Filter keys that are loaned to this contact
+                const loanedKeys = details?.keys.filter(
+                  (key) =>
+                    key.maintenanceLoan &&
+                    key.maintenanceLoan.company === contactCode
+                ) || []
+
+                // Build key system map from the keys array
+                const keySystemMap: Record<string, string> = {}
+                if (details?.keys) {
+                  details.keys.forEach((key) => {
+                    if (key.keySystemId && key.keySystem?.name) {
+                      keySystemMap[key.keySystemId] = key.keySystem.name
+                    }
+                  })
+                }
+
+                return (
+                  <div key={bundle.id} className="rounded-lg border">
+                    {/* Bundle Header */}
+                    <div className="flex items-center justify-between p-3 transition-colors group">
+                      {/* Left side - expandable to show keys */}
+                      <div
+                        className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-muted/50 -m-3 p-3 rounded-l-lg"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleBundleExpand(bundle.id)
+                        }}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{bundle.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {bundle.loanedKeyCount}/{bundle.totalKeyCount}{' '}
+                              nycklar utlånade
+                            </Badge>
+                          </div>
+                          {bundle.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {bundle.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side - navigate to bundle */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onBundleClick(bundle.id)
+                        }}
+                        className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors shrink-0"
+                      >
+                        Visa samling
+                      </button>
                     </div>
-                    {bundle.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-1">
-                        {bundle.description}
-                      </p>
+
+                    {/* Expanded Keys List */}
+                    {isExpanded && (
+                      <div className="border-t px-3 pb-3">
+                        {isLoadingDetails ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : loanedKeys.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-4 text-center">
+                            Inga nycklar hittades
+                          </p>
+                        ) : (
+                          <div className="mt-3">
+                            <MaintenanceKeysTable
+                              keys={loanedKeys}
+                              keySystemMap={keySystemMap}
+                            />
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
