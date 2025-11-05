@@ -61,6 +61,10 @@ export interface Config {
     baseUrl: string
     apiKey: string
   }
+  tenfast: {
+    baseUrl: string
+    apiKey: string
+  }
   health: {
     xledger: {
       systemName: string
@@ -146,6 +150,10 @@ const config = configPackage({
       baseUrl: '',
       apiKey: '',
     },
+    tenfast: {
+      baseUrl: '',
+      apiKey: '',
+    },
     health: {
       xledger: {
         systemName: 'xledger',
@@ -175,5 +183,6 @@ export default {
     'scriptNotificationEmailAddresses'
   ),
   infobip: config.get('infobip'),
+  tenfast: config.get('tenfast'),
   health: config.get('health'),
 } as Config
