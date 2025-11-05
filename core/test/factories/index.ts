@@ -47,9 +47,10 @@ export { FacilityDetailsFactory as facilityDetails } from './facility'
 
 // Keyfactories
 export { KeyFactory as key } from './key'
-export { KeyLoanFactory as keyLoan } from './key-loan'
+export { KeyLoanFactory as keyLoan, KeyLoanWithDetailsFactory as keyLoanWithDetails } from './key-loan'
 export { KeySystemFactory as keySystem } from './key-system'
 export { KeyNoteFactory as keyNote } from './key-note'
 export { ReceiptFactory as receipt } from './receipt'
 export { LogFactory as log } from './log'
 export { KeyEventFactory as keyEvent } from './key-event'
+export { SignatureFactory as signature } from './signature'
