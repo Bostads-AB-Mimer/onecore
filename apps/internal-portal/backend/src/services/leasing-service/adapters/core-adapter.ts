@@ -672,21 +672,26 @@ const createLeaseForNonScoredParkingSpace = async (params: {
 
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === HttpStatusCode.BadRequest) {
-      const errorCode = err.response.data?.content?.errorCode || err.response.data?.error
+    if (err instanceof AxiosError && err.response?.data) {
+      const statusCode = err.response.status
+      // Check error at root level first, then nested in content
+      const errorCode = err.response.data?.error || err.response.data?.content?.errorCode
 
-      // Map error codes from core service
-      if (errorCode === 'internal-credit-check-failed') {
-        return { ok: false, err: 'internal-credit-check-failed', statusCode: 400 }
-      }
-      if (errorCode === 'external-credit-check-failed') {
-        return { ok: false, err: 'external-credit-check-failed', statusCode: 400 }
-      }
-      if (errorCode === 'invalid-address') {
-        return { ok: false, err: 'invalid-address', statusCode: 400 }
-      }
-      if (errorCode === 'already-has-lease') {
-        return { ok: false, err: 'already-has-lease', statusCode: 400 }
+      // Handle both 400 BadRequest and 404 NotFound for validation errors
+      if (statusCode === HttpStatusCode.BadRequest || statusCode === 404) {
+        // Map error codes from core service
+        if (errorCode === 'internal-credit-check-failed') {
+          return { ok: false, err: 'internal-credit-check-failed', statusCode }
+        }
+        if (errorCode === 'external-credit-check-failed') {
+          return { ok: false, err: 'external-credit-check-failed', statusCode }
+        }
+        if (errorCode === 'invalid-address' || errorCode === 'applicant-missing-address') {
+          return { ok: false, err: 'invalid-address', statusCode }
+        }
+        if (errorCode === 'already-has-lease') {
+          return { ok: false, err: 'already-has-lease', statusCode }
+        }
       }
     }
 
