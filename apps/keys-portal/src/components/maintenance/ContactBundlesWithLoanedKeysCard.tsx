@@ -12,6 +12,7 @@ import {
   getBundlesByContactWithLoanedKeys,
   getKeyBundleWithLoanStatus,
 } from '@/services/api/keyBundleService'
+import { keyService } from '@/services/api/keyService'
 import type {
   BundleWithLoanedKeysInfo,
   KeyBundleWithLoanStatusResponse,
@@ -38,6 +39,9 @@ export function ContactBundlesWithLoanedKeysCard({
     Record<string, KeyBundleWithLoanStatusResponse>
   >({})
   const [loadingBundleId, setLoadingBundleId] = useState<string | null>(null)
+  const [keySystemMaps, setKeySystemMaps] = useState<
+    Record<string, Record<string, string>>
+  >({})
 
   useEffect(() => {
     if (!isOpen || hasLoaded) {
@@ -82,6 +86,30 @@ export function ContactBundlesWithLoanedKeysCard({
       const data = await getKeyBundleWithLoanStatus(bundleId)
       if (data) {
         setBundleDetails((prev) => ({ ...prev, [bundleId]: data }))
+
+        // Fetch key systems for this bundle
+        const uniqueKeySystemIds = [
+          ...new Set(
+            data.keys
+              .map((k) => k.keySystemId)
+              .filter((id): id is string => id != null && id !== '')
+          ),
+        ]
+
+        if (uniqueKeySystemIds.length > 0) {
+          const keySystemMap: Record<string, string> = {}
+          await Promise.all(
+            uniqueKeySystemIds.map(async (id) => {
+              try {
+                const keySystem = await keyService.getKeySystem(id)
+                keySystemMap[id] = keySystem.name
+              } catch (error) {
+                console.error(`Failed to fetch key system ${id}:`, error)
+              }
+            })
+          )
+          setKeySystemMaps((prev) => ({ ...prev, [bundleId]: keySystemMap }))
+        }
       }
     } catch (error) {
       console.error('Error fetching bundle details:', error)
@@ -133,19 +161,14 @@ export function ContactBundlesWithLoanedKeysCard({
                 const loanedKeys =
                   details?.keys.filter(
                     (key) =>
-                      key.maintenanceLoan &&
-                      key.maintenanceLoan.company === contactCode
+                      key.loan &&
+                      key.loan.loanType === 'MAINTENANCE' &&
+                      key.loan.contact === contactCode &&
+                      !key.loan.returnedAt
                   ) || []
 
-                // Build key system map from the keys array
-                const keySystemMap: Record<string, string> = {}
-                if (details?.keys) {
-                  details.keys.forEach((key) => {
-                    if (key.keySystemId && key.keySystem?.name) {
-                      keySystemMap[key.keySystemId] = key.keySystem.name
-                    }
-                  })
-                }
+                // Get key system map for this bundle (fetched in handleBundleExpand)
+                const keySystemMap = keySystemMaps[bundle.id] || {}
 
                 return (
                   <div key={bundle.id} className="rounded-lg border">
