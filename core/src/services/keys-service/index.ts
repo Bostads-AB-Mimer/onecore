@@ -10,7 +10,6 @@ import {
   ReceiptsApi,
   KeyEventsApi,
   KeyBundlesApi,
-  KeyLoanMaintenanceKeysApi,
   SignaturesApi,
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
@@ -19,15 +18,13 @@ import { registerSchema } from '../../utils/openapi'
 const {
   KeySchema,
   KeyWithLoanStatusSchema,
+  KeyWithLoanAndEventSchema,
   KeyLoanSchema,
   KeyLoanWithDetailsSchema,
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
   KeyBundleSchema,
-  KeyLoanMaintenanceKeysSchema,
-  KeyLoanMaintenanceKeysWithDetailsSchema,
-  KeyWithMaintenanceLoanStatusSchema,
   KeyBundleWithLoanStatusResponseSchema,
   BundleWithLoanedKeysInfoSchema,
   ReceiptSchema,
@@ -45,8 +42,6 @@ const {
   UpdateKeyNoteRequestSchema,
   CreateKeyBundleRequestSchema,
   UpdateKeyBundleRequestSchema,
-  CreateKeyLoanMaintenanceKeysRequestSchema,
-  UpdateKeyLoanMaintenanceKeysRequestSchema,
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
   CreateSignatureRequestSchema,
@@ -98,6 +93,7 @@ export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('Key', KeySchema)
   registerSchema('KeyWithLoanStatus', KeyWithLoanStatusSchema)
+  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema)
   registerSchema('KeyLoan', KeyLoanSchema)
   registerSchema('KeyLoanWithDetails', KeyLoanWithDetailsSchema)
   registerSchema('KeySystem', KeySystemSchema)
@@ -120,26 +116,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('BundleWithLoanedKeysInfo', BundleWithLoanedKeysInfoSchema)
   registerSchema('CreateKeyBundleRequest', CreateKeyBundleRequestSchema)
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
-  registerSchema('KeyLoanMaintenanceKeys', KeyLoanMaintenanceKeysSchema)
-  registerSchema(
-    'KeyLoanMaintenanceKeysWithDetails',
-    KeyLoanMaintenanceKeysWithDetailsSchema
-  )
-  registerSchema(
-    'KeyWithMaintenanceLoanStatus',
-    KeyWithMaintenanceLoanStatusSchema
-  )
   registerSchema(
     'KeyBundleWithLoanStatusResponse',
     KeyBundleWithLoanStatusResponseSchema
-  )
-  registerSchema(
-    'CreateKeyLoanMaintenanceKeysRequest',
-    CreateKeyLoanMaintenanceKeysRequestSchema
-  )
-  registerSchema(
-    'UpdateKeyLoanMaintenanceKeysRequest',
-    UpdateKeyLoanMaintenanceKeysRequestSchema
   )
   registerSchema('CreateKeyEventRequest', CreateKeyEventRequestSchema)
   registerSchema('UpdateKeyEventRequest', UpdateKeyEventRequestSchema)
@@ -166,7 +145,6 @@ export const routes = (router: KoaRouter) => {
       | 'keySystem'
       | 'keyLoan'
       | 'keyBundle'
-      | 'keyLoanMaintenanceKeys'
       | 'receipt'
       | 'keyEvent'
       | 'signature'
@@ -539,6 +517,178 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { err: result.err, metadata },
         'Error fetching key loans by rental object'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/by-contact/{contact}/with-keys:
+   *   get:
+   *     summary: Get key loans by contact with keys
+   *     description: Returns all key loans for a specific contact with full key details, optionally filtered by loan type and return status
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: contact
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact identifier to search for
+   *       - in: query
+   *         name: loanType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *         description: Filter by loan type (TENANT or MAINTENANCE)
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by return status (true = returned, false = not returned)
+   *     responses:
+   *       200:
+   *         description: Array of key loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-contact/:contact/with-keys', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+
+    const loanTypeParam = ctx.query.loanType as string | undefined
+    const returnedParam = ctx.query.returned
+
+    let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
+    if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
+      loanType = loanTypeParam
+    }
+
+    let returned: boolean | undefined = undefined
+    if (returnedParam === 'true') {
+      returned = true
+    } else if (returnedParam === 'false') {
+      returned = false
+    }
+
+    const result = await KeyLoansApi.getByContactWithKeys(
+      ctx.params.contact,
+      loanType,
+      returned
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching key loans with keys by contact'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/by-bundle/{bundleId}/with-keys:
+   *   get:
+   *     summary: Get key loans by bundle with keys
+   *     description: Returns all key loans for a specific bundle with full key details, optionally filtered by loan type and return status
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: bundleId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The bundle ID to search for
+   *       - in: query
+   *         name: loanType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *         description: Filter by loan type (TENANT or MAINTENANCE)
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by return status (true = returned, false = not returned)
+   *     responses:
+   *       200:
+   *         description: Array of key loans with full key details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-bundle/:bundleId/with-keys', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+
+    const loanTypeParam = ctx.query.loanType as string | undefined
+    const returnedParam = ctx.query.returned
+
+    let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
+    if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
+      loanType = loanTypeParam
+    }
+
+    let returned: boolean | undefined = undefined
+    if (returnedParam === 'true') {
+      returned = true
+    } else if (returnedParam === 'false') {
+      returned = false
+    }
+
+    const result = await KeyLoansApi.getByBundleWithKeys(
+      ctx.params.bundleId,
+      loanType,
+      returned
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching key loans with keys by bundle'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -2432,7 +2582,7 @@ export const routes = (router: KoaRouter) => {
    *     description: |
    *       Returns all log entries for a given rental object code by JOINing across multiple tables.
    *
-   *       Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+   *       Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
    *
    *       Excluded: keySystem logs (infrastructure-level, not property-specific)
    *
@@ -2515,7 +2665,7 @@ export const routes = (router: KoaRouter) => {
    *
    *       Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
    *
-   *       Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+   *       Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
    *
    *       Note: Matches both contact and contact2 fields (co-tenants supported)
    *
@@ -5023,631 +5173,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { content: result.data, ...metadata }
     }
   )
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys:
-   *   get:
-   *     summary: List all maintenance key loans
-   *     description: Fetches a list of all maintenance key loans.
-   *     tags: [Keys Service]
-   *     responses:
-   *       200:
-   *         description: A list of maintenance key loans.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       500:
-   *         description: An error occurred while listing maintenance key loans.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/key-loan-maintenance-keys', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.list()
-
-    if (!result.ok) {
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching maintenance key loans'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/search:
-   *   get:
-   *     summary: Search maintenance key loans
-   *     description: Search maintenance key loans with flexible filtering.
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         required: false
-   *         schema:
-   *           type: string
-   *           minLength: 3
-   *       - in: query
-   *         name: fields
-   *         required: false
-   *         schema:
-   *           type: string
-   *         description: Comma-separated list of fields for OR search.
-   *     responses:
-   *       200:
-   *         description: Search results
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       400:
-   *         description: Invalid search parameters
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/key-loan-maintenance-keys/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
-
-    const result = await KeyLoanMaintenanceKeysApi.search(ctx.query)
-
-    if (!result.ok) {
-      if (result.err === 'bad-request') {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid search parameters', ...metadata }
-        return
-      }
-
-      logger.error(
-        { err: result.err, metadata },
-        'Error searching maintenance key loans'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/by-key/{keyId}:
-   *   get:
-   *     summary: Get all maintenance key loans for a specific key
-   *     description: Returns all maintenance key loan records for the specified key ID
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: keyId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The key ID to search for
-   *     responses:
-   *       200:
-   *         description: Array of loans containing this key
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/key-loan-maintenance-keys/by-key/:keyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.getByKey(ctx.params.keyId)
-
-    if (!result.ok) {
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching maintenance key loans by key'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/by-company/{company}:
-   *   get:
-   *     summary: Get all maintenance key loans for a specific company
-   *     description: Returns all maintenance key loan records for the specified company
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: company
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The company name to filter by
-   *     responses:
-   *       200:
-   *         description: Array of loans for this company
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/key-loan-maintenance-keys/by-company/:company', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.getByCompany(
-      ctx.params.company
-    )
-
-    if (!result.ok) {
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching maintenance key loans by company'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/by-company/{company}/with-keys:
-   *   get:
-   *     summary: Get maintenance key loans for a company with full key details
-   *     description: |
-   *       Returns all maintenance key loan records for the specified company with joined key data.
-   *       Supports filtering by returned status via query parameter.
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: company
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The company name to filter by
-   *       - in: query
-   *         name: returned
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: |
-   *           Filter by return status:
-   *           - true: Only returned loans (returnedAt IS NOT NULL)
-   *           - false: Only active loans (returnedAt IS NULL)
-   *           - omitted: All loans (no filter)
-   *     responses:
-   *       200:
-   *         description: Array of loans with full key details
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeysWithDetails'
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get(
-    '/key-loan-maintenance-keys/by-company/:company/with-keys',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ['returned'])
-
-      const returnedParam = ctx.query.returned
-      let returned: boolean | undefined = undefined
-      if (returnedParam === 'true') {
-        returned = true
-      } else if (returnedParam === 'false') {
-        returned = false
-      }
-
-      const result = await KeyLoanMaintenanceKeysApi.getByCompanyWithKeys(
-        ctx.params.company,
-        returned
-      )
-
-      if (!result.ok) {
-        logger.error(
-          { err: result.err, metadata },
-          'Error fetching maintenance key loans with keys by company'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-    }
-  )
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/by-bundle/{bundleId}/with-keys:
-   *   get:
-   *     summary: Get maintenance key loans for a key bundle with full key details
-   *     description: |
-   *       Returns all maintenance key loan records containing keys from the specified bundle.
-   *       Supports filtering by returned status via query parameter.
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: bundleId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The key bundle ID to filter by
-   *       - in: query
-   *         name: returned
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: |
-   *           Filter by return status:
-   *           - true: Only returned loans (returnedAt IS NOT NULL)
-   *           - false: Only active loans (returnedAt IS NULL)
-   *           - omitted: All loans (no filter)
-   *     responses:
-   *       200:
-   *         description: Array of loans with full key details
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyLoanMaintenanceKeysWithDetails'
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get(
-    '/key-loan-maintenance-keys/by-bundle/:bundleId/with-keys',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ['returned'])
-
-      const returnedParam = ctx.query.returned
-      let returned: boolean | undefined = undefined
-      if (returnedParam === 'true') {
-        returned = true
-      } else if (returnedParam === 'false') {
-        returned = false
-      }
-
-      const result = await KeyLoanMaintenanceKeysApi.getByBundleWithKeys(
-        ctx.params.bundleId,
-        returned
-      )
-
-      if (!result.ok) {
-        logger.error(
-          { err: result.err, metadata },
-          'Error fetching maintenance key loans with keys by bundle'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-    }
-  )
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/{id}:
-   *   get:
-   *     summary: Get maintenance key loan by ID
-   *     description: Fetch a specific maintenance key loan by its ID.
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The unique ID of the maintenance key loan to retrieve.
-   *     responses:
-   *       200:
-   *         description: A maintenance key loan object.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       404:
-   *         description: Maintenance key loan not found.
-   *       500:
-   *         description: An error occurred while fetching the maintenance key loan.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/key-loan-maintenance-keys/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.get(ctx.params.id)
-
-    if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Maintenance key loan not found', ...metadata }
-        return
-      }
-
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching maintenance key loan'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys:
-   *   post:
-   *     summary: Create a new maintenance key loan
-   *     description: Create a new maintenance key loan record.
-   *     tags: [Keys Service]
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/CreateKeyLoanMaintenanceKeysRequest'
-   *     responses:
-   *       201:
-   *         description: Maintenance key loan created successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       400:
-   *         description: Invalid request body
-   *       500:
-   *         description: An error occurred while creating the maintenance key loan.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('/key-loan-maintenance-keys', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.create(ctx.request.body)
-
-    if (!result.ok) {
-      if (result.err === 'bad-request') {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid request body', ...metadata }
-        return
-      }
-
-      if (result.err === 'conflict') {
-        ctx.status = 409
-        ctx.body = {
-          error: 'Conflict creating maintenance key loan',
-          ...metadata,
-        }
-        return
-      }
-
-      logger.error(
-        { err: result.err, metadata },
-        'Error creating maintenance key loan'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    await createLogEntry(
-      ctx.state.user,
-      'creation',
-      'keyLoanMaintenanceKeys',
-      result.data.id
-    )
-
-    ctx.status = 201
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/{id}:
-   *   patch:
-   *     summary: Update a maintenance key loan
-   *     description: Partially update an existing maintenance key loan.
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The unique ID of the maintenance key loan to update.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/UpdateKeyLoanMaintenanceKeysRequest'
-   *     responses:
-   *       200:
-   *         description: Maintenance key loan updated successfully.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/KeyLoanMaintenanceKeys'
-   *       400:
-   *         description: Invalid request body
-   *       404:
-   *         description: Maintenance key loan not found.
-   *       500:
-   *         description: An error occurred while updating the maintenance key loan.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.patch('/key-loan-maintenance-keys/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.update(
-      ctx.params.id,
-      ctx.request.body
-    )
-
-    if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Maintenance key loan not found', ...metadata }
-        return
-      }
-
-      if (result.err === 'bad-request') {
-        ctx.status = 400
-        ctx.body = { error: 'Invalid request body', ...metadata }
-        return
-      }
-
-      logger.error(
-        { err: result.err, metadata },
-        'Error updating maintenance key loan'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    await createLogEntry(
-      ctx.state.user,
-      'update',
-      'keyLoanMaintenanceKeys',
-      ctx.params.id
-    )
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /key-loan-maintenance-keys/{id}:
-   *   delete:
-   *     summary: Delete a maintenance key loan
-   *     description: Delete a maintenance key loan by ID.
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The unique ID of the maintenance key loan to delete.
-   *     responses:
-   *       204:
-   *         description: Maintenance key loan deleted successfully.
-   *       404:
-   *         description: Maintenance key loan not found.
-   *       500:
-   *         description: An error occurred while deleting the maintenance key loan.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.delete('/key-loan-maintenance-keys/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const result = await KeyLoanMaintenanceKeysApi.remove(ctx.params.id)
-
-    if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Maintenance key loan not found', ...metadata }
-        return
-      }
-
-      logger.error(
-        { err: result.err, metadata },
-        'Error deleting maintenance key loan'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    await createLogEntry(
-      ctx.state.user,
-      'delete',
-      'keyLoanMaintenanceKeys',
-      ctx.params.id
-    )
-
-    ctx.status = 204
-  })
 }

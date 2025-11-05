@@ -3037,6 +3037,78 @@ export interface paths {
       };
     };
   };
+  "/key-loans/by-contact/{contact}/with-keys": {
+    /**
+     * Get key loans by contact with keys
+     * @description Returns all key loans for a specific contact with full key details, optionally filtered by loan type and return status
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type (TENANT or MAINTENANCE) */
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Filter by return status (true = returned, false = not returned) */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The contact identifier to search for */
+          contact: string;
+        };
+      };
+      responses: {
+        /** @description Array of key loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/by-bundle/{bundleId}/with-keys": {
+    /**
+     * Get key loans by bundle with keys
+     * @description Returns all key loans for a specific bundle with full key details, optionally filtered by loan type and return status
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type (TENANT or MAINTENANCE) */
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Filter by return status (true = returned, false = not returned) */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The bundle ID to search for */
+          bundleId: string;
+        };
+      };
+      responses: {
+        /** @description Array of key loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/key-loans/{id}": {
     /**
      * Get key loan by ID
@@ -3870,7 +3942,7 @@ export interface paths {
      * Get all logs for a specific rental object
      * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
      *
-     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
      *
      * Excluded: keySystem logs (infrastructure-level, not property-specific)
      *
@@ -3914,7 +3986,7 @@ export interface paths {
      *
      * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
      *
-     * Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
      *
      * Note: Matches both contact and contact2 fields (co-tenants supported)
      *
@@ -5166,321 +5238,6 @@ export interface paths {
       };
     };
   };
-  "/key-loan-maintenance-keys": {
-    /**
-     * List all maintenance key loans
-     * @description Fetches a list of all maintenance key loans.
-     */
-    get: {
-      responses: {
-        /** @description A list of maintenance key loans. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description An error occurred while listing maintenance key loans. */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-    /**
-     * Create a new maintenance key loan
-     * @description Create a new maintenance key loan record.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateKeyLoanMaintenanceKeysRequest"];
-        };
-      };
-      responses: {
-        /** @description Maintenance key loan created successfully. */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: never;
-        };
-        /** @description An error occurred while creating the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/search": {
-    /**
-     * Search maintenance key loans
-     * @description Search maintenance key loans with flexible filtering.
-     */
-    get: {
-      parameters: {
-        query?: {
-          q?: string;
-          /** @description Comma-separated list of fields for OR search. */
-          fields?: string;
-        };
-      };
-      responses: {
-        /** @description Search results */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description Invalid search parameters */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-key/{keyId}": {
-    /**
-     * Get all maintenance key loans for a specific key
-     * @description Returns all maintenance key loan records for the specified key ID
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The key ID to search for */
-          keyId: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans containing this key */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-company/{company}": {
-    /**
-     * Get all maintenance key loans for a specific company
-     * @description Returns all maintenance key loan records for the specified company
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The company name to filter by */
-          company: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans for this company */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-company/{company}/with-keys": {
-    /**
-     * Get maintenance key loans for a company with full key details
-     * @description Returns all maintenance key loan records for the specified company with joined key data.
-     * Supports filtering by returned status via query parameter.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /**
-           * @description Filter by return status:
-           * - true: Only returned loans (returnedAt IS NOT NULL)
-           * - false: Only active loans (returnedAt IS NULL)
-           * - omitted: All loans (no filter)
-           */
-          returned?: boolean;
-        };
-        path: {
-          /** @description The company name to filter by */
-          company: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans with full key details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/by-bundle/{bundleId}/with-keys": {
-    /**
-     * Get maintenance key loans for a key bundle with full key details
-     * @description Returns all maintenance key loan records containing keys from the specified bundle.
-     * Supports filtering by returned status via query parameter.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /**
-           * @description Filter by return status:
-           * - true: Only returned loans (returnedAt IS NOT NULL)
-           * - false: Only active loans (returnedAt IS NULL)
-           * - omitted: All loans (no filter)
-           */
-          returned?: boolean;
-        };
-        path: {
-          /** @description The key bundle ID to filter by */
-          bundleId: string;
-        };
-      };
-      responses: {
-        /** @description Array of loans with full key details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeysWithDetails"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-loan-maintenance-keys/{id}": {
-    /**
-     * Get maintenance key loan by ID
-     * @description Fetch a specific maintenance key loan by its ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the maintenance key loan to retrieve. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description A maintenance key loan object. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
-            };
-          };
-        };
-        /** @description Maintenance key loan not found. */
-        404: {
-          content: never;
-        };
-        /** @description An error occurred while fetching the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a maintenance key loan
-     * @description Delete a maintenance key loan by ID.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the maintenance key loan to delete. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Maintenance key loan deleted successfully. */
-        204: {
-          content: never;
-        };
-        /** @description Maintenance key loan not found. */
-        404: {
-          content: never;
-        };
-        /** @description An error occurred while deleting the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a maintenance key loan
-     * @description Partially update an existing maintenance key loan.
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the maintenance key loan to update. */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateKeyLoanMaintenanceKeysRequest"];
-        };
-      };
-      responses: {
-        /** @description Maintenance key loan updated successfully. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyLoanMaintenanceKeys"];
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: never;
-        };
-        /** @description Maintenance key loan not found. */
-        404: {
-          content: never;
-        };
-        /** @description An error occurred while updating the maintenance key loan. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
 }
 
 export type webhooks = Record<string, never>;
@@ -6056,12 +5813,72 @@ export interface components {
         updatedAt: string;
       }) | null;
     };
+    KeyWithLoanAndEvent: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      loan: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        loanType: "TENANT" | "MAINTENANCE";
+        contact?: string;
+        contact2?: string;
+        contactPerson?: string | null;
+        description?: string | null;
+        /** Format: date-time */
+        returnedAt?: string | null;
+        /** Format: date-time */
+        availableToNextTenantFrom?: string | null;
+        /** Format: date-time */
+        pickedUpAt?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        createdBy?: string | null;
+        updatedBy?: string | null;
+      }) | null;
+      latestEvent: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
+    };
     KeyLoan: {
       /** Format: uuid */
       id: string;
       keys: string;
+      /** @enum {string} */
+      loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
       contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -6079,8 +5896,12 @@ export interface components {
       /** Format: uuid */
       id: string;
       keys: string;
+      /** @enum {string} */
+      loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
       contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -6116,8 +5937,6 @@ export interface components {
           id: string;
           /** Format: uuid */
           keyLoanId: string;
-          /** @enum {string} */
-          loanType: "REGULAR" | "MAINTENANCE";
           /** @enum {string} */
           receiptType: "LOAN" | "RETURN";
           /** @enum {string} */
@@ -6158,7 +5977,7 @@ export interface components {
       /** @enum {string} */
       eventType: "creation" | "update" | "delete";
       /** @enum {string} */
-      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "keyLoanMaintenanceKeys" | "receipt" | "keyEvent" | "signature" | "keyNote";
+      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
       /** Format: uuid */
       objectId?: string | null;
       /** Format: date-time */
@@ -6176,8 +5995,6 @@ export interface components {
       id: string;
       /** Format: uuid */
       keyLoanId: string;
-      /** @enum {string} */
-      loanType: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
@@ -6249,8 +6066,12 @@ export interface components {
     };
     CreateKeyLoanRequest: {
       keys: string;
+      /** @enum {string} */
+      loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
       contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -6261,8 +6082,12 @@ export interface components {
     };
     UpdateKeyLoanRequest: {
       keys?: string;
+      /** @enum {string} */
+      loanType?: "TENANT" | "MAINTENANCE";
       contact?: string;
       contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -6300,7 +6125,7 @@ export interface components {
       /** @enum {string} */
       eventType: "creation" | "update" | "delete";
       /** @enum {string} */
-      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "keyLoanMaintenanceKeys" | "receipt" | "keyEvent" | "signature" | "keyNote";
+      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
       /** Format: uuid */
       objectId?: string | null;
       description?: string | null;
@@ -6338,99 +6163,6 @@ export interface components {
       keys?: string;
       description?: string | null;
     };
-    KeyLoanMaintenanceKeys: {
-      /** Format: uuid */
-      id: string;
-      keys: string;
-      company?: string | null;
-      contactPerson?: string | null;
-      /** Format: date-time */
-      returnedAt?: string | null;
-      /** Format: date-time */
-      pickedUpAt?: string | null;
-      description?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-    };
-    KeyLoanMaintenanceKeysWithDetails: {
-      /** Format: uuid */
-      id: string;
-      keys: string;
-      company?: string | null;
-      contactPerson?: string | null;
-      /** Format: date-time */
-      returnedAt?: string | null;
-      /** Format: date-time */
-      pickedUpAt?: string | null;
-      description?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      keysArray: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number | null;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
-    };
-    KeyWithMaintenanceLoanStatus: {
-      /** Format: uuid */
-      id: string;
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number | null;
-      rentalObjectCode?: string;
-      /** @enum {string} */
-      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-      /** Format: uuid */
-      keySystemId?: string | null;
-      /** @default false */
-      disposed?: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      maintenanceLoan: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        company?: string | null;
-        contactPerson?: string | null;
-        /** Format: date-time */
-        returnedAt?: string | null;
-        /** Format: date-time */
-        pickedUpAt?: string | null;
-        description?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-      }) | null;
-      latestEvent: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        type: "FLEX" | "ORDER" | "LOST";
-        /** @enum {string} */
-        status: "ORDERED" | "RECEIVED" | "COMPLETED";
-        /** Format: uuid */
-        workOrderId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-      }) | null;
-    };
     KeyBundleWithLoanStatusResponse: {
       bundle: {
         /** Format: uuid */
@@ -6456,19 +6188,28 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
-          maintenanceLoan: ({
+          loan: ({
             /** Format: uuid */
             id: string;
             keys: string;
-            company?: string | null;
+            /** @enum {string} */
+            loanType: "TENANT" | "MAINTENANCE";
+            contact?: string;
+            contact2?: string;
             contactPerson?: string | null;
+            description?: string | null;
             /** Format: date-time */
             returnedAt?: string | null;
             /** Format: date-time */
+            availableToNextTenantFrom?: string | null;
+            /** Format: date-time */
             pickedUpAt?: string | null;
-            description?: string | null;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            createdBy?: string | null;
+            updatedBy?: string | null;
           }) | null;
           latestEvent: ({
             /** Format: uuid */
@@ -6486,26 +6227,6 @@ export interface components {
             updatedAt: string;
           }) | null;
         })[];
-    };
-    CreateKeyLoanMaintenanceKeysRequest: {
-      keys: string;
-      company?: string | null;
-      contactPerson?: string | null;
-      /** Format: date-time */
-      returnedAt?: string | null;
-      /** Format: date-time */
-      pickedUpAt?: string | null;
-      description?: string | null;
-    };
-    UpdateKeyLoanMaintenanceKeysRequest: {
-      keys?: string;
-      company?: string | null;
-      contactPerson?: string | null;
-      /** Format: date-time */
-      returnedAt?: string | null;
-      /** Format: date-time */
-      pickedUpAt?: string | null;
-      description?: string | null;
     };
     CreateKeyEventRequest: {
       keys: string;
@@ -6562,11 +6283,6 @@ export interface components {
     CreateReceiptRequest: {
       /** Format: uuid */
       keyLoanId: string;
-      /**
-       * @default REGULAR
-       * @enum {string}
-       */
-      loanType?: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
@@ -6681,7 +6397,7 @@ export interface components {
           /** @enum {string} */
           eventType: "creation" | "update" | "delete";
           /** @enum {string} */
-          objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "keyLoanMaintenanceKeys" | "receipt" | "keyEvent" | "signature" | "keyNote";
+          objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
           /** Format: uuid */
           objectId?: string | null;
           /** Format: date-time */

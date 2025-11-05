@@ -15,9 +15,7 @@ import {
   LogSchema,
   KeyNoteSchema,
   KeyBundleSchema,
-  KeyLoanMaintenanceKeysSchema,
-  KeyLoanMaintenanceKeysWithDetailsSchema,
-  KeyWithMaintenanceLoanStatusSchema,
+  KeyWithLoanAndEventSchema,
   KeyBundleWithLoanStatusResponseSchema,
   BundleWithLoanedKeysInfoSchema,
   KeyEventSchema,
@@ -43,8 +41,6 @@ import {
   UpdateKeyNoteRequestSchema,
   CreateKeyBundleRequestSchema,
   UpdateKeyBundleRequestSchema,
-  CreateKeyLoanMaintenanceKeysRequestSchema,
-  UpdateKeyLoanMaintenanceKeysRequestSchema,
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
   BulkUpdateFlexRequestSchema,
@@ -119,27 +115,13 @@ export type UpdateKeyBundleRequest = z.infer<
   typeof UpdateKeyBundleRequestSchema
 >
 
-// Request types for key loan maintenance keys
-export type KeyLoanMaintenanceKeys = z.infer<
-  typeof KeyLoanMaintenanceKeysSchema
->
-export type KeyLoanMaintenanceKeysWithDetails = z.infer<
-  typeof KeyLoanMaintenanceKeysWithDetailsSchema
->
-export type KeyWithMaintenanceLoanStatus = z.infer<
-  typeof KeyWithMaintenanceLoanStatusSchema
->
-export type BundleWithLoanedKeysInfo = z.infer<
-  typeof BundleWithLoanedKeysInfoSchema
->
+// Key bundle types (with loan and event status)
+export type KeyWithLoanAndEvent = z.infer<typeof KeyWithLoanAndEventSchema>
 export type KeyBundleWithLoanStatusResponse = z.infer<
   typeof KeyBundleWithLoanStatusResponseSchema
 >
-export type CreateKeyLoanMaintenanceKeysRequest = z.infer<
-  typeof CreateKeyLoanMaintenanceKeysRequestSchema
->
-export type UpdateKeyLoanMaintenanceKeysRequest = z.infer<
-  typeof UpdateKeyLoanMaintenanceKeysRequestSchema
+export type BundleWithLoanedKeysInfo = z.infer<
+  typeof BundleWithLoanedKeysInfoSchema
 >
 
 // Request types for key events

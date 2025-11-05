@@ -83,24 +83,16 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateReceiptRequest = ctx.request.body
 
-        // Validate that the key loan exists based on loanType
-        let loanExists = false
-        if (payload.loanType === 'REGULAR') {
-          loanExists = await receiptsAdapter.keyLoanExists(
-            payload.keyLoanId,
-            db
-          )
-        } else if (payload.loanType === 'MAINTENANCE') {
-          loanExists = await receiptsAdapter.maintenanceKeyLoanExists(
-            payload.keyLoanId,
-            db
-          )
-        }
+        // Validate that the key loan exists
+        const loanExists = await receiptsAdapter.keyLoanExists(
+          payload.keyLoanId,
+          db
+        )
 
         if (!loanExists) {
           ctx.status = 404
           ctx.body = {
-            reason: `${payload.loanType === 'REGULAR' ? 'Key loan' : 'Maintenance key loan'} not found`,
+            reason: 'Key loan not found',
             ...metadata,
           }
           return
@@ -275,7 +267,6 @@ export const routes = (router: KoaRouter) => {
               {
                 keyLoanId: receipt.keyLoanId,
                 receiptId: receipt.id,
-                loanType: receipt.loanType,
                 keyLoanActivated: result.data.keyLoanActivated,
                 keyEventsCompleted: result.data.keyEventsCompleted,
               },
@@ -402,7 +393,6 @@ export const routes = (router: KoaRouter) => {
               {
                 keyLoanId: receipt.keyLoanId,
                 receiptId: parse.data.id,
-                loanType: receipt.loanType,
                 keyLoanActivated: result.data.keyLoanActivated,
                 keyEventsCompleted: result.data.keyEventsCompleted,
               },

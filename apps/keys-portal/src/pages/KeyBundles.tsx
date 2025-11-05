@@ -4,7 +4,7 @@ import { KeyBundlesToolbar } from '@/components/key-bundles/KeyBundlesToolbar'
 import { KeyBundlesTable } from '@/components/key-bundles/KeyBundlesTable'
 import { AddKeyBundleForm } from '@/components/key-bundles/AddKeyBundleForm'
 
-import { KeyBundle, KeyWithMaintenanceLoanStatus } from '@/services/types'
+import { KeyBundle, KeyWithLoanAndEvent } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import * as keyBundleService from '@/services/api/keyBundleService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
@@ -19,7 +19,7 @@ export default function KeyBundles() {
   )
   const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
   const [keysForExpandedBundle, setKeysForExpandedBundle] = useState<
-    KeyWithMaintenanceLoanStatus[]
+    KeyWithLoanAndEvent[]
   >([])
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const { toast } = useToast()

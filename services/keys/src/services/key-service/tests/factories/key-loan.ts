@@ -25,8 +25,11 @@ export const KeyLoanFactory = Factory.define<KeyLoan>(({ sequence }) => {
   return {
     id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
     keys: JSON.stringify([`key-${sequence}`]), // JSON string array with single key by default
+    loanType: 'TENANT',
     contact: `contact-${sequence}@example.com`,
     contact2: undefined,
+    contactPerson: undefined,
+    description: undefined,
     returnedAt: undefined, // null = not returned yet (active loan)
     availableToNextTenantFrom: undefined,
     pickedUpAt: new Date(now.getTime() - 86400000), // Picked up 1 day ago

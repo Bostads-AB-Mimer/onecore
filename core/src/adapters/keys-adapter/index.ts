@@ -23,9 +23,6 @@ type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
 type KeyBundleWithLoanStatusResponse = keys.v1.KeyBundleWithLoanStatusResponse
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
-type KeyLoanMaintenanceKeys = keys.v1.KeyLoanMaintenanceKeys
-type KeyLoanMaintenanceKeysWithDetails =
-  keys.v1.KeyLoanMaintenanceKeysWithDetails
 
 const BASE = Config.keysService.url
 
@@ -336,6 +333,42 @@ export const KeyLoansApi = {
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
     return deleteJSON(`${BASE}/key-loans/${id}`)
+  },
+
+  getByContactWithKeys: async (
+    contact: string,
+    loanType?: 'TENANT' | 'MAINTENANCE',
+    returned?: boolean
+  ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
+    const params = new URLSearchParams()
+    if (loanType) params.append('loanType', loanType)
+    if (returned !== undefined) params.append('returned', returned.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/key-loans/by-contact/${contact}/with-keys?${queryString}`
+      : `${BASE}/key-loans/by-contact/${contact}/with-keys`
+
+    const r = await getJSON<{ content: KeyLoanWithDetails[] }>(url)
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  getByBundleWithKeys: async (
+    bundleId: string,
+    loanType?: 'TENANT' | 'MAINTENANCE',
+    returned?: boolean
+  ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
+    const params = new URLSearchParams()
+    if (loanType) params.append('loanType', loanType)
+    if (returned !== undefined) params.append('returned', returned.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/key-loans/by-bundle/${bundleId}/with-keys?${queryString}`
+      : `${BASE}/key-loans/by-bundle/${bundleId}/with-keys`
+
+    const r = await getJSON<{ content: KeyLoanWithDetails[] }>(url)
+    return r.ok ? ok(r.data.content) : r
   },
 }
 
@@ -923,136 +956,6 @@ export const KeyBundlesApi = {
       `${BASE}/key-bundles/by-contact/${contactCode}/with-loaned-keys`
     )
     return r.ok ? ok(r.data.content) : r
-  },
-}
-
-/**
- * ---- Key Loan Maintenance Keys API ------------------------------------------
- */
-
-export const KeyLoanMaintenanceKeysApi = {
-  list: async (): Promise<
-    AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>
-  > => {
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
-      `${BASE}/key-loan-maintenance-keys`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  search: async (
-    searchParams: Record<string, string | string[] | undefined>
-  ): Promise<
-    AdapterResult<KeyLoanMaintenanceKeys[], 'bad-request' | CommonErr>
-  > => {
-    const params = new URLSearchParams()
-    for (const [key, value] of Object.entries(searchParams)) {
-      if (value !== undefined) {
-        if (Array.isArray(value)) {
-          params.append(key, value.join(','))
-        } else {
-          params.append(key, value)
-        }
-      }
-    }
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
-      `${BASE}/key-loan-maintenance-keys/search?${params.toString()}`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  getByKey: async (
-    keyId: string
-  ): Promise<AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>> => {
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
-      `${BASE}/key-loan-maintenance-keys/by-key/${keyId}`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  getByCompany: async (
-    company: string
-  ): Promise<AdapterResult<KeyLoanMaintenanceKeys[], CommonErr>> => {
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeys[] }>(
-      `${BASE}/key-loan-maintenance-keys/by-company/${company}`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  getByCompanyWithKeys: async (
-    company: string,
-    returned?: boolean
-  ): Promise<AdapterResult<KeyLoanMaintenanceKeysWithDetails[], CommonErr>> => {
-    let url = `${BASE}/key-loan-maintenance-keys/by-company/${company}/with-keys`
-    if (returned !== undefined) {
-      url += `?returned=${returned}`
-    }
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeysWithDetails[] }>(
-      url
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  getByBundleWithKeys: async (
-    bundleId: string,
-    returned?: boolean
-  ): Promise<AdapterResult<KeyLoanMaintenanceKeysWithDetails[], CommonErr>> => {
-    let url = `${BASE}/key-loan-maintenance-keys/by-bundle/${bundleId}/with-keys`
-    if (returned !== undefined) {
-      url += `?returned=${returned}`
-    }
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeysWithDetails[] }>(
-      url
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  get: async (
-    id: string
-  ): Promise<
-    AdapterResult<KeyLoanMaintenanceKeys, 'not-found' | CommonErr>
-  > => {
-    const r = await getJSON<{ content: KeyLoanMaintenanceKeys }>(
-      `${BASE}/key-loan-maintenance-keys/${id}`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  create: async (
-    payload: Partial<KeyLoanMaintenanceKeys>
-  ): Promise<
-    AdapterResult<
-      KeyLoanMaintenanceKeys,
-      'bad-request' | 'conflict' | CommonErr
-    >
-  > => {
-    const r = await postJSON<{ content: KeyLoanMaintenanceKeys }>(
-      `${BASE}/key-loan-maintenance-keys`,
-      payload
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  update: async (
-    id: string,
-    payload: Partial<KeyLoanMaintenanceKeys>
-  ): Promise<
-    AdapterResult<
-      KeyLoanMaintenanceKeys,
-      'not-found' | 'bad-request' | 'conflict' | CommonErr
-    >
-  > => {
-    const r = await patchJSON<{ content: KeyLoanMaintenanceKeys }>(
-      `${BASE}/key-loan-maintenance-keys/${id}`,
-      payload
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  remove: async (
-    id: string
-  ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
-    return deleteJSON(`${BASE}/key-loan-maintenance-keys/${id}`)
   },
 }
 
