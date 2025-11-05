@@ -3942,7 +3942,7 @@ export interface paths {
      * Get all logs for a specific rental object
      * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
      *
-     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, keyLoanMaintenanceKeys, signatures
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
      *
      * Excluded: keySystem logs (infrastructure-level, not property-specific)
      *
@@ -3986,7 +3986,7 @@ export interface paths {
      *
      * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
      *
-     * Excluded: keyEvents, keyBundles, keyNotes, keySystem, keyLoanMaintenanceKeys (no contact relationship)
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
      *
      * Note: Matches both contact and contact2 fields (co-tenants supported)
      *
@@ -5947,7 +5947,7 @@ export interface components {
       /** @enum {string} */
       eventType: "creation" | "update" | "delete";
       /** @enum {string} */
-      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "keyLoanMaintenanceKeys" | "receipt" | "keyEvent" | "signature" | "keyNote";
+      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
       /** Format: uuid */
       objectId?: string | null;
       /** Format: date-time */
@@ -6095,7 +6095,7 @@ export interface components {
       /** @enum {string} */
       eventType: "creation" | "update" | "delete";
       /** @enum {string} */
-      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "keyLoanMaintenanceKeys" | "receipt" | "keyEvent" | "signature" | "keyNote";
+      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
       /** Format: uuid */
       objectId?: string | null;
       description?: string | null;
@@ -6359,7 +6359,7 @@ export interface components {
           /** @enum {string} */
           eventType: "creation" | "update" | "delete";
           /** @enum {string} */
-          objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "keyLoanMaintenanceKeys" | "receipt" | "keyEvent" | "signature" | "keyNote";
+          objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
           /** Format: uuid */
           objectId?: string | null;
           /** Format: date-time */
