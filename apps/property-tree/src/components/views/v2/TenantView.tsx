@@ -10,14 +10,24 @@ import {
 } from '@/components/ui/Tooltip'
 import { TriangleAlert } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
-// import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
-// import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
+import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
+import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
+import { TenantMobileAccordion } from '@/components/tenants/TenantMobileAccordion'
 
 const TenantView = () => {
   const { contactCode } = useParams<{ contactCode: string }>()
 
   // Fetch tenant data
   const { data: tenant, isLoading, error } = useTenant(contactCode)
+  // Placeholder contracts, we will get them from a leases/by-contact-code
+  // endpoint later
+  const contracts = [
+    ...(tenant?.housingContracts ?? []),
+    ...(tenant?.parkingSpaceContracts ?? []),
+  ]
+
+  // This would typically come from API data. Ärenden?
+  const hasActiveCases = true
 
   const isMobile = useIsMobile()
 
@@ -86,12 +96,11 @@ const TenantView = () => {
           <TenantCard tenant={tenant} />
         </div>
 
-        {/* Implemented when we implement the various tabs in the view
         {isMobile ? (
           <TenantMobileAccordion
             contracts={contracts}
             hasActiveCases={hasActiveCases}
-            customerNumber={tenant.personalNumber}
+            contactCode={tenant.contactCode}
             customerName={`${tenant.firstName} ${tenant.lastName}`}
           />
         ) : (
@@ -101,12 +110,12 @@ const TenantView = () => {
           >
             <TenantDetailTabsContent
               contracts={contracts}
-              personalNumber={tenant.personalNumber}
-              customerNumber={tenant.personalNumber}
+              personalNumber={tenant.nationalRegistrationNumber}
+              contactCode={tenant.contactCode}
               customerName={`${tenant.firstName} ${tenant.lastName}`}
             />
           </TenantDetailTabs>
-        )} */}
+        )}
       </div>
     )
   }
