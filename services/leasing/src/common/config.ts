@@ -29,6 +29,10 @@ export interface Config {
     template: string
     url: string
   }
+  tenfast: {
+    baseUrl: string
+    apiKey: string
+  }
   health: {
     leasingDatabase: {
       systemName: string
@@ -83,6 +87,10 @@ const config = configPackage({
       template: 'PERSON_CAS_P1',
       url: 'https://testwebservice.creditsafe.se/CAS/cas_service.asmx',
     },
+    tenfast: {
+      baseUrl: '',
+      apiKey: '',
+    },
     health: {
       leasingDatabase: {
         systemName: 'leasing database',
@@ -104,6 +112,10 @@ const config = configPackage({
         systemName: 'creditsafe base url',
         minimumMinutesBetweenRequests: 2,
       },
+      tenfast: {
+        systemName: 'tenfast base url',
+        minimumMinutesBetweenRequests: 2,
+      },
     },
   },
 })
@@ -114,5 +126,6 @@ export default {
   leasingDatabase: config.get('leasingDatabase'),
   xpandSoap: config.get('xpandSoap'),
   creditsafe: config.get('creditsafe'),
+  tenfast: config.get('tenfast'),
   health: config.get('health'),
 } as Config
