@@ -289,7 +289,7 @@ export const routes = (router: KoaRouter) => {
    *     description: |
    *       Returns all key loans for a rental object with their keys and receipts
    *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
-   *       Optionally filter by contact code.
+   *       Optionally filter by contact code and return status.
    *     tags: [Key Loans]
    *     parameters:
    *       - in: path
@@ -304,6 +304,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Optional contact code to filter by (checks contact or contact2).
+   *       - in: query
+   *         name: returned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
    *     responses:
    *       200:
    *         description: List of key loans with enriched keys and receipts data.
@@ -320,18 +330,28 @@ export const routes = (router: KoaRouter) => {
    *         description: An error occurred while fetching key loans.
    */
   router.get('/key-loans/by-rental-object/:rentalObjectCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, ['returned'])
     try {
       const { rentalObjectCode } = ctx.params
       const contact = ctx.query.contact as string | undefined
       const contact2 = ctx.query.contact2 as string | undefined
       const includeReceipts = ctx.query.includeReceipts === 'true'
+      const returnedParam = ctx.query.returned
+
+      // Parse returned query param: 'true' => true, 'false' => false, undefined => undefined
+      let returned: boolean | undefined = undefined
+      if (returnedParam === 'true') {
+        returned = true
+      } else if (returnedParam === 'false') {
+        returned = false
+      }
 
       const rows = await keyLoansAdapter.getKeyLoansByRentalObject(
         rentalObjectCode,
         contact,
         contact2,
         includeReceipts,
+        returned,
         db
       )
 

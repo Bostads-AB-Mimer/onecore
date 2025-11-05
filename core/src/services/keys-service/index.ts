@@ -474,6 +474,15 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Include receipts in the response
+   *       - in: query
+   *         name: returned
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           Filter by return status:
+   *           - true: Only returned loans (returnedAt IS NOT NULL)
+   *           - false: Only active loans (returnedAt IS NULL)
+   *           - omitted: All loans (no filter)
    *     responses:
    *       200:
    *         description: A list of key loans with details
@@ -500,17 +509,28 @@ export const routes = (router: KoaRouter) => {
       'contact',
       'contact2',
       'includeReceipts',
+      'returned',
     ])
 
     const contact = ctx.query.contact as string | undefined
     const contact2 = ctx.query.contact2 as string | undefined
     const includeReceipts = ctx.query.includeReceipts === 'true'
+    const returnedParam = ctx.query.returned
+
+    // Parse returned query param: 'true' => true, 'false' => false, undefined => undefined
+    let returned: boolean | undefined = undefined
+    if (returnedParam === 'true') {
+      returned = true
+    } else if (returnedParam === 'false') {
+      returned = false
+    }
 
     const result = await KeyLoansApi.getByRentalObject(
       ctx.params.rentalObjectCode,
       contact,
       contact2,
-      includeReceipts
+      includeReceipts,
+      returned
     )
 
     if (!result.ok) {
@@ -803,7 +823,14 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
 
-    const result = await KeyLoansApi.create(payload)
+    // Set createdBy from authenticated user (same pattern as logs)
+    const enrichedPayload = {
+      ...payload,
+      createdBy:
+        ctx.state.user?.name || ctx.state.user?.preferred_username || null,
+    }
+
+    const result = await KeyLoansApi.create(enrichedPayload)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
@@ -897,7 +924,14 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
 
-    const result = await KeyLoansApi.update(ctx.params.id, payload)
+    // Set updatedBy from authenticated user (same pattern as logs)
+    const enrichedPayload = {
+      ...payload,
+      updatedBy:
+        ctx.state.user?.name || ctx.state.user?.preferred_username || null,
+    }
+
+    const result = await KeyLoansApi.update(ctx.params.id, enrichedPayload)
 
     if (!result.ok) {
       if (result.err === 'not-found') {
