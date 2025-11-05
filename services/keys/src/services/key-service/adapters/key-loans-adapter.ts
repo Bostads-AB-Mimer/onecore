@@ -127,6 +127,7 @@ export function getKeyLoansSearchQuery(
  * @param contact - Optional first contact code to filter by
  * @param contact2 - Optional second contact code to filter by
  * @param includeReceipts - Whether to include receipts (default: false)
+ * @param returned - Optional filter: true = only returned loans, false = only active loans, undefined = all loans
  * @param dbConnection - Database connection (optional, defaults to db)
  * @returns Promise<KeyLoanWithDetails[]> - Key loans with enriched keys and optionally receipts data
  */
@@ -135,6 +136,7 @@ export async function getKeyLoansByRentalObject(
   contact?: string,
   contact2?: string,
   includeReceipts = false,
+  returned?: boolean,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoanWithDetails[]> {
   // Step 1: Get all key loans for the rental object (filtered by contacts if provided)
@@ -165,6 +167,13 @@ export async function getKeyLoansByRentalObject(
         this.where('kl.contact', contact2).orWhere('kl.contact2', contact2)
       }
     })
+  }
+
+  // Filter by returned status
+  if (returned === true) {
+    loansQuery = loansQuery.whereNotNull('kl.returnedAt')
+  } else if (returned === false) {
+    loansQuery = loansQuery.whereNull('kl.returnedAt')
   }
 
   const loans = await loansQuery
