@@ -5,13 +5,20 @@ import {
   CardTitle,
 } from '@/components/ui/v2/Card'
 import { useIsMobile } from '../hooks/useMobile'
+import { Building } from '@/services/types'
 import { components } from '@/services/api/core/generated/api-types'
 
 interface ResidenceBasicInfoProps {
+  building: Building
   residence: components['schemas']['ResidenceDetails']
+  rent: number | null | undefined
 }
 
-export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
+export const ResidenceBasicInfo = ({
+  building,
+  residence,
+  rent,
+}: ResidenceBasicInfoProps) => {
   const isMobile = useIsMobile()
 
   return (
@@ -53,7 +60,9 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
               <p className="font-medium">{residence.code}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Hyres ID</p>
+              <p className="text-sm text-muted-foreground">
+                Objektsnummer/lägenhetskod
+              </p>
               <p className="font-medium">{residence.propertyObject.rentalId}</p>
             </div>
             <div>
@@ -82,6 +91,27 @@ export const ResidenceBasicInfo = ({ residence }: ResidenceBasicInfoProps) => {
               </p>
               <p className="font-medium">
                 {residence.malarEnergiFacilityId || 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Hyra</p>
+              <p className="font-medium">
+                {rent
+                  ? `${Math.round(rent).toLocaleString('sv-SE')} kr/mån`
+                  : '-'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground">Byggnadsår</p>
+              <p className="font-medium">
+                {building?.construction?.constructionYear || '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Ombyggnadsår</p>
+              <p className="font-medium">
+                {building?.construction?.renovationYear || '-'}
               </p>
             </div>
             {/* Hiding for demo purposes*/}

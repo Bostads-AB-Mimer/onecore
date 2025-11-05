@@ -1,34 +1,40 @@
 import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { Grid } from '@/components/ui/Grid'
-import { residenceService } from '@/services/api/core'
 import { ResidenceBasicInfo } from '../residence/ResidenceBasicInfo'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
 import { Card, CardContent } from '../ui/v2/Card'
 import { RoomInfo } from '../residence/RoomInfo'
 import { TenantInformation } from '../residence/TenantInformation'
 import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { useResidenceDetail } from '../hooks/useResidenceDetail'
 
 export function ResidenceView() {
   const { residenceId } = useParams()
 
-  const residenceQuery = useQuery({
-    queryKey: ['residence', residenceId],
-    queryFn: () => residenceService.getById(residenceId!),
-    enabled: !!residenceId,
-  })
+  const {
+    residence,
+    residenceIsLoading,
+    residenceError,
+    building,
+    buildingIsLoading,
+    buildingError,
+    leases,
+    leasesIsLoading,
+    leasesError,
+  } = useResidenceDetail(residenceId!)
 
-  const isLoading = residenceQuery.isLoading
-  const error = residenceQuery.error
-  const residence = residenceQuery.data
+  const currentRent =
+    leases && leases.length > 0
+      ? leases[0]?.rentInfo?.currentRent?.currentRent
+      : null
 
-  if (isLoading) {
+  if (residenceIsLoading) {
     return <LoadingSkeleton />
   }
 
-  if (error || !residence) {
+  if (residenceError || !residence) {
     return (
       <div className="py-4 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -41,7 +47,11 @@ export function ResidenceView() {
   return (
     <div className="py-4 animate-in grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-3 space-y-6">
-        <ResidenceBasicInfo residence={residence} />
+        <ResidenceBasicInfo
+          residence={residence}
+          building={building}
+          rent={currentRent}
+        />
       </div>
 
       <div className="lg:col-span-3 space-y-6">
@@ -82,16 +92,18 @@ export function ResidenceView() {
             <Card>
               <CardContent className="p-4">
                 <TenantInformation
-                  rentalPropertyId={residence.propertyObject.rentalId!}
+                  isLoading={leasesIsLoading}
+                  error={leasesError}
+                  data={leases}
                 />
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="workorders">
-            {residence.propertyObject.rentalId && (
+            {residence?.propertyObject.rentalId && (
               <WorkOrdersManagement
                 contextType="residence"
-                id={residence.propertyObject.rentalId}
+                id={residence?.propertyObject.rentalId}
               />
             )}
           </TabsContent>
