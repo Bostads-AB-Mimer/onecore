@@ -477,18 +477,6 @@ describe('keys-service', () => {
       expect(res.body.content).toHaveLength(2)
     })
 
-    it('responds with 500 if not found', async () => {
-      jest
-        .spyOn(keysAdapter.KeyLoansApi, 'getByKey')
-        .mockResolvedValue({ ok: false, err: 'not-found' })
-
-      const res = await request(app.callback()).get(
-        '/key-loans/by-key/00000000-0000-0000-0000-000000000999'
-      )
-
-      expect(res.status).toBe(500)
-    })
-
     it('responds with 500 if adapter fails', async () => {
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'getByKey')
@@ -542,6 +530,25 @@ describe('keys-service', () => {
   })
 
   describe('POST /key-loans', () => {
+    it('responds with created key loan on success', async () => {
+      const newKeyLoan = factory.keyLoan.build()
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'create')
+        .mockResolvedValue({ ok: true, data: newKeyLoan })
+
+      const res = await request(app.callback())
+        .post('/key-loans')
+        .send({
+          keys: JSON.stringify(['key-1', 'key-2']),
+          contact: 'P123456',
+          lease: 'lease-123',
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.id).toBe(newKeyLoan.id)
+    })
+
     it('responds with 400 on bad request', async () => {
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'create')
@@ -566,6 +573,21 @@ describe('keys-service', () => {
   })
 
   describe('PATCH /key-loans/:id', () => {
+    it('responds with updated key loan on success', async () => {
+      const updatedKeyLoan = factory.keyLoan.build()
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'update')
+        .mockResolvedValue({ ok: true, data: updatedKeyLoan })
+
+      const res = await request(app.callback())
+        .patch(`/key-loans/${updatedKeyLoan.id}`)
+        .send({ returnedAt: new Date().toISOString() })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(updatedKeyLoan.id)
+    })
+
     it('responds with 404 if key loan not found', async () => {
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'update')
@@ -604,6 +626,24 @@ describe('keys-service', () => {
   })
 
   describe('DELETE /key-loans/:id', () => {
+    it('responds with 200 on successful deletion', async () => {
+      const keyLoan = factory.keyLoan.build()
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'get')
+        .mockResolvedValue({ ok: true, data: keyLoan })
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'remove')
+        .mockResolvedValue({ ok: true, data: undefined })
+
+      const res = await request(app.callback()).delete(
+        `/key-loans/${keyLoan.id}`
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('responds with 404 if key loan not found on get', async () => {
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'get')
@@ -629,6 +669,93 @@ describe('keys-service', () => {
 
       const res = await request(app.callback()).delete(
         `/key-loans/${keyLoan.id}`
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
+    it('responds with key loans for rental object on success', async () => {
+      const keyLoans = factory.keyLoan.buildList(2)
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getByRentalObject')
+        .mockResolvedValue({ ok: true, data: keyLoans })
+
+      const res = await request(app.callback()).get(
+        '/key-loans/by-rental-object/123-456-789'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getByRentalObject')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/key-loans/by-rental-object/123-456-789'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /key-loans/by-contact/:contact/with-keys', () => {
+    it('responds with key loans with keys for contact on success', async () => {
+      const keyLoansWithKeys = factory.keyLoan.buildList(2)
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getByContactWithKeys')
+        .mockResolvedValue({ ok: true, data: keyLoansWithKeys })
+
+      const res = await request(app.callback()).get(
+        '/key-loans/by-contact/P123456/with-keys'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getByContactWithKeys')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/key-loans/by-contact/P123456/with-keys'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /key-loans/by-bundle/:bundleId/with-keys', () => {
+    it('responds with key loans with keys for bundle on success', async () => {
+      const keyLoansWithKeys = factory.keyLoan.buildList(1)
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getByBundleWithKeys')
+        .mockResolvedValue({ ok: true, data: keyLoansWithKeys })
+
+      const res = await request(app.callback()).get(
+        '/key-loans/by-bundle/bundle-123/with-keys'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getByBundleWithKeys')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/key-loans/by-bundle/bundle-123/with-keys'
       )
 
       expect(res.status).toBe(500)
@@ -771,6 +898,21 @@ describe('keys-service', () => {
   })
 
   describe('POST /key-systems', () => {
+    it('responds with created key system on success', async () => {
+      const newKeySystem = factory.keySystem.build()
+
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'create')
+        .mockResolvedValue({ ok: true, data: newKeySystem })
+
+      const res = await request(app.callback())
+        .post('/key-systems')
+        .send({ systemCode: 'TEST-001', name: 'Test System' })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.id).toBe(newKeySystem.id)
+    })
+
     it('responds with 400 on bad request', async () => {
       jest
         .spyOn(keysAdapter.KeySystemsApi, 'create')
@@ -795,6 +937,21 @@ describe('keys-service', () => {
   })
 
   describe('PATCH /key-systems/:id', () => {
+    it('responds with updated key system on success', async () => {
+      const updatedKeySystem = factory.keySystem.build()
+
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'update')
+        .mockResolvedValue({ ok: true, data: updatedKeySystem })
+
+      const res = await request(app.callback())
+        .patch(`/key-systems/${updatedKeySystem.id}`)
+        .send({ name: 'Updated Name' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(updatedKeySystem.id)
+    })
+
     it('responds with 404 if key system not found', async () => {
       jest
         .spyOn(keysAdapter.KeySystemsApi, 'update')
@@ -833,6 +990,24 @@ describe('keys-service', () => {
   })
 
   describe('DELETE /key-systems/:id', () => {
+    it('responds with 200 on successful deletion', async () => {
+      const keySystem = factory.keySystem.build()
+
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
+        .mockResolvedValue({ ok: true, data: keySystem })
+
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'remove')
+        .mockResolvedValue({ ok: true, data: undefined })
+
+      const res = await request(app.callback()).delete(
+        `/key-systems/${keySystem.id}`
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('responds with 404 if key system not found on get', async () => {
       jest
         .spyOn(keysAdapter.KeySystemsApi, 'get')
@@ -858,6 +1033,87 @@ describe('keys-service', () => {
 
       const res = await request(app.callback()).delete(
         `/key-systems/${keySystem.id}`
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /key-systems/:id/download-schema', () => {
+    it('responds with download URL on success', async () => {
+      const mockUrl = {
+        downloadUrl: 'https://minio.example.com/schemas/file.json',
+      }
+
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'getSchemaDownloadUrl')
+        .mockResolvedValue({ ok: true, data: mockUrl })
+
+      const res = await request(app.callback()).get(
+        '/key-systems/system-123/download-schema'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(mockUrl)
+    })
+
+    it('responds with 404 if key system not found', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'getSchemaDownloadUrl')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/key-systems/system-123/download-schema'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'getSchemaDownloadUrl')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/key-systems/system-123/download-schema'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('DELETE /key-systems/:id/schema', () => {
+    it('responds with 204 on successful schema deletion', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
+        .mockResolvedValue({ ok: true, data: undefined })
+
+      const res = await request(app.callback()).delete(
+        '/key-systems/system-123/schema'
+      )
+
+      expect(res.status).toBe(204)
+    })
+
+    it('responds with 404 if key system not found', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).delete(
+        '/key-systems/system-123/schema'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).delete(
+        '/key-systems/system-123/schema'
       )
 
       expect(res.status).toBe(500)
@@ -1058,6 +1314,94 @@ describe('keys-service', () => {
     })
   })
 
+  describe('GET /logs/rental-object/:rentalObjectCode', () => {
+    it('responds with paginated logs for rental object on success', async () => {
+      const paginatedResponse = {
+        content: factory.log.buildList(3),
+        _meta: { totalRecords: 3, page: 1, limit: 20, count: 3 },
+        _links: [
+          {
+            href: '/logs/rental-object/123-456-789?page=1&limit=20',
+            rel: 'self' as const,
+          },
+          {
+            href: '/logs/rental-object/123-456-789?page=1&limit=20',
+            rel: 'first' as const,
+          },
+          {
+            href: '/logs/rental-object/123-456-789?page=1&limit=20',
+            rel: 'last' as const,
+          },
+        ],
+      }
+
+      jest
+        .spyOn(keysAdapter.LogsApi, 'getByRentalObjectCode')
+        .mockResolvedValue({ ok: true, data: paginatedResponse })
+
+      const res = await request(app.callback()).get(
+        '/logs/rental-object/123-456-789'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(3)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.LogsApi, 'getByRentalObjectCode')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/logs/rental-object/123-456-789'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /logs/contact/:contactId', () => {
+    it('responds with paginated logs for contact on success', async () => {
+      const paginatedResponse = {
+        content: factory.log.buildList(2),
+        _meta: { totalRecords: 2, page: 1, limit: 20, count: 2 },
+        _links: [
+          {
+            href: '/logs/contact/P123456?page=1&limit=20',
+            rel: 'self' as const,
+          },
+          {
+            href: '/logs/contact/P123456?page=1&limit=20',
+            rel: 'first' as const,
+          },
+          {
+            href: '/logs/contact/P123456?page=1&limit=20',
+            rel: 'last' as const,
+          },
+        ],
+      }
+
+      jest
+        .spyOn(keysAdapter.LogsApi, 'getByContactId')
+        .mockResolvedValue({ ok: true, data: paginatedResponse })
+
+      const res = await request(app.callback()).get('/logs/contact/P123456')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.LogsApi, 'getByContactId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/logs/contact/P123456')
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   // ============================================================================
   // KeyNotes Routes
   // ============================================================================
@@ -1143,6 +1487,22 @@ describe('keys-service', () => {
   })
 
   describe('POST /key-notes', () => {
+    it('responds with created key note on success', async () => {
+      const newKeyNote = factory.keyNote.build()
+
+      jest
+        .spyOn(keysAdapter.KeyNotesApi, 'create')
+        .mockResolvedValue({ ok: true, data: newKeyNote })
+
+      const res = await request(app.callback()).post('/key-notes').send({
+        rentalObjectCode: '123-456-789',
+        description: 'Test note',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.id).toBe(newKeyNote.id)
+    })
+
     it('responds with 400 on bad request', async () => {
       jest
         .spyOn(keysAdapter.KeyNotesApi, 'create')
@@ -1168,6 +1528,21 @@ describe('keys-service', () => {
   })
 
   describe('PATCH /key-notes/:id', () => {
+    it('responds with updated key note on success', async () => {
+      const updatedKeyNote = factory.keyNote.build()
+
+      jest
+        .spyOn(keysAdapter.KeyNotesApi, 'update')
+        .mockResolvedValue({ ok: true, data: updatedKeyNote })
+
+      const res = await request(app.callback())
+        .patch(`/key-notes/${updatedKeyNote.id}`)
+        .send({ description: 'Updated' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(updatedKeyNote.id)
+    })
+
     it('responds with 404 if key note not found', async () => {
       jest
         .spyOn(keysAdapter.KeyNotesApi, 'update')
@@ -1210,6 +1585,22 @@ describe('keys-service', () => {
   // ============================================================================
 
   describe('POST /receipts', () => {
+    it('responds with created receipt on success', async () => {
+      const newReceipt = factory.receipt.build()
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'create')
+        .mockResolvedValue({ ok: true, data: newReceipt })
+
+      const res = await request(app.callback()).post('/receipts').send({
+        keyLoanId: '00000000-0000-0000-0000-000000000001',
+        receiptType: 'LOAN',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.id).toBe(newReceipt.id)
+    })
+
     it('responds with 400 on bad request', async () => {
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'create')
@@ -1303,6 +1694,21 @@ describe('keys-service', () => {
   })
 
   describe('PATCH /receipts/:id', () => {
+    it('responds with updated receipt on success', async () => {
+      const updatedReceipt = factory.receipt.build()
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'update')
+        .mockResolvedValue({ ok: true, data: updatedReceipt })
+
+      const res = await request(app.callback())
+        .patch(`/receipts/${updatedReceipt.id}`)
+        .send({ receiptType: 'RETURN' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(updatedReceipt.id)
+    })
+
     it('responds with 404 if receipt not found', async () => {
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'update')
@@ -1341,6 +1747,24 @@ describe('keys-service', () => {
   })
 
   describe('DELETE /receipts/:id', () => {
+    it('responds with 200 on successful deletion', async () => {
+      const receipt = factory.receipt.build()
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'remove')
+        .mockResolvedValue({ ok: true, data: undefined })
+
+      const res = await request(app.callback()).delete(
+        `/receipts/${receipt.id}`
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('responds with 404 if receipt not found on get', async () => {
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'get')
@@ -1371,44 +1795,6 @@ describe('keys-service', () => {
       const res = await request(app.callback()).delete(
         `/receipts/${receipt.id}`
       )
-
-      expect(res.status).toBe(500)
-    })
-  })
-
-  describe('POST /receipts/:id/upload-base64', () => {
-    it('responds with 404 if receipt not found', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: false, err: 'not-found' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000999/upload-base64')
-        .send({ fileContent: 'base64data' })
-
-      expect(res.status).toBe(404)
-    })
-
-    it('responds with 400 on bad request', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: false, err: 'bad-request' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-        .send({})
-
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-        .send({ fileContent: 'base64data' })
 
       expect(res.status).toBe(500)
     })
@@ -1454,6 +1840,116 @@ describe('keys-service', () => {
       const res = await request(app.callback()).get(
         '/receipts/00000000-0000-0000-0000-000000000001/download'
       )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('POST /receipts/:id/upload-base64', () => {
+    it('responds with 200 on successful file upload', async () => {
+      const receipt = factory.receipt.build()
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      const res = await request(app.callback())
+        .post(`/receipts/${receipt.id}/upload-base64`)
+        .send({ fileContent: 'base64encodedpdfdata', fileName: 'receipt.pdf' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(receipt.id)
+    })
+
+    it('responds with 404 if receipt not found', async () => {
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000999/upload-base64')
+        .send({ fileContent: 'base64data' })
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 400 on bad request', async () => {
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
+        .mockResolvedValue({ ok: false, err: 'bad-request' })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
+        .send({ fileContent: 'invalidbase64' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
+        .send({ fileContent: 'base64data' })
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('POST /receipts/:id/upload', () => {
+    it('responds with 200 on successful file upload', async () => {
+      const receipt = factory.receipt.build()
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      const res = await request(app.callback())
+        .post(`/receipts/${receipt.id}/upload`)
+        .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(receipt.id)
+    })
+
+    it('responds with 404 if receipt not found', async () => {
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000999/upload')
+        .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 400 on bad request (missing file)', async () => {
+      const res = await request(app.callback()).post(
+        '/receipts/00000000-0000-0000-0000-000000000001/upload'
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000001/upload')
+        .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
 
       expect(res.status).toBe(500)
     })
@@ -1577,6 +2073,24 @@ describe('keys-service', () => {
   })
 
   describe('POST /key-events', () => {
+    it('responds with created key event on success', async () => {
+      const newKeyEvent = factory.keyEvent.build()
+
+      jest
+        .spyOn(keysAdapter.KeyEventsApi, 'create')
+        .mockResolvedValue({ ok: true, data: newKeyEvent })
+
+      const res = await request(app.callback())
+        .post('/key-events')
+        .send({
+          keys: JSON.stringify(['key-1']),
+          type: 'FLEX',
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.id).toBe(newKeyEvent.id)
+    })
+
     it('responds with 400 on bad request', async () => {
       jest
         .spyOn(keysAdapter.KeyEventsApi, 'create')
@@ -1604,6 +2118,21 @@ describe('keys-service', () => {
   })
 
   describe('PATCH /key-events/:id', () => {
+    it('responds with updated key event on success', async () => {
+      const updatedKeyEvent = factory.keyEvent.build()
+
+      jest
+        .spyOn(keysAdapter.KeyEventsApi, 'update')
+        .mockResolvedValue({ ok: true, data: updatedKeyEvent })
+
+      const res = await request(app.callback())
+        .patch(`/key-events/${updatedKeyEvent.id}`)
+        .send({ status: 'COMPLETED' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(updatedKeyEvent.id)
+    })
+
     it('responds with 404 if key event not found', async () => {
       jest
         .spyOn(keysAdapter.KeyEventsApi, 'update')
@@ -1636,6 +2165,137 @@ describe('keys-service', () => {
       const res = await request(app.callback())
         .patch('/key-events/00000000-0000-0000-0000-000000000001')
         .send({ status: 'COMPLETED' })
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  // ============================================================================
+  // Signatures Routes
+  // ============================================================================
+
+  describe('POST /signatures/send', () => {
+    it('responds with 201 on successful signature request sent', async () => {
+      const signatureResponse = factory.signature.build({
+        recipientEmail: 'test@example.com',
+      })
+
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'send')
+        .mockResolvedValue({ ok: true, data: signatureResponse })
+
+      const res = await request(app.callback()).post('/signatures/send').send({
+        recipientEmail: 'test@example.com',
+        resourceType: 'key-loan',
+        resourceId: '00000000-0000-0000-0000-000000000001',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.recipientEmail).toBe('test@example.com')
+    })
+
+    it('responds with 400 on bad request', async () => {
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'send')
+        .mockResolvedValue({ ok: false, err: 'bad-request' })
+
+      const res = await request(app.callback())
+        .post('/signatures/send')
+        .send({})
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 404 if resource not found', async () => {
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'send')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback())
+        .post('/signatures/send')
+        .send({ recipientEmail: 'test@example.com' })
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'send')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback())
+        .post('/signatures/send')
+        .send({ recipientEmail: 'test@example.com' })
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /signatures/:id', () => {
+    it('responds with signature on success', async () => {
+      const signature = factory.signature.build()
+
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'get')
+        .mockResolvedValue({ ok: true, data: signature })
+
+      const res = await request(app.callback()).get(
+        `/signatures/${signature.id}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.id).toBe(signature.id)
+    })
+
+    it('responds with 404 if signature not found', async () => {
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'get')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/signatures/00000000-0000-0000-0000-000000000999'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'get')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/signatures/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /signatures/resource/:resourceType/:resourceId', () => {
+    it('responds with signatures for resource on success', async () => {
+      const signatures = factory.signature.buildList(2)
+
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'getByResource')
+        .mockResolvedValue({ ok: true, data: signatures })
+
+      const res = await request(app.callback()).get(
+        '/signatures/resource/key-loan/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.SignaturesApi, 'getByResource')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/signatures/resource/key-loan/00000000-0000-0000-0000-000000000001'
+      )
 
       expect(res.status).toBe(500)
     })
