@@ -40,7 +40,7 @@ export const TenantDetailTabsContent = ({
         /> */}
       </TabsContent>
 
-      <TabsContent value="cases">
+      <TabsContent value="work-orders">
         <WorkOrdersManagement id={contactCode} contextType="tenant" />
       </TabsContent>
 
