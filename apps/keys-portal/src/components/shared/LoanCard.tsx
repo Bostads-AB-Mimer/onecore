@@ -4,19 +4,34 @@ import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Calendar, User, FileText, AlertCircle, Undo2 } from 'lucide-react'
-import type { KeyLoanWithDetails } from '@/services/types'
-import { MaintenanceKeysTable } from './MaintenanceKeysTable'
-import { MaintenanceReceiptActions } from './MaintenanceReceiptActions'
-import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
+import {
+  Calendar,
+  User,
+  FileText,
+  AlertCircle,
+  Undo2,
+  Users,
+} from 'lucide-react'
+import type { KeyLoanWithDetails, Lease } from '@/services/types'
+import { MaintenanceKeysTable } from '@/components/maintenance/MaintenanceKeysTable'
+import { MaintenanceReceiptActions } from '@/components/maintenance/MaintenanceReceiptActions'
+import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 
-type Props = {
+type LoanCardProps = {
   loan: KeyLoanWithDetails
   keySystemMap: Record<string, string>
+  lease?: Lease // Only for TENANT loans
   onRefresh?: () => void
 }
 
-export function MaintenanceLoanCard({ loan, keySystemMap, onRefresh }: Props) {
+export function LoanCard({
+  loan,
+  keySystemMap,
+  lease,
+  onRefresh,
+}: LoanCardProps) {
+  const loanType = loan.loanType
   const isReturned = !!loan.returnedAt
   const isActive = !isReturned
   const hasNoReceipt = isActive && !loan.pickedUpAt
@@ -25,18 +40,54 @@ export function MaintenanceLoanCard({ loan, keySystemMap, onRefresh }: Props) {
   // Get all key IDs for this loan
   const allKeyIds = loan.keysArray.map((k) => k.id)
 
+  // Determine display names based on loan type
+  const getContactInfo = () => {
+    if (loanType === 'MAINTENANCE') {
+      return {
+        primaryName: loan.contactPerson || null,
+        secondaryInfo: loan.description || null,
+      }
+    } else {
+      // TENANT loan - get info from lease
+      return {
+        primaryName: lease
+          ? `${lease.tenants.map((t) => `${t.firstName} ${t.lastName}`).join(', ')}`
+          : 'Okänd hyresgäst',
+        secondaryInfo: lease?.rentalPropertyId || null,
+      }
+    }
+  }
+
+  const contactInfo = getContactInfo()
+
   return (
     <>
-      <ReturnMaintenanceKeysDialog
-        open={returnDialogOpen}
-        onOpenChange={setReturnDialogOpen}
-        keyIds={allKeyIds}
-        allKeys={loan.keysArray}
-        onSuccess={() => {
-          setReturnDialogOpen(false)
-          onRefresh?.()
-        }}
-      />
+      {loanType === 'MAINTENANCE' ? (
+        <ReturnMaintenanceKeysDialog
+          open={returnDialogOpen}
+          onOpenChange={setReturnDialogOpen}
+          keyIds={allKeyIds}
+          allKeys={loan.keysArray}
+          onSuccess={() => {
+            setReturnDialogOpen(false)
+            onRefresh?.()
+          }}
+        />
+      ) : (
+        lease && (
+          <ReturnKeysDialog
+            open={returnDialogOpen}
+            onOpenChange={setReturnDialogOpen}
+            keyIds={allKeyIds}
+            allKeys={loan.keysArray}
+            lease={lease}
+            onSuccess={() => {
+              setReturnDialogOpen(false)
+              onRefresh?.()
+            }}
+          />
+        )
+      )}
       <Card
         className={`overflow-hidden ${
           hasNoReceipt
@@ -57,19 +108,23 @@ export function MaintenanceLoanCard({ loan, keySystemMap, onRefresh }: Props) {
           {/* Top row: Contact/Description on left, Badges/Dates on right */}
           <div className="flex items-start justify-between gap-4 mb-2">
             <div className="flex-1 space-y-1.5">
-              {/* Contact Person */}
-              {loan.contactPerson && (
+              {/* Primary Name (Contact Person or Tenant Names) */}
+              {contactInfo.primaryName && (
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{loan.contactPerson}</span>
+                  {loanType === 'MAINTENANCE' ? (
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="font-medium">{contactInfo.primaryName}</span>
                 </div>
               )}
 
-              {/* Description */}
-              {loan.description && (
+              {/* Secondary Info (Description or Rental Object Code) */}
+              {contactInfo.secondaryInfo && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <FileText className="h-4 w-4" />
-                  <span>{loan.description}</span>
+                  <span>{contactInfo.secondaryInfo}</span>
                 </div>
               )}
             </div>
@@ -77,6 +132,15 @@ export function MaintenanceLoanCard({ loan, keySystemMap, onRefresh }: Props) {
             {/* Status Badge and Dates column */}
             <div className="flex flex-col gap-2 items-end">
               <div className="flex items-center gap-1">
+                {/* Loan Type Badge */}
+                <Badge
+                  variant="outline"
+                  className="text-[9px] py-0 px-1 h-4 border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-950"
+                >
+                  {loanType === 'MAINTENANCE' ? 'Underhåll' : 'Hyresgäst'}
+                </Badge>
+
+                {/* No Receipt Warning Badge */}
                 {hasNoReceipt && (
                   <Badge
                     variant="outline"
@@ -86,6 +150,8 @@ export function MaintenanceLoanCard({ loan, keySystemMap, onRefresh }: Props) {
                     Saknar kvittens
                   </Badge>
                 )}
+
+                {/* Active/Returned Badge */}
                 <Badge variant={isReturned ? 'secondary' : 'default'}>
                   {isReturned ? 'Återlämnad' : 'Aktiv'}
                 </Badge>
