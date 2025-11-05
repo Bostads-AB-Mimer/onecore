@@ -162,19 +162,26 @@ export const keyLoanService = {
    * @param contact - Optional contact code to filter by
    * @param contact2 - Optional second contact code to filter by
    * @param includeReceipts - Whether to include receipts in the response
+   * @param returned - Optional filter: true = returned loans, false = active loans, undefined = all
    */
   async getByRentalObject(
     rentalObjectCode: string,
     contact?: string,
     contact2?: string,
-    includeReceipts?: boolean
+    includeReceipts?: boolean,
+    returned?: boolean
   ): Promise<KeyLoanWithDetails[]> {
     const { data, error } = await GET(
       '/key-loans/by-rental-object/{rentalObjectCode}',
       {
         params: {
           path: { rentalObjectCode },
-          query: { contact, contact2, includeReceipts },
+          query: {
+            contact,
+            contact2,
+            includeReceipts,
+            ...(returned !== undefined ? { returned } : {}),
+          },
         },
       }
     )

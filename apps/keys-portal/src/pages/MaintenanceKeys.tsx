@@ -7,7 +7,7 @@ import {
   type SearchResult,
 } from '@/components/maintenance/UnifiedMaintenanceSearchHook'
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
-import { MaintenanceLoanCard } from '@/components/maintenance/MaintenanceLoanCard'
+import { LoanCard } from '@/components/shared/LoanCard'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
 import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
 import { ContactBundlesWithLoanedKeysCard } from '@/components/maintenance/ContactBundlesWithLoanedKeysCard'
@@ -516,7 +516,7 @@ export default function MaintenanceKeys() {
                       {activeLoans.length > 0 ? (
                         <CardContent className="space-y-4">
                           {activeLoans.map((loan) => (
-                            <MaintenanceLoanCard
+                            <LoanCard
                               key={loan.id}
                               loan={loan}
                               keySystemMap={loansKeySystemMap}
@@ -561,7 +561,7 @@ export default function MaintenanceKeys() {
                       {returnedLoans.length > 0 ? (
                         <CardContent className="space-y-4">
                           {returnedLoans.map((loan) => (
-                            <MaintenanceLoanCard
+                            <LoanCard
                               key={loan.id}
                               loan={loan}
                               keySystemMap={loansKeySystemMap}
