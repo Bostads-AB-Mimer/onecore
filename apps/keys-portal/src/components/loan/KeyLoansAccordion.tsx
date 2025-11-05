@@ -1,353 +1,222 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { KeyRound, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-import type { Lease, Receipt, ReceiptData } from '@/services/types'
-import { receiptService } from '@/services/api/receiptService'
-import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
-import { KeyLoanCard } from './KeyLoanCard'
-import { useKeyLoans, type KeyLoanWithDetails } from '@/hooks/useKeyLoans'
+import type { Lease } from '@/services/types'
+import { LoanCard } from '@/components/shared/LoanCard'
+import { useKeyLoans } from '@/hooks/useKeyLoans'
+import { keyService } from '@/services/api/keyService'
 
 interface KeyLoansAccordionProps {
   lease: Lease
   refreshKey?: number
-  onUnsignedLoansChange?: (hasUnsignedLoans: boolean) => void
   onReceiptUploaded?: () => void
 }
 
 export function KeyLoansAccordion({
   lease,
   refreshKey,
-  onUnsignedLoansChange,
   onReceiptUploaded,
 }: KeyLoansAccordionProps) {
-  const { activeLoans, returnedLoans, loading, refresh } = useKeyLoans(
+  const [showActiveLoans, setShowActiveLoans] = useState(true) // Default open
+  const [showReturnedLoans, setShowReturnedLoans] = useState(false) // Default closed
+  const [hasEverOpenedReturned, setHasEverOpenedReturned] = useState(false) // Track if returned loans were ever fetched
+  const [loansKeySystemMap, setLoansKeySystemMap] = useState<
+    Record<string, string>
+  >({})
+
+  // Fetch active loans (enabled by default since section starts open)
+  const {
+    keyLoans: activeLoans,
+    loading: loadingActive,
+    refresh: refreshActive,
+  } = useKeyLoans(lease, false, showActiveLoans)
+
+  // Lazy load returned loans - only fetch when accordion is expanded
+  const {
+    keyLoans: returnedLoans,
+    loading: loadingReturned,
+    refresh: refreshReturned,
+  } = useKeyLoans(
     lease,
-    onUnsignedLoansChange
+    true,
+    showReturnedLoans // Only enabled when accordion is expanded
   )
 
-  const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(
-    null
-  )
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [showReturnedLoans, setShowReturnedLoans] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const pendingUploadReceiptIdRef = useRef<string | null>(null)
+  // Track when returned loans are first opened
+  useEffect(() => {
+    if (showReturnedLoans && !hasEverOpenedReturned) {
+      setHasEverOpenedReturned(true)
+    }
+  }, [showReturnedLoans, hasEverOpenedReturned])
 
   // Refresh when refreshKey changes
-  // Note: We intentionally use refreshKey as the only dependency to avoid
-  // re-fetching when the refresh callback reference changes
   useEffect(() => {
     if (refreshKey !== undefined && refreshKey > 0) {
-      refresh()
+      if (showActiveLoans) refreshActive()
+      if (showReturnedLoans) refreshReturned()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey])
+  }, [
+    refreshKey,
+    showActiveLoans,
+    showReturnedLoans,
+    refreshActive,
+    refreshReturned,
+  ])
 
-  /**
-   * Handles toggling the returned loans accordion
-   * Receipts are already loaded from the optimized endpoint
-   */
+  // Build key system map when loans change
+  useEffect(() => {
+    const buildKeySystemMap = async () => {
+      const allLoans = [
+        ...(showActiveLoans ? activeLoans : []),
+        ...(showReturnedLoans ? returnedLoans : []),
+      ]
+      const allKeys = allLoans.flatMap((loan) => loan.keysArray)
+      const uniqueKeySystemIds = [
+        ...new Set(
+          allKeys
+            .map((k) => k.keySystemId)
+            .filter((id): id is string => id != null && id !== '')
+        ),
+      ]
+
+      if (uniqueKeySystemIds.length > 0) {
+        const systemMap: Record<string, string> = {}
+        await Promise.all(
+          uniqueKeySystemIds.map(async (id) => {
+            try {
+              const keySystem = await keyService.getKeySystem(id)
+              systemMap[id] = keySystem.systemCode
+            } catch (error) {
+              console.error(`Failed to fetch key system ${id}:`, error)
+            }
+          })
+        )
+        setLoansKeySystemMap(systemMap)
+      }
+    }
+
+    buildKeySystemMap()
+  }, [activeLoans, returnedLoans, showActiveLoans, showReturnedLoans])
+
+  const handleToggleActiveLoans = () => {
+    setShowActiveLoans(!showActiveLoans)
+  }
+
   const handleToggleReturnedLoans = () => {
     setShowReturnedLoans(!showReturnedLoans)
   }
 
-  /**
-   * Handles generating or downloading a loan receipt
-   * If signed receipt exists (has fileId), downloads from MinIO
-   * Otherwise, generates PDF client-side and opens in new tab
-   */
-  const handleGenerateLoanReceipt = async (
-    loanWithDetails: KeyLoanWithDetails
-  ) => {
-    // If a signed receipt exists (has fileId), download it from MinIO
-    if (loanWithDetails.loanReceipt && loanWithDetails.loanReceipt.fileId) {
-      try {
-        await receiptService.downloadFile(loanWithDetails.loanReceipt.id)
-        return
-      } catch (err) {
-        console.error('Failed to download signed receipt:', err)
-        // Fall through to generate PDF if download fails
-      }
-    }
-
-    // Otherwise, generate the receipt PDF client-side
-    const baseReceiptData: ReceiptData = {
-      lease,
-      tenants: lease.tenants ?? [],
-      keys: loanWithDetails.keys,
-      receiptType: 'LOAN',
-      operationDate: loanWithDetails.keyLoan.createdAt
-        ? new Date(loanWithDetails.keyLoan.createdAt)
-        : new Date(),
-    }
-
-    if (!loanWithDetails.loanReceipt) {
-      try {
-        const receipt = await receiptService.create({
-          keyLoanId: loanWithDetails.keyLoan.id,
-          receiptType: 'LOAN',
-          type: 'PHYSICAL',
-        })
-
-        await refresh()
-
-        // Open PDF directly in new tab
-        await openPdfInNewTab(baseReceiptData, receipt.id)
-      } catch (err) {
-        console.error('Failed to create loan receipt:', err)
-      }
-    } else {
-      // Open PDF directly in new tab
-      await openPdfInNewTab(baseReceiptData, loanWithDetails.loanReceipt.id)
-    }
-  }
-
-  /**
-   * Handles generating or downloading a return receipt
-   * If signed receipt exists (has fileId), downloads from MinIO
-   * Otherwise, generates PDF client-side and opens in new tab
-   */
-  const handleGenerateReturnReceipt = async (
-    loanWithDetails: KeyLoanWithDetails
-  ) => {
-    // If a signed receipt exists (has fileId), download it from MinIO
-    if (loanWithDetails.returnReceipt && loanWithDetails.returnReceipt.fileId) {
-      try {
-        await receiptService.downloadFile(loanWithDetails.returnReceipt.id)
-        return
-      } catch (err) {
-        console.error('Failed to download signed return receipt:', err)
-        // Fall through to generate PDF if download fails
-      }
-    }
-
-    // Otherwise, generate the receipt PDF client-side
-    const baseReceiptData: ReceiptData = {
-      lease,
-      tenants: lease.tenants ?? [],
-      keys: loanWithDetails.keys,
-      receiptType: 'RETURN',
-      operationDate: loanWithDetails.keyLoan.returnedAt
-        ? new Date(loanWithDetails.keyLoan.returnedAt)
-        : new Date(),
-    }
-
-    if (!loanWithDetails.returnReceipt) {
-      try {
-        const receipt = await receiptService.create({
-          keyLoanId: loanWithDetails.keyLoan.id,
-          receiptType: 'RETURN',
-          type: 'PHYSICAL',
-        })
-
-        await refresh()
-
-        // Open PDF directly in new tab
-        await openPdfInNewTab(baseReceiptData, receipt.id)
-      } catch (err) {
-        console.error('Failed to create return receipt:', err)
-      }
-    } else {
-      // Open PDF directly in new tab
-      await openPdfInNewTab(baseReceiptData, loanWithDetails.returnReceipt.id)
-    }
-  }
-
-  /**
-   * Downloads a receipt file from MinIO
-   */
-  const handleDownloadReceipt = async (receipt: Receipt) => {
-    try {
-      await receiptService.downloadFile(receipt.id)
-    } catch (err) {
-      console.error('Failed to download receipt:', err)
-    }
-  }
-
-  /**
-   * Handles uploading a signed receipt file
-   */
-  const handleUploadReceipt = async (receiptId: string, file: File) => {
-    setUploadError(null)
-    setUploadingReceiptId(receiptId)
-    try {
-      if (file.type !== 'application/pdf') {
-        setUploadError('Endast PDF-filer är tillåtna')
-        return
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setUploadError('Filen är för stor (max 10 MB)')
-        return
-      }
-
-      await receiptService.uploadFile(receiptId, file)
-      await refresh()
-
-      // Notify parent that a receipt was uploaded (to refresh key statuses)
-      onReceiptUploaded?.()
-    } catch (err: any) {
-      setUploadError(err?.message ?? 'Kunde inte ladda upp filen')
-    } finally {
-      setUploadingReceiptId(null)
-    }
-  }
-
-  /**
-   * Triggers file picker for receipt upload
-   */
-  const onPickFile = (receiptId: string) => {
-    pendingUploadReceiptIdRef.current = receiptId
-    fileInputRef.current?.click()
-  }
-
-  /**
-   * Handles file selection from file picker
-   */
-  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    const receiptId = pendingUploadReceiptIdRef.current
-    if (file && receiptId) {
-      void handleUploadReceipt(receiptId, file)
-    }
-    pendingUploadReceiptIdRef.current = null
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-        <Clock className="h-4 w-4 mr-2 animate-spin" />
-        Laddar nyckellån...
-      </div>
-    )
-  }
-
-  if (activeLoans.length === 0 && returnedLoans.length === 0) {
-    return (
-      <div className="py-8 text-center text-sm text-muted-foreground">
-        <KeyRound className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>Inga nyckellån hittades</p>
-      </div>
-    )
+  const handleRefresh = () => {
+    if (showActiveLoans) refreshActive()
+    if (showReturnedLoans) refreshReturned()
+    onReceiptUploaded?.()
   }
 
   return (
-    <>
-      <div className="space-y-2">
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          onChange={onFileInputChange}
-        />
+    <div className="space-y-3">
+      {/* Active loans section - collapsible, defaults to open */}
+      <div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleToggleActiveLoans}
+          className="w-full h-8 text-xs gap-2 justify-start"
+        >
+          {showActiveLoans ? (
+            <>
+              <ChevronUp className="h-3.5 w-3.5" />
+              Aktiva lån ({activeLoans.length})
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3.5 w-3.5" />
+              Aktiva lån ({activeLoans.length})
+            </>
+          )}
+        </Button>
 
-        {/* Active loans - always visible */}
-        {activeLoans.length > 0 && (
-          <div className="space-y-2">
-            {activeLoans.map((loanWithDetails) => {
-              const hasUnsignedLoanReceipt =
-                loanWithDetails.loanReceipt &&
-                !loanWithDetails.loanReceipt.fileId
-              const isActive = !loanWithDetails.keyLoan.returnedAt
-
-              return (
-                <KeyLoanCard
-                  key={loanWithDetails.keyLoan.id}
-                  keyLoan={loanWithDetails.keyLoan}
-                  keys={loanWithDetails.keys}
-                  receipts={loanWithDetails.receipts}
-                  loanReceipt={loanWithDetails.loanReceipt}
-                  returnReceipt={loanWithDetails.returnReceipt}
-                  isActive={isActive}
-                  hasUnsignedLoanReceipt={hasUnsignedLoanReceipt}
-                  uploadingReceiptId={uploadingReceiptId}
-                  uploadError={uploadError}
-                  lease={lease}
-                  onGenerateLoanReceipt={() =>
-                    handleGenerateLoanReceipt(loanWithDetails)
-                  }
-                  onGenerateReturnReceipt={() =>
-                    handleGenerateReturnReceipt(loanWithDetails)
-                  }
-                  onUploadReceipt={onPickFile}
-                  onDownloadReceipt={handleDownloadReceipt}
-                  onRefresh={refresh}
-                />
-              )
-            })}
-          </div>
-        )}
-
-        {/* No active loans message */}
-        {activeLoans.length === 0 && returnedLoans.length > 0 && (
-          <div className="py-4 text-center text-sm text-muted-foreground">
-            <p>Inga aktiva nyckellån</p>
-          </div>
-        )}
-
-        {/* Returned loans - collapsible section */}
-        {returnedLoans.length > 0 && (
-          <div className="mt-4">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleToggleReturnedLoans}
-              className="w-full h-8 text-xs gap-2"
-            >
-              {showReturnedLoans ? (
-                <>
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  Dölj återlämnade lån ({returnedLoans.length})
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                  Visa återlämnade lån ({returnedLoans.length})
-                </>
-              )}
-            </Button>
-
-            {showReturnedLoans && (
-              <div className="space-y-2 mt-2">
-                {returnedLoans.map((loanWithDetails) => {
-                  const hasUnsignedLoanReceipt =
-                    loanWithDetails.loanReceipt &&
-                    !loanWithDetails.loanReceipt.fileId
-                  const isActive = !loanWithDetails.keyLoan.returnedAt
-
-                  return (
-                    <KeyLoanCard
-                      key={loanWithDetails.keyLoan.id}
-                      keyLoan={loanWithDetails.keyLoan}
-                      keys={loanWithDetails.keys}
-                      receipts={loanWithDetails.receipts}
-                      loanReceipt={loanWithDetails.loanReceipt}
-                      returnReceipt={loanWithDetails.returnReceipt}
-                      isActive={isActive}
-                      hasUnsignedLoanReceipt={hasUnsignedLoanReceipt}
-                      uploadingReceiptId={uploadingReceiptId}
-                      uploadError={uploadError}
-                      lease={lease}
-                      onGenerateLoanReceipt={() =>
-                        handleGenerateLoanReceipt(loanWithDetails)
-                      }
-                      onGenerateReturnReceipt={() =>
-                        handleGenerateReturnReceipt(loanWithDetails)
-                      }
-                      onUploadReceipt={onPickFile}
-                      onDownloadReceipt={handleDownloadReceipt}
-                      onRefresh={refresh}
-                    />
-                  )
-                })}
+        {/* Show active loans content when expanded */}
+        {showActiveLoans && (
+          <div className="mt-2">
+            {loadingActive ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 mr-2 animate-spin" />
+                Laddar aktiva lån...
+              </div>
+            ) : activeLoans.length > 0 ? (
+              <div className="space-y-2">
+                {activeLoans.map((loan) => (
+                  <LoanCard
+                    key={loan.id}
+                    loan={loan}
+                    keySystemMap={loansKeySystemMap}
+                    lease={lease}
+                    onRefresh={handleRefresh}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                <KeyRound className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Inga aktiva nyckellån</p>
               </div>
             )}
           </div>
         )}
       </div>
-    </>
+
+      {/* Returned loans section - collapsible, defaults to closed */}
+      <div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleToggleReturnedLoans}
+          className="w-full h-8 text-xs gap-2 justify-start"
+        >
+          {showReturnedLoans ? (
+            <>
+              <ChevronUp className="h-3.5 w-3.5" />
+              Återlämnade lån{' '}
+              {hasEverOpenedReturned ? `(${returnedLoans.length})` : ''}
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3.5 w-3.5" />
+              Återlämnade lån{' '}
+              {hasEverOpenedReturned ? `(${returnedLoans.length})` : ''}
+            </>
+          )}
+        </Button>
+
+        {showReturnedLoans && (
+          <div className="mt-2">
+            {loadingReturned ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 mr-2 animate-spin" />
+                Laddar återlämnade lån...
+              </div>
+            ) : returnedLoans.length > 0 ? (
+              <div className="space-y-2">
+                {returnedLoans.map((loan) => (
+                  <LoanCard
+                    key={loan.id}
+                    loan={loan}
+                    keySystemMap={loansKeySystemMap}
+                    lease={lease}
+                    onRefresh={handleRefresh}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                <KeyRound className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Inga återlämnade lån</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
