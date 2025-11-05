@@ -46,7 +46,6 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
         const result = await keysAdapter.ReceiptsApi.create({
           keyLoanId: '00000000-0000-0000-0000-000000000001',
-          loanType: 'REGULAR',
           receiptType: 'LOAN',
         })
 
@@ -58,7 +57,6 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
         const result = await keysAdapter.ReceiptsApi.create({
           keyLoanId: '00000000-0000-0000-0000-000000000001',
-          loanType: 'REGULAR',
           receiptType: 'LOAN',
         })
 
