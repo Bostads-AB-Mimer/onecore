@@ -1,4 +1,4 @@
-import { CounterPartCustomer } from '../../../../common/types'
+import { CounterPartCustomer } from '@src/common/types'
 
 // Mock data factories
 export const createMockCounterPartCustomer = (
