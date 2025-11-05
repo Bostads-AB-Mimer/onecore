@@ -3950,6 +3950,7 @@ export interface paths {
      * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
      *
      * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
      *
      * Excluded: keySystem logs (infrastructure-level, not property-specific)
      *
