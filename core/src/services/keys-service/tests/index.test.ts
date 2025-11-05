@@ -677,7 +677,7 @@ describe('keys-service', () => {
 
   describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
     it('responds with key loans for rental object on success', async () => {
-      const keyLoans = factory.keyLoan.buildList(2)
+      const keyLoans = factory.keyLoanWithDetails.buildList(2)
 
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'getByRentalObject')
@@ -706,7 +706,7 @@ describe('keys-service', () => {
 
   describe('GET /key-loans/by-contact/:contact/with-keys', () => {
     it('responds with key loans with keys for contact on success', async () => {
-      const keyLoansWithKeys = factory.keyLoan.buildList(2)
+      const keyLoansWithKeys = factory.keyLoanWithDetails.buildList(2)
 
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'getByContactWithKeys')
@@ -735,7 +735,7 @@ describe('keys-service', () => {
 
   describe('GET /key-loans/by-bundle/:bundleId/with-keys', () => {
     it('responds with key loans with keys for bundle on success', async () => {
-      const keyLoansWithKeys = factory.keyLoan.buildList(1)
+      const keyLoansWithKeys = factory.keyLoanWithDetails.buildList(1)
 
       jest
         .spyOn(keysAdapter.KeyLoansApi, 'getByBundleWithKeys')
@@ -1042,7 +1042,9 @@ describe('keys-service', () => {
   describe('GET /key-systems/:id/download-schema', () => {
     it('responds with download URL on success', async () => {
       const mockUrl = {
-        downloadUrl: 'https://minio.example.com/schemas/file.json',
+        url: 'https://minio.example.com/schemas/file.json',
+        expiresIn: 3600,
+        fileId: 'file-123',
       }
 
       jest
@@ -1848,10 +1850,16 @@ describe('keys-service', () => {
   describe('POST /receipts/:id/upload-base64', () => {
     it('responds with 200 on successful file upload', async () => {
       const receipt = factory.receipt.build()
+      const uploadResponse = {
+        fileId: 'file-123',
+        fileName: 'receipt.pdf',
+        size: 1024,
+        source: 'base64',
+      }
 
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: true, data: receipt })
+        .mockResolvedValue({ ok: true, data: uploadResponse })
 
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'get')
@@ -1862,7 +1870,7 @@ describe('keys-service', () => {
         .send({ fileContent: 'base64encodedpdfdata', fileName: 'receipt.pdf' })
 
       expect(res.status).toBe(200)
-      expect(res.body.content.id).toBe(receipt.id)
+      expect(res.body.content.fileId).toBe(uploadResponse.fileId)
     })
 
     it('responds with 404 if receipt not found', async () => {
@@ -1905,10 +1913,15 @@ describe('keys-service', () => {
   describe('POST /receipts/:id/upload', () => {
     it('responds with 200 on successful file upload', async () => {
       const receipt = factory.receipt.build()
+      const uploadResponse = {
+        fileId: 'file-123',
+        fileName: 'receipt.pdf',
+        size: 1024,
+      }
 
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
-        .mockResolvedValue({ ok: true, data: receipt })
+        .mockResolvedValue({ ok: true, data: uploadResponse })
 
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'get')
@@ -1919,7 +1932,7 @@ describe('keys-service', () => {
         .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
 
       expect(res.status).toBe(200)
-      expect(res.body.content.id).toBe(receipt.id)
+      expect(res.body.content.fileId).toBe(uploadResponse.fileId)
     })
 
     it('responds with 404 if receipt not found', async () => {
