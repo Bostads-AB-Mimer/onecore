@@ -2,6 +2,14 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTenant } from '@/components/hooks/useTenant'
 import { TenantCard } from '@/components/tenants/TenantCard'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/Tooltip'
+import { TriangleAlert } from 'lucide-react'
+import { useIsMobile } from '@/components/hooks/useMobile'
 // import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
 // import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
 
@@ -10,6 +18,13 @@ const TenantView = () => {
 
   // Fetch tenant data
   const { data: tenant, isLoading, error } = useTenant(contactCode)
+
+  const isMobile = useIsMobile()
+
+  // Let the PageLayout handle sidebar state based on route
+  useEffect(() => {
+    // Default sidebar state is handled in PageLayout based on route
+  }, [isMobile])
 
   useEffect(() => {
     if (error) {
@@ -43,19 +58,55 @@ const TenantView = () => {
     }
 
     return (
-      <div className="py-4 space-y-4 sm:space-y-6 lg:space-y-8">
-        {/* Main tenant information card */}
-        <TenantCard tenant={tenant} />
+      <div className="w-full">
+        <TooltipProvider>
+          <div className="flex items-center gap-3 mb-6">
+            <h1 className="text-3xl font-bold">
+              {tenant.firstName} {tenant.lastName}
+            </h1>
+            {tenant.specialAttention && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-center w-8 h-8 bg-amber-100 rounded-full border border-amber-200 cursor-help">
+                    <TriangleAlert className="h-4 w-4 text-amber-600" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    Åk aldrig ensam till kund. Ta alltid med dig en kollega vid
+                    hembesök.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
 
-        {/* Tabbed content for contracts, queue, cases, etc. - NOT YET READY */}
-        {/* <TenantDetailTabs defaultValue="contracts" hasActiveCases={false}>
-          <TenantDetailTabsContent
-            contracts={tenant.housingContracts || []}
-            personalNumber={tenant.nationalRegistrationNumber}
-            customerNumber={tenant.contactCode}
-            customerName={tenant.fullName}
+        <div className="grid grid-cols-1 gap-6 mb-6">
+          <TenantCard tenant={tenant} />
+        </div>
+
+        {/* Implemented when we implement the various tabs in the view
+        {isMobile ? (
+          <TenantMobileAccordion
+            contracts={contracts}
+            hasActiveCases={hasActiveCases}
+            customerNumber={tenant.personalNumber}
+            customerName={`${tenant.firstName} ${tenant.lastName}`}
           />
-        </TenantDetailTabs> */}
+        ) : (
+          <TenantDetailTabs
+            defaultValue="contracts"
+            hasActiveCases={hasActiveCases}
+          >
+            <TenantDetailTabsContent
+              contracts={contracts}
+              personalNumber={tenant.personalNumber}
+              customerNumber={tenant.personalNumber}
+              customerName={`${tenant.firstName} ${tenant.lastName}`}
+            />
+          </TenantDetailTabs>
+        )} */}
       </div>
     )
   }

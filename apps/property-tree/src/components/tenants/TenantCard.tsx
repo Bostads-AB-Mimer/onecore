@@ -120,20 +120,6 @@ export function TenantCard({ tenant }: TenantCardProps) {
 
       <div className="space-y-4">
         <div>
-          <p className="text-sm text-muted-foreground">Telefon</p>
-          <div className="space-y-1">
-            {tenant.phoneNumbers && tenant.phoneNumbers.length > 0 ? (
-              tenant.phoneNumbers.map((phone, index) => (
-                <p key={index} className="font-medium">
-                  {phone.phoneNumber}
-                </p>
-              ))
-            ) : (
-              <p className="font-medium">Ej angivet</p>
-            )}
-          </div>
-        </div>
-        <div>
           <p className="text-sm text-muted-foreground">E-post</p>
           <div className="flex items-center gap-2">
             <p className="font-medium">{tenant.emailAddress}</p>
@@ -145,6 +131,20 @@ export function TenantCard({ tenant }: TenantCardProps) {
             >
               <Mail className="h-4 w-4" />
             </Button> */}
+          </div>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Telefon</p>
+          <div className="space-y-1">
+            {tenant.phoneNumbers && tenant.phoneNumbers.length > 0 ? (
+              tenant.phoneNumbers.map((phone, index) => (
+                <p key={index} className="font-medium">
+                  {phone.phoneNumber}
+                </p>
+              ))
+            ) : (
+              <p className="font-medium">Ej angivet</p>
+            )}
           </div>
         </div>
         {/* Later
