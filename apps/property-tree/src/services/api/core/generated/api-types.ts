@@ -1932,6 +1932,50 @@ export interface paths {
       };
     };
   };
+  "/work-orders/xpand/by-contact-code/{contactCode}": {
+    /**
+     * Get work orders by contact code from xpand
+     * @description Retrieves work orders from xpand based on the provided contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The number of work orders to skip. */
+          skip?: number;
+          /** @description The number of work orders to fetch. */
+          limit?: number;
+          /** @description Whether to sort the work orders by ascending creation date. */
+          sortAscending?: boolean;
+        };
+        path: {
+          /** @description The contact code used to fetch work orders. */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/work-orders/xpand/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get work orders by rental property id from xpand
