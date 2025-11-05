@@ -60,6 +60,78 @@ describe('work-order-adapter', () => {
     })
   })
 
+  describe(workOrderAdapter.getXpandWorkOrdersByContactCode, () => {
+    const contactCode = 'P174958'
+    const xpandWorkOrderMock = factory.externalXpandWorkOrder.buildList(3)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/contactCode/${contactCode}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByContactCode(contactCode)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/contactCode/${contactCode}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByContactCode(contactCode)
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+
+    it('returns work order data with query params', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/contactCode/${contactCode}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await workOrderAdapter.getXpandWorkOrdersByContactCode(
+        contactCode,
+        {
+          skip: 10,
+          limit: 50,
+          sortAscending: true,
+        }
+      )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+  })
+
   describe(workOrderAdapter.getXpandWorkOrdersByRentalPropertyId, () => {
     const rentalPropertyId = '406-028-02-0101'
     const xpandWorkOrderMock = factory.externalXpandWorkOrder.buildList(3)
