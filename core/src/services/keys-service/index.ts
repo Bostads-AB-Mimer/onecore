@@ -5173,5 +5173,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { content: result.data, ...metadata }
     }
   )
-
 }
