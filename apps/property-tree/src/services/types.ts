@@ -52,3 +52,63 @@ export interface DashboardCard {
   isExternal: boolean
   isDisabled: boolean
 }
+
+// Tenant-related types
+export interface ContractType {
+  leaseId: string
+  leaseNumber: string
+  rentalPropertyId: string
+  type: string
+  leaseStartDate: string
+  leaseEndDate: string | null
+  status: number
+  tenantContactIds: string[]
+  tenants: string[]
+  noticeGivenBy: string | null
+  noticeDate: string | null
+  noticeTimeTenant: number
+  preferredMoveOutDate: string | null
+  terminationDate: string | null
+  contractDate: string
+  lastDebitDate: string | null
+  approvalDate: string | null
+  residentialArea: {
+    code: string
+    caption: string
+  }
+  propertyType?: string
+}
+
+export interface Tenant {
+  contactCode: string
+  contactKey: string
+  firstName: string
+  lastName: string
+  fullName: string
+  leaseIds: string[]
+  nationalRegistrationNumber: string
+  birthDate: string
+  address: {
+    street: string
+    number: string
+    postalCode: string
+    city: string
+  }
+  phoneNumbers: Array<{
+    phoneNumber: string
+    type: string
+    isMainNumber: number
+  }>
+  emailAddress: string
+  isTenant: boolean
+  parkingSpaceWaitingList: {
+    queueTime: string
+    queuePoints: number
+    type: number
+  }
+  specialAttention: boolean
+  isAboutToLeave: boolean
+  currentHousingContract: ContractType
+  parkingSpaceContracts: ContractType[]
+  housingContracts: ContractType[]
+}
