@@ -1,4 +1,5 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 // import { TenantContracts } from '@/components/tenants/TenantContracts'
 // import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 // import { TenantNotes } from '@/components/tenants/TenantNotes'
@@ -40,8 +41,7 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="cases">
-        <div>Placeholder Ärenden</div>
-        {/* <TenantOrders /> */}
+        <WorkOrdersManagement id={contactCode} contextType="tenant" />
       </TabsContent>
 
       <TabsContent value="ledger">

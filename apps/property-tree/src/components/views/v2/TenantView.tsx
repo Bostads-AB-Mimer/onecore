@@ -26,9 +26,6 @@ const TenantView = () => {
     ...(tenant?.parkingSpaceContracts ?? []),
   ]
 
-  // This would typically come from API data. Ärenden?
-  const hasActiveCases = true
-
   const isMobile = useIsMobile()
 
   // Let the PageLayout handle sidebar state based on route
@@ -99,15 +96,11 @@ const TenantView = () => {
         {isMobile ? (
           <TenantMobileAccordion
             contracts={contracts}
-            hasActiveCases={hasActiveCases}
             contactCode={tenant.contactCode}
             customerName={`${tenant.firstName} ${tenant.lastName}`}
           />
         ) : (
-          <TenantDetailTabs
-            defaultValue="contracts"
-            hasActiveCases={hasActiveCases}
-          >
+          <TenantDetailTabs defaultValue="contracts">
             <TenantDetailTabsContent
               contracts={contracts}
               personalNumber={tenant.nationalRegistrationNumber}
