@@ -2,6 +2,7 @@ import { logger } from '@onecore/utilities'
 import { RentalObject } from '@onecore/types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
+import { calculateMonthlyRent } from '../../helpers/rent-calculation'
 
 const districts = {
   Mitt: ['Centrum', 'Gryta', 'Skallberget', 'Nordanby', 'Vega', 'Hökåsen'],
@@ -67,17 +68,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     }
   }
 
-  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
-  // Calculate monthlyRent from yearrent if available and numeric
-  let monthlyRent = 0
-  if (Array.isArray(yearRentRows) && yearRentRows.length > 0) {
-    const totalYearRent = yearRentRows
-      .map((r: any) =>
-        typeof r.yearrent === 'number' && !isNaN(r.yearrent) ? r.yearrent : 0
-      )
-      .reduce((sum: number, val: number) => sum + val, 0)
-    monthlyRent = totalYearRent / 12
-  }
+  // Calculate monthlyRent from yearrent using shared utility
+  const monthlyRent = calculateMonthlyRent(row.yearrentrows)
 
   // Determine vacantFrom date
   const lastDebitDate = row.lastdebitdate
