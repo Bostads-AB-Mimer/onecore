@@ -1,4 +1,4 @@
-import { processInvoiceRows } from '../service'
+import { processInvoiceRows } from '@src/services/invoice-service/service'
 
 const mockInvoiceDataRows = [
   {
@@ -29,10 +29,11 @@ const mockInvoiceDataRows = [
 ]
 
 // Mock database adapters
-jest.mock('../adapters/invoice-data-db-adapter', () =>
-  require('./__mocks__/invoice-data-db-adapter')
+jest.mock(
+  '@src/services/invoice-service/adapters/invoice-data-db-adapter',
+  () => require('./__mocks__/invoice-data-db-adapter')
 )
-jest.mock('../adapters/xpand-db-adapter', () =>
+jest.mock('@src/services/invoice-service/adapters/xpand-db-adapter', () =>
   require('./__mocks__/invoice-service-xpand-db-adapter')
 )
 
