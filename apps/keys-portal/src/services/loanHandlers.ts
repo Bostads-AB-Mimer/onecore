@@ -44,6 +44,7 @@ export async function handleLoanKeys({
       keys: JSON.stringify(keyIds),
       contact,
       contact2,
+      loanType: 'TENANT', // Tenant loans from regular key-loans menu
       createdBy: 'ui',
     })
 
