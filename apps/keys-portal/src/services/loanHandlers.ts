@@ -45,7 +45,7 @@ export async function handleLoanKeys({
       contact,
       contact2,
       loanType: 'TENANT', // Tenant loans from regular key-loans menu
-      createdBy: 'ui',
+      // createdBy is set automatically by backend from authenticated user
     })
 
     // Create receipt for this loan
