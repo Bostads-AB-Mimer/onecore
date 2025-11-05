@@ -45,7 +45,6 @@ describe('POST /receipts', () => {
     const loanReceipt = factory.receipt.build({
       id: validUuid,
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
@@ -79,7 +78,6 @@ describe('POST /receipts', () => {
     const returnReceipt = factory.receipt.build({
       id: validUuid,
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'RETURN',
       type: 'PHYSICAL',
     })
@@ -108,7 +106,6 @@ describe('POST /receipts', () => {
 
     const res = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
@@ -122,12 +119,10 @@ describe('POST /receipts', () => {
     // Business rule: multiple receipts allowed (e.g., LOAN + RETURN)
     const loanReceipt = factory.receipt.build({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'LOAN',
     })
     const returnReceipt = factory.receipt.build({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'RETURN',
     })
 
@@ -140,7 +135,6 @@ describe('POST /receipts', () => {
 
     const res1 = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
@@ -154,7 +148,6 @@ describe('POST /receipts', () => {
 
     const res2 = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'RETURN',
       type: 'DIGITAL',
     })
@@ -644,16 +637,11 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
       if (receipt.receiptType === 'LOAN') {
         const alreadyActivated = await receiptsAdapter.isKeyLoanActivated(
           receipt.keyLoanId,
-          receipt.loanType,
           {} as any
         )
 
         if (!alreadyActivated) {
-          await receiptsAdapter.activateKeyLoan(
-            receipt.keyLoanId,
-            receipt.loanType,
-            {} as any
-          )
+          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, {} as any)
 
           const loan = await receiptsAdapter.getKeyLoanById(
             receipt.keyLoanId,
@@ -687,7 +675,6 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
     expect(res.status).toBe(200)
     expect(activateKeyLoanSpy).toHaveBeenCalledWith(
       keyLoanId,
-      'REGULAR',
       expect.anything()
     )
     expect(completeKeyEventsSpy).toHaveBeenCalledWith(
@@ -755,15 +742,10 @@ describe('POST /receipts/:id/upload - Business Logic (multipart)', () => {
       if (receipt.receiptType === 'LOAN') {
         const alreadyActivated = await receiptsAdapter.isKeyLoanActivated(
           receipt.keyLoanId,
-          receipt.loanType,
           {} as any
         )
         if (!alreadyActivated) {
-          await receiptsAdapter.activateKeyLoan(
-            receipt.keyLoanId,
-            receipt.loanType,
-            {} as any
-          )
+          await receiptsAdapter.activateKeyLoan(receipt.keyLoanId, {} as any)
         }
       }
 
@@ -851,17 +833,3 @@ describe('DELETE /receipts/:id', () => {
     expect(deleteFile).not.toHaveBeenCalled()
   })
 })
-
-/**
- * Note: GET /receipts/:id/download endpoint tests
- *
- * The download endpoint uses createFileDownloadHandler factory which creates
- * a complex handler with its own error handling. The endpoint:
- * - Generates presigned download URLs with 7-day expiration
- * - Returns 404 when receipt or file not found
- * - Returns 400 for invalid UUID format
- * - Returns 500 for MinIO errors
- *
- * The handler is created via a factory function which makes unit testing
- * more complex. Integration tests would be more appropriate for this endpoint.
- */
