@@ -119,6 +119,126 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /workOrders/xpand/contactCode/{contactCode}:
+   *   get:
+   *     summary: Get work orders by contact code from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders from xpand based on the provided contact code.
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to filter work orders.
+   *       - in: query
+   *         name: skip
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to skip.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to fetch.
+   *       - in: query
+   *         name: sortAscending
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Whether to sort the work orders by ascending creation date.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/xpand/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedQuery = GetWorkOrdersFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedQuery.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: parsedQuery.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedQuery.data
+
+    try {
+      const xpandWorkOrders = await xpandAdapter.getWorkOrdersByContactCode(
+        ctx.params.contactCode,
+        {
+          skip,
+          limit,
+          sortAscending,
+        }
+      )
+
+      if (!xpandWorkOrders.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch work orders from Xpand: ${xpandWorkOrders.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrders: xpandWorkOrders.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error fetching work orders from Xpand')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /workOrders/residenceId/{residenceId}:
    *   get:
    *     summary: Get work orders by residence id

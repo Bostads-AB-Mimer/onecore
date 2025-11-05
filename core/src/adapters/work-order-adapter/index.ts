@@ -111,6 +111,47 @@ export const getWorkOrdersByPropertyId = async (
   }
 }
 
+export const getXpandWorkOrdersByContactCode = async (
+  contactCode: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<XpandWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/xpand/contactCode/{contactCode}',
+      {
+        params: {
+          path: { contactCode },
+          query: { skip, limit, sortAscending },
+        },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders as XpandWorkOrder[],
+    }
+  } catch (error) {
+    logger.error(
+      { error },
+      'work-order-adapter.getXpandWorkOrdersByContactCode'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const getXpandWorkOrdersByRentalPropertyId = async (
   rentalPropertyId: string,
   {

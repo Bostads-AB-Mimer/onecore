@@ -9,16 +9,13 @@ interface TenantDetailTabsProps {
 export const TenantDetailTabs = ({
   defaultValue,
   children,
-  hasActiveCases,
 }: TenantDetailTabsProps) => {
   return (
     <Tabs defaultValue={defaultValue} className="space-y-6">
       <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
         <TabsTrigger value="contracts">Hyreskontrakt</TabsTrigger>
         <TabsTrigger value="queue">Kösystem</TabsTrigger>
-        <TabsTrigger value="cases">
-          {hasActiveCases ? 'Ärenden (2)' : 'Ärenden'}
-        </TabsTrigger>
+        <TabsTrigger value="work-orders">Ärenden</TabsTrigger>
         <TabsTrigger value="ledger">Fakturor & betalningar</TabsTrigger>
         <TabsTrigger value="notes">Noteringar</TabsTrigger>
         <TabsTrigger value="keys">Nyckelknippa</TabsTrigger>

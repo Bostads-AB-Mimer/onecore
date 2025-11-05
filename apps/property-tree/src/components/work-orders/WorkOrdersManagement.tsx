@@ -8,7 +8,7 @@ import { linkToOdooCreateMaintenanceRequest } from '@/utils/odooUtils'
 
 export interface WorkOrdersManagementProps {
   id: string
-  contextType?: 'property' | 'building' | 'residence'
+  contextType?: 'property' | 'building' | 'residence' | 'tenant'
 }
 
 export function WorkOrdersManagement({
