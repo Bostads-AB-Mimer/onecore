@@ -284,12 +284,14 @@ export const KeyLoansApi = {
     rentalObjectCode: string,
     contact?: string,
     contact2?: string,
-    includeReceipts?: boolean
+    includeReceipts?: boolean,
+    returned?: boolean
   ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
     const params = new URLSearchParams()
     if (contact) params.append('contact', contact)
     if (contact2) params.append('contact2', contact2)
     if (includeReceipts) params.append('includeReceipts', 'true')
+    if (returned !== undefined) params.append('returned', returned.toString())
 
     const queryString = params.toString()
     const url = queryString
