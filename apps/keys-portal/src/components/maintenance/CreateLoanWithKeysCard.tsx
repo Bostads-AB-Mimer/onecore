@@ -1,7 +1,6 @@
 import { Check } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { KeySelectionCard } from '@/components/shared/KeySelectionCard'
-import { maintenanceKeysService } from '@/services/api/maintenanceKeysService'
 import type { Key } from '@/services/types'
 
 interface CreateLoanWithKeysCardProps {
@@ -19,13 +18,13 @@ export function CreateLoanWithKeysCard({
   const { toast } = useToast()
 
   const handleValidateKey = (key: Key) => {
-    // Check if key has an active maintenance loan
-    // Note: We check maintenanceLoanStatus if available (from KeyWithMaintenanceLoanStatus type)
+    // Check if key has any active loan (regardless of type)
+    // Note: We check loan status if available (from KeyWithLoanAndEvent type)
     const keyWithStatus = key as any
-    if (keyWithStatus.maintenanceLoanStatus?.hasActiveLoan) {
+    if (keyWithStatus.loan && !keyWithStatus.loan?.returnedAt) {
       toast({
         title: 'Nyckeln är redan utlånad',
-        description: `${key.keyName} har ett aktivt entreprenörslån`,
+        description: `${key.keyName} har ett aktivt lån`,
         variant: 'destructive',
       })
       return { valid: false }

@@ -333,6 +333,7 @@ describe('POST /key-loans', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify(['key-1', 'key-2']),
+        loanType: 'TENANT',
         contact: 'jane@example.com',
       })
 
@@ -359,6 +360,7 @@ describe('POST /key-loans', () => {
 
     const res = await request(app.callback()).post('/key-loans').send({
       keys: 'not-valid-json',
+      loanType: 'TENANT',
       contact: 'jane@example.com',
     })
 
@@ -376,6 +378,7 @@ describe('POST /key-loans', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify({ notAnArray: true }),
+        loanType: 'TENANT',
         contact: 'jane@example.com',
       })
 
@@ -397,6 +400,7 @@ describe('POST /key-loans', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify(['key-1', 'key-2']),
+        loanType: 'TENANT',
         contact: 'jane@example.com',
       })
 
@@ -415,6 +419,7 @@ describe('POST /key-loans', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify([]),
+        loanType: 'TENANT',
         contact: 'jane@example.com',
       })
 
@@ -443,6 +448,7 @@ describe('POST /key-loans', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify(['key-1']),
+        loanType: 'TENANT',
         contact: 'jane@example.com',
         contact2: 'john@example.com',
         createdBy: 'user-123',
@@ -736,6 +742,7 @@ describe('Key Loans Lifecycle', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify(['key-1']),
+        loanType: 'TENANT',
         contact: 'pending@example.com',
         // Explicitly not providing pickedUpAt
       })
@@ -834,6 +841,7 @@ describe('Key Loans Lifecycle', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify(['key-1']),
+        loanType: 'TENANT',
         contact: 'newcustomer@example.com',
       })
 
@@ -912,6 +920,7 @@ describe('Key Loans Lifecycle', () => {
       .post('/key-loans')
       .send({
         keys: JSON.stringify(['key-workflow']),
+        loanType: 'TENANT',
         contact: 'workflow@example.com',
       })
 

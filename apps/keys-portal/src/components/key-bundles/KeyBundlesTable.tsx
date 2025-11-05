@@ -23,7 +23,7 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react'
-import { KeyBundle, KeyWithMaintenanceLoanStatus } from '@/services/types'
+import { KeyBundle, KeyWithLoanAndEvent } from '@/services/types'
 import { groupAndSortKeys } from '@/utils/groupKeys'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
@@ -34,7 +34,7 @@ interface KeyBundlesTableProps {
   onDelete: (id: string) => void
   expandedBundleId: string | null
   onToggleExpand: (bundleId: string) => void
-  keysForExpandedBundle: KeyWithMaintenanceLoanStatus[]
+  keysForExpandedBundle: KeyWithLoanAndEvent[]
   isLoadingKeys: boolean
   isLoading: boolean
 }
@@ -62,12 +62,12 @@ export function KeyBundlesTable({
     const fetchCompanyNames = async () => {
       const uniqueCompanyCodes = new Set<string>()
 
-      // Collect all unique company codes from loaned keys
-      grouped.nonDisposed.loaned.forEach((companyGroup) => {
-        if (companyGroup.company) uniqueCompanyCodes.add(companyGroup.company)
+      // Collect all unique contact codes from loaned keys
+      grouped.nonDisposed.loaned.forEach((contactGroup) => {
+        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
       })
-      grouped.disposed.loaned.forEach((companyGroup) => {
-        if (companyGroup.company) uniqueCompanyCodes.add(companyGroup.company)
+      grouped.disposed.loaned.forEach((contactGroup) => {
+        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
       })
 
       // Fetch contact info for each company code

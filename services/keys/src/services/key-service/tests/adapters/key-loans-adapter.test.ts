@@ -30,6 +30,7 @@ describe('key-loans-adapter', () => {
 
         const loanData = {
           keys: JSON.stringify([key1.id, key2.id]),
+          loanType: 'TENANT' as const,
           contact: 'john@example.com',
         }
 
@@ -50,6 +51,7 @@ describe('key-loans-adapter', () => {
         const createdLoan = await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key.id]),
+            loanType: 'TENANT' as const,
             contact: 'test@example.com',
           },
           ctx.db
@@ -75,6 +77,7 @@ describe('key-loans-adapter', () => {
         const loan = await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key.id]),
+            loanType: 'TENANT' as const,
             contact: 'existing@example.com',
           },
           ctx.db
@@ -104,6 +107,7 @@ describe('key-loans-adapter', () => {
         const loan = await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key.id]),
+            loanType: 'TENANT' as const,
             contact: 'test@example.com',
           },
           ctx.db
@@ -134,6 +138,7 @@ describe('key-loans-adapter', () => {
         const loan = await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key.id]),
+            loanType: 'TENANT' as const,
             contact: 'original@example.com',
           },
           ctx.db
@@ -170,6 +175,7 @@ describe('key-loans-adapter', () => {
         await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key1.id]),
+            loanType: 'TENANT' as const,
             contact: 'tenant1@example.com',
           },
           ctx.db
@@ -177,6 +183,7 @@ describe('key-loans-adapter', () => {
         await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key2.id]),
+            loanType: 'TENANT' as const,
             contact: 'tenant2@example.com',
           },
           ctx.db
@@ -202,6 +209,7 @@ describe('key-loans-adapter', () => {
         const loan = await keyLoansAdapter.createKeyLoan(
           {
             keys: JSON.stringify([key.id]),
+            loanType: 'TENANT' as const,
             contact: 'test@example.com',
           },
           ctx.db
