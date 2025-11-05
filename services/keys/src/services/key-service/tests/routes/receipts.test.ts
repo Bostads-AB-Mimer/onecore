@@ -58,7 +58,6 @@ describe('POST /receipts', () => {
 
     const res = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'LOAN',
       type: 'DIGITAL',
     })
@@ -66,7 +65,6 @@ describe('POST /receipts', () => {
     expect(receiptsAdapter.createReceipt).toHaveBeenCalledWith(
       expect.objectContaining({
         keyLoanId: validUuid,
-        loanType: 'REGULAR',
         receiptType: 'LOAN',
         type: 'DIGITAL',
       }),
@@ -93,7 +91,6 @@ describe('POST /receipts', () => {
 
     const res = await request(app.callback()).post('/receipts').send({
       keyLoanId: validUuid,
-      loanType: 'REGULAR',
       receiptType: 'RETURN',
       type: 'PHYSICAL',
     })
