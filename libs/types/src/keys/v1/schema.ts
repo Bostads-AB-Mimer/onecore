@@ -143,10 +143,12 @@ export const KeyEventSchema = z.object({
   updatedAt: z.coerce.date(),
 })
 
-// Key with loan and event status (for key bundle table view)
+// Key with loan and event status (for key bundle table view and lease context)
+// Includes both active loan and previous loan for unified display
 export const KeyWithLoanAndEventSchema = KeySchema.extend({
-  loan: KeyLoanSchema.nullable(),
-  latestEvent: KeyEventSchema.nullable(),
+  loan: KeyLoanSchema.nullable(), // Active loan (null if not currently loaned)
+  previousLoan: KeyLoanSchema.nullable().optional(), // Previous loan (for returned keys)
+  latestEvent: KeyEventSchema.nullable().optional(),
 })
 
 // Response schema for key bundle with loan status endpoint
@@ -357,22 +359,6 @@ export const UpdateKeyEventRequestSchema = z.object({
 export const BulkUpdateFlexRequestSchema = z.object({
   rentalObjectCode: z.string(),
   flexNumber: z.number().int().min(1).max(3),
-})
-
-// Key with enriched active loan status (for optimized endpoint)
-export const KeyWithLoanStatusSchema = KeySchema.extend({
-  // Active loan fields (null if no active loan)
-  activeLoanId: z.string().uuid().nullable(),
-  activeLoanContact: z.string().nullable(),
-  activeLoanContact2: z.string().nullable(),
-  activeLoanPickedUpAt: z.coerce.date().nullable(),
-  activeLoanAvailableFrom: z.coerce.date().nullable(),
-  // Previous loan data (for returned keys - to show who returned it)
-  prevLoanAvailableFrom: z.coerce.date().nullable(),
-  prevLoanContact: z.string().nullable(),
-  prevLoanContact2: z.string().nullable(),
-  // Optional latest key event (included when includeLatestEvent=true query param is set)
-  latestEvent: KeyEventSchema.nullable().optional(),
 })
 
 // Key loan with enriched keys and receipts data (for optimized endpoint)
