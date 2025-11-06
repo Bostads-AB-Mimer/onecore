@@ -1,6 +1,6 @@
 import type {
   Key,
-  KeyWithLoanStatus,
+  KeyWithLoanAndEvent,
   KeySystem,
   CreateKeyRequest,
   UpdateKeyRequest,
@@ -91,10 +91,10 @@ export const keyService = {
     return (data?.content ?? []) as Key[]
   },
 
-  async getKeysWithLoanStatus(
+  async getKeysWithLoanAndEvent(
     rentalObjectCode: string,
     includeLatestEvent?: boolean
-  ): Promise<KeyWithLoanStatus[]> {
+  ): Promise<KeyWithLoanAndEvent[]> {
     const { data, error } = await GET(
       '/keys/with-loan-status/{rentalObjectCode}',
       {
@@ -105,7 +105,7 @@ export const keyService = {
       }
     )
     if (error) throw error
-    return (data?.content ?? []) as KeyWithLoanStatus[]
+    return (data?.content ?? []) as KeyWithLoanAndEvent[]
   },
 
   async bulkUpdateFlex(
