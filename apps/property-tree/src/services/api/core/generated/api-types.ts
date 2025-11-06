@@ -3013,6 +3013,13 @@ export interface paths {
           contact2?: string;
           /** @description Include receipts in the response */
           includeReceipts?: boolean;
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
         };
         path: {
           /** @description The rental object code */

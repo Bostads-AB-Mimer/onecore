@@ -630,13 +630,20 @@ export interface paths {
      * Get key loans with enriched keys and receipts
      * @description Returns all key loans for a rental object with their keys and receipts
      * pre-fetched in a single optimized query. This eliminates N+1 query problems.
-     * Optionally filter by contact code.
+     * Optionally filter by contact code and return status.
      */
     get: {
       parameters: {
         query?: {
           /** @description Optional contact code to filter by (checks contact or contact2). */
           contact?: string;
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
         };
         path: {
           /** @description The rental object code to filter key loans by. */
