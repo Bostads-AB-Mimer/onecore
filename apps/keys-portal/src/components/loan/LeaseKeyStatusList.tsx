@@ -1,26 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { Lease, KeyWithLoanStatus, KeyType } from '@/services/types'
+import type { Lease, KeyWithLoanAndEvent } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 import { ToastAction } from '@/components/ui/toast'
 import { keyService } from '@/services/api/keyService'
-import { keyLoanService } from '@/services/api/keyLoanService'
-import {
-  sortKeysByTypeAndSequence,
-  computeKeyWithStatus,
-  filterVisibleKeys,
-  type KeyWithStatus,
-} from '@/utils/keyStatusHelpers'
 import { useToast } from '@/hooks/use-toast'
 import {
   handleLoanKeys,
@@ -35,105 +19,10 @@ import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { KeyLoanTransferDialog } from './dialogs/KeyLoanTransferDialog'
 import { ReturnKeysDialog } from './dialogs/ReturnKeysDialog'
-import { Pencil } from 'lucide-react'
+import { LeaseKeyTableList } from './LeaseKeyTableList'
 
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
-}
-
-// Component for editing the available date inline
-function EditableAvailableDate({
-  keyId,
-  currentDate,
-  onUpdate,
-}: {
-  keyId: string
-  currentDate?: string
-  onUpdate: () => void
-}) {
-  const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    currentDate ? new Date(currentDate) : undefined
-  )
-  const [isUpdating, setIsUpdating] = useState(false)
-
-  const handleUpdate = async () => {
-    setIsUpdating(true)
-    try {
-      // Get the loan for this key
-      const loans = await keyLoanService.getByKeyId(keyId)
-      const returnedLoan = loans.find((loan) => loan.returnedAt)
-
-      if (!returnedLoan) {
-        toast({
-          title: 'Fel',
-          description: 'Kunde inte hitta återlämnad nyckel',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      // Update the loan with the new available date
-      await keyLoanService.update(returnedLoan.id, {
-        availableToNextTenantFrom: selectedDate?.toISOString(),
-      })
-
-      toast({
-        title: 'Uppdaterat',
-        description: 'Tillgänglighetsdatum har uppdaterats',
-      })
-
-      setOpen(false)
-      onUpdate()
-    } catch (error) {
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte uppdatera datum',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-5 w-5 p-0 hover:bg-muted"
-          title="Ändra tillgänglighetsdatum"
-        >
-          <Pencil className="h-3 w-3" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end">
-        <div className="p-3 space-y-3">
-          <div className="text-sm font-medium">Ändra tillgänglighetsdatum</div>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-          />
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOpen(false)}
-              disabled={isUpdating}
-            >
-              Avbryt
-            </Button>
-            <Button size="sm" onClick={handleUpdate} disabled={isUpdating}>
-              {isUpdating ? 'Uppdaterar...' : 'Spara'}
-            </Button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
 }
 
 export function LeaseKeyStatusList({
@@ -145,18 +34,14 @@ export function LeaseKeyStatusList({
   refreshTrigger,
 }: {
   lease: Lease
-  keysData?: KeyWithLoanStatus[]
+  keysData?: KeyWithLoanAndEvent[]
   onKeysLoaned?: () => void
   onKeysReturned?: () => void
   onKeyCreated?: () => void
   refreshTrigger?: number
 }) {
   const { toast } = useToast()
-  const navigate = useNavigate()
-  const [keysWithLoanStatus, setKeysWithLoanStatus] = useState<
-    KeyWithLoanStatus[]
-  >([])
-  const [keysWithStatus, setKeysWithStatus] = useState<KeyWithStatus[]>([])
+  const [keys, setKeys] = useState<KeyWithLoanAndEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
@@ -194,16 +79,12 @@ export function LeaseKeyStatusList({
     ;(async () => {
       setLoading(true)
       try {
-        const keys = await keyService.getKeysWithLoanStatus(
+        const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
           lease.rentalPropertyId,
           true // Include latest event to avoid N+1 queries
         )
         if (!cancelled) {
-          setKeysWithLoanStatus(keys)
-          const withStatus = keys.map((key) =>
-            computeKeyWithStatus(key, tenantContactCodes)
-          )
-          setKeysWithStatus(withStatus)
+          setKeys(fetchedKeys)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -212,19 +93,15 @@ export function LeaseKeyStatusList({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId, tenantContactCodes, keysData])
+  }, [lease.rentalPropertyId, keysData])
 
   // Handle keysData prop changes - no fetching, just update state
   useEffect(() => {
     if (keysData) {
-      setKeysWithLoanStatus(keysData)
-      const withStatus = keysData.map((key) =>
-        computeKeyWithStatus(key, tenantContactCodes)
-      )
-      setKeysWithStatus(withStatus)
+      setKeys(keysData)
       setLoading(false)
     }
-  }, [keysData, tenantContactCodes])
+  }, [keysData])
 
   // Refresh when external trigger changes (e.g., after receipt upload)
   useEffect(() => {
@@ -241,16 +118,11 @@ export function LeaseKeyStatusList({
     }
 
     // Only fetch directly if component is standalone (no parent providing data)
-    const fetchedKeys = await keyService.getKeysWithLoanStatus(
+    const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
       lease.rentalPropertyId,
       true
     )
-    setKeysWithLoanStatus(fetchedKeys)
-    // Recompute statuses with events (computeKeyWithStatus is synchronous)
-    const withStatus = fetchedKeys.map((key) =>
-      computeKeyWithStatus(key, tenantContactCodes)
-    )
-    setKeysWithStatus(withStatus)
+    setKeys(fetchedKeys)
   }
 
   const handleKeyCreated = async () => {
@@ -258,12 +130,6 @@ export function LeaseKeyStatusList({
     // Notify parent component to refetch its keys data
     // Parent will refetch and pass updated keysData down, triggering our useEffect
     onKeyCreated?.()
-  }
-
-  const handleEditKey = (keyId: string) => {
-    navigate(
-      `/Keys?rentalObjectCode=${lease.rentalPropertyId}&disposed=false&editKeyId=${keyId}`
-    )
   }
 
   const onRent = async (keyIds: string[]) => {
@@ -369,16 +235,14 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  // Filter out disposed keys (synchronous)
-  const visibleKeys = useMemo(
-    () => filterVisibleKeys(keysWithStatus),
-    [keysWithStatus]
-  )
-
-  const sortedKeys = useMemo(
-    () => sortKeysByTypeAndSequence(visibleKeys),
-    [visibleKeys]
-  )
+  // Filter out disposed keys (unless they have active loans)
+  const visibleKeys = useMemo(() => {
+    return keys.filter((key) => {
+      if (!key.disposed) return true
+      // Include disposed key only if it's currently loaned
+      return !!key.loan
+    })
+  }, [keys])
 
   // Summary counts by type (only visible keys)
   const countsByType = useMemo(() => {
@@ -388,15 +252,17 @@ export function LeaseKeyStatusList({
   }, [visibleKeys])
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading keys...</div>
+    return (
+      <div className="text-sm text-muted-foreground">Laddar nycklar...</div>
+    )
   }
 
-  if (sortedKeys.length === 0) {
+  if (visibleKeys.length === 0) {
     return (
       <Card className="mt-2">
         <CardContent className="p-3 space-y-3">
           <div className="text-sm text-muted-foreground">
-            No keys found for this rental object.
+            Inga nycklar hittades för detta hyresobjekt.
           </div>
           <div className="flex gap-2">
             {!showAddKeyForm && (
@@ -405,7 +271,7 @@ export function LeaseKeyStatusList({
           </div>
           {showAddKeyForm && (
             <AddKeyForm
-              keys={keysWithLoanStatus}
+              keys={keys}
               selectedKeyIds={selectedKeys}
               rentalObjectCode={lease.rentalPropertyId}
               onKeyCreated={handleKeyCreated}
@@ -432,9 +298,9 @@ export function LeaseKeyStatusList({
                 </Badge>
               )
             })}
-            {sortedKeys.length > 0 && sortedKeys[0].flexNumber && (
+            {visibleKeys.length > 0 && visibleKeys[0].flexNumber && (
               <Badge variant="outline" className="text-xs">
-                Flex: {sortedKeys[0].flexNumber}
+                Flex: {visibleKeys[0].flexNumber}
               </Badge>
             )}
           </div>
@@ -443,7 +309,7 @@ export function LeaseKeyStatusList({
           <div className="flex flex-wrap gap-2">
             <KeyActionButtons
               selectedKeys={selectedKeys}
-              keysWithStatus={keysWithStatus}
+              keysWithStatus={visibleKeys}
               leaseIsNotPast={leaseIsNotPast}
               isProcessing={isProcessing}
               onRent={onRent}
@@ -453,6 +319,7 @@ export function LeaseKeyStatusList({
                 // Refresh keys and statuses after flex keys are created
                 await refreshStatuses()
               }}
+              tenantContactCodes={tenantContactCodes}
             />
             {!showAddKeyForm && (
               <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
@@ -462,7 +329,7 @@ export function LeaseKeyStatusList({
           {/* Add key form */}
           {showAddKeyForm && (
             <AddKeyForm
-              keys={keysWithLoanStatus}
+              keys={keys}
               selectedKeyIds={selectedKeys}
               rentalObjectCode={lease.rentalPropertyId}
               onKeyCreated={handleKeyCreated}
@@ -470,106 +337,18 @@ export function LeaseKeyStatusList({
             />
           )}
 
-          {/* Keys list */}
-          <div className="space-y-1">
-            {sortedKeys.map((key, index) => {
-              const isLoaned = !!key.activeLoanId
-              const canRent = !isLoaned && leaseIsNotPast
-              const canReturn = isLoaned && key.matchesCurrentTenant
-              const isSelectable = canRent || canReturn
-
-              // Use isAvailable flag for color: green if available, red if blocked, muted otherwise
-              const statusColor = key.isAvailable
-                ? 'text-green-600 dark:text-green-400'
-                : isLoaned
-                  ? 'text-destructive'
-                  : 'text-muted-foreground'
-
-              // Check if this key has an available date that can be edited
-              const availabilityDate = key.activeLoanPickedUpAt
-                ? key.activeLoanAvailableFrom
-                : key.prevLoanAvailableFrom
-              const hasAvailableDate =
-                !isLoaned && availabilityDate !== undefined
-
-              return (
-                <div
-                  key={key.id}
-                  className={`flex items-center justify-between py-2 px-1 ${
-                    index > 0 ? 'border-t border-border/50' : ''
-                  }`}
-                >
-                  <div className="flex items-center space-x-3 flex-1">
-                    {isSelectable && (
-                      <Checkbox
-                        checked={selectedKeys.includes(key.id)}
-                        onCheckedChange={(checked) => {
-                          setSelectedKeys((prev) =>
-                            checked
-                              ? [...prev, key.id]
-                              : prev.filter((id) => id !== key.id)
-                          )
-                        }}
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => handleEditKey(key.id)}
-                          className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                        >
-                          {key.keyName}
-                        </button>
-                        <span className="text-xs text-muted-foreground">
-                          {KeyTypeLabels[key.keyType as KeyType]}
-                        </span>
-                        {key.keySequenceNumber && (
-                          <span className="text-xs text-muted-foreground">
-                            Löp: {key.keySequenceNumber}
-                          </span>
-                        )}
-                        {key.flexNumber && (
-                          <span className="text-xs text-muted-foreground">
-                            Flex: {key.flexNumber}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right side: status first, then date with a subtle separator */}
-                  <div className="flex items-center justify-end gap-3 text-sm">
-                    <span
-                      className={`font-medium whitespace-nowrap ${statusColor}`}
-                    >
-                      {key.displayStatus}
-                    </span>
-
-                    {key.displayDate && (
-                      <div className="flex items-center gap-2">
-                        <span aria-hidden className="opacity-30 select-none">
-                          •
-                        </span>
-                        <span className="text-muted-foreground tabular-nums sm:whitespace-nowrap">
-                          {key.displayDate}
-                        </span>
-
-                        {hasAvailableDate && (
-                          <div className="ml-1">
-                            <EditableAvailableDate
-                              keyId={key.id}
-                              currentDate={availabilityDate}
-                              onUpdate={refreshStatuses}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+          {/* Keys table */}
+          <LeaseKeyTableList
+            keys={visibleKeys}
+            tenantContactCodes={tenantContactCodes}
+            selectable={true}
+            selectedKeys={selectedKeys}
+            onKeySelectionChange={(keyId, checked) => {
+              setSelectedKeys((prev) =>
+                checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
               )
-            })}
-          </div>
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -589,9 +368,7 @@ export function LeaseKeyStatusList({
       <KeyLoanTransferDialog
         open={showTransferDialog}
         onOpenChange={setShowTransferDialog}
-        newKeys={keysWithLoanStatus.filter((k) =>
-          pendingLoanKeyIds.includes(k.id)
-        )}
+        newKeys={keys.filter((k) => pendingLoanKeyIds.includes(k.id))}
         existingLoans={existingLoansForTransfer}
         contact={tenantContactCodes[0]}
         contact2={tenantContactCodes[1]}
@@ -613,7 +390,7 @@ export function LeaseKeyStatusList({
         open={showReturnDialog}
         onOpenChange={setShowReturnDialog}
         keyIds={pendingReturnKeyIds}
-        allKeys={keysWithLoanStatus}
+        allKeys={keys}
         lease={lease}
         onSuccess={async () => {
           // Refresh statuses and clear selection

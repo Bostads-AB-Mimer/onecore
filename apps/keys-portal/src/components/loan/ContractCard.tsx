@@ -16,7 +16,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react'
-import type { Lease, KeyWithLoanStatus, KeyType } from '@/services/types'
+import type { Lease, KeyWithLoanAndEvent, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { KeyLoansAccordion } from './KeyLoansAccordion'
@@ -64,7 +64,7 @@ export function ContractCard({
   )
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
-  const [keys, setKeys] = useState<KeyWithLoanStatus[]>([])
+  const [keys, setKeys] = useState<KeyWithLoanAndEvent[]>([])
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
@@ -114,7 +114,7 @@ export function ContractCard({
   // Refetch keys function that can be called externally
   const refetchKeys = useCallback(async () => {
     try {
-      const keysWithStatus = await keyService.getKeysWithLoanStatus(
+      const keysWithStatus = await keyService.getKeysWithLoanAndEvent(
         lease.rentalPropertyId,
         true
       )

@@ -3387,7 +3387,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["KeyWithLoanStatus"][];
+              content?: components["schemas"]["KeyWithLoanAndEvent"][];
             };
           };
         };
@@ -6186,7 +6186,8 @@ export interface components {
         createdBy?: string | null;
         updatedBy?: string | null;
       }) | null;
-      latestEvent: ({
+      previousLoan?: components["schemas"]["KeyWithLoanAndEvent"]["loan"] | null;
+      latestEvent?: ({
         /** Format: uuid */
         id: string;
         keys: string;
