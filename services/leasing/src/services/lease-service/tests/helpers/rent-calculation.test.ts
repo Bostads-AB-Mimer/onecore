@@ -1,4 +1,7 @@
-import { calculateRentInfo, calculateMonthlyRent } from '../../helpers/rent-calculation'
+import {
+  calculateRentInfo,
+  calculateMonthlyRent,
+} from '../../helpers/rent-calculation'
 import { logger } from '@onecore/utilities'
 
 // Mock the logger
