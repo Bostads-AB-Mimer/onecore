@@ -54,6 +54,15 @@ export function KeyActionButtons({
     )
   }
 
+  // Helper to check if a key's loan matches current tenant
+  const matchesCurrentTenant = (key: KeyWithLoanAndEvent) => {
+    if (!key.loan) return false
+    return (
+      tenantContactCodes.includes(key.loan.contact || '') ||
+      tenantContactCodes.includes(key.loan.contact2 || '')
+    )
+  }
+
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
     .filter((k): k is KeyWithLoanAndEvent => k !== undefined)
