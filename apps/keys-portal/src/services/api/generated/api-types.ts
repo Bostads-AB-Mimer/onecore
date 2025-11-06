@@ -1428,13 +1428,16 @@ export interface paths {
   };
   "/keys/with-loan-status/{rentalObjectCode}": {
     /**
-     * Get keys with active loan status enriched
-     * @description Returns all relevant keys for a rental object with their active loan information
+     * Get keys with loan and event status enriched
+     * @description Returns all relevant keys for a rental object with their active and previous loan information
      * pre-fetched in a single optimized query. This eliminates N+1 query problems.
      *
      * **Performance**: ~95% faster than fetching keys then looping for loan status.
      *
-     * Optionally include the latest key event for each key by setting includeLatestEvent=true.
+     * Returns:
+     * - `loan`: Active loan object (null if not currently loaned)
+     * - `previousLoan`: Most recent returned loan object (null if never returned)
+     * - `latestEvent`: Latest key event (included when includeLatestEvent=true)
      */
     get: {
       parameters: {
@@ -1448,11 +1451,11 @@ export interface paths {
         };
       };
       responses: {
-        /** @description List of keys with enriched active loan data. */
+        /** @description List of keys with enriched loan and event data. */
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["KeyWithLoanStatus"][];
+              content?: components["schemas"]["KeyWithLoanAndEvent"][];
             };
           };
         };
@@ -2235,6 +2238,63 @@ export interface components {
       prevLoanAvailableFrom: string | null;
       prevLoanContact: string | null;
       prevLoanContact2: string | null;
+      latestEvent?: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        type: "FLEX" | "ORDER" | "LOST";
+        /** @enum {string} */
+        status: "ORDERED" | "RECEIVED" | "COMPLETED";
+        /** Format: uuid */
+        workOrderId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      }) | null;
+    };
+    KeyWithLoanAndEvent: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      loan: ({
+        /** Format: uuid */
+        id: string;
+        keys: string;
+        /** @enum {string} */
+        loanType: "TENANT" | "MAINTENANCE";
+        contact?: string;
+        contact2?: string;
+        contactPerson?: string | null;
+        description?: string | null;
+        /** Format: date-time */
+        returnedAt?: string | null;
+        /** Format: date-time */
+        availableToNextTenantFrom?: string | null;
+        /** Format: date-time */
+        pickedUpAt?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        createdBy?: string | null;
+        updatedBy?: string | null;
+      }) | null;
+      previousLoan?: components["schemas"]["KeyWithLoanAndEvent"]["loan"] | null;
       latestEvent?: ({
         /** Format: uuid */
         id: string;

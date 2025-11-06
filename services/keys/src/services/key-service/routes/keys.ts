@@ -11,6 +11,7 @@ import { buildSearchQuery } from '../../../utils/search-builder'
 const {
   KeySchema,
   KeyWithLoanStatusSchema,
+  KeyWithLoanAndEventSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
@@ -43,6 +44,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('Key', KeySchema)
   registerSchema('KeyWithLoanStatus', KeyWithLoanStatusSchema)
+  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema)
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
   registerSchema(
@@ -295,14 +297,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /keys/with-loan-status/{rentalObjectCode}:
    *   get:
-   *     summary: Get keys with active loan status enriched
+   *     summary: Get keys with loan and event status enriched
    *     description: |
-   *       Returns all relevant keys for a rental object with their active loan information
+   *       Returns all relevant keys for a rental object with their active and previous loan information
    *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
    *
    *       **Performance**: ~95% faster than fetching keys then looping for loan status.
    *
-   *       Optionally include the latest key event for each key by setting includeLatestEvent=true.
+   *       Returns:
+   *       - `loan`: Active loan object (null if not currently loaned)
+   *       - `previousLoan`: Most recent returned loan object (null if never returned)
+   *       - `latestEvent`: Latest key event (included when includeLatestEvent=true)
    *     tags: [Keys]
    *     parameters:
    *       - in: path
@@ -320,7 +325,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Include the latest key event for each key in the response.
    *     responses:
    *       200:
-   *         description: List of keys with enriched active loan data.
+   *         description: List of keys with enriched loan and event data.
    *         content:
    *           application/json:
    *             schema:
@@ -329,7 +334,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/KeyWithLoanStatus'
+   *                     $ref: '#/components/schemas/KeyWithLoanAndEvent'
    *       500:
    *         description: An error occurred while fetching keys.
    *         content:

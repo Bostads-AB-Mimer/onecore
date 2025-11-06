@@ -1320,7 +1320,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/KeyWithLoanStatus'
+   *                     $ref: '#/components/schemas/KeyWithLoanAndEvent'
    *       500:
    *         description: Server error
    *         content:
