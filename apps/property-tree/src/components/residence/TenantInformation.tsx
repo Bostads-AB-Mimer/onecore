@@ -7,15 +7,15 @@ import { Lease } from '@/services/api/core/lease-service'
 interface Props {
   isLoading: boolean
   error: Error | null
-  data: Lease[] | undefined
+  lease: Lease | undefined
 }
 
-export function TenantInformation(props: Props) {
-  if (props.isLoading) {
+export function TenantInformation({ isLoading, error, lease }: Props) {
+  if (isLoading) {
     return <LoadingSkeleton />
   }
 
-  if (props.error || !props.data) {
+  if (error || !lease) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -24,8 +24,6 @@ export function TenantInformation(props: Props) {
       </div>
     )
   }
-
-  const lease = props.data.find((lease) => lease.status === 'Current')
 
   if (!lease) {
     return (

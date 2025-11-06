@@ -94,7 +94,7 @@ export function ResidenceView() {
                 <TenantInformation
                   isLoading={leasesIsLoading}
                   error={leasesError}
-                  data={leases}
+                  lease={leases[0]}
                 />
               </CardContent>
             </Card>
