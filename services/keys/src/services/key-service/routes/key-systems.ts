@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import multer from '@koa/multer'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
@@ -7,6 +8,12 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
+import {
+  createFileUploadHandler,
+  createFileDownloadHandler,
+  createFileDeleteHandler,
+} from '../../../utils/file-upload-routes'
+import { deleteFile } from '../adapters/minio'
 
 const {
   KeySystemSchema,
@@ -19,6 +26,16 @@ const {
 type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
 type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
 type KeySystem = keys.v1.KeySystem
+
+// Configure multer for in-memory storage (we'll upload to MinIO)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') cb(null, true)
+    else cb(new Error('Only PDF files are allowed'), false)
+  },
+})
 
 /**
  * @swagger
@@ -439,10 +456,137 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-systems/{id}/upload-schema:
+   *   post:
+   *     summary: Upload PDF schema file for a key system
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *       400:
+   *         description: Invalid file or key system not found
+   *       404:
+   *         description: Key system not found
+   *       413:
+   *         description: File too large
+   */
+  router.post(
+    '/key-systems/:id/upload-schema',
+    upload.single('file'),
+    createFileUploadHandler({
+      entityName: 'key system',
+      filePrefix: 'schema',
+      getEntityById: keySystemsAdapter.getKeySystemById,
+      getFileId: (keySystem) => keySystem.schemaFileId,
+      updateFileId: keySystemsAdapter.updateKeySystemSchemaFileId,
+      getFileMetadata: (keySystem, entityId) => ({
+        'key-system-id': entityId,
+        'system-code': keySystem.systemCode,
+        'key-system-type': keySystem.type,
+      }),
+      downloadUrlExpirySeconds: 60 * 60, // 1 hour
+    })(db)
+  )
+
+  /**
+   * @swagger
+   * /key-systems/{id}/download-schema:
+   *   get:
+   *     summary: Get presigned download URL for key system schema PDF
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Download URL generated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     url:
+   *                       type: string
+   *                     expiresIn:
+   *                       type: number
+   *                     fileId:
+   *                       type: string
+   *       404:
+   *         description: Key system or schema file not found
+   */
+  router.get(
+    '/key-systems/:id/download-schema',
+    createFileDownloadHandler({
+      entityName: 'key system',
+      filePrefix: 'schema',
+      getEntityById: keySystemsAdapter.getKeySystemById,
+      getFileId: (keySystem) => keySystem.schemaFileId,
+      updateFileId: keySystemsAdapter.updateKeySystemSchemaFileId,
+      downloadUrlExpirySeconds: 60 * 60, // 1 hour
+    })(db)
+  )
+
+  /**
+   * @swagger
+   * /key-systems/{id}/schema:
+   *   delete:
+   *     summary: Delete schema file for a key system
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Schema file deleted successfully
+   *       404:
+   *         description: Key system not found
+   */
+  router.delete(
+    '/key-systems/:id/schema',
+    createFileDeleteHandler({
+      entityName: 'key system',
+      filePrefix: 'schema',
+      getEntityById: keySystemsAdapter.getKeySystemById,
+      getFileId: (keySystem) => keySystem.schemaFileId,
+      updateFileId: keySystemsAdapter.updateKeySystemSchemaFileId,
+      clearFileId: keySystemsAdapter.clearKeySystemSchemaFileId,
+    })(db)
+  )
+
+  /**
+   * @swagger
    * /key-systems/{id}:
    *   delete:
    *     summary: Delete a key system
-   *     description: Delete a key system by ID
+   *     description: Delete a key system by ID (and associated schema file)
    *     tags: [Key Systems]
    *     parameters:
    *       - in: path
@@ -462,12 +606,35 @@ export const routes = (router: KoaRouter) => {
   router.delete('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const n = await keySystemsAdapter.deleteKeySystem(ctx.params.id, db)
-      if (!n) {
+      // Get key system to check for schema file before deletion
+      const keySystem = await keySystemsAdapter.getKeySystemById(
+        ctx.params.id,
+        db
+      )
+      if (!keySystem) {
         ctx.status = 404
         ctx.body = { reason: 'Key system not found', ...metadata }
         return
       }
+
+      // Delete schema file from MinIO if exists
+      if (keySystem.schemaFileId) {
+        try {
+          await deleteFile(keySystem.schemaFileId)
+          logger.info(
+            { fileId: keySystem.schemaFileId, keySystemId: ctx.params.id },
+            'Schema file deleted from MinIO'
+          )
+        } catch (err) {
+          logger.warn(
+            { err, fileId: keySystem.schemaFileId, keySystemId: ctx.params.id },
+            'Failed to delete schema file from MinIO'
+          )
+        }
+      }
+
+      // Delete key system from database
+      await keySystemsAdapter.deleteKeySystem(ctx.params.id, db)
       ctx.status = 200
       ctx.body = { ...metadata }
     } catch (err) {
