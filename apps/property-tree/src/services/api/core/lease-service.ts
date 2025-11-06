@@ -1,7 +1,7 @@
 import { GET } from './base-api'
 import type { components } from './generated/api-types'
 
-type Lease = components['schemas']['Lease']
+export type Lease = components['schemas']['Lease']
 
 async function getByRentalPropertyId(
   rentalPropertyId: string,
@@ -20,4 +20,15 @@ async function getByRentalPropertyId(
   return data?.content || []
 }
 
-export const leaseService = { getByRentalPropertyId }
+async function getByContactCode(contactCode: string): Promise<Array<Lease>> {
+  const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
+    params: { path: { contactCode } },
+  })
+
+  if (error) throw error
+  if (!data?.content) throw 'Response ok but missing content'
+
+  return data?.content || []
+}
+
+export const leaseService = { getByRentalPropertyId, getByContactCode }

@@ -1,4 +1,4 @@
-// import { TenantContracts } from './TenantContracts'
+import { TenantContracts } from '@/components/tenants/TenantContracts'
 // import { TenantQueueSystem } from './TenantQueueSystem'
 // import { TenantNotes } from './TenantNotes'
 // import { TenantOrders } from './TenantOrders'
@@ -7,18 +7,20 @@ import {
   MobileAccordion as GenericMobileAccordion,
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
-// import { getMockLedgerForCustomer } from '@/data/ledger'
-// import { getMockInvoicesForCustomer } from '@/data/invoices'
+import { Lease } from '@/services/api/core/lease-service'
+import { RentalProperty } from '@/services/api/core/rentalPropertyService'
 
 interface TenantMobileAccordionProps {
-  contracts: any[]
+  leases: Lease[]
+  rentalProperties: Record<string, RentalProperty>
   hasActiveCases?: boolean
   contactCode: string
   customerName: string
 }
 
 export function TenantMobileAccordion({
-  contracts,
+  leases: contracts,
+  rentalProperties,
   hasActiveCases,
   contactCode,
   customerName,
@@ -27,8 +29,12 @@ export function TenantMobileAccordion({
     {
       id: 'contracts',
       title: 'Hyreskontrakt',
-      content: <div>Placeholder Hyreskontrakt</div>,
-      // content: <TenantContracts contracts={contracts} />,
+      content: (
+        <TenantContracts
+          leases={contracts}
+          rentalProperties={rentalProperties}
+        />
+      ),
     },
     {
       id: 'queue',

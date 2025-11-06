@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTenant } from '@/components/hooks/useTenant'
+import { useLeases } from '@/components/hooks/useLeases'
+import { useRentalProperties } from '@/components/hooks/useRentalProperties'
 import { TenantCard } from '@/components/tenants/TenantCard'
 import {
   Tooltip,
@@ -18,13 +20,30 @@ const TenantView = () => {
   const { contactCode } = useParams<{ contactCode: string }>()
 
   // Fetch tenant data
-  const { data: tenant, isLoading, error } = useTenant(contactCode)
-  // Placeholder contracts, we will get them from a leases/by-contact-code
-  // endpoint later
-  const contracts = [
-    ...(tenant?.housingContracts ?? []),
-    ...(tenant?.parkingSpaceContracts ?? []),
-  ]
+  const {
+    data: tenant,
+    isLoading: tenantLoading,
+    error: tenantError,
+  } = useTenant(contactCode)
+  // Fetch leases data
+  const {
+    data: leases,
+    isLoading: leasesLoading,
+    error: leasesError,
+  } = useLeases(contactCode)
+
+  // Extract unique rental property IDs from leases
+  const rentalPropertyIds = useMemo(() => {
+    if (!leases) return []
+    return leases.map((lease) => lease.rentalPropertyId)
+  }, [leases])
+
+  // Fetch rental properties data
+  const {
+    data: rentalProperties,
+    isLoading: rentalPropertiesLoading,
+    error: rentalPropertiesError,
+  } = useRentalProperties(rentalPropertyIds)
 
   const isMobile = useIsMobile()
 
@@ -34,13 +53,13 @@ const TenantView = () => {
   }, [isMobile])
 
   useEffect(() => {
-    if (error) {
-      console.error('Error loading tenant data:', error)
+    if (tenantError) {
+      console.error('Error loading tenant data:', tenantError)
     }
-  }, [error])
+  }, [tenantError])
 
   const renderContent = () => {
-    if (isLoading) {
+    if (tenantLoading || leasesLoading || rentalPropertiesLoading) {
       return (
         <div className="animate-pulse space-y-6 py-4">
           <div className="h-8 bg-secondary rounded w-64"></div>
@@ -50,7 +69,7 @@ const TenantView = () => {
       )
     }
 
-    if (error || !tenant) {
+    if (tenantError || !tenant) {
       return (
         <div className="text-center py-10 space-y-4">
           <h2 className="text-2xl font-bold">Hyresgästen kunde inte hittas</h2>
@@ -59,6 +78,30 @@ const TenantView = () => {
           </p>
           <p className="text-sm text-muted-foreground mt-2">
             Sökte efter: {contactCode}
+          </p>
+        </div>
+      )
+    }
+
+    if (leasesError) {
+      return (
+        <div className="text-center py-10 space-y-4">
+          <h2 className="text-2xl font-bold">Kunde inte hämta kontrakt</h2>
+          <p className="text-muted-foreground">
+            Ett fel uppstod när kontrakten skulle hämtas
+          </p>
+        </div>
+      )
+    }
+
+    if (rentalPropertiesError) {
+      return (
+        <div className="text-center py-10 space-y-4">
+          <h2 className="text-2xl font-bold">
+            Kunde inte hämta objektsinformation
+          </h2>
+          <p className="text-muted-foreground">
+            Ett fel uppstod när objektsinformationen skulle hämtas
           </p>
         </div>
       )
@@ -95,14 +138,16 @@ const TenantView = () => {
 
         {isMobile ? (
           <TenantMobileAccordion
-            contracts={contracts}
+            leases={leases ?? []}
+            rentalProperties={rentalProperties}
             contactCode={tenant.contactCode}
             customerName={`${tenant.firstName} ${tenant.lastName}`}
           />
         ) : (
           <TenantDetailTabs defaultValue="contracts">
             <TenantDetailTabsContent
-              contracts={contracts}
+              leases={leases ?? []}
+              rentalProperties={rentalProperties}
               personalNumber={tenant.nationalRegistrationNumber}
               contactCode={tenant.contactCode}
               customerName={`${tenant.firstName} ${tenant.lastName}`}
