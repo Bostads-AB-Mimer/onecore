@@ -2,20 +2,21 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2 } from 'lucide-react'
 
-import type { KeyWithStatus } from '@/utils/keyStatusHelpers'
+import type { KeyWithLoanAndEvent } from '@/services/types'
 import { FlexMenu } from './dialogs/FlexMenu'
 import { IncomingFlexMenu } from './dialogs/IncomingFlexMenu'
 
 type Props = {
   selectedKeys: string[]
-  keysWithStatus: KeyWithStatus[]
+  keysWithStatus: KeyWithLoanAndEvent[]
   leaseIsNotPast: boolean
   isProcessing: boolean
   onRent: (keyIds: string[]) => void
   onReturn: (keyIds: string[]) => void
   onDispose?: (keyIds: string[]) => void
   onRefresh?: () => void
-  allKeys?: KeyWithStatus[]
+  allKeys?: KeyWithLoanAndEvent[]
+  tenantContactCodes?: string[] // Add tenant contact codes for matching logic
 }
 
 export function KeyActionButtons({
@@ -28,20 +29,28 @@ export function KeyActionButtons({
   onDispose,
   onRefresh,
   allKeys,
+  tenantContactCodes = [],
 }: Props) {
   const [flexMenuOpen, setFlexMenuOpen] = useState(false)
   const [incomingFlexMenuOpen, setIncomingFlexMenuOpen] = useState(false)
 
+  // Helper to check if a key's loan matches current tenant
+  const matchesCurrentTenant = (key: KeyWithLoanAndEvent) => {
+    if (!key.loan) return false
+    return (
+      tenantContactCodes.includes(key.loan.contact || '') ||
+      tenantContactCodes.includes(key.loan.contact2 || '')
+    )
+  }
+
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
-    .filter((k): k is KeyWithStatus => k !== undefined)
+    .filter((k): k is KeyWithLoanAndEvent => k !== undefined)
 
-  const rentableKeys = selectedKeysData.filter(
-    (k) => !k.activeLoanId && leaseIsNotPast
-  )
+  const rentableKeys = selectedKeysData.filter((k) => !k.loan && leaseIsNotPast)
 
   const returnableKeys = selectedKeysData.filter(
-    (k) => !!k.activeLoanId && k.matchesCurrentTenant
+    (k) => !!k.loan && matchesCurrentTenant(k)
   )
 
   // Keys that have "beställd flex" status (latest event is FLEX type with ORDERED status)
@@ -54,12 +63,12 @@ export function KeyActionButtons({
 
   // All available keys (excluding disposed keys)
   const allAvailableKeys = keysWithStatus.filter(
-    (k) => !k.activeLoanId && leaseIsNotPast && !k.disposed
+    (k) => !k.loan && leaseIsNotPast && !k.disposed
   )
 
   // All keys rented by this tenant
   const allRentedByTenant = keysWithStatus.filter(
-    (k) => !!k.activeLoanId && k.matchesCurrentTenant
+    (k) => !!k.loan && matchesCurrentTenant(k)
   )
 
   const hasSelectedKeys = selectedKeys.length > 0
