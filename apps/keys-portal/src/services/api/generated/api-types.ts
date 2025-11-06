@@ -1187,7 +1187,7 @@ export interface paths {
     };
     /**
      * Delete a key system
-     * @description Delete a key system by ID
+     * @description Delete a key system by ID (and associated schema file)
      */
     delete: {
       parameters: {
@@ -1251,6 +1251,90 @@ export interface paths {
         };
         /** @description Internal server error */
         500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/upload-schema": {
+    /** Upload PDF schema file for a key system */
+    post: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid file or key system not found */
+        400: {
+          content: never;
+        };
+        /** @description Key system not found */
+        404: {
+          content: never;
+        };
+        /** @description File too large */
+        413: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/download-schema": {
+    /** Get presigned download URL for key system schema PDF */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Download URL generated */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                url?: string;
+                expiresIn?: number;
+                fileId?: string;
+              };
+            };
+          };
+        };
+        /** @description Key system or schema file not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/schema": {
+    /** Delete schema file for a key system */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Schema file deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Key system not found */
+        404: {
           content: never;
         };
       };
