@@ -140,6 +140,12 @@ describe('PATCH /key-systems/:id', () => {
 
 describe('DELETE /key-systems/:id', () => {
   it('deletes key system successfully and returns 200', async () => {
+    jest
+      .spyOn(keySystemsAdapter, 'getKeySystemById')
+      .mockResolvedValueOnce(
+        factory.keySystem.build({ id: 'system-123', schemaFileId: null })
+      )
+
     const deleteKeySystemSpy = jest
       .spyOn(keySystemsAdapter, 'deleteKeySystem')
       .mockResolvedValueOnce(1)
@@ -283,6 +289,12 @@ describe('Validation Edge Cases - Key Systems', () => {
     // Note: Current implementation may not prevent deletion of systems with keys
     // Future improvement: Add foreign key constraint or check before deletion
     // This test documents the expected behavior
+
+    jest
+      .spyOn(keySystemsAdapter, 'getKeySystemById')
+      .mockResolvedValueOnce(
+        factory.keySystem.build({ id: 'system-123', schemaFileId: null })
+      )
 
     jest.spyOn(keySystemsAdapter, 'deleteKeySystem').mockResolvedValueOnce(1)
 
