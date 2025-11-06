@@ -7,7 +7,9 @@ import {
   Edit,
   Check,
   X,
+  PenLine,
 } from 'lucide-react'
+import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,6 +17,7 @@ import { keyNoteService } from '@/services/api/keyNoteService'
 import type { KeyNote, Lease } from '@/services/types'
 import { leaseTypes } from '@/services/types'
 import { deriveDisplayStatus } from '@/lib/lease-status'
+import { useUser } from '@/auth/useUser'
 
 interface KeyNoteDisplayProps {
   leases: Lease[]
@@ -55,6 +58,7 @@ function restoreStyles(
  * Groups objects by status (active, upcoming, ended) and shows all notes for a status group on one page.
  */
 export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
+  const userState = useUser()
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0)
   const [notes, setNotes] = useState<Map<string, KeyNote | null>>(new Map())
   const [loadingObjects, setLoadingObjects] = useState<Set<string>>(new Set())
@@ -63,6 +67,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const [savingObjects, setSavingObjects] = useState<Set<string>>(new Set())
   const contentRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [lineClamps, setLineClamps] = useState<Map<string, number | null>>(
     new Map()
   )
@@ -266,6 +271,42 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     })
   }, [currentGroup, notes])
 
+  // Create signature string
+  const createSignature = () => {
+    const userName =
+      userState.tag === 'success' ? userState.user.name : 'Unknown'
+    const timestamp = format(new Date(), 'yyyy-MM-dd HH:mm')
+    return `${timestamp} ${userName}\n`
+  }
+
+  const handleAddSignature = () => {
+    const signature = createSignature()
+    const textarea = textareaRef.current
+
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const text = editedDescription
+      const prefix = start > 0 ? '\n\n' : ''
+      const newText =
+        text.substring(0, start) +
+        prefix +
+        signature +
+        '\n' +
+        text.substring(end)
+      setEditedDescription(newText)
+
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd =
+          start + prefix.length + signature.length
+        textarea.focus()
+      }, 0)
+    } else {
+      // Fallback: prepend to beginning
+      setEditedDescription(signature + '\n' + editedDescription)
+    }
+  }
+
   const handleToggleExpand = (objectId: string) => {
     const isTruncated =
       lineClamps.has(objectId) && lineClamps.get(objectId) !== null
@@ -394,6 +435,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
               ) : isEditing ? (
                 <div className="space-y-3">
                   <Textarea
+                    ref={textareaRef}
                     value={editedDescription}
                     onChange={(e) => setEditedDescription(e.target.value)}
                     placeholder="Skriv dina noteringar här..."
@@ -401,36 +443,47 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                     className="resize-none text-sm"
                     autoFocus
                   />
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex gap-2 justify-between">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setEditingObjectId(null)
-                        setEditedDescription('')
-                      }}
+                      onClick={handleAddSignature}
                       disabled={isSaving}
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Avbryt
+                      <PenLine className="h-4 w-4 mr-1" />
+                      Lägg till signatur
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSave(objectId)}
-                      disabled={isSaving}
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sparar...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 mr-1" />
-                          Spara
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingObjectId(null)
+                          setEditedDescription('')
+                        }}
+                        disabled={isSaving}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Avbryt
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSave(objectId)}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sparar...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-1" />
+                            Spara
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
