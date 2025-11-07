@@ -1,4 +1,4 @@
-import React from 'react'
+import { useMemo } from 'react'
 import {
   LoanableKeyTableBase,
   type LoanableKeyTableConfig,
@@ -6,6 +6,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import type { GroupedKeys } from '@/utils/groupKeys'
 import { formatAbsoluteTime } from '@/lib/dateUtils'
+import type { KeyWithLoanAndEvent } from '@/services/types'
 
 interface KeyBundleKeysListProps {
   group: GroupedKeys['nonDisposed'] | GroupedKeys['disposed']
@@ -26,18 +27,35 @@ export function KeyBundleKeysList({
   selectedKeys = [],
   onKeySelectionChange,
 }: KeyBundleKeysListProps) {
+  // Flatten the grouped keys into a single array
+  const keys = useMemo(() => {
+    const result: KeyWithLoanAndEvent[] = []
+
+    // Add all loaned keys
+    group.loaned.forEach((contactGroup) => {
+      contactGroup.loans.forEach((loan) => {
+        result.push(...loan.keys)
+      })
+    })
+
+    // Add all unloaned keys
+    result.push(...group.unloaned)
+
+    return result
+  }, [group])
+
   // Custom loan header for key bundles (shows contact person and pickup date)
   const loanHeaderRenderer = (loan: any) => (
     <div className="flex items-center gap-3">
       <Badge variant="outline">Lånad</Badge>
-      {loan.loanContactPerson && (
+      {loan.contactPerson && (
         <span className="text-muted-foreground">
-          Kontakt: {loan.loanContactPerson}
+          Kontakt: {loan.contactPerson}
         </span>
       )}
-      {loan.loanPickedUpAt && (
+      {loan.pickedUpAt && (
         <span className="text-muted-foreground">
-          Upphämtad: {formatAbsoluteTime(loan.loanPickedUpAt)}
+          Upphämtad: {formatAbsoluteTime(loan.pickedUpAt)}
         </span>
       )}
     </div>
@@ -60,7 +78,7 @@ export function KeyBundleKeysList({
 
   return (
     <LoanableKeyTableBase
-      group={group}
+      keys={keys}
       companyNames={companyNames}
       config={config}
       selectedKeys={selectedKeys}
