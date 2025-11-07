@@ -145,14 +145,9 @@ describe('keys-service', () => {
       const keysWithStatus = [
         {
           ...mockKey,
-          activeLoanId: null,
-          activeLoanContact: null,
-          activeLoanContact2: null,
-          activeLoanPickedUpAt: null,
-          activeLoanAvailableFrom: null,
-          prevLoanAvailableFrom: null,
-          prevLoanContact: null,
-          prevLoanContact2: null,
+          loan: null,
+          previousLoan: null,
+          latestEvent: null,
         },
       ]
 
@@ -166,7 +161,7 @@ describe('keys-service', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content).toHaveLength(1)
-      expect(res.body.content[0]).toHaveProperty('activeLoanId')
+      expect(res.body.content[0]).toHaveProperty('loan')
     })
 
     it('responds with 500 if adapter fails', async () => {
