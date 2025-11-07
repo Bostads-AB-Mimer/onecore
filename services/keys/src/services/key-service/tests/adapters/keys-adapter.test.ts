@@ -99,7 +99,8 @@ describe('keys-adapter', () => {
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe(key.id)
-        expect(result[0].activeLoanContact).toBe('john@example.com')
+        expect(result[0].loan).toBeDefined()
+        expect(result[0].loan?.contact).toBe('john@example.com')
       }))
 
     it('returns keys without active loans', () =>
@@ -116,7 +117,7 @@ describe('keys-adapter', () => {
         )
 
         expect(result).toHaveLength(1)
-        expect(result[0].activeLoanId).toBeNull()
+        expect(result[0].loan).toBeNull()
       }))
   })
 

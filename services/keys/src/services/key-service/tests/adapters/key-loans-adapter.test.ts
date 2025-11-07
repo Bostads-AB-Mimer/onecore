@@ -194,6 +194,7 @@ describe('key-loans-adapter', () => {
           undefined,
           undefined,
           false,
+          undefined, // returned
           ctx.db
         )
 
