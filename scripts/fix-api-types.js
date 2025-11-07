@@ -5,6 +5,7 @@
  *
  * The openapi-typescript generator sometimes creates circular references like:
  * previousLoan?: components["schemas"]["KeyWithLoanAndEvent"]["loan"] | null;
+ * previousLoan?: components["schemas"]["KeyBundleWithLoanStatusResponse"]["keys"]["items"]["loan"] | null;
  *
  * This script replaces those by referencing the KeyLoan schema directly.
  */
@@ -26,17 +27,29 @@ function fixApiTypes(filePath) {
   }
 
   let content = fs.readFileSync(fullPath, 'utf-8')
+  let fixed = false
 
-  // Replace the circular reference with a reference to KeyLoan schema
-  // This avoids the circular reference while still using the same type
-  const circularRefPattern = /previousLoan\?:\s*components\["schemas"\]\["KeyWithLoanAndEvent"\]\["loan"\]\s*\|\s*null;/g
-
-  if (circularRefPattern.test(content)) {
+  // Pattern 1: KeyWithLoanAndEvent circular reference
+  const pattern1 = /previousLoan\?:\s*components\["schemas"\]\["KeyWithLoanAndEvent"\]\["loan"\]\s*\|\s*null;/g
+  if (pattern1.test(content)) {
     content = content.replace(
-      circularRefPattern,
+      pattern1,
       `previousLoan?: components["schemas"]["KeyLoan"] | null;`
     )
+    fixed = true
+  }
 
+  // Pattern 2: KeyBundleWithLoanStatusResponse circular reference
+  const pattern2 = /previousLoan\?:\s*components\["schemas"\]\["KeyBundleWithLoanStatusResponse"\]\["keys"\]\["items"\]\["loan"\]\s*\|\s*null;/g
+  if (pattern2.test(content)) {
+    content = content.replace(
+      pattern2,
+      `previousLoan?: components["schemas"]["KeyLoan"] | null;`
+    )
+    fixed = true
+  }
+
+  if (fixed) {
     fs.writeFileSync(fullPath, content, 'utf-8')
     console.log(`✅ Fixed circular reference in ${filePath}`)
   } else {
