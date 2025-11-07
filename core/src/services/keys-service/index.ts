@@ -295,6 +295,7 @@ export const routes = (router: KoaRouter) => {
    *       - **OR search**: Use `q` with `fields` for multiple field search
    *       - **AND search**: Use any KeyLoan field parameter for filtering
    *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - **Advanced filters**: Search by key name/object code, filter by key count, null checks
    *       - Only one OR group is supported, but you can combine it with multiple AND filters
    *     tags: [Keys Service]
    *     parameters:
@@ -309,7 +310,37 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *         description: Comma-separated list of fields for OR search. Defaults to lease.
+   *         description: Comma-separated list of fields for OR search. Defaults to contact and contact2.
+   *       - in: query
+   *         name: keyNameOrObjectCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Search by key name or rental object code (requires JOIN with keys table)
+   *       - in: query
+   *         name: minKeys
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: Minimum number of keys in loan
+   *       - in: query
+   *         name: maxKeys
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: Maximum number of keys in loan
+   *       - in: query
+   *         name: hasPickedUp
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by pickedUpAt null status (true = NOT NULL, false = NULL)
+   *       - in: query
+   *         name: hasReturned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by returnedAt null status (true = NOT NULL, false = NULL)
    *       - in: query
    *         name: id
    *         schema:
@@ -323,13 +354,19 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *       - in: query
-   *         name: lease
+   *         name: contact2
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: loanType
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
    *       - in: query
    *         name: returnedAt
    *         schema:
    *           type: string
+   *         description: Supports comparison operators (e.g., >=2024-01-01, <2024-12-31)
    *       - in: query
    *         name: availableToNextTenantFrom
    *         schema:
@@ -338,6 +375,7 @@ export const routes = (router: KoaRouter) => {
    *         name: pickedUpAt
    *         schema:
    *           type: string
+   *         description: Supports comparison operators (e.g., >=2024-01-01, <2024-12-31)
    *       - in: query
    *         name: createdAt
    *         schema:
@@ -374,7 +412,15 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'keyNameOrObjectCode',
+      'minKeys',
+      'maxKeys',
+      'hasPickedUp',
+      'hasReturned',
+    ])
 
     const result = await KeyLoansApi.search(ctx.query)
 

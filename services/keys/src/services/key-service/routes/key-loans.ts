@@ -130,6 +130,7 @@ export const routes = (router: KoaRouter) => {
    *       - **OR search**: Use `q` with `fields` for multiple field search
    *       - **AND search**: Use any KeyLoan field parameter for filtering
    *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - **Advanced filters**: Search by key name/object code, filter by key count, null checks
    *       - Only one OR group is supported, but you can combine it with multiple AND filters
    *     tags: [Key Loans]
    *     parameters:
@@ -145,6 +146,36 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Comma-separated list of fields for OR search. Defaults to contact and contact2.
+   *       - in: query
+   *         name: keyNameOrObjectCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Search by key name or rental object code (requires JOIN with keys table)
+   *       - in: query
+   *         name: minKeys
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: Minimum number of keys in loan
+   *       - in: query
+   *         name: maxKeys
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: Maximum number of keys in loan
+   *       - in: query
+   *         name: hasPickedUp
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by pickedUpAt null status (true = NOT NULL, false = NULL)
+   *       - in: query
+   *         name: hasReturned
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter by returnedAt null status (true = NOT NULL, false = NULL)
    *       - in: query
    *         name: id
    *         schema:
@@ -162,9 +193,15 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *       - in: query
+   *         name: loanType
+   *         schema:
+   *           type: string
+   *           enum: [TENANT, MAINTENANCE]
+   *       - in: query
    *         name: returnedAt
    *         schema:
    *           type: string
+   *         description: Supports comparison operators (e.g., >=2024-01-01, <2024-12-31)
    *       - in: query
    *         name: availableToNextTenantFrom
    *         schema:
@@ -173,6 +210,7 @@ export const routes = (router: KoaRouter) => {
    *         name: pickedUpAt
    *         schema:
    *           type: string
+   *         description: Supports comparison operators (e.g., >=2024-01-01, <2024-12-31)
    *       - in: query
    *         name: createdAt
    *         schema:
@@ -199,16 +237,86 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('/key-loans/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'keyNameOrObjectCode',
+      'minKeys',
+      'maxKeys',
+      'hasPickedUp',
+      'hasReturned',
+    ])
 
     try {
-      const query = keyLoansAdapter.getKeyLoansSearchQuery(db)
+      // Parse advanced search options
+      const keyNameOrObjectCode =
+        typeof ctx.query.keyNameOrObjectCode === 'string'
+          ? ctx.query.keyNameOrObjectCode.trim()
+          : undefined
 
+      const minKeys =
+        typeof ctx.query.minKeys === 'string'
+          ? parseInt(ctx.query.minKeys, 10)
+          : undefined
+
+      const maxKeys =
+        typeof ctx.query.maxKeys === 'string'
+          ? parseInt(ctx.query.maxKeys, 10)
+          : undefined
+
+      // Parse boolean filters
+      let hasPickedUp: boolean | undefined = undefined
+      if (ctx.query.hasPickedUp === 'true') {
+        hasPickedUp = true
+      } else if (ctx.query.hasPickedUp === 'false') {
+        hasPickedUp = false
+      }
+
+      let hasReturned: boolean | undefined = undefined
+      if (ctx.query.hasReturned === 'true') {
+        hasReturned = true
+      } else if (ctx.query.hasReturned === 'false') {
+        hasReturned = false
+      }
+
+      // Build query with advanced options
+      const query = keyLoansAdapter.getKeyLoansSearchQuery(
+        {
+          keyNameOrObjectCode,
+          minKeys,
+          maxKeys,
+          hasPickedUp,
+          hasReturned,
+        },
+        db
+      )
+
+      // Check if we have any custom search parameters
+      const hasCustomParams =
+        keyNameOrObjectCode !== undefined ||
+        minKeys !== undefined ||
+        maxKeys !== undefined ||
+        hasPickedUp !== undefined ||
+        hasReturned !== undefined
+
+      // Apply additional search filters using buildSearchQuery
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['contact', 'contact2'],
+        reservedParams: [
+          'q',
+          'fields',
+          'page',
+          'limit',
+          'keyNameOrObjectCode',
+          'minKeys',
+          'maxKeys',
+          'hasPickedUp',
+          'hasReturned',
+        ],
       })
 
-      if (!searchResult.hasSearchParams) {
+      // Only return 400 if there are no custom params AND no standard search params
+      if (!searchResult.hasSearchParams && !hasCustomParams) {
         ctx.status = 400
         ctx.body = {
           reason: searchResult.error,

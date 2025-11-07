@@ -553,6 +553,7 @@ export interface paths {
      * - **OR search**: Use `q` with `fields` for multiple field search
      * - **AND search**: Use any KeyLoan field parameter for filtering
      * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - **Advanced filters**: Search by key name/object code, filter by key count, null checks
      * - Only one OR group is supported, but you can combine it with multiple AND filters
      */
     get: {
@@ -561,12 +562,25 @@ export interface paths {
           q?: string;
           /** @description Comma-separated list of fields for OR search. Defaults to contact and contact2. */
           fields?: string;
+          /** @description Search by key name or rental object code (requires JOIN with keys table) */
+          keyNameOrObjectCode?: string;
+          /** @description Minimum number of keys in loan */
+          minKeys?: number;
+          /** @description Maximum number of keys in loan */
+          maxKeys?: number;
+          /** @description Filter by pickedUpAt null status (true = NOT NULL, false = NULL) */
+          hasPickedUp?: boolean;
+          /** @description Filter by returnedAt null status (true = NOT NULL, false = NULL) */
+          hasReturned?: boolean;
           id?: string;
           keys?: string;
           contact?: string;
           contact2?: string;
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Supports comparison operators (e.g., >=2024-01-01, <2024-12-31) */
           returnedAt?: string;
           availableToNextTenantFrom?: string;
+          /** @description Supports comparison operators (e.g., >=2024-01-01, <2024-12-31) */
           pickedUpAt?: string;
           createdAt?: string;
           updatedAt?: string;
