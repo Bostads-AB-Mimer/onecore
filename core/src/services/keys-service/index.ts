@@ -5128,9 +5128,15 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-bundles/:id/keys-with-loan-status', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, ['includePreviousLoan'])
 
-    const result = await KeyBundlesApi.getWithLoanStatus(ctx.params.id)
+    // Parse includePreviousLoan query param (defaults to true)
+    const includePreviousLoan = ctx.query.includePreviousLoan !== 'false'
+
+    const result = await KeyBundlesApi.getWithLoanStatus(
+      ctx.params.id,
+      includePreviousLoan
+    )
 
     if (!result.ok) {
       if (result.err === 'not-found') {

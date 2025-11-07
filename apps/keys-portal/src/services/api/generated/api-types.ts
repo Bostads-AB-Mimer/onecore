@@ -2293,6 +2293,7 @@ export interface components {
       flexNumber: number;
     };
     Key: components["schemas"]["Key"];
+    KeyLoan: components["schemas"]["KeyLoan"];
     KeyWithLoanAndEvent: {
       /** Format: uuid */
       id: string;
@@ -2310,30 +2311,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      loan: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        loanType: "TENANT" | "MAINTENANCE";
-        contact?: string;
-        contact2?: string;
-        contactPerson?: string | null;
-        description?: string | null;
-        /** Format: date-time */
-        returnedAt?: string | null;
-        /** Format: date-time */
-        availableToNextTenantFrom?: string | null;
-        /** Format: date-time */
-        pickedUpAt?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-        createdBy?: string | null;
-        updatedBy?: string | null;
-      }) | null;
-      previousLoan?: components["schemas"]["KeyWithLoanAndEvent"]["loan"] | null;
+      loan: components["schemas"]["KeyLoan"] | null;
+      previousLoan?: components["schemas"]["KeyLoan"] | null;
       latestEvent?: ({
         /** Format: uuid */
         id: string;
@@ -2432,7 +2411,6 @@ export interface components {
     };
     CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
     UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
-    KeyLoan: components["schemas"]["KeyLoan"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     Log: components["schemas"]["Log"];
     PaginatedLogsResponse: components["schemas"]["PaginatedLogsResponse"];
