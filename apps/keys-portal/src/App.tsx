@@ -13,6 +13,7 @@ import Keys from './pages/Keys'
 import KeySystems from './pages/KeySystems'
 import KeySystemDetail from './pages/KeySystemDetail'
 import KeyBundles from './pages/KeyBundles'
+import KeyLoans from './pages/KeyLoans'
 import NotFound from './pages/NotFound'
 import { AuthCallback } from './auth/AuthCallback'
 import { ProtectedRoute } from './auth/ProtectedRoute'
@@ -43,6 +44,7 @@ const AppContent = () => (
           <Route path="/key-systems" element={<KeySystems />} />
           <Route path="/key-systems/:id" element={<KeySystemDetail />} />
           <Route path="/key-bundles" element={<KeyBundles />} />
+          <Route path="/key-loans" element={<KeyLoans />} />
           <Route path="/KeyLoan" element={<KeyLoan />} />
           <Route path="/maintenance-keys" element={<MaintenanceKeys />} />
           <Route path="/activity-log" element={<ActivityLog />} />

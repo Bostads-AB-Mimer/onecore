@@ -553,6 +553,7 @@ export interface paths {
      * - **OR search**: Use `q` with `fields` for multiple field search
      * - **AND search**: Use any KeyLoan field parameter for filtering
      * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - **Advanced filters**: Search by key name/object code, filter by key count, null checks
      * - Only one OR group is supported, but you can combine it with multiple AND filters
      */
     get: {
@@ -561,12 +562,25 @@ export interface paths {
           q?: string;
           /** @description Comma-separated list of fields for OR search. Defaults to contact and contact2. */
           fields?: string;
+          /** @description Search by key name or rental object code (requires JOIN with keys table) */
+          keyNameOrObjectCode?: string;
+          /** @description Minimum number of keys in loan */
+          minKeys?: number;
+          /** @description Maximum number of keys in loan */
+          maxKeys?: number;
+          /** @description Filter by pickedUpAt null status (true = NOT NULL, false = NULL) */
+          hasPickedUp?: boolean;
+          /** @description Filter by returnedAt null status (true = NOT NULL, false = NULL) */
+          hasReturned?: boolean;
           id?: string;
           keys?: string;
           contact?: string;
           contact2?: string;
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Supports comparison operators (e.g., >=2024-01-01, <2024-12-31) */
           returnedAt?: string;
           availableToNextTenantFrom?: string;
+          /** @description Supports comparison operators (e.g., >=2024-01-01, <2024-12-31) */
           pickedUpAt?: string;
           createdAt?: string;
           updatedAt?: string;
@@ -2293,6 +2307,7 @@ export interface components {
       flexNumber: number;
     };
     Key: components["schemas"]["Key"];
+    KeyLoan: components["schemas"]["KeyLoan"];
     KeyWithLoanAndEvent: {
       /** Format: uuid */
       id: string;
@@ -2310,30 +2325,8 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      loan: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        loanType: "TENANT" | "MAINTENANCE";
-        contact?: string;
-        contact2?: string;
-        contactPerson?: string | null;
-        description?: string | null;
-        /** Format: date-time */
-        returnedAt?: string | null;
-        /** Format: date-time */
-        availableToNextTenantFrom?: string | null;
-        /** Format: date-time */
-        pickedUpAt?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-        createdBy?: string | null;
-        updatedBy?: string | null;
-      }) | null;
-      previousLoan?: components["schemas"]["KeyWithLoanAndEvent"]["loan"] | null;
+      loan: components["schemas"]["KeyLoan"] | null;
+      previousLoan?: components["schemas"]["KeyLoan"] | null;
       latestEvent?: ({
         /** Format: uuid */
         id: string;
@@ -2432,7 +2425,6 @@ export interface components {
     };
     CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
     UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
-    KeyLoan: components["schemas"]["KeyLoan"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     Log: components["schemas"]["Log"];
     PaginatedLogsResponse: components["schemas"]["PaginatedLogsResponse"];
