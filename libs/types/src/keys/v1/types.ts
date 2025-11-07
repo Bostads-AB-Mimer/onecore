@@ -20,7 +20,6 @@ import {
   BundleWithLoanedKeysInfoSchema,
   KeyEventSchema,
   ReceiptSchema,
-  KeyWithLoanStatusSchema,
   KeyLoanWithDetailsSchema,
   SignatureSchema,
   // Request schemas
@@ -66,7 +65,6 @@ export type KeyLoanWithDetails = z.infer<typeof KeyLoanWithDetailsSchema>
 export type KeySystem = z.infer<typeof KeySystemSchema>
 export type Log = z.infer<typeof LogSchema>
 export type KeyEvent = z.infer<typeof KeyEventSchema>
-export type KeyWithLoanStatus = z.infer<typeof KeyWithLoanStatusSchema>
 
 // Request types for keys
 export type CreateKeyRequest = z.infer<typeof CreateKeyRequestSchema>
