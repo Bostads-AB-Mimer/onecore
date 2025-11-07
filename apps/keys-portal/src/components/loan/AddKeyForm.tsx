@@ -57,8 +57,9 @@ export function AddKeyForm({
 
   // Calculate next sequence number for a given type/name/flex combination
   // Uses the keys prop which contains all keys for this rental object
+  // Also considers pending rows in the form to avoid duplicate sequence numbers
   const calculateNextSequenceNumber = useCallback(
-    (keyType: KeyType, keyName: string, flexNumber: number | null): number => {
+    (keyType: KeyType, keyName: string, flexNumber: number | null, currentRows: KeyRow[] = []): number => {
       const matchingKeys = keys.filter(
         (k) =>
           k.keyType === keyType &&
@@ -67,11 +68,29 @@ export function AddKeyForm({
           !k.disposed // Exclude disposed keys
       )
 
-      if (matchingKeys.length === 0) return 1
+      // Find the max sequence number from existing keys
+      let maxSeq = 0
+      if (matchingKeys.length > 0) {
+        maxSeq = Math.max(
+          ...matchingKeys.map((k) => Number(k.keySequenceNumber || 0))
+        )
+      }
 
-      const maxSeq = Math.max(
-        ...matchingKeys.map((k) => Number(k.keySequenceNumber || 0))
+      // Also check pending rows in the form
+      const matchingRows = currentRows.filter(
+        (r) =>
+          r.keyType === keyType &&
+          r.keyName === keyName &&
+          r.flexNumber === flexNumber
       )
+
+      if (matchingRows.length > 0) {
+        const maxRowSeq = Math.max(
+          ...matchingRows.map((r) => r.startingSequenceNumber + r.quantity - 1)
+        )
+        maxSeq = Math.max(maxSeq, maxRowSeq)
+      }
+
       return maxSeq + 1
     },
     [keys]
@@ -170,7 +189,8 @@ export function AddKeyForm({
         startingSequenceNumber: calculateNextSequenceNumber(
           defaultKeyType,
           defaultKeyName,
-          defaultFlexNumber
+          defaultFlexNumber,
+          rows // Pass current rows to check for conflicts
         ),
       },
     ])
@@ -197,8 +217,8 @@ export function AddKeyForm({
     field: keyof KeyRow,
     value: string | number | null
   ) => {
-    setRows(
-      rows.map((r) => {
+    setRows((prevRows) =>
+      prevRows.map((r) => {
         if (r.id !== id) return r
 
         const updated = { ...r, [field]: value }
@@ -209,10 +229,13 @@ export function AddKeyForm({
           field === 'keyName' ||
           field === 'flexNumber'
         ) {
+          // Filter out the current row to avoid self-comparison
+          const otherRows = prevRows.filter((row) => row.id !== id)
           updated.startingSequenceNumber = calculateNextSequenceNumber(
             updated.keyType,
             updated.keyName,
-            updated.flexNumber
+            updated.flexNumber,
+            otherRows
           )
         }
 
