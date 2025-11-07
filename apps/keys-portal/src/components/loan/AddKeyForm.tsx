@@ -59,7 +59,12 @@ export function AddKeyForm({
   // Uses the keys prop which contains all keys for this rental object
   // Also considers pending rows in the form to avoid duplicate sequence numbers
   const calculateNextSequenceNumber = useCallback(
-    (keyType: KeyType, keyName: string, flexNumber: number | null, currentRows: KeyRow[] = []): number => {
+    (
+      keyType: KeyType,
+      keyName: string,
+      flexNumber: number | null,
+      currentRows: KeyRow[] = []
+    ): number => {
       const matchingKeys = keys.filter(
         (k) =>
           k.keyType === keyType &&
