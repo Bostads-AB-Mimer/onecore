@@ -238,6 +238,24 @@ export const UpdateKeyLoanRequestSchema = z.object({
   updatedBy: z.string().nullable().optional(),
 })
 
+// Search parameters schema for key loans
+export const KeyLoanSearchParamsSchema = z.object({
+  q: z.string().optional(),
+  fields: z.string().optional(),
+  keyNameOrObjectCode: z.string().optional(),
+  minKeys: z.coerce.number().optional(),
+  maxKeys: z.coerce.number().optional(),
+  hasPickedUp: z.coerce.boolean().optional(),
+  hasReturned: z.coerce.boolean().optional(),
+  loanType: LoanTypeSchema.optional(),
+  contact: z.string().optional(),
+  contact2: z.string().optional(),
+  pickedUpAt: z.string().optional(),
+  returnedAt: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+})
+
 // Request schemas for logs
 
 export const CreateLogRequestSchema = z.object({

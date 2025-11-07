@@ -108,14 +108,98 @@ export async function checkActiveKeyLoans(
   }
 }
 
+export interface KeyLoansSearchOptions {
+  /**
+   * Search by key name or rental object code (requires JOIN with keys table)
+   */
+  keyNameOrObjectCode?: string
+
+  /**
+   * Minimum number of keys in loan
+   */
+  minKeys?: number
+
+  /**
+   * Maximum number of keys in loan
+   */
+  maxKeys?: number
+
+  /**
+   * Filter by pickedUpAt null status
+   * - true: pickedUpAt IS NOT NULL
+   * - false: pickedUpAt IS NULL
+   * - undefined: no filter
+   */
+  hasPickedUp?: boolean
+
+  /**
+   * Filter by returnedAt null status
+   * - true: returnedAt IS NOT NULL
+   * - false: returnedAt IS NULL
+   * - undefined: no filter
+   */
+  hasReturned?: boolean
+}
+
 /**
  * Get key loans search query builder for pagination
  * Returns a query builder that can be used with buildSearchQuery() and paginate()
+ * @param options - Optional search filters
+ * @param dbConnection - Database connection
  */
 export function getKeyLoansSearchQuery(
+  options: KeyLoansSearchOptions = {},
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*')
+  let query = dbConnection(TABLE).select(`${TABLE}.*`)
+
+  // Filter by key name or rental object code using EXISTS subquery
+  if (options.keyNameOrObjectCode) {
+    const searchTerm = `%${options.keyNameOrObjectCode}%`
+
+    query = query.whereRaw(
+      `EXISTS (
+        SELECT 1
+        FROM ?? k
+        CROSS APPLY OPENJSON(??) AS keyIds
+        WHERE k.id = keyIds.value
+        AND (k.keyName LIKE ? OR k.rentalObjectCode LIKE ?)
+      )`,
+      [KEYS_TABLE, `${TABLE}.keys`, searchTerm, searchTerm]
+    )
+  }
+
+  // Filter by minimum number of keys
+  if (options.minKeys !== undefined && options.minKeys > 0) {
+    query = query.whereRaw(
+      `(SELECT COUNT(*) FROM OPENJSON(${TABLE}.keys)) >= ?`,
+      [options.minKeys]
+    )
+  }
+
+  // Filter by maximum number of keys
+  if (options.maxKeys !== undefined && options.maxKeys > 0) {
+    query = query.whereRaw(
+      `(SELECT COUNT(*) FROM OPENJSON(${TABLE}.keys)) <= ?`,
+      [options.maxKeys]
+    )
+  }
+
+  // Filter by pickedUpAt null status
+  if (options.hasPickedUp === true) {
+    query = query.whereNotNull(`${TABLE}.pickedUpAt`)
+  } else if (options.hasPickedUp === false) {
+    query = query.whereNull(`${TABLE}.pickedUpAt`)
+  }
+
+  // Filter by returnedAt null status
+  if (options.hasReturned === true) {
+    query = query.whereNotNull(`${TABLE}.returnedAt`)
+  } else if (options.hasReturned === false) {
+    query = query.whereNull(`${TABLE}.returnedAt`)
+  }
+
+  return query
 }
 
 /**
