@@ -3,7 +3,6 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 
 type Key = keys.v1.Key
-type KeyWithLoanStatus = keys.v1.KeyWithLoanStatus
 type KeyWithLoanAndEvent = keys.v1.KeyWithLoanAndEvent
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
