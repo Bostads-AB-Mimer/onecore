@@ -69,6 +69,7 @@ export interface LoanableKeyTableConfig {
     flex?: boolean
     status?: boolean
     pickupAvailability?: boolean
+    disposal?: boolean
     type?: boolean
     rentalObject?: boolean
   }
@@ -271,13 +272,16 @@ export function LoanableKeyTableBase({
               <TableHead className="w-[8%]">Löpnr</TableHead>
             )}
             {columns.flex && <TableHead className="w-[8%]">Flex</TableHead>}
+            {columns.type && <TableHead className="w-[15%]">Typ</TableHead>}
             {columns.status && (
               <TableHead className="w-[22%]">Status</TableHead>
             )}
             {columns.pickupAvailability && (
               <TableHead className="w-[22%]">Utlämning</TableHead>
             )}
-            {columns.type && <TableHead className="w-[15%]">Typ</TableHead>}
+            {columns.disposal && (
+              <TableHead className="w-[15%]">Kassering</TableHead>
+            )}
             {columns.rentalObject && (
               <TableHead className="w-[25%]">Hyresobjekt</TableHead>
             )}
@@ -430,15 +434,37 @@ function DefaultLoanHeader({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <Badge variant="outline">Lånad</Badge>
+      <Badge variant="outline">
+        {loan.loanType === 'TENANT' ? 'Hyresgästlån' : 'Underhållslån'}
+      </Badge>
+      {loan.contact && (
+        <span className="text-muted-foreground">Kontakt: {loan.contact}</span>
+      )}
       {loan.contactPerson && (
         <span className="text-muted-foreground">
           Kontakt: {loan.contactPerson}
         </span>
       )}
-      {loan.pickedUpAt && (
+      {loan.pickedUpAt ? (
         <span className="text-muted-foreground">
-          Upphämtad: {new Date(loan.pickedUpAt).toLocaleDateString('sv-SE')}
+          Upphämtad:{' '}
+          {format(new Date(loan.pickedUpAt), 'd MMM yyyy', { locale: sv })}
+        </span>
+      ) : loan.createdAt ? (
+        <>
+          <span className="text-muted-foreground">
+            Utlånad:{' '}
+            {format(new Date(loan.createdAt), 'd MMM yyyy', { locale: sv })}
+          </span>
+          <span className="text-muted-foreground font-semibold">
+            Ej upphämtat
+          </span>
+        </>
+      ) : null}
+      {loan.returnedAt && (
+        <span className="text-muted-foreground">
+          Återlämnad:{' '}
+          {format(new Date(loan.returnedAt), 'd MMM yyyy', { locale: sv })}
         </span>
       )}
     </div>
@@ -499,6 +525,13 @@ function KeyRow({
       {columns.flex && (
         <TableCell className="w-[8%]">{keyData.flexNumber ?? '-'}</TableCell>
       )}
+      {columns.type && (
+        <TableCell className="w-[15%]">
+          <Badge variant="secondary">
+            {KeyTypeLabels[keyData.keyType as keyof typeof KeyTypeLabels]}
+          </Badge>
+        </TableCell>
+      )}
       {columns.status && (
         <TableCell className="w-[22%]">
           {keyData.latestEvent && keyData.latestEvent.status !== 'COMPLETED' ? (
@@ -518,10 +551,10 @@ function KeyRow({
           })()}
         </TableCell>
       )}
-      {columns.type && (
+      {columns.disposal && (
         <TableCell className="w-[15%]">
-          <Badge variant="secondary">
-            {KeyTypeLabels[keyData.keyType as keyof typeof KeyTypeLabels]}
+          <Badge variant={keyData.disposed ? 'destructive' : 'outline'}>
+            {keyData.disposed ? 'Kasserad' : 'Aktiv'}
           </Badge>
         </TableCell>
       )}

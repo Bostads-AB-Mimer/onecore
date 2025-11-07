@@ -3,9 +3,7 @@ import {
   LoanableKeyTableBase,
   type LoanableKeyTableConfig,
 } from './LoanableKeyTableBase'
-import { Badge } from '@/components/ui/badge'
 import type { GroupedKeys } from '@/utils/groupKeys'
-import { formatAbsoluteTime } from '@/lib/dateUtils'
 import type { KeyWithLoanAndEvent } from '@/services/types'
 
 interface KeyBundleKeysListProps {
@@ -44,23 +42,6 @@ export function KeyBundleKeysList({
     return result
   }, [group])
 
-  // Custom loan header for key bundles (shows contact person and pickup date)
-  const loanHeaderRenderer = (loan: any) => (
-    <div className="flex items-center gap-3">
-      <Badge variant="outline">Lånad</Badge>
-      {loan.contactPerson && (
-        <span className="text-muted-foreground">
-          Kontakt: {loan.contactPerson}
-        </span>
-      )}
-      {loan.pickedUpAt && (
-        <span className="text-muted-foreground">
-          Upphämtad: {formatAbsoluteTime(loan.pickedUpAt)}
-        </span>
-      )}
-    </div>
-  )
-
   const config: LoanableKeyTableConfig = {
     columns: {
       keyName: true,
@@ -72,7 +53,6 @@ export function KeyBundleKeysList({
     },
     showContactHeaders: true,
     showLoanHeaders: true,
-    customLoanHeaderRenderer: loanHeaderRenderer,
     selectable,
   }
 

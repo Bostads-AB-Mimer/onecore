@@ -87,8 +87,7 @@ export async function checkActiveKeyLoans(
   for (const keyId of keyIds) {
     let query = dbConnection(TABLE)
       .select('id')
-      .whereNotNull('pickedUpAt') // Only consider activated loans (not pending)
-      .whereNull('returnedAt') // Active if: not returned yet
+      .whereNull('returnedAt') // Active if: not returned yet (regardless of pickup status)
       .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
 
     // Exclude specific loan ID if provided (for update scenarios)

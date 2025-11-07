@@ -109,14 +109,15 @@ export function LoanMaintenanceKeysDialog({
 
     try {
       const keyIds = keys.map((k) => k.id)
-
-      await keyLoanService.create({
+      const payload = {
         keys: JSON.stringify(keyIds),
-        loanType: 'MAINTENANCE',
+        loanType: 'MAINTENANCE' as const,
         contact: selectedCompany.contactCode,
         contactPerson: contactPerson.trim() || null,
         description: description.trim() || null,
-      })
+      }
+
+      await keyLoanService.create(payload)
 
       toast({
         title: 'Lån skapat',
@@ -130,7 +131,10 @@ export function LoanMaintenanceKeysDialog({
       console.error('Error creating maintenance loan:', error)
       toast({
         title: 'Kunde inte skapa lån',
-        description: 'Ett fel uppstod när lånet skulle skapas',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Ett fel uppstod när lånet skulle skapas',
         variant: 'destructive',
       })
     } finally {
