@@ -11,6 +11,7 @@ import { buildSearchQuery } from '../../../utils/search-builder'
 const {
   KeySchema,
   KeyWithLoanAndEventSchema,
+  KeyLoanSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
@@ -42,7 +43,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('Key', KeySchema)
-  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema)
+  registerSchema('KeyLoan', KeyLoanSchema)
+  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema, {
+    KeyLoan: KeyLoanSchema,
+  })
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
   registerSchema(
