@@ -6495,7 +6495,7 @@ export interface components {
             createdBy?: string | null;
             updatedBy?: string | null;
           }) | null;
-          previousLoan?: components["schemas"]["KeyBundleWithLoanStatusResponse"]["keys"]["items"]["loan"] | null;
+          previousLoan?: components["schemas"]["KeyLoan"] | null;
           latestEvent?: ({
             /** Format: uuid */
             id: string;
