@@ -467,10 +467,14 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('/key-bundles/:id/keys-with-loan-status', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, ['includePreviousLoan'])
     try {
+      // Parse includePreviousLoan query param (defaults to true)
+      const includePreviousLoan = ctx.query.includePreviousLoan !== 'false'
+
       const result = await keyBundlesAdapter.getKeyBundleWithLoanStatus(
         ctx.params.id,
+        includePreviousLoan,
         db
       )
       ctx.status = 200

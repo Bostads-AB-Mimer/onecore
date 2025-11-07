@@ -83,11 +83,13 @@ export function getKeyBundlesSearchQuery(
  * Returns all keys in the bundle with information about any active loans (both TENANT and MAINTENANCE)
  *
  * @param bundleId - The key bundle ID
+ * @param includePreviousLoan - Whether to fetch the most recent returned loan for each key (default: true)
  * @param dbConnection - Database connection
  * @returns Promise with bundle info and keys with loan status
  */
 export async function getKeyBundleWithLoanStatus(
   bundleId: string,
+  includePreviousLoan: boolean = true,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<{
   bundle: KeyBundle
@@ -125,9 +127,18 @@ export async function getKeyBundleWithLoanStatus(
       // Find active loan containing this specific key (unified key_loans table)
       const activeLoan = await dbConnection(KEY_LOANS_TABLE)
         .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-        .whereNotNull('pickedUpAt')
         .whereNull('returnedAt')
         .first()
+
+      // Find previous loan (most recent returned loan) for this key if requested
+      let previousLoan = null
+      if (includePreviousLoan) {
+        previousLoan = await dbConnection(KEY_LOANS_TABLE)
+          .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+          .whereNotNull('returnedAt')
+          .orderBy('returnedAt', 'desc')
+          .first()
+      }
 
       // Find latest key event for this key
       const latestEvent = await dbConnection(KEY_EVENTS_TABLE)
@@ -138,6 +149,7 @@ export async function getKeyBundleWithLoanStatus(
       return {
         ...key,
         loan: activeLoan || null,
+        previousLoan: previousLoan || null,
         latestEvent: latestEvent || null,
       } as KeyWithLoanAndEvent
     })

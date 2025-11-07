@@ -941,12 +941,14 @@ export const KeyBundlesApi = {
   },
 
   getWithLoanStatus: async (
-    id: string
+    id: string,
+    includePreviousLoan: boolean = true
   ): Promise<
     AdapterResult<KeyBundleWithLoanStatusResponse, 'not-found' | CommonErr>
   > => {
+    const queryParams = includePreviousLoan ? '' : '?includePreviousLoan=false'
     const r = await getJSON<{ content: KeyBundleWithLoanStatusResponse }>(
-      `${BASE}/key-bundles/${id}/keys-with-loan-status`
+      `${BASE}/key-bundles/${id}/keys-with-loan-status${queryParams}`
     )
     return r.ok ? ok(r.data.content) : r
   },
