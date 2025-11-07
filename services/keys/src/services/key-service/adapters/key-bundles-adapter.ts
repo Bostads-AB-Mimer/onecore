@@ -125,6 +125,7 @@ export async function getKeyBundleWithLoanStatus(
       // Find active loan containing this specific key (unified key_loans table)
       const activeLoan = await dbConnection(KEY_LOANS_TABLE)
         .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+        .whereNotNull('pickedUpAt')
         .whereNull('returnedAt')
         .first()
 

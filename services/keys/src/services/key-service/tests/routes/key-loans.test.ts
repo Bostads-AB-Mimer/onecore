@@ -156,6 +156,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
       undefined, // contact
       undefined, // contact2
       false, // includeReceipts
+      undefined, // returned
       expect.anything()
     )
     expect(res.status).toBe(200)
@@ -182,6 +183,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
       'john@example.com',
       undefined,
       false,
+      undefined, // returned
       expect.anything()
     )
     expect(res.status).toBe(200)
@@ -207,6 +209,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
       undefined,
       'jane@example.com',
       false,
+      undefined, // returned
       expect.anything()
     )
     expect(res.status).toBe(200)
@@ -233,6 +236,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
       undefined,
       undefined,
       true,
+      undefined, // returned
       expect.anything()
     )
     expect(res.status).toBe(200)
@@ -260,6 +264,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
       'john@example.com',
       'jane@example.com',
       true,
+      undefined, // returned
       expect.anything()
     )
     expect(res.status).toBe(200)
@@ -295,6 +300,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
       undefined,
       undefined,
       false,
+      undefined, // returned
       expect.anything()
     )
     expect(res.status).toBe(200)
