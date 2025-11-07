@@ -175,28 +175,19 @@ export function getLoanTypeFilterOptions() {
 }
 
 // ----- Logs (UI/domain) -----
-// Event type labels in Swedish
-export const LogEventTypeLabels = {
-  creation: 'Skapad',
-  update: 'Uppdaterad',
-  delete: 'Raderad',
-} as const
+// Event type - represents the action performed (creation, update, delete)
+export type LogEventType = 'creation' | 'update' | 'delete'
 
-export type LogEventType = keyof typeof LogEventTypeLabels
-
-// Object type labels in Swedish
-export const LogObjectTypeLabels = {
-  key: 'Nyckel',
-  keySystem: 'Nyckelsystem',
-  keyLoan: 'Nyckellån',
-  keyBundle: 'Nyckelknippe',
-  receipt: 'Kvitto',
-  keyEvent: 'Nyckelhändelse',
-  signature: 'Signatur',
-  keyNote: 'Nyckelanteckning',
-} as const
-
-export type LogObjectType = keyof typeof LogObjectTypeLabels
+// Object type - represents the type of object the log entry refers to
+export type LogObjectType =
+  | 'key'
+  | 'keySystem'
+  | 'keyLoan'
+  | 'keyBundle'
+  | 'receipt'
+  | 'keyEvent'
+  | 'signature'
+  | 'keyNote'
 
 // Grouped log type for displaying multiple logs for the same object
 export interface GroupedLog {

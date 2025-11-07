@@ -1,5 +1,6 @@
 import { Knex } from 'knex'
 import { keys } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 type Log = keys.v1.Log
 type CreateLogRequest = keys.v1.CreateLogRequest
@@ -375,4 +376,414 @@ export function getAllLogsWithKeyEventsQuery(db: Knex) {
     .wrap('(', ') as logs_with_events')
 
   return db.from(logsWithEvents).select('*').orderBy('eventTime', 'desc')
+}
+
+/**
+ * Get list of unique users who have created logs.
+ * Used for populating user filter dropdowns in the frontend.
+ *
+ * @param db - Knex instance or transaction
+ * @returns Array of unique usernames sorted alphabetically
+ */
+export async function getUniqueUsers(db: Knex): Promise<string[]> {
+  const rows = await db(TABLE)
+    .distinct('userName')
+    .whereNotNull('userName')
+    .orderBy('userName', 'asc')
+
+  return rows.map((row: any) => row.userName)
+}
+
+/**
+ * Translation mappings for Swedish labels.
+ * Provides single source of truth for all log-related translations.
+ */
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  creation: 'Skapad',
+  update: 'Uppdaterad',
+  delete: 'Raderad',
+}
+
+const OBJECT_TYPE_LABELS: Record<string, string> = {
+  key: 'Nyckel',
+  keySystem: 'Nyckelsystem',
+  keyLoan: 'Nyckellån',
+  keyBundle: 'Nyckelknippe',
+  receipt: 'Kvitto',
+  keyEvent: 'Nyckelhändelse',
+  signature: 'Signatur',
+  keyNote: 'Nyckelanteckning',
+}
+
+/**
+ * Enriches a log object with Swedish labels for eventType and objectType.
+ * This provides i18n support and eliminates the need for frontend translation dictionaries.
+ *
+ * @param row - Raw log data from database
+ * @returns Log object with eventTypeLabel and objectTypeLabel fields added
+ */
+export function enrichLogWithLabels(row: any): Log {
+  return {
+    ...row,
+    eventTypeLabel: EVENT_TYPE_LABELS[row.eventType] || row.eventType,
+    objectTypeLabel: OBJECT_TYPE_LABELS[row.objectType] || row.objectType,
+  }
+}
+
+/**
+ * Build description for key log entries.
+ * Uses direct DB queries instead of HTTP calls to core service.
+ *
+ * @param key - Key entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @param db - Knex instance or transaction
+ * @returns Swedish description string
+ */
+export async function buildKeyDescription(
+  key: {
+    id: string
+    keyName: string
+    keySequenceNumber?: number
+    rentalObjectCode?: string
+    keyType: string
+    flexNumber?: number | null
+    keySystemId?: string | null
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad',
+  db: Knex
+): Promise<string> {
+  const parts: string[] = [`${action} nyckel`]
+
+  // Key name with sequence number
+  const keyName = key.keySequenceNumber
+    ? `${key.keyName} ${key.keySequenceNumber}`
+    : key.keyName
+  parts.push(keyName)
+
+  // Add rental object code
+  if (key.rentalObjectCode) {
+    parts.push(`för ${key.rentalObjectCode}`)
+  }
+
+  // Add key type
+  parts.push(`typ: ${key.keyType}`)
+
+  // Add flex number if present
+  if (key.flexNumber) {
+    parts.push(`flex: ${key.flexNumber}`)
+  }
+
+  // Add key system if present (DIRECT DB QUERY instead of HTTP call)
+  if (key.keySystemId) {
+    try {
+      const keySystem = await db('key_systems')
+        .where({ id: key.keySystemId })
+        .select('systemCode')
+        .first()
+
+      if (keySystem) {
+        parts.push(`system: ${keySystem.systemCode}`)
+      }
+    } catch (error) {
+      logger.warn(
+        { error, keySystemId: key.keySystemId },
+        'Failed to fetch key system for log description'
+      )
+    }
+  }
+
+  return parts.join(', ')
+}
+
+/**
+ * Build description for key system log entries.
+ * Pure function - no DB queries needed.
+ *
+ * @param keySystem - Key system entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @returns Swedish description string
+ */
+export function buildKeySystemDescription(
+  keySystem: {
+    systemCode: string
+    name: string
+    manufacturer: string
+    type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+    propertyIds?: string
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad'
+): string {
+  const parts: string[] = [`${action} nyckelsystem`]
+
+  // System code and name
+  parts.push(`${keySystem.systemCode} (${keySystem.name})`)
+
+  // Add manufacturer
+  parts.push(`tillverkare: ${keySystem.manufacturer}`)
+
+  // Add type with Swedish translation
+  const typeLabels = {
+    MECHANICAL: 'Mekaniskt',
+    ELECTRONIC: 'Elektroniskt',
+    HYBRID: 'Hybrid',
+  }
+  parts.push(`typ: ${typeLabels[keySystem.type]}`)
+
+  // Add property count if available
+  if (keySystem.propertyIds) {
+    try {
+      const propertyCount = JSON.parse(keySystem.propertyIds).length
+      parts.push(
+        `${propertyCount} ${propertyCount === 1 ? 'fastighet' : 'fastigheter'}`
+      )
+    } catch (error) {
+      // If parsing fails, skip property count
+    }
+  }
+
+  return parts.join(', ')
+}
+
+/**
+ * Build description for receipt log entries.
+ * Uses direct DB queries instead of HTTP calls to core service.
+ *
+ * @param receipt - Receipt entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @param db - Knex instance or transaction
+ * @returns Swedish description string
+ */
+export async function buildReceiptDescription(
+  receipt: {
+    id: string
+    keyLoanId: string
+    receiptType: 'LOAN' | 'RETURN'
+    type: 'DIGITAL' | 'PHYSICAL'
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad',
+  db: Knex
+): Promise<string> {
+  const parts: string[] = [`${action}`]
+
+  // Receipt type
+  const typeLabel = receipt.receiptType === 'LOAN' ? 'utlånings' : 'återlämnings'
+  parts.push(`${typeLabel}kvitto`)
+
+  // Format
+  const formatLabel = receipt.type === 'DIGITAL' ? 'digitalt' : 'fysiskt'
+  parts.push(`(${formatLabel})`)
+
+  // Fetch key loan details for context (DIRECT DB QUERY)
+  try {
+    const loan = await db('key_loans')
+      .where({ id: receipt.keyLoanId })
+      .select('contact', 'keys')
+      .first()
+
+    if (loan) {
+      // Add contact
+      if (loan.contact) {
+        parts.push(`för ${loan.contact}`)
+      }
+
+      // Add key count
+      try {
+        const keyIds = JSON.parse(loan.keys)
+        const keyCount = Array.isArray(keyIds) ? keyIds.length : 0
+        parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
+      } catch (error) {
+        // Skip if parsing fails
+      }
+    }
+  } catch (error) {
+    logger.warn(
+      { error, keyLoanId: receipt.keyLoanId },
+      'Failed to fetch key loan for receipt log description'
+    )
+  }
+
+  return parts.join(', ')
+}
+
+/**
+ * Build description for signature log entries.
+ * Pure function - no DB queries needed.
+ *
+ * @param signature - Signature entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @returns Swedish description string
+ */
+export function buildSignatureDescription(
+  signature: {
+    resourceType: string
+    resourceId: string
+    recipientEmail: string
+    recipientName?: string | null
+    simpleSignDocumentId: number
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad'
+): string {
+  const parts: string[] = [action]
+
+  // Resource type
+  const resourceTypeLabel =
+    signature.resourceType === 'receipt' ? 'kvitto' : signature.resourceType
+  parts.push(`signaturförfrågan för ${resourceTypeLabel}`)
+
+  // Recipient
+  if (signature.recipientName) {
+    parts.push(`till ${signature.recipientName} (${signature.recipientEmail})`)
+  } else {
+    parts.push(`till ${signature.recipientEmail}`)
+  }
+
+  // Document ID
+  parts.push(`dokument-ID: ${signature.simpleSignDocumentId}`)
+
+  return parts.join(', ')
+}
+
+/**
+ * Build description for key bundle log entries.
+ * Uses direct DB queries instead of HTTP calls to core service.
+ *
+ * @param bundle - Key bundle entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @param db - Knex instance or transaction
+ * @returns Swedish description string
+ */
+export async function buildKeyBundleDescription(
+  bundle: {
+    id: string
+    name: string
+    keys: string
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad',
+  db: Knex
+): Promise<string> {
+  const parts: string[] = [`${action} nyckelknippa`]
+
+  // Bundle name
+  parts.push(`"${bundle.name}"`)
+
+  // Key count and names
+  try {
+    const keyIds = JSON.parse(bundle.keys)
+    const keyCount = Array.isArray(keyIds) ? keyIds.length : 0
+    parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
+
+    // Only fetch key names if 5 or fewer keys (DIRECT DB QUERY)
+    if (Array.isArray(keyIds) && keyIds.length > 0 && keyIds.length <= 5) {
+      const keys = await db('keys')
+        .whereIn('id', keyIds)
+        .select('keyName', 'keySequenceNumber')
+
+      const keyNames = keys
+        .map((key: any) => {
+          return key.keySequenceNumber
+            ? `${key.keyName} ${key.keySequenceNumber}`
+            : key.keyName
+        })
+        .filter((name) => name !== '')
+
+      if (keyNames.length > 0) {
+        parts.push(`(${keyNames.join(', ')})`)
+      }
+    }
+  } catch (error) {
+    logger.warn(
+      { error, bundleId: bundle.id },
+      'Failed to parse keys for bundle log description'
+    )
+  }
+
+  return parts.join(', ')
+}
+
+/**
+ * Build description for key loan log entries.
+ * Uses direct DB queries instead of HTTP calls to core service.
+ *
+ * @param keyLoan - Key loan entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @param db - Knex instance or transaction
+ * @returns Swedish description string
+ */
+export async function buildKeyLoanDescription(
+  keyLoan: {
+    contact?: string
+    keys: string
+    lease?: string
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad',
+  db: Knex
+): Promise<string> {
+  const parts: string[] = [`${action} nyckellån`]
+
+  // Add contact code to description
+  if (keyLoan.contact) {
+    parts.push(`för kontakt ${keyLoan.contact}`)
+  }
+
+  // Fetch key names from key IDs (DIRECT DB QUERY)
+  try {
+    const keyIds = JSON.parse(keyLoan.keys) as string[]
+    if (Array.isArray(keyIds) && keyIds.length > 0) {
+      const keys = await db('keys')
+        .whereIn('id', keyIds)
+        .select('keyName', 'keySequenceNumber')
+
+      const keyNames = keys
+        .map((key: any) => {
+          return key.keySequenceNumber
+            ? `${key.keyName} ${key.keySequenceNumber}`
+            : key.keyName
+        })
+        .filter((name) => name !== '')
+
+      if (keyNames.length > 0) {
+        parts.push(`nycklar: ${keyNames.join(', ')}`)
+      }
+    }
+  } catch (error) {
+    logger.warn(
+      { error, keyLoanKeys: keyLoan.keys },
+      'Failed to fetch keys for loan log description'
+    )
+  }
+
+  if (keyLoan.lease) {
+    parts.push(`avtal: ${keyLoan.lease}`)
+  }
+
+  return parts.join(', ')
+}
+
+/**
+ * Build description for key note log entries.
+ * Pure function - no DB queries needed.
+ *
+ * @param keyNote - Key note entity data
+ * @param action - Swedish action label (Skapad, Uppdaterad, Kasserad, Raderad)
+ * @returns Swedish description string
+ */
+export function buildKeyNoteDescription(
+  keyNote: {
+    rentalObjectCode: string
+    description: string
+  },
+  action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad'
+): string {
+  const parts: string[] = [`${action} Nyckelanteckning för ${keyNote.rentalObjectCode}`]
+
+  // Truncate description to ~50 chars for preview
+  if (keyNote.description) {
+    const descriptionPreview =
+      keyNote.description.length > 50
+        ? keyNote.description.substring(0, 50) + '...'
+        : keyNote.description
+    parts.push(`"${descriptionPreview}"`)
+  }
+
+  return parts.join(': ')
 }
