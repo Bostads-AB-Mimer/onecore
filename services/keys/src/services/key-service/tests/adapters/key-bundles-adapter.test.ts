@@ -214,6 +214,7 @@ describe('key-bundles-adapter', () => {
         // Get bundle with loan status
         const result = await keyBundlesAdapter.getKeyBundleWithLoanStatus(
           bundle.id,
+          true,
           ctx.db
         )
 
