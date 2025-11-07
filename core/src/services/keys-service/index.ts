@@ -91,7 +91,9 @@ const {
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('Key', KeySchema)
-  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema)
+  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema, {
+    KeyLoan: KeyLoanSchema,
+  })
   registerSchema('KeyLoan', KeyLoanSchema)
   registerSchema('KeyLoanWithDetails', KeyLoanWithDetailsSchema)
   registerSchema('KeySystem', KeySystemSchema)
@@ -116,7 +118,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
   registerSchema(
     'KeyBundleWithLoanStatusResponse',
-    KeyBundleWithLoanStatusResponseSchema
+    KeyBundleWithLoanStatusResponseSchema,
+    {
+      KeyLoan: KeyLoanSchema,
+    }
   )
   registerSchema('CreateKeyEventRequest', CreateKeyEventRequestSchema)
   registerSchema('UpdateKeyEventRequest', UpdateKeyEventRequestSchema)
