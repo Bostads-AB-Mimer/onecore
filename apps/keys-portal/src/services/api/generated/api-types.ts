@@ -2293,51 +2293,6 @@ export interface components {
       flexNumber: number;
     };
     Key: components["schemas"]["Key"];
-    KeyWithLoanStatus: {
-      /** Format: uuid */
-      id: string;
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number | null;
-      rentalObjectCode?: string;
-      /** @enum {string} */
-      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-      /** Format: uuid */
-      keySystemId?: string | null;
-      /** @default false */
-      disposed?: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      /** Format: uuid */
-      activeLoanId: string | null;
-      activeLoanContact: string | null;
-      activeLoanContact2: string | null;
-      /** Format: date-time */
-      activeLoanPickedUpAt: string | null;
-      /** Format: date-time */
-      activeLoanAvailableFrom: string | null;
-      /** Format: date-time */
-      prevLoanAvailableFrom: string | null;
-      prevLoanContact: string | null;
-      prevLoanContact2: string | null;
-      latestEvent?: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        type: "FLEX" | "ORDER" | "LOST";
-        /** @enum {string} */
-        status: "ORDERED" | "RECEIVED" | "COMPLETED";
-        /** Format: uuid */
-        workOrderId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-      }) | null;
-    };
     KeyWithLoanAndEvent: {
       /** Format: uuid */
       id: string;
