@@ -3369,10 +3369,10 @@ export interface paths {
       };
     };
   };
-  "/keys/with-loan-and-event/{rentalObjectCode}": {
+  "/keys/with-loan-status/{rentalObjectCode}": {
     /**
-     * Get keys with active loan and event data enriched
-     * @description Returns all relevant keys for a rental object with their active loan and latest event information
+     * Get keys with active loan status enriched
+     * @description Returns all relevant keys for a rental object with their active loan information
      * pre-fetched in a single optimized query. This eliminates N+1 query problems.
      */
     get: {
@@ -3383,7 +3383,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description List of keys with enriched active loan and event data */
+        /** @description List of keys with enriched active loan data */
         200: {
           content: {
             "application/json": {
@@ -6186,7 +6186,7 @@ export interface components {
         createdBy?: string | null;
         updatedBy?: string | null;
       }) | null;
-      previousLoan?: components["schemas"]["KeyWithLoanAndEvent"]["loan"] | null;
+      previousLoan?: components["schemas"]["KeyLoan"] | null;
       latestEvent?: ({
         /** Format: uuid */
         id: string;
