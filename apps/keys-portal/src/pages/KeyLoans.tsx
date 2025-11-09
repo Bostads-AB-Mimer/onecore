@@ -36,6 +36,10 @@ export default function KeyLoans() {
   const returnedAfter = pagination.searchParams.get('returnedAfter')
   const returnedBefore = pagination.searchParams.get('returnedBefore')
 
+  // Created date filters
+  const createdAtAfter = pagination.searchParams.get('createdAtAfter') || null
+  const createdAtBefore = pagination.searchParams.get('createdAtBefore') || null
+
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
 
@@ -92,6 +96,21 @@ export default function KeyLoans() {
             : `<=${returnedBefore}`
         }
 
+        // Created date filters
+        const createdDateFilters: string[] = []
+        if (createdAtAfter) {
+          createdDateFilters.push(`>=${createdAtAfter}`)
+        }
+        if (createdAtBefore) {
+          createdDateFilters.push(`<=${createdAtBefore}`)
+        }
+        if (createdDateFilters.length > 0) {
+          params.createdAt =
+            createdDateFilters.length === 1
+              ? createdDateFilters[0]
+              : createdDateFilters.join(',')
+        }
+
         // Always use search endpoint with pagination (even with empty params)
         const response = await keyLoanService.search(params, page, limit)
         setKeyLoans(response.content)
@@ -118,6 +137,8 @@ export default function KeyLoans() {
       hasReturned,
       returnedAfter,
       returnedBefore,
+      createdAtAfter,
+      createdAtBefore,
       toast,
       pagination.setPaginationMeta,
     ]
@@ -145,6 +166,8 @@ export default function KeyLoans() {
     hasReturned,
     returnedAfter,
     returnedBefore,
+    createdAtAfter,
+    createdAtBefore,
   ])
 
   const handleSearchChange = useCallback(
@@ -208,6 +231,17 @@ export default function KeyLoans() {
     [pagination]
   )
 
+  const handleCreatedAtDateChange = useCallback(
+    (afterDate: string | null, beforeDate: string | null) => {
+      pagination.updateUrlParams({
+        createdAtAfter: afterDate,
+        createdAtBefore: beforeDate,
+        page: '1',
+      })
+    },
+    [pagination]
+  )
+
   // Count active and returned loans
   const activeLoanCount = keyLoans.filter((loan) => !loan.returnedAt).length
   const returnedLoanCount = keyLoans.filter((loan) => loan.returnedAt).length
@@ -241,6 +275,9 @@ export default function KeyLoans() {
         minKeys={minKeys}
         maxKeys={maxKeys}
         onKeyCountChange={handleKeyCountChange}
+        createdAtAfter={createdAtAfter}
+        createdAtBefore={createdAtBefore}
+        onCreatedAtDateChange={handleCreatedAtDateChange}
         pickedUpDateFilter={{
           hasValue: hasPickedUp === null ? null : hasPickedUp === 'true',
           after: pickedUpAfter || null,
