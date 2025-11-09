@@ -162,7 +162,7 @@ export function getKeyLoansSearchQuery(
         SELECT 1
         FROM ?? k
         CROSS APPLY OPENJSON(??) AS keyIds
-        WHERE k.id = keyIds.value
+        WHERE k.id = TRY_CAST(keyIds.value AS uniqueidentifier)
         AND (k.keyName LIKE ? OR k.rentalObjectCode LIKE ?)
       )`,
       [KEYS_TABLE, `${TABLE}.keys`, searchTerm, searchTerm]
