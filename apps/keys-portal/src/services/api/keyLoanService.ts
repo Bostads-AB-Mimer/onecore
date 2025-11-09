@@ -4,7 +4,9 @@ import type {
   KeyLoanWithDetails,
   CreateKeyLoanRequest,
   UpdateKeyLoanRequest,
+  PaginatedResponse,
 } from '@/services/types'
+import { querySerializer } from '@/utils/querySerializer'
 
 import { GET, POST, PATCH, DELETE } from './core/base-api'
 
@@ -14,6 +16,20 @@ type ApiError = {
   data?: any
 }
 
+// Helper to ensure paginated response has proper structure
+function ensurePaginatedResponse<T>(data: any): PaginatedResponse<T> {
+  return {
+    content: data?.content ?? [],
+    _meta: data?._meta ?? {
+      totalRecords: 0,
+      page: 1,
+      limit: 60,
+      count: 0,
+    },
+    _links: data?._links ?? [],
+  }
+}
+
 export const keyLoanService = {
   async list(): Promise<KeyLoan[]> {
     const { data, error } = await GET('/key-loans')
@@ -21,33 +37,17 @@ export const keyLoanService = {
     return data?.content ?? []
   },
 
-  async search(params: {
-    q?: string
-    fields?: string | string[]
-    id?: string
-    keys?: string
-    contact?: string
-    returnedAt?: string
-    availableToNextTenantFrom?: string
-    pickedUpAt?: string
-    createdAt?: string
-    updatedAt?: string
-  }): Promise<KeyLoan[]> {
-    const { fields, ...rest } = params ?? {}
-    const normalized: Record<string, unknown> = {
-      ...rest,
-      ...(typeof fields === 'string'
-        ? { fields }
-        : Array.isArray(fields) && fields.length
-          ? { fields: fields.join(',') }
-          : {}),
-    }
-
+  async search(
+    searchParams: Record<string, string | number | string[] | undefined>,
+    page: number = 1,
+    limit: number = 60
+  ): Promise<PaginatedResponse<KeyLoan>> {
     const { data, error } = await GET('/key-loans/search', {
-      params: { query: normalized as any },
+      params: { query: { ...searchParams, page, limit } as any },
+      querySerializer,
     })
     if (error) throw error
-    return data?.content ?? []
+    return ensurePaginatedResponse<KeyLoan>(data)
   },
 
   async get(id: string): Promise<KeyLoan> {

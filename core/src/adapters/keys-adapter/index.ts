@@ -252,23 +252,25 @@ export const KeyLoansApi = {
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<KeyLoan[], 'bad-request' | CommonErr>> => {
+  ): Promise<
+    AdapterResult<PaginatedResponse<KeyLoan>, 'bad-request' | CommonErr>
+  > => {
     const params = new URLSearchParams()
 
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          params.append(key, value.join(','))
+          value.forEach((v) => params.append(key, v))
         } else {
           params.append(key, value)
         }
       }
     }
 
-    const r = await getJSON<{ content: KeyLoan[] }>(
+    const r = await getJSON<PaginatedResponse<KeyLoan>>(
       `${BASE}/key-loans/search?${params.toString()}`
     )
-    return r.ok ? ok(r.data.content) : r
+    return r.ok ? ok(r.data) : r
   },
 
   getByKey: async (

@@ -9,6 +9,7 @@ import * as keyLoanService from '../key-loan-service'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { buildSearchQuery } from '../../../utils/search-builder'
+import { paginate } from '../../../utils/pagination'
 
 const {
   KeyLoanSchema,
@@ -245,6 +246,13 @@ export const routes = (router: KoaRouter) => {
       'maxKeys',
       'hasPickedUp',
       'hasReturned',
+      'loanType',
+      'pickedUpAt',
+      'returnedAt',
+      'pickedUpAfter',
+      'pickedUpBefore',
+      'returnedAfter',
+      'returnedBefore',
     ])
 
     try {
@@ -291,16 +299,8 @@ export const routes = (router: KoaRouter) => {
         db
       )
 
-      // Check if we have any custom search parameters
-      const hasCustomParams =
-        keyNameOrObjectCode !== undefined ||
-        minKeys !== undefined ||
-        maxKeys !== undefined ||
-        hasPickedUp !== undefined ||
-        hasReturned !== undefined
-
       // Apply additional search filters using buildSearchQuery
-      const searchResult = buildSearchQuery(query, ctx, {
+      buildSearchQuery(query, ctx, {
         defaultSearchFields: ['contact', 'contact2'],
         reservedParams: [
           'q',
@@ -312,23 +312,21 @@ export const routes = (router: KoaRouter) => {
           'maxKeys',
           'hasPickedUp',
           'hasReturned',
+          'pickedUpAfter',
+          'pickedUpBefore',
+          'returnedAfter',
+          'returnedBefore',
         ],
       })
 
-      // Only return 400 if there are no custom params AND no standard search params
-      if (!searchResult.hasSearchParams && !hasCustomParams) {
-        ctx.status = 400
-        ctx.body = {
-          reason: searchResult.error,
-          ...metadata,
-        }
-        return
-      }
+      // Apply ordering
+      const orderedQuery = query.orderBy('createdAt', 'desc')
 
-      const rows = await query.orderBy('createdAt', 'desc').limit(10)
+      // Allow empty params - will return all results with pagination
+      const paginatedResult = await paginate(orderedQuery, ctx)
 
       ctx.status = 200
-      ctx.body = { content: rows satisfies KeyLoanResponse[], ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error searching key loans')
       ctx.status = 500
