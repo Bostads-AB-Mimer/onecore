@@ -9,14 +9,28 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, Edit, Trash2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Key, KeyLoan, KeyBundle, KeyTypeLabels, getKeyTypeFilterOptions, LoanTypeLabels } from '@/services/types'
+import {
+  Key,
+  KeyLoan,
+  KeyBundle,
+  KeyTypeLabels,
+  getKeyTypeFilterOptions,
+  LoanTypeLabels,
+} from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { useNavigate } from 'react-router-dom'
@@ -86,8 +100,9 @@ export function KeysTable({
         ])
 
         // Sort loans by createdAt descending (newest first)
-        const sortedLoans = loans.sort((a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        const sortedLoans = loans.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
 
         // Sort bundles by name alphabetically
@@ -162,9 +177,17 @@ export function KeysTable({
     if (loan.returnedAt) {
       return <Badge variant="secondary">Återlämnad</Badge>
     } else if (loan.pickedUpAt) {
-      return <Badge variant="default" className="bg-green-600">Aktiv</Badge>
+      return (
+        <Badge variant="default" className="bg-green-600">
+          Aktiv
+        </Badge>
+      )
     } else {
-      return <Badge variant="outline" className="text-muted-foreground">Ej upphämtad</Badge>
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          Ej upphämtad
+        </Badge>
+      )
     }
   }
 
@@ -279,7 +302,9 @@ export function KeysTable({
                     <TableCell>
                       {key.rentalObjectCode ? (
                         <button
-                          onClick={() => handleObjectClick(key.rentalObjectCode!)}
+                          onClick={() =>
+                            handleObjectClick(key.rentalObjectCode!)
+                          }
                           className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                         >
                           {key.rentalObjectCode}
@@ -320,7 +345,11 @@ export function KeysTable({
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -358,83 +387,93 @@ export function KeysTable({
                             {/* Key Loans Section */}
                             {keyDetails.loans.length > 0 && (
                               <div>
-                                <h3 className="text-lg font-semibold mb-3">Nyckellån</h3>
-                                <div className="rounded-md border bg-card">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Kontakt</TableHead>
-                                        <TableHead>Lånetyp</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Skapad</TableHead>
-                                        <TableHead>Upphämtat</TableHead>
-                                        <TableHead>Återlämnat</TableHead>
+                                <h3 className="text-lg font-semibold mb-3">
+                                  Nyckellån
+                                </h3>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Kontakt</TableHead>
+                                      <TableHead>Lånetyp</TableHead>
+                                      <TableHead>Status</TableHead>
+                                      <TableHead>Skapad</TableHead>
+                                      <TableHead>Upphämtat</TableHead>
+                                      <TableHead>Återlämnat</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {keyDetails.loans.map((loan) => (
+                                      <TableRow key={loan.id}>
+                                        <TableCell className="font-medium">
+                                          {getContactDisplay(loan)}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge variant="outline">
+                                            {LoanTypeLabels[loan.loanType]}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          {getLoanStatus(loan)}
+                                        </TableCell>
+                                        <TableCell>
+                                          {formatDate(loan.createdAt)}
+                                        </TableCell>
+                                        <TableCell>
+                                          {formatDate(loan.pickedUpAt)}
+                                        </TableCell>
+                                        <TableCell>
+                                          {formatDate(loan.returnedAt)}
+                                        </TableCell>
                                       </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {keyDetails.loans.map((loan) => (
-                                        <TableRow key={loan.id}>
-                                          <TableCell className="font-medium">
-                                            {getContactDisplay(loan)}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Badge variant="outline">
-                                              {LoanTypeLabels[loan.loanType]}
-                                            </Badge>
-                                          </TableCell>
-                                          <TableCell>{getLoanStatus(loan)}</TableCell>
-                                          <TableCell>{formatDate(loan.createdAt)}</TableCell>
-                                          <TableCell>{formatDate(loan.pickedUpAt)}</TableCell>
-                                          <TableCell>{formatDate(loan.returnedAt)}</TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
+                                    ))}
+                                  </TableBody>
+                                </Table>
                               </div>
                             )}
 
                             {/* Key Bundles Section */}
                             {keyDetails.bundles.length > 0 && (
                               <div>
-                                <h3 className="text-lg font-semibold mb-3">Nyckelsamlingar</h3>
-                                <div className="rounded-md border bg-card">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Namn</TableHead>
-                                        <TableHead>Beskrivning</TableHead>
-                                        <TableHead>Antal nycklar</TableHead>
+                                <h3 className="text-lg font-semibold mb-3">
+                                  Nyckelsamlingar
+                                </h3>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Namn</TableHead>
+                                      <TableHead>Beskrivning</TableHead>
+                                      <TableHead>Antal nycklar</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {keyDetails.bundles.map((bundle) => (
+                                      <TableRow key={bundle.id}>
+                                        <TableCell className="font-medium">
+                                          {bundle.name}
+                                        </TableCell>
+                                        <TableCell>
+                                          {bundle.description || '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge variant="secondary">
+                                            {getKeyCount(bundle.keys)}
+                                          </Badge>
+                                        </TableCell>
                                       </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {keyDetails.bundles.map((bundle) => (
-                                        <TableRow key={bundle.id}>
-                                          <TableCell className="font-medium">
-                                            {bundle.name}
-                                          </TableCell>
-                                          <TableCell>
-                                            {bundle.description || '-'}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Badge variant="secondary">
-                                              {getKeyCount(bundle.keys)}
-                                            </Badge>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
+                                    ))}
+                                  </TableBody>
+                                </Table>
                               </div>
                             )}
 
                             {/* No results message */}
-                            {keyDetails.loans.length === 0 && keyDetails.bundles.length === 0 && (
-                              <div className="text-center text-muted-foreground py-8">
-                                Denna nyckel ingår inte i några lån eller samlingar
-                              </div>
-                            )}
+                            {keyDetails.loans.length === 0 &&
+                              keyDetails.bundles.length === 0 && (
+                                <div className="text-center text-muted-foreground py-8">
+                                  Denna nyckel ingår inte i några lån eller
+                                  samlingar
+                                </div>
+                              )}
                           </div>
                         )}
                       </TableCell>
