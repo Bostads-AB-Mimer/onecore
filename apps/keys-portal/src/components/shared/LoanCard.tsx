@@ -52,7 +52,7 @@ export function LoanCard({
       return {
         primaryName: lease
           ? `${lease.tenants.map((t) => `${t.firstName} ${t.lastName}`).join(', ')}`
-          : 'Okänd hyresgäst',
+          : null,
         secondaryInfo: lease?.rentalPropertyId || null,
       }
     }
