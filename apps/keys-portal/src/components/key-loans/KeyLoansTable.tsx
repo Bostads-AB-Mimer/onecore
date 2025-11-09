@@ -17,7 +17,7 @@ import {
   User,
   FileText,
 } from 'lucide-react'
-import { KeyLoan, KeyLoanWithDetails, Key } from '@/services/types'
+import { KeyLoan, KeyLoanWithDetails, Key, LoanTypeLabels } from '@/services/types'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
@@ -65,11 +65,6 @@ interface KeyLoansTableProps {
     after: string | null
     before: string | null
   }) => void
-}
-
-const LoanTypeLabels = {
-  TENANT: 'Hyresgäst',
-  MAINTENANCE: 'Underhåll',
 }
 
 export function KeyLoansTable({
