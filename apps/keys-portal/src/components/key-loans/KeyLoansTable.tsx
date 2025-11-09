@@ -242,22 +242,6 @@ export function KeyLoansTable({
     return contacts.length > 0 ? contacts.join(', ') : '-'
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    )
-  }
-
-  if (keyLoans.length === 0) {
-    return (
-      <div className="border rounded-lg p-8 text-center text-muted-foreground">
-        Inga nyckellån hittades
-      </div>
-    )
-  }
-
   return (
     <>
       {/* Return dialog for maintenance loans */}
@@ -375,135 +359,154 @@ export function KeyLoansTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {keyLoans.map((loan) => {
-              const isExpanded = expandedLoanId === loan.id
-              const keyCount = getKeyCount(loan.keys)
-              const isPickedUp = !!loan.pickedUpAt
-              const isReturned = !!loan.returnedAt
-              const isActive = isPickedUp && !isReturned
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-24">
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : keyLoans.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={8}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  Inga nyckellån hittades
+                </TableCell>
+              </TableRow>
+            ) : (
+              keyLoans.map((loan) => {
+                const isExpanded = expandedLoanId === loan.id
+                const keyCount = getKeyCount(loan.keys)
+                const isPickedUp = !!loan.pickedUpAt
+                const isReturned = !!loan.returnedAt
+                const isActive = isPickedUp && !isReturned
 
-              // Determine status
-              let statusBadge
-              if (isReturned) {
-                statusBadge = <Badge variant="secondary">Återlämnad</Badge>
-              } else if (isPickedUp) {
-                statusBadge = (
-                  <Badge variant="default" className="bg-green-600">
-                    Aktiv
-                  </Badge>
-                )
-              } else {
-                statusBadge = (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    Ej upphämtad
-                  </Badge>
-                )
-              }
+                // Determine status
+                let statusBadge
+                if (isReturned) {
+                  statusBadge = <Badge variant="secondary">Återlämnad</Badge>
+                } else if (isPickedUp) {
+                  statusBadge = (
+                    <Badge variant="default" className="bg-green-600">
+                      Aktiv
+                    </Badge>
+                  )
+                } else {
+                  statusBadge = (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      Ej upphämtad
+                    </Badge>
+                  )
+                }
 
-              return (
-                <React.Fragment key={loan.id}>
-                  {/* Main loan row */}
-                  <TableRow>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleToggleExpand(loan.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {getContactDisplay(loan)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {LoanTypeLabels[loan.loanType]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{keyCount}</Badge>
-                    </TableCell>
-                    <TableCell>{statusBadge}</TableCell>
-                    <TableCell>{formatDate(loan.createdAt)}</TableCell>
-                    <TableCell>{formatDate(loan.pickedUpAt)}</TableCell>
-                    <TableCell>{formatDate(loan.returnedAt)}</TableCell>
-                  </TableRow>
-
-                  {/* Expanded keys section */}
-                  {isExpanded && (
+                return (
+                  <React.Fragment key={loan.id}>
+                    {/* Main loan row */}
                     <TableRow>
-                      <TableCell colSpan={8} className="p-6 bg-muted/30">
-                        {isLoadingDetails ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin" />
-                          </div>
-                        ) : !loanDetails ? (
-                          <div className="text-center text-muted-foreground py-8">
-                            Inga nycklar i detta lån
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {/* Contact info and Action buttons */}
-                            <div className="flex items-start justify-between gap-4">
-                              {/* Left: Contact Person and Description */}
-                              <div className="flex-1 space-y-1.5">
-                                {loanDetails.contactPerson && (
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-medium">
-                                      {loanDetails.contactPerson}
-                                    </span>
-                                  </div>
-                                )}
-                                {loanDetails.description && (
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <FileText className="h-4 w-4" />
-                                    <span>{loanDetails.description}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Right: Action buttons */}
-                              <div className="flex items-center gap-2">
-                                {/* Return button - only show for active loans */}
-                                {isActive && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setReturnDialogOpen(true)}
-                                  >
-                                    <Undo2 className="h-4 w-4 mr-1" />
-                                    Återlämna
-                                  </Button>
-                                )}
-
-                                {/* Receipt actions */}
-                                <MaintenanceReceiptActions
-                                  loanId={loan.id}
-                                  onRefresh={onRefresh}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Keys table */}
-                            <MaintenanceKeysTable
-                              keys={loanDetails.keysArray}
-                              keySystemMap={keySystemMap}
-                            />
-                          </div>
-                        )}
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleExpand(loan.id)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
                       </TableCell>
+                      <TableCell className="font-medium">
+                        {getContactDisplay(loan)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {LoanTypeLabels[loan.loanType]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{keyCount}</Badge>
+                      </TableCell>
+                      <TableCell>{statusBadge}</TableCell>
+                      <TableCell>{formatDate(loan.createdAt)}</TableCell>
+                      <TableCell>{formatDate(loan.pickedUpAt)}</TableCell>
+                      <TableCell>{formatDate(loan.returnedAt)}</TableCell>
                     </TableRow>
-                  )}
-                </React.Fragment>
-              )
-            })}
+
+                    {/* Expanded keys section */}
+                    {isExpanded && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="p-6 bg-muted/30">
+                          {isLoadingDetails ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                            </div>
+                          ) : !loanDetails ? (
+                            <div className="text-center text-muted-foreground py-8">
+                              Inga nycklar i detta lån
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {/* Contact info and Action buttons */}
+                              <div className="flex items-start justify-between gap-4">
+                                {/* Left: Contact Person and Description */}
+                                <div className="flex-1 space-y-1.5">
+                                  {loanDetails.contactPerson && (
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-4 w-4 text-muted-foreground" />
+                                      <span className="font-medium">
+                                        {loanDetails.contactPerson}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {loanDetails.description && (
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                      <FileText className="h-4 w-4" />
+                                      <span>{loanDetails.description}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Right: Action buttons */}
+                                <div className="flex items-center gap-2">
+                                  {/* Return button - only show for active loans */}
+                                  {isActive && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setReturnDialogOpen(true)}
+                                    >
+                                      <Undo2 className="h-4 w-4 mr-1" />
+                                      Återlämna
+                                    </Button>
+                                  )}
+
+                                  {/* Receipt actions */}
+                                  <MaintenanceReceiptActions
+                                    loanId={loan.id}
+                                    onRefresh={onRefresh}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Keys table */}
+                              <MaintenanceKeysTable
+                                keys={loanDetails.keysArray}
+                                keySystemMap={keySystemMap}
+                              />
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                )
+              })
+            )}
           </TableBody>
         </Table>
       </div>
