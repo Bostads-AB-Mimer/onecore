@@ -37,29 +37,41 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
     describe(keysAdapter.KeyLoansApi.search, () => {
       it('returns ok with search results on 200', async () => {
+        const paginatedResponse = {
+          content: [mockedKeyLoan],
+          _meta: { totalRecords: 1, page: 1, limit: 10, count: 1 },
+          _links: [{ href: '/key-loans/search?contact=P123456', rel: 'self' }],
+        }
+
         nock(config.keysService.url)
           .get('/key-loans/search?contact=P123456')
-          .reply(200, { content: [mockedKeyLoan] })
+          .reply(200, paginatedResponse)
 
         const result = await keysAdapter.KeyLoansApi.search({
           contact: 'P123456',
         })
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyLoan])
+        expect(result.data).toEqual(paginatedResponse)
       })
 
       it('handles array parameters', async () => {
+        const paginatedResponse = {
+          content: [mockedKeyLoan],
+          _meta: { totalRecords: 1, page: 1, limit: 10, count: 1 },
+          _links: [{ href: '/key-loans/search?keys=key1%2Ckey2', rel: 'self' }],
+        }
+
         nock(config.keysService.url)
           .get('/key-loans/search?keys=key1%2Ckey2')
-          .reply(200, { content: [mockedKeyLoan] })
+          .reply(200, paginatedResponse)
 
         const result = await keysAdapter.KeyLoansApi.search({
           keys: ['key1', 'key2'],
         })
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyLoan])
+        expect(result.data).toEqual(paginatedResponse)
       })
 
       it('returns bad-request on 400', async () => {

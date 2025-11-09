@@ -646,40 +646,10 @@ describe('DELETE /key-loans/:id', () => {
  * Tests for GET /key-loans/search endpoint
  *
  * Testing search functionality:
- * - Missing search parameters (400)
- * - Search parameter too short (400)
- * - Only pagination parameters (400)
+ * - Allows empty search parameters (returns all results with pagination)
+ * - Search with specific parameters
  */
 describe('GET /key-loans/search', () => {
-  it('returns 400 when no search parameters provided', async () => {
-    const res = await request(app.callback()).get('/key-loans/search')
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain(
-      'At least one search parameter is required'
-    )
-  })
-
-  it('returns 400 when q parameter is too short', async () => {
-    const res = await request(app.callback()).get('/key-loans/search?q=ab')
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain(
-      'At least one search parameter is required'
-    )
-  })
-
-  it('returns 400 when only pagination parameters provided', async () => {
-    const res = await request(app.callback()).get(
-      '/key-loans/search?page=1&limit=10'
-    )
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain(
-      'At least one search parameter is required'
-    )
-  })
-
   it('searches by contact using OR search with q parameter', async () => {
     // Search by contact email (default OR fields: contact, contact2)
     const res = await request(app.callback()).get('/key-loans/search?q=jane')
