@@ -433,9 +433,16 @@ describe('keys-service', () => {
     it('responds with search results', async () => {
       const keyLoans = factory.keyLoan.buildList(1)
 
-      jest
-        .spyOn(keysAdapter.KeyLoansApi, 'search')
-        .mockResolvedValue({ ok: true, data: keyLoans })
+      jest.spyOn(keysAdapter.KeyLoansApi, 'search').mockResolvedValue({
+        ok: true,
+        data: {
+          content: keyLoans,
+          _meta: { totalRecords: 1, page: 1, limit: 10, count: 1 },
+          _links: [
+            { href: '/key-loans/search?q=test&fields=contact', rel: 'self' },
+          ],
+        },
+      })
 
       const res = await request(app.callback()).get(
         '/key-loans/search?q=test&fields=contact'
