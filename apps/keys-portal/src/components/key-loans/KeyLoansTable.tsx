@@ -9,7 +9,14 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Loader2, Undo2 } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Undo2,
+  User,
+  FileText,
+} from 'lucide-react'
 import { KeyLoan, KeyLoanWithDetails, Key } from '@/services/types'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
@@ -406,9 +413,27 @@ export function KeyLoansTable({
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            {/* Action buttons */}
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-lg font-semibold">Nycklar</h3>
+                            {/* Contact info and Action buttons */}
+                            <div className="flex items-start justify-between gap-4">
+                              {/* Left: Contact Person and Description */}
+                              <div className="flex-1 space-y-1.5">
+                                {loanDetails.contactPerson && (
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">
+                                      {loanDetails.contactPerson}
+                                    </span>
+                                  </div>
+                                )}
+                                {loanDetails.description && (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    <span>{loanDetails.description}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right: Action buttons */}
                               <div className="flex items-center gap-2">
                                 {/* Return button - only show for active loans */}
                                 {isActive && (
