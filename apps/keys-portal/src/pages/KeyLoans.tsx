@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { KeyLoansHeader } from '@/components/key-loans/KeyLoansHeader'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
+import { PaginationControls } from '@/components/common/PaginationControls'
 import { Input } from '@/components/ui/input'
 
 import { KeyLoan } from '@/services/types'
@@ -39,100 +40,101 @@ export default function KeyLoans() {
   const [searchInput, setSearchInput] = useState(searchQuery)
 
   // Load key loans from API
-  const loadKeyLoans = useCallback(async () => {
-    try {
-      setIsLoading(true)
+  const loadKeyLoans = useCallback(
+    async (page: number = 1, limit: number = 60) => {
+      try {
+        setIsLoading(true)
 
-      // Build search parameters
-      const params: Record<string, string> = {}
+        // Build search parameters
+        const params: Record<string, string> = {}
 
-      // Search query (searches by key name, rental object code, or contact)
-      if (searchQuery.trim().length >= 3) {
-        params.keyNameOrObjectCode = searchQuery.trim()
-      }
+        // Search query (searches by key name, rental object code, or contact)
+        if (searchQuery.trim().length >= 3) {
+          params.keyNameOrObjectCode = searchQuery.trim()
+        }
 
-      // Loan type filter
-      if (loanTypeFilter) {
-        params.loanType = loanTypeFilter
-      }
+        // Loan type filter
+        if (loanTypeFilter) {
+          params.loanType = loanTypeFilter
+        }
 
-      // Key count filters
-      if (minKeys !== null) {
-        params.minKeys = minKeys.toString()
-      }
-      if (maxKeys !== null) {
-        params.maxKeys = maxKeys.toString()
-      }
+        // Key count filters
+        if (minKeys !== null) {
+          params.minKeys = minKeys.toString()
+        }
+        if (maxKeys !== null) {
+          params.maxKeys = maxKeys.toString()
+        }
 
-      // Picked up date filters
-      if (hasPickedUp !== null) {
-        params.hasPickedUp = hasPickedUp
-      }
-      if (pickedUpAfter) {
-        params.pickedUpAt = `>=${pickedUpAfter}`
-      }
-      if (pickedUpBefore) {
-        params.pickedUpAt = params.pickedUpAt
-          ? `${params.pickedUpAt},<=${pickedUpBefore}`
-          : `<=${pickedUpBefore}`
-      }
+        // Picked up date filters
+        if (hasPickedUp !== null) {
+          params.hasPickedUp = hasPickedUp
+        }
+        if (pickedUpAfter) {
+          params.pickedUpAt = `>=${pickedUpAfter}`
+        }
+        if (pickedUpBefore) {
+          params.pickedUpAt = params.pickedUpAt
+            ? `${params.pickedUpAt},<=${pickedUpBefore}`
+            : `<=${pickedUpBefore}`
+        }
 
-      // Returned date filters
-      if (hasReturned !== null) {
-        params.hasReturned = hasReturned
-      }
-      if (returnedAfter) {
-        params.returnedAt = `>=${returnedAfter}`
-      }
-      if (returnedBefore) {
-        params.returnedAt = params.returnedAt
-          ? `${params.returnedAt},<=${returnedBefore}`
-          : `<=${returnedBefore}`
-      }
+        // Returned date filters
+        if (hasReturned !== null) {
+          params.hasReturned = hasReturned
+        }
+        if (returnedAfter) {
+          params.returnedAt = `>=${returnedAfter}`
+        }
+        if (returnedBefore) {
+          params.returnedAt = params.returnedAt
+            ? `${params.returnedAt},<=${returnedBefore}`
+            : `<=${returnedBefore}`
+        }
 
-      // If no filters are set, use the list endpoint
-      if (Object.keys(params).length === 0) {
-        const loans = await keyLoanService.list()
-        setKeyLoans(loans)
-      } else {
-        // Use search endpoint with filters
-        const loans = await keyLoanService.search(params)
-        setKeyLoans(loans)
+        // Always use search endpoint with pagination (even with empty params)
+        const response = await keyLoanService.search(params, page, limit)
+        setKeyLoans(response.content)
+        pagination.setPaginationMeta(response._meta)
+      } catch (error) {
+        console.error('Failed to load key loans:', error)
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte ladda nyckellån.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Failed to load key loans:', error)
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte ladda nyckellån.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [
-    searchQuery,
-    loanTypeFilter,
-    minKeys,
-    maxKeys,
-    hasPickedUp,
-    pickedUpAfter,
-    pickedUpBefore,
-    hasReturned,
-    returnedAfter,
-    returnedBefore,
-    toast,
-  ])
+    },
+    [
+      searchQuery,
+      loanTypeFilter,
+      minKeys,
+      maxKeys,
+      hasPickedUp,
+      pickedUpAfter,
+      pickedUpBefore,
+      hasReturned,
+      returnedAfter,
+      returnedBefore,
+      toast,
+      pagination.setPaginationMeta,
+    ]
+  )
 
   // Sync local search input with URL query
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
 
-  // Fetch data whenever filters change
+  // Fetch data whenever filters or pagination changes
   useEffect(() => {
-    loadKeyLoans()
+    loadKeyLoans(pagination.currentPage, pagination.currentLimit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    pagination.currentPage,
+    pagination.currentLimit,
     searchQuery,
     loanTypeFilter,
     minKeys,
@@ -148,10 +150,11 @@ export default function KeyLoans() {
   const handleSearchChange = useCallback(
     (query: string) => {
       setSearchInput(query)
-      // Update URL with search query
+      // Update URL with search query and reset to page 1
       if (query.trim().length >= 3 || query.trim().length === 0) {
         pagination.updateUrlParams({
           q: query.trim().length > 0 ? query.trim() : null,
+          page: '1',
         })
       }
     },
@@ -162,6 +165,7 @@ export default function KeyLoans() {
     (value: string | null) => {
       pagination.updateUrlParams({
         loanType: value,
+        page: '1',
       })
     },
     [pagination]
@@ -172,6 +176,7 @@ export default function KeyLoans() {
       pagination.updateUrlParams({
         minKeys: min !== null ? min.toString() : null,
         maxKeys: max !== null ? max.toString() : null,
+        page: '1',
       })
     },
     [pagination]
@@ -184,6 +189,7 @@ export default function KeyLoans() {
           value.hasValue === null ? null : value.hasValue ? 'true' : 'false',
         pickedUpAfter: value.after,
         pickedUpBefore: value.before,
+        page: '1',
       })
     },
     [pagination]
@@ -196,6 +202,7 @@ export default function KeyLoans() {
           value.hasValue === null ? null : value.hasValue ? 'true' : 'false',
         returnedAfter: value.after,
         returnedBefore: value.before,
+        page: '1',
       })
     },
     [pagination]
@@ -208,7 +215,7 @@ export default function KeyLoans() {
   return (
     <div className="container mx-auto py-8 px-4">
       <KeyLoansHeader
-        totalLoans={keyLoans.length}
+        totalLoans={pagination.paginationMeta.totalRecords || keyLoans.length}
         activeLoans={activeLoanCount}
         returnedLoans={returnedLoanCount}
       />
@@ -226,7 +233,9 @@ export default function KeyLoans() {
       <KeyLoansTable
         keyLoans={keyLoans}
         isLoading={isLoading}
-        onRefresh={loadKeyLoans}
+        onRefresh={() =>
+          loadKeyLoans(pagination.currentPage, pagination.currentLimit)
+        }
         loanTypeFilter={loanTypeFilter}
         onLoanTypeFilterChange={handleLoanTypeFilterChange}
         minKeys={minKeys}
@@ -244,6 +253,18 @@ export default function KeyLoans() {
           before: returnedBefore || null,
         }}
         onReturnedDateChange={handleReturnedDateChange}
+      />
+
+      <PaginationControls
+        paginationMeta={pagination.paginationMeta}
+        pageLimit={pagination.currentLimit}
+        customLimit={pagination.customLimit}
+        isFocused={pagination.isFocused}
+        onPageChange={pagination.handlePageChange}
+        onLimitChange={pagination.handleLimitChange}
+        onCustomLimitChange={pagination.setCustomLimit}
+        onCustomLimitSubmit={pagination.handleCustomLimitSubmit}
+        onFocusChange={pagination.setIsFocused}
       />
     </div>
   )
