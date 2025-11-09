@@ -25,7 +25,6 @@ import { MaintenanceKeysTable } from '@/components/maintenance/MaintenanceKeysTa
 import { MaintenanceReceiptActions } from '@/components/maintenance/MaintenanceReceiptActions'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
-import { NullableDateFilterDropdown } from '@/components/ui/nullable-date-filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter-dropdown'
@@ -344,20 +343,32 @@ export function KeyLoansTable({
               <TableHead className="font-medium">
                 <div className="flex items-center gap-1">
                   Upphämtat
-                  <NullableDateFilterDropdown
-                    label="Upphämtat"
-                    value={pickedUpDateFilter}
-                    onChange={onPickedUpDateChange}
+                  <DateRangeFilterDropdown
+                    afterDate={pickedUpDateFilter.after}
+                    beforeDate={pickedUpDateFilter.before}
+                    onDatesChange={(after, before) =>
+                      onPickedUpDateChange({
+                        hasValue: pickedUpDateFilter.hasValue,
+                        after,
+                        before,
+                      })
+                    }
                   />
                 </div>
               </TableHead>
               <TableHead className="font-medium">
                 <div className="flex items-center gap-1">
                   Återlämnat
-                  <NullableDateFilterDropdown
-                    label="Återlämnat"
-                    value={returnedDateFilter}
-                    onChange={onReturnedDateChange}
+                  <DateRangeFilterDropdown
+                    afterDate={returnedDateFilter.after}
+                    beforeDate={returnedDateFilter.before}
+                    onDatesChange={(after, before) =>
+                      onReturnedDateChange({
+                        hasValue: returnedDateFilter.hasValue,
+                        after,
+                        before,
+                      })
+                    }
                   />
                 </div>
               </TableHead>
