@@ -1,16 +1,13 @@
 'use client'
 
-import * as React from 'react'
-import { Filter } from 'lucide-react'
+import { Filter, Check } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 export interface NullableFilterValue {
@@ -38,55 +35,30 @@ export function DualNullableFilterDropdown({
 }: DualNullableFilterDropdownProps) {
   const hasActiveFilter = value1.hasValue !== null || value2.hasValue !== null
 
-  // Local state for both filters
-  const [localValue1, setLocalValue1] = React.useState<string>(
-    value1.hasValue === null ? 'all' : value1.hasValue ? 'has-value' : 'no-value'
-  )
-  const [localValue2, setLocalValue2] = React.useState<string>(
-    value2.hasValue === null ? 'all' : value2.hasValue ? 'has-value' : 'no-value'
-  )
+  const handleSelect1Has = () => {
+    onChange1({ hasValue: value1.hasValue === true ? null : true })
+  }
 
-  // Sync local state with props when they change
-  React.useEffect(() => {
-    setLocalValue1(
-      value1.hasValue === null
-        ? 'all'
-        : value1.hasValue
-          ? 'has-value'
-          : 'no-value'
-    )
-  }, [value1.hasValue])
+  const handleSelect1No = () => {
+    onChange1({ hasValue: value1.hasValue === false ? null : false })
+  }
 
-  React.useEffect(() => {
-    setLocalValue2(
-      value2.hasValue === null
-        ? 'all'
-        : value2.hasValue
-          ? 'has-value'
-          : 'no-value'
-    )
-  }, [value2.hasValue])
+  const handleSelect2Has = () => {
+    onChange2({ hasValue: value2.hasValue === true ? null : true })
+  }
 
-  const handleApply = () => {
-    const hasValue1 =
-      localValue1 === 'all' ? null : localValue1 === 'has-value' ? true : false
-    const hasValue2 =
-      localValue2 === 'all' ? null : localValue2 === 'has-value' ? true : false
-
-    onChange1({ hasValue: hasValue1 })
-    onChange2({ hasValue: hasValue2 })
+  const handleSelect2No = () => {
+    onChange2({ hasValue: value2.hasValue === false ? null : false })
   }
 
   const handleClearAll = () => {
-    setLocalValue1('all')
-    setLocalValue2('all')
     onChange1({ hasValue: null })
     onChange2({ hasValue: null })
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
@@ -100,85 +72,78 @@ export function DualNullableFilterDropdown({
             className={cn('h-3 w-3', hasActiveFilter && 'fill-current')}
           />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-4" align="start">
-        <div className="space-y-6">
-          {/* Filter 1 */}
-          <div className="flex flex-col gap-3">
-            <Label className="text-sm font-medium">{label1}</Label>
-            <RadioGroup value={localValue1} onValueChange={setLocalValue1}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id={`${label1}-all`} />
-                <Label htmlFor={`${label1}-all`} className="font-normal">
-                  Visa alla
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="has-value" id={`${label1}-has`} />
-                <Label htmlFor={`${label1}-has`} className="font-normal">
-                  Har datum
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="no-value" id={`${label1}-no`} />
-                <Label htmlFor={`${label1}-no`} className="font-normal">
-                  Inget datum
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {/* Group 1 options */}
+        <button
+          onClick={handleSelect1Has}
+          className={cn(
+            'relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
+            value1.hasValue === true && 'bg-accent'
+          )}
+        >
+          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+            {value1.hasValue === true && <Check className="h-4 w-4" />}
+          </span>
+          <span className="pl-6">Upphämtad</span>
+        </button>
+        <button
+          onClick={handleSelect1No}
+          className={cn(
+            'relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
+            value1.hasValue === false && 'bg-accent'
+          )}
+        >
+          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+            {value1.hasValue === false && <Check className="h-4 w-4" />}
+          </span>
+          <span className="pl-6">Ej upphämtad</span>
+        </button>
 
-          {/* Divider */}
-          <div className="border-t" />
+        {/* Separator */}
+        <div className="border-t my-1" />
 
-          {/* Filter 2 */}
-          <div className="flex flex-col gap-3">
-            <Label className="text-sm font-medium">{label2}</Label>
-            <RadioGroup value={localValue2} onValueChange={setLocalValue2}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id={`${label2}-all`} />
-                <Label htmlFor={`${label2}-all`} className="font-normal">
-                  Visa alla
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="has-value" id={`${label2}-has`} />
-                <Label htmlFor={`${label2}-has`} className="font-normal">
-                  Har datum
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="no-value" id={`${label2}-no`} />
-                <Label htmlFor={`${label2}-no`} className="font-normal">
-                  Inget datum
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+        {/* Group 2 options */}
+        <button
+          onClick={handleSelect2Has}
+          className={cn(
+            'relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
+            value2.hasValue === true && 'bg-accent'
+          )}
+        >
+          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+            {value2.hasValue === true && <Check className="h-4 w-4" />}
+          </span>
+          <span className="pl-6">Återlämnad</span>
+        </button>
+        <button
+          onClick={handleSelect2No}
+          className={cn(
+            'relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground',
+            value2.hasValue === false && 'bg-accent'
+          )}
+        >
+          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+            {value2.hasValue === false && <Check className="h-4 w-4" />}
+          </span>
+          <span className="pl-6">Ej återlämnad</span>
+        </button>
 
-          {/* Action buttons */}
-          <div className="flex gap-2 pt-2">
+        {/* Clear button */}
+        {hasActiveFilter && (
+          <>
+            <div className="border-t my-1" />
             <Button
-              variant="default"
+              variant="ghost"
               size="sm"
-              className="flex-1"
-              onClick={handleApply}
+              className="w-full h-8 justify-start px-2 text-xs"
+              onClick={handleClearAll}
             >
-              Använd
+              Rensa filter
             </Button>
-            {hasActiveFilter && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={handleClearAll}
-              >
-                Rensa
-              </Button>
-            )}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
