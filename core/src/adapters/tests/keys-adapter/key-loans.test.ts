@@ -59,11 +59,11 @@ describe('keys-adapter - KeyLoans & Logs', () => {
         const paginatedResponse = {
           content: [mockedKeyLoan],
           _meta: { totalRecords: 1, page: 1, limit: 10, count: 1 },
-          _links: [{ href: '/key-loans/search?keys=key1%2Ckey2', rel: 'self' }],
+          _links: [{ href: '/key-loans/search?keys=key1&keys=key2', rel: 'self' }],
         }
 
         nock(config.keysService.url)
-          .get('/key-loans/search?keys=key1%2Ckey2')
+          .get('/key-loans/search?keys=key1&keys=key2')
           .reply(200, paginatedResponse)
 
         const result = await keysAdapter.KeyLoansApi.search({
