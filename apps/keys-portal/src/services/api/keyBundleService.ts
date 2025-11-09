@@ -156,7 +156,9 @@ export async function getBundlesByContactWithLoanedKeys(
 /**
  * Get all key bundles that contain a specific key
  */
-export async function getKeyBundlesByKeyId(keyId: string): Promise<KeyBundle[]> {
+export async function getKeyBundlesByKeyId(
+  keyId: string
+): Promise<KeyBundle[]> {
   const { data, error } = await GET('/key-bundles/by-key/{keyId}', {
     params: {
       path: { keyId },
