@@ -8,7 +8,6 @@ import { KeyLoan } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
-import { NullableDateFilterValue } from '@/components/ui/nullable-date-filter-dropdown'
 
 export default function KeyLoans() {
   const pagination = useUrlPagination()
@@ -50,9 +49,9 @@ export default function KeyLoans() {
         setIsLoading(true)
 
         // Build search parameters
-        const params: Record<string, string> = {}
+        const params: Record<string, string | string[]> = {}
 
-        // Search query (searches by key name, rental object code, or contact)
+        // Search query (searches by key name, rental object code, contact, or contact2)
         if (searchQuery.trim().length >= 3) {
           params.keyNameOrObjectCode = searchQuery.trim()
         }
@@ -267,7 +266,7 @@ export default function KeyLoans() {
       {/* Search input */}
       <div className="mb-4">
         <Input
-          placeholder="Sök kontakt, nyckel eller objekt..."
+          placeholder="Sök kundnummer, nyckel eller objekt..."
           value={searchInput}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-md"

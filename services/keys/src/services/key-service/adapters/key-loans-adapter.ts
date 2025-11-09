@@ -110,7 +110,7 @@ export async function checkActiveKeyLoans(
 
 export interface KeyLoansSearchOptions {
   /**
-   * Search by key name or rental object code (requires JOIN with keys table)
+   * Search by key name, rental object code, contact, or contact2
    */
   keyNameOrObjectCode?: string
 
@@ -153,20 +153,26 @@ export function getKeyLoansSearchQuery(
 ): Knex.QueryBuilder {
   let query = dbConnection(TABLE).select(`${TABLE}.*`)
 
-  // Filter by key name or rental object code using EXISTS subquery
+  // Filter by key name, rental object code, or contact
   if (options.keyNameOrObjectCode) {
     const searchTerm = `%${options.keyNameOrObjectCode}%`
 
-    query = query.whereRaw(
-      `EXISTS (
-        SELECT 1
-        FROM ?? k
-        CROSS APPLY OPENJSON(??) AS keyIds
-        WHERE k.id = TRY_CAST(keyIds.value AS uniqueidentifier)
-        AND (k.keyName LIKE ? OR k.rentalObjectCode LIKE ?)
-      )`,
-      [KEYS_TABLE, `${TABLE}.keys`, searchTerm, searchTerm]
-    )
+    query = query.where(function () {
+      // Search in keys (keyName or rentalObjectCode)
+      this.whereRaw(
+        `EXISTS (
+          SELECT 1
+          FROM ?? k
+          CROSS APPLY OPENJSON(??) AS keyIds
+          WHERE k.id = TRY_CAST(keyIds.value AS uniqueidentifier)
+          AND (k.keyName LIKE ? OR k.rentalObjectCode LIKE ?)
+        )`,
+        [KEYS_TABLE, `${TABLE}.keys`, searchTerm, searchTerm]
+      )
+        // OR search in contact fields
+        .orWhere(`${TABLE}.contact`, 'like', searchTerm)
+        .orWhere(`${TABLE}.contact2`, 'like', searchTerm)
+    })
   }
 
   // Filter by minimum number of keys
