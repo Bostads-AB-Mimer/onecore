@@ -19,7 +19,8 @@ import { MaintenanceReceiptActions } from '@/components/maintenance/MaintenanceR
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NullableDateFilterDropdown } from '@/components/ui/nullable-date-filter-dropdown'
-import { Input } from '@/components/ui/input'
+import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
+import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 
 interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
@@ -31,6 +32,12 @@ interface KeyLoansTableProps {
   minKeys: number | null
   maxKeys: number | null
   onKeyCountChange: (min: number | null, max: number | null) => void
+  createdAtAfter: string | null
+  createdAtBefore: string | null
+  onCreatedAtDateChange: (
+    afterDate: string | null,
+    beforeDate: string | null
+  ) => void
   pickedUpDateFilter: {
     hasValue: boolean | null
     after: string | null
@@ -67,6 +74,9 @@ export function KeyLoansTable({
   minKeys,
   maxKeys,
   onKeyCountChange,
+  createdAtAfter,
+  createdAtBefore,
+  onCreatedAtDateChange,
   pickedUpDateFilter,
   onPickedUpDateChange,
   returnedDateFilter,
@@ -277,36 +287,26 @@ export function KeyLoansTable({
                 </div>
               </TableHead>
               <TableHead className="font-medium">
-                <div className="flex items-center gap-1 flex-col items-start">
-                  <span>Antal nycklar</span>
-                  <div className="flex gap-1">
-                    <Input
-                      type="number"
-                      placeholder="Min"
-                      value={minKeys ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        onKeyCountChange(
-                          val ? parseInt(val, 10) : null,
-                          maxKeys
-                        )
-                      }}
-                      className="w-16 h-7 text-xs"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Max"
-                      value={maxKeys ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        onKeyCountChange(
-                          minKeys,
-                          val ? parseInt(val, 10) : null
-                        )
-                      }}
-                      className="w-16 h-7 text-xs"
-                    />
-                  </div>
+                <div className="flex items-center gap-1">
+                  Antal nycklar
+                  <NumberRangeFilterDropdown
+                    minValue={minKeys}
+                    maxValue={maxKeys}
+                    onRangeChange={onKeyCountChange}
+                    minLabel="Minst antal nycklar"
+                    maxLabel="Max antal nycklar"
+                  />
+                </div>
+              </TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="font-medium">
+                <div className="flex items-center gap-1">
+                  Skapad
+                  <DateRangeFilterDropdown
+                    afterDate={createdAtAfter}
+                    beforeDate={createdAtBefore}
+                    onDatesChange={onCreatedAtDateChange}
+                  />
                 </div>
               </TableHead>
               <TableHead className="font-medium">
@@ -329,14 +329,33 @@ export function KeyLoansTable({
                   />
                 </div>
               </TableHead>
-              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {keyLoans.map((loan) => {
               const isExpanded = expandedLoanId === loan.id
               const keyCount = getKeyCount(loan.keys)
-              const isActive = !loan.returnedAt
+              const isPickedUp = !!loan.pickedUpAt
+              const isReturned = !!loan.returnedAt
+              const isActive = isPickedUp && !isReturned
+
+              // Determine status
+              let statusBadge
+              if (isReturned) {
+                statusBadge = <Badge variant="secondary">Återlämnad</Badge>
+              } else if (isPickedUp) {
+                statusBadge = (
+                  <Badge variant="default" className="bg-green-600">
+                    Aktiv
+                  </Badge>
+                )
+              } else {
+                statusBadge = (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    Ej upphämtad
+                  </Badge>
+                )
+              }
 
               return (
                 <React.Fragment key={loan.id}>
@@ -367,23 +386,16 @@ export function KeyLoansTable({
                     <TableCell>
                       <Badge variant="secondary">{keyCount}</Badge>
                     </TableCell>
+                    <TableCell>{statusBadge}</TableCell>
+                    <TableCell>{formatDate(loan.createdAt)}</TableCell>
                     <TableCell>{formatDate(loan.pickedUpAt)}</TableCell>
                     <TableCell>{formatDate(loan.returnedAt)}</TableCell>
-                    <TableCell>
-                      {isActive ? (
-                        <Badge variant="default" className="bg-green-600">
-                          Aktiv
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Återlämnad</Badge>
-                      )}
-                    </TableCell>
                   </TableRow>
 
                   {/* Expanded keys section */}
                   {isExpanded && (
                     <TableRow>
-                      <TableCell colSpan={7} className="p-6 bg-muted/30">
+                      <TableCell colSpan={8} className="p-6 bg-muted/30">
                         {isLoadingDetails ? (
                           <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin" />
