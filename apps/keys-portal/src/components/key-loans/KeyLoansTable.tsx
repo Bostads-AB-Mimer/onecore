@@ -28,6 +28,7 @@ import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NullableDateFilterDropdown } from '@/components/ui/nullable-date-filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
+import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter-dropdown'
 
 interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
@@ -305,7 +306,31 @@ export function KeyLoansTable({
                   />
                 </div>
               </TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="font-medium">
+                <div className="flex items-center gap-1">
+                  Status
+                  <DualNullableFilterDropdown
+                    label1="Upphämtat"
+                    label2="Återlämnat"
+                    value1={{ hasValue: pickedUpDateFilter.hasValue }}
+                    value2={{ hasValue: returnedDateFilter.hasValue }}
+                    onChange1={(value) =>
+                      onPickedUpDateChange({
+                        hasValue: value.hasValue,
+                        after: null,
+                        before: null,
+                      })
+                    }
+                    onChange2={(value) =>
+                      onReturnedDateChange({
+                        hasValue: value.hasValue,
+                        after: null,
+                        before: null,
+                      })
+                    }
+                  />
+                </div>
+              </TableHead>
               <TableHead className="font-medium">
                 <div className="flex items-center gap-1">
                   Skapad
