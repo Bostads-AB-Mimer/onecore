@@ -259,6 +259,7 @@ export default function KeyLoans() {
     <div className="container mx-auto py-8 px-4">
       <KeyLoansHeader
         totalLoans={pagination.paginationMeta.totalRecords || keyLoans.length}
+        currentPageCount={keyLoans.length}
         activeLoans={activeLoanCount}
         returnedLoans={returnedLoanCount}
       />
