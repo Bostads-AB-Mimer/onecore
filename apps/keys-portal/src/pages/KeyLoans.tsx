@@ -74,26 +74,36 @@ export default function KeyLoans() {
         if (hasPickedUp !== null) {
           params.hasPickedUp = hasPickedUp
         }
+        const pickedUpDateFilters: string[] = []
         if (pickedUpAfter) {
-          params.pickedUpAt = `>=${pickedUpAfter}`
+          pickedUpDateFilters.push(`>=${pickedUpAfter}`)
         }
         if (pickedUpBefore) {
-          params.pickedUpAt = params.pickedUpAt
-            ? `${params.pickedUpAt},<=${pickedUpBefore}`
-            : `<=${pickedUpBefore}`
+          pickedUpDateFilters.push(`<=${pickedUpBefore}`)
+        }
+        if (pickedUpDateFilters.length > 0) {
+          params.pickedUpAt =
+            pickedUpDateFilters.length === 1
+              ? pickedUpDateFilters[0]
+              : pickedUpDateFilters
         }
 
         // Returned date filters
         if (hasReturned !== null) {
           params.hasReturned = hasReturned
         }
+        const returnedDateFilters: string[] = []
         if (returnedAfter) {
-          params.returnedAt = `>=${returnedAfter}`
+          returnedDateFilters.push(`>=${returnedAfter}`)
         }
         if (returnedBefore) {
-          params.returnedAt = params.returnedAt
-            ? `${params.returnedAt},<=${returnedBefore}`
-            : `<=${returnedBefore}`
+          returnedDateFilters.push(`<=${returnedBefore}`)
+        }
+        if (returnedDateFilters.length > 0) {
+          params.returnedAt =
+            returnedDateFilters.length === 1
+              ? returnedDateFilters[0]
+              : returnedDateFilters
         }
 
         // Created date filters
@@ -108,7 +118,7 @@ export default function KeyLoans() {
           params.createdAt =
             createdDateFilters.length === 1
               ? createdDateFilters[0]
-              : createdDateFilters.join(',')
+              : createdDateFilters
         }
 
         // Always use search endpoint with pagination (even with empty params)
