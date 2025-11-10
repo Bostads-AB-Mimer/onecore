@@ -820,7 +820,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful creation
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'keyLoan',
         objectId: result.data.id,
@@ -830,7 +833,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'keyLoan', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'keyLoan',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -933,7 +941,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful update
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'update',
         objectType: 'keyLoan',
         objectId: result.data.id,
@@ -943,7 +954,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'update', objectType: 'keyLoan', objectId: result.data.id },
+        {
+          error,
+          eventType: 'update',
+          objectType: 'keyLoan',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -1023,7 +1039,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful deletion
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'delete',
         objectType: 'keyLoan',
         objectId: ctx.params.id,
@@ -1033,7 +1052,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'delete', objectType: 'keyLoan', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'delete',
+          objectType: 'keyLoan',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -1457,7 +1481,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful creation
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'key',
         objectId: result.data.id,
@@ -1467,7 +1494,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'key', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'key',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -1559,7 +1591,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType,
         objectType: 'key',
         objectId: result.data.id,
@@ -1647,7 +1682,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful deletion
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'delete',
         objectType: 'key',
         objectId: ctx.params.id,
@@ -1657,7 +1695,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'delete', objectType: 'key', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'delete',
+          objectType: 'key',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -2068,7 +2111,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful creation
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'keySystem',
         objectId: result.data.id,
@@ -2078,7 +2124,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'keySystem', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'keySystem',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -2174,7 +2225,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful update
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'update',
         objectType: 'keySystem',
         objectId: result.data.id,
@@ -2184,7 +2238,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'update', objectType: 'keySystem', objectId: result.data.id },
+        {
+          error,
+          eventType: 'update',
+          objectType: 'keySystem',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -2264,7 +2323,10 @@ export const routes = (router: KoaRouter) => {
     // Create log entry after successful deletion
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'delete',
         objectType: 'keySystem',
         objectId: ctx.params.id,
@@ -2274,7 +2336,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'delete', objectType: 'keySystem', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'delete',
+          objectType: 'keySystem',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -2984,7 +3051,10 @@ export const routes = (router: KoaRouter) => {
     // Log key note creation
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'keyNote',
         objectId: result.data.id,
@@ -2994,7 +3064,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'keyNote', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'keyNote',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -3082,7 +3157,10 @@ export const routes = (router: KoaRouter) => {
     // Log key note update
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'update',
         objectType: 'keyNote',
         objectId: result.data.id,
@@ -3092,7 +3170,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'update', objectType: 'keyNote', objectId: result.data.id },
+        {
+          error,
+          eventType: 'update',
+          objectType: 'keyNote',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -3171,7 +3254,10 @@ export const routes = (router: KoaRouter) => {
     // Log receipt creation
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'receipt',
         objectId: result.data.id,
@@ -3181,7 +3267,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'receipt', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'receipt',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -3392,7 +3483,10 @@ export const routes = (router: KoaRouter) => {
     // Log receipt update
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'update',
         objectType: 'receipt',
         objectId: ctx.params.id,
@@ -3402,7 +3496,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'update', objectType: 'receipt', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'update',
+          objectType: 'receipt',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -3483,7 +3582,10 @@ export const routes = (router: KoaRouter) => {
     // Log receipt deletion
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'delete',
         objectType: 'receipt',
         objectId: ctx.params.id,
@@ -3493,7 +3595,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'delete', objectType: 'receipt', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'delete',
+          objectType: 'receipt',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -3624,7 +3731,10 @@ export const routes = (router: KoaRouter) => {
           const fileSizeKB = (ctx.file.size / 1024).toFixed(2)
           try {
             await LogsApi.create({
-              userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+              userName:
+                ctx.state.user?.name ||
+                ctx.state.user?.preferred_username ||
+                'system',
               eventType: 'update',
               objectType: 'keySystem',
               objectId: ctx.params.id,
@@ -3632,7 +3742,12 @@ export const routes = (router: KoaRouter) => {
             })
           } catch (error) {
             logger.error(
-              { error, eventType: 'update', objectType: 'keySystem', objectId: ctx.params.id },
+              {
+                error,
+                eventType: 'update',
+                objectType: 'keySystem',
+                objectId: ctx.params.id,
+              },
               'Failed to create log entry'
             )
           }
@@ -3772,7 +3887,10 @@ export const routes = (router: KoaRouter) => {
     if (keySystemResult.ok) {
       try {
         await LogsApi.create({
-          userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+          userName:
+            ctx.state.user?.name ||
+            ctx.state.user?.preferred_username ||
+            'system',
           eventType: 'update',
           objectType: 'keySystem',
           objectId: ctx.params.id,
@@ -3780,7 +3898,12 @@ export const routes = (router: KoaRouter) => {
         })
       } catch (error) {
         logger.error(
-          { error, eventType: 'update', objectType: 'keySystem', objectId: ctx.params.id },
+          {
+            error,
+            eventType: 'update',
+            objectType: 'keySystem',
+            objectId: ctx.params.id,
+          },
           'Failed to create log entry'
         )
       }
@@ -3904,7 +4027,10 @@ export const routes = (router: KoaRouter) => {
 
         try {
           await LogsApi.create({
-            userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+            userName:
+              ctx.state.user?.name ||
+              ctx.state.user?.preferred_username ||
+              'system',
             eventType: 'update',
             objectType: 'receipt',
             objectId: ctx.params.id,
@@ -3912,7 +4038,12 @@ export const routes = (router: KoaRouter) => {
           })
         } catch (error) {
           logger.error(
-            { error, eventType: 'update', objectType: 'receipt', objectId: ctx.params.id },
+            {
+              error,
+              eventType: 'update',
+              objectType: 'receipt',
+              objectId: ctx.params.id,
+            },
             'Failed to create log entry'
           )
         }
@@ -4068,7 +4199,10 @@ export const routes = (router: KoaRouter) => {
 
         try {
           await LogsApi.create({
-            userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+            userName:
+              ctx.state.user?.name ||
+              ctx.state.user?.preferred_username ||
+              'system',
             eventType: 'update',
             objectType: 'receipt',
             objectId: ctx.params.id,
@@ -4076,7 +4210,12 @@ export const routes = (router: KoaRouter) => {
           })
         } catch (error) {
           logger.error(
-            { error, eventType: 'update', objectType: 'receipt', objectId: ctx.params.id },
+            {
+              error,
+              eventType: 'update',
+              objectType: 'receipt',
+              objectId: ctx.params.id,
+            },
             'Failed to create log entry'
           )
         }
@@ -4256,7 +4395,10 @@ export const routes = (router: KoaRouter) => {
     // Log signature send
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'signature',
         objectId: result.data.id,
@@ -4266,7 +4408,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'signature', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'signature',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -4704,7 +4851,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'keyEvent',
         objectId: keyEvent.id,
@@ -4712,7 +4862,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'keyEvent', objectId: keyEvent.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'keyEvent',
+          objectId: keyEvent.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -4823,7 +4978,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'update',
         objectType: 'keyEvent',
         objectId: ctx.params.id,
@@ -4831,7 +4989,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'update', objectType: 'keyEvent', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'update',
+          objectType: 'keyEvent',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -5104,7 +5267,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'creation',
         objectType: 'keyBundle',
         objectId: result.data.id,
@@ -5114,7 +5280,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'creation', objectType: 'keyBundle', objectId: result.data.id },
+        {
+          error,
+          eventType: 'creation',
+          objectType: 'keyBundle',
+          objectId: result.data.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -5188,7 +5359,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'update',
         objectType: 'keyBundle',
         objectId: ctx.params.id,
@@ -5198,7 +5372,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'update', objectType: 'keyBundle', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'update',
+          objectType: 'keyBundle',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }
@@ -5269,7 +5448,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       await LogsApi.create({
-        userName: ctx.state.user?.name || ctx.state.user?.preferred_username || 'system',
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
         eventType: 'delete',
         objectType: 'keyBundle',
         objectId: ctx.params.id,
@@ -5279,7 +5461,12 @@ export const routes = (router: KoaRouter) => {
       })
     } catch (error) {
       logger.error(
-        { error, eventType: 'delete', objectType: 'keyBundle', objectId: ctx.params.id },
+        {
+          error,
+          eventType: 'delete',
+          objectType: 'keyBundle',
+          objectId: ctx.params.id,
+        },
         'Failed to create log entry'
       )
     }

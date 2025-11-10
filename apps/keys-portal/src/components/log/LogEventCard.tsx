@@ -58,9 +58,11 @@ export function LogEventCard({ log }: { log: Log }) {
                   className={eventTypeColors[log.eventType]}
                 >
                   {log.eventTypeLabel ||
-                    { creation: 'Skapad', update: 'Uppdaterad', delete: 'Raderad' }[
-                      log.eventType
-                    ]}
+                    {
+                      creation: 'Skapad',
+                      update: 'Uppdaterad',
+                      delete: 'Raderad',
+                    }[log.eventType]}
                 </Badge>
                 <Badge
                   variant="outline"
@@ -135,9 +137,11 @@ export function LogEventCard({ log }: { log: Log }) {
                         className={`text-xs ${eventTypeColors[eventLog.eventType]}`}
                       >
                         {eventLog.eventTypeLabel ||
-                          { creation: 'Skapad', update: 'Uppdaterad', delete: 'Raderad' }[
-                            eventLog.eventType
-                          ]}
+                          {
+                            creation: 'Skapad',
+                            update: 'Uppdaterad',
+                            delete: 'Raderad',
+                          }[eventLog.eventType]}
                       </Badge>
                       <Badge
                         variant="outline"

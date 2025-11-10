@@ -566,7 +566,8 @@ export async function buildReceiptDescription(
   const parts: string[] = [`${action}`]
 
   // Receipt type
-  const typeLabel = receipt.receiptType === 'LOAN' ? 'utlånings' : 'återlämnings'
+  const typeLabel =
+    receipt.receiptType === 'LOAN' ? 'utlånings' : 'återlämnings'
   parts.push(`${typeLabel}kvitto`)
 
   // Format
@@ -774,7 +775,9 @@ export function buildKeyNoteDescription(
   },
   action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad'
 ): string {
-  const parts: string[] = [`${action} Nyckelanteckning för ${keyNote.rentalObjectCode}`]
+  const parts: string[] = [
+    `${action} Nyckelanteckning för ${keyNote.rentalObjectCode}`,
+  ]
 
   // Truncate description to ~50 chars for preview
   if (keyNote.description) {
