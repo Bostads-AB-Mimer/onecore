@@ -5,6 +5,7 @@ import { Plus, Copy, Trash2 } from 'lucide-react'
 import type { KeyWithLoanAndEvent } from '@/services/types'
 import { FlexMenu } from './dialogs/FlexMenu'
 import { IncomingFlexMenu } from './dialogs/IncomingFlexMenu'
+import { IncomingOrderMenu } from './dialogs/IncomingOrderMenu'
 
 type Props = {
   selectedKeys: string[]
@@ -33,6 +34,7 @@ export function KeyActionButtons({
 }: Props) {
   const [flexMenuOpen, setFlexMenuOpen] = useState(false)
   const [incomingFlexMenuOpen, setIncomingFlexMenuOpen] = useState(false)
+  const [incomingOrderMenuOpen, setIncomingOrderMenuOpen] = useState(false)
 
   // Helper to check if a key's loan matches current tenant
   const matchesCurrentTenant = (key: KeyWithLoanAndEvent) => {
@@ -58,6 +60,14 @@ export function KeyActionButtons({
     (k) =>
       k.latestEvent &&
       k.latestEvent.type === 'FLEX' &&
+      k.latestEvent.status === 'ORDERED'
+  )
+
+  // Keys that have "beställd extranyckel" status (latest event is ORDER type with ORDERED status)
+  const incomingOrderKeys = selectedKeysData.filter(
+    (k) =>
+      k.latestEvent &&
+      k.latestEvent.type === 'ORDER' &&
       k.latestEvent.status === 'ORDERED'
   )
 
@@ -111,6 +121,18 @@ export function KeyActionButtons({
               >
                 <Copy className="h-3 w-3" />
                 Inkommen flex ({incomingFlexKeys.length})
+              </Button>
+            )}
+            {incomingOrderKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIncomingOrderMenuOpen(true)}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <Copy className="h-3 w-3" />
+                Inkommen extranyckel ({incomingOrderKeys.length})
               </Button>
             )}
             <Button
@@ -173,6 +195,13 @@ export function KeyActionButtons({
         onOpenChange={setIncomingFlexMenuOpen}
         selectedKeys={selectedKeysData}
         allKeys={allKeys || keysWithStatus}
+        onSuccess={onRefresh}
+      />
+
+      <IncomingOrderMenu
+        open={incomingOrderMenuOpen}
+        onOpenChange={setIncomingOrderMenuOpen}
+        selectedKeys={selectedKeysData}
         onSuccess={onRefresh}
       />
     </>
