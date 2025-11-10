@@ -1,7 +1,7 @@
 import { GET } from './base-api'
 import type { components } from './generated/api-types'
 
-type Lease = components['schemas']['Lease']
+export type Lease = components['schemas']['Lease']
 
 async function getByRentalPropertyId(
   rentalPropertyId: string,
