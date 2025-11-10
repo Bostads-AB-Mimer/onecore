@@ -9,12 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Search } from 'lucide-react'
-import {
-  LogEventTypeLabels,
-  LogObjectTypeLabels,
-  type LogEventType,
-  type LogObjectType,
-} from '@/services/types'
+import { type LogEventType, type LogObjectType } from '@/services/types'
 
 type Props = {
   searchQuery: string
@@ -70,11 +65,9 @@ export function LogFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alla typer</SelectItem>
-              {Object.entries(LogEventTypeLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
+              <SelectItem value="creation">Skapad</SelectItem>
+              <SelectItem value="update">Uppdaterad</SelectItem>
+              <SelectItem value="delete">Raderad</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -90,11 +83,14 @@ export function LogFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alla objekt</SelectItem>
-              {Object.entries(LogObjectTypeLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
+              <SelectItem value="key">Nyckel</SelectItem>
+              <SelectItem value="keySystem">Nyckelsystem</SelectItem>
+              <SelectItem value="keyLoan">Nyckellån</SelectItem>
+              <SelectItem value="keyBundle">Nyckelknippe</SelectItem>
+              <SelectItem value="receipt">Kvitto</SelectItem>
+              <SelectItem value="keyEvent">Nyckelhändelse</SelectItem>
+              <SelectItem value="signature">Signatur</SelectItem>
+              <SelectItem value="keyNote">Nyckelanteckning</SelectItem>
             </SelectContent>
           </Select>
         </div>

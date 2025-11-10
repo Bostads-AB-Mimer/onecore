@@ -10,11 +10,7 @@ import {
 import { ScrollText, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatRelativeTime } from '@/lib/dateUtils'
 import { eventTypeColors, objectTypeColors } from './constants'
-import {
-  LogEventTypeLabels,
-  LogObjectTypeLabels,
-  type Log,
-} from '@/services/types'
+import { type Log } from '@/services/types'
 import { logService } from '@/services/api/logService'
 
 export function LogEventCard({ log }: { log: Log }) {
@@ -61,13 +57,28 @@ export function LogEventCard({ log }: { log: Log }) {
                   variant="outline"
                   className={eventTypeColors[log.eventType]}
                 >
-                  {LogEventTypeLabels[log.eventType]}
+                  {log.eventTypeLabel ||
+                    {
+                      creation: 'Skapad',
+                      update: 'Uppdaterad',
+                      delete: 'Raderad',
+                    }[log.eventType]}
                 </Badge>
                 <Badge
                   variant="outline"
                   className={objectTypeColors[log.objectType]}
                 >
-                  {LogObjectTypeLabels[log.objectType]}
+                  {log.objectTypeLabel ||
+                    {
+                      key: 'Nyckel',
+                      keySystem: 'Nyckelsystem',
+                      keyLoan: 'Nyckellån',
+                      keyBundle: 'Nyckelknippe',
+                      receipt: 'Kvitto',
+                      keyEvent: 'Nyckelhändelse',
+                      signature: 'Signatur',
+                      keyNote: 'Nyckelanteckning',
+                    }[log.objectType]}
                 </Badge>
               </div>
 
@@ -125,13 +136,28 @@ export function LogEventCard({ log }: { log: Log }) {
                         variant="outline"
                         className={`text-xs ${eventTypeColors[eventLog.eventType]}`}
                       >
-                        {LogEventTypeLabels[eventLog.eventType]}
+                        {eventLog.eventTypeLabel ||
+                          {
+                            creation: 'Skapad',
+                            update: 'Uppdaterad',
+                            delete: 'Raderad',
+                          }[eventLog.eventType]}
                       </Badge>
                       <Badge
                         variant="outline"
                         className={`text-xs ${objectTypeColors[eventLog.objectType]}`}
                       >
-                        {LogObjectTypeLabels[eventLog.objectType]}
+                        {eventLog.objectTypeLabel ||
+                          {
+                            key: 'Nyckel',
+                            keySystem: 'Nyckelsystem',
+                            keyLoan: 'Nyckellån',
+                            keyBundle: 'Nyckelknippe',
+                            receipt: 'Kvitto',
+                            keyEvent: 'Nyckelhändelse',
+                            signature: 'Signatur',
+                            keyNote: 'Nyckelanteckning',
+                          }[eventLog.objectType]}
                       </Badge>
                     </div>
 

@@ -35,9 +35,9 @@ const normalizeLog = (row: any): Log => ({
   objectType: row.objectType,
   objectId: row.objectId ?? null,
   description: row.description ?? null,
-  // Context fields (rentalObjectCode, contactId, keyEventId) are used server-side for filtering
-  // via dedicated endpoints (/logs/rental-object/:code and /logs/contact/:id)
-  // They are not included in general log responses to keep the API clean
+  // New optional fields from backend
+  eventTypeLabel: row.eventTypeLabel,
+  objectTypeLabel: row.objectTypeLabel,
 })
 
 export const logService = {
@@ -83,11 +83,9 @@ export const logService = {
   },
 
   async getUniqueUsers(): Promise<string[]> {
-    const { data, error } = await GET('/logs', { params: {} })
+    const { data, error } = await GET('/logs/users', { params: {} })
     if (error) throw error
-    const rows = (data?.content ?? []) as any[]
-    const users = rows.map((r) => r.userName).filter(Boolean)
-    return Array.from(new Set(users)).sort()
+    return (data?.content ?? []) as string[]
   },
 
   async fetchLogsByObjectId(objectId: string): Promise<Log[]> {
