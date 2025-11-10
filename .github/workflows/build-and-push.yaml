@@ -33,12 +33,10 @@ jobs:
   prepare:
     if: >
       (
-        # Run when a tag is created or pushed
         (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')) &&
         (github.event_name == 'push' || github.event_name == 'create')
       ) ||
       (
-        # Run when an epic/release branch is created
         github.event_name == 'create' &&
         (
           startsWith(github.ref_name, 'release/') ||
@@ -46,7 +44,6 @@ jobs:
         )
       ) ||
       (
-        # Run when triggered by successful CI workflow on main or epic/release branch
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.conclusion == 'success' &&
         (
@@ -56,7 +53,6 @@ jobs:
         )
       ) ||
       (
-        # Run on pull request against main and epic/release branch
         github.event_name == 'pull_request' &&
         (
           github.base_ref == 'main' ||
