@@ -39,7 +39,7 @@ const db = knex({
     password: config.xpandDatabase.password,
     port: config.xpandDatabase.port,
     database: config.xpandDatabase.database,
-    requestTimeout: 60000,
+    requestTimeout: 120000,
   },
   pool: { min: 0, max: 10 },
   client: 'mssql',
@@ -149,7 +149,7 @@ const getRentalRowSpecificRule = async (
     .innerJoin('hyrad', 'repsk.keycode', 'hyrad.keyhyrad')
     .innerJoin('cmart', 'cmart.keycmart', 'hyrad.keycmart')
     .innerJoin('hyobj', 'hyrad.keyhyobj', 'hyobj.keyhyobj')
-    .where('repsk.year', '2025')
+    .where('repsk.year', '2025') // TODO: Fix year.
     .andWhere('keyrektk', 'INTAKT')
     //.andWhere('hyrad.keycmuni', 'year')
     .andWhere('repst.name', 'Hyresrad')
@@ -286,7 +286,7 @@ export const enrichInvoiceRows = async (
   })
 
   const rentalIds = Object.keys(rentalIdMap)
-  const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025')
+  const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025') // TODO: Fix dynamic year
 
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
@@ -538,18 +538,19 @@ export const getRentalInvoices = async (
   )
 
   const rentalInvoiceQuery = db.raw(
-    'select DISTINCT(invoice) from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh \
-  		inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp \
-	    inner join cmart on cmart.code = krfkr.code \
-	    inner join cmarg on cmart.keycmarg = cmarg.keycmarg \
-      inner Join repsk on cmart.keycmart = repsk.keycode \
-      inner join repsr on repsk.keyrepsr = repsr.keyrepsr \
-      where repsr.keycode IN (' +
+    `select DISTINCT(invoice) from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh
+inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp
+inner join cmart on cmart.code = krfkr.code
+inner join cmarg on cmart.keycmarg = cmarg.keycmarg
+inner Join repsk on cmart.keycmart = repsk.keycode
+inner join repsr on repsk.keyrepsr = repsr.keyrepsr
+where repsr.keycode IN (` +
       keycodes.map((_) => "'" + _ + "'").join(',') +
-      ') \
-      and cmcmp.code = ? \
-      and krfkh.fromdate >= ? AND krfkh.fromdate < ? \
-      and not invoice is null',
+      ')' +
+      `and cmcmp.code = ?
+and krfkh.fromdate >= ? AND krfkh.fromdate < ?
+and not invoice is null
+and not invoice like 'IH%'`,
     [companyId, fromDate, toDate]
   )
 

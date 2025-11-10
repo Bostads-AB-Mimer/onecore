@@ -1,4 +1,4 @@
-import { CounterPartCustomer } from '@src/common/types'
+import { CounterPartCustomer, InvoiceDataRow } from '@src/common/types'
 
 // Mock data factories
 export const createMockCounterPartCustomer = (
@@ -7,8 +7,8 @@ export const createMockCounterPartCustomer = (
   return {
     customerName: 'Västerås kommunala bolag AB',
     counterPartCode: '123456',
-    ledgerAccount: '2899',
-    totalAccount: '1599',
+    ledgerAccount: '1599',
+    totalAccount: '2899',
     ...overrides,
   }
 }
@@ -25,7 +25,16 @@ export const setupDefaultMocks = () => {
     find: () => createMockCounterPartCustomer(),
   })
   saveInvoiceRows.mockResolvedValue(null)
-  addAccountInformation.mockResolvedValue([])
+  addAccountInformation.mockImplementation((rows: InvoiceDataRow[]) => {
+    const newRows = rows.map((row) => {
+      return {
+        ledgerAccount: '1599',
+        totalAccount: '2899',
+        ...row,
+      }
+    })
+    return Promise.resolve(newRows)
+  })
 }
 
 // Reset all mocks
