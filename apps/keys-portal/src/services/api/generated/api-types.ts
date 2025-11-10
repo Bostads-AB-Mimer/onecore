@@ -5,6 +5,128 @@
 
 
 export interface paths {
+  "/dax/contracts": {
+    /**
+     * Get all contracts from DAX
+     * @description Retrieve all contracts from the Amido DAX API
+     */
+    get: {
+      responses: {
+        /** @description List of contracts retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              contracts?: {
+                  contractId?: string;
+                  promisee?: Record<string, never>;
+                  promisor?: Record<string, never>;
+                  accessControlInstance?: Record<string, never>;
+                  state?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Failed to fetch contracts */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/dax/card-owners/{cardOwnerId}": {
+    /**
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the Amido DAX API
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The owning partner ID (defaults to configured partner) */
+          partnerId?: string;
+          /** @description The owning instance ID (defaults to configured instance) */
+          instanceId?: string;
+        };
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string;
+        };
+      };
+      responses: {
+        /** @description Card owner retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwner?: {
+                cardOwnerId?: string;
+                firstname?: string;
+                lastname?: string;
+                email?: string;
+                cards?: unknown[];
+              };
+            };
+          };
+        };
+        /** @description Missing required parameters */
+        400: {
+          content: never;
+        };
+        /** @description Card owner not found */
+        404: {
+          content: never;
+        };
+        /** @description Failed to fetch card owner */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/dax/card-owners/search": {
+    /**
+     * Search for card owners in DAX
+     * @description Query card owners from the Amido DAX API by various criteria
+     */
+    post: {
+      requestBody?: {
+        content: {
+          "application/json": {
+            /** @description Filter by first name */
+            firstname?: string;
+            /** @description Filter by last name */
+            lastname?: string;
+            /** @description Filter by email */
+            email?: string;
+            /** @description Filter by personnummer (Swedish personal number) */
+            personnummer?: string;
+            /**
+             * @description Pagination offset
+             * @default 0
+             */
+            offset?: number;
+            /**
+             * @description Maximum number of results
+             * @default 50
+             */
+            limit?: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Card owners retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwners?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Failed to search card owners */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-bundles": {
     /**
      * List all key bundles
