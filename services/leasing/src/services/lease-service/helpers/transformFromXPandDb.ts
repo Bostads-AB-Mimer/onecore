@@ -1,4 +1,5 @@
 import { Lease, Contact, LeaseStatus } from '@onecore/types'
+import { calculateRentInfo } from './rent-calculation'
 
 const calculateStatus = (
   lastDebitDateString: string,
@@ -42,7 +43,7 @@ const toLease = (
     tenantContactIds,
     tenants,
     rentalProperty: undefined,
-    rentInfo: undefined,
+    rentInfo: calculateRentInfo(row.yearrentrows),
     address: undefined,
     noticeGivenBy: row.noticeGivenBy,
     noticeDate: row.noticeDate,

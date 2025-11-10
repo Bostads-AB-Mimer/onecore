@@ -1,29 +1,21 @@
-import { useQuery } from '@tanstack/react-query'
-
-import { leaseService } from '@/services/api/core'
 import { Separator } from '../ui/v2/Separator'
 import { LeaseInfo } from './LeaseInfo'
 import { TenantCard } from './TenantCard'
 import { Grid } from '../ui/Grid'
+import { Lease } from '@/services/api/core/lease-service'
 
 interface Props {
-  rentalPropertyId: string
+  isLoading: boolean
+  error: Error | null
+  lease: Lease | undefined
 }
 
-export function TenantInformation(props: Props) {
-  const leasesQuery = useQuery({
-    queryKey: ['leases', props.rentalPropertyId],
-    queryFn: () =>
-      leaseService.getByRentalPropertyId(props.rentalPropertyId, {
-        includeContacts: true,
-      }),
-  })
-
-  if (leasesQuery.isLoading) {
+export function TenantInformation({ isLoading, error, lease }: Props) {
+  if (isLoading) {
     return <LoadingSkeleton />
   }
 
-  if (leasesQuery.error || !leasesQuery.data) {
+  if (error || !lease) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -32,8 +24,6 @@ export function TenantInformation(props: Props) {
       </div>
     )
   }
-
-  const lease = leasesQuery.data.find((lease) => lease.status === 'Current')
 
   if (!lease) {
     return (
