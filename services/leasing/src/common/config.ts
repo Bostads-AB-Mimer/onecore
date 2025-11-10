@@ -32,6 +32,8 @@ export interface Config {
   tenfast: {
     baseUrl: string
     apiKey: string
+    username: string
+    password: string
   }
   health: {
     leasingDatabase: {
