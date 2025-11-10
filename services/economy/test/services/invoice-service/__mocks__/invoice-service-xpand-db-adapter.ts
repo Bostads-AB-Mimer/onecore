@@ -1,3 +1,5 @@
+import { InvoiceDataRow } from '@src/common/types'
+
 // Mock functions
 export const getRoundOffInformation = jest.fn()
 export const enrichInvoiceRows = jest.fn()
@@ -9,12 +11,11 @@ export const setupDefaultMocks = () => {
     account: '3999',
     costCode: '123',
   })
-  enrichInvoiceRows.mockResolvedValue({
-    rows: [],
-    errors: [],
-  })
-  addAccountInformation.mockResolvedValue({
-    rows: [],
+  enrichInvoiceRows.mockImplementation((rows: InvoiceDataRow[]) => {
+    return Promise.resolve({
+      rows: rows,
+      errors: [],
+    })
   })
 }
 
@@ -22,5 +23,4 @@ export const setupDefaultMocks = () => {
 export const resetMocks = () => {
   getRoundOffInformation.mockReset()
   enrichInvoiceRows.mockReset()
-  addAccountInformation.mockReset()
 }
