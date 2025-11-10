@@ -11,6 +11,7 @@ type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
+type CreateLogRequest = keys.v1.CreateLogRequest
 type KeyNote = keys.v1.KeyNote
 type Receipt = keys.v1.Receipt
 type CreateReceiptRequest = keys.v1.CreateReceiptRequest
@@ -585,7 +586,7 @@ export const LogsApi = {
   },
 
   create: async (
-    payload: Partial<Log>
+    payload: Partial<CreateLogRequest>
   ): Promise<AdapterResult<Log, 'bad-request' | CommonErr>> => {
     const r = await postJSON<{ content: Log }>(`${BASE}/logs`, payload)
     return r.ok ? ok(r.data.content) : r

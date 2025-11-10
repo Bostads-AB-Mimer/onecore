@@ -1882,38 +1882,6 @@ export interface paths {
       };
     };
   };
-  "/logs/{id}": {
-    /** Get log by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Log found */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Log"];
-            };
-          };
-        };
-        /** @description Not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
-        /** @description Server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
   "/logs/rental-object/{rentalObjectCode}": {
     /**
      * Get all logs for a specific rental object
@@ -1987,6 +1955,95 @@ export interface paths {
         200: {
           content: {
             "application/json": components["schemas"]["PaginatedLogsResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/users": {
+    /**
+     * Get list of unique users who have created logs
+     * @description Returns a sorted list of distinct usernames from the logs table for populating filter dropdowns
+     */
+    get: {
+      responses: {
+        /** @description List of unique usernames */
+        200: {
+          content: {
+            "application/json": {
+              content?: string[];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/metadata": {
+    /**
+     * Get metadata for logs (translations, allowed values)
+     * @description Returns Swedish translations and allowed values for eventTypes, objectTypes, and other enums used in logging
+     */
+    get: {
+      responses: {
+        /** @description Log metadata with translations */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                eventTypes?: {
+                    value?: string;
+                    label?: string;
+                  }[];
+                objectTypes?: {
+                    value?: string;
+                    label?: string;
+                  }[];
+              };
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/{id}": {
+    /** Get log by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Log found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Log"];
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
           };
         };
         /** @description Server error */

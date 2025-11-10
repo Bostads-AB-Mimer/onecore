@@ -1092,6 +1092,19 @@ describe('keys-service', () => {
         .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
         .mockResolvedValue({ ok: true, data: undefined })
 
+      jest.spyOn(keysAdapter.KeySystemsApi, 'get').mockResolvedValue({
+        ok: true,
+        data: {
+          id: 'system-123',
+          systemCode: 'TEST-SYSTEM',
+          type: 'MECHANICAL',
+          name: 'Test System',
+          manufacturer: 'Test Manufacturer',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      })
+
       const res = await request(app.callback()).delete(
         '/key-systems/system-123/schema'
       )
