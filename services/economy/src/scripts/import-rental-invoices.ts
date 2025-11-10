@@ -13,9 +13,11 @@ import config from '../common/config'
 import { sep } from 'node:path'
 import { sendEmail } from '../common/adapters/infobip-adapter'
 
-const importRentalInvoicesScript = async () => {
-  const companyIds = ['001', '006']
-  const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
+const importRentalInvoicesScript = async (
+  companyIds: string[],
+  earliestStartDate: Date,
+  dryRun: boolean = false
+) => {
   const notification: string[] = []
   let hasErrors = false
 
@@ -51,7 +53,9 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
         `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
         contactsCsv
       )
-      await uploadInvoiceFile(contactsFilename, contactsCsv)
+      if (!dryRun) {
+        await uploadInvoiceFile(contactsFilename, contactsCsv)
+      }
       logger.info({ contactsFilename }, 'Uploaded file')
 
       if (companyId !== '006') {
@@ -65,8 +69,10 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
             `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
             aggregatedCsv
           )
-          await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-          logger.info({ aggregatedFilename }, 'Uploaded file')
+          if (!dryRun) {
+            await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+            logger.info({ aggregatedFilename }, 'Uploaded file')
+          }
         }
       }
 
@@ -78,12 +84,14 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
         ledgerCsv
       )
 
-      await uploadInvoiceFile(ledgerFilename, ledgerCsv)
-      logger.info({ ledgerFilename }, 'Uploaded file')
+      if (!dryRun) {
+        await uploadInvoiceFile(ledgerFilename, ledgerCsv)
+        logger.info({ ledgerFilename }, 'Uploaded file')
 
-      await markBatchAsProcessed(parseInt(batchId))
+        await markBatchAsProcessed(parseInt(batchId))
 
-      notification.push('Filer uppladdade till Xledger för import')
+        notification.push('Filer uppladdade till Xledger för import')
+      }
     } else {
       notification.push('Inga nya avier hittade sen senaste importen')
       logger.info({ companyId }, 'No new invoices found')
@@ -92,23 +100,29 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
     notification.push(
       `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
     )
+  }
 
-    if (config.scriptNotificationEmailAddresses) {
-      try {
-        await sendEmail(
-          config.scriptNotificationEmailAddresses,
-          hasErrors
-            ? 'Fel i körning: import av hyresavier till Xledger'
-            : 'Körning: import av hyresavier till Xledger',
-          notification.join('\n')
-        )
-      } catch {
-        // Do not fail script based on failed email.
-      }
+  if (config.scriptNotificationEmailAddresses) {
+    try {
+      await sendEmail(
+        config.scriptNotificationEmailAddresses,
+        hasErrors
+          ? 'Fel i körning: import av hyresavier till Xledger'
+          : 'Körning: import av hyresavier till Xledger',
+        notification.join('\n')
+      )
+    } catch {
+      // Do not fail script based on failed email.
     }
   }
 
   closeDatabases()
 }
 
-importRentalInvoicesScript()
+const companyIds = process.argv[2]?.split(',') ?? ['001', '006']
+const earliestStartDate = process.argv[3]
+  ? new Date(process.argv[3])
+  : new Date('2025-10-01T00:00:00.000Z')
+const dryRun = process.argv[4] ? true : false
+
+importRentalInvoicesScript(companyIds, earliestStartDate, dryRun)
