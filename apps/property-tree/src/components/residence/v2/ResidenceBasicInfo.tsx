@@ -24,16 +24,22 @@ const getCurrentRent = (lease: components['schemas']['Lease'] | undefined) => {
 }
 
 const requiresSpecialHandling = (
-  residence: components['schemas']['ResidenceDetails']
+  lease: components['schemas']['Lease']
 ): boolean => {
-  // TODO: Implement logic to determine if special handling is required
-  return false
+  // Flag for a tenant requiring special handling
+  const tenant = lease?.tenants?.[0]
+  if (!tenant) {
+    return false
+  }
+
+  return Boolean(!!tenant.specialAttention)
 }
 
 const requiresPestControl = (
-  residence: components['schemas']['ResidenceDetails']
+  lease: components['schemas']['Lease']
 ): boolean => {
-  // TODO: Implement logic to determine if pest control is required
+  // Where do we find pest control info?
+
   return false
 }
 
@@ -43,11 +49,9 @@ export const ResidenceBasicInfo = ({
   lease,
 }: ResidenceBasicInfoProps) => {
   // Check if this is a secondary rental based on tenant data
-  const needsSpecialHandling = requiresSpecialHandling(residence)
-  const hasPestIssues = requiresPestControl(residence)
+  const needsSpecialHandling = requiresSpecialHandling(lease)
+  const hasPestIssues = requiresPestControl(lease)
   const rent = getCurrentRent(lease)
-
-  console.log(JSON.stringify(lease, null, 2))
 
   return (
     <TooltipProvider>
