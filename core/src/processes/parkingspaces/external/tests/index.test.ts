@@ -1,11 +1,13 @@
 import {
   ConsumerReport,
   Contact,
+  Invoice,
   ParkingSpace,
   ParkingSpaceApplicationCategory,
 } from '@onecore/types'
 import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import * as economyAdapter from '../../../../adapters/economy-adapter'
 import * as communcationAdapter from '../../../../adapters/communication-adapter'
 import { ProcessStatus } from '../../../../common/types'
 import * as parkingProcesses from '../index'
@@ -16,6 +18,7 @@ import {
   mockedApplicantWithoutLeases,
   mockedApplicantWithLeases,
   mockedApplicantWithoutAddress,
+  mockedUnpaidInvoice,
 } from './index.mocks'
 import { AdapterResult } from '../../../../adapters/types'
 
@@ -36,9 +39,9 @@ describe('parkingspaces', () => {
       [nationalRegistrationNumber: string],
       any
     >
-    let getInternalCreditInformationSpy: jest.SpyInstance<
-      Promise<boolean>,
-      [contactCode: string],
+    let getInvoicesSentToDebtCollectionSpy: jest.SpyInstance<
+      Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>>,
+      [contactCode: string, from?: Date],
       any
     >
     let sendNotificationToContactSpy: jest.SpyInstance<
@@ -72,9 +75,9 @@ describe('parkingspaces', () => {
       getCreditInformationSpy = jest
         .spyOn(leasingAdapter, 'getCreditInformation')
         .mockResolvedValue(successfulConsumerReport)
-      getInternalCreditInformationSpy = jest
-        .spyOn(leasingAdapter, 'getInternalCreditInformation')
-        .mockResolvedValue(false)
+      getInvoicesSentToDebtCollectionSpy = jest
+        .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
+        .mockResolvedValue({ ok: true, data: [] })
       sendNotificationToContactSpy = jest
         .spyOn(communcationAdapter, 'sendNotificationToContact')
         .mockResolvedValue({})
@@ -243,7 +246,7 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
-      getInternalCreditInformationSpy.mockReset()
+      getInvoicesSentToDebtCollectionSpy.mockReset()
       getCreditInformationSpy.mockReset()
 
       await parkingProcesses.createLeaseForExternalParkingSpace(
@@ -252,8 +255,9 @@ describe('parkingspaces', () => {
         '2034-04-21'
       )
 
-      expect(getInternalCreditInformationSpy).toHaveBeenCalledWith(
-        mockedApplicantWithLeases.contactCode
+      expect(getInvoicesSentToDebtCollectionSpy).toHaveBeenCalledWith(
+        mockedApplicantWithLeases.contactCode,
+        expect.any(Date)
       )
       expect(getCreditInformationSpy).not.toHaveBeenCalled()
     })
@@ -263,7 +267,10 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
-      getInternalCreditInformationSpy.mockResolvedValue(false)
+      getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+        ok: true,
+        data: [mockedUnpaidInvoice],
+      })
 
       const result = await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
@@ -316,7 +323,9 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
-      getInternalCreditInformationSpy.mockReset().mockResolvedValue(true)
+      getInvoicesSentToDebtCollectionSpy
+        .mockReset()
+        .mockResolvedValue({ ok: true, data: [] })
       getCreditInformationSpy.mockReset()
 
       await parkingProcesses.createLeaseForExternalParkingSpace(
@@ -339,7 +348,10 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
-      getInternalCreditInformationSpy.mockReset().mockResolvedValue(false)
+      getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+        ok: true,
+        data: [mockedUnpaidInvoice],
+      })
 
       await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',

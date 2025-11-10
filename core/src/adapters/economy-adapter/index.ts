@@ -60,3 +60,19 @@ export async function getInvoicesByContactCode(
   logger.error(response.data, 'economy-adapter.getInvoicesByContactCode')
   return { ok: false, err: 'unknown' }
 }
+
+export async function getInvoicesSentToDebtCollection(
+  contactCode: string,
+  from?: Date
+): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+  const invoicesResult = await getInvoicesByContactCode(contactCode, { from })
+  if (!invoicesResult.ok) {
+    return { ok: false, err: invoicesResult.err }
+  }
+
+  const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
+    return invoice.sentToDebtCollection !== undefined
+  })
+
+  return { ok: true, data: hasDebtCollection }
+}
