@@ -5893,8 +5893,6 @@ export interface components {
           /** Format: uuid */
           keyLoanId: string;
           /** @enum {string} */
-          loanType: "REGULAR" | "MAINTENANCE";
-          /** @enum {string} */
           receiptType: "LOAN" | "RETURN";
           /** @enum {string} */
           type: "DIGITAL" | "PHYSICAL";
@@ -5933,10 +5931,8 @@ export interface components {
       userName: string;
       /** @enum {string} */
       eventType: "creation" | "update" | "delete";
-      eventTypeLabel?: string;
       /** @enum {string} */
       objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
-      objectTypeLabel?: string;
       /** Format: uuid */
       objectId?: string | null;
       /** Format: date-time */
@@ -5954,8 +5950,6 @@ export interface components {
       id: string;
       /** Format: uuid */
       keyLoanId: string;
-      /** @enum {string} */
-      loanType: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
@@ -6094,6 +6088,8 @@ export interface components {
       entityData?: unknown;
       /** @enum {string} */
       action?: "Skapad" | "Uppdaterad" | "Kasserad" | "Raderad";
+      /** Format: date-time */
+      eventTime?: string;
     };
     CreateKeyNoteRequest: {
       rentalObjectCode: string;
@@ -6227,11 +6223,6 @@ export interface components {
     CreateReceiptRequest: {
       /** Format: uuid */
       keyLoanId: string;
-      /**
-       * @default REGULAR
-       * @enum {string}
-       */
-      loanType?: "REGULAR" | "MAINTENANCE";
       /** @enum {string} */
       receiptType: "LOAN" | "RETURN";
       /** @enum {string} */
@@ -6345,10 +6336,8 @@ export interface components {
           userName: string;
           /** @enum {string} */
           eventType: "creation" | "update" | "delete";
-          eventTypeLabel?: string;
           /** @enum {string} */
           objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
-          objectTypeLabel?: string;
           /** Format: uuid */
           objectId?: string | null;
           /** Format: date-time */
