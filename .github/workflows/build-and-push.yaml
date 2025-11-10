@@ -32,23 +32,36 @@ jobs:
 
   prepare:
     if: >
-      github.event_name == 'push' ||
-      github.event_name == 'create' ||
       (
+        # Run when a tag is created or pushed
+        (github.ref_type == 'tag' && startsWith(github.ref_name, 'v')) &&
+        (github.event_name == 'push' || github.event_name == 'create')
+      ) ||
+      (
+        # Run when an epic/release branch is created
+        github.event_name == 'create' &&
+        (
+          startsWith(github.ref_name, 'release/') ||
+          startsWith(github.ref_name, 'epic/')
+        )
+      ) ||
+      (
+        # Run when triggered by successful CI workflow on main or epic/release branch
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.conclusion == 'success' &&
         (
-          github.event.workflow_run.event == 'push' && (
-            github.event.workflow_run.head_branch == 'main' ||
-            startsWith(github.event.workflow_run.head_branch, 'epic/') ||
-            startsWith(github.event.workflow_run.head_branch, 'release/')
-          )
-          ||
-          github.event.workflow_run.event == 'pull_request' && (
-            github.event.workflow_run.pull_requests[0].base.ref == 'main' ||
-            startsWith(github.event.workflow_run.pull_requests[0].base.ref, 'epic/') ||
-            startsWith(github.event.workflow_run.pull_requests[0].base.ref, 'release/')
-          )
+          github.event.workflow_run.head_branch == 'main' ||
+          startsWith(github.event.workflow_run.head_branch, 'release/') ||
+          startsWith(github.event.workflow_run.head_branch, 'epic/')
+        )
+      ) ||
+      (
+        # Run on pull request against main and epic/release branch
+        github.event_name == 'pull_request' &&
+        (
+          github.base_ref == 'main' ||
+          startsWith(github.base_ref, 'release/') ||
+          startsWith(github.base_ref, 'epic/')
         )
       )
     runs-on: ubuntu-latest
