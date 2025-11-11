@@ -1,4 +1,7 @@
 import KoaRouter from '@koa/router'
+import { generateRouteMetadata } from '@onecore/utilities'
+import z from 'zod'
+
 import {
   getLease,
   getLeasesForContactCode,
@@ -6,8 +9,7 @@ import {
   getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
-import { generateRouteMetadata } from '@onecore/utilities'
-import z from 'zod'
+import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 
 /**
  * @swagger
