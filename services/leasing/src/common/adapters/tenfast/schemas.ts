@@ -209,3 +209,91 @@ export const TenfastLeaseTemplateSchema = z.object({
 })
 
 export type TenfastLeaseTemplate = z.infer<typeof TenfastLeaseTemplateSchema>
+export const NotificationTypeSchema = z.enum([
+  'physicalmail',
+  'kivra',
+  'email',
+  'post',
+  'none',
+])
+
+/**
+ * This schema is a combination of what was found here:
+ * https://tenfast-test-api.mimer.nu/docs -> schema "Avtal"
+ * and what was found in the actual responses from Tenfast API.
+ *
+ * Currently there are several discrepancies between data model and actual response.
+ * Some fields that I considered irrelevant at the time of writing are typed as unknown
+ */
+
+export const TenfastLeaseSchema = z.object({
+  reference: z.number(),
+  verson: z.number(),
+  originalData: z.unknown(),
+  hyror: z.array(TenfastInvoiceRowSchema),
+  simpleHyra: z.boolean(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  aviseringsTyp: NotificationTypeSchema,
+  uppsagningstid: z.string(),
+  aviseringsFrekvens: z.string(),
+  forskottsAvisering: z.string(),
+  betalningsOffset: z.string(),
+  betalasForskott: z.boolean(),
+  vatEnabled: z.boolean(),
+  originalTemplate: z.string(),
+  template: z.object({}),
+  method: z.string(),
+  file: z.object({
+    key: z.string(),
+    location: z.string(),
+    originalName: z.string(),
+  }),
+  bankidSigningEnabled: z.boolean(),
+  bankidSignatures: z.array(z.string()),
+  cancellation: z.object({
+    cancelled: z.boolean(),
+    doneAutomatically: z.boolean(),
+    hyresgastBankidSignature: z.string(),
+  }),
+  deposit: z.object({
+    ekoNotifications: z.array(z.any()),
+  }),
+  id: z.string(),
+  _id: z.string(),
+  hyresvard: z.string(),
+  hyresgaster: z.array(z.string()),
+  hyresobjekt: z.array(z.string()),
+  invitations: z.array(
+    z.object({
+      _id: z.string(),
+      email: z.string(),
+      signedUpAt: z.string(),
+      hyresgast: z.string(),
+    })
+  ),
+  confirmedHyresgastInfo: z.array(z.string()),
+  avtalsbyggare: z.boolean(),
+  acceptedByHyresgast: z.boolean(),
+  comments: z.array(z.string()),
+  files: z.array(
+    z.object({
+      key: z.string(),
+      location: z.string(),
+      originalName: z.string(),
+    })
+  ),
+  versions: z.unknown(),
+  incudeHyrorInThePast: z.boolean(),
+  createdBy: z.string(),
+  updatedBy: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  tags: z.array(z.unknown()),
+  wasNew: z.boolean(),
+  wasAccepted: z.boolean(),
+})
+
+export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
+
+// TODO: I'd like to scope all these under "tenfast" instead, i.e tenfast.Lease, tenfast.Tenant etc

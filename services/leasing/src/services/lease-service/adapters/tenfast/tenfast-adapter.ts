@@ -1,4 +1,8 @@
 import { logger } from '@onecore/utilities'
+import { ZodError } from 'zod'
+import { Contact } from '@onecore/types'
+import { isAxiosError } from 'axios'
+
 import {
   TenfastTenantByContactCodeResponseSchema,
   TenfastTenant,
@@ -7,10 +11,11 @@ import {
   TenfastLeaseTemplate,
   TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
+  TenfastLease,
+  TenfastLeaseSchema,
 } from '../../../../common/adapters/tenfast/schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
-import { Contact } from '@onecore/types'
 import * as tenfastApi from './tenfast-api'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
@@ -364,5 +369,48 @@ function buildTenantRequestData(contact: Contact) {
     postadress: `${contact.address?.street} ${contact.address?.number}`,
     postnummer: contact.address?.postalCode,
     stad: contact.address?.city,
+  }
+}
+
+type SchemaError = { tag: 'schema-error'; error: ZodError }
+
+export async function getLeasesByTenantId(
+  tenantId: string
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal`,
+    })
+
+    const leases = TenfastLeaseSchema.array().safeParse(res.data)
+
+    if (!leases.success) {
+      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
+    }
+
+    return { ok: true, data: leases.data }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByTenantId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// TODO: maybe move to utilities
+function mapHttpError(err: unknown): { err: string } {
+  if (isAxiosError(err)) {
+    return {
+      err: JSON.stringify(
+        {
+          statusCode: err.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+        },
+        null,
+        2
+      ),
+    }
+  } else {
+    return { err: JSON.stringify(err, null, 2) }
   }
 }

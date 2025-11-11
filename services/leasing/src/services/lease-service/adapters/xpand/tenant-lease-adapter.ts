@@ -1,5 +1,5 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
-import transformFromXPandDb from './../../helpers/transformFromXPandDb'
+import transformFromXPandDb from './../../helpers/xpand-db'
 
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
