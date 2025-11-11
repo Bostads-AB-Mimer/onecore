@@ -1,14 +1,20 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { logger } from '@onecore/utilities'
+import { ZodError } from 'zod'
+import { Lease } from '@onecore/types'
+
 import {
   TenfastTenantByContactCodeResponseSchema,
   TenfastTenant,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponseSchema,
   TenfastCreateLeaseRequestSchema,
+  TenfastLease,
+  TenfastLeaseSchema,
 } from '../../../../common/adapters/tenfast/schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
+import helpers from '../../helpers/xpand-db'
 
 const baseUrl = config.tenfast.baseUrl
 // const apiKey = config.tenfast.apiKey
@@ -245,5 +251,77 @@ export const getTenantByContactCode = async (
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.statusCode }
+  }
+}
+
+type SchemaError = { tag: 'schema-error'; error: ZodError }
+
+export async function getLeasesByTenantId(
+  tenantId: string
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+  try {
+    const res = await getFromTenfast({
+      method: 'get',
+      url: `${baseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal`,
+    })
+
+    const leases = TenfastLeaseSchema.array().safeParse(res.data)
+
+    if (!leases.success) {
+      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
+    }
+
+    return { ok: true, data: leases.data }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByTenantId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// TODO: maybe move to utilities
+function mapHttpError(err: unknown): { err: string } {
+  if (err instanceof AxiosError) {
+    return {
+      err: JSON.stringify(
+        {
+          statusCode: err.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+        },
+        null,
+        2
+      ),
+    }
+  } else {
+    return { err: JSON.stringify(err, null, 2) }
+  }
+}
+
+function mapToOnecoreLease(lease: TenfastLease): Lease {
+  return {
+    leaseId: 'missing',
+    leaseNumber: 'missing',
+    leaseStartDate: lease.startDate,
+    leaseEndDate: lease.endDate,
+    status: helpers.calculateLeaseStatus(
+      lease.endDate.toISOString(),
+      lease.startDate.toISOString()
+    ),
+    address: undefined,
+    noticeGivenBy: undefined,
+    noticeDate: undefined,
+    noticeTimeTenant: undefined,
+    preferredMoveOutDate: undefined,
+    terminationDate: undefined,
+    contractDate: undefined,
+    lastDebitDate: undefined,
+    approvalDate: undefined,
+    residentialArea: undefined,
+    tenantContactIds: undefined,
+    tenants: undefined,
+    rentalPropertyId: 'missing',
+    rentalProperty: undefined,
+    type: 'missing',
+    rentInfo: undefined,
   }
 }
