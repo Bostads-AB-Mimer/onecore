@@ -44,11 +44,16 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
   const isCommonSpace = Object.keys(spaceCodes).includes(
     odooWorkOrder.space_code
   )
+
+  const masterKeyAccessCaption = odooWorkOrder.master_key
+    ? 'Huvudnyckel'
+    : 'Ej huvudnyckel'
+
   const descriptionWithMoreInfo = `${description}${isCommonSpace ? '' : `\r\n Husdjur: ${odooWorkOrder.pet}`}
   ${odooWorkOrder.call_between ? `\r\n Kund nås enklast mellan ${odooWorkOrder.call_between} \r\n på telefonnummer: ${odooWorkOrder.phone_number}.` : ''}`
 
   return {
-    AccessCaption: isCommonSpace ? 'Gemensamt utrymme' : 'Huvudnyckel',
+    AccessCaption: isCommonSpace ? 'Gemensamt utrymme' : masterKeyAccessCaption,
     Caption:
       spaceCode && equipmentCode
         ? `WEBB: ${spaceCode}, ${equipmentCode}`
@@ -74,7 +79,7 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     RentalObjectCode: odooWorkOrder.rental_property_id[1],
     Status: odooWorkOrder.stage_id[1],
     HiddenFromMyPages: odooWorkOrder.hidden_from_my_pages || false,
-    UseMasterKey: true, // NOTE: Should this always be true?
+    UseMasterKey: odooWorkOrder.master_key || false,
     WorkOrderRows: [
       {
         Description: odooWorkOrder.description || null,
