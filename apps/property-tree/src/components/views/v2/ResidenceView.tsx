@@ -4,7 +4,6 @@ import { ErrorState } from '@/components/residence/ErrorState'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { useResidenceDetail } from '@/components/hooks/useResidenceDetail'
 import { ResidenceBasicInfo } from '@/components/residence/v2/ResidenceBasicInfo'
-import { MobileAccordion } from '@/components/ui/MobileAccordion'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/v2/Tabs'
 import { TabsContent } from '@radix-ui/react-tabs'
 import { ClipboardList, Info, MessageSquare, Users } from 'lucide-react'
@@ -13,6 +12,7 @@ import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
 import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { Lease } from '@/services/api/core'
+import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -68,6 +68,12 @@ export const ResidenceView = () => {
                 Rumsinformation
               </TabsTrigger>
               <TabsTrigger
+                value="floorplan"
+                className="flex items-center gap-1.5"
+              >
+                Planritning
+              </TabsTrigger>
+              <TabsTrigger
                 disabled
                 value="inspections"
                 className="flex items-center gap-1.5"
@@ -91,6 +97,20 @@ export const ResidenceView = () => {
               <Card>
                 <CardContent className="p-4">
                   <RoomInfo residenceId={residence.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="floorplan">
+              <ResidenceFloorplan
+                rentalId={residence.propertyObject.rentalId ?? ''}
+              />
+            </TabsContent>
+            <TabsContent value="inspections">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-center text-sm text-muted-foreground">
+                    Besiktningar kommer snart att finnas tillgängliga här.
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
