@@ -302,9 +302,9 @@ function mapToOnecoreLease(lease: TenfastLease): Lease {
     leaseId: 'missing',
     leaseNumber: 'missing',
     leaseStartDate: lease.startDate,
-    leaseEndDate: lease.endDate,
+    leaseEndDate: lease.endDate ?? undefined,
     status: helpers.calculateLeaseStatus(
-      lease.endDate.toISOString(),
+      lease.endDate?.toISOString() ?? '', // TODO: dunno if endDate is good here
       lease.startDate.toISOString()
     ),
     address: undefined,
