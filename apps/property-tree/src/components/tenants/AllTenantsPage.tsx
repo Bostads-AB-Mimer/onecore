@@ -20,8 +20,13 @@ import { useTenantSearch } from '@/hooks/useTenantSearch'
 
 const AllTenantsPage = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
-  const { searchQuery, setSearchQuery, searchResults, showSearchResults, isSearching } =
-    useTenantSearch()
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    showSearchResults,
+    isSearching,
+  } = useTenantSearch()
 
   return (
     <div className="py-4 animate-in">
