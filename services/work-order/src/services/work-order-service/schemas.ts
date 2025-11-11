@@ -47,6 +47,7 @@ export const OdooWorkOrderSchema = z.object({
   pet: z.string(),
   call_between: z.string(),
   hidden_from_my_pages: z.boolean().optional(),
+  master_key: z.boolean().optional(),
   space_code: z.string(),
   equipment_code: z.string(),
   rental_property_id: z.string(),
