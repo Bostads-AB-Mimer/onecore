@@ -50,6 +50,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'stage_id',
   'phone_number',
   'hidden_from_my_pages',
+  'master_key',
   'maintenance_unit_code',
   'maintenance_unit_caption',
 ]
