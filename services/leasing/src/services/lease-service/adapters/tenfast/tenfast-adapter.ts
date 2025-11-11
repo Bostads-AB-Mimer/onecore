@@ -1,6 +1,6 @@
 import { logger } from '@onecore/utilities'
 import { ZodError } from 'zod'
-import { Contact } from '@onecore/types'
+import { Contact, Lease } from '@onecore/types'
 import { isAxiosError } from 'axios'
 
 import {
@@ -17,6 +17,7 @@ import {
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
+import * as helpers from '../../helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -412,5 +413,31 @@ function mapHttpError(err: unknown): { err: string } {
     }
   } else {
     return { err: JSON.stringify(err, null, 2) }
+  }
+}
+
+function mapToOnecoreLease(lease: TenfastLease): Lease {
+  return {
+    leaseId: 'missing',
+    leaseNumber: 'missing',
+    leaseStartDate: lease.startDate,
+    leaseEndDate: lease.endDate ?? undefined,
+    status: helpers.calculateLeaseStatus(
+      lease.endDate?.toISOString() ?? '', // TODO: dunno if endDate is good here
+      lease.startDate.toISOString()
+    ),
+    noticeGivenBy: undefined,
+    noticeDate: undefined,
+    noticeTimeTenant: undefined,
+    preferredMoveOutDate: undefined,
+    terminationDate: undefined,
+    contractDate: undefined,
+    lastDebitDate: undefined,
+    approvalDate: undefined,
+    residentialArea: undefined,
+    tenantContactIds: undefined,
+    tenants: undefined,
+    rentalPropertyId: 'missing',
+    type: 'missing',
   }
 }
