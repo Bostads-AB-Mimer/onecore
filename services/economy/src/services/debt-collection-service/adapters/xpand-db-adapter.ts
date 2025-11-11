@@ -97,6 +97,10 @@ const buildRentalPropertyQuery = ({
 export const getRentalProperties = async (
   rentalIds: string[]
 ): Promise<RentalProperty[]> => {
+  if (rentalIds.length === 0) {
+    return []
+  }
+
   const [residences, parkingSpaces, facilities] = await Promise.all([
     buildRentalPropertyQuery({
       rentalIds,
