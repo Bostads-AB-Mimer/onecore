@@ -233,7 +233,7 @@ export const TenfastLeaseSchema = z.object({
   hyror: z.array(TenfastInvoiceRowSchema),
   simpleHyra: z.boolean(),
   startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  endDate: z.coerce.date().nullable(),
   aviseringsTyp: NotificationTypeSchema,
   uppsagningstid: z.string(),
   aviseringsFrekvens: z.string(),
