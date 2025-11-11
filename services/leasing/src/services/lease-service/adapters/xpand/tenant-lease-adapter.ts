@@ -583,23 +583,6 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
-// const isLeaseActive = (lease: Lease | PartialLease): boolean => {
-//   const { leaseStartDate } = lease
-//   const currentDate = new Date()
-
-//   return leaseStartDate < currentDate
-// }
-
-// const isLeaseActiveOrUpcoming = (lease: Lease | PartialLease): boolean => {
-//   const { lastDebitDate, terminationDate } = lease
-//   const currentDate = new Date()
-
-//   return (
-//     (!lastDebitDate || currentDate <= lastDebitDate) &&
-//     (!terminationDate || currentDate < terminationDate)
-//   )
-// }
-
 const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
