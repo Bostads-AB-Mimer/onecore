@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "noEmit": true,
+    "composite": true,
     "rootDirs": ["./src", "./test"],
-    "outDir": "./build",
-    "types": ["koa-body", "jest"],
+    "baseUrl": ".",
     "paths": {
-      "@src/*": ["./src/*"],
-      "@test/*": ["./test/*"]
+      "@src/*": ["./src/*"]
     }
   }
 }

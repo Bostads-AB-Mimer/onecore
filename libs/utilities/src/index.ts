@@ -1,4 +1,5 @@
 import { logger, middlewares } from './logging/logger'
+export { errorHandler } from './middlewares/index'
 import loggedAxios, { setExclusionFilters } from './logging/loggedAxios'
 import { storage, getCorrelationId } from './logging/loggingStorage'
 import {
