@@ -23,9 +23,7 @@ import {
 import { useIsMobile } from '@/components/hooks/useMobile'
 import type { Tenant } from '@/services/types'
 import { CopyableField } from '@/components/ui/CopyableField'
-import {
-  TooltipProvider,
-} from '@/components/ui/Tooltip'
+import { TooltipProvider } from '@/components/ui/Tooltip'
 
 interface TenantCardProps {
   tenant: Tenant

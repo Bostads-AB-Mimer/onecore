@@ -9,12 +9,12 @@ import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 // import { TenantLedger } from '@/components/tenants/TenantLedger'
 // import { TenantKeys } from '@/components/tenants/TenantKeys'
 import { StickyNote } from 'lucide-react'
-import type { Lease } from '@onecore/types'
+import type { ContractType } from '@/services/types'
 // import { getMockLedgerForCustomer } from '@/data/ledger'
 // import { getMockInvoicesForCustomer } from '@/data/invoices'
 
 interface TenantDetailTabsContentProps {
-  contracts: Lease[]
+  contracts: ContractType[]
   personalNumber?: string
   contactCode: string
   customerName: string

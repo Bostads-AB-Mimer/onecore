@@ -1,9 +1,22 @@
 import { User, UserCheck } from 'lucide-react'
 import { Badge } from '@/components/ui/v2/Badge'
-import type { ApplicationProfile } from '@onecore/types'
 
 interface ApplicationProfileDisplayProps {
-  profile: ApplicationProfile
+  profile: {
+    numAdults: number
+    numChildren: number
+    housingType?: string | null
+    landlord?: string | null
+    housingReference?: {
+      phone?: string | null
+      email?: string | null
+      reviewStatus?: string | null
+      comment?: string | null
+      reviewedAt?: string | Date | null
+      reviewedBy?: string | null
+      expiresAt?: string | Date | null
+    } | null
+  }
 }
 
 const housingTypeLabels: Record<string, string> = {
@@ -42,7 +55,9 @@ const getReferenceStatusColor = (status?: string) => {
   }
 }
 
-export function ApplicationProfileDisplay({ profile }: ApplicationProfileDisplayProps) {
+export function ApplicationProfileDisplay({
+  profile,
+}: ApplicationProfileDisplayProps) {
   const { housingReference } = profile
 
   return (
@@ -50,9 +65,13 @@ export function ApplicationProfileDisplay({ profile }: ApplicationProfileDisplay
       {/* Two-column grid for housing and household info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <p className="text-sm text-muted-foreground mb-1">Nuvarande boendeform</p>
+          <p className="text-sm text-muted-foreground mb-1">
+            Nuvarande boendeform
+          </p>
           <p className="font-medium">
-            {profile.housingType ? housingTypeLabels[profile.housingType] || profile.housingType : '-'}
+            {profile.housingType
+              ? housingTypeLabels[profile.housingType] || profile.housingType
+              : '-'}
           </p>
         </div>
         <div>
@@ -83,16 +102,22 @@ export function ApplicationProfileDisplay({ profile }: ApplicationProfileDisplay
         <div>
           <div className="flex items-center gap-2 mb-1">
             <UserCheck className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Status på boendereferens</p>
+            <p className="text-sm text-muted-foreground">
+              Status på boendereferens
+            </p>
           </div>
           <Badge
-            className={`${getReferenceStatusColor(housingReference.reviewStatus)} text-white mt-1`}
+            className={`${getReferenceStatusColor(housingReference.reviewStatus ?? undefined)} text-white mt-1`}
           >
-            {reviewStatusLabels[housingReference.reviewStatus || ''] || housingReference.reviewStatus || 'Okänd'}
+            {reviewStatusLabels[housingReference.reviewStatus || ''] ||
+              housingReference.reviewStatus ||
+              'Okänd'}
           </Badge>
 
           {/* Additional reference details - shown below status */}
-          {(housingReference.phone || housingReference.email || housingReference.comment) && (
+          {(housingReference.phone ||
+            housingReference.email ||
+            housingReference.comment) && (
             <div className="mt-3 pt-3 border-t space-y-2 text-sm">
               {housingReference.phone && (
                 <div>
@@ -116,13 +141,15 @@ export function ApplicationProfileDisplay({ profile }: ApplicationProfileDisplay
                 <div className="text-xs text-muted-foreground">
                   Granskad av: {housingReference.reviewedBy}
                   {housingReference.reviewedAt &&
-                    ` (${new Date(housingReference.reviewedAt).toLocaleDateString('sv-SE')})`
-                  }
+                    ` (${new Date(housingReference.reviewedAt).toLocaleDateString('sv-SE')})`}
                 </div>
               )}
               {housingReference.expiresAt && (
                 <div className="text-xs text-muted-foreground">
-                  Utgår: {new Date(housingReference.expiresAt).toLocaleDateString('sv-SE')}
+                  Utgår:{' '}
+                  {new Date(housingReference.expiresAt).toLocaleDateString(
+                    'sv-SE'
+                  )}
                 </div>
               )}
             </div>
