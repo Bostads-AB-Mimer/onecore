@@ -16,6 +16,11 @@ export type BuildingWithRelations = Prisma.BuildingGetPayload<{
     propertyObject: {
       include: {
         property: true
+        quantityValues: {
+          include: {
+            quantityType: true
+          }
+        }
       }
     }
   }
@@ -51,6 +56,11 @@ const getBuildings = async (
         propertyObject: {
           include: {
             property: true,
+            quantityValues: {
+              include: {
+                quantityType: true,
+              },
+            },
           },
         },
       },
@@ -74,6 +84,11 @@ const getBuildingById = async (
         propertyObject: {
           include: {
             property: true,
+            quantityValues: {
+              include: {
+                quantityType: true,
+              },
+            },
           },
         },
       },
@@ -97,6 +112,11 @@ const getBuildingByCode = async (
         propertyObject: {
           include: {
             property: true,
+            quantityValues: {
+              include: {
+                quantityType: true,
+              },
+            },
           },
         },
       },
@@ -140,6 +160,11 @@ const searchBuildings = async (
           propertyObject: {
             include: {
               property: true,
+              quantityValues: {
+                include: {
+                  quantityType: true,
+                },
+              },
             },
           },
         },

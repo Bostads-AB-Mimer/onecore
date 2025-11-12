@@ -9,6 +9,7 @@ import {
   getResidencesByBuildingCodeAndStaircaseCode,
   searchResidences,
   getResidenceByRentalId,
+  getResidenceSummariesByBuildingCodeAndStaircaseCode,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -16,6 +17,7 @@ import {
   ResidenceDetailedSchema,
   ResidenceSearchResult,
   GetResidenceByRentalIdResponse,
+  ResidenceSummarySchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -102,6 +104,112 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 200
         ctx.body = {
           content: ResidenceSchema.array().parse(responseContent),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err }, 'residences route error')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/summary/by-building-code/{buildingCode}:
+   *   get:
+   *     summary: Get residences by building code, optionally filtered by staircase code.
+   *     description: Returns all residences belonging to a specific building, optionally filtered by staircase code.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: buildingCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building code of the building.
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the staircase (optional).
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the residences.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ResidenceSummary'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+
+  const ResidenceSummaryQueryParamsSchema = z.object({
+    staircaseCode: z.string().optional(),
+  })
+
+  router.get(
+    ['(.*)/residences/summary/by-building-code/:buildingCode'],
+    parseRequest({ query: ResidenceSummaryQueryParamsSchema }),
+    async (ctx) => {
+      const { buildingCode } = ctx.params
+      const { staircaseCode } = ctx.request.parsedQuery
+
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        let dbResidences
+
+        dbResidences =
+          await getResidenceSummariesByBuildingCodeAndStaircaseCode(
+            buildingCode,
+            staircaseCode
+          )
+
+        const responseContent = dbResidences.map(
+          (v): z.infer<typeof ResidenceSummarySchema> => ({
+            id: v.propertyObject.residence?.id || '',
+            code: v.propertyObject.residence?.code || '',
+            name: v.propertyObject.residence?.name || null,
+            buildingCode: v.buildingCode || '',
+            buildingName: v.buildingName || '',
+            rentalId: v.rentalId || '',
+            staircaseName: v.staircaseName || '',
+            staircaseCode: v.staircaseCode || '',
+            deleted: Boolean(v.propertyObject.residence?.deleted),
+            validityPeriod: {
+              fromDate: v.propertyObject.residence?.fromDate || null,
+              toDate: v.propertyObject.residence?.toDate || null,
+            },
+            residenceType: {
+              code: v.propertyObject.residence?.residenceType?.code || '',
+              name: v.propertyObject.residence?.residenceType?.name || '',
+              roomCount:
+                v.propertyObject.residence?.residenceType?.roomCount || 0,
+              kitchen: v.propertyObject.residence?.residenceType?.kitchen || 0,
+            },
+            quantityValues: v.propertyObject?.quantityValues || [],
+            wheelchairAccessible: 0,
+            hygieneFacility: null,
+            elevator: v.propertyObject.residence?.elevator || null,
+            floor: v.propertyObject.residence?.floor || '',
+          })
+        )
+
+        ctx.status = 200
+        ctx.body = {
+          content: ResidenceSummarySchema.array().parse(responseContent),
           ...metadata,
         }
       } catch (err) {

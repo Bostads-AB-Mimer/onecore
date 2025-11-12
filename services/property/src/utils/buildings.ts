@@ -38,6 +38,13 @@ export function transformBuildingData(
       class: building.insuranceClass,
       value: building.insuranceValue,
     },
+    quantityValues:
+      building.propertyObject?.quantityValues?.map((qv) => ({
+        id: qv?.quantityType?.id,
+        name: qv.quantityType?.name,
+        unitId: qv.quantityType?.unitId,
+        value: qv.value,
+      })) || undefined,
     deleted: Boolean(building.deleteMark),
   }
 }

@@ -1,26 +1,21 @@
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@radix-ui/react-collapsible'
 import { CompanyList } from './CompanyList'
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
   SidebarMenu,
 } from '@/components/ui/Sidebar'
 import { ChevronRight } from 'lucide-react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/Collapsible'
-import { SearchForm } from '../SearchForm'
 
 export default function SidebarNavigation() {
   return (
     <Sidebar>
-      <SidebarHeader>
-        <SearchForm />
-      </SidebarHeader>
       <SidebarContent className="gap-0">
         <Collapsible
           key="companies"
@@ -29,9 +24,9 @@ export default function SidebarNavigation() {
           className="group/collapsible"
         >
           <SidebarGroup>
-            <CollapsibleTrigger className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-              Companies
-              <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+            <CollapsibleTrigger className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex items-center gap-2 mb-2">
+              <ChevronRight className="transition-transform group-data-[state=open]/collapsible:rotate-90" />
+              <div>Företag</div>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <SidebarGroupContent>

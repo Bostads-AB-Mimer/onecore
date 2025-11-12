@@ -10,8 +10,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { BuildingList } from '../shared/BuildingList'
-import { buildingService } from '../../services/api'
-import { propertyService } from '../../services/api/core'
+import { propertyService, buildingService } from '../../services/api/core'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '../../components/ui/Card'
 import { Grid } from '../../components/ui/Grid'
@@ -19,7 +18,7 @@ import { StatCard } from '../shared/StatCard'
 
 export function PropertyView() {
   const { propertyId } = useParams<{ propertyId: string }>()
-  const navigate = useNavigate()
+
   const propertyQuery = useQuery({
     queryKey: ['property', propertyId],
     queryFn: () => propertyService.getPropertyById(propertyId!),
@@ -32,7 +31,9 @@ export function PropertyView() {
     enabled: !!propertyQuery.data?.code,
   })
 
-  if (propertyQuery.isLoading || buildingsQuery.isLoading) {
+  const isLoading = propertyQuery.isLoading || buildingsQuery.isLoading
+
+  if (isLoading) {
     return (
       <div className="p-8 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
