@@ -1,3 +1,4 @@
+import { logger } from '@onecore/utilities'
 import {
   getInvoices,
   getContacts,
@@ -331,7 +332,10 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
       const regex = /^[A-Z\d]{3}-[A-Z\d]{3}-[A-Z\d]{2}-[A-Z\d]{4}\/\d{2}/i
       const match = row.text.match(regex)
       if (!match) {
-        console.error(row)
+        logger.error(
+          { row: JSON.stringify(row) },
+          'Row text does not match regular expression for lease ids'
+        )
         throw new Error(
           `${row.text} does not match regular expression for lease ids`
         )

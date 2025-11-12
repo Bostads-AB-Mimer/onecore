@@ -203,7 +203,7 @@ const getRentalRowSpecificRule = async (
 
 const getAdditionalColumns = async (
   row: InvoiceDataRow,
-  rentalSpecificRules: RentalSpecificRules
+  rentalSpecificRules: Record<string, RentalSpecificRules>
 ): Promise<InvoiceDataRow | null> => {
   const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
@@ -215,7 +215,10 @@ const getAdditionalColumns = async (
   let specificRule: RentalSpecificRule | null = null
 
   if (row.company === '001' && !additionalColumns['costCode'] && contractCode) {
-    specificRule = rentalSpecificRules[contractCode.split('/')[0]]
+    specificRule =
+      rentalSpecificRules[(row.fromDate as string).substring(0, 4)][
+        contractCode.split('/')[0]
+      ]
     if (!specificRule) {
       logger.error(
         row,
@@ -286,7 +289,9 @@ export const enrichInvoiceRows = async (
   })
 
   const rentalIds = Object.keys(rentalIdMap)
-  const rentalSpecificRules = await getRentalSpecificRules(rentalIds, '2025') // TODO: Fix dynamic year
+  const rentalSpecificRules: Record<string, RentalSpecificRules> = {}
+  rentalSpecificRules['2025'] = await getRentalSpecificRules(rentalIds, '2025')
+  rentalSpecificRules['2026'] = await getRentalSpecificRules(rentalIds, '2026')
 
   const enrichedInvoiceRows = await Promise.all(
     invoiceDataRows.map(
