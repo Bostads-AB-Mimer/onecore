@@ -1186,6 +1186,190 @@ importers:
         specifier: ^5.6.2
         version: 5.9.2
 
+  services/contacts:
+    dependencies:
+      '@iteam/config':
+        specifier: ^12.1.2
+        version: 12.1.2
+      '@koa/cors':
+        specifier: ^5.0.0
+        version: 5.0.0
+      '@koa/router':
+        specifier: ^12.0.1
+        version: 12.0.2
+      '@onecore/types':
+        specifier: workspace:*
+        version: link:../../libs/types
+      '@onecore/utilities':
+        specifier: workspace:*
+        version: link:../../libs/utilities
+      '@types/easy-soap-request':
+        specifier: ^5.6.0
+        version: 5.6.0
+      '@types/swagger-jsdoc':
+        specifier: ^6.0.4
+        version: 6.0.4
+      '@types/swagger-ui':
+        specifier: ^3.52.4
+        version: 3.52.4
+      axios:
+        specifier: ^1.9.0
+        version: 1.11.0
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
+      dedent:
+        specifier: ^1.5.1
+        version: 1.6.0(babel-plugin-macros@3.1.0)
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      easy-soap-request:
+        specifier: ^5.6.1
+        version: 5.7.0
+      fast-xml-parser:
+        specifier: ^4.4.0
+        version: 4.5.3
+      fishery:
+        specifier: ^2.2.2
+        version: 2.3.1
+      http-errors:
+        specifier: ^2.0.0
+        version: 2.0.0
+      knex:
+        specifier: ^3.1.0
+        version: 3.1.0(tedious@18.6.1)
+      koa:
+        specifier: ^2.16.2
+        version: 2.16.2
+      koa-body:
+        specifier: ^6.0.1
+        version: 6.0.1
+      koa-bodyparser:
+        specifier: ^4.4.1
+        version: 4.4.1
+      koa-okapi-router:
+        specifier: ^0.1.1
+        version: 0.1.1(@koa/router@12.0.2)(zod@3.25.76)
+      koa-pino-logger:
+        specifier: ^4.0.0
+        version: 4.0.0
+      koa2-swagger-ui:
+        specifier: ^5.11.0
+        version: 5.11.0(@types/koa@2.15.0)
+      mssql:
+        specifier: ^11.0.1
+        version: 11.0.1
+      personnummer:
+        specifier: ^3.2.1
+        version: 3.2.1
+      pino:
+        specifier: ^9.1.0
+        version: 9.9.1
+      pino-elasticsearch:
+        specifier: ^8.0.0
+        version: 8.1.0
+      pino-multi-stream:
+        specifier: ^6.0.0
+        version: 6.0.0
+      pino-pretty:
+        specifier: ^11.1.0
+        version: 11.3.0
+      prettier:
+        specifier: ^3.6.2
+        version: 3.6.2
+      randexp:
+        specifier: ^0.5.3
+        version: 0.5.3
+      strong-soap:
+        specifier: ^4.1.4
+        version: 4.1.14
+      swagger-jsdoc:
+        specifier: ^6.2.8
+        version: 6.2.8(openapi-types@12.1.3)
+      tedious:
+        specifier: ^18.6.1
+        version: 18.6.1
+      ts-pattern:
+        specifier: ^5.7.0
+        version: 5.8.0
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.76
+    devDependencies:
+      '@eslint/compat':
+        specifier: ^1.1.1
+        version: 1.3.2(eslint@9.34.0(jiti@1.21.7))
+      '@eslint/eslintrc':
+        specifier: ^3.1.0
+        version: 3.3.1
+      '@eslint/js':
+        specifier: 9.32.0
+        version: 9.32.0
+      '@types/apidoc':
+        specifier: ^0.50.3
+        version: 0.50.3
+      '@types/http-errors':
+        specifier: ^2.0.0
+        version: 2.0.5
+      '@types/jest':
+        specifier: ^29.5.14
+        version: 29.5.14
+      '@types/koa':
+        specifier: ^2.15.0
+        version: 2.15.0
+      '@types/koa-bodyparser':
+        specifier: ^4.3.12
+        version: 4.3.12
+      '@types/koa-pino-logger':
+        specifier: 3.0.4
+        version: 3.0.4
+      '@types/koa__cors':
+        specifier: ^5.0.0
+        version: 5.0.0
+      '@types/koa__router':
+        specifier: 12.0.4
+        version: 12.0.4
+      '@types/node':
+        specifier: ^20.11.5
+        version: 20.19.11
+      '@types/pino-multi-stream':
+        specifier: ^5.1.6
+        version: 5.1.6
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      '@typescript-eslint/typescript-estree':
+        specifier: ^8.6.0
+        version: 8.42.0(typescript@5.9.2)
+      eslint:
+        specifier: ^9.31.0
+        version: 9.34.0(jiti@1.21.7)
+      globals:
+        specifier: ^15.9.0
+        version: 15.15.0
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.19.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
+      nodemon:
+        specifier: ^3.1.7
+        version: 3.1.10
+      supertest:
+        specifier: ^7.0.0
+        version: 7.1.4
+      ts-jest:
+        specifier: ^29.2.5
+        version: 29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2)))(typescript@5.9.2)
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@20.19.11)(typescript@5.9.2)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.20.5
+      typescript:
+        specifier: ^5.6.2
+        version: 5.9.2
+
   services/economy:
     dependencies:
       '@infobip-api/sdk':
@@ -8617,6 +8801,13 @@ packages:
   koa-jwt@4.0.4:
     resolution: {integrity: sha512-Tid9BQfpVtUG/8YZV38a+hDKll0pfVhfl7A/2cNaYThS1cxMFXylZzfARqHQqvNhHy9qM+qkxd4/z6EaIV4SAQ==}
     engines: {node: '>= 8'}
+
+  koa-okapi-router@0.1.1:
+    resolution: {integrity: sha512-1Rrc4Eaq4Yf0eUWmTJmWS0xtor8kl2kMFnGjgdIZUhV3f+FD4wnSe1i97FyM72uBiALNd3IYu5PWMz7EAHFQjQ==}
+    engines: {node: '>=24'}
+    peerDependencies:
+      '@koa/router': ^12.0.0
+      zod: '>=3.0.0 <5.0.0'
 
   koa-pino-logger@4.0.0:
     resolution: {integrity: sha512-YI/LB9ajyLPpjvf6e+7Ewmn+OQkCJpu/Y9eI1n7fnipu5Y1NchuNlke0mqh3/2z+5oDYr7pijjOWruEDIfua2A==}
@@ -19128,6 +19319,12 @@ snapshots:
       jsonwebtoken: 9.0.2
       koa-unless: 1.0.7
       p-any: 2.1.0
+
+  koa-okapi-router@0.1.1(@koa/router@12.0.2)(zod@3.25.76):
+    dependencies:
+      '@koa/router': 12.0.2
+      openapi-types: 12.1.3
+      zod: 3.25.76
 
   koa-pino-logger@4.0.0:
     dependencies:
