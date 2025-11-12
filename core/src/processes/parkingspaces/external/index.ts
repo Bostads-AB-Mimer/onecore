@@ -213,6 +213,7 @@ export const createLeaseForExternalParkingSpace = async (
         response: {
           leaseId,
           message: 'Parking space lease created.',
+          creditCheckType: applicantHasNoLease ? 'extern' : 'intern',
         },
         httpStatus: 200,
       }
@@ -234,7 +235,9 @@ export const createLeaseForExternalParkingSpace = async (
 
       return {
         processStatus: ProcessStatus.failed,
-        error: 'rejected-application',
+        error: applicantHasNoLease
+          ? 'external-credit-check-failed'
+          : 'internal-credit-check-failed',
         httpStatus: 400,
         response: {
           reason: applicantHasNoLease

@@ -78,6 +78,31 @@ export const routes = (router: KoaRouter) => {
     })
 
     if (result.ok) {
+      // Add comment to nonscored listing indicating credit check type and approval
+      const creditCheckType = (result.data as any)?.creditCheckType
+      const creditCheckDescription =
+        creditCheckType === 'intern'
+          ? 'Intern betalningskontroll'
+          : 'Kreditkontroll'
+      const commentText = `Anmälan hanterad av ${ctx.session?.account.name}. ${creditCheckDescription} godkänd.`
+
+      const addCommentResult = await coreAdapter.addComment(
+        { targetType: 'listing', targetId: Number(params.listingId) },
+        {
+          authorId: 'system',
+          authorName: 'System',
+          comment: `Automatisk notering ${commentText}`,
+          type: 'COMMENT',
+        }
+      )
+
+      if (!addCommentResult.ok) {
+        logger.error(
+          { error: addCommentResult.err },
+          'Failed to add comment to parking space listing'
+        )
+      }
+
       ctx.status = 200
       ctx.body = {
         content: result.data,

@@ -12,7 +12,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "pnpm run migrate:up && pnpx nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
+    "dev": "pnpm run migrate:up && pnpm exec nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",

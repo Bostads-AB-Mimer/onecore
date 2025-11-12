@@ -8,6 +8,7 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 export type CreateNonScoredLeaseParams = {
   parkingSpaceId: string
   contactCode: string
+  listingId: number
 }
 
 export enum CreateNonScoredLeaseErrorCodes {

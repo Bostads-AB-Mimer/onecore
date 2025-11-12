@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Button,
   Dialog,
@@ -49,6 +50,7 @@ export interface Props {
 
 export const CreateApplicantForListing = (props: Props) => {
   const isNonScored = props.listing.rentalRule === 'NON_SCORED'
+  const navigate = useNavigate()
 
   const createNoteOfInterest = useCreateNoteOfInterest(props.listing.id)
   const createNonScoredLease = useCreateNonScoredLease(props.listing.id)
@@ -61,7 +63,6 @@ export const CreateApplicantForListing = (props: Props) => {
   const [applicationType, setApplicationType] = useState<
     'Replace' | 'Additional'
   >()
-  const [showSuccessState, setShowSuccessState] = useState(false)
 
   // For SCORED listings: validate tenant with housing contract requirements
   const tenantQuery = useTenantWithValidation(
@@ -105,26 +106,41 @@ export const CreateApplicantForListing = (props: Props) => {
       },
     })
 
-  const onCreateNonScoredLease = (params: CreateNonScoredLeaseParams) =>
+  const onCreateNonScoredLease = (params: CreateNonScoredLeaseParams) => {
     createNonScoredLease.mutate(params, {
       onSuccess: () => {
-        setShowSuccessState(true)
+        // Show success toast with navigation option
+        const toastId = toast.success(
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span>Bilplatskontrakt skapat och tilldelat</span>
+            <Button
+              size="small"
+              variant="dark"
+              onClick={() => {
+                toast.dismiss(toastId)
+                navigate(`/bilplatser/${props.listing.id}`)
+              }}
+            >
+              Visa
+            </Button>
+          </div>,
+          {
+            autoClose: 8000,
+            hideProgressBar: false,
+          }
+        )
+        // Close the dialog
+        setOpen(false)
+        setSelectedContact(null)
+        setApplicationType(undefined)
       },
     })
+  }
 
   const onCloseModal = () => {
     setOpen(false)
     setSelectedContact(null)
     setApplicationType(undefined)
-    setShowSuccessState(false)
-
-    // Show toast if we're closing after success
-    if (showSuccessState) {
-      toast('Bilplatskontrakt skapat och tilldelat', {
-        type: 'success',
-        hideProgressBar: true,
-      })
-    }
   }
 
   const handleChange = (_e: React.SyntheticEvent, tab: string) =>
@@ -180,12 +196,6 @@ export const CreateApplicantForListing = (props: Props) => {
                 ? createNonScoredLease.error!
                 : createNoteOfInterest.error!
             }
-          />
-        ) : showSuccessState && isNonScored ? (
-          <SuccessState
-            onClose={onCloseModal}
-            contactName={selectedContact?.fullName || ''}
-            parkingSpaceAddress={props.listing.rentalObject.address}
           />
         ) : (
           <Box paddingTop="0.5rem">
@@ -341,6 +351,7 @@ export const CreateApplicantForListing = (props: Props) => {
                         onCreateNonScoredLease({
                           contactCode: selectedContact.contactCode,
                           parkingSpaceId: props.listing.rentalObjectCode,
+                          listingId: props.listing.id,
                         })
                       }
                     >
@@ -474,8 +485,15 @@ const SuccessState = (props: {
   onClose: () => void
   contactName: string
   parkingSpaceAddress: string
+  listingId: number
 }) => {
-  const { onClose, contactName, parkingSpaceAddress } = props
+  const { onClose, contactName, parkingSpaceAddress, listingId } = props
+  const navigate = useNavigate()
+
+  const handleNavigateToListing = () => {
+    onClose()
+    navigate(`/bilplatser/${listingId}`)
+  }
 
   return (
     <Box
@@ -505,8 +523,11 @@ const SuccessState = (props: {
           Kontraktet har skapats i systemet och annonsens status har uppdaterats till tilldelad.
         </Typography>
       </Box>
-      <Box paddingTop={4}>
-        <Button variant="dark" onClick={onClose}>
+      <Box paddingTop={4} display="flex" gap={2}>
+        <Button variant="dark" onClick={handleNavigateToListing}>
+          Visa annons
+        </Button>
+        <Button variant="dark-outlined" onClick={onClose}>
           Stäng
         </Button>
       </Box>
