@@ -84,7 +84,7 @@ export const routes = (router: KoaRouter) => {
         creditCheckType === 'intern'
           ? 'Intern betalningskontroll'
           : 'Kreditkontroll'
-      const commentText = `Anmälan hanterad av ${ctx.session?.account.name}. ${creditCheckDescription} godkänd.`
+      const commentText = `Anmälan hanterad av ${ctx.session?.account.name}. Tilldelad till ${params.contactCode}. ${creditCheckDescription} godkänd.`
 
       const addCommentResult = await coreAdapter.addComment(
         { targetType: 'listing', targetId: Number(params.listingId) },
