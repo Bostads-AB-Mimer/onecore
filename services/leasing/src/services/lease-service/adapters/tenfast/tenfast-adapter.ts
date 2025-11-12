@@ -307,7 +307,6 @@ function mapToOnecoreLease(lease: TenfastLease): Lease {
       lease.endDate?.toISOString() ?? '', // TODO: dunno if endDate is good here
       lease.startDate.toISOString()
     ),
-    address: undefined,
     noticeGivenBy: undefined,
     noticeDate: undefined,
     noticeTimeTenant: undefined,
@@ -320,8 +319,6 @@ function mapToOnecoreLease(lease: TenfastLease): Lease {
     tenantContactIds: undefined,
     tenants: undefined,
     rentalPropertyId: 'missing',
-    rentalProperty: undefined,
     type: 'missing',
-    rentInfo: undefined,
   }
 }
