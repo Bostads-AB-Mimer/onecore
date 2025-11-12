@@ -20,6 +20,7 @@ import { z } from 'zod'
 import { AdapterResult } from './../types'
 import config from '../../common/config'
 import { getListingByListingId } from './listings'
+import { getParkingSpaces } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -332,12 +333,47 @@ const getApplicantsAndListingByContactCode = async (
     const applicantsResponse = (await getApplicantsByContactCode(
       contactCode
     )) as Applicant[]
+
+    // Fetch all listings for the applicants
+    const listingsMap = new Map()
     for (const applicant of applicantsResponse) {
       const listingResponse = await getListingByListingId(applicant.listingId)
       if (listingResponse) {
-        applicantsAndListings.push({ applicant, listing: listingResponse })
+        listingsMap.set(applicant.listingId, listingResponse)
       }
     }
+
+    // Collect all rental object codes to fetch parking spaces in batch
+    const rentalObjectCodes = Array.from(listingsMap.values())
+      .map((listing) => listing.rentalObjectCode)
+      .filter(Boolean)
+
+    // Fetch all parking spaces in one batch call
+    const parkingSpacesResult = await getParkingSpaces(rentalObjectCodes)
+    const parkingSpacesMap = new Map()
+
+    if (parkingSpacesResult.ok) {
+      parkingSpacesResult.data.forEach((space) => {
+        parkingSpacesMap.set(space.rentalObjectCode, space)
+      })
+    }
+
+    // Build the final result with listings and parking spaces
+    for (const applicant of applicantsResponse) {
+      const listing = listingsMap.get(applicant.listingId)
+      if (listing) {
+        const rentalObject = parkingSpacesMap.get(listing.rentalObjectCode)
+        const listingWithRentalObject = rentalObject
+          ? { ...listing, rentalObject }
+          : listing
+
+        applicantsAndListings.push({
+          applicant,
+          listing: listingWithRentalObject,
+        })
+      }
+    }
+
     return applicantsAndListings
   } catch (error) {
     logger.error(

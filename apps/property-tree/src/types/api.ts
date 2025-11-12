@@ -292,3 +292,93 @@ export interface Building {
   //
   deleted: boolean
 }
+
+// Queue System Types
+export interface ParkingSpaceForPublishing {
+  id: string
+  listingId?: number // Database ID for /listings/apply endpoint
+  rentalId: string
+  address: string
+  area: string
+  type: string
+  rentIncl: number
+  district: string
+  queueTypes: {
+    intern: boolean
+    external: boolean
+    poangfri: boolean
+  }
+  publications?: {
+    publishedFrom: string
+    publishedTo: string
+    vacantFrom: string
+  }
+}
+
+export interface InterestApplication {
+  id: number
+  contactCode: string
+  applicationDate: string
+  applicationType?: 'Additional' | 'Replace'
+  status: string | number // Can be string or numeric ApplicantStatus enum
+  listingId: number
+  parkingSpace?: ParkingSpaceForPublishing
+  queuePoints?: number
+  // Listing details for display
+  address?: string
+  rentalObjectCode?: string
+  publishedFrom?: string
+  publishedTo?: string
+  vacantFrom?: string
+}
+
+export interface ValidationData {
+  hasContractInDistrict?: boolean
+  hasUpcomingContractInDistrict?: boolean
+  validationResult?: string
+  applicationType?: 'Replace' | 'Additional'
+  isEligible?: boolean
+  message?: string
+}
+
+export interface QueueData {
+  parking?: {
+    queuePoints: number
+    queueTime: string
+    type: number
+  }
+  housing?: {
+    queuePoints: number
+    queueTime: string
+  }
+  storage?: {
+    queuePoints: number
+    queueTime: string
+  }
+  interestApplications: InterestApplication[]
+  housingReferences?: {
+    currentHousingForm?: string
+    landlord?: string
+    householdSize?: number
+    numAdults?: number
+    numChildren?: number
+    referenceStatus?: string
+  }
+  applicationProfile?: {
+    numAdults: number
+    numChildren: number
+    housingType?: string
+    housingTypeDescription?: string
+    landlord?: string
+    housingReference?: {
+      phone?: string
+      email?: string
+      reviewStatus?: string
+      comment?: string
+      reasonRejected?: string
+      reviewedAt?: string
+      reviewedBy?: string
+      expiresAt?: string
+    }
+  }
+}
