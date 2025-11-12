@@ -907,9 +907,9 @@ importers:
 
   services/economy:
     dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.39.0
-        version: 0.39.0
+      '@infobip-api/sdk':
+        specifier: ^0.3.2
+        version: 0.3.2
       '@iteam/config':
         specifier: ^12.1.2
         version: 12.1.2
@@ -934,9 +934,6 @@ importers:
       axios-logger:
         specifier: ^2.8.0
         version: 2.8.1
-      date-holidays:
-        specifier: ^3.23.12
-        version: 3.25.2
       dayjs:
         specifier: ^1.11.10
         version: 1.11.18
@@ -1003,13 +1000,13 @@ importers:
       tedious:
         specifier: ^18.6.1
         version: 18.6.1
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       zod:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
-      '@iteam/sanity-check':
-        specifier: ^1.0.1
-        version: 1.0.3
       '@types/jest':
         specifier: ^29.5.11
         version: 29.5.14
@@ -1053,7 +1050,7 @@ importers:
         specifier: ^9.31.0
         version: 9.34.0(jiti@1.21.7)
       fishery:
-        specifier: ^2.2.2
+        specifier: ^2.3.1
         version: 2.3.1
       jest:
         specifier: ^29.7.0
@@ -1073,6 +1070,9 @@ importers:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.11)(typescript@5.9.2)
+      tsconfig-paths:
+        specifier: ^4.2.0
+        version: 4.2.0
       typescript:
         specifier: ^5.6.2
         version: 5.9.2
@@ -16002,18 +16002,6 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
 
-  '@anthropic-ai/sdk@0.39.0':
-    dependencies:
-      '@types/node': 18.19.123
-      '@types/node-fetch': 2.6.13
-      abort-controller: 3.0.0
-      agentkeepalive: 4.6.0
-      form-data-encoder: 1.7.2
-      formdata-node: 4.4.1
-      node-fetch: 2.7.0
-    transitivePeerDependencies:
-      - encoding
-
   '@apidevtools/json-schema-ref-parser@9.1.2':
     dependencies:
       '@jsdevtools/ono': 7.1.3
@@ -17140,8 +17128,6 @@ snapshots:
       eslint-plugin-testing-library: 7.6.8(eslint@9.34.0(jiti@1.21.7))(typescript@5.9.2)
       prettier: 3.6.2
       typescript: 5.9.2
-
-  '@iteam/sanity-check@1.0.3': {}
 
   '@jest/console@29.7.0':
     dependencies:
@@ -19106,11 +19092,6 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node-fetch@2.6.13':
-    dependencies:
-      '@types/node': 20.19.11
-      form-data: 4.0.4
-
   '@types/node@14.18.63': {}
 
   '@types/node@16.18.126': {}
@@ -19799,10 +19780,6 @@ snapshots:
       - supports-color
 
   agent-base@7.1.4: {}
-
-  agentkeepalive@4.6.0:
-    dependencies:
-      humanize-ms: 1.2.1
 
   aggregate-error@3.1.0:
     dependencies:
@@ -21759,8 +21736,6 @@ snapshots:
 
   forever-agent@0.6.1: {}
 
-  form-data-encoder@1.7.2: {}
-
   form-data@4.0.4:
     dependencies:
       asynckit: 0.4.0
@@ -21768,11 +21743,6 @@ snapshots:
       es-set-tostringtag: 2.1.0
       hasown: 2.0.2
       mime-types: 2.1.35
-
-  formdata-node@4.4.1:
-    dependencies:
-      node-domexception: 1.0.0
-      web-streams-polyfill: 4.0.0-beta.3
 
   formdata-polyfill@4.0.10:
     dependencies:
@@ -22129,10 +22099,6 @@ snapshots:
   human-signals@1.1.1: {}
 
   human-signals@2.1.0: {}
-
-  humanize-ms@1.2.1:
-    dependencies:
-      ms: 2.1.3
 
   iconv-lite@0.4.24:
     dependencies:
@@ -25717,8 +25683,6 @@ snapshots:
       makeerror: 1.0.12
 
   web-streams-polyfill@3.3.3: {}
-
-  web-streams-polyfill@4.0.0-beta.3: {}
 
   webidl-conversions@3.0.1: {}
 
