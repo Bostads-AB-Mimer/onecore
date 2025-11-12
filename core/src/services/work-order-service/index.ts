@@ -654,6 +654,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+<<<<<<< HEAD
    * /work-orders/xpand/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get work orders by contact code from xpand
@@ -781,6 +782,8 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+=======
+>>>>>>> c83a9f1f3 (MIM-694: Update property tree according to lovable - first revision (#84))
    * /work-orders/xpand/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get work orders by rental property id from xpand
