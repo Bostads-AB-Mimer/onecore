@@ -1,6 +1,11 @@
 import { GET } from './base-api'
 import type { Tenant } from '@/services/types'
 
+export interface ContactSearchResult {
+  fullName: string
+  contactCode: string
+}
+
 async function getByContactCode(contactCode: string): Promise<Tenant> {
   const { data, error } = await GET('/tenants/by-contact-code/{contactCode}', {
     params: { path: { contactCode } },
@@ -15,4 +20,17 @@ async function getByContactCode(contactCode: string): Promise<Tenant> {
   return response.content as Tenant
 }
 
-export const tenantService = { getByContactCode }
+async function searchContacts(query: string): Promise<ContactSearchResult[]> {
+  const { data, error } = await GET('/contacts/search', {
+    params: { query: { q: query } },
+  })
+
+  if (error) throw error
+
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as ContactSearchResult[]
+}
+
+export const tenantService = { getByContactCode, searchContacts }

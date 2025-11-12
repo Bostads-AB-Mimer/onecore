@@ -19,6 +19,7 @@ import { RoomView } from './components/views/RoomView'
 import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
+import AllTenantsPage from './components/tenants/AllTenantsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ export default function App() {
                 path="residences/:residenceId/rooms/:roomId"
                 element={<RoomView />}
               />
+              <Route path="tenants" element={<AllTenantsPage />} />
               <Route path="tenants/:contactCode" element={<TenantView />} />
             </Route>
           </Routes>
