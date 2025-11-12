@@ -233,13 +233,16 @@ export const createLeaseForExternalParkingSpace = async (
         log.join('\n')
       )
 
+      const errorCode = applicantHasNoLease
+        ? 'external-credit-check-failed'
+        : 'internal-credit-check-failed'
+
       return {
         processStatus: ProcessStatus.failed,
-        error: applicantHasNoLease
-          ? 'external-credit-check-failed'
-          : 'internal-credit-check-failed',
+        error: errorCode,
         httpStatus: 400,
         response: {
+          errorCode: errorCode,
           reason: applicantHasNoLease
             ? 'External check failed'
             : 'Internal check failed',
