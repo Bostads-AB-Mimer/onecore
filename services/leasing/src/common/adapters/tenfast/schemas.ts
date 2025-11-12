@@ -262,7 +262,7 @@ export const TenfastLeaseSchema = z.object({
   id: z.string(),
   _id: z.string(),
   hyresvard: z.string(),
-  hyresgaster: z.array(z.string()),
+  hyresgaster: z.array(TenfastTenantSchema),
   hyresobjekt: z.array(z.string()),
   invitations: z.array(
     z.object({
