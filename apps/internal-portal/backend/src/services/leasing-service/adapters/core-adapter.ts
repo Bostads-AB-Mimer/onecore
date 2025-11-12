@@ -690,7 +690,8 @@ const createLeaseForNonScoredParkingSpace = async (params: {
     if (err instanceof AxiosError && err.response?.data) {
       const statusCode = err.response.status
       // Check error at root level first, then nested in content
-      const errorCode = err.response.data?.error || err.response.data?.content?.errorCode
+      const errorCode =
+        err.response.data?.error || err.response.data?.content?.errorCode
 
       // Handle both 400 BadRequest and 404 NotFound for validation errors
       if (statusCode === HttpStatusCode.BadRequest || statusCode === 404) {
@@ -701,7 +702,10 @@ const createLeaseForNonScoredParkingSpace = async (params: {
         if (errorCode === 'external-credit-check-failed') {
           return { ok: false, err: 'external-credit-check-failed', statusCode }
         }
-        if (errorCode === 'invalid-address' || errorCode === 'applicant-missing-address') {
+        if (
+          errorCode === 'invalid-address' ||
+          errorCode === 'applicant-missing-address'
+        ) {
           return { ok: false, err: 'invalid-address', statusCode }
         }
         if (errorCode === 'already-has-lease') {

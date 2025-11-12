@@ -115,7 +115,7 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       error: result.err,
       errorMessage: result.err,
-      ...metadata
+      ...metadata,
     }
   })
 
