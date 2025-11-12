@@ -114,7 +114,8 @@ export const acceptOffer = async (
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
         calculateVacantFrom(listing).toISOString(),
-        '001'
+        '001',
+        false
       )
 
       if (!createLeaseResult.ok) {
