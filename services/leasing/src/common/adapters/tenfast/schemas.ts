@@ -172,32 +172,6 @@ export const TenfastRentalObjectSchema = z.object({
   // states: z.array(z.string()),
 })
 
-export const TenfastCreateLeaseRequestSchema = z.object({
-  hyresgaster: z.array(z.string()),
-  hyresobjekt: z.array(z.string()),
-  avtalsbyggare: z.boolean(),
-  hyror: z.array(
-    z.object({
-      amount: z.number(),
-      vat: z.number(),
-      article: z.string(),
-      label: z.string(),
-    })
-  ),
-  startDate: z.string(),
-  endDate: z.string().optional(),
-  aviseringsTyp: z.string(),
-  uppsagningstid: z.string(),
-  forskottAvisering: z.string(),
-  betalningsOffset: z.string(),
-  betalasForskott: z.boolean(),
-  vatEnabled: z.boolean(),
-  originalTemplate: z.string(),
-  template: z.object({}),
-  method: z.string(),
-  aviseringsFrekvens: z.string(),
-})
-
 export const TenfastTenantByContactCodeResponseSchema = z.object({
   records: z.array(TenfastTenantSchema),
 })
@@ -220,9 +194,6 @@ export type TenfastTenantByContactCodeResponse = z.infer<
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 export type TenfastRentalObjectByRentalObjectCodeResponse = z.infer<
   typeof TenfastRentalObjectByRentalObjectCodeResponseSchema
->
-export type TenfastCreateLeaseRequest = z.infer<
-  typeof TenfastCreateLeaseRequestSchema
 >
 
 // TODO byt namn
@@ -292,26 +263,3 @@ export const TenfastLeaseTemplateSchema = z.object({
 })
 
 export type TenfastLeaseTemplate = z.infer<typeof TenfastLeaseTemplateSchema>
-
-export const TenfastCreateTenantRequestSchema = z.object({
-  name: z.object({
-    first: z.string(),
-    last: z.string(),
-  }),
-  phone: z.string(),
-  postadress: z.string(),
-  postnummer: z.string(),
-  stad: z.string(),
-  company: z.string().optional(),
-  externalId: z.string(),
-  isCompany: z.boolean(),
-  idbeteckning: z.string(),
-  firmatecknare: z.array(z.any()).optional(),
-  borgenarer: z.array(z.any()).optional(),
-  // onlineInboxes: z.record(z.any()).optional(),
-  // displayName: z.string(),
-})
-
-export type TenfastCreateTenantRequest = z.infer<
-  typeof TenfastCreateTenantRequestSchema
->

@@ -6,10 +6,8 @@ import {
   TenfastTenant,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponseSchema,
-  TenfastCreateLeaseRequestSchema,
   TenfastLeaseTemplate,
   TenfastLeaseTemplateSchema,
-  TenfastCreateTenantRequestSchema,
   TenfastTenantSchema,
 } from '../../../../common/adapters/tenfast/schemas'
 import config from '../../../../common/config'
@@ -122,20 +120,19 @@ export const createLease = async (
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
       data: createLeaseRequestData,
     })
-    if (leaseResponse.status !== 200 && leaseResponse.status !== 201) {
-      if (leaseResponse.status === 400)
-        return handleTenfastError(
-          leaseResponse.data.error,
-          'create-lease-bad-request'
-        )
-
+    if (leaseResponse.status === 400)
+      return handleTenfastError(
+        leaseResponse.data.error,
+        'create-lease-bad-request'
+      )
+    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
       return handleTenfastError(
         { error: leaseResponse.data.error, status: leaseResponse.status },
         'lease-could-not-be-created'
       )
-    }
-    //gör schema av response?
-    return { ok: true, data: leaseResponse.data }
+
+    //TODO: create schema for response and convert to onecore lease type here later
+    return { ok: true, data: undefined }
   } catch (err) {
     console.log(err)
     return handleTenfastError(err, 'lease-could-not-be-created')
@@ -386,7 +383,7 @@ function buildLeaseRequestData(
     vat = currency(rentalObject.hyra).multiply(0.25).value
   }
 
-  return TenfastCreateLeaseRequestSchema.parse({
+  return {
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,
@@ -410,11 +407,11 @@ function buildLeaseRequestData(
     originalTemplate: template._id,
     template: template,
     method: 'bankid',
-  })
+  }
 }
 
 function buildTenantRequestData(contact: Contact) {
-  return TenfastCreateTenantRequestSchema.parse({
+  return {
     externalId: contact.contactCode,
     idbeteckning: contact.nationalRegistrationNumber, // orgNr for companies when that is implemented
     // company: contact.company, //doesn't exist on contact yet
@@ -429,5 +426,5 @@ function buildTenantRequestData(contact: Contact) {
     postadress: `${contact.address?.street} ${contact.address?.number}`,
     postnummer: contact.address?.postalCode,
     stad: contact.address?.city,
-  })
+  }
 }
