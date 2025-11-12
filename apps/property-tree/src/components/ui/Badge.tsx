@@ -1,49 +1,36 @@
-import React from 'react'
-import { motion } from 'framer-motion'
-import { LucideIcon } from 'lucide-react'
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
 
-interface BadgeProps {
-  children: React.ReactNode
-  icon?: LucideIcon
-  variant?: 'default' | 'success' | 'warning' | 'error'
-  onClick?: () => void
-}
+import { cn } from '@/lib/utils'
 
-export function Badge({
-  children,
-  icon: Icon,
-  variant = 'default',
-  onClick,
-}: BadgeProps) {
-  const variantStyles = {
-    default: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
-    success:
-      'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-    warning:
-      'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-    error: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+const badgeVariants = cva(
+  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  {
+    variants: {
+      variant: {
+        default:
+          'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',
+        secondary:
+          'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        destructive:
+          'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
+        outline: 'text-foreground',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
   }
+)
 
-  const Component = onClick ? motion.button : 'div'
-  const motionProps = onClick
-    ? {
-        whileHover: { scale: 1.05 },
-        whileTap: { scale: 0.95 },
-      }
-    : {}
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
 
+function Badge({ className, variant, ...props }: BadgeProps) {
   return (
-    <Component
-      {...motionProps}
-      onClick={onClick}
-      className={`
-        inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs
-        ${variantStyles[variant]}
-        ${onClick ? 'cursor-pointer hover:bg-opacity-80' : ''}
-      `}
-    >
-      {Icon && <Icon className="h-3 w-3" />}
-      <span>{children}</span>
-    </Component>
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
   )
 }
+
+export { Badge, badgeVariants }

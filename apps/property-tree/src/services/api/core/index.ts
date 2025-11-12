@@ -1,3 +1,4 @@
+export * from './buildingService'
 export * from './companyService'
 export * from './lease-service'
 export * from './propertyService'

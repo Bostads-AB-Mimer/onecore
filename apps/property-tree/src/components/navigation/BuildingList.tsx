@@ -3,13 +3,14 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { SidebarMenu } from '@/components/ui/Sidebar'
 import { BuildingNavigation } from './Building'
 import { useQuery } from '@tanstack/react-query'
-import { buildingService } from '@/services/api'
+import { buildingService } from '@/services/api/core'
 
 interface BuildingListProps {
   property: Property
+  companyId?: string
 }
 
-export function BuildingList({ property }: BuildingListProps) {
+export function BuildingList({ property, companyId }: BuildingListProps) {
   const {
     data: buildings,
     isLoading,
@@ -47,6 +48,7 @@ export function BuildingList({ property }: BuildingListProps) {
           key={building.code}
           property={property}
           building={building}
+          companyId={companyId}
         />
       ))}
     </SidebarMenu>

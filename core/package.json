@@ -32,6 +32,8 @@
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@onecore/types": "workspace:*",
+    "@onecore/utilities": "workspace:*",
     "@types/lodash": "^4.17.13",
     "axios": "^1.9.0",
     "axios-logger": "^2.8.0",
@@ -57,14 +59,12 @@
     "striptags": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
     "zod": "^3.25.67",
-    "zod-to-json-schema": "^3.24.5",
-    "@onecore/types": "workspace:*",
-    "@onecore/utilities": "workspace:*"
+    "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
+    "@types/http-errors": "^2.0.0",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/http-errors": "^2.0.0",
     "@types/koa": "^2.15.0",
     "@types/koa-bodyparser": "^4.3.12",
     "@types/koa-pino-logger": "3.0.4",
@@ -85,6 +85,7 @@
     "msw": "^2.7.3",
     "nock": "^13.5.4",
     "nodemon": "^3.1.7",
+    "openapi-typescript": "^6.7.6",
     "prettier": "^3.6.2",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",

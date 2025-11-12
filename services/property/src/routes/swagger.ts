@@ -58,6 +58,10 @@ const schemas = {
     name: 'ResidenceByRentalId',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.ResidenceSummarySchema, {
+    name: 'ResidenceSummary',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(types.GetResidenceByRentalIdResponseSchema, {
     name: 'GetResidenceByRentalIdResponse',
     target: 'openApi3',
