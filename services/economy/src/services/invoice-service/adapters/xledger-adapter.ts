@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
 import {
@@ -10,7 +11,6 @@ import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
-import { randomUUID } from 'crypto'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -49,6 +49,7 @@ const makeXledgerRequest = async (query: {
   if (result.status === 'ok') {
     return result.data
   } else if (result.status === 'retry') {
+    logger.warn('Rate limit exceeded, waiting and retrying')
     await sleep(3000)
     return await makeXledgerRequest(query)
   } else {
@@ -161,9 +162,13 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
+      remainingAmount: parseFloat(invoiceData.node.invoiceRemaining),
       type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
-      description: invoiceData.node.text,
+      description: invoiceData.node.text ?? undefined,
       sentToDebtCollection,
+      source: 'next',
+      invoiceRows: [],
+      invoiceFileUrl: invoiceData.node.invoiceFile?.url,
     }
 
     if (invoice.paidAmount === invoice.amount) {
@@ -405,6 +410,7 @@ export const getInvoicesByContactCode = async (
   }
 
   const result = await makeXledgerRequest(query)
+
   return transformToInvoice(result.data?.arTransactions?.edges ?? [])
 }
 
@@ -439,6 +445,45 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
     return invoice
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')
+    throw err
+  }
+}
+
+export async function getInvoiceMatchId(invoiceNumber: string) {
+  const q = {
+    query: `query {
+      arTransactions(
+        first: 1
+        filter: {
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
+        }
+      ) {
+          edges {
+            node {
+              matchId
+            }
+          }
+        }
+    }`,
+  }
+
+  try {
+    const result = await makeXledgerRequest(q)
+
+    if (!result.data?.arTransactions?.edges) {
+      return null
+    }
+
+    const matchId = result.data.arTransactions.edges[0]?.node.matchId
+    // If matchId is 0, invoice has not been paired correctly with events in xledger.
+    // Return null in this scenario.
+    if (matchId == null || matchId === 0) {
+      return null
+    } else {
+      return matchId
+    }
+  } catch (err) {
+    logger.error(err, 'Error getting invoice match id from Xledger')
     throw err
   }
 }
@@ -606,15 +651,23 @@ const getTaxRule = (totalAmount: number, totalVat: number) => {
 }
 
 export const getPeriodInformation = (
-  invoiceRow: InvoiceDataRow
+  invoiceDate: Date | null,
+  fromDate: Date,
+  toDate: Date
 ): { periodStart: string; periods: string } => {
-  const from = dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string)
-  const to = dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
-  const interval = to.getMonth() - from.getMonth()
+  if (!invoiceDate) {
+    invoiceDate = fromDate
+  }
+
+  const toStart = fromDate.getMonth() - invoiceDate.getMonth()
+  const invoiceInterval = toDate.getMonth() - fromDate.getMonth()
 
   const periodInformation = {
-    periodStart: interval == 0 ? '' : '0',
-    periods: interval == 0 ? '' : (interval + 1).toString(),
+    periodStart: toStart == 0 ? '' : toStart.toString(),
+    periods:
+      invoiceInterval == 0 && toStart == 0
+        ? ''
+        : (invoiceInterval + 1).toString(),
   }
 
   return periodInformation
@@ -624,7 +677,11 @@ export const transformAggregatedInvoiceRow = (
   invoiceRow: InvoiceDataRow,
   chunkNumber: number
 ): InvoiceDataRow => {
-  const periodInformation = getPeriodInformation(invoiceRow)
+  const periodInformation = getPeriodInformation(
+    null,
+    dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string),
+    dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
+  )
 
   const transformedRow = {
     voucherType: 'AR',
