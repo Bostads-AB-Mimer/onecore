@@ -1189,7 +1189,7 @@ importers:
         specifier: ^18.6.1
         version: 18.6.1
       ts-pattern:
-        specifier: ^5.7.0
+        specifier: ^5.8.0
         version: 5.8.0
       zod:
         specifier: ^3.25.67

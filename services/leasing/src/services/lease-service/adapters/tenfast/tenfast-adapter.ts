@@ -1,7 +1,8 @@
 import { logger } from '@onecore/utilities'
-import { ZodError } from 'zod'
-import { Contact, Lease } from '@onecore/types'
+import { match } from 'ts-pattern'
+import { Contact } from '@onecore/types'
 import { isAxiosError } from 'axios'
+import { ZodError } from 'zod'
 
 import {
   TenfastTenantByContactCodeResponseSchema,
@@ -21,6 +22,7 @@ import * as helpers from '../../helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
+type SchemaError = { tag: 'schema-error'; error: ZodError }
 
 export const createLease = async (
   contact: Contact,
@@ -373,10 +375,15 @@ function buildTenantRequestData(contact: Contact) {
   }
 }
 
-type SchemaError = { tag: 'schema-error'; error: ZodError }
+type GetLeasesFilters = {
+  type: ('active' | 'upcoming' | 'terminated')[]
+}
+
+const defaultFilters: GetLeasesFilters = { type: ['active'] }
 
 export async function getLeasesByTenantId(
-  tenantId: string
+  tenantId: string,
+  filters: GetLeasesFilters = defaultFilters
 ): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
   try {
     const res = await tenfastApi.request({
@@ -384,20 +391,45 @@ export async function getLeasesByTenantId(
       url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal`,
     })
 
+    // Not sure we want to fail completely here if parsing fails
     const leases = TenfastLeaseSchema.array().safeParse(res.data)
 
     if (!leases.success) {
+      logger.error(
+        { error: JSON.stringify(leases.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
       return { ok: false, err: { tag: 'schema-error', error: leases.error } }
     }
 
-    return { ok: true, data: leases.data }
+    return {
+      ok: true,
+      data: filterByType(leases.data, filters.type),
+    }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByTenantId')
     return { ok: false, err: 'unknown' }
   }
 }
 
-// TODO: maybe move to utilities
+// prettier-ignore
+function filterByType(leases: TenfastLease[], types: GetLeasesFilters['type']) {
+  const now = new Date()
+  return types.reduce(
+    (acc, type) =>
+      acc.filter((l) =>
+        match(type)
+          .with('active', () => l.startDate < now && l.endDate && l.endDate > now)
+          .with('upcoming', () => l.startDate > now)
+          .with('terminated', () => l.cancellation.cancelled)
+          .exhaustive()
+      ),
+    leases
+  )
+}
+
+// TODO: maybe move to utilities and rework
 function mapHttpError(err: unknown): { err: string } {
   if (isAxiosError(err)) {
     return {
@@ -413,31 +445,5 @@ function mapHttpError(err: unknown): { err: string } {
     }
   } else {
     return { err: JSON.stringify(err, null, 2) }
-  }
-}
-
-function mapToOnecoreLease(lease: TenfastLease): Lease {
-  return {
-    leaseId: 'missing',
-    leaseNumber: 'missing',
-    leaseStartDate: lease.startDate,
-    leaseEndDate: lease.endDate ?? undefined,
-    status: helpers.calculateLeaseStatus(
-      lease.endDate?.toISOString() ?? '', // TODO: dunno if endDate is good here
-      lease.startDate.toISOString()
-    ),
-    noticeGivenBy: undefined,
-    noticeDate: undefined,
-    noticeTimeTenant: undefined,
-    preferredMoveOutDate: undefined,
-    terminationDate: undefined,
-    contractDate: undefined,
-    lastDebitDate: undefined,
-    approvalDate: undefined,
-    residentialArea: undefined,
-    tenantContactIds: undefined,
-    tenants: undefined,
-    rentalPropertyId: 'missing',
-    type: 'missing',
   }
 }

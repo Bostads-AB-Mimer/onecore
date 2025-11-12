@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import z from 'zod'
 
 import {
@@ -11,6 +15,9 @@ import {
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import * as tenfastHelpers from '../helpers/tenfast'
+import { Contact, Lease } from '@onecore/types'
+import { AdapterResult } from '../adapters/types'
 
 /**
  * @swagger
@@ -159,7 +166,7 @@ export const routes = (router: KoaRouter) => {
       .transform((value) => value === 'true'),
   })
 
-  router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
+  router.get('(.*)/leases/for/contactCode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'includeUpcomingLeases',
       'includeTerminatedLeases',
@@ -169,16 +176,17 @@ export const routes = (router: KoaRouter) => {
     const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
       ctx.query
     )
+
     if (queryParams.success === false) {
       ctx.status = 400
       return
     }
 
-    const result = await getLeasesForContactCode(ctx.params.pnr, {
-      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-      includeContacts: queryParams.data.includeContacts,
-    })
+    const result = await getLeasesForContactCode(
+      ctx.params.contactCode,
+      queryParams.data
+    )
+
     if (!result.ok) {
       ctx.status = 500
       ctx.body = {
@@ -195,6 +203,105 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  // Tenfast equivalent of above route
+  router.get('(.*)/v1/leases/for/contactCode/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'includeUpcomingLeases',
+      'includeTerminatedLeases',
+      'includeContacts',
+    ])
+
+    const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
+      ctx.query
+    )
+
+    if (queryParams.success === false) {
+      ctx.status = 400
+      return
+    }
+
+    const contact = await tenfastAdapter.getTenantByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!contact.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: contact.err,
+        ...metadata,
+      }
+
+      return
+    }
+
+    if (!contact.data) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Contact not found',
+        ...metadata,
+      }
+      return
+    }
+
+    const getLeases = await tenfastAdapter.getLeasesByTenantId(contact.data._id)
+
+    if (!getLeases.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: getLeases.err,
+        ...metadata,
+      }
+      return
+    }
+
+    const onecoreLeases = getLeases.data.map((lease) =>
+      tenfastHelpers.mapToOnecoreLease(lease)
+    )
+
+    // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
+    if (!queryParams.data.includeContacts) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
+    } else {
+      const patchLeases = await patchLeasesWithContacts(onecoreLeases)
+      if (!patchLeases.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: patchLeases.err,
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
+    }
+  })
+
+  async function patchLeasesWithContacts(
+    leases: Lease[]
+  ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
+    for (const lease of leases) {
+      if (!lease.tenantContactIds) {
+        continue
+      }
+
+      let contacts: Contact[] = []
+      for (const contactId of lease.tenantContactIds) {
+        const contact = await getContactByContactCode(contactId, false)
+        if (!contact.ok || !contact.data) {
+          return { ok: false, err: 'no-contact' }
+        }
+
+        contacts.push(contact.data)
+      }
+
+      lease.tenants = contacts
+    }
+
+    return { ok: true, data: leases }
+  }
   /**
    * @swagger
    * /leases/for/propertyId/{propertyId}:
