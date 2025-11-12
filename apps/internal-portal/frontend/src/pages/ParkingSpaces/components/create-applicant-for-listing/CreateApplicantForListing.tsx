@@ -248,7 +248,9 @@ export const CreateApplicantForListing = (props: Props) => {
                         {contactQuery.data && !hasValidAddress && (
                           <Box paddingTop="1rem">
                             <Typography color="error">
-                              Kontakten saknar adress (gatuadress, stad eller postnummer). Uppdatera kontaktuppgifterna före tilldelning.
+                              Kontakten saknar adress (gatuadress, stad eller
+                              postnummer). Uppdatera kontaktuppgifterna före
+                              tilldelning.
                             </Typography>
                           </Box>
                         )}
@@ -260,7 +262,9 @@ export const CreateApplicantForListing = (props: Props) => {
                     ) : (
                       <>
                         {!tenantQuery.isLoading && (
-                          <ContactInfo tenant={tenantQuery.data?.tenant ?? null} />
+                          <ContactInfo
+                            tenant={tenantQuery.data?.tenant ?? null}
+                          />
                         )}
                         {tenantQuery.isLoading && <ContactInfoLoading />}
                         {renderTenantQueryError(tenantQuery.error)}
@@ -362,34 +366,32 @@ export const CreateApplicantForListing = (props: Props) => {
                       Tilldela
                     </Button>
                   )
+                ) : // SCORED: Show "Lägg till" button based on tenant validation
+                tenantQuery.data ? (
+                  <LoadingButton
+                    disabled={
+                      tenantQuery.data.validationResult === 'no-contract' ||
+                      !tenantHasValidContractForTheDiscrict(
+                        tenantQuery.data.tenant,
+                        props.listing
+                      )
+                    }
+                    loading={createNoteOfInterest.isPending}
+                    variant="dark"
+                    onClick={() =>
+                      onCreate({
+                        applicationType,
+                        contactCode: tenantQuery.data.tenant.contactCode,
+                        parkingSpaceId: props.listing.rentalObjectCode,
+                      })
+                    }
+                  >
+                    Lägg till
+                  </LoadingButton>
                 ) : (
-                  // SCORED: Show "Lägg till" button based on tenant validation
-                  tenantQuery.data ? (
-                    <LoadingButton
-                      disabled={
-                        tenantQuery.data.validationResult === 'no-contract' ||
-                        !tenantHasValidContractForTheDiscrict(
-                          tenantQuery.data.tenant,
-                          props.listing
-                        )
-                      }
-                      loading={createNoteOfInterest.isPending}
-                      variant="dark"
-                      onClick={() =>
-                        onCreate({
-                          applicationType,
-                          contactCode: tenantQuery.data.tenant.contactCode,
-                          parkingSpaceId: props.listing.rentalObjectCode,
-                        })
-                      }
-                    >
-                      Lägg till
-                    </LoadingButton>
-                  ) : (
-                    <Button disabled variant="dark">
-                      Lägg till
-                    </Button>
-                  )
+                  <Button disabled variant="dark">
+                    Lägg till
+                  </Button>
                 )}
               </Box>
             </DialogContent>
@@ -446,7 +448,9 @@ function renderWarningIfDistrictsMismatch(listing: Listing, tenant: Tenant) {
 
 const CreateApplicantError = (props: {
   reset: () => void
-  error: RequestError<CreateNoteOfInterestErrorCodes | CreateNonScoredLeaseErrorCodes>
+  error: RequestError<
+    CreateNoteOfInterestErrorCodes | CreateNonScoredLeaseErrorCodes
+  >
 }) => (
   <Box
     padding="1rem"
@@ -520,7 +524,8 @@ const SuccessState = (props: {
       </Box>
       <Box marginTop={2}>
         <Typography variant="body2" color="text.secondary" textAlign="center">
-          Kontraktet har skapats i systemet och annonsens status har uppdaterats till tilldelad.
+          Kontraktet har skapats i systemet och annonsens status har uppdaterats
+          till tilldelad.
         </Typography>
       </Box>
       <Box paddingTop={4} display="flex" gap={2}>

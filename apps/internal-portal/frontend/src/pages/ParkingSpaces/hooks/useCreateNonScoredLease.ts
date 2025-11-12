@@ -78,8 +78,7 @@ export const useCreateNonScoredLease = (listingId: number) => {
           status: 400,
           errorCode: CreateNonScoredLeaseErrorCodes.ExternalCreditCheckFailed,
           errorHeading: 'Kreditprövning misslyckades',
-          errorMessage:
-            'Kunden uppfyller inte kraven för kreditkontroll.',
+          errorMessage: 'Kunden uppfyller inte kraven för kreditkontroll.',
         }
       case CreateNonScoredLeaseErrorCodes.InvalidAddress:
         return {
@@ -94,8 +93,7 @@ export const useCreateNonScoredLease = (listingId: number) => {
           status: 400,
           errorCode: CreateNonScoredLeaseErrorCodes.AlreadyHasLease,
           errorHeading: 'Kontrakt finns redan',
-          errorMessage:
-            'Kunden har redan ett kontrakt för denna bilplats.',
+          errorMessage: 'Kunden har redan ett kontrakt för denna bilplats.',
         }
       default: {
         return defaultError
