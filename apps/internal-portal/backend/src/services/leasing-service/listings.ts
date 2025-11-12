@@ -68,6 +68,57 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { error: result.err, ...metadata }
   })
 
+  router.post('(.*)/listings/non-scored-lease', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+
+    const result = await coreAdapter.createLeaseForNonScoredParkingSpace({
+      parkingSpaceId: params.parkingSpaceId,
+      contactCode: params.contactCode,
+    })
+
+    if (result.ok) {
+      // Add comment to nonscored listing indicating credit check type and approval
+      const creditCheckType = (result.data as any)?.creditCheckType
+      const creditCheckDescription =
+        creditCheckType === 'intern'
+          ? 'Intern betalningskontroll'
+          : 'Kreditkontroll'
+      const commentText = `Anmälan hanterad av ${ctx.session?.account.name}. Tilldelad till ${params.contactCode}. ${creditCheckDescription} godkänd.`
+
+      const addCommentResult = await coreAdapter.addComment(
+        { targetType: 'listing', targetId: Number(params.listingId) },
+        {
+          authorId: 'system',
+          authorName: 'System',
+          comment: `Automatisk notering ${commentText}`,
+          type: 'COMMENT',
+        }
+      )
+
+      if (!addCommentResult.ok) {
+        logger.error(
+          { error: addCommentResult.err },
+          'Failed to add comment to parking space listing'
+        )
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = result.statusCode
+    ctx.body = {
+      error: result.err,
+      errorMessage: result.err,
+      ...metadata,
+    }
+  })
+
   router.delete('(.*)/listings/applicants/:applicantId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await coreAdapter.removeApplicant(ctx.params.applicantId)

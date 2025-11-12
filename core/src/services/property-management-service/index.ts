@@ -461,13 +461,14 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const contactId = ctx.request.body.contactId
+    // Accept both contactId and contactCode for backward compatibility
+    const contactId = ctx.request.body.contactId || ctx.request.body.contactCode
 
     if (!contactId) {
       ctx.status = 400
       ctx.body = {
         reason:
-          'Contact id is missing. It needs to be passed in the body (contactId)',
+          'Contact id/code is missing. It needs to be passed in the body (contactId or contactCode)',
         ...metadata,
       }
 
