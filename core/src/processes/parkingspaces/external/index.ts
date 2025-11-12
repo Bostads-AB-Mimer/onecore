@@ -134,11 +134,13 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (creditCheck) {
       // Step 4A. Create lease
+      const includeVAT = applicantHasNoLease
       const createLeaseResult = await createLease(
         parkingSpace.parkingSpaceId,
         applicantContact.contactCode,
         startDate != undefined ? startDate : new Date().toISOString(),
-        '001'
+        '001',
+        includeVAT
       )
 
       if (!createLeaseResult.ok) {

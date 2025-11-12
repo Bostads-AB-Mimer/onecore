@@ -34,6 +34,10 @@ export interface Config {
     apiKey: string
     username: string
     password: string
+    companyId: string
+    leaseTemplates: {
+      parkingSpace: string
+    }
   }
   health: {
     leasingDatabase: {
