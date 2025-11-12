@@ -9,6 +9,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useForm, SubmitHandler, FormProvider } from 'react-hook-form'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Contact, schemas } from '@onecore/types'
 import dayjs from 'dayjs'
@@ -82,6 +83,11 @@ const formDefaults = (): Inputs => {
 }
 
 const ResidencesPage: React.FC = () => {
+  const [searchParams] = useSearchParams()
+  const contactCodeFromUrl = searchParams.get('contact_code')
+  const [isOpenedFromPropertyTree, setIsOpenedFromPropertyTree] =
+    useState(false)
+
   const formMethods = useForm<Inputs>({
     defaultValues: {
       ...formDefaults(),
@@ -210,6 +216,36 @@ const ResidencesPage: React.FC = () => {
     searchInputRef.current?.focus()
   }, [])
 
+  // Auto-populate contact from URL query parameter
+  useEffect(() => {
+    if (contactCodeFromUrl && !selectedContact) {
+      setSelectedContact({
+        contactCode: contactCodeFromUrl,
+        fullName: '', // Will be fetched by the useCustomerCard hook
+      })
+    }
+  }, [contactCodeFromUrl, selectedContact])
+
+  // Check if opened from property-tree via window.open
+  useEffect(() => {
+    setIsOpenedFromPropertyTree(!!window.opener && !window.opener.closed)
+  }, [])
+
+  // Handler to open/return to kundkort (property-tree tenant view)
+  const handleOpenKundkort = () => {
+    if (!selectedContact?.contactCode) return
+
+    const propertyTreeUrl = `http://localhost:3000/tenants/${selectedContact.contactCode}`
+
+    if (isOpenedFromPropertyTree && window.opener && !window.opener.closed) {
+      // Close this window and return to the opener
+      window.close()
+    } else {
+      // Open kundkort in a new tab
+      window.open(propertyTreeUrl, '_blank')
+    }
+  }
+
   return (
     <Stack spacing={4} padding={0}>
       <Typography variant="h1">Sökandeprofil</Typography>
@@ -271,10 +307,35 @@ const ResidencesPage: React.FC = () => {
                       justifyContent="center"
                       xs={12}
                       marginY={4}
+                      spacing={2}
                     >
-                      <Button type="submit" variant="contained">
-                        Spara/uppdatera boendereferens
-                      </Button>
+                      <Grid item>
+                        <Button type="submit" variant="contained">
+                          Spara/uppdatera boendereferens
+                        </Button>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="outlined"
+                          onClick={handleOpenKundkort}
+                          disabled={!selectedContact}
+                          sx={{
+                            color: '#000 !important',
+                            borderColor: '#000 !important',
+                            backgroundColor: '#fff !important',
+                            '&:hover': {
+                              borderColor: '#333 !important',
+                              backgroundColor: '#f5f5f5 !important',
+                            },
+                            '&.Mui-disabled': {
+                              color: '#999 !important',
+                              borderColor: '#ccc !important',
+                            },
+                          }}
+                        >
+                          Öppna Kundkort
+                        </Button>
+                      </Grid>
                     </Grid>
                   </Grid>
                 </fieldset>
