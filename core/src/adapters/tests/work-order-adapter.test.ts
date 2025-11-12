@@ -272,4 +272,119 @@ describe('work-order-adapter', () => {
         expect(result.data).toEqual('Work order with ID 1 updated successfully')
     })
   })
+
+  describe(workOrderAdapter.getWorkOrdersByPropertyId, () => {
+    const propertyId = '123'
+    const workOrderMock = factory.externalOdooWorkOrder.buildList(2)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/propertyId/${propertyId}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getWorkOrdersByPropertyId(propertyId)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/propertyId/${propertyId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: workOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getWorkOrdersByPropertyId(propertyId)
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: workOrderMock,
+      })
+    })
+  })
+
+  describe(workOrderAdapter.getXpandWorkOrdersByPropertyId, () => {
+    const propertyId = '123'
+    const xpandWorkOrderMock = factory.externalXpandWorkOrder.buildList(3)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/propertyId/${propertyId}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByPropertyId(propertyId)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/propertyId/${propertyId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByPropertyId(propertyId)
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+
+    it('returns work order data with query params', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/propertyId/${propertyId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await workOrderAdapter.getXpandWorkOrdersByPropertyId(
+        propertyId,
+        {
+          skip: 10,
+          limit: 50,
+          sortAscending: true,
+        }
+      )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+  })
 })

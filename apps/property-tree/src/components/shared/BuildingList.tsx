@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, LucideIcon } from 'lucide-react'
 import { Building } from '@/services/types'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 
 interface BuildingListProps {
@@ -16,16 +16,20 @@ export function BuildingList({
   icon,
 }: BuildingListProps) {
   const navigate = useNavigate()
+  const { state } = useLocation()
+  const companyId = state?.companyId
 
   return (
-    <Card title={title} icon={icon}>
+    <Card title={title}>
       <div className="space-y-4">
         {buildings.map((building) => (
           <motion.div
             key={building.id}
             whileHover={{ scale: 1.02 }}
             className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
-            onClick={() => navigate(`/buildings/${building.id}`)}
+            onClick={() =>
+              navigate(`/buildings/${building.id}`, { state: { companyId } })
+            }
           >
             <div>
               <h3 className="font-medium group-hover:text-blue-500 transition-colors">

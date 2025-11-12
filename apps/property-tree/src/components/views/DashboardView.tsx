@@ -117,7 +117,6 @@ export function DashboardView() {
       isExternal: true,
       isDisabled: false,
     },
-    // Disabled cards (not yet implemented)
     {
       id: 'keys',
       title: 'Nycklar',
@@ -127,6 +126,17 @@ export function DashboardView() {
       isExternal: true,
       isDisabled: true,
     },
+    {
+      id: 'tenants',
+      title: 'Kunder',
+      icon: Contact,
+      description: 'Kundregister och hyresgästinformation',
+      path: resolve('VITE_TENANTS_URL', ''),
+      isExternal: true,
+      isDisabled: false,
+    },
+
+    // Disabled cards (not yet implemented)
     {
       id: 'barriers',
       title: 'Spärrar',
@@ -200,9 +210,8 @@ export function DashboardView() {
             <p className="text-lg leading-relaxed text-muted-foreground">
               Vi är glada att ha dig här! ONECore är din digitala arbetsplats
               där allt du behöver för att göra ditt bästa arbete finns samlat på
-              ett ställe. Ta det i din egen takt och utforska systemet - du
-              kommer att märka hur enkelt det är att navigera mellan olika
-              funktioner.
+              ett ställe. Ta det i din egen takt och utforska systemet - allt
+              finns ännu inte på plats utan vi uppdaterar löpande.
             </p>
             <p className="text-base text-muted-foreground">
               Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
