@@ -12,7 +12,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "pnpm run migrate:up && pnpx nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
+    "dev": "pnpm run migrate:up && pnpm exec nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -88,7 +88,7 @@
     "eslint": "^9.31.0",
     "globals": "^15.9.0",
     "jest": "^29.7.0",
-    "nodemon": "^3.1.7",
+    "nodemon": "3.1.10",
     "prettier": "^3.6.2",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
