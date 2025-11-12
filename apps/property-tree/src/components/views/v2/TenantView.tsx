@@ -95,7 +95,6 @@ const TenantView = () => {
 
         {isMobile ? (
           <TenantMobileAccordion
-            contracts={contracts}
             contactCode={tenant.contactCode}
             customerName={`${tenant.firstName} ${tenant.lastName}`}
           />
