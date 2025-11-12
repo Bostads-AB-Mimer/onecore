@@ -70,10 +70,7 @@ interface Lease {
   // sublet: Information om andrahandsuthyrning
   // hyresrader vill vi ha också
   rentalPropertyId: string
-  rentalProperty: RentalProperty | undefined // Eventuellt kan vi stryka den då den inte verkar användas någonstans i onecore
   type: string // Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
-  rentInfo: RentInfo | undefined // Den här används nog inte heller, ta bort?
-  address: Address | undefined
   noticeGivenBy: string | undefined // Vem har gjort uppsägningen?
   noticeDate: Date | undefined // När gjordes uppsägningen?
   noticeTimeTenant: string | undefined // Uppsägningstid i antal månader
