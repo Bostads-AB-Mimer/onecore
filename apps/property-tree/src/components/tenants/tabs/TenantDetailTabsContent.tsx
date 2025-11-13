@@ -1,7 +1,7 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
 import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 // import { TenantContracts } from '@/components/tenants/TenantContracts'
-// import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
+import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 // import { TenantNotes } from '@/components/tenants/TenantNotes'
 // import { TenantOrders } from '@/components/tenants/TenantOrders'
 // import { TenantEventLog } from '@/components/tenants/TenantEventLog'
@@ -9,11 +9,12 @@ import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagem
 // import { TenantLedger } from '@/components/tenants/TenantLedger'
 // import { TenantKeys } from '@/components/tenants/TenantKeys'
 import { StickyNote } from 'lucide-react'
+import type { ContractType } from '@/services/types'
 // import { getMockLedgerForCustomer } from '@/data/ledger'
 // import { getMockInvoicesForCustomer } from '@/data/invoices'
 
 interface TenantDetailTabsContentProps {
-  contracts: any[]
+  contracts: ContractType[]
   personalNumber?: string
   contactCode: string
   customerName: string
@@ -33,11 +34,10 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="queue">
-        <div>Placeholder Kösystem</div>
-        {/* <TenantQueueSystem
+        <TenantQueueSystem
           customerNumber={contactCode}
           customerName={customerName}
-        /> */}
+        />
       </TabsContent>
 
       <TabsContent value="work-orders">

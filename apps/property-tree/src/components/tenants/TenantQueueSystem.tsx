@@ -1,259 +1,430 @@
-// import { useState, useEffect } from 'react'
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-// import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-// import { Badge } from '@/components/ui/badge'
-// import { Button } from '@/components/ui/button'
-// import { InfoIcon, Home, Car, User, UserCheck, Users, Plus } from 'lucide-react'
-// import { CreateParkingInterestDialog } from './CreateParkingInterestDialog'
+import { useState, useEffect } from 'react'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/v2/Card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/v2/Button'
+import { InfoIcon, Home, Car, Users, ExternalLink, Plus } from 'lucide-react'
+import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
+import { useQueueData } from '@/components/hooks/useQueueData'
+import { resolve } from '@/utils/env'
 
-// // Mock data for the queue system
-// const queueData = {
-//   housingPoints: 1245,
-//   parkingPoints: 386,
-//   activeInterests: [
-//     {
-//       id: 'int-001',
-//       type: 'housing',
-//       address: 'Storgatan 45, 2tr',
-//       dateRegistered: '2023-09-12',
-//       status: 'waiting',
-//     },
-//     {
-//       id: 'int-002',
-//       type: 'parking',
-//       address: 'P-plats Norra garaget',
-//       dateRegistered: '2023-11-05',
-//       status: 'offered',
-//     },
-//   ],
-//   housingReferences: {
-//     currentHousingForm: 'Hyresrätt',
-//     landlord: 'Mimer Fastigheter AB',
-//     adultsInHousehold: 2,
-//     childrenInHousehold: 1,
-//     referenceStatus: 'Godkänd',
-//   },
-// }
+// Helper function to get status badge variant
+// Handles both numeric ApplicantStatus enum values and string values
+const getStatusBadge = (status: string | number) => {
+  // Handle numeric ApplicantStatus enum values
+  if (typeof status === 'number') {
+    switch (status) {
+      case 1: // Active - applicant is waiting in queue
+        return { variant: 'outline' as const, className: '', text: 'Väntar' }
+      case 2: // Assigned
+        return {
+          variant: 'default' as const,
+          className: 'bg-green-500',
+          text: 'Tilldelad',
+        }
+      case 3: // AssignedToOther
+        return {
+          variant: 'secondary' as const,
+          className: '',
+          text: 'Tilldelad till annan',
+        }
+      case 4: // WithdrawnByUser
+        return {
+          variant: 'secondary' as const,
+          className: '',
+          text: 'Återkallad av hyresgäst',
+        }
+      case 5: // WithdrawnByManager
+        return {
+          variant: 'secondary' as const,
+          className: '',
+          text: 'Återkallad',
+        }
+      case 6: // Offered
+        return {
+          variant: 'default' as const,
+          className: 'bg-amber-500',
+          text: 'Erbjuden',
+        }
+      case 7: // OfferAccepted
+        return {
+          variant: 'default' as const,
+          className: 'bg-green-500',
+          text: 'Erbjudande accepterat',
+        }
+      case 8: // OfferDeclined
+        return {
+          variant: 'secondary' as const,
+          className: '',
+          text: 'Erbjudande avböjt',
+        }
+      case 9: // OfferExpired
+        return {
+          variant: 'secondary' as const,
+          className: '',
+          text: 'Erbjudande utgånget',
+        }
+      default:
+        return {
+          variant: 'outline' as const,
+          className: '',
+          text: `Status ${status}`,
+        }
+    }
+  }
 
-// // Helper function to get the appropriate color for reference status
-// const getReferenceStatusColor = (status: string) => {
-//   switch (status) {
-//     case 'Godkänd':
-//       return 'bg-green-500'
-//     case 'Ej godkänd':
-//       return 'bg-red-500'
-//     case 'Kontaktad - ej svar':
-//       return 'bg-amber-500'
-//     case 'Referens krävs ej':
-//       return 'bg-blue-500'
-//     default:
-//       return 'bg-slate-500'
-//   }
-// }
+  // Handle string status values (backwards compatibility)
+  switch (status?.toLowerCase()) {
+    case 'offered':
+    case 'erbjuden':
+      return {
+        variant: 'default' as const,
+        className: 'bg-amber-500',
+        text: 'Erbjuden',
+      }
+    case 'active':
+    case 'aktiv':
+      return { variant: 'outline' as const, className: '', text: 'Aktiv' }
+    case 'waiting':
+    case 'väntar':
+      return { variant: 'outline' as const, className: '', text: 'Väntar' }
+    default:
+      return { variant: 'outline' as const, className: '', text: status }
+  }
+}
 
-// interface TenantQueueSystemProps {
-//   customerNumber: string
-//   customerName: string
-// }
+interface TenantQueueSystemProps {
+  customerNumber: string
+  customerName: string
+}
 
-// export function TenantQueueSystem({
-//   customerNumber,
-//   customerName,
-// }: TenantQueueSystemProps) {
-//   const [activeInterests, setActiveInterests] = useState(
-//     queueData.activeInterests
-//   )
+export function TenantQueueSystem({
+  customerNumber,
+  customerName,
+}: TenantQueueSystemProps) {
+  const { data: queueData, isLoading, error } = useQueueData(customerNumber)
+  const [activeInterests, setActiveInterests] = useState(
+    queueData?.interestApplications || []
+  )
 
-//   // Listen for new parking interest applications
-//   useEffect(() => {
-//     const handleNewInterest = (event: CustomEvent) => {
-//       const { parkingSpaces } = event.detail
-//       const newInterests = parkingSpaces.map((space: any) => ({
-//         id: `int-parking-${Date.now()}-${space.id}`,
-//         type: 'parking',
-//         address: space.address,
-//         dateRegistered: new Date().toISOString().split('T')[0],
-//         status: 'waiting',
-//       }))
+  // Update active interests when queue data changes
+  useEffect(() => {
+    if (queueData?.interestApplications) {
+      setActiveInterests(queueData.interestApplications)
+    }
+  }, [queueData])
 
-//       setActiveInterests((prev) => [...newInterests, ...prev])
-//     }
+  // Listen for new parking interest applications
+  useEffect(() => {
+    const handleNewInterest = (event: CustomEvent) => {
+      // Refetch will be triggered by the mutation hook
+      // This is just for real-time UI updates
+      console.log('New parking interest created:', event.detail)
+    }
 
-//     window.addEventListener(
-//       'parkingInterestCreated',
-//       handleNewInterest as EventListener
-//     )
-//     return () =>
-//       window.removeEventListener(
-//         'parkingInterestCreated',
-//         handleNewInterest as EventListener
-//       )
-//   }, [])
+    window.addEventListener(
+      'parkingInterestCreated',
+      handleNewInterest as EventListener
+    )
+    return () =>
+      window.removeEventListener(
+        'parkingInterestCreated',
+        handleNewInterest as EventListener
+      )
+  }, [])
 
-//   return (
-//     <div className="space-y-6">
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//         <Card>
-//           <CardHeader className="pb-3">
-//             <CardTitle className="text-lg flex items-center gap-2">
-//               <Home className="h-5 w-5 text-muted-foreground" />
-//               Bostadskö
-//             </CardTitle>
-//           </CardHeader>
-//           <CardContent>
-//             <div className="space-y-4">
-//               <div>
-//                 <p className="text-sm text-muted-foreground">Köpoäng</p>
-//                 <p className="text-2xl font-bold">{queueData.housingPoints}</p>
-//                 <p className="text-xs text-muted-foreground mt-1">
-//                   Motsvarar ca {Math.floor(queueData.housingPoints / 365)} år
-//                   och {queueData.housingPoints % 365} dagar
-//                 </p>
-//               </div>
-//               <Button variant="outline" className="w-full">
-//                 <Plus className="h-4 w-4 mr-2" />
-//                 Ny intresseanmälan bostad
-//               </Button>
-//             </div>
-//           </CardContent>
-//         </Card>
+  // Handler to open Sökandeprofil in internal portal
+  const handleOpenSokandeprofil = () => {
+    const portalBaseUrl = resolve(
+      'VITE_INTERNAL_PORTAL',
+      'http://localhost:7003'
+    )
+    const sokprofilUrl = `${portalBaseUrl}/sokandeprofil?contact_code=${customerNumber}`
+    window.open(sokprofilUrl, '_blank')
+  }
 
-//         <Card>
-//           <CardHeader className="pb-3">
-//             <CardTitle className="text-lg flex items-center gap-2">
-//               <Car className="h-5 w-5 text-muted-foreground" />
-//               Bilplatskö
-//             </CardTitle>
-//           </CardHeader>
-//           <CardContent>
-//             <div className="space-y-4">
-//               <div>
-//                 <p className="text-sm text-muted-foreground">Köpoäng</p>
-//                 <p className="text-2xl font-bold">{queueData.parkingPoints}</p>
-//                 <p className="text-xs text-muted-foreground mt-1">
-//                   Motsvarar ca {Math.floor(queueData.parkingPoints / 365)} år
-//                   och {queueData.parkingPoints % 365} dagar
-//                 </p>
-//               </div>
-//               <CreateParkingInterestDialog
-//                 customerNumber={customerNumber}
-//                 customerName={customerName}
-//               />
-//             </div>
-//           </CardContent>
-//         </Card>
-//       </div>
+  // Handler to open Bilplatser in internal portal
+  const handleOpenBilplatser = () => {
+    const portalBaseUrl = resolve(
+      'VITE_INTERNAL_PORTAL',
+      'http://localhost:7003'
+    )
+    const bilplatserUrl = `${portalBaseUrl}/bilplatser`
+    window.open(bilplatserUrl, '_blank')
+  }
 
-//       <Card>
-//         <CardHeader>
-//           <CardTitle className="flex items-center gap-2">
-//             <Users className="h-5 w-5 text-muted-foreground" />
-//             Boendereferenser
-//           </CardTitle>
-//         </CardHeader>
-//         <CardContent>
-//           <div className="space-y-4">
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//               <div>
-//                 <p className="text-sm text-muted-foreground mb-1">
-//                   Nuvarande boendeform
-//                 </p>
-//                 <p className="font-medium">
-//                   {queueData.housingReferences.currentHousingForm}
-//                 </p>
-//               </div>
-//               <div>
-//                 <p className="text-sm text-muted-foreground mb-1">Hyresvärd</p>
-//                 <p className="font-medium">
-//                   {queueData.housingReferences.landlord}
-//                 </p>
-//               </div>
-//             </div>
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//               <div>
-//                 <div className="flex items-center gap-2 mb-1">
-//                   <User className="h-4 w-4 text-muted-foreground" />
-//                   <p className="text-sm text-muted-foreground">
-//                     Vuxna i hushållet
-//                   </p>
-//                 </div>
-//                 <p className="font-medium">
-//                   {queueData.housingReferences.adultsInHousehold}
-//                 </p>
-//               </div>
-//               <div>
-//                 <div className="flex items-center gap-2 mb-1">
-//                   <User className="h-4 w-4 text-muted-foreground" />
-//                   <p className="text-sm text-muted-foreground">
-//                     Barn i hushållet
-//                   </p>
-//                 </div>
-//                 <p className="font-medium">
-//                   {queueData.housingReferences.childrenInHousehold}
-//                 </p>
-//               </div>
-//             </div>
-//             <div>
-//               <div className="flex items-center gap-2 mb-1">
-//                 <UserCheck className="h-4 w-4 text-muted-foreground" />
-//                 <p className="text-sm text-muted-foreground">
-//                   Status på boendereferens
-//                 </p>
-//               </div>
-//               <Badge
-//                 className={`${getReferenceStatusColor(queueData.housingReferences.referenceStatus)} text-white mt-1`}
-//               >
-//                 {queueData.housingReferences.referenceStatus}
-//               </Badge>
-//             </div>
-//           </div>
-//         </CardContent>
-//       </Card>
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <p className="text-muted-foreground">Laddar köinformation...</p>
+      </div>
+    )
+  }
 
-//       <Card>
-//         <CardHeader>
-//           <CardTitle>Aktiva intresseanmälningar</CardTitle>
-//         </CardHeader>
-//         <CardContent>
-//           {activeInterests.length > 0 ? (
-//             <div className="space-y-4">
-//               {activeInterests.map((interest) => (
-//                 <div key={interest.id} className="border rounded-md p-4">
-//                   <div className="flex justify-between items-start mb-2">
-//                     <div>
-//                       <span className="font-medium">{interest.address}</span>
-//                     </div>
-//                     <Badge
-//                       variant={
-//                         interest.status === 'offered' ? 'default' : 'outline'
-//                       }
-//                       className={
-//                         interest.status === 'offered' ? 'bg-amber-500' : ''
-//                       }
-//                     >
-//                       {interest.status === 'waiting' ? 'Väntar' : 'Erbjuden'}
-//                     </Badge>
-//                   </div>
-//                   <p className="text-sm text-muted-foreground">
-//                     Anmäld:{' '}
-//                     {new Date(interest.dateRegistered).toLocaleDateString(
-//                       'sv-SE'
-//                     )}
-//                   </p>
-//                 </div>
-//               ))}
-//             </div>
-//           ) : (
-//             <Alert>
-//               <InfoIcon className="h-4 w-4" />
-//               <AlertTitle>Inga aktiva intresseanmälningar</AlertTitle>
-//               <AlertDescription>
-//                 Det finns inga aktiva intresseanmälningar för denna kund.
-//               </AlertDescription>
-//             </Alert>
-//           )}
-//         </CardContent>
-//       </Card>
-//     </div>
-//   )
-// }
+  if (error) {
+    return (
+      <Alert>
+        <InfoIcon className="h-4 w-4" />
+        <AlertTitle>Kunde inte ladda köinformation</AlertTitle>
+        <AlertDescription>
+          Ett fel uppstod vid hämtning av köinformation. Försök igen senare.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Housing Queue */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Home className="h-5 w-5 text-muted-foreground" />
+              Bostadskö
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {queueData?.housing ? (
+                <>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Köpoäng</p>
+                    <p className="text-2xl font-bold">
+                      {queueData.housing.queuePoints}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Motsvarar ca{' '}
+                      {Math.floor(queueData.housing.queuePoints / 365)} år och{' '}
+                      {queueData.housing.queuePoints % 365} dagar
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full" disabled>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ny intresseanmälan bostad
+                  </Button>
+                </>
+              ) : (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Finns inga poäng att visa
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Parking Queue */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Car className="h-5 w-5 text-muted-foreground" />
+              Bilplatskö
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {queueData?.parking ? (
+                <>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Köpoäng</p>
+                    <p className="text-2xl font-bold">
+                      {queueData.parking.queuePoints}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Motsvarar ca{' '}
+                      {Math.floor(queueData.parking.queuePoints / 365)} år och{' '}
+                      {queueData.parking.queuePoints % 365} dagar
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleOpenBilplatser}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Visa tillgängliga bilplatser
+                  </Button>
+                </>
+              ) : (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Ingen köinformation tillgänglig
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Storage Queue */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Home className="h-5 w-5 text-muted-foreground" />
+              Förråd
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {queueData?.storage ? (
+                <>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Köpoäng</p>
+                    <p className="text-2xl font-bold">
+                      {queueData.storage.queuePoints}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Motsvarar ca{' '}
+                      {Math.floor(queueData.storage.queuePoints / 365)} år och{' '}
+                      {queueData.storage.queuePoints % 365} dagar
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full" disabled>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ny intresseanmälan förråd
+                  </Button>
+                </>
+              ) : (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Finns inga poäng att visa
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Housing References */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            Boendereferenser
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {queueData?.applicationProfile ? (
+            <div className="space-y-4">
+              <ApplicationProfileDisplay
+                profile={queueData.applicationProfile}
+              />
+              <Button
+                variant="outline"
+                onClick={handleOpenSokandeprofil}
+                size="sm"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Sökandeprofil
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Alert>
+                <InfoIcon className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  Ingen sökandeprofil finns ännu. Klicka på knappen nedan för
+                  att skapa en profil.
+                </AlertDescription>
+              </Alert>
+              <Button
+                variant="outline"
+                onClick={handleOpenSokandeprofil}
+                size="sm"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Sökandeprofil
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Active Interest Applications */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Aktiva intresseanmälningar (Bilplatser)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activeInterests && activeInterests.length > 0 ? (
+            <div className="space-y-4">
+              {activeInterests.map((interest) => {
+                const statusBadge = getStatusBadge(interest.status)
+                return (
+                  <div key={interest.id} className="border rounded-md p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <span className="font-medium">
+                          {interest.address || `Ansökan #${interest.id}`}
+                        </span>
+                      </div>
+                      <Badge
+                        variant={statusBadge.variant}
+                        className={statusBadge.className}
+                      >
+                        {statusBadge.text}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Anmäld: </span>
+                        <span>
+                          {new Date(
+                            interest.applicationDate
+                          ).toLocaleDateString('sv-SE')}
+                        </span>
+                      </div>
+                      {interest.publishedTo && (
+                        <div>
+                          <span className="text-muted-foreground">
+                            Publicerad tom:{' '}
+                          </span>
+                          <span>
+                            {new Date(interest.publishedTo).toLocaleDateString(
+                              'sv-SE'
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {interest.vacantFrom && (
+                        <div>
+                          <span className="text-muted-foreground">
+                            Ledigt från:{' '}
+                          </span>
+                          <span>
+                            {new Date(interest.vacantFrom).toLocaleDateString(
+                              'sv-SE'
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <Alert>
+              <InfoIcon className="h-4 w-4" />
+              <AlertTitle>Inga aktiva intresseanmälningar</AlertTitle>
+              <AlertDescription>
+                Det finns inga aktiva intresseanmälningar för denna kund.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

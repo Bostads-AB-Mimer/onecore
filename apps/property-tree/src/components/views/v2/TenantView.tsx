@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
-import { TriangleAlert } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
 import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
@@ -75,7 +75,7 @@ const TenantView = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center justify-center w-8 h-8 bg-amber-100 rounded-full border border-amber-200 cursor-help">
-                    <TriangleAlert className="h-4 w-4 text-amber-600" />
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -95,7 +95,6 @@ const TenantView = () => {
 
         {isMobile ? (
           <TenantMobileAccordion
-            contracts={contracts}
             contactCode={tenant.contactCode}
             customerName={`${tenant.firstName} ${tenant.lastName}`}
           />

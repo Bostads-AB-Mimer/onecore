@@ -1,5 +1,5 @@
 // import { TenantContracts } from './TenantContracts'
-// import { TenantQueueSystem } from './TenantQueueSystem'
+import { TenantQueueSystem } from './TenantQueueSystem'
 // import { TenantNotes } from './TenantNotes'
 // import { TenantOrders } from './TenantOrders'
 // import { TenantLedger } from './TenantLedger'
@@ -11,14 +11,12 @@ import {
 // import { getMockInvoicesForCustomer } from '@/data/invoices'
 
 interface TenantMobileAccordionProps {
-  contracts: any[]
   hasActiveCases?: boolean
   contactCode: string
   customerName: string
 }
 
 export function TenantMobileAccordion({
-  contracts,
   hasActiveCases,
   contactCode,
   customerName,
@@ -32,14 +30,13 @@ export function TenantMobileAccordion({
     },
     {
       id: 'queue',
-      title: 'Kösystem',
-      content: <div>Placeholder Kösystem</div>,
-      // content: (
-      //   <TenantQueueSystem
-      //     customerNumber={customerNumber}
-      //     customerName={customerName}
-      //   />
-      // ),
+      title: 'Uthyrning',
+      content: (
+        <TenantQueueSystem
+          customerNumber={contactCode}
+          customerName={customerName}
+        />
+      ),
     },
     {
       id: 'cases',

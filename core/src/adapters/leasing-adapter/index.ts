@@ -306,6 +306,9 @@ const getApplicantsAndListingByContactCode = async (
     const applicantsResponse = (await getApplicantsByContactCode(
       contactCode
     )) as Applicant[]
+
+    // Fetch all listings for the applicants
+    const listingsMap = new Map()
     for (const applicant of applicantsResponse) {
       const listingResponse = await getListingByListingId(applicant.listingId)
       if (listingResponse) {
@@ -325,6 +328,38 @@ const getApplicantsAndListingByContactCode = async (
         applicantsAndListings.push({ applicant, listing: listingResponse })
       }
     }
+
+    // Collect all rental object codes to fetch parking spaces in batch
+    const rentalObjectCodes = Array.from(listingsMap.values())
+      .map((listing) => listing.rentalObjectCode)
+      .filter(Boolean)
+
+    // Fetch all parking spaces in one batch call
+    const parkingSpacesResult = await getParkingSpaces(rentalObjectCodes)
+    const parkingSpacesMap = new Map()
+
+    if (parkingSpacesResult.ok) {
+      parkingSpacesResult.data.forEach((space) => {
+        parkingSpacesMap.set(space.rentalObjectCode, space)
+      })
+    }
+
+    // Build the final result with listings and parking spaces
+    for (const applicant of applicantsResponse) {
+      const listing = listingsMap.get(applicant.listingId)
+      if (listing) {
+        const rentalObject = parkingSpacesMap.get(listing.rentalObjectCode)
+        const listingWithRentalObject = rentalObject
+          ? { ...listing, rentalObject }
+          : listing
+
+        applicantsAndListings.push({
+          applicant,
+          listing: listingWithRentalObject,
+        })
+      }
+    }
+
     return applicantsAndListings
   } catch (error) {
     logger.error(
