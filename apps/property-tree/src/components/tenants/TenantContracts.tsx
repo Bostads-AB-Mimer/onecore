@@ -103,6 +103,24 @@ export function TenantContracts({
     }).format(amount)
   }
 
+  const getPropertyIdentifier = (rentalProperty: RentalProperty) => {
+    const type = rentalProperty?.type
+    if (type === 'Lägenhet') {
+      return rentalProperty.property.number || ''
+    }
+    if (type === 'Bilplats') {
+      return rentalProperty.property.code || ''
+    }
+    // Default fallback for other types
+    return rentalProperty.property.number || rentalProperty.property.code || ''
+  }
+
+  const formatAddress = (address: string) => {
+    if (!address) return ''
+    // Capitalize only the first letter, rest lowercase
+    return address.charAt(0).toUpperCase() + address.slice(1).toLowerCase()
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -115,6 +133,7 @@ export function TenantContracts({
               <TableHead>Typ</TableHead>
               <TableHead>Kontraktsnummer</TableHead>
               <TableHead>Objekt</TableHead>
+              <TableHead>Lägenhetsnummer/Skyltnummer</TableHead>
               <TableHead>Startdatum</TableHead>
               <TableHead>Slutdatum</TableHead>
               <TableHead>Månadshyra</TableHead>
@@ -134,7 +153,13 @@ export function TenantContracts({
                     </div>
                   </TableCell>
                   <TableCell>{lease.leaseNumber}</TableCell>
-                  <TableCell>{lease.rentalPropertyId}</TableCell>
+                  <TableCell>
+                    <div className="whitespace-nowrap">
+                      {formatAddress(rentalProperty.property.address)}
+                    </div>
+                    <div>{lease.rentalPropertyId}</div>
+                  </TableCell>
+                  <TableCell>{getPropertyIdentifier(rentalProperty)}</TableCell>
                   <TableCell>
                     <div>{formatDate(lease.leaseStartDate)}</div>
                   </TableCell>
