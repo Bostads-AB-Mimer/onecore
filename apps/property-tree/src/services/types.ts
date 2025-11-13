@@ -4,19 +4,13 @@ import type {
   ApplicantStatus,
   WaitingListType,
   ApplicationProfileHousingReference,
+  Address,
 } from '@onecore/types'
 
 export interface WaitingListResponse {
   queueTime: string
   queuePoints: number
   type: WaitingListType
-}
-
-export interface AddressResponse {
-  street: string
-  number: string
-  postalCode: string
-  city: string
 }
 
 export interface ApplicantResponse {
@@ -138,7 +132,7 @@ export interface Tenant {
   leaseIds: string[]
   nationalRegistrationNumber: string
   birthDate: string
-  address: AddressResponse
+  address: Address
   phoneNumbers: Array<{
     phoneNumber: string
     type: string
