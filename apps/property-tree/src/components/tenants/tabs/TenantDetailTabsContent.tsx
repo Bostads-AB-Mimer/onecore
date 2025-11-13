@@ -11,11 +11,11 @@ import { TenantContracts } from '@/components/tenants/TenantContracts'
 import { StickyNote } from 'lucide-react'
 
 import { Lease } from '@/services/api/core/lease-service'
-import { RentalProperty } from '@/services/api/core/rentalPropertyService'
+import type { RentalPropertyInfo } from '@onecore/types'
 
 interface TenantDetailTabsContentProps {
   leases: Lease[]
-  rentalProperties: Record<string, RentalProperty>
+  rentalProperties: Record<string, RentalPropertyInfo>
   personalNumber?: string
   contactCode: string
   customerName: string

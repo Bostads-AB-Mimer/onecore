@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import type { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/lease-service'
-import { RentalProperty } from '@/services/api/core/rentalPropertyService'
+import type { RentalPropertyInfo } from '@onecore/types'
 
 const LeaseStatus = {
   Current: 0, // Gällande
@@ -27,7 +27,7 @@ const LeaseStatus = {
 
 interface TenantContractsProps {
   leases: Lease[] // replace with real type representing response from leases/by-contact-code
-  rentalProperties: Record<string, RentalProperty>
+  rentalProperties: Record<string, RentalPropertyInfo>
 }
 
 export function TenantContracts({
@@ -103,16 +103,18 @@ export function TenantContracts({
     }).format(amount)
   }
 
-  const getPropertyIdentifier = (rentalProperty: RentalProperty) => {
+  const getPropertyIdentifier = (rentalProperty: RentalPropertyInfo) => {
     const type = rentalProperty?.type
-    if (type === 'Lägenhet') {
-      return rentalProperty.property.number || ''
+    const property = rentalProperty.property
+
+    if (type === 'Lägenhet' && 'number' in property) {
+      return property.number || ''
     }
     if (type === 'Bilplats') {
-      return rentalProperty.property.code || ''
+      return property.code || ''
     }
     // Default fallback for other types
-    return rentalProperty.property.number || rentalProperty.property.code || ''
+    return ('number' in property && property.number) || property.code || ''
   }
 
   const formatAddress = (address: string) => {

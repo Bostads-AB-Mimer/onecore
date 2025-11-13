@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query'
-import { rentalPropertyService, RentalProperty } from '@/services/api/core'
+import { rentalPropertyService } from '@/services/api/core'
+import type { RentalPropertyInfo } from '@onecore/types'
 
 export function useRentalProperties(rentalPropertyIds: string[]) {
   // Get unique IDs to avoid duplicate requests
@@ -18,7 +19,7 @@ export function useRentalProperties(rentalPropertyIds: string[]) {
   const error = queries.find((q) => q.error)?.error
 
   // Create a map of rental property ID to rental property data
-  const rentalPropertiesMap: Record<string, RentalProperty> = {}
+  const rentalPropertiesMap: Record<string, RentalPropertyInfo> = {}
   queries.forEach((query, index) => {
     if (query.data) {
       rentalPropertiesMap[uniqueIds[index]] = query.data

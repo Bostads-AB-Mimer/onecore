@@ -8,11 +8,11 @@ import {
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
 import { Lease } from '@/services/api/core/lease-service'
-import { RentalProperty } from '@/services/api/core/rentalPropertyService'
+import type { RentalPropertyInfo } from '@onecore/types'
 
 interface TenantMobileAccordionProps {
   leases: Lease[]
-  rentalProperties: Record<string, RentalProperty>
+  rentalProperties: Record<string, RentalPropertyInfo>
   hasActiveCases?: boolean
   contactCode: string
   customerName: string

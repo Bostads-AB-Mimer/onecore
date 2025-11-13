@@ -1,40 +1,9 @@
 import { GET } from './base-api'
-
-export interface RentalProperty {
-  id: string
-  type: string
-  property: {
-    rentalTypeCode: string
-    rentalType: string
-    address: string
-    code: string
-    number?: string
-    type?: string
-    roomTypeCode?: string
-    entrance?: string
-    floor?: string
-    hasElevator?: boolean
-    washSpace?: string
-    area?: number
-    estateCode?: string
-    estate?: string
-    buildingCode?: string
-    building?: string
-  }
-  maintenanceUnits?: Array<{
-    id: string
-    rentalPropertyId: string
-    code: string
-    caption: string
-    type: string
-    estateCode: string
-    estate: string
-  }>
-}
+import type { RentalPropertyInfo } from '@onecore/types'
 
 async function getByRentalObjectCode(
   rentalObjectCode: string
-): Promise<RentalProperty> {
+): Promise<RentalPropertyInfo> {
   const { data, error } = await GET(
     '/rental-properties/by-rental-object-code/{rentalObjectCode}',
     {
@@ -48,7 +17,7 @@ async function getByRentalObjectCode(
   const response = data as any
   if (!response?.content) throw new Error('Response ok but missing content')
 
-  return response.content as RentalProperty
+  return response.content as RentalPropertyInfo
 }
 
 export const rentalPropertyService = { getByRentalObjectCode }
