@@ -1,28 +1,50 @@
 import type { components } from './api/generated/api-types'
 import type {
-  WaitingList,
-  Address as SharedAddress,
-  Lease as SharedLease,
   ResidentialArea,
-  Applicant as SharedApplicant,
   ApplicantStatus,
   WaitingListType,
-  ApplicationProfile as SharedApplicationProfile,
   ApplicationProfileHousingReference,
 } from '@onecore/types'
 
-// Utility type to convert Date fields to string (for JSON serialization)
-type Serialized<T> = T extends Date
-  ? string
-  : T extends object
-    ? { [K in keyof T]: Serialized<T[K]> }
-    : T
+export interface WaitingListResponse {
+  queueTime: string
+  queuePoints: number
+  type: WaitingListType
+}
 
-// Serialized versions for API responses
-export type SerializedWaitingList = Serialized<WaitingList>
-export type SerializedAddress = Serialized<SharedAddress>
-export type SerializedLease = Serialized<SharedLease>
-export type SerializedApplicant = Serialized<SharedApplicant>
+export interface AddressResponse {
+  street: string
+  number: string
+  postalCode: string
+  city: string
+}
+
+export interface ApplicantResponse {
+  id: number
+  contactCode: string
+  applicationDate: string
+  applicationType?: string
+  status: ApplicantStatus
+  listingId: number
+}
+
+export interface ApplicationProfileResponse {
+  numAdults: number
+  numChildren: number
+  housingType: string
+  housingTypeDescription?: string
+  landlord?: string
+  housingReference?: {
+    phone?: string
+    email?: string
+    reviewStatus?: string
+    comment?: string
+    reasonRejected?: string
+    reviewedAt?: string
+    reviewedBy?: string
+    expiresAt?: string
+  }
+}
 
 // Re-export shared types for convenience
 export type {
@@ -116,7 +138,7 @@ export interface Tenant {
   leaseIds: string[]
   nationalRegistrationNumber: string
   birthDate: string
-  address: SerializedAddress
+  address: AddressResponse
   phoneNumbers: Array<{
     phoneNumber: string
     type: string
@@ -124,7 +146,7 @@ export interface Tenant {
   }>
   emailAddress: string
   isTenant: boolean
-  parkingSpaceWaitingList: SerializedWaitingList
+  parkingSpaceWaitingList: WaitingListResponse
   specialAttention: boolean
   isAboutToLeave: boolean
   currentHousingContract: ContractType
@@ -155,13 +177,13 @@ export interface ParkingSpaceForPublishing {
 }
 
 /**
- * Interest application type that extends the shared Applicant type
+ * Interest application type that extends the API response Applicant type
  * with additional UI-specific display fields.
  *
  * Note: This is a view model that combines Applicant data with Listing details
- * for convenient display in the UI.
+ * for convenient display in the UI. All dates are ISO strings from the API.
  */
-export interface InterestApplication extends SerializedApplicant {
+export interface InterestApplication extends ApplicantResponse {
   parkingSpace?: ParkingSpaceForPublishing
   queuePoints?: number
   address?: string
@@ -188,12 +210,12 @@ export interface ValidationData {
  * - /contacts/{contactCode}/application-profile - housing references
  *
  * Note: This is a UI-specific aggregation type, not a domain type.
- * It uses serialized versions of shared types (Date -> string for JSON).
+ * All dates are ISO strings from the API (not Date objects).
  */
 export interface QueueData {
-  parking?: SerializedWaitingList
-  housing?: Omit<SerializedWaitingList, 'type'> // Housing doesn't have type in API
-  storage?: Omit<SerializedWaitingList, 'type'> // Storage doesn't have type in API
+  parking?: WaitingListResponse
+  housing?: WaitingListResponse
+  storage?: WaitingListResponse
   interestApplications: InterestApplication[]
   housingReferences?: {
     currentHousingForm?: string
@@ -203,5 +225,5 @@ export interface QueueData {
     numChildren?: number
     referenceStatus?: string
   }
-  applicationProfile?: Serialized<SharedApplicationProfile>
+  applicationProfile?: ApplicationProfileResponse
 }
