@@ -7,6 +7,7 @@ import { logger, loggerMiddlewares } from '@onecore/utilities'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
+import { MemoryStore } from './common/memory-store'
 
 const app = new Koa()
 
@@ -17,6 +18,7 @@ const CONFIG: Partial<session.opts<DefaultState, DefaultContext, unknown>> = {
   /** (number || 'session') maxAge in ms (default is 1 day) */
   /** 'session' will result in a cookie that expires when session/browser is closed */
   /** Warning: If a session cookie is stolen, this cookie will never expire */
+  store: new MemoryStore(),
   maxAge: 86400000,
   autoCommit: true /** (boolean) automatically commit headers (default true) */,
   overwrite: true /** (boolean) can overwrite or not (default true) */,
