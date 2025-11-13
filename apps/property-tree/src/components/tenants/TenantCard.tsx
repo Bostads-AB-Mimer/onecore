@@ -22,6 +22,8 @@ import {
 } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import type { Tenant } from '@/services/types'
+import { CopyableField } from '@/components/ui/CopyableField'
+import { TooltipProvider } from '@/components/ui/Tooltip'
 
 interface TenantCardProps {
   tenant: Tenant
@@ -93,72 +95,59 @@ export function TenantCard({ tenant }: TenantCardProps) {
   }
 
   const cardContent = (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Namn</p>
-          <p className="font-medium">
-            {tenant.firstName} {tenant.lastName}
-          </p>
+    <TooltipProvider>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-4">
+          <CopyableField
+            label="Namn"
+            value={`${tenant.firstName} ${tenant.lastName}`}
+          />
+
+          <CopyableField
+            label="Personnummer"
+            value={tenant.nationalRegistrationNumber}
+          />
+
+          <CopyableField
+            label="Bostadsadress"
+            value={formatAddress(tenant.address)}
+          />
+
+          <CopyableField label="Kundnummer" value={tenant.contactCode} />
         </div>
 
-        <div>
-          <p className="text-sm text-muted-foreground">Personnummer</p>
-          <p className="font-medium">{tenant.nationalRegistrationNumber}</p>
-        </div>
+        <div className="space-y-4">
+          <CopyableField label="E-post" value={tenant.emailAddress} />
 
-        <div>
-          <p className="text-sm text-muted-foreground">Bostadsadress</p>
-          <p className="font-medium">{formatAddress(tenant.address)}</p>
-        </div>
-
-        <div>
-          <p className="text-sm text-muted-foreground">Kundnummer</p>
-          <p className="font-medium">{tenant.contactCode}</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm text-muted-foreground">E-post</p>
-          <div className="flex items-center gap-2">
-            <p className="font-medium">{tenant.emailAddress}</p>
-            {/* <Button
-              variant="outline"
-              size="icon"
-              onClick={handleEmail}
-              title="Skicka e-post"
-            >
-              <Mail className="h-4 w-4" />
-            </Button> */}
+          <div>
+            <p className="text-sm text-muted-foreground">Telefon</p>
+            <div className="space-y-2">
+              {tenant.phoneNumbers && tenant.phoneNumbers.length > 0 ? (
+                tenant.phoneNumbers.map((phone, index) => (
+                  <CopyableField
+                    key={index}
+                    label={phone.type || 'Telefon'}
+                    value={phone.phoneNumber}
+                  />
+                ))
+              ) : (
+                <p className="font-medium">Ej angivet</p>
+              )}
+            </div>
           </div>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Telefon</p>
-          <div className="space-y-1">
-            {tenant.phoneNumbers && tenant.phoneNumbers.length > 0 ? (
-              tenant.phoneNumbers.map((phone, index) => (
-                <p key={index} className="font-medium">
-                  {phone.phoneNumber}
-                </p>
-              ))
-            ) : (
-              <p className="font-medium">Ej angivet</p>
-            )}
-          </div>
-        </div>
-        {/* Later
+          {/* Later
         - type/role of the user (boende/sökande)
         - has legal guardian status
         will be shown here */}
-      </div>
+        </div>
 
-      {/* <div className="space-y-4">
+        {/* <div className="space-y-4">
         Later
         - Mina sidor & related information
         will be shown here
       </div> */}
-    </div>
+      </div>
+    </TooltipProvider>
   )
 
   if (isMobile) {

@@ -78,6 +78,8 @@ enum OfferStatus {
 
 enum WaitingListType {
   ParkingSpace = 1,
+  Housing = 2,
+  Storage = 3,
 }
 
 export {

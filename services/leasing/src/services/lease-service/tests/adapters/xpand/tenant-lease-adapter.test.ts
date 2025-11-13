@@ -89,6 +89,8 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
           queueTime: expect.any(Date),
           type: WaitingListType.ParkingSpace,
         },
+        housingWaitingList: undefined,
+        storageWaitingList: undefined,
       },
     })
   })

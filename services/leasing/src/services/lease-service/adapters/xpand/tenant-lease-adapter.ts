@@ -49,6 +49,36 @@ const getParkingSpaceWaitingList = (
     }
 }
 
+const getHousingWaitingList = (rows: Array<any>): WaitingList | undefined => {
+  const housingQueueTime =
+    rows
+      .filter((r) => r.queueName == 'Bostad')
+      .map((r) => r.queueTime)
+      .shift() ?? undefined
+
+  if (housingQueueTime)
+    return {
+      queueTime: housingQueueTime,
+      queuePoints: calculateQueuePoints(housingQueueTime),
+      type: WaitingListType.Housing,
+    }
+}
+
+const getStorageWaitingList = (rows: Array<any>): WaitingList | undefined => {
+  const storageQueueTime =
+    rows
+      .filter((r) => r.queueName == 'Förråd (intern)')
+      .map((r) => r.queueTime)
+      .shift() ?? undefined
+
+  if (storageQueueTime)
+    return {
+      queueTime: storageQueueTime,
+      queuePoints: calculateQueuePoints(storageQueueTime),
+      type: WaitingListType.Storage,
+    }
+}
+
 const transformFromDbContact = (
   rows: Array<any>,
   phoneNumbers: any,
@@ -83,6 +113,8 @@ const transformFromDbContact = (
         : 'redacted',
     isTenant: leases.length > 0,
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
+    housingWaitingList: getHousingWaitingList(rows),
+    storageWaitingList: getStorageWaitingList(rows),
     specialAttention: !!row.specialAttention,
   }
 

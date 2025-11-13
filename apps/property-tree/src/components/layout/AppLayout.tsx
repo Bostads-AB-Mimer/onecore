@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { CommandPalette } from '../CommandPalette'
 import SidebarNavigation from '../navigation/SidebarNavigation'
 import { SidebarInset, SidebarProvider, useSidebar } from '../ui/Sidebar'
+import { Toaster } from '../ui/Toaster'
 
 import { NavigationBar } from '../NavigationBar'
 
@@ -35,6 +36,7 @@ function AppLayoutContent() {
           </div>
         </SidebarInset>
       </div>
+      <Toaster />
     </div>
   )
 }
