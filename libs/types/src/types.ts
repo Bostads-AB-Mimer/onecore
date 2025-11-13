@@ -35,6 +35,8 @@ interface Contact {
   emailAddress?: string
   isTenant: boolean
   parkingSpaceWaitingList?: WaitingList
+  housingWaitingList?: WaitingList
+  storageWaitingList?: WaitingList
   specialAttention?: boolean
 }
 

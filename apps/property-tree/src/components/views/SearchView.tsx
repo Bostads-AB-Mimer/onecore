@@ -16,7 +16,7 @@ import { ChevronDown } from 'lucide-react'
 import { PropertySearch } from '@/components/properties/v2/PropertySearch'
 import { PropertyTypeFilters } from '@/components/properties/v2/PropertyTypeFilters'
 import { PropertyFilteredResults } from '@/components/properties/v2/PropertyFilteredResults'
-import { usePropertyFilters } from '@/hooks/usePropertyFilters'
+import { usePropertyFilters } from '@/components/hooks/usePropertyFilters'
 
 const SearchView = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
