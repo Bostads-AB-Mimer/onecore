@@ -271,7 +271,9 @@ export interface paths {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": Record<string, never>[];
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
           };
         };
       };
