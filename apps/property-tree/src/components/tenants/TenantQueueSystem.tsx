@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { InfoIcon, Home, Car, Users, ExternalLink, Plus } from 'lucide-react'
 import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
-import { useQueueData } from '@/hooks/useQueueData'
+import { useQueueData } from '@/components/hooks/useQueueData'
 import { resolve } from '@/utils/env'
 
 // Helper function to get status badge variant

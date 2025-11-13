@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { queueService } from '@/services/api/core/queueService'
-import type { QueueData } from '@/types/api'
+import type { QueueData } from '@/services/types'
 
 /**
  * Hook to fetch comprehensive queue data for a tenant

@@ -23,6 +23,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@onecore/types": "workspace:*",
     "@deck.gl/core": "^9.0.38",
     "@deck.gl/layers": "^9.0.38",
     "@deck.gl/react": "^9.0.38",

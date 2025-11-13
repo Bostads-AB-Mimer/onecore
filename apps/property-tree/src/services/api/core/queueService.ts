@@ -1,11 +1,13 @@
 import { GET } from './base-api'
-import type { QueueData, InterestApplication } from '@/types/api'
+import type { QueueData, InterestApplication } from '@/services/types'
 
 export const queueService = {
   /**
-   * Get comprehensive queue data for a tenant
-   * Currently only parking queue is fully implemented
-   * Housing and storage queues will be added when backend endpoints are available
+   * Get comprehensive queue data for a tenant.
+   * Combines data from multiple API endpoints:
+   * - /contacts/{contactCode} - queue points and waiting lists
+   * - /applicants-with-listings - interest applications
+   * - /contacts/{contactCode}/application-profile - housing references
    */
   async getQueueData(contactCode: string): Promise<QueueData> {
     try {
@@ -48,16 +50,10 @@ export const queueService = {
         // Don't throw - this is optional data
       }
 
-      // Debug: Log the profile response structure
-      console.log('Profile response:', {
-        hasData: !!profileData,
-        hasDataContent: !!(profileData as any)?.data?.content,
-        hasContent: !!(profileData as any)?.content,
-        profileData: JSON.stringify(profileData, null, 2),
-      })
-
       // Extract queue data from contact
-      // Note: API types show Record<string, never> but actual response contains waiting lists
+      // Note: OpenAPI-generated types show Record<string, never> due to incomplete Swagger schemas
+      // in the backend. Actual API responses contain full WaitingList data structures.
+      // Type casting is required until backend Swagger documentation is improved.
       const contact = contactData?.content as any
 
       const parkingQueue = contact?.parkingSpaceWaitingList
@@ -84,8 +80,9 @@ export const queueService = {
           }
         : undefined
 
-      // Map applicants to interest applications
-      // Note: API returns { applicant: {...}, listing: {...} } structure
+      // Map applicants to interest applications (view model for UI)
+      // Note: API returns { applicant: {...}, listing: {...} } structure.
+      // We flatten this into InterestApplication which extends Applicant with display fields.
       const interestApplications: InterestApplication[] =
         (applicantsData as any)?.content?.map((item: any) => ({
           id: item.applicant.id,
@@ -104,7 +101,7 @@ export const queueService = {
         })) || []
 
       // Extract housing references from application profile
-      // Note: API types show Record<string, never> but actual response is at content
+      // Note: OpenAPI-generated types are incomplete. Type casting required.
       const profile = (profileData as any)?.content
       const housingReferences = profile
         ? {
