@@ -273,7 +273,7 @@ describe('POST /contacts/:contactCode/application-profile', () => {
   })
 })
 
-describe('GET /tenants/contactCode/:contactCode', () => {
+describe('GET /contacts/:contactCode/tenant', () => {
   it('responds with 200 and a tenant', async () => {
     const tenant = factory.tenant.build()
 
@@ -282,9 +282,7 @@ describe('GET /tenants/contactCode/:contactCode', () => {
       data: tenant,
     })
 
-    const res = await request(app.callback()).get(
-      '/tenants/contactCode/1231234'
-    )
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
     //Testa mot zod-schemat
     expect(res.status).toBe(200)
     expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(tenant))
@@ -296,9 +294,7 @@ describe('GET /tenants/contactCode/:contactCode', () => {
       err: 'no-valid-housing-contract',
     })
 
-    const res = await request(app.callback()).get(
-      '/tenants/contactCode/1231234'
-    )
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
 
     expect(res.status).toBe(500)
     expect(res.body.type).toEqual('no-valid-housing-contract')

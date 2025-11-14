@@ -86,7 +86,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contact/nationalRegistrationNumber/{pnr}:
+   * /contacts/by-national-registration-number/{pnr}:
    *   get:
    *     summary: Get contact by PNR
    *     description: Retrieve contact information by national registration number (pnr).
@@ -126,31 +126,33 @@ export const routes = (router: KoaRouter) => {
         .transform((value) => value === 'true'),
     })
     .default({ includeTerminatedLeases: 'false' })
+  router.get(
+    '(.*)/contacts/by-national-registration-number/:pnr',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+      const queryParams = getContactByPnrQueryParamSchema.safeParse(ctx.query)
 
-  router.get('(.*)/contact/nationalRegistrationNumber/:pnr', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
-    const queryParams = getContactByPnrQueryParamSchema.safeParse(ctx.query)
+      if (!queryParams.success) {
+        ctx.status = 400
+        return
+      }
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      return
+      const responseData = await getContactByNationalRegistrationNumber(
+        ctx.params.pnr,
+        queryParams.data.includeTerminatedLeases
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        content: responseData,
+        ...metadata,
+      }
     }
-
-    const responseData = await getContactByNationalRegistrationNumber(
-      ctx.params.pnr,
-      queryParams.data.includeTerminatedLeases
-    )
-
-    ctx.status = 200
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
+  )
 
   /**
    * @swagger
-   * /contact/contactCode/{contactCode}:
+   * /contacts/{contactCode}:
    *   get:
    *     summary: Get contact by contact code
    *     description: Retrieve contact information by contact code.
@@ -191,7 +193,7 @@ export const routes = (router: KoaRouter) => {
     })
     .default({ includeTerminatedLeases: 'false' })
 
-  router.get('(.*)/contact/contactCode/:contactCode', async (ctx) => {
+  router.get('(.*)/contacts/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
 
     const queryParams = getContactByContactCodeQueryParamSchema.safeParse(
@@ -229,7 +231,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /tenants/contactCode/{contactCode}:
+   * /contacts/{contactCode}/tenant:
    *   get:
    *     summary: Gets tenant by contact code
    *     description: Retrieve tenant information by contact code.
@@ -257,7 +259,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve Tenant information.
    */
-  router.get('(.*)/tenants/contactCode/:contactCode', async (ctx) => {
+  router.get('(.*)/contacts/:contactCode/tenant', async (ctx) => {
     const result = await getTenant({ contactCode: ctx.params.contactCode })
     const metadata = generateRouteMetadata(ctx)
 
@@ -316,7 +318,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contact/phoneNumber/{phoneNumber}:
+   * /contacts/by-phone-number/{phoneNumber}:
    *   get:
    *     summary: Get contact by phone number
    *     description: Retrieve contact information by phone number.
@@ -352,7 +354,7 @@ export const routes = (router: KoaRouter) => {
     })
     .default({ includeTerminatedLeases: 'false' })
 
-  router.get('(.*)/contact/phoneNumber/:phoneNumber', async (ctx) => {
+  router.get('(.*)/contacts/by-phone-number/:phoneNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const queryParams = getContactByPhoneNumberQueryParamSchema.safeParse(
