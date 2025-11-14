@@ -21,6 +21,7 @@ import ParkingSpace from './pages/ParkingSpace'
 import { mdTheme } from './theme'
 import Residences from './pages/Residences/Residences'
 import { ContactPage } from './pages/Contact/index'
+import Invoices from './pages/Invoices/index'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +72,7 @@ function App() {
                   />
                   <Route path="/sokandeprofil" element={<Residences />} />
                   <Route path="/kundkort" element={<ContactPage />} />
+                  <Route path="/fakturor" element={<Invoices />} />
                   <Route path="/logout" element={<Login />} />
                 </Route>
               </Routes>
