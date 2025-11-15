@@ -15,6 +15,11 @@ export const RoomTypeSchema = z.object({
   timestamp: z.string(),
 })
 
+export const QuantityValueSchema = z.object({
+  value: z.number(),
+  quantityTypeId: z.string(),
+})
+
 export const RoomSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -41,6 +46,11 @@ export const RoomSchema = z.object({
   deleted: z.boolean(),
   timestamp: z.string(),
   roomType: RoomTypeSchema.nullable(),
+  propertyObject: z
+    .object({
+      quantityValues: z.array(QuantityValueSchema),
+    })
+    .optional(),
 })
 
 export type Room = z.infer<typeof RoomSchema>
