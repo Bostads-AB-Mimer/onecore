@@ -103,13 +103,17 @@ export const RoomInfo = (props: RoomInfoProps) => {
         */}
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Rumsinformation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-2">
-            {rooms.map((room) => (
+      <div className="mt-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">
+          Rumsinformation ({rooms.length})
+        </h2>
+        <div className="grid grid-cols-1 gap-2">
+          {rooms.map((room) => {
+            const roomArea = room.propertyObject?.quantityValues?.find(
+              (qv) => qv.quantityTypeId === 'NTA'
+            )?.value
+
+            return (
               <div key={room.id}>
                 <button
                   className="w-full bg-card hover:bg-accent/50 border rounded-lg p-3 sm:p-4 transition-colors text-left"
@@ -121,13 +125,18 @@ export const RoomInfo = (props: RoomInfoProps) => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                         <span className="font-medium">
                           {room.name || room.roomType?.name || room.code}
                         </span>
                         <span className="text-sm text-muted-foreground">
                           {room.code}
                         </span>
+                        {roomArea && (
+                          <span className="text-sm text-muted-foreground">
+                            ({roomArea} m²)
+                          </span>
+                        )}
                       </div>
                     </div>
                     {expandedRoomId === room.id ? (
@@ -212,10 +221,10 @@ export const RoomInfo = (props: RoomInfoProps) => {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            )
+          })}
+        </div>
+      </div>
     </>
   )
 }
