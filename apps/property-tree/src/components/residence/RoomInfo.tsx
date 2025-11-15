@@ -1,12 +1,15 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
-
 import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
 import { roomService } from '@/services/api/core'
 import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../ui/Accordion'
 
 interface RoomInfoProps {
   residenceId: string
@@ -18,7 +21,6 @@ export const RoomInfo = (props: RoomInfoProps) => {
     queryFn: () => roomService.getByResidenceId(props.residenceId),
   })
 
-  const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
   if (roomsQuery.isLoading) {
@@ -107,123 +109,107 @@ export const RoomInfo = (props: RoomInfoProps) => {
         <h2 className="text-lg sm:text-xl font-semibold mb-4">
           Rumsinformation ({rooms.length})
         </h2>
-        <div className="grid grid-cols-1 gap-2">
+        <Accordion type="single" collapsible className="space-y-2">
           {rooms.map((room) => {
-            const roomArea = room.propertyObject?.quantityValues?.find(
-              (qv) => qv.quantityTypeId === 'NTA'
+            const roomArea = (room as any).propertyObject?.quantityValues?.find(
+              (qv: any) => qv.quantityTypeId === 'NTA'
             )?.value
 
             return (
-              <div key={room.id}>
-                <button
-                  className="w-full bg-card hover:bg-accent/50 border rounded-lg p-3 sm:p-4 transition-colors text-left"
-                  onClick={() =>
-                    setExpandedRoomId(
-                      expandedRoomId === room.id ? null : room.id
-                    )
-                  }
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                        <span className="font-medium">
-                          {room.name || room.roomType?.name || room.code}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {room.code}
-                        </span>
-                        {roomArea && (
-                          <span className="text-sm text-muted-foreground">
-                            ({roomArea} m²)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {expandedRoomId === room.id ? (
-                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <AccordionItem
+                key={room.id}
+                value={room.id}
+                className="border rounded-lg bg-card overflow-hidden"
+              >
+                <AccordionTrigger className="px-3 sm:px-4 hover:bg-accent/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 flex-1 text-left mr-2">
+                    <span className="font-medium">
+                      {room.name || room.roomType?.name || room.code}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {room.code}
+                    </span>
+                    {roomArea && (
+                      <span className="text-sm text-muted-foreground">
+                        ({roomArea} m²)
+                      </span>
                     )}
                   </div>
-                </button>
+                </AccordionTrigger>
 
-                {expandedRoomId === room.id && (
-                  <div className="mt-2 p-3 sm:p-4 border rounded-lg bg-muted/50 space-y-4">
-                    <div
-                      className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
-                    >
-                      <div>
-                        <p className="text-sm text-muted-foreground">Typ</p>
-                        <p className="font-medium">
-                          {room.roomType?.name || '-'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Orientering
-                        </p>
-                        <p className="font-medium">
-                          {getOrientationText(room.features.orientation)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <p className="font-medium">
-                          {room.deleted ? 'Borttagen' : 'Aktiv'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Delat utrymme
-                        </p>
-                        <p className="font-medium">
-                          {room.usage.shared ? 'Ja' : 'Nej'}
-                        </p>
-                      </div>
+                <AccordionContent className="border-t bg-muted/30 space-y-4 pt-4">
+                  <div
+                    className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
+                  >
+                    <div>
+                      <p className="text-sm text-muted-foreground">Typ</p>
+                      <p className="font-medium">
+                        {room.roomType?.name || '-'}
+                      </p>
                     </div>
-
-                    <div
-                      className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
-                    >
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Uppvärmd
-                        </p>
-                        <p className="font-medium">
-                          {room.features.isHeated ? 'Ja' : 'Nej'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Termostatventil
-                        </p>
-                        <p className="font-medium">
-                          {room.features.hasThermostatValve ? 'Ja' : 'Nej'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Toalett</p>
-                        <p className="font-medium">
-                          {room.features.hasToilet ? 'Ja' : 'Nej'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Periodiskt arbete
-                        </p>
-                        <p className="font-medium">
-                          {room.usage.allowPeriodicWorks
-                            ? 'Tillåtet'
-                            : 'Ej tillåtet'}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Orientering
+                      </p>
+                      <p className="font-medium">
+                        {getOrientationText(room.features.orientation)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <p className="font-medium">
+                        {room.deleted ? 'Borttagen' : 'Aktiv'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Delat utrymme
+                      </p>
+                      <p className="font-medium">
+                        {room.usage.shared ? 'Ja' : 'Nej'}
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  <div
+                    className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
+                  >
+                    <div>
+                      <p className="text-sm text-muted-foreground">Uppvärmd</p>
+                      <p className="font-medium">
+                        {room.features.isHeated ? 'Ja' : 'Nej'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Termostatventil
+                      </p>
+                      <p className="font-medium">
+                        {room.features.hasThermostatValve ? 'Ja' : 'Nej'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Toalett</p>
+                      <p className="font-medium">
+                        {room.features.hasToilet ? 'Ja' : 'Nej'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Periodiskt arbete
+                      </p>
+                      <p className="font-medium">
+                        {room.usage.allowPeriodicWorks
+                          ? 'Tillåtet'
+                          : 'Ej tillåtet'}
+                      </p>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
             )
           })}
-        </div>
+        </Accordion>
       </div>
     </>
   )
