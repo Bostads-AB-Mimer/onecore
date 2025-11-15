@@ -70,7 +70,7 @@ export const routes = (router: KoaRouter) => {
             features: {
               hasThermostatValve: Boolean(v.hasThermostatValve),
               hasToilet: Boolean(v.hasToilet),
-              isHeated: Boolean(v.isHeated),
+              isHeated: v.isHeated === 2,
               orientation: v.orientation,
             },
             usage: {
