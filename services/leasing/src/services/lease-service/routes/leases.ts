@@ -243,6 +243,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // TODO: translate query params to filters
     const getLeases = await tenfastAdapter.getLeasesByTenantId(contact.data._id)
 
     if (!getLeases.ok) {
@@ -254,9 +255,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const onecoreLeases = getLeases.data.map((lease) =>
-      tenfastHelpers.mapToOnecoreLease(lease)
-    )
+    const onecoreLeases = getLeases.data.map(tenfastHelpers.mapToOnecoreLease)
 
     // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
     if (!queryParams.data.includeContacts) {
