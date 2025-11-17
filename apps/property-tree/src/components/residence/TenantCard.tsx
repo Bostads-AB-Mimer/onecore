@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/v2/Button'
 import { TenantPersonalInfo } from './TenantPersonalInfo'
 import { TenantContactActions } from './TenantContactActions'
 import { components } from '@/services/api/core/generated/api-types'
-import { resolve } from '@/utils/env'
 
 type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
 type Lease = components['schemas']['Lease']
@@ -14,8 +13,6 @@ type Props = { lease: Lease; tenant: Tenant }
 
 export function TenantCard(props: Props) {
   const phone = props.tenant.phoneNumbers?.find((v) => v.isMainNumber)
-
-  const tenantsBaseUrl = resolve('VITE_TENANTS_URL', '')
 
   return (
     <div className="space-y-4">
