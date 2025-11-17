@@ -9,20 +9,26 @@ interface ResidenceListProps {
   building: Building
   propertyId?: string
   companyId?: string
+  staircaseCode?: string
 }
 
 export function ResidenceList({
   building,
   propertyId,
   companyId,
+  staircaseCode,
 }: ResidenceListProps) {
   const {
     data: residences,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['residences', building.id],
-    queryFn: () => residenceService.getByBuildingCode(building.code),
+    queryKey: ['residences', building.id, staircaseCode],
+    queryFn: () =>
+      residenceService.getByBuildingCodeAndStaircaseCode(
+        building.code,
+        staircaseCode || ''
+      ),
   })
 
   if (isLoading) {
@@ -53,8 +59,8 @@ export function ResidenceList({
           <ResidenceNavigation
             key={residence.id}
             residence={residence}
-            buildingCode={building.code}
-            staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
+            buildingCode={residence.buildingCode || building.code}
+            staircaseCode={residence.staircaseCode || staircaseCode || ''}
             propertyId={propertyId}
             companyId={companyId}
           />
