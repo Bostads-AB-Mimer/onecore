@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -41,6 +40,9 @@ export function EditKeyLoanForm({
     contact: editingKeyLoan.contact || '',
     contact2: editingKeyLoan.contact2 || '',
     loanType: editingKeyLoan.loanType,
+    pickedUpAt: editingKeyLoan.pickedUpAt
+      ? new Date(editingKeyLoan.pickedUpAt).toISOString().split('T')[0]
+      : '',
     returnedAt: editingKeyLoan.returnedAt
       ? new Date(editingKeyLoan.returnedAt).toISOString().split('T')[0]
       : '',
@@ -80,6 +82,9 @@ export function EditKeyLoanForm({
     // Convert date strings to ISO format
     const loanData: UpdateKeyLoanRequest = {
       ...formData,
+      pickedUpAt: formData.pickedUpAt
+        ? new Date(formData.pickedUpAt).toISOString()
+        : undefined,
       returnedAt: formData.returnedAt
         ? new Date(formData.returnedAt).toISOString()
         : undefined,
@@ -135,13 +140,19 @@ export function EditKeyLoanForm({
     if (!onReceiptDelete) return
     if (
       !confirm(
-        'Är du säker på att du vill ta bort kvittensen? Detta går inte att ångra.'
+        'Är du säker på att du vill ta bort kvittensen? Lånet kommer markeras som ej upphämtat.'
       )
     ) {
       return
     }
 
     await onReceiptDelete(editingKeyLoan.id)
+
+    // Clear pickedUpAt from form state since loan is now "Ej upphämtat"
+    setFormData((prev) => ({
+      ...prev,
+      pickedUpAt: '',
+    }))
 
     // Refresh receipt info
     const receipts = await receiptService.getByKeyLoan(editingKeyLoan.id)
@@ -242,25 +253,31 @@ export function EditKeyLoanForm({
           <div className="space-y-3 pt-2">
             <h3 className="font-medium text-sm">Datum</h3>
 
-            {/* pickedUpAt - read-only */}
+            {/* pickedUpAt - editable if exists */}
             <div className="space-y-1">
-              <Label className="text-xs">Upphämtat</Label>
-              <div className="flex items-center gap-2">
-                {editingKeyLoan.pickedUpAt ? (
-                  <>
-                    <Badge variant="default">
-                      {formatDate(editingKeyLoan.pickedUpAt)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      (Sätts automatiskt vid kvittensuppladdning)
-                    </span>
-                  </>
-                ) : (
+              <Label htmlFor="pickedUpAt" className="text-xs">
+                Upphämtat
+              </Label>
+              {editingKeyLoan.pickedUpAt ? (
+                <Input
+                  id="pickedUpAt"
+                  type="date"
+                  className="h-8"
+                  value={formData.pickedUpAt}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      pickedUpAt: e.target.value,
+                    }))
+                  }
+                />
+              ) : (
+                <div className="flex items-center h-8 px-3 rounded-md border border-input bg-muted">
                   <span className="text-sm text-muted-foreground">
                     Ej upphämtat - ladda upp kvittens för att aktivera
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* returnedAt - only show for returned loans */}

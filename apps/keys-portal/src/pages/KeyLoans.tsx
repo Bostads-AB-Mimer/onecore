@@ -377,11 +377,19 @@ export default function KeyLoans() {
         const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
 
         if (loanReceipt) {
+          // Delete the receipt file
           await receiptService.remove(loanReceipt.id)
+
+          // Clear pickedUpAt to revert loan to "Ej upphämtat" status
+          await keyLoanService.update(loanId, {
+            pickedUpAt: null,
+          })
+
           toast({
             title: 'Kvittens borttagen',
-            description: 'Kvittensen har tagits bort',
+            description: 'Kvittensen har tagits bort och lånet är nu markerat som ej upphämtat',
           })
+
           // Refresh the list
           await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
         }
