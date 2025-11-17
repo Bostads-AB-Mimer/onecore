@@ -76,25 +76,83 @@ export function EditKeyLoanForm({
     loadReceipt()
   }, [editingKeyLoan.id])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check if user is clearing pickedUpAt (reverting to "Ej upphämtat")
+    const isClearingPickedUpAt =
+      editingKeyLoan.pickedUpAt && !formData.pickedUpAt
+
+    if (isClearingPickedUpAt) {
+      if (
+        !confirm(
+          'Du har tagit bort upphämtat datum. Kvittensen kommer att raderas och lånet markeras som ej upphämtat. Är du säker?'
+        )
+      ) {
+        return
+      }
+
+      // Delete the receipt if it exists
+      if (onReceiptDelete) {
+        try {
+          await onReceiptDelete(editingKeyLoan.id)
+        } catch (error) {
+          console.error('Failed to delete receipt:', error)
+          // Continue anyway - the loan will still be updated
+        }
+      }
+    }
+
+    // Check if user is clearing returnedAt (reactivating the loan)
+    const isClearingReturnedAt =
+      editingKeyLoan.returnedAt && !formData.returnedAt
+
+    if (isClearingReturnedAt) {
+      if (
+        !confirm(
+          'Du har tagit bort återlämnat datum, detta kommer återaktivera lånet. Är du säker?'
+        )
+      ) {
+        return
+      }
+    }
+
+    // Destructure to exclude pickedUpAt from the spread (we'll add it conditionally)
+    const { pickedUpAt: _pickedUpAt, ...restFormData } = formData
 
     // Convert date strings to ISO format
     const loanData: UpdateKeyLoanRequest = {
-      ...formData,
-      pickedUpAt: formData.pickedUpAt
-        ? new Date(formData.pickedUpAt).toISOString()
-        : undefined,
+      ...restFormData,
       returnedAt: formData.returnedAt
         ? new Date(formData.returnedAt).toISOString()
-        : undefined,
+        : null,
       availableToNextTenantFrom: formData.availableToNextTenantFrom
         ? new Date(formData.availableToNextTenantFrom).toISOString()
-        : undefined,
+        : null,
     }
 
+    // Only include pickedUpAt in the update if:
+    // 1. User is clearing it (already handled above with receipt deletion)
+    // 2. User is manually editing an existing date
+    // 3. No receipt exists (prevents overwriting backend-set pickedUpAt)
+    if (isClearingPickedUpAt) {
+      // User wants to clear it - set to null
+      loanData.pickedUpAt = null
+    } else if (
+      editingKeyLoan.pickedUpAt &&
+      formData.pickedUpAt &&
+      formData.pickedUpAt !== editingKeyLoan.pickedUpAt
+    ) {
+      // User is manually editing an existing date
+      loanData.pickedUpAt = new Date(formData.pickedUpAt).toISOString()
+    } else if (!loanReceipt?.fileId && formData.pickedUpAt) {
+      // No receipt exists but user has entered a date - allow it
+      loanData.pickedUpAt = new Date(formData.pickedUpAt).toISOString()
+    }
+    // Otherwise, don't include pickedUpAt in the update (preserve backend value)
+
     // Pass the receipt file along with the form data
-    onSave(loanData, selectedReceiptFile)
+    await onSave(loanData, selectedReceiptFile)
   }
 
   const handleReceiptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

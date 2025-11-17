@@ -35,7 +35,6 @@ import { fetchContactByContactCode } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
 import { MaintenanceKeysTable } from '@/components/maintenance/MaintenanceKeysTable'
-import { MaintenanceReceiptActions } from '@/components/maintenance/MaintenanceReceiptActions'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
@@ -510,12 +509,6 @@ export function KeyLoansTable({
                                       Återlämna
                                     </Button>
                                   )}
-
-                                  {/* Receipt actions */}
-                                  <MaintenanceReceiptActions
-                                    loanId={loan.id}
-                                    onRefresh={onRefresh}
-                                  />
                                 </div>
                               </div>
 
