@@ -39,9 +39,8 @@ import {
   CreateNonScoredLeaseErrorCodes,
   CreateNonScoredLeaseParams,
 } from '../../hooks/useCreateNonScoredLease'
-import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
 import { Contact } from '@onecore/types'
+import { useContactByContactCode } from '../../hooks/useContactByContactCode'
 
 export interface Props {
   listing: Listing
@@ -72,21 +71,9 @@ export const CreateApplicantForListing = (props: Props) => {
   )
 
   // For NON_SCORED listings: fetch contact to validate address
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
-  const contactQuery = useQuery<Contact>({
-    queryKey: ['contact', selectedContact?.contactCode],
-    enabled: isNonScored && Boolean(selectedContact?.contactCode),
-    queryFn: () =>
-      axios
-        .get(`${backendUrl}/contacts/${selectedContact?.contactCode}`, {
-          headers: {
-            Accept: 'application/json',
-            'Access-Control-Allow-Credentials': true,
-          },
-          withCredentials: true,
-        })
-        .then((res) => res.data.content),
-  })
+  const contactQuery = useContactByContactCode<Contact>(
+    isNonScored ? selectedContact?.contactCode : undefined
+  )
 
   // Check if contact has valid address for NON_SCORED
   const hasValidAddress =
