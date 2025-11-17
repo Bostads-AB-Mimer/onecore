@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -40,6 +41,8 @@ export function EditKeyLoanForm({
     contact: editingKeyLoan.contact || '',
     contact2: editingKeyLoan.contact2 || '',
     loanType: editingKeyLoan.loanType,
+    contactPerson: editingKeyLoan.contactPerson || '',
+    description: editingKeyLoan.description || '',
     pickedUpAt: editingKeyLoan.pickedUpAt
       ? new Date(editingKeyLoan.pickedUpAt).toISOString().split('T')[0]
       : '',
@@ -123,6 +126,8 @@ export function EditKeyLoanForm({
     // Convert date strings to ISO format
     const loanData: UpdateKeyLoanRequest = {
       ...restFormData,
+      contactPerson: formData.contactPerson?.trim() || null,
+      description: formData.description?.trim() || null,
       returnedAt: formData.returnedAt
         ? new Date(formData.returnedAt).toISOString()
         : null,
@@ -306,6 +311,49 @@ export function EditKeyLoanForm({
               />
             </div>
           </div>
+
+          {/* Maintenance-specific fields */}
+          {formData.loanType === 'MAINTENANCE' && (
+            <div className="space-y-3 pt-2">
+              <h3 className="font-medium text-sm">Underhållsinformation</h3>
+
+              <div className="space-y-1">
+                <Label htmlFor="contactPerson" className="text-xs">
+                  Kontaktperson (valfritt)
+                </Label>
+                <Input
+                  id="contactPerson"
+                  className="h-8"
+                  placeholder="T.ex. Anders Svensson"
+                  value={formData.contactPerson || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      contactPerson: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="description" className="text-xs">
+                  Beskrivning (valfritt)
+                </Label>
+                <Textarea
+                  id="description"
+                  rows={4}
+                  placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
+                  value={formData.description || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          )}
 
           {/* Dates */}
           <div className="space-y-3 pt-2">
