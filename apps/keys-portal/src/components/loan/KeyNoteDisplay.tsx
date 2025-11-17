@@ -73,6 +73,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   )
   const [minHeight, setMinHeight] = useState<number | null>(null)
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
+  const [currentPageIndex, setCurrentPageIndex] = useState(0)
 
   // Group leases by status and filter to unique objects
   const statusGroups = useMemo<GroupedLeases[]>(() => {
@@ -123,6 +124,18 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const currentGroup = statusGroups[currentGroupIndex]
   const hasMultipleGroups = statusGroups.length > 1
 
+  // Pagination for rental objects within current group
+  const ITEMS_PER_PAGE = 1
+  const totalItems = currentGroup?.leases.length || 0
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE)
+  const hasMultiplePages = totalPages > 1
+
+  // Get current page of leases
+  const startIndex = currentPageIndex * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const currentPageLeases =
+    currentGroup?.leases.slice(startIndex, endIndex) || []
+
   // Set minimum height to match tenant card
   useEffect(() => {
     const tenantCard = document.getElementById('tenant-card')
@@ -145,10 +158,20 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     if (!tenantCard) return
 
     const timer = setTimeout(() => {
-      if (!cardRef.current || !tenantCard) return
+      if (!cardRef.current || !contentRef.current || !tenantCard) return
 
       const tenantCardHeight = tenantCard.getBoundingClientRect().height
       if (tenantCardHeight === 0) return
+
+      // Get notes header height to calculate available content space
+      const notesCardHeader = cardRef.current.querySelector(
+        '[class*="CardHeader"]'
+      )
+      const notesHeaderHeight =
+        notesCardHeader?.getBoundingClientRect().height || 0
+
+      // Calculate available height for content
+      const availableContentHeight = tenantCardHeight - notesHeaderHeight - 20 // 20px buffer
 
       // Temporarily remove all line-clamps to measure natural heights
       const noteElements = cardRef.current.querySelectorAll('[data-object-id]')
@@ -163,12 +186,12 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
         htmlEl.style.overflow = ''
       })
 
-      void cardRef.current.offsetHeight // Force reflow
+      void contentRef.current.offsetHeight // Force reflow
 
-      const notesCardHeight = cardRef.current.getBoundingClientRect().height
+      const contentScrollHeight = contentRef.current.scrollHeight
 
       // If we fit without truncation, clear any existing clamps
-      if (notesCardHeight <= tenantCardHeight + 10) {
+      if (contentScrollHeight <= availableContentHeight + 10) {
         restoreStyles(noteElements, originalStyles)
         if (lineClamps.size > 0) setLineClamps(new Map())
         return
@@ -176,7 +199,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
       // Calculate truncation: bottom-up, exact line counts
       const newLineClamps = new Map<string, number | null>()
-      let remainingOverflow = notesCardHeight - tenantCardHeight
+      let remainingOverflow = contentScrollHeight - availableContentHeight
       const objectIds = currentGroup.leases.map((l) => l.rentalPropertyId)
 
       for (let i = objectIds.length - 1; i >= 0 && remainingOverflow > 5; i--) {
@@ -226,10 +249,11 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     return () => clearTimeout(timer)
   }, [currentGroup, notes, loadingObjects.size, minHeight, lineClamps])
 
-  // Reset line clamps and expanded notes when navigating to a new group
+  // Reset line clamps, expanded notes, and page index when navigating to a new group
   useEffect(() => {
     setLineClamps(new Map())
     setExpandedNotes(new Set())
+    setCurrentPageIndex(0)
   }, [currentGroupIndex])
 
   // Load notes for all objects in the current group
@@ -358,11 +382,20 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
   if (!currentGroup) return null
 
+  // When editing, allow card to grow beyond tenant card height
+  const isEditing = editingObjectId !== null
+
   return (
     <Card
       ref={cardRef}
       className="flex flex-col"
-      style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
+      style={
+        minHeight && !isEditing
+          ? { minHeight: `${minHeight}px`, maxHeight: `${minHeight}px` }
+          : minHeight
+            ? { minHeight: `${minHeight}px` }
+            : undefined
+      }
     >
       <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -370,7 +403,40 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
             <FileText className="h-5 w-5" />
             Noteringar nycklar
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {hasMultiplePages && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => {
+                    setCurrentPageIndex((prev) => Math.max(0, prev - 1))
+                    setEditingObjectId(null)
+                  }}
+                  disabled={currentPageIndex === 0}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  Objekt {currentPageIndex + 1} av {totalItems}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => {
+                    setCurrentPageIndex((prev) =>
+                      Math.min(totalPages - 1, prev + 1)
+                    )
+                    setEditingObjectId(null)
+                  }}
+                  disabled={currentPageIndex >= totalPages - 1}
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </>
+            )}
             {hasMultipleGroups && (
               <Button
                 variant="outline"
@@ -410,9 +476,9 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
       </CardHeader>
       <CardContent
         ref={contentRef}
-        className="flex-1 overflow-y-auto space-y-3 min-h-0"
+        className="flex-1 overflow-hidden space-y-3 min-h-0"
       >
-        {currentGroup.leases.map((lease) => {
+        {currentPageLeases.map((lease) => {
           const objectId = lease.rentalPropertyId
           const note = notes.get(objectId)
           const isLoading = loadingObjects.has(objectId)
