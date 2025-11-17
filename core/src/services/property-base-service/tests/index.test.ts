@@ -316,11 +316,8 @@ describe('@onecore/property-service', () => {
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
         .mockResolvedValueOnce({
           ok: true,
-          data: { id: residenceDetails.id } as any,
+          data: residenceDetails,
         })
-      const getResidenceDetailsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
-        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
 
       const res = await request(app.callback()).get(
         `/property/residences/by-rental-id/1234`
@@ -328,7 +325,6 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(200)
       expect(getResidenceByRentalIdSpy).toHaveBeenCalled()
-      expect(getResidenceDetailsSpy).toHaveBeenCalled()
       expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
     })
 
@@ -340,11 +336,8 @@ describe('@onecore/property-service', () => {
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
         .mockResolvedValueOnce({
           ok: true,
-          data: { id: residenceDetails.id } as any,
+          data: residenceDetails,
         })
-      const getResidenceDetailsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
-        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
 
       const lease = factory.lease.build({ status: LeaseStatus.Current })
       const getLeasesSpy = jest
@@ -360,7 +353,6 @@ describe('@onecore/property-service', () => {
       expect(res.body.content.status).toBe('LEASED')
 
       expect(getResidenceByRentalIdSpy).toHaveBeenCalled()
-      expect(getResidenceDetailsSpy).toHaveBeenCalled()
       expect(getLeasesSpy).toHaveBeenCalled()
     })
 
