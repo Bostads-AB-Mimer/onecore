@@ -314,7 +314,10 @@ describe('@onecore/property-service', () => {
       const residenceDetails = factory.residenceDetails.build()
       const getResidenceByRentalIdSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
-        .mockResolvedValueOnce({ ok: true, data: { id: residenceDetails.id } as any })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { id: residenceDetails.id } as any,
+        })
       const getResidenceDetailsSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidenceDetails')
         .mockResolvedValueOnce({ ok: true, data: residenceDetails })
@@ -335,7 +338,10 @@ describe('@onecore/property-service', () => {
       })
       const getResidenceByRentalIdSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
-        .mockResolvedValueOnce({ ok: true, data: { id: residenceDetails.id } as any })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { id: residenceDetails.id } as any,
+        })
       const getResidenceDetailsSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidenceDetails')
         .mockResolvedValueOnce({ ok: true, data: residenceDetails })

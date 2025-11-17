@@ -164,7 +164,6 @@ export const ResidenceDetailedSchema = z.object({
   size: z.number().nullable(),
 })
 
-
 export type ExternalResidence = z.infer<typeof ResidenceSchema>
 export type Residence = ExternalResidence
 export type ResidenceSearchResult = z.infer<typeof ResidenceSearchResultSchema>
