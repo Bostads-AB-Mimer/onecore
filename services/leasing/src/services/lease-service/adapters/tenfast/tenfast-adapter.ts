@@ -413,6 +413,77 @@ export async function getLeasesByTenantId(
   }
 }
 
+export async function getLeasesByRentalObjectId(
+  rentalObjectId: string,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalObjectId}/avtal`,
+    })
+
+    // Not sure we want to fail completely here if parsing fails
+    const leases = TenfastLeaseSchema.array().safeParse(res.data)
+
+    if (!leases.success) {
+      logger.error(
+        { error: JSON.stringify(leases.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
+    }
+
+    return {
+      ok: true,
+      data: filterByType(leases.data, filters.type),
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByRentalObjectId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getLeaseByRentalObjectId(
+  rentalObjectId: string
+): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${rentalObjectId}`,
+    })
+
+    if (res.status !== 200) {
+      if (res.status === 404) {
+        return { ok: false, err: 'not-found' }
+      }
+
+      return { ok: false, err: 'unknown' }
+    }
+
+    // Not sure we want to fail completely here if parsing fails
+    const lease = TenfastLeaseSchema.safeParse(res.data)
+
+    if (!lease.success) {
+      logger.error(
+        { error: JSON.stringify(lease.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: lease.error } }
+    }
+
+    return {
+      ok: true,
+      data: lease.data,
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByRentalObjectId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // prettier-ignore
 function filterByType(leases: TenfastLease[], types: GetLeasesFilters['type']) {
   const now = new Date()

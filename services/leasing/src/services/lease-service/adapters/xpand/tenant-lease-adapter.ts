@@ -583,4 +583,5 @@ export {
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
   transformFromDbContact,
+  getContactsByLeaseId,
 }
