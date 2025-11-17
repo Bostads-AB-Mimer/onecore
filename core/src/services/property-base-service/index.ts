@@ -35,10 +35,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Room', schemas.RoomSchema)
   registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
-  registerSchema(
-    'ResidenceByRentalIdDetails',
-    schemas.ResidenceByRentalIdSchema
-  )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
 
   /**
@@ -713,7 +709,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
+   *                   $ref: '#/components/schemas/ResidenceDetails'
    *       '404':
    *         description: Residence not found
    *         content:
@@ -741,26 +737,62 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalId } = ctx.params
 
-    const getResidence =
-      await propertyBaseAdapter.getResidenceByRentalId(rentalId)
+    try {
+      // Get the full residence details by rental ID
+      const getResidence =
+        await propertyBaseAdapter.getResidenceByRentalId(rentalId)
 
-    if (!getResidence.ok) {
-      if (getResidence.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { error: 'Residence not found', ...metadata }
+      if (!getResidence.ok) {
+        if (getResidence.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Residence not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          { err: getResidence.err, metadata },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
         return
       }
 
-      logger.error({ err: getResidence.err, metadata }, 'Internal server error')
+      if (!getResidence.data.propertyObject.rentalId) {
+        ctx.status = 200
+        ctx.body = {
+          content: schemas.ResidenceDetailsSchema.parse({
+            ...getResidence.data,
+            status: null,
+          }),
+          ...metadata,
+        }
+        return
+      }
+
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        getResidence.data.propertyObject.rentalId,
+        {
+          includeContacts: false,
+          includeTerminatedLeases: false,
+          includeUpcomingLeases: true,
+        }
+      )
+
+      const status = calculateResidenceStatus(leases)
+
+      ctx.status = 200
+      ctx.body = {
+        content: schemas.ResidenceDetailsSchema.parse({
+          ...getResidence.data,
+          status,
+        }),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = {
-      content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
-      ...metadata,
     }
   })
 

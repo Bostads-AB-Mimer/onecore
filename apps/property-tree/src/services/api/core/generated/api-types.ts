@@ -2665,7 +2665,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ResidenceByRentalIdDetails"];
+              content?: components["schemas"]["ResidenceDetails"];
             };
           };
         };
@@ -3507,46 +3507,6 @@ export interface components {
       type?: string | null;
       estateCode: string | null;
       estate: string | null;
-    };
-    ResidenceByRentalIdDetails: {
-      id: string;
-      code: string;
-      name: string | null;
-      accessibility: {
-        wheelchairAccessible: boolean;
-        elevator: boolean;
-      };
-      features: {
-        hygieneFacility: string | null;
-      };
-      entrance: string | null;
-      floor: string | null;
-      deleted: boolean;
-      type: {
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
-        type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
-      property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      areaSize: number | null;
     };
     FacilityDetails: {
       id: string;

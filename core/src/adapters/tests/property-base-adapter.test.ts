@@ -395,7 +395,7 @@ describe('@onecore/property-adapter', () => {
     })
 
     it('returns residence', async () => {
-      const residenceDetailsMock = factory.residenceByRentalIdDetails.build()
+      const residenceDetailsMock = factory.residenceDetails.build()
       mockServer.use(
         http.get(
           `${config.propertyBaseService.url}/residences/rental-id/1234`,

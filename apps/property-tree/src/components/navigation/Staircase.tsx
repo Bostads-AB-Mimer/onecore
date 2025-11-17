@@ -32,7 +32,7 @@ export function StaircaseNavigation({
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">
-          <ResidenceList building={building} />
+          <ResidenceList building={building} staircaseCode={staircase.code} />
         </div>
       )}
     </SidebarMenuItem>

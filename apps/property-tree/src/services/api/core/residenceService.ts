@@ -38,4 +38,15 @@ export const residenceService = {
 
     return data.content
   },
+
+  async getByRentalId(rentalId: string): Promise<ResidenceDetails> {
+    const { data, error } = await GET(`/residences/by-rental-id/{rentalId}`, {
+      params: { path: { rentalId } },
+    })
+
+    if (error) throw error
+    if (!data.content) throw new Error('No data returned from API')
+
+    return data.content
+  },
 }

@@ -12,12 +12,12 @@ import { TenantInformation } from '../residence/TenantInformation'
 import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 
 export function ResidenceView() {
-  const { residenceId } = useParams()
+  const { rentalId } = useParams()
 
   const residenceQuery = useQuery({
-    queryKey: ['residence', residenceId],
-    queryFn: () => residenceService.getById(residenceId!),
-    enabled: !!residenceId,
+    queryKey: ['residence', rentalId],
+    queryFn: () => residenceService.getByRentalId(rentalId!),
+    enabled: !!rentalId,
   })
 
   const isLoading = residenceQuery.isLoading
