@@ -229,7 +229,7 @@ export function ReturnMaintenanceKeysDialog({
       onAccept={handleAccept}
       isProcessing={isProcessing}
       acceptButtonText="Återlämna"
-      title="Återlämna entreprenörsnycklar"
+      title="Återlämna nycklar"
       description="Markera lån som återlämnat och lägg till en valfri anteckning"
     />
   )

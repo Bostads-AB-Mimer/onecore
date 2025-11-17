@@ -161,17 +161,34 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
    */
   const handleUploadReceipt = async (file: File) => {
     setUploadError(null)
+
+    // Validate file BEFORE showing replacement warning
+    if (file.type !== 'application/pdf') {
+      setUploadError('Endast PDF-filer är tillåtna')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Filen är för stor (max 10 MB)')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    // Show warning if replacing existing file
+    if (loanReceipt?.fileId) {
+      const confirmed = confirm(
+        'Obs! Det finns redan en uppladdad kvittens. ' +
+          'Om du fortsätter kommer den befintliga kvittensen att ersättas. ' +
+          'Är du säker?'
+      )
+      if (!confirmed) {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
+      }
+    }
+
     setLoading(true)
     try {
-      if (file.type !== 'application/pdf') {
-        setUploadError('Endast PDF-filer är tillåtna')
-        return
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setUploadError('Filen är för stor (max 10 MB)')
-        return
-      }
-
       // Create receipt record if it doesn't exist
       let receiptId = loanReceipt?.id
       if (!receiptId) {
@@ -186,8 +203,10 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
       await receiptService.uploadFile(receiptId, file)
 
       toast({
-        title: 'Kvittens uppladdad',
-        description: 'Kvittensen har laddats upp',
+        title: loanReceipt?.fileId ? 'Kvittens ersatt' : 'Kvittens uppladdad',
+        description: loanReceipt?.fileId
+          ? 'Den nya kvittensen har ersatt den gamla'
+          : 'Kvittensen har laddats upp',
       })
 
       // Refresh receipt info
@@ -204,6 +223,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
       })
     } finally {
       setLoading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -275,18 +295,16 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
           </Button>
         )}
 
-        {/* Upload Receipt Button - show if no file uploaded */}
-        {!loanReceipt?.fileId && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPickFile}
-            disabled={loading}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            {loading ? 'Laddar upp...' : 'Ladda upp'}
-          </Button>
-        )}
+        {/* Upload Receipt Button - always show (enables replacement) */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPickFile}
+          disabled={loading}
+        >
+          <Upload className="h-3 w-3 mr-1" />
+          {loading ? 'Laddar upp...' : 'Ladda upp'}
+        </Button>
 
         {/* View Loan Receipt Button - show if file uploaded */}
         {loanReceipt?.fileId && (
