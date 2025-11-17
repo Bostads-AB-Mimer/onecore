@@ -16,6 +16,7 @@ COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Copy relevant packages
 COPY libs ./libs
 COPY apps/property-tree ./apps/property-tree
+COPY libs ./libs
 
 RUN pnpm install
 RUN pnpm build:types
