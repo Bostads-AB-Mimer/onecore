@@ -54,16 +54,8 @@ const schemas = {
   ...zodToJsonSchema(types.MaintenanceUnitSchema, {
     name: 'MaintenanceUnit',
   }).definitions,
-  ...zodToJsonSchema(types.ResidenceByRentalIdSchema, {
-    name: 'ResidenceByRentalId',
-    target: 'openApi3',
-  }).definitions,
   ...zodToJsonSchema(types.ResidenceSummarySchema, {
     name: 'ResidenceSummary',
-    target: 'openApi3',
-  }).definitions,
-  ...zodToJsonSchema(types.GetResidenceByRentalIdResponseSchema, {
-    name: 'GetResidenceByRentalIdResponse',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(types.ParkingSpaceSchema, {
