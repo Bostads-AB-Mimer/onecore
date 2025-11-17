@@ -1,18 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { KeyLoansHeader } from '@/components/key-loans/KeyLoansHeader'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
+import { EditKeyLoanForm } from '@/components/key-loans/EditKeyLoanForm'
 import { PaginationControls } from '@/components/common/PaginationControls'
 import { Input } from '@/components/ui/input'
 
-import { KeyLoan } from '@/services/types'
+import { KeyLoan, UpdateKeyLoanRequest } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
+import { receiptService } from '@/services/api/receiptService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 
 export default function KeyLoans() {
   const pagination = useUrlPagination()
   const [keyLoans, setKeyLoans] = useState<KeyLoan[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [editingKeyLoan, setEditingKeyLoan] = useState<KeyLoan | null>(null)
   const { toast } = useToast()
 
   // Read search query from URL
@@ -251,6 +255,149 @@ export default function KeyLoans() {
     [pagination]
   )
 
+  const handleEdit = useCallback((loan: KeyLoan) => {
+    setEditingKeyLoan(loan)
+    setShowEditForm(true)
+  }, [])
+
+  const handleSave = useCallback(
+    async (loanData: UpdateKeyLoanRequest, receiptFile?: File | null) => {
+      if (!editingKeyLoan) return
+
+      try {
+        setIsLoading(true)
+        await keyLoanService.update(editingKeyLoan.id, loanData)
+
+        toast({
+          title: 'Uppdaterat',
+          description: 'Nyckellånet har uppdaterats',
+        })
+
+        setShowEditForm(false)
+        setEditingKeyLoan(null)
+
+        // Refresh the list
+        await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
+      } catch (error) {
+        console.error('Failed to update key loan:', error)
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte uppdatera nyckellånet',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [
+      editingKeyLoan,
+      toast,
+      pagination.currentPage,
+      pagination.currentLimit,
+      loadKeyLoans,
+    ]
+  )
+
+  const handleCancel = useCallback(() => {
+    setShowEditForm(false)
+    setEditingKeyLoan(null)
+  }, [])
+
+  const handleReceiptUpload = useCallback(
+    async (loanId: string, file: File) => {
+      try {
+        // Get existing receipts for this loan
+        const receipts = await receiptService.getByKeyLoan(loanId)
+        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+
+        // Create receipt record if it doesn't exist
+        let receiptId = loanReceipt?.id
+        if (!receiptId) {
+          const newReceipt = await receiptService.create({
+            keyLoanId: loanId,
+            receiptType: 'LOAN',
+            type: 'DIGITAL',
+          })
+          receiptId = newReceipt.id
+        }
+
+        // Upload file to the receipt
+        await receiptService.uploadFile(receiptId, file)
+
+        toast({
+          title: loanReceipt?.fileId ? 'Kvittens ersatt' : 'Kvittens uppladdad',
+          description: loanReceipt?.fileId
+            ? 'Den nya kvittensen har ersatt den gamla'
+            : 'Kvittensen har laddats upp',
+        })
+
+        // Refresh the list
+        await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
+      } catch (error) {
+        console.error('Failed to upload receipt:', error)
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte ladda upp kvittensen',
+          variant: 'destructive',
+        })
+        throw error
+      }
+    },
+    [toast, pagination.currentPage, pagination.currentLimit, loadKeyLoans]
+  )
+
+  const handleReceiptDownload = useCallback(
+    async (loanId: string) => {
+      try {
+        // Get receipts for this loan
+        const receipts = await receiptService.getByKeyLoan(loanId)
+        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+
+        if (loanReceipt) {
+          await receiptService.downloadFile(loanReceipt.id)
+        }
+      } catch (error) {
+        console.error('Failed to download receipt:', error)
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte ladda ner kvittensen',
+          variant: 'destructive',
+        })
+        throw error
+      }
+    },
+    [toast]
+  )
+
+  const handleReceiptDelete = useCallback(
+    async (loanId: string) => {
+      try {
+        // Get receipts for this loan
+        const receipts = await receiptService.getByKeyLoan(loanId)
+        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+
+        if (loanReceipt) {
+          await receiptService.remove(loanReceipt.id)
+          toast({
+            title: 'Kvittens borttagen',
+            description: 'Kvittensen har tagits bort',
+          })
+          // Refresh the list
+          await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
+        }
+      } catch (error) {
+        console.error('Failed to delete receipt:', error)
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte ta bort kvittensen',
+          variant: 'destructive',
+        })
+        throw error
+      }
+    },
+    [toast, pagination.currentPage, pagination.currentLimit, loadKeyLoans]
+  )
+
   // Count active and returned loans
   const activeLoanCount = keyLoans.filter((loan) => !loan.returnedAt).length
   const returnedLoanCount = keyLoans.filter((loan) => loan.returnedAt).length
@@ -274,12 +421,25 @@ export default function KeyLoans() {
         />
       </div>
 
+      {/* Edit form */}
+      {showEditForm && editingKeyLoan && (
+        <EditKeyLoanForm
+          editingKeyLoan={editingKeyLoan}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          onReceiptUpload={handleReceiptUpload}
+          onReceiptDownload={handleReceiptDownload}
+          onReceiptDelete={handleReceiptDelete}
+        />
+      )}
+
       <KeyLoansTable
         keyLoans={keyLoans}
         isLoading={isLoading}
         onRefresh={() =>
           loadKeyLoans(pagination.currentPage, pagination.currentLimit)
         }
+        onEdit={handleEdit}
         loanTypeFilter={loanTypeFilter}
         onLoanTypeFilterChange={handleLoanTypeFilterChange}
         minKeys={minKeys}

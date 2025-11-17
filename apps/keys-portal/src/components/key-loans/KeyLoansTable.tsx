@@ -10,12 +10,20 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   ChevronDown,
   ChevronRight,
   Loader2,
   Undo2,
   User,
   FileText,
+  MoreHorizontal,
+  Edit,
 } from 'lucide-react'
 import {
   KeyLoan,
@@ -38,6 +46,7 @@ interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
   isLoading: boolean
   onRefresh?: () => void
+  onEdit?: (loan: KeyLoan) => void
   // Filter props
   loanTypeFilter: string | null
   onLoanTypeFilterChange: (value: string | null) => void
@@ -76,6 +85,7 @@ export function KeyLoansTable({
   keyLoans,
   isLoading,
   onRefresh,
+  onEdit,
   loanTypeFilter,
   onLoanTypeFilterChange,
   minKeys,
@@ -356,6 +366,7 @@ export function KeyLoansTable({
                   />
                 </div>
               </TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -370,7 +381,7 @@ export function KeyLoansTable({
             ) : keyLoans.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="h-24 text-center text-muted-foreground"
                 >
                   Inga nyckellån hittades
@@ -435,12 +446,27 @@ export function KeyLoansTable({
                       <TableCell>{formatDate(loan.createdAt)}</TableCell>
                       <TableCell>{formatDate(loan.pickedUpAt)}</TableCell>
                       <TableCell>{formatDate(loan.returnedAt)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEdit?.(loan)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Redigera
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
 
                     {/* Expanded keys section */}
                     {isExpanded && (
                       <TableRow>
-                        <TableCell colSpan={8} className="p-6 bg-muted/30">
+                        <TableCell colSpan={9} className="p-6 bg-muted/30">
                           {isLoadingDetails ? (
                             <div className="flex items-center justify-center py-8">
                               <Loader2 className="h-6 w-6 animate-spin" />
