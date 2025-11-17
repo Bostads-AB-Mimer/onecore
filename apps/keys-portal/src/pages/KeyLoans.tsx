@@ -387,7 +387,8 @@ export default function KeyLoans() {
 
           toast({
             title: 'Kvittens borttagen',
-            description: 'Kvittensen har tagits bort och lånet är nu markerat som ej upphämtat',
+            description:
+              'Kvittensen har tagits bort och lånet är nu markerat som ej upphämtat',
           })
 
           // Refresh the list
