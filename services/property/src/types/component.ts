@@ -37,13 +37,15 @@ export const ComponentSchema = z.object({
       name: z.string(),
     }),
   }),
-  maintenanceUnits: z.array(
-    z.object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-  ),
+  maintenanceUnits: z
+    .array(
+      z.object({
+        id: z.string(),
+        code: z.string(),
+        name: z.string(),
+      })
+    )
+    .optional(),
 })
 
 export type Component = z.infer<typeof ComponentSchema>
