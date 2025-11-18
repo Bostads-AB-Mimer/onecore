@@ -1,7 +1,7 @@
 import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
-import { roomService } from '@/services/api/core'
+import { roomService, componentService } from '@/services/api/core'
 import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
 import {
@@ -10,9 +10,58 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../ui/Accordion'
+import { ComponentCard } from './ComponentCard'
 
 interface RoomInfoProps {
   residenceId: string
+}
+
+interface RoomComponentsProps {
+  roomId: string
+}
+
+const RoomComponents = ({ roomId }: RoomComponentsProps) => {
+  const componentsQuery = useQuery({
+    queryKey: ['components', roomId],
+    queryFn: () => componentService.getByRoomId(roomId),
+  })
+
+  if (componentsQuery.isLoading) {
+    return (
+      <div className="py-4">
+        <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+      </div>
+    )
+  }
+
+  if (componentsQuery.error || !componentsQuery.data) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-muted-foreground text-sm">
+          Kunde inte hämta komponenter
+        </p>
+      </div>
+    )
+  }
+
+  if (componentsQuery.data.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-muted-foreground text-sm">
+          Ingen komponentinformation tillgänglig
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-3 grid-cols-1 pt-4 border-t">
+      <p className="text-sm font-medium text-muted-foreground">Komponenter</p>
+      {componentsQuery.data.map((component) => (
+        <ComponentCard key={component.id} component={component} />
+      ))}
+    </div>
+  )
 }
 
 export const RoomInfo = (props: RoomInfoProps) => {
@@ -205,6 +254,8 @@ export const RoomInfo = (props: RoomInfoProps) => {
                       </p>
                     </div>
                   </div>
+
+                  <RoomComponents roomId={room.id} />
                 </AccordionContent>
               </AccordionItem>
             )
