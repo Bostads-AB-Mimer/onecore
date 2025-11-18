@@ -36,7 +36,9 @@ import {
 } from './schemas/lease'
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
-  const lease = await leasingAdapter.getLease(rentalId, 'true')
+  const lease = await leasingAdapter.getLease(rentalId, {
+    includeContacts: true,
+  })
 
   return lease
 }

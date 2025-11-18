@@ -265,6 +265,9 @@ export {
   updateApplicantStatus,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
+  getApplicantByContactCodeAndListingId,
+  getApplicantsByContactCode,
+  getApplicantsAndListingByContactCode,
 } from './applicants'
 
 export {
