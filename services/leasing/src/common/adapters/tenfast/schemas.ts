@@ -111,65 +111,11 @@ export const TenfastTenantSchema = z.object({
   displayName: z.string(),
 })
 
-/*{
-            "tags": [],
-            "comments": [],
-            "_id": "67eb8af5545c8f1195bef2e6",
-            "hyresvard": "6344b398b63ff59d5bde8257",
-            "externalId": "941-721-00-0014",
-            "roomCount": null,
-            "typ": "parkering",
-            "parkeringType": "personbil",
-            "originalType": "Parkeringsplats med el",
-            "hyra": 287.17,
-            "hyror": [],
-            "createdAt": "2025-04-01T06:43:01.357Z",
-            "nummer": "19105",
-            "postadress": "Testvägen 3",
-            "postnummer": "72212",
-            "stad": "Västerås",
-            "avtalStates": [
-                "reserved",
-                "vacant"
-            ],
-            "lastStateChanged": "2025-11-05T12:46:51.251Z",
-            "updatedAt": "2025-11-05T12:46:51.251Z",
-            "images": [],
-            "files": [],
-            "displayName": "Testvägen 3 - nr. 19105",
-            "subType": "Personbil",
-            "states": [
-                "reserved",
-                "vacant"
-            ]
-        }*/
-
 export const TenfastRentalObjectSchema = z.object({
-  // tags: z.array(z.any()),
-  // comments: z.array(z.any()),
   _id: z.string(),
-  // hyresvard: z.string(),
-  // externalId: z.string(),
-  // roomCount: z.number().nullable(),
-  // typ: z.string(), //gör typ??
-  // parkeringType: z.string().nullable(),
-  // originalType: z.string(),
   hyra: z.number(),
   article: z.string(),
   hyror: z.array(z.any()), //gör hyror??
-  // createdAt: z.string(), // gör datum??
-  // nummer: z.string(),
-  // postadress: z.string(),
-  // postnummer: z.string(),
-  // stad: z.string(),
-  // avtalStates: z.array(z.string()),
-  // lastStateChanged: z.string(), //gör datum??
-  // updatedAt: z.string(), //gör datum??
-  // images: z.array(z.any()),
-  // files: z.array(z.any()),
-  // displayName: z.string(),
-  // subType: z.string(),
-  // states: z.array(z.string()),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
