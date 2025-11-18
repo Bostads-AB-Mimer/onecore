@@ -63,7 +63,7 @@ describe('lease-service', () => {
 
     it('responds with 500 if adapter fails', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
         .mockRejectedValue(new Error('Adapter error'))
 
       const res = await request(app.callback()).get(
@@ -75,7 +75,7 @@ describe('lease-service', () => {
 
     it('responds with a list of leases for valid query parameters', async () => {
       const getLeasesForPropertyIdSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
         .mockResolvedValue(factory.lease.buildList(1))
 
       const res = await request(app.callback()).get(

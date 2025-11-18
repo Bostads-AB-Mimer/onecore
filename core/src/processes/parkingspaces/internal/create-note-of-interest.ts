@@ -20,7 +20,7 @@ import {
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
   getContactByContactCode,
-  getLeasesForContactCode,
+  getLeasesByContactCode,
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import {
@@ -82,7 +82,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     const applicantContact = getApplicantContact.data
 
     //step 3a. Check if applicant is tenant
-    const leases = await getLeasesForContactCode(contactCode, {
+    const leases = await getLeasesByContactCode(contactCode, {
       includeUpcomingLeases: true,
       includeTerminatedLeases: false,
       includeContacts: false,
