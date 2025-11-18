@@ -194,7 +194,7 @@ export const getTenantByContactCode = async (
   contactCode: string
 ): Promise<
   AdapterResult<
-    TenfastTenant | null,
+    TenfastTenant,
     | 'could-not-retrieve-tenant'
     | 'could-not-parse-tenant-response'
     | 'get-tenant-bad-request'
@@ -204,8 +204,10 @@ export const getTenantByContactCode = async (
   try {
     const tenantResponse = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?filter[externalId]=${contactCode}134`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?filter[externalId]=${contactCode}`,
     })
+
+    // console.log('Tenant response status:', tenantResponse.status)
 
     if (tenantResponse.status === 400)
       return handleTenfastError(
