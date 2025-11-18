@@ -18,10 +18,10 @@ import {
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
-import * as helpers from '../../helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
+
 type SchemaError = { tag: 'schema-error'; error: ZodError }
 
 export const createLease = async (

@@ -10,10 +10,6 @@ import z from 'zod'
 import {
   getContactByContactCode,
   getContactsByLeaseId,
-  getLease,
-  getLeasesForContactCode,
-  getLeasesForNationalRegistrationNumber,
-  getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
@@ -100,50 +96,50 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
 
-  const getLeasesForPnrQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-  })
+  // const getLeasesForPnrQueryParamSchema = z.object({
+  //   includeUpcomingLeases: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  //   includeTerminatedLeases: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  //   includeContacts: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  // })
 
   // TODO: Maybe remove this route and use contact code instead?
   // Core can get that from pnr
-  router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-    ])
+  // router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
+  //   const metadata = generateRouteMetadata(ctx, [
+  //     'includeUpcomingLeases',
+  //     'includeTerminatedLeases',
+  //     'includeContacts',
+  //   ])
 
-    const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
+  //   const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
+  //   if (queryParams.success === false) {
+  //     ctx.status = 400
+  //     return
+  //   }
 
-    const responseData = await getLeasesForNationalRegistrationNumber(
-      ctx.params.pnr,
-      {
-        includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-        includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-        includeContacts: queryParams.data.includeContacts,
-      }
-    )
+  //   const responseData = await getLeasesForNationalRegistrationNumber(
+  //     ctx.params.pnr,
+  //     {
+  //       includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
+  //       includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
+  //       includeContacts: queryParams.data.includeContacts,
+  //     }
+  //   )
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
+  //   ctx.body = {
+  //     content: responseData,
+  //     ...metadata,
+  //   }
+  // })
 
   /**
    * @swagger
@@ -186,60 +182,60 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
 
-  const getLeasesForContactCodeQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-  })
+  // const getLeasesForContactCodeQueryParamSchema = z.object({
+  //   includeUpcomingLeases: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  //   includeTerminatedLeases: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  //   includeContacts: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  // })
 
-  router.get('(.*)/leases/for/contactCode/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-    ])
+  // router.get('(.*)/leases/for/contactCode/:contactCode', async (ctx) => {
+  //   const metadata = generateRouteMetadata(ctx, [
+  //     'includeUpcomingLeases',
+  //     'includeTerminatedLeases',
+  //     'includeContacts',
+  //   ])
 
-    const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
-      ctx.query
-    )
+  //   const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
+  //     ctx.query
+  //   )
 
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
+  //   if (queryParams.success === false) {
+  //     ctx.status = 400
+  //     return
+  //   }
 
-    const result = await getLeasesForContactCode(
-      ctx.params.contactCode,
-      queryParams.data
-    )
+  //   const result = await getLeasesForContactCode(
+  //     ctx.params.contactCode,
+  //     queryParams.data
+  //   )
 
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: result.err,
-        ...metadata,
-      }
-      return
-    }
+  //   if (!result.ok) {
+  //     ctx.status = 500
+  //     ctx.body = {
+  //       error: result.err,
+  //       ...metadata,
+  //     }
+  //     return
+  //   }
 
-    ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
-  })
+  //   ctx.status = 200
+  //   ctx.body = {
+  //     content: result.data,
+  //     ...metadata,
+  //   }
+  // })
 
   // Tenfast equivalent of above route
-  router.get('(.*)/v1/leases/by-contact-code/:contactCode', async (ctx) => {
+  router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
     const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
@@ -313,30 +309,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  async function patchLeasesWithContacts(
-    leases: Lease[]
-  ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
-    for (const lease of leases) {
-      if (!lease.tenantContactIds) {
-        continue
-      }
-
-      let contacts: Contact[] = []
-      for (const contactId of lease.tenantContactIds) {
-        const contact = await getContactByContactCode(contactId, false)
-        if (!contact.ok || !contact.data) {
-          return { ok: false, err: 'no-contact' }
-        }
-
-        contacts.push(contact.data)
-      }
-
-      lease.tenants = contacts
-    }
-
-    return { ok: true, data: leases }
-  }
-
   /**
    * @swagger
    * /leases/for/propertyId/{propertyId}:
@@ -378,50 +350,50 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
 
-  const getLeasesForPropertyIdQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-  })
+  // const getLeasesForPropertyIdQueryParamSchema = z.object({
+  //   includeUpcomingLeases: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  //   includeTerminatedLeases: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  //   includeContacts: z
+  //     .enum(['true', 'false'])
+  //     .optional()
+  //     .transform((value) => value === 'true'),
+  // })
 
-  router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-    ])
+  // router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
+  //   const metadata = generateRouteMetadata(ctx, [
+  //     'includeUpcomingLeases',
+  //     'includeTerminatedLeases',
+  //     'includeContacts',
+  //   ])
 
-    const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
-      ctx.query
-    )
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
+  //   const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
+  //     ctx.query
+  //   )
+  //   if (queryParams.success === false) {
+  //     ctx.status = 400
+  //     return
+  //   }
 
-    const responseData = await getLeasesForPropertyId(ctx.params.propertyId, {
-      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-      includeContacts: queryParams.data.includeContacts,
-    })
+  //   const responseData = await getLeasesForPropertyId(ctx.params.propertyId, {
+  //     includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
+  //     includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
+  //     includeContacts: queryParams.data.includeContacts,
+  //   })
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
+  //   ctx.body = {
+  //     content: responseData,
+  //     ...metadata,
+  //   }
+  // })
 
   router.get(
-    '(.*)/v1/leases/by-rental-object-code/:rentalObjectCode',
+    '(.*)/leases/by-rental-object-code/:rentalObjectCode',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
@@ -435,8 +407,10 @@ export const routes = (router: KoaRouter) => {
       // TODO: TenFAST route is coming to get avtal by hyresobjekt
       // EDIT: or is it?
       const property = await tenfastAdapter.getRentalObject(
-        ctx.params.propertyId
+        ctx.params.rentalObjectCode
       )
+
+      // TODO: Clean this up
       if (!property.ok && property.err === 'could-not-find-rental-object') {
         ctx.status = 404
         ctx.body = {
@@ -499,47 +473,8 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const filters = queryParams.data?.status
-          ? { status: queryParams.data.status }
-          : undefined
-
-        const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
-          property.data._id,
-          filters
-        )
-
-        if (!getLeases.ok) {
-          ctx.status = 500
-          ctx.body = {
-            error: getLeases.err,
-            ...metadata,
-          }
-          return
-        }
-
-        const onecoreLeases = getLeases.data.map(
-          tenfastHelpers.mapToOnecoreLease
-        )
-
-        // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
-        if (!queryParams.data.includeContacts) {
-          ctx.status = 200
-          ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
-        } else {
-          const patchLeases = await patchLeasesWithContacts(onecoreLeases)
-          if (!patchLeases.ok) {
-            ctx.status = 500
-            ctx.body = {
-              error: patchLeases.err,
-              ...metadata,
-            }
-
-            return
-          }
-
-          ctx.status = 200
-          ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
-        }
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
       }
     }
   )
@@ -579,18 +514,18 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve lease details.
    */
-  router.get('(.*)/leases/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
-    const responseData = await getLease(
-      ctx.params.id,
-      ctx.query.includeContacts
-    )
+  // router.get('(.*)/leases/:id', async (ctx) => {
+  //   const metadata = generateRouteMetadata(ctx, ['includeContacts'])
+  //   const responseData = await getLease(
+  //     ctx.params.id,
+  //     ctx.query.includeContacts
+  //   )
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
+  //   ctx.body = {
+  //     content: responseData,
+  //     ...metadata,
+  //   }
+  // })
 
   router.get('(.*)/v1/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
@@ -763,4 +698,28 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+}
+
+async function patchLeasesWithContacts(
+  leases: Lease[]
+): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
+  for (const lease of leases) {
+    if (!lease.tenantContactIds) {
+      continue
+    }
+
+    let contacts: Contact[] = []
+    for (const contactId of lease.tenantContactIds) {
+      const contact = await getContactByContactCode(contactId, false)
+      if (!contact.ok || !contact.data) {
+        return { ok: false, err: 'no-contact' }
+      }
+
+      contacts.push(contact.data)
+    }
+
+    lease.tenants = contacts
+  }
+
+  return { ok: true, data: leases }
 }
