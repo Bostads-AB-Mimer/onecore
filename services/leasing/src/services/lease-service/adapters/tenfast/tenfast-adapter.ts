@@ -375,11 +375,13 @@ function buildTenantRequestData(contact: Contact) {
   }
 }
 
-type GetLeasesFilters = {
-  type: ('active' | 'upcoming' | 'terminated')[]
+export type GetLeasesFilters = {
+  type: ('active' | 'upcoming' | 'about-to-end' | 'ended')[]
 }
 
-const defaultFilters: GetLeasesFilters = { type: ['active'] }
+const defaultFilters: GetLeasesFilters = {
+  type: ['active', 'upcoming', 'about-to-end', 'ended'],
+}
 
 export async function getLeasesByTenantId(
   tenantId: string,
@@ -413,14 +415,14 @@ export async function getLeasesByTenantId(
   }
 }
 
-export async function getLeasesByRentalObjectCode(
-  rentalObjectCode: string,
+export async function getLeasesByRentalPropertyId(
+  rentalPropertyId: string,
   filters: GetLeasesFilters = defaultFilters
 ): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalObjectCode}/avtal`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal`,
     })
 
     // Not sure we want to fail completely here if parsing fails
@@ -440,7 +442,10 @@ export async function getLeasesByRentalObjectCode(
       data: filterByType(leases.data, filters.type),
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByRentalObjectId')
+    logger.error(
+      mapHttpError(err),
+      'tenfast-adapter.getLeasesByRentalPropertyId'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -491,9 +496,10 @@ function filterByType(leases: TenfastLease[], types: GetLeasesFilters['type']) {
     (acc, type) =>
       acc.filter((l) =>
         match(type)
-          .with('active', () => l.startDate < now && l.endDate && l.endDate > now)
-          .with('upcoming', () => l.startDate > now)
-          .with('terminated', () => l.cancellation.cancelled)
+          .with('active', () => l.startDate < now)
+          .with('upcoming', () => l.startDate >= now)
+          .with('about-to-end', () => l.endDate && l.endDate >= now)
+          .with('ended', () => l.endDate && l.endDate < now)
           .exhaustive()
       ),
     leases

@@ -431,6 +431,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     // TODO: TenFAST route is coming to get avtal by hyresobjekt
+    // EDIT: or is it?
     const property = await tenfastAdapter.getRentalObject(ctx.params.propertyId)
     if (!property.ok && property.err === 'could-not-find-rental-object') {
       ctx.status = 404
@@ -463,7 +464,7 @@ export const routes = (router: KoaRouter) => {
       throw 'ffs'
     }
 
-    const getLeases = await tenfastAdapter.getLeasesByRentalObjectId(
+    const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
       property.data._id
     )
 
@@ -547,11 +548,11 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/v1/leases/:rentalObjectCode', async (ctx) => {
+  router.get('(.*)/v1/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
     try {
-      const getLease = await tenfastAdapter.getLeaseByRentalObjectCode(
-        ctx.params.rentalObjectCode
+      const getLease = await tenfastAdapter.getLeaseByLeaseId(
+        ctx.params.leaseId
       )
 
       if (!getLease.ok) {
