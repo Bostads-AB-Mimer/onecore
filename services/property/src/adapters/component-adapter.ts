@@ -83,3 +83,75 @@ export const getComponentByMaintenanceUnitCode = async (
     }))
     .map(trimStrings)
 }
+
+export const getComponentsByRoomId = async (roomId: string) => {
+  // First get the room's propertyObjectId
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+    select: { propertyObjectId: true },
+  })
+
+  if (!room) {
+    return null
+  }
+
+  const response = await prisma.component.findMany({
+    where: {
+      propertyStructures: {
+        some: {
+          roomId: room.propertyObjectId,
+        },
+      },
+    },
+    orderBy: {
+      installationDate: 'desc',
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      manufacturer: true,
+      typeDesignation: true,
+      installationDate: true,
+      warrantyEndDate: true,
+      componentType: {
+        select: {
+          code: true,
+          name: true,
+        },
+      },
+      componentCategory: {
+        select: {
+          code: true,
+          name: true,
+        },
+      },
+    },
+  })
+
+  return response
+    .map((component) => ({
+      id: component.id,
+      code: component.code,
+      name: component.name ?? '',
+      details: {
+        manufacturer: component.manufacturer,
+        typeDesignation: component.typeDesignation,
+      },
+      dates: {
+        installation: component.installationDate,
+        warrantyEnd: component.warrantyEndDate,
+      },
+      classification: {
+        componentType: {
+          code: component.componentType?.code ?? '',
+          name: component.componentType?.name ?? '',
+        },
+        category: {
+          code: component.componentCategory?.code ?? '',
+          name: component.componentCategory?.name ?? '',
+        },
+      },
+    }))
+    .map(trimStrings)
+}

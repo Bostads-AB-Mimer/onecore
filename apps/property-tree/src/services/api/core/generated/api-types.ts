@@ -2840,6 +2840,49 @@ export interface paths {
       };
     };
   };
+  "/components/by-room/{roomId}": {
+    /**
+     * Get components by room ID
+     * @description Retrieves all components associated with a specific room ID.
+     * Components are returned ordered by installation date (newest first).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the room */
+          roomId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the components list */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"][];
+            };
+          };
+        };
+        /** @description Room not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Room not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/parking-spaces/by-rental-id/{rentalId}": {
     /**
      * Get parking space data by rentalId
@@ -3575,6 +3618,36 @@ export interface components {
         code: string | null;
       };
       areaSize: number | null;
+    };
+    Component: {
+      id: string;
+      code: string;
+      name: string;
+      details: {
+        manufacturer: string | null;
+        typeDesignation: string | null;
+      };
+      dates: {
+        /** Format: date-time */
+        installation: string | null;
+        /** Format: date-time */
+        warrantyEnd: string | null;
+      };
+      classification: {
+        componentType: {
+          code: string;
+          name: string;
+        };
+        category: {
+          code: string;
+          name: string;
+        };
+      };
+      maintenanceUnits?: {
+          id: string;
+          code: string;
+          name: string;
+        }[];
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */

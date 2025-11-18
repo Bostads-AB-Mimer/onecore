@@ -49,6 +49,39 @@ export interface paths {
       };
     };
   };
+  "/components/by-room/{roomId}": {
+    /**
+     * Gets a list of components for a room
+     * @description Retrieves all components associated with a specific room ID.
+     * Components are returned ordered by installation date (newest first).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the room */
+          roomId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the components list */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"][];
+            };
+          };
+        };
+        /** @description Room not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences": {
     /**
      * Get residences by building code, optionally filtered by staircase code.
@@ -981,7 +1014,7 @@ export interface components {
           name: string;
         };
       };
-      maintenanceUnits: {
+      maintenanceUnits?: {
           id: string;
           code: string;
           name: string;
@@ -1153,6 +1186,12 @@ export interface components {
         allowSmallRoomsInValuation: number;
         timestamp: string;
       }) | null;
+      propertyObject?: {
+        quantityValues: {
+            value: number;
+            quantityTypeId: string;
+          }[];
+      };
     };
     Company: {
       id: string;

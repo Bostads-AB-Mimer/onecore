@@ -391,6 +391,39 @@ export const MaintenanceUnitSchema = z.object({
   estate: z.string().nullable(),
 })
 
+export const ComponentSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  details: z.object({
+    manufacturer: z.string().nullable(),
+    typeDesignation: z.string().nullable(),
+  }),
+  dates: z.object({
+    installation: z.date().nullable(),
+    warrantyEnd: z.date().nullable(),
+  }),
+  classification: z.object({
+    componentType: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+    category: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+  }),
+  maintenanceUnits: z
+    .array(
+      z.object({
+        id: z.string(),
+        code: z.string(),
+        name: z.string(),
+      })
+    )
+    .optional(),
+})
+
 export const FacilityDetailsSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -503,4 +536,5 @@ export type RoomType = z.infer<typeof RoomTypeSchema>
 export type Room = z.infer<typeof RoomSchema>
 export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
 export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>
+export type Component = z.infer<typeof ComponentSchema>
 export type FacilityDetails = z.infer<typeof FacilityDetailsSchema>

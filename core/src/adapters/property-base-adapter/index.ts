@@ -526,3 +526,30 @@ export async function getResidenceSummariesByBuildingCode(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetComponentsByRoomIdResponse = components['schemas']['Component'][]
+
+export async function getComponentsByRoomId(
+  roomId: string
+): Promise<
+  AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/components/by-room/{roomId}', {
+      params: { path: { roomId } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentsByRoomId')
+    return { ok: false, err: 'unknown' }
+  }
+}
