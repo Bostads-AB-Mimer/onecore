@@ -400,8 +400,8 @@ export const ComponentSchema = z.object({
     typeDesignation: z.string().nullable(),
   }),
   dates: z.object({
-    installation: z.date().nullable(),
-    warrantyEnd: z.date().nullable(),
+    installation: z.string().datetime().nullable(),
+    warrantyEnd: z.string().datetime().nullable(),
   }),
   classification: z.object({
     componentType: z.object({
