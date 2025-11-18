@@ -58,6 +58,7 @@ describe('parkingspaces', () => {
         contactId: string,
         fromDate: string,
         companyCode: string,
+        includeVAT: boolean,
       ],
       any
     >
