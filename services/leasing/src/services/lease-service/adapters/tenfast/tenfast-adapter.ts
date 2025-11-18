@@ -376,11 +376,11 @@ function buildTenantRequestData(contact: Contact) {
 }
 
 export type GetLeasesFilters = {
-  type: ('active' | 'upcoming' | 'about-to-end' | 'ended')[]
+  status: ('active' | 'upcoming' | 'about-to-end' | 'ended')[]
 }
 
 const defaultFilters: GetLeasesFilters = {
-  type: ['active', 'upcoming', 'about-to-end', 'ended'],
+  status: ['active', 'upcoming', 'about-to-end', 'ended'],
 }
 
 export async function getLeasesByTenantId(
@@ -407,7 +407,7 @@ export async function getLeasesByTenantId(
 
     return {
       ok: true,
-      data: filterByType(leases.data, filters.type),
+      data: filterByStatus(leases.data, filters.status),
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByTenantId')
@@ -439,7 +439,7 @@ export async function getLeasesByRentalPropertyId(
 
     return {
       ok: true,
-      data: filterByType(leases.data, filters.type),
+      data: filterByStatus(leases.data, filters.status),
     }
   } catch (err) {
     logger.error(
@@ -490,9 +490,9 @@ export async function getLeaseByLeaseId(
 }
 
 // prettier-ignore
-function filterByType(leases: TenfastLease[], types: GetLeasesFilters['type']) {
+function filterByStatus(leases: TenfastLease[], status: GetLeasesFilters['status']) {
   const now = new Date()
-  return types.reduce(
+  return status.reduce(
     (acc, type) =>
       acc.filter((l) =>
         match(type)

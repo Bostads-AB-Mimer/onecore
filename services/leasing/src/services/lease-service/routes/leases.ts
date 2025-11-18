@@ -26,6 +26,39 @@ import { AdapterResult } from '../adapters/types'
  *   - name: Leases
  *     description: Endpoints related to lease operations
  */
+
+const GetLeasesStatusSchema = z.enum([
+  'active',
+  'upcoming',
+  'about-to-end',
+  'ended',
+])
+
+const GetLeasesQueryParamsSchema = z.object({
+  status: z
+    .string()
+    .nonempty()
+    .refine(
+      (value) =>
+        value
+          .split(',')
+          .every((v) => GetLeasesStatusSchema.safeParse(v.trim()).success),
+      {
+        message: `status must be one or more of ${GetLeasesStatusSchema.options.join(', ')}`,
+      }
+    )
+    .transform((value) =>
+      value
+        .split(',')
+        .map((v) => v.trim() as z.infer<typeof GetLeasesStatusSchema>)
+    )
+    .optional(),
+  includeContacts: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
+})
+
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -52,8 +85,7 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *         description: Include contact information in the result.
    *     responses:
-   *       200:
-   *         description: Successfully retrieved leases.
+   *       200: *         description: Successfully retrieved leases.
    *         content:
    *           application/json:
    *             schema:
@@ -83,35 +115,9 @@ export const routes = (router: KoaRouter) => {
       .transform((value) => value === 'true'),
   })
 
+  // TODO: Maybe remove this route and use contact code instead?
+  // Core can get that from pnr
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-    ])
-
-    const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
-
-    const responseData = await getLeasesForNationalRegistrationNumber(
-      ctx.params.pnr,
-      {
-        includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-        includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-        includeContacts: queryParams.data.includeContacts,
-      }
-    )
-
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
-
-  router.get('(.*)/v1/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'includeUpcomingLeases',
       'includeTerminatedLeases',
@@ -234,15 +240,9 @@ export const routes = (router: KoaRouter) => {
 
   // Tenfast equivalent of above route
   router.get('(.*)/v1/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-    ])
+    const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
-    const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
-      ctx.query
-    )
+    const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
 
     if (queryParams.success === false) {
       ctx.status = 400
@@ -272,8 +272,14 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // TODO: translate query params to filters
-    const getLeases = await tenfastAdapter.getLeasesByTenantId(contact.data._id)
+    const filters = queryParams.data?.status
+      ? { status: queryParams.data.status }
+      : undefined
+
+    const getLeases = await tenfastAdapter.getLeasesByTenantId(
+      contact.data._id,
+      filters
+    )
 
     if (!getLeases.ok) {
       ctx.status = 500
@@ -414,91 +420,129 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/v1/leases/by-property-id/:propertyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-    ])
+  router.get(
+    '(.*)/v1/leases/by-rental-object-code/:rentalObjectCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
-    const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
-      ctx.query
-    )
+      const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
 
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
-
-    // TODO: TenFAST route is coming to get avtal by hyresobjekt
-    // EDIT: or is it?
-    const property = await tenfastAdapter.getRentalObject(ctx.params.propertyId)
-    if (!property.ok && property.err === 'could-not-find-rental-object') {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Not found',
-        ...metadata,
-      }
-      return
-    }
-
-    if (property.ok && property.data === null) {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Not found',
-        ...metadata,
-      }
-      return
-    }
-
-    if (!property.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: property.err,
-        ...metadata,
-      }
-      return
-    }
-
-    if (!property.data) {
-      throw 'ffs'
-    }
-
-    const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
-      property.data._id
-    )
-
-    if (!getLeases.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: getLeases.err,
-        ...metadata,
-      }
-      return
-    }
-
-    const onecoreLeases = getLeases.data.map(tenfastHelpers.mapToOnecoreLease)
-
-    // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
-    if (!queryParams.data.includeContacts) {
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
-    } else {
-      const patchLeases = await patchLeasesWithContacts(onecoreLeases)
-      if (!patchLeases.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: patchLeases.err,
-          ...metadata,
-        }
-
+      if (queryParams.success === false) {
+        ctx.status = 400
         return
       }
 
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
+      // TODO: TenFAST route is coming to get avtal by hyresobjekt
+      // EDIT: or is it?
+      const property = await tenfastAdapter.getRentalObject(
+        ctx.params.propertyId
+      )
+      if (!property.ok && property.err === 'could-not-find-rental-object') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Not found',
+          ...metadata,
+        }
+        return
+      }
+
+      if (property.ok && property.data === null) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Not found',
+          ...metadata,
+        }
+        return
+      }
+
+      if (!property.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: property.err,
+          ...metadata,
+        }
+        return
+      }
+
+      if (!property.data) {
+        throw 'ffs'
+      }
+
+      const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
+        property.data._id
+      )
+
+      if (!getLeases.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: getLeases.err,
+          ...metadata,
+        }
+        return
+      }
+
+      const onecoreLeases = getLeases.data.map(tenfastHelpers.mapToOnecoreLease)
+
+      // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
+      if (!queryParams.data.includeContacts) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
+      } else {
+        const patchLeases = await patchLeasesWithContacts(onecoreLeases)
+        if (!patchLeases.ok) {
+          ctx.status = 500
+          ctx.body = {
+            error: 'Not found',
+            ...metadata,
+          }
+
+          return
+        }
+
+        const filters = queryParams.data?.status
+          ? { status: queryParams.data.status }
+          : undefined
+
+        const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
+          property.data._id,
+          filters
+        )
+
+        if (!getLeases.ok) {
+          ctx.status = 500
+          ctx.body = {
+            error: getLeases.err,
+            ...metadata,
+          }
+          return
+        }
+
+        const onecoreLeases = getLeases.data.map(
+          tenfastHelpers.mapToOnecoreLease
+        )
+
+        // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
+        if (!queryParams.data.includeContacts) {
+          ctx.status = 200
+          ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
+        } else {
+          const patchLeases = await patchLeasesWithContacts(onecoreLeases)
+          if (!patchLeases.ok) {
+            ctx.status = 500
+            ctx.body = {
+              error: patchLeases.err,
+              ...metadata,
+            }
+
+            return
+          }
+
+          ctx.status = 200
+          ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
+        }
+      }
     }
-  })
+  )
 
   /**
    * @swagger
