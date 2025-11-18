@@ -9,19 +9,24 @@ export interface Resource<T> {
   close(): Promise<void> // optional teardown
 }
 
-export function makeResource<T>(
-  name: string,
-  initializer: () => Promise<T>,
-  checker: (instance: T) => Promise<boolean>,
-  destroyer?: (instance: T) => Promise<void>
-): Resource<T> {
+export function makeResource<T>({
+  name,
+  initialize,
+  healthcheck,
+  teardown,
+}: {
+  name: string
+  initialize: () => Promise<T>
+  healthcheck: (instance: T) => Promise<boolean>
+  teardown?: (instance: T) => Promise<void>
+}): Resource<T> {
   let instance: T | null = null
   let status: ResourceStatus = 'uninitialized'
   let lastError: Error | null = null
 
   async function init() {
     try {
-      instance = await initializer()
+      instance = await initialize()
       status = 'ready'
       lastError = null
     } catch (err) {
@@ -40,7 +45,7 @@ export function makeResource<T>(
 
   async function check() {
     if (!instance) throw new Error(`Resource ${name} not initialized`)
-    const ok = await checker(instance)
+    const ok = await healthcheck(instance)
     if (!ok) {
       status = 'failed'
       throw new Error(`Resource ${name} health check failed`)
@@ -48,8 +53,8 @@ export function makeResource<T>(
   }
 
   async function close() {
-    if (instance && destroyer) {
-      await destroyer(instance)
+    if (instance && teardown) {
+      await teardown(instance)
     }
     instance = null
     status = 'uninitialized'
