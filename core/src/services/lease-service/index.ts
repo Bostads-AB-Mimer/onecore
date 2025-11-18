@@ -35,29 +35,6 @@ import {
   mapLease,
 } from './schemas/lease'
 
-const getLeaseWithRelatedEntities = async (rentalId: string) => {
-  const lease = await leasingAdapter.getLease(rentalId, {
-    includeContacts: true,
-  })
-
-  return lease
-}
-
-const getLeasesWithRelatedEntitiesForPnr = async (
-  nationalRegistrationNumber: string
-) => {
-  const leases = await leasingAdapter.getLeasesForPnr(
-    nationalRegistrationNumber,
-    {
-      includeUpcomingLeases: false,
-      includeTerminatedLeases: false,
-      includeContacts: true,
-    }
-  )
-
-  return leases
-}
-
 /**
  * @swagger
  * openapi: 3.0.0
@@ -156,7 +133,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const leases = await leasingAdapter.getLeasesForPropertyId(
+      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
         ctx.params.rentalPropertyId,
         queryParams.data
       )
@@ -201,9 +178,11 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getLeasesWithRelatedEntitiesForPnr(
-      ctx.params.pnr
-    )
+    const responseData = await leasingAdapter.getLeasesForPnr(ctx.params.pnr, {
+      includeUpcomingLeases: false,
+      includeTerminatedLeases: false,
+      includeContacts: true,
+    })
 
     ctx.body = {
       content: responseData,
@@ -251,7 +230,7 @@ export const routes = (router: KoaRouter) => {
     const includeUpcomingLeases =
       ctx.query.includeUpcomingLeases === 'true' ? true : false
 
-    const responseData = await leasingAdapter.getLeasesForContactCode(
+    const responseData = await leasingAdapter.getLeasesByContactCode(
       ctx.params.contactCode,
       {
         includeUpcomingLeases,
@@ -791,7 +770,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await getLeaseWithRelatedEntities(ctx.params.id)
+    const responseData = await leasingAdapter.getLease(ctx.params.id, {
+      includeContacts: true,
+    })
 
     ctx.body = {
       content: responseData,

@@ -37,7 +37,7 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
+      expect(getLeaseSpy).toHaveBeenCalledWith('123', { includeContacts: true })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
@@ -48,7 +48,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(rentalPropertyInfoMock)
 
       const getLeasesForPropertyIdSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
         .mockResolvedValue([leaseMock])
 
       const res = await request(app.callback()).get(
@@ -93,7 +93,7 @@ describe('work-order-service index', () => {
         .spyOn(tenantLeaseAdapter, 'getContactByPhoneNumber')
         .mockResolvedValue(contactMock)
       const getLeasesForContactCodeSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
@@ -117,7 +117,7 @@ describe('work-order-service index', () => {
 
     it('should handle contactCode case', async () => {
       const getLeasesForContactCodeSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest

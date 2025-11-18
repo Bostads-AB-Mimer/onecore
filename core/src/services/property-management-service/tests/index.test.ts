@@ -128,7 +128,7 @@ describe('rental-property-service index', () => {
 
     it('should return all maintenance units', async () => {
       const getLeasesForContactCodeSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .spyOn(leasingAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
       const getMaintenanceUnitsForRentalPropertySpy = jest
         .spyOn(
@@ -155,7 +155,7 @@ describe('rental-property-service index', () => {
 
     it('should return an empty list if there are no leases', async () => {
       const getLeasesForContactCodeSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .spyOn(leasingAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([])
 
       const res = await request(app.callback()).get(

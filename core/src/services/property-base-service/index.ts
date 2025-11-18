@@ -933,7 +933,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const leases = await leasingAdapter.getLeasesForPropertyId(
+      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
         getResidence.data.propertyObject.rentalId,
         {
           includeContacts: false,
@@ -1470,7 +1470,7 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const leases = await leasingAdapter.getLeasesForContactCode(
+        const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.contactCode,
           {
             includeUpcomingLeases: true,

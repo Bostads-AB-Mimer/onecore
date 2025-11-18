@@ -130,7 +130,7 @@ export const routes = (router: KoaRouter) => {
 
     const handlers: { [key: string]: () => Promise<void> } = {
       rentalObjectId: async () => {
-        const leases = await leasingAdapter.getLeasesForPropertyId(
+        const leases = await leasingAdapter.getLeasesByRentalObjectCode(
           ctx.params.identifier,
           {
             includeUpcomingLeases: true,
@@ -180,7 +180,7 @@ export const routes = (router: KoaRouter) => {
           ctx.params.identifier
         )
         if (contact) {
-          const leases = await leasingAdapter.getLeasesForContactCode(
+          const leases = await leasingAdapter.getLeasesByContactCode(
             contact.contactCode,
             {
               includeUpcomingLeases: true,
@@ -194,7 +194,7 @@ export const routes = (router: KoaRouter) => {
         }
       },
       contactCode: async () => {
-        const leases = await leasingAdapter.getLeasesForContactCode(
+        const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.identifier,
           {
             includeUpcomingLeases: true,

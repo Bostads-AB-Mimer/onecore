@@ -8,20 +8,20 @@ import {
   CreateNoteOfInterestErrorCodes,
   WaitingListType,
 } from '@onecore/types'
+import dayjs from 'dayjs'
 import { logger } from '@onecore/utilities'
 
 import {
   addApplicantToWaitingList,
   getActiveListingByRentalObjectCode,
-  createNewListing,
   applyForListing,
   setApplicantStatusActive,
   getApplicantByContactCodeAndListingId,
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
   getContactByContactCode,
-  getLeasesForContactCode,
   getParkingSpaceByCode,
+  getLeasesByContactCode,
 } from '../../../adapters/leasing-adapter'
 import {
   ProcessError,
@@ -31,7 +31,6 @@ import {
 import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
-import dayjs from 'dayjs'
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
 export const createNoteOfInterestForInternalParkingSpace = async (
@@ -98,7 +97,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     const applicantContact = getApplicantContact.data
 
     //step 3a. Check if applicant is tenant
-    const leases = await getLeasesForContactCode(contactCode, {
+    const leases = await getLeasesByContactCode(contactCode, {
       includeUpcomingLeases: true,
       includeTerminatedLeases: false,
       includeContacts: false,

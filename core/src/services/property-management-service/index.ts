@@ -744,7 +744,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/maintenance-units/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const leases = await leasingAdapter.getLeasesForContactCode(
+      const leases = await leasingAdapter.getLeasesByContactCode(
         ctx.params.contactCode,
         {
           includeUpcomingLeases: true,
