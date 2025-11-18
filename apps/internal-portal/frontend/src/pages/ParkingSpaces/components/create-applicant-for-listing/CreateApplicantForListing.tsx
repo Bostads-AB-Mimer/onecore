@@ -97,7 +97,14 @@ export const CreateApplicantForListing = (props: Props) => {
       onSuccess: () => {
         // Show success toast with navigation option
         const toastId = toast.success(
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', wordBreak: 'keep-all', }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              wordBreak: 'keep-all',
+            }}
+          >
             <span>Bilplatskontrakt skapat och tilldelat</span>
             <Button
               size="small"
