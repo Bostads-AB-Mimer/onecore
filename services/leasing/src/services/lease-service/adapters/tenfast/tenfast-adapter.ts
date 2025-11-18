@@ -1,4 +1,3 @@
-import currency from 'currency.js'
 import { logger } from '@onecore/utilities'
 import {
   TenfastTenantByContactCodeResponseSchema,
@@ -319,7 +318,7 @@ function buildLeaseRequestData(
 ) {
   let vat = 0
   if (includeVAT) {
-    vat = currency(rentalObject.hyra).multiply(0.25).value
+    vat = 0.25
   }
 
   return {
