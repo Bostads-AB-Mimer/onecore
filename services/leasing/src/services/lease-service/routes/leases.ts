@@ -547,11 +547,11 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/v1/leases/:rentalPropertyId', async (ctx) => {
+  router.get('(.*)/v1/leases/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
     try {
-      const getLease = await tenfastAdapter.getLeaseByRentalObjectId(
-        ctx.params.rentalPropertyid
+      const getLease = await tenfastAdapter.getLeaseByRentalObjectCode(
+        ctx.params.rentalObjectCode
       )
 
       if (!getLease.ok) {
