@@ -156,7 +156,7 @@ export const routes = (router: KoaRouter) => {
       leaseId: async () => {
         const lease = await leasingAdapter.getLease(
           encodeURIComponent(ctx.params.identifier),
-          'true'
+          { includeContacts: true }
         )
         if (lease) {
           await getRentalPropertyInfoWithLeases([lease])

@@ -1,8 +1,8 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
+import { Lease } from '@onecore/types'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
-import { Lease } from '@onecore/types'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -14,13 +14,14 @@ interface GetLeasesOptions {
 
 export const getLease = async (
   leaseId: string,
-  includeContacts: string | string[] | undefined
+  options: { includeContacts: boolean }
 ): Promise<Lease> => {
+  const queryParams = new URLSearchParams({
+    includeContacts: options.includeContacts.toString(),
+  })
+
   const leaseResponse = await axios(
-    tenantsLeasesServiceUrl +
-      '/leases/' +
-      encodeURIComponent(leaseId) +
-      (includeContacts ? '?includeContacts=true' : '')
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}?${queryParams.toString()}`
   )
 
   return leaseResponse.data.content
