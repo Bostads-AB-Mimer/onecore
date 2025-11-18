@@ -7,6 +7,7 @@ import {
   InvoiceTransactionType,
   PaymentStatus,
 } from '@onecore/types'
+import { gql } from 'graphql-request'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
@@ -36,7 +37,10 @@ const getCallerFromError = (error: Error) => {
     .split(' ')[0]
 }
 
-const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
+const makeXledgerRequest = async (query: {
+  query: string
+  variables?: Record<string, any>
+}): Promise<any> => {
   function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
@@ -63,6 +67,7 @@ const makeXledgerRequest = async (query: { query: string }): Promise<any> => {
 
 const makeXledgerHttpRequest = async (query: {
   query: string
+  variables?: Record<string, any>
 }): Promise<XledgerResponse> => {
   const result = await axios(`${config.xledger.url}`, {
     data: query,
@@ -101,13 +106,22 @@ const dateFromXledgerDateString = (xledgerDateString: string): Date => {
   return dateFromString(dateString)
 }
 
+const dateToXledgerDateString = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return `${year}-${month > 9 ? month : `0${month}`}-${day > 9 ? day : `0${day}`}`
+}
+
 const transformToInvoice = (invoiceData: any[]): Invoice[] => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
     797: 'Regular',
     3536: 'Regular',
   }
-  const debtCollectionRegex = /Sergel Inkasso (?<date>\d{8})/
+
+  // Match "Sergel Inkasso" and optionally a space followed by an 8-digit date string
+  const debtCollectionRegex = /Sergel Inkasso(?: (?<date>\d{8}))?/
 
   const invoices = invoiceData.map((invoiceData) => {
     let sentToDebtCollection: Date | undefined
@@ -115,15 +129,20 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
     if (typeof invoiceData.node.text === 'string') {
       const match = (invoiceData.node.text as string).match(debtCollectionRegex)
 
-      if (match && match.groups?.date) {
-        const date = dateFromXledgerDateString(match.groups.date)
+      if (match) {
+        if (match.groups?.date) {
+          const date = dateFromXledgerDateString(match.groups.date)
 
-        if (date.toString() !== 'Invalid Date') {
-          sentToDebtCollection = date
+          if (date.toString() !== 'Invalid Date') {
+            sentToDebtCollection = date
+          } else {
+            logger.warn(
+              `Invalid debt collection date in invoice description: ${invoiceData.node.text}`
+            )
+          }
         } else {
-          logger.warn(
-            `Invalid debt collection date in invoice description: ${invoiceData.node.text}`
-          )
+          // Sent to inkasso from Xpand, set to expiration date
+          sentToDebtCollection = dateFromString(invoiceData.node.dueDate)
         }
       }
     }
@@ -354,7 +373,10 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
   }
 }
 
-export const getInvoicesByContactCode = async (contactCode: string) => {
+export const getInvoicesByContactCode = async (
+  contactCode: string,
+  filters?: { from?: Date }
+) => {
   const xledgerId = await getContactDbId(contactCode)
 
   if (!xledgerId) {
@@ -366,15 +388,31 @@ export const getInvoicesByContactCode = async (contactCode: string) => {
   }
 
   const query = {
-    query: `{
-      arTransactions(first: 100, filter: { subledgerDbId: ${xledgerId}, headerTransactionSourceDbId_in: [600, 797, 3536] }) {
-        edges {
-          node {
-            ${invoiceNodeFragment}
+    query: gql`
+      query GetInvoices($xledgerId: Int!, $fromDate: String) {
+        arTransactions(
+          first: 100,
+          filter: {
+            subledgerDbId: $xledgerId,
+            headerTransactionSourceDbId_in: [600, 797, 3536],
+            invoiceDate_gte: $fromDate
+          }
+        )
+        {
+          edges {
+            node {
+              ${invoiceNodeFragment}
+            }
           }
         }
       }
-     }`,
+    `,
+    variables: {
+      xledgerId,
+      fromDate: filters?.from
+        ? dateToXledgerDateString(filters.from)
+        : undefined,
+    },
   }
 
   const result = await makeXledgerRequest(query)

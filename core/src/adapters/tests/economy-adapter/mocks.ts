@@ -2,9 +2,7 @@ import { Invoice, InvoiceTransactionType, PaymentStatus } from '@onecore/types'
 
 const oneDayMs = 24 * 60 * 60 * 1000
 const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
-const sixMonthsMs = 182 * 24 * 60 * 60 * 1000
 
-// Non-problematic invoices
 export const mockedInvoices: Invoice[] = [
   {
     amount: 123,
@@ -73,35 +71,5 @@ export const mockedInvoices: Invoice[] = [
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
-  },
-]
-
-export const mockedProblematicInvoices: Invoice[] = [
-  {
-    ...mockedInvoices[0],
-    transactionType: InvoiceTransactionType.Reminder,
-  },
-  {
-    ...mockedInvoices[1],
-    transactionType: InvoiceTransactionType.DebtCollection,
-  },
-  {
-    ...mockedInvoices[2],
-  },
-]
-
-export const mockedOldProblematicInvoices: Invoice[] = [
-  {
-    ...mockedInvoices[0],
-    transactionType: InvoiceTransactionType.Reminder,
-    expirationDate: new Date(Date.now() - sixMonthsMs - thirtyDaysMs),
-  },
-  {
-    ...mockedInvoices[1],
-    transactionType: InvoiceTransactionType.DebtCollection,
-    expirationDate: new Date(Date.now() - sixMonthsMs - thirtyDaysMs),
-  },
-  {
-    ...mockedInvoices[2],
   },
 ]
