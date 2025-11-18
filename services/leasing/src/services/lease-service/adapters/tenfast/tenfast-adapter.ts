@@ -413,14 +413,14 @@ export async function getLeasesByTenantId(
   }
 }
 
-export async function getLeasesByRentalObjectId(
-  rentalObjectId: string,
+export async function getLeasesByRentalObjectCode(
+  rentalObjectCode: string,
   filters: GetLeasesFilters = defaultFilters
 ): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalObjectId}/avtal`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalObjectCode}/avtal`,
     })
 
     // Not sure we want to fail completely here if parsing fails
@@ -445,13 +445,13 @@ export async function getLeasesByRentalObjectId(
   }
 }
 
-export async function getLeaseByRentalObjectId(
-  rentalObjectId: string
+export async function getLeaseByLeaseId(
+  leaseId: string
 ): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${rentalObjectId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${leaseId}`,
     })
 
     if (res.status !== 200) {
@@ -479,7 +479,7 @@ export async function getLeaseByRentalObjectId(
       data: lease.data,
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByRentalObjectId')
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByLeaseId')
     return { ok: false, err: 'unknown' }
   }
 }
