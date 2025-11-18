@@ -172,93 +172,6 @@ export const TenfastRentalObjectSchema = z.object({
   // states: z.array(z.string()),
 })
 
-/*
-{
-  "hyresgaster": [
-    "67eb3cdbc334e091aa28f322"
-  ],
-  "hyresobjekt": [
-    "67eb8af5545c8f1195bef2e6"
-  ],
-  "avtalsbyggare": true,
-  "hyror": [
-    {
-      "amount": 287.17,
-      "vat": 0,
-      "article": "67eb8aea545c8f1195bea0ba",
-      "label": "Hyra för bilplats"
-    }
-  ],
-  "startDate": "2025-11-05",
-  "endDate": "2026-02-06",
-  "aviseringsTyp": "none",
-  "uppsagningstid": "1m",
-  "forskottAvisering": "1m",
-  "betalningsOffset": "1d",
-  "betalasForskott": false,
-  "vatEnabled": true,
-  "originalTemplate": "6012d3ffe095ca4e36525235",
-  "template": {
-        "_id": "6012d3ffe095ca4e36525235",
-        "hyresvardar": [
-            "6344b398b63ff59d5bde8257"
-        ],
-        "public": false,
-        "official": true,
-        "category": "bostad",
-        "addons": [
-            "6012cc0fe095ca4e365245b6",
-            "6012cba5e095ca4e365245ab",
-            "6012cc29e095ca4e365245be",
-            "6012c95be095ca4e36524218",
-            "6012ce8ce095ca4e365248fb",
-            "6012d265e095ca4e36524f7b",
-            "6012cf74e095ca4e36524c24",
-            "63640e5bdfd0610fa9f82f1f",
-            "6012c622e095ca4e36523edb",
-            "6012c7cee095ca4e36523ee1",
-            "6012d2bbe095ca4e36524f81",
-            "60108d9b8cc47e71c61ce5e7",
-            "6012cfb6e095ca4e36524c34"
-        ],
-        "name": "Hyresavtal Bostad",
-        "createdBy": null,
-        "createdAt": "2021-01-28T15:10:55.809Z",
-        "updatedAt": "2024-05-15T07:18:53.691Z",
-        "__v": 17,
-        "updatedBy": null,
-        "type": "official",
-        "id": "6012d3ffe095ca4e36525235"
-    },
-  "method": "manual",
-  "aviseringsFrekvens": "1m"
-}*/
-export const TenfastCreateLeaseRequestSchema = z.object({
-  hyresgaster: z.array(z.string()),
-  hyresobjekt: z.array(z.string()),
-  avtalsbyggare: z.boolean(),
-  hyror: z.array(
-    z.object({
-      amount: z.number(),
-      vat: z.number(),
-      article: z.string(),
-      label: z.string(),
-    })
-  ),
-  startDate: z.string(),
-  endDate: z.string(),
-  aviseringsTyp: z.string(),
-  uppsagningstid: z.string(),
-  forskottAvisering: z.string(),
-  betalningsOffset: z.string(),
-  betalasForskott: z.boolean(),
-  vatEnabled: z.boolean(),
-  originalTemplate: z.string(),
-  template: z.object({}),
-  method: z.string(),
-  aviseringsFrekvens: z.string(),
-})
-
 export const TenfastTenantByContactCodeResponseSchema = z.object({
   records: z.array(TenfastTenantSchema),
 })
@@ -281,9 +194,6 @@ export type TenfastTenantByContactCodeResponse = z.infer<
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 export type TenfastRentalObjectByRentalObjectCodeResponse = z.infer<
   typeof TenfastRentalObjectByRentalObjectCodeResponseSchema
->
-export type TenfastCreateLeaseRequest = z.infer<
-  typeof TenfastCreateLeaseRequestSchema
 >
 
 // TODO byt namn
@@ -334,3 +244,22 @@ export const TenfastRentArticleSchema = z.object({
 })
 
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
+
+export const TenfastLeaseTemplateSchema = z.object({
+  _id: z.string(),
+  hyresvardar: z.array(z.string()),
+  public: z.boolean(),
+  official: z.boolean(),
+  category: z.string(),
+  addons: z.array(z.any()),
+  name: z.string(),
+  createdBy: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  __v: z.number(),
+  updatedBy: z.string().nullable(),
+  type: z.string(),
+  id: z.string(),
+})
+
+export type TenfastLeaseTemplate = z.infer<typeof TenfastLeaseTemplateSchema>
