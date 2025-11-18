@@ -14,7 +14,6 @@ import {
   RadioGroup,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from '@onecore/types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
@@ -471,58 +470,3 @@ const DefaultError = () => (
     Något gick fel. Försök igen eller kontakta support
   </Typography>
 )
-
-const SuccessState = (props: {
-  onClose: () => void
-  contactName: string
-  parkingSpaceAddress: string
-  listingId: number
-}) => {
-  const { onClose, contactName, parkingSpaceAddress, listingId } = props
-  const navigate = useNavigate()
-
-  const handleNavigateToListing = () => {
-    onClose()
-    navigate(`/bilplatser/${listingId}`)
-  }
-
-  return (
-    <Box
-      padding="2rem"
-      minHeight="300px"
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-    >
-      <CheckCircleIcon
-        sx={{ fontSize: 80, color: 'success.main', marginBottom: 2 }}
-      />
-      <Typography variant="h1" textAlign="center" marginBottom={2}>
-        Bilplatskontrakt skapat och tilldelat
-      </Typography>
-      <Box textAlign="center" marginBottom={3}>
-        <Typography variant="body1" marginBottom={1}>
-          <strong>{contactName}</strong> har nu tilldelats bilplatsen på:
-        </Typography>
-        <Typography variant="body1">
-          <strong>{parkingSpaceAddress}</strong>
-        </Typography>
-      </Box>
-      <Box marginTop={2}>
-        <Typography variant="body2" color="text.secondary" textAlign="center">
-          Kontraktet har skapats i systemet och annonsens status har uppdaterats
-          till tilldelad.
-        </Typography>
-      </Box>
-      <Box paddingTop={4} display="flex" gap={2}>
-        <Button variant="dark" onClick={handleNavigateToListing}>
-          Visa annons
-        </Button>
-        <Button variant="dark-outlined" onClick={onClose}>
-          Stäng
-        </Button>
-      </Box>
-    </Box>
-  )
-}
