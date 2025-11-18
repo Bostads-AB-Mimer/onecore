@@ -191,7 +191,8 @@ const createLease = async (
   objectId: string,
   contactId: string,
   fromDate: string,
-  companyCode: string
+  companyCode: string,
+  includeVAT: boolean
 ): Promise<AdapterResult<string, 'create-lease-failed' | 'unknown'>> => {
   const axiosOptions = {
     method: 'POST',
@@ -200,6 +201,7 @@ const createLease = async (
       contactCode: contactId,
       fromDate,
       companyCode,
+      includeVAT,
     },
   }
 

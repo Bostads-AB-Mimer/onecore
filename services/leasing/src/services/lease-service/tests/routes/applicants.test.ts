@@ -185,7 +185,6 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     jest
       .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
       .mockImplementation(async (rentalObjectCode: string) => {
-        console.log('rentalObjectCode', rentalObjectCode)
         if (rentalObjectCode === 'upcoming-rental-object-code') {
           return { estateCode: '23003', type: 'bar' }
         }

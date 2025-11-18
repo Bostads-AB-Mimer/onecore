@@ -34,6 +34,10 @@ export interface Config {
     apiKey: string
     username: string
     password: string
+    companyId: string
+    leaseTemplates: {
+      parkingSpace: string
+    }
   }
   health: {
     leasingDatabase: {
@@ -92,6 +96,12 @@ const config = configPackage({
     tenfast: {
       baseUrl: '',
       apiKey: '',
+      username: '',
+      password: '',
+      companyId: '',
+      leaseTemplates: {
+        parkingSpace: '123456',
+      },
     },
     health: {
       leasingDatabase: {
