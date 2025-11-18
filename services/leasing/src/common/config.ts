@@ -96,6 +96,12 @@ const config = configPackage({
     tenfast: {
       baseUrl: '',
       apiKey: '',
+      username: '',
+      password: '',
+      companyId: '',
+      leaseTemplates: {
+        parkingSpace: '123456',
+      },
     },
     health: {
       leasingDatabase: {

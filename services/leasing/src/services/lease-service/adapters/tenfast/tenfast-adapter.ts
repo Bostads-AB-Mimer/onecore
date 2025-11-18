@@ -1,4 +1,3 @@
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import currency from 'currency.js'
 import { logger } from '@onecore/utilities'
 import {
@@ -13,67 +12,10 @@ import {
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import { Contact } from '@onecore/types'
-
-//todo: move to global config or handle error statuses in middleware
-axios.defaults.validateStatus = function (status) {
-  return status >= 200 && status < 500 // override Axios throwing errors so that we can handle errors manually
-}
+import * as tenfastApi from './tenfast-api'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
-
-let accessToken: string | undefined = undefined
-
-const getAccessToken = async () => {
-  const username = config.tenfast.username
-  const password = config.tenfast.password
-
-  const requestConfig = {
-    method: 'get',
-    url: `${tenfastBaseUrl}/v1/auth`,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    auth: {
-      username: username,
-      password: password,
-    },
-  }
-
-  const result = await axios(requestConfig)
-  return result.data.token
-}
-
-const createHeaders = (accessToken: string) => {
-  const headers = {
-    'Content-type': 'application/json',
-    'api-token': accessToken,
-  }
-
-  return headers
-}
-
-const tenfastApiRequest = async <T = any>(
-  config: AxiosRequestConfig<any>
-): Promise<AxiosResponse<T, any>> => {
-  if (!accessToken) {
-    accessToken = await getAccessToken()
-  }
-
-  try {
-    config.headers = createHeaders(accessToken ?? '')
-
-    return await axios(config)
-  } catch (error) {
-    const axiosErr = error as AxiosError
-    if (axiosErr.response?.status === 401) {
-      accessToken = await getAccessToken()
-      return await tenfastApiRequest(config)
-    }
-
-    throw error
-  }
-}
 
 export const createLease = async (
   contact: Contact,
@@ -115,7 +57,7 @@ export const createLease = async (
       includeVAT
     )
 
-    const leaseResponse = await tenfastApiRequest({
+    const leaseResponse = await tenfastApi.request({
       method: 'post',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
       data: createLeaseRequestData,
@@ -134,7 +76,6 @@ export const createLease = async (
     //TODO: create schema for response and convert to onecore lease type here later
     return { ok: true, data: undefined }
   } catch (err) {
-    console.log(err)
     return handleTenfastError(err, 'lease-could-not-be-created')
   }
 }
@@ -150,7 +91,7 @@ export const getRentalObject = async (
   >
 > => {
   try {
-    const rentalObjectResponse = await tenfastApiRequest({
+    const rentalObjectResponse = await tenfastApi.request({
       method: 'get',
       url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?filter[externalId]=${rentalObjectCode}`,
     })
@@ -181,7 +122,6 @@ export const getRentalObject = async (
         parsedRentalObjectResponse.error,
         'could-not-parse-rental-object'
       )
-
     return {
       ok: true,
       data: parsedRentalObjectResponse.data.records[0] ?? null,
@@ -191,7 +131,7 @@ export const getRentalObject = async (
   }
 }
 
-//TODO: Choose a different template depending on poängfri eller ej?
+//TODO: Choose a different template depending on bilplatstyp alt poängfri eller ej?
 export const getLeaseTemplate = async (
   listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
 ): Promise<
@@ -218,7 +158,7 @@ export const getLeaseTemplate = async (
   }
 
   try {
-    const templateResponse = await tenfastApiRequest({
+    const templateResponse = await tenfastApi.request({
       method: 'get',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtalsmallar/${templateId}`,
     })
@@ -228,7 +168,7 @@ export const getLeaseTemplate = async (
         templateResponse.data.error,
         'get-template-bad-request'
       )
-    else if (templateResponse.status !== 200 && templateResponse.status !== 201)
+    else if (templateResponse.status !== 200)
       return handleTenfastError(
         {
           error: templateResponse.data.error,
@@ -245,7 +185,6 @@ export const getLeaseTemplate = async (
         parsedTemplateResponse.error,
         'response-could-not-be-parsed'
       )
-
     return { ok: true, data: parsedTemplateResponse.data ?? undefined }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
@@ -264,7 +203,7 @@ export const getTenantByContactCode = async (
   >
 > => {
   try {
-    const tenantResponse = await tenfastApiRequest({
+    const tenantResponse = await tenfastApi.request({
       method: 'get',
       url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?filter[externalId]=${contactCode}134`,
     })
@@ -312,7 +251,7 @@ export const createTenant = async (
 > => {
   const createTenantRequestData = buildTenantRequestData(contact)
 
-  const tenantResponse = await tenfastApiRequest({
+  const tenantResponse = await tenfastApi.request({
     method: 'post',
     url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?hyresvard=${tenfastCompanyId}`,
     data: createTenantRequestData,

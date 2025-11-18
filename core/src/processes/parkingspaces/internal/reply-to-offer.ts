@@ -110,12 +110,13 @@ export const acceptOffer = async (
     let leaseId: string
 
     try {
+      const includeVAT = false
       const createLeaseResult = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
         calculateVacantFrom(listing).toISOString(),
         '001',
-        false
+        includeVAT
       )
 
       if (!createLeaseResult.ok) {
