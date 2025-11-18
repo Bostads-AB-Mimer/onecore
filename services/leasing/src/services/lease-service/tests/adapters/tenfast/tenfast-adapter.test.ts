@@ -108,7 +108,7 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
 })
 
 describe(tenfastAdapter.getRentalObject, () => {
-  it.skip('should return rental object when response is valid and status is 200', async () => {
+  it('should return rental object when response is valid and status is 200', async () => {
     // Arrange
     const mockRentalObject = factory.tenfastRentalObject.build()
     const mockResponse = {
@@ -127,26 +127,134 @@ describe(tenfastAdapter.getRentalObject, () => {
     })
   })
 
-  it.todo(
-    'should return rental object when response is valid and status is 201'
-  )
-  it.todo(
-    'should return null when response is valid but records array is empty'
-  )
-  it.todo('should return error "get-lease-bad-request" when status is 400')
-  it.todo(
-    'should return error "could-not-find-rental-object" when status is not 200, 201, or 400'
-  )
-  it.todo(
-    'should return error "could-not-parse-rental-object" when schema parsing fails'
-  )
-  it.todo(
-    'should return error "could-not-find-rental-object" when tenfastApiRequest throws an exception'
-  )
+  it('should return rental object when response is valid and status is 201', async () => {
+    // Arrange
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    const mockResponse = {
+      status: 201,
+      data: mockRentalObject,
+    }
+    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
+
+    // Assert
+    expect(result).toEqual({
+      ok: true,
+      data: mockRentalObject.records[0],
+    })
+  })
+
+  it('should return null when response is valid but records array is empty', async () => {
+    // Arrange
+    const mockResponse = {
+      status: 200,
+      data: { records: [] },
+    }
+    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
+
+    // Assert
+    expect(result).toEqual({
+      ok: true,
+      data: null,
+    })
+  })
+
+  it('should return error "get-lease-bad-request" when status is 400', async () => {
+    // Arrange
+    const mockResponse = {
+      status: 400,
+      data: { error: 'Bad request' },
+    }
+    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'get-lease-bad-request',
+    })
+  })
+
+  it('should return error "could-not-find-rental-object" when status is not 200, 201, or 400', async () => {
+    // Arrange
+    const mockResponse = {
+      status: 500,
+      data: { error: 'Internal server error' },
+    }
+    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'could-not-find-rental-object',
+    })
+  })
+
+  it('should return error "could-not-parse-rental-object" when schema parsing fails', async () => {
+    // Arrange
+    // Return a response with status 200 and invalid data for the schema
+    const invalidData = { notARentalObject: true }
+    const mockResponse = {
+      status: 200,
+      data: invalidData,
+    }
+    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+
+    // Act
+    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'could-not-parse-rental-object',
+    })
+  })
+
+  it('should return error "could-not-find-rental-object" when request throws an exception', async () => {
+    // Arrange
+    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+    // Act
+    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'could-not-find-rental-object',
+    })
+  })
 })
 
 describe(tenfastAdapter.getTenantByContactCode, () => {
-  it.todo('should return tenant when response is valid and status is 200')
+  //   it('should return tenant when response is valid and status is 200', async () => {
+  //     // Arrange
+  //     const mockTenant = factory.tenfastTenant.build()
+  //     const mockResponse = {
+  //       status: 200,
+  //       data: { records: [mockTenant] },
+  //     }
+  //     ;(request as jest.Mock).mockResolvedValue(mockResponse)
+
+  //     // Act
+  //     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
+
+  //     // Assert
+  //     expect(result).toEqual({
+  //       ok: true,
+  //       data: mockTenant,
+  //     })
+  //   })
+
   it.todo('should return tenant when response is valid and status is 201')
   it.todo(
     'should return null when response is valid but records array is empty'
