@@ -27,6 +27,7 @@ export const getLease = async (
   return leaseResponse.data.content
 }
 
+// TODO: need this or get by contact code?
 export const getLeasesForPnr = async (
   nationalRegistrationNumber: string,
   options: GetLeasesOptions
@@ -44,7 +45,7 @@ export const getLeasesForPnr = async (
   return leasesResponse.data.content
 }
 
-export const getLeasesForContactCode = async (
+export const getLeasesByContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
@@ -55,14 +56,14 @@ export const getLeasesForContactCode = async (
   })
 
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/for/contactCode/${contactCode}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-contact-code/${contactCode}?${queryParams.toString()}`
   )
 
   return leasesResponse.data.content
 }
 
-export const getLeasesForPropertyId = async (
-  propertyId: string,
+export const getLeasesByRentalObjectCode = async (
+  rentalObjectCode: string,
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
@@ -71,7 +72,7 @@ export const getLeasesForPropertyId = async (
     includeContacts: options.includeContacts.toString(),
   })
   const leasesResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${rentalObjectCode}?${queryParams.toString()}`
   )
   return leasesResponse.data.content
 }
