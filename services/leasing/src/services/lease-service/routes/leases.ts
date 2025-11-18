@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
+  getContactByContactCode,
   getLease,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
@@ -10,8 +11,9 @@ import {
   searchLeases,
   getBuildingManagers,
 } from '../adapters/xpand/lease-search-adapter'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
+import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import z from 'zod'
 
 /**
@@ -603,13 +605,14 @@ export const routes = (router: KoaRouter) => {
     contactCode: string
     fromDate: string
     companyCode: string
+    includeVAT: boolean
   }
 
   /**
    * @swagger
    * /leases:
    *   post:
-   *     summary: Create new lease in xpand for parking space
+   *     summary: Create new lease for parking space
    *     description: Create a new lease for a parking space.
    *     tags: [Leases]
    *     requestBody:
@@ -637,6 +640,7 @@ export const routes = (router: KoaRouter) => {
    *               - contactCode
    *               - fromDate
    *               - companyCode
+   *               - includeVAT
    *     responses:
    *       200:
    *         description: Lease created successfully.
@@ -662,10 +666,48 @@ export const routes = (router: KoaRouter) => {
         request.contactCode,
         request.companyCode
       )
+
       if (createLeaseResult.ok) {
         ctx.body = {
           content: createLeaseResult.data,
           ...metadata,
+        }
+
+        //Temporary: also create lease to tenfast
+        const contactResult = await getContactByContactCode(
+          request.contactCode,
+          false
+        )
+
+        if (!contactResult.ok || !contactResult.data) {
+          logger.error(
+            {
+              contactCode: request.contactCode,
+              error: contactResult.ok ? undefined : contactResult.err,
+            },
+            'Could not retrieve contact to create tenFAST lease'
+          )
+          return
+        }
+
+        const createLeaseTenfastResult = await tenfastAdapter.createLease(
+          contactResult.data,
+          request.parkingSpaceId,
+          new Date(request.fromDate),
+          'PARKING_SPACE',
+          request.includeVAT
+        )
+
+        if (createLeaseTenfastResult.ok) {
+          logger.info(
+            { result: createLeaseTenfastResult.data },
+            'Lease created in tenFAST'
+          )
+        } else {
+          logger.error(
+            { error: createLeaseTenfastResult.err },
+            'Error creating lease in tenFAST'
+          )
         }
       } else if (createLeaseResult.err === 'create-lease-not-allowed') {
         ctx.status = 404
