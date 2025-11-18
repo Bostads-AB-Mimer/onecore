@@ -4,9 +4,9 @@ import { makeResource } from '@src/common/resource'
 import config from '@src/common/config'
 
 export const xpandDbClient = () => {
-  return makeResource<knex.Knex>(
-    'xpand-db',
-    async () => {
+  return makeResource<knex.Knex>({
+    name: 'xpand-db',
+    initialize: async () => {
       return knex({
         client: 'mssql',
         connection: {
@@ -24,9 +24,9 @@ export const xpandDbClient = () => {
         },
       })
     },
-    async (knex: knex.Knex) => {
+    check: async (knex: knex.Knex) => {
       return true
     },
-    async () => {}
-  )
+    teardown: async () => {},
+  })
 }
