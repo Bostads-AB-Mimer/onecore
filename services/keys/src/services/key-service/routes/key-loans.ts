@@ -895,6 +895,43 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: UpdateKeyLoanRequest = ctx.request.body
 
+        // Validate returnedAt updates (prevent marking active loans as returned)
+        if (payload.returnedAt !== undefined) {
+          const existingLoan = await keyLoansAdapter.getKeyLoanById(
+            ctx.params.id,
+            db
+          )
+
+          if (!existingLoan) {
+            ctx.status = 404
+            ctx.body = {
+              reason: `Key loan with id ${ctx.params.id} not found`,
+              ...metadata,
+            }
+            return
+          }
+
+          if (payload.returnedAt && !existingLoan.returnedAt) {
+            ctx.status = 400
+            ctx.body = {
+              reason:
+                'Cannot mark loan as returned via direct update. Use return dialog which ensures keys are properly returned.',
+              ...metadata,
+            }
+            return
+          }
+
+          if (!payload.returnedAt && existingLoan.returnedAt) {
+            logger.info(
+              {
+                loanId: ctx.params.id,
+                userId: ctx.state.user?.id,
+              },
+              'Loan reactivated by clearing returnedAt'
+            )
+          }
+        }
+
         // If updating keys, validate using service layer
         if (payload.keys) {
           const validationResult = await keyLoanService.validateKeyLoanUpdate(
@@ -1004,7 +1041,32 @@ export const routes = (router: KoaRouter) => {
   router.delete('/key-loans/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
+      // Fetch loan to validate deletion is safe
+      const loan = await keyLoansAdapter.getKeyLoanById(ctx.params.id, db)
+
+      if (!loan) {
+        ctx.status = 404
+        ctx.body = {
+          reason: `Key loan with id ${ctx.params.id} not found`,
+          ...metadata,
+        }
+        return
+      }
+
+      const isActive = loan.pickedUpAt && !loan.returnedAt
+      if (isActive) {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Cannot delete active loan. Keys must be returned before deletion.',
+          code: 'ACTIVE_LOAN_CANNOT_DELETE',
+          ...metadata,
+        }
+        return
+      }
+
       const n = await keyLoansAdapter.deleteKeyLoan(ctx.params.id, db)
+
       if (!n) {
         ctx.status = 404
         ctx.body = {

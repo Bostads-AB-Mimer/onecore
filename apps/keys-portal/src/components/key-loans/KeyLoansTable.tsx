@@ -24,6 +24,7 @@ import {
   FileText,
   MoreHorizontal,
   Edit,
+  Trash2,
 } from 'lucide-react'
 import {
   KeyLoan,
@@ -46,6 +47,7 @@ interface KeyLoansTableProps {
   isLoading: boolean
   onRefresh?: () => void
   onEdit?: (loan: KeyLoan) => void
+  onDelete?: (loan: KeyLoan) => void
   // Filter props
   loanTypeFilter: string | null
   onLoanTypeFilterChange: (value: string | null) => void
@@ -85,6 +87,7 @@ export function KeyLoansTable({
   isLoading,
   onRefresh,
   onEdit,
+  onDelete,
   loanTypeFilter,
   onLoanTypeFilterChange,
   minKeys,
@@ -456,6 +459,18 @@ export function KeyLoansTable({
                             <DropdownMenuItem onClick={() => onEdit?.(loan)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Redigera
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDelete?.(loan)}
+                              disabled={isActive}
+                              className={
+                                isActive
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'text-destructive'
+                              }
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Ta bort
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

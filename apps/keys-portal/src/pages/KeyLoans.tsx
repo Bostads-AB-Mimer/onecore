@@ -407,6 +407,77 @@ export default function KeyLoans() {
     [toast, pagination.currentPage, pagination.currentLimit, loadKeyLoans]
   )
 
+  const handleDelete = useCallback(
+    async (loan: KeyLoan) => {
+      // Check if loan is active (frontend validation - UX improvement)
+      const isActive = loan.pickedUpAt && !loan.returnedAt
+
+      if (isActive) {
+        toast({
+          title: 'Kan inte ta bort aktivt lån',
+          description:
+            'Lånet kan inte tas bort medan nycklar är uthyrda till hyresgäst.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Confirm deletion
+      if (
+        !confirm(
+          'Är du säker på att du vill ta bort detta lån? Detta går inte att ångra.'
+        )
+      ) {
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        await keyLoanService.remove(loan.id)
+
+        toast({
+          title: 'Nyckellån borttaget',
+          description: 'Lånet har tagits bort',
+        })
+
+        // Close edit form if we're deleting the loan being edited
+        if (editingKeyLoan?.id === loan.id) {
+          setShowEditForm(false)
+          setEditingKeyLoan(null)
+        }
+
+        // Refresh list
+        await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
+      } catch (error: any) {
+        console.error('Failed to delete loan:', error)
+
+        // Check for specific error code from backend
+        if (error?.data?.code === 'ACTIVE_LOAN_CANNOT_DELETE') {
+          toast({
+            title: 'Kan inte ta bort aktivt lån',
+            description: 'Lånet kan inte tas bort medan nycklar är uthyrda.',
+            variant: 'destructive',
+          })
+        } else {
+          toast({
+            title: 'Kunde inte ta bort lånet',
+            description: 'Ett fel uppstod när lånet skulle tas bort',
+            variant: 'destructive',
+          })
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [
+      editingKeyLoan,
+      toast,
+      pagination.currentPage,
+      pagination.currentLimit,
+      loadKeyLoans,
+    ]
+  )
+
   // Count active and returned loans
   const activeLoanCount = keyLoans.filter((loan) => !loan.returnedAt).length
   const returnedLoanCount = keyLoans.filter((loan) => loan.returnedAt).length
@@ -449,6 +520,7 @@ export default function KeyLoans() {
           loadKeyLoans(pagination.currentPage, pagination.currentLimit)
         }
         onEdit={handleEdit}
+        onDelete={handleDelete}
         loanTypeFilter={loanTypeFilter}
         onLoanTypeFilterChange={handleLoanTypeFilterChange}
         minKeys={minKeys}
