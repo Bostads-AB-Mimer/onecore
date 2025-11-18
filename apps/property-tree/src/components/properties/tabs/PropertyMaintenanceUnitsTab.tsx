@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/Accordion'
 import { Wrench, FilePlus } from 'lucide-react'
 import type { PropertyDetail } from '@/types/api'
-import type { MaintenanceUnit } from '@/services/types'
 import { useMaintenanceUnits } from '@/components/hooks/useMaintenanceUnits'
 
 interface PropertyMaintenanceUnitsTabProps {
@@ -35,7 +34,7 @@ const MAINTENANCE_UNIT_TYPES = [
     description: 'Sorterat avfall och återvinning',
   },
   {
-    label: 'Tvättsugor',
+    label: 'Tvättstugor',
     description: 'Tvätt och torkmaskiner för hyresgäster',
   },
   { label: 'Skyddsrum', description: 'Skyddsrum enligt BBR' },
@@ -89,23 +88,6 @@ export const PropertyMaintenanceUnitsTab = ({
     )
   }
 
-  // Map API units to their display categories
-  const groupedUnits = maintenanceUnits.reduce(
-    (acc, unit) => {
-      if (!unit.type) return acc
-
-      const mappedLabel = TYPE_CONFIG[unit.type]
-      if (mappedLabel) {
-        if (!acc[mappedLabel]) {
-          acc[mappedLabel] = []
-        }
-        acc[mappedLabel].push(unit)
-      }
-      return acc
-    },
-    {} as Record<string, MaintenanceUnit[]>
-  )
-
   const totalCount = maintenanceUnits.length
 
   if (totalCount === 0) {
@@ -124,7 +106,10 @@ export const PropertyMaintenanceUnitsTab = ({
     <TabLayout title="Underhållsenheter" count={totalCount} showCard={true}>
       <Accordion type="single" collapsible className="space-y-3">
         {MAINTENANCE_UNIT_TYPES.map((unitType) => {
-          const units = groupedUnits[unitType.label] || []
+          // Filter units where the mapped API type matches this category label
+          const units = maintenanceUnits.filter(
+            (unit) => unit.type && TYPE_CONFIG[unit.type] === unitType.label
+          )
           const unitCount = units.length
 
           return (
