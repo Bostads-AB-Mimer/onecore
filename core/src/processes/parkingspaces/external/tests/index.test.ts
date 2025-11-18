@@ -58,6 +58,7 @@ describe('parkingspaces', () => {
         contactId: string,
         fromDate: string,
         companyCode: string,
+        includeVAT: boolean,
       ],
       any
     >
@@ -322,7 +323,8 @@ describe('parkingspaces', () => {
         mockedListing.rentalObjectCode,
         mockedApplicantWithLeases.contactCode,
         expect.any(String),
-        '001'
+        '001',
+        true
       )
     })
 
@@ -386,7 +388,8 @@ describe('parkingspaces', () => {
         mockedListing.rentalObjectCode,
         mockedApplicantWithLeases.contactCode,
         expect.any(String),
-        '001'
+        '001',
+        false
       )
     })
 
