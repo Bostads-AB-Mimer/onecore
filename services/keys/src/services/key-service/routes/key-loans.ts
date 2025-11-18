@@ -895,7 +895,7 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: UpdateKeyLoanRequest = ctx.request.body
 
-        // Validate returnedAt updates (prevent marking active loans as returned)
+        // Validate returnedAt updates (prevent marking unpicked loans as returned)
         if (payload.returnedAt !== undefined) {
           const existingLoan = await keyLoansAdapter.getKeyLoanById(
             ctx.params.id,
@@ -911,16 +911,19 @@ export const routes = (router: KoaRouter) => {
             return
           }
 
-          if (payload.returnedAt && !existingLoan.returnedAt) {
+          // CRITICAL: Prevent marking loans as returned if they were never picked up
+          // This prevents the scenario where keys are marked as returned while still physically with tenant
+          if (payload.returnedAt && !existingLoan.pickedUpAt) {
             ctx.status = 400
             ctx.body = {
               reason:
-                'Cannot mark loan as returned via direct update. Use return dialog which ensures keys are properly returned.',
+                'Cannot mark loan as returned when it was never picked up. Loan must have pickedUpAt date set first.',
               ...metadata,
             }
             return
           }
 
+          // Log reactivation (clearing returnedAt)
           if (!payload.returnedAt && existingLoan.returnedAt) {
             logger.info(
               {

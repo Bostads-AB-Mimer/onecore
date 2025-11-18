@@ -631,6 +631,17 @@ describe('PATCH /key-loans/:id', () => {
  */
 describe('DELETE /key-loans/:id', () => {
   it('deletes key loan successfully and returns 200', async () => {
+    // Mock a returned loan (safe to delete)
+    const returnedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      pickedUpAt: new Date(Date.now() - 86400000), // Picked up yesterday
+      returnedAt: new Date(), // Already returned
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(returnedLoan)
+
     const deleteKeyLoanSpy = jest
       .spyOn(keyLoansAdapter, 'deleteKeyLoan')
       .mockResolvedValueOnce(1)
@@ -752,11 +763,25 @@ describe('Key Loans Lifecycle', () => {
 
   it('returns a loan by setting returnedAt', async () => {
     const now = new Date().toISOString()
-    const returnedLoan = factory.keyLoan.build({
+
+    // Mock existing active loan (has pickedUpAt, no returnedAt)
+    const activeLoan = factory.keyLoan.build({
       id: 'loan-123',
       keys: JSON.stringify(['key-1']),
       contact: 'returned@example.com',
       pickedUpAt: new Date(Date.now() - 86400000), // Picked up yesterday
+      returnedAt: undefined, // Not yet returned (active loan)
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(activeLoan)
+
+    const returnedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      contact: 'returned@example.com',
+      pickedUpAt: new Date(Date.now() - 86400000),
       returnedAt: new Date(now), // Returned now
     })
 
@@ -778,6 +803,18 @@ describe('Key Loans Lifecycle', () => {
     const now = Date.now()
     const futureDate = new Date(now + 7 * 86400000).toISOString() // 7 days from now
     const returnedNow = new Date(now).toISOString()
+
+    // Mock existing active loan (has pickedUpAt, no returnedAt)
+    const activeLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      pickedUpAt: new Date(now - 86400000), // Picked up yesterday
+      returnedAt: undefined, // Not yet returned
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(activeLoan)
 
     const earlyReturnLoan = factory.keyLoan.build({
       id: 'loan-123',
@@ -830,6 +867,17 @@ describe('Key Loans Lifecycle', () => {
     const pickupDate = new Date(now).toISOString()
     const returnDate = new Date(now - 86400000).toISOString() // 1 day earlier
 
+    // Mock existing active loan (has pickedUpAt, no returnedAt)
+    const activeLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      pickedUpAt: new Date(now - 172800000), // Picked up 2 days ago
+      returnedAt: undefined, // Not yet returned
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(activeLoan)
+
     // This is a logical validation - the route might not enforce it,
     // but we test that the database accepts the data structure
     const invalidLoan = factory.keyLoan.build({
@@ -854,6 +902,18 @@ describe('Key Loans Lifecycle', () => {
   })
 
   it('allows clearing returnedAt to undo a return', async () => {
+    // Mock existing returned loan (has both pickedUpAt and returnedAt)
+    const returnedLoan = factory.keyLoan.build({
+      id: 'loan-123',
+      keys: JSON.stringify(['key-1']),
+      pickedUpAt: new Date(Date.now() - 86400000), // Picked up yesterday
+      returnedAt: new Date(), // Already returned
+    })
+
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(returnedLoan)
+
     const undoReturnLoan = factory.keyLoan.build({
       id: 'loan-123',
       keys: JSON.stringify(['key-1']),
@@ -923,6 +983,11 @@ describe('Key Loans Lifecycle', () => {
     expect(activateRes.body.content.pickedUpAt).toBeTruthy()
 
     // Step 3: Return loan
+    // Mock getKeyLoanById for returnedAt validation (need active loan)
+    jest
+      .spyOn(keyLoansAdapter, 'getKeyLoanById')
+      .mockResolvedValueOnce(activatedLoan)
+
     const returnedLoan = {
       ...activatedLoan,
       returnedAt: new Date(),
