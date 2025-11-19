@@ -1,20 +1,18 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { Lease } from '@onecore/types'
+import { Lease, leasing } from '@onecore/types'
+import z from 'zod'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
-interface GetLeasesOptions {
-  includeUpcomingLeases: boolean
-  includeTerminatedLeases: boolean
-  includeContacts: boolean
-}
+type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
+type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 
 export const getLease = async (
   leaseId: string,
-  options: { includeContacts: boolean }
+  options: GetLeaseOptions
 ): Promise<Lease> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
@@ -33,10 +31,12 @@ export const getLeasesForPnr = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
-    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
   })
+
+  if (options.status) {
+    queryParams.set('status', options.status.join(','))
+  }
 
   const leasesResponse = await axios.get(
     `${tenantsLeasesServiceUrl}/leases/for/nationalRegistrationNumber/${nationalRegistrationNumber}?${queryParams.toString()}`
@@ -50,10 +50,12 @@ export const getLeasesByContactCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
-    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
   })
+
+  if (options.status) {
+    queryParams.set('status', options.status.join(','))
+  }
 
   const leasesResponse = await axios.get(
     `${tenantsLeasesServiceUrl}/leases/by-contact-code/${contactCode}?${queryParams.toString()}`
@@ -67,10 +69,13 @@ export const getLeasesByRentalObjectCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
-    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
   })
+
+  if (options.status) {
+    queryParams.set('status', options.status.join(','))
+  }
+
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${rentalObjectCode}?${queryParams.toString()}`
   )
