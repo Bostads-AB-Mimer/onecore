@@ -79,6 +79,15 @@ const subsystems: HealthCheckTarget[] = [
       )
     },
   },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await oneCoreServiceProbe(
+        config.health.contacts.systemName,
+        config.health.contacts.minimumMinutesBetweenRequests,
+        config.workOrderService.url + '/health'
+      )
+    },
+  },
 ]
 
 /**

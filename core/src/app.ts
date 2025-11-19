@@ -9,9 +9,11 @@ import { routes as healthRoutes } from './services/health-service'
 
 import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swaggerRoutes } from './services/swagger'
-import { extractToken } from './middlewares/extract-token'
 import { requireAuth, requireRole } from './middlewares/keycloak-auth'
+import { routes as apiRoutes } from './api/index'
+import { routes as swaggerRoutes } from './services/swagger'
+import { makeOkapiRouter } from 'koa-okapi-router'
+import { extractToken } from './middlewares/extract-token'
 
 const app = new Koa()
 
@@ -50,7 +52,6 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
-swaggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // Token extraction (cookie -> Bearer -> Basic Auth)
@@ -80,5 +81,17 @@ app.use(async (ctx, next) => {
 })
 
 app.use(api.routes())
+
+const apiRouter = makeOkapiRouter(new KoaRouter(), {
+  openapi: {
+    info: { title: `ONECore API` },
+  },
+})
+
+apiRoutes(apiRouter)
+
+app.use(apiRouter.routes())
+
+swaggerRoutes(publicRouter, apiRouter)
 
 export default app
