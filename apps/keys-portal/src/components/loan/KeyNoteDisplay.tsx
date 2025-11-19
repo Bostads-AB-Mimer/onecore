@@ -340,11 +340,37 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
   if (!currentGroup) return null
 
+  // Check if all notes for current group are loaded
+  const allNotesLoaded = currentGroup.leases.every(
+    (lease) => notes.has(lease.rentalPropertyId) && !loadingObjects.has(lease.rentalPropertyId)
+  )
+
+  // Show empty card until all notes are loaded and height is calculated
+  if (!allNotesLoaded || !minHeight) {
+    return (
+      <Card
+        ref={cardRef}
+        className="flex flex-col"
+        style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
+      >
+        <CardHeader className="flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-5 w-5" />
+              Noteringar nycklar
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1" />
+      </Card>
+    )
+  }
+
   return (
     <Card
       ref={cardRef}
       className="flex flex-col"
-      style={minHeight ? { minHeight: `${minHeight}px` } : undefined}
+      style={{ minHeight: `${minHeight}px` }}
     >
       <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
