@@ -356,14 +356,6 @@ export function KeySystemsTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigate(`/key-systems/${KeySystem.id}`)
-                            }
-                          >
-                            <Search className="mr-2 h-4 w-4" />
-                            Utforska
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onEdit(KeySystem)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Redigera
