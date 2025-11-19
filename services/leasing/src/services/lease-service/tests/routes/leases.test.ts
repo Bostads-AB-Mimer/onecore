@@ -10,7 +10,6 @@ import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
 import config from '../../../../common/config'
-import { add, sub } from 'date-fns'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -80,7 +79,48 @@ describe('GET /leases/by-contact-code/:contactCode', () => {
     expect(res.body.content.length).toBe(3)
   })
 
-  it.todo('includes contacts when includeContacts is true')
+  it('includes contacts', async () => {
+    const contacts = [factory.contact.build(), factory.contact.build()]
+
+    const tenantMock = factory.tenfastTenant.build()
+    const leaseMock = factory.tenfastLease.build({
+      hyresgaster: [
+        factory.tenfastTenant.build({ externalId: contacts[0].contactCode }),
+        factory.tenfastTenant.build({ externalId: contacts[1].contactCode }),
+      ],
+    })
+
+    const getTenantSpy = jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: tenantMock })
+
+    const getLeasesSpy = jest
+      .spyOn(tenfastAdapter, 'getLeasesByTenantId')
+      .mockResolvedValueOnce({ ok: true, data: [leaseMock] })
+
+    const getContactSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: contacts[0] })
+      .mockResolvedValueOnce({ ok: true, data: contacts[1] })
+
+    const res = await request(app.callback()).get(
+      '/leases/by-contact-code/P965339?includeContacts=true'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([
+      expect.objectContaining({
+        tenants: expect.arrayContaining([
+          expect.objectContaining({ contactCode: contacts[0].contactCode }),
+          expect.objectContaining({ contactCode: contacts[1].contactCode }),
+        ]),
+      }),
+    ])
+
+    expect(getTenantSpy).toHaveBeenCalled()
+    expect(getLeasesSpy).toHaveBeenCalled()
+    expect(getContactSpy).toHaveBeenCalled()
+  })
 })
 
 describe('GET /leases/by-rental-object-code/:rentalObjectCode', () => {
@@ -105,6 +145,50 @@ describe('GET /leases/by-rental-object-code/:rentalObjectCode', () => {
     expect(getRentalObjectSpy).toHaveBeenCalled()
     expect(res.body.content.length).toBe(3)
   })
+
+  it('includes contacts', async () => {
+    const contacts = [factory.contact.build(), factory.contact.build()]
+
+    const leaseMock = factory.tenfastLease.build({
+      hyresgaster: [
+        factory.tenfastTenant.build({ externalId: contacts[0].contactCode }),
+        factory.tenfastTenant.build({ externalId: contacts[1].contactCode }),
+      ],
+    })
+
+    const rentalObjectMock = factory.tenfastRentalObject.build()
+
+    const getRentalObjectSpy = jest
+      .spyOn(tenfastAdapter, 'getRentalObject')
+      .mockResolvedValueOnce({ ok: true, data: rentalObjectMock })
+
+    const getLeasesSpy = jest
+      .spyOn(tenfastAdapter, 'getLeasesByRentalPropertyId')
+      .mockResolvedValueOnce({ ok: true, data: [leaseMock] })
+
+    const getContactSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: contacts[0] })
+      .mockResolvedValueOnce({ ok: true, data: contacts[1] })
+
+    const res = await request(app.callback()).get(
+      '/leases/by-rental-object-code/110-007-01-0203?includeContacts=true'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([
+      expect.objectContaining({
+        tenants: expect.arrayContaining([
+          expect.objectContaining({ contactCode: contacts[0].contactCode }),
+          expect.objectContaining({ contactCode: contacts[1].contactCode }),
+        ]),
+      }),
+    ])
+
+    expect(getLeasesSpy).toHaveBeenCalled()
+    expect(getContactSpy).toHaveBeenCalled()
+    expect(getRentalObjectSpy).toHaveBeenCalled()
+  })
 })
 
 describe('GET /leases/:id', () => {
@@ -118,8 +202,36 @@ describe('GET /leases/:id', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.content).not.toBeNull()
-
     expect(getLeaseSpy).toHaveBeenCalled()
+  })
+
+  it('includes contacts', async () => {
+    const leaseMock = factory.tenfastLease.build()
+    const getLeaseSpy = jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValueOnce({ ok: true, data: leaseMock })
+
+    const contacts = [factory.contact.build(), factory.contact.build()]
+
+    const getContactSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getContactsByLeaseId')
+      .mockResolvedValueOnce(contacts)
+
+    const res = await request(app.callback()).get(
+      '/leases/1337?includeContacts=true'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(
+      expect.objectContaining({
+        tenants: expect.arrayContaining([
+          expect.objectContaining({ contactCode: contacts[0].contactCode }),
+          expect.objectContaining({ contactCode: contacts[1].contactCode }),
+        ]),
+      })
+    )
+    expect(getLeaseSpy).toHaveBeenCalled()
+    expect(getContactSpy).toHaveBeenCalled()
   })
 })
 
