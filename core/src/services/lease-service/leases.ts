@@ -1,10 +1,8 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { leasing } from '@onecore/types'
 
-import {
-  GetLeasesByRentalPropertyIdQueryParams,
-  mapLease,
-} from './schemas/lease'
+import { mapLease } from './schemas/lease'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 
@@ -63,11 +61,11 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+
+  // TODO(BREAKING): Changed the query param structure
   router.get('/leases/by-rental-property-id/:rentalPropertyId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = GetLeasesByRentalPropertyIdQueryParams.safeParse(
-      ctx.query
-    )
+    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -125,11 +123,23 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await leasingAdapter.getLeasesForPnr(ctx.params.pnr, {
-      includeUpcomingLeases: false,
-      includeTerminatedLeases: false,
-      includeContacts: true,
-    })
+    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        error: queryParams.error,
+        ...metadata,
+      }
+      return
+    }
+
+    // TODO(BREAKING): includeContacts no longer defaults to true
+    const responseData = await leasingAdapter.getLeasesForPnr(
+      ctx.params.pnr,
+      queryParams.data
+    )
 
     ctx.body = {
       content: responseData,
@@ -165,22 +175,23 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-    ])
-    const includeTerminatedLeases =
-      ctx.query.includeTerminatedLeases === 'true' ? true : false
-    const includeUpcomingLeases =
-      ctx.query.includeUpcomingLeases === 'true' ? true : false
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        error: queryParams.error,
+        ...metadata,
+      }
+      return
+    }
+
+    // TODO(BREAKING): includeContacts no longer defaults to true
     const responseData = await leasingAdapter.getLeasesByContactCode(
       ctx.params.contactCode,
-      {
-        includeUpcomingLeases,
-        includeTerminatedLeases,
-        includeContacts: true,
-      }
+      queryParams.data
     )
 
     ctx.body = {
@@ -219,9 +230,23 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const responseData = await leasingAdapter.getLease(ctx.params.id, {
-      includeContacts: true,
-    })
+    const queryParams = leasing.v1.GetLeaseOptionsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        error: queryParams.error,
+        ...metadata,
+      }
+      return
+    }
+
+    // TODO(BREAKING): includeContacts no longer defaults to true
+    const responseData = await leasingAdapter.getLease(
+      ctx.params.id,
+      queryParams.data
+    )
 
     ctx.body = {
       content: responseData,
