@@ -60,12 +60,17 @@ const RoomComponents = ({ roomId }: RoomComponentsProps) => {
       if (code === 'Lägenhet') return 1
       return 2
     }
-    return categoryOrder(a.classification.category.code) - categoryOrder(b.classification.category.code)
+    return (
+      categoryOrder(a.classification.category.code) -
+      categoryOrder(b.classification.category.code)
+    )
   })
 
   return (
     <div className="pt-4 border-t">
-      <p className="text-sm font-medium text-muted-foreground mb-3">Komponenter</p>
+      <p className="text-sm font-medium text-muted-foreground mb-3">
+        Komponenter
+      </p>
       <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {sortedComponents.map((component) => (
           <ComponentCard key={component.id} component={component} />
