@@ -141,7 +141,8 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     const fixedHeight =
       CARD_HEADER_HEIGHT +
       CARD_CONTENT_PADDING +
-      numObjects * (OBJECT_HEADER_HEIGHT + HEADER_TO_CONTENT_GAP + NOTE_PADDING) +
+      numObjects *
+        (OBJECT_HEADER_HEIGHT + HEADER_TO_CONTENT_GAP + NOTE_PADDING) +
       (numObjects - 1) * OBJECT_GAP
 
     const availableForNotes = minHeight - fixedHeight
@@ -160,7 +161,10 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
       return Math.max(explicitLines, charLines)
     })
 
-    const totalLinesNeeded = noteLineCounts.reduce((sum, lines) => sum + lines, 0)
+    const totalLinesNeeded = noteLineCounts.reduce(
+      (sum, lines) => sum + lines,
+      0
+    )
     const maxTotalLines = Math.floor(availableForNotes / LINE_HEIGHT)
 
     // If everything fits, no truncation needed
@@ -173,7 +177,10 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     let remainingLines = maxTotalLines
 
     // First pass: give each note at least 1 line
-    const minLinesPerNote = Math.min(1, Math.floor(remainingLines / numObjectsWithNotes))
+    const minLinesPerNote = Math.min(
+      1,
+      Math.floor(remainingLines / numObjectsWithNotes)
+    )
     remainingLines -= minLinesPerNote * numObjectsWithNotes
 
     // Second pass: distribute remaining lines proportionally
@@ -342,7 +349,9 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
   // Check if all notes for current group are loaded
   const allNotesLoaded = currentGroup.leases.every(
-    (lease) => notes.has(lease.rentalPropertyId) && !loadingObjects.has(lease.rentalPropertyId)
+    (lease) =>
+      notes.has(lease.rentalPropertyId) &&
+      !loadingObjects.has(lease.rentalPropertyId)
   )
 
   // Show empty card until all notes are loaded and height is calculated
