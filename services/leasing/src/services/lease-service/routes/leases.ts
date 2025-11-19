@@ -527,7 +527,7 @@ export const routes = (router: KoaRouter) => {
   //   }
   // })
 
-  router.get('(.*)/v1/leases/:leaseId', async (ctx) => {
+  router.get('(.*)/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
     try {
       const getLease = await tenfastAdapter.getLeaseByLeaseId(
