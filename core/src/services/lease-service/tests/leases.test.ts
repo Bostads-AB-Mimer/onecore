@@ -79,6 +79,67 @@ describe('leases routes', () => {
     })
   })
 
+  describe('GET /leases/by-contact-code/:contactCode', () => {
+    it('responds with 400 for invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        '/leases/by-contact-code/123?includeContacts=invalid'
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({
+        reason: 'Invalid query parameters',
+        error: expect.any(Object),
+      })
+    })
+
+    it('responds with 400 for invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        '/leases/by-contact-code/123?status=invalid'
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({
+        reason: 'Invalid query parameters',
+        error: expect.any(Object),
+      })
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+        .mockRejectedValue(new Error('Adapter error'))
+
+      const res = await request(app.callback()).get(
+        '/leases/by-contact-code/123'
+      )
+
+      expect(res.status).toBe(500)
+    })
+
+    it('responds with a list of leases for valid query parameters', async () => {
+      const getLeasesByContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+        .mockResolvedValue([leaseMock])
+
+      const res = await request(app.callback()).get(
+        '/leases/by-contact-code/123?status=current,upcoming,about-to-end&includeContacts=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getLeasesByContactCodeSpy).toHaveBeenCalledWith(
+        '123',
+        expect.objectContaining({
+          status: ['current', 'upcoming', 'about-to-end'],
+          includeContacts: true,
+        })
+      )
+
+      expect(JSON.stringify(res.body.content[0])).toEqual(
+        JSON.stringify(leaseMock)
+      )
+    })
+  })
+
   describe('GET /leases/by-pnr/:pnr', () => {
     it('responds with a list of leases', async () => {
       const getLeaseSpy = jest
