@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -43,16 +43,6 @@ function getPropertyTypePriority(leaseType?: string): number {
   return 6
 }
 
-// Helper: Restore element styles from original state
-function restoreStyles(
-  elements: NodeListOf<Element>,
-  originalStyles: Map<Element, string>
-) {
-  elements.forEach((el) => {
-    ;(el as HTMLElement).style.cssText = originalStyles.get(el) || ''
-  })
-}
-
 /**
  * Displays key notes for rental objects grouped by lease status.
  * Groups objects by status (active, upcoming, ended) and shows all notes for a status group on one page.
@@ -68,9 +58,6 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [lineClamps, setLineClamps] = useState<Map<string, number | null>>(
-    new Map()
-  )
   const [minHeight, setMinHeight] = useState<number | null>(null)
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
 
@@ -123,8 +110,97 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const currentGroup = statusGroups[currentGroupIndex]
   const hasMultipleGroups = statusGroups.length > 1
 
-  // Set minimum height to match tenant card
-  useEffect(() => {
+  // Calculate line-clamp based on available height (synchronously during render)
+  const lineClamps = useMemo(() => {
+    if (!currentGroup || !minHeight || loadingObjects.size > 0) {
+      return new Map<string, number | null>()
+    }
+
+    // Layout constants (in pixels)
+    const CARD_HEADER_HEIGHT = 56 // CardHeader with title
+    const CARD_CONTENT_PADDING = 48 // 24px top + 24px bottom padding
+    const OBJECT_HEADER_HEIGHT = 20 // "Hyresobjekt: XXX" text-xs
+    const HEADER_TO_CONTENT_GAP = 4 // space-y-1
+    const OBJECT_GAP = 12 // space-y-3 between objects
+    const LINE_HEIGHT = 20 // text-sm line height
+    const NOTE_PADDING = 16 // p-2 padding on the clickable div (8px top + 8px bottom)
+
+    const objectsWithNotes = currentGroup.leases.filter((lease) => {
+      const note = notes.get(lease.rentalPropertyId)
+      return note?.description && !expandedNotes.has(lease.rentalPropertyId)
+    })
+
+    const numObjects = currentGroup.leases.length
+    const numObjectsWithNotes = objectsWithNotes.length
+
+    if (numObjectsWithNotes === 0) {
+      return new Map<string, number | null>()
+    }
+
+    // Calculate available height for note content
+    const fixedHeight =
+      CARD_HEADER_HEIGHT +
+      CARD_CONTENT_PADDING +
+      numObjects * (OBJECT_HEADER_HEIGHT + HEADER_TO_CONTENT_GAP + NOTE_PADDING) +
+      (numObjects - 1) * OBJECT_GAP
+
+    const availableForNotes = minHeight - fixedHeight
+    if (availableForNotes <= 0) {
+      return new Map<string, number | null>()
+    }
+
+    // Calculate total lines needed across all notes
+    const noteLineCounts = objectsWithNotes.map((lease) => {
+      const note = notes.get(lease.rentalPropertyId)
+      if (!note?.description) return 0
+      // Estimate lines by counting newlines and assuming ~80 chars per line
+      const text = note.description
+      const explicitLines = (text.match(/\n/g) || []).length + 1
+      const charLines = Math.ceil(text.length / 80)
+      return Math.max(explicitLines, charLines)
+    })
+
+    const totalLinesNeeded = noteLineCounts.reduce((sum, lines) => sum + lines, 0)
+    const maxTotalLines = Math.floor(availableForNotes / LINE_HEIGHT)
+
+    // If everything fits, no truncation needed
+    if (totalLinesNeeded <= maxTotalLines) {
+      return new Map<string, number | null>()
+    }
+
+    // Distribute available lines proportionally, minimum 1 line each
+    const newLineClamps = new Map<string, number | null>()
+    let remainingLines = maxTotalLines
+
+    // First pass: give each note at least 1 line
+    const minLinesPerNote = Math.min(1, Math.floor(remainingLines / numObjectsWithNotes))
+    remainingLines -= minLinesPerNote * numObjectsWithNotes
+
+    // Second pass: distribute remaining lines proportionally
+    objectsWithNotes.forEach((lease, index) => {
+      const objectId = lease.rentalPropertyId
+      const neededLines = noteLineCounts[index]
+
+      if (neededLines <= minLinesPerNote) {
+        // This note fits in minimum allocation
+        return
+      }
+
+      // Calculate this note's share of remaining lines
+      const proportion = neededLines / totalLinesNeeded
+      const extraLines = Math.floor(remainingLines * proportion)
+      const totalLines = Math.max(1, minLinesPerNote + extraLines)
+
+      if (totalLines < neededLines) {
+        newLineClamps.set(objectId, totalLines)
+      }
+    })
+
+    return newLineClamps
+  }, [currentGroup, notes, loadingObjects.size, minHeight, expandedNotes])
+
+  // Set minimum height to match tenant card (useLayoutEffect to prevent flash)
+  useLayoutEffect(() => {
     const tenantCard = document.getElementById('tenant-card')
     if (!tenantCard) return
 
@@ -137,98 +213,8 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     return () => resizeObserver.disconnect()
   }, [])
 
-  // Dynamically calculate line-clamp to fit within tenant card height
+  // Reset expanded notes when navigating to a new group
   useEffect(() => {
-    if (!cardRef.current || loadingObjects.size > 0 || !currentGroup) return
-
-    const tenantCard = document.getElementById('tenant-card')
-    if (!tenantCard) return
-
-    const timer = setTimeout(() => {
-      if (!cardRef.current || !tenantCard) return
-
-      const tenantCardHeight = tenantCard.getBoundingClientRect().height
-      if (tenantCardHeight === 0) return
-
-      // Temporarily remove all line-clamps to measure natural heights
-      const noteElements = cardRef.current.querySelectorAll('[data-object-id]')
-      const originalStyles = new Map<Element, string>()
-
-      noteElements.forEach((el) => {
-        const htmlEl = el as HTMLElement
-        originalStyles.set(el, htmlEl.style.cssText)
-        htmlEl.style.display = ''
-        htmlEl.style.webkitLineClamp = ''
-        htmlEl.style.webkitBoxOrient = ''
-        htmlEl.style.overflow = ''
-      })
-
-      void cardRef.current.offsetHeight // Force reflow
-
-      const notesCardHeight = cardRef.current.getBoundingClientRect().height
-
-      // If we fit without truncation, clear any existing clamps
-      if (notesCardHeight <= tenantCardHeight + 10) {
-        restoreStyles(noteElements, originalStyles)
-        if (lineClamps.size > 0) setLineClamps(new Map())
-        return
-      }
-
-      // Calculate truncation: bottom-up, exact line counts
-      const newLineClamps = new Map<string, number | null>()
-      let remainingOverflow = notesCardHeight - tenantCardHeight
-      const objectIds = currentGroup.leases.map((l) => l.rentalPropertyId)
-
-      for (let i = objectIds.length - 1; i >= 0 && remainingOverflow > 5; i--) {
-        const objectId = objectIds[i]
-        const note = notes.get(objectId)
-        if (!note?.description) continue
-
-        // Skip notes that user has manually expanded
-        if (expandedNotes.has(objectId)) continue
-
-        const noteElement = Array.from(noteElements).find(
-          (el) => el.getAttribute('data-object-id') === objectId
-        ) as HTMLElement | undefined
-
-        if (!noteElement) continue
-
-        const lineHeight = parseFloat(
-          window.getComputedStyle(noteElement).lineHeight
-        )
-        if (!lineHeight || isNaN(lineHeight)) continue
-
-        const currentHeight = noteElement.getBoundingClientRect().height
-        const targetHeight = Math.max(
-          lineHeight,
-          currentHeight - remainingOverflow
-        )
-        const linesToShow = Math.max(1, Math.floor(targetHeight / lineHeight))
-
-        newLineClamps.set(objectId, linesToShow)
-        remainingOverflow -= currentHeight - targetHeight
-      }
-
-      // Check if lineClamps actually changed
-      const clampsChanged =
-        newLineClamps.size !== lineClamps.size ||
-        Array.from(newLineClamps.entries()).some(
-          ([id, lines]) => lineClamps.get(id) !== lines
-        )
-
-      restoreStyles(noteElements, originalStyles)
-
-      if (clampsChanged) {
-        setLineClamps(newLineClamps)
-      }
-    }, 100)
-
-    return () => clearTimeout(timer)
-  }, [currentGroup, notes, loadingObjects.size, minHeight, lineClamps])
-
-  // Reset line clamps and expanded notes when navigating to a new group
-  useEffect(() => {
-    setLineClamps(new Map())
     setExpandedNotes(new Set())
   }, [currentGroupIndex])
 
@@ -313,12 +299,8 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
 
     if (isTruncated) {
       // User is expanding - mark as manually expanded to prevent re-truncation
+      // lineClamps will recalculate automatically via useMemo
       setExpandedNotes((prev) => new Set(prev).add(objectId))
-      setLineClamps((prev) => {
-        const next = new Map(prev)
-        next.delete(objectId)
-        return next
-      })
     } else {
       const note = notes.get(objectId)
       setEditedDescription(note?.description ?? '')
