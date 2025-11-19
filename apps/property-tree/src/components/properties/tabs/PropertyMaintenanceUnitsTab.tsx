@@ -88,9 +88,11 @@ export const PropertyMaintenanceUnitsTab = ({
     )
   }
 
-  const totalCount = maintenanceUnits.length
+  const mappedCount = maintenanceUnits.filter(
+    (unit) => unit.type && TYPE_CONFIG[unit.type]
+  ).length
 
-  if (totalCount === 0) {
+  if (mappedCount === 0) {
     return (
       <TabLayout title="Underhållsenheter" count={0}>
         <EmptyState
@@ -103,7 +105,7 @@ export const PropertyMaintenanceUnitsTab = ({
   }
 
   return (
-    <TabLayout title="Underhållsenheter" count={totalCount} showCard={true}>
+    <TabLayout title="Underhållsenheter" count={mappedCount} showCard={true}>
       <Accordion type="single" collapsible className="space-y-3">
         {MAINTENANCE_UNIT_TYPES.map((unitType) => {
           // Filter units where the mapped API type matches this category label
