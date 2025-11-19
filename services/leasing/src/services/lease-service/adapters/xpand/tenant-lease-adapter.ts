@@ -1,5 +1,5 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
-import transformFromXPandDb from './../../helpers/transformFromXPandDb'
+import transformFromXPandDb from './../../helpers/xpand-db'
 
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
@@ -513,23 +513,6 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
-// const isLeaseActive = (lease: Lease | PartialLease): boolean => {
-//   const { leaseStartDate } = lease
-//   const currentDate = new Date()
-
-//   return leaseStartDate < currentDate
-// }
-
-// const isLeaseActiveOrUpcoming = (lease: Lease | PartialLease): boolean => {
-//   const { lastDebitDate, terminationDate } = lease
-//   const currentDate = new Date()
-
-//   return (
-//     (!lastDebitDate || currentDate <= lastDebitDate) &&
-//     (!terminationDate || currentDate < terminationDate)
-//   )
-// }
-
 const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
@@ -600,4 +583,5 @@ export {
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
   transformFromDbContact,
+  getContactsByLeaseId,
 }
