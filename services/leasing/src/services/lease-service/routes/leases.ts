@@ -4,8 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { Contact, Lease } from '@onecore/types'
-import z from 'zod'
+import { Contact, Lease, leasing } from '@onecore/types'
 
 import {
   getContactByContactCode,
@@ -22,46 +21,6 @@ import { AdapterResult } from '../adapters/types'
  *   - name: Leases
  *     description: Endpoints related to lease operations
  */
-
-const GetLeasesStatusSchema = z.enum([
-  'current',
-  'upcoming',
-  'about-to-end',
-  'ended',
-])
-
-const IncludeContactsQueryParamSchema = z.object({
-  includeContacts: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-})
-
-const FilterLeasesQueryParamsSchema = z.object({
-  status: z
-    .string()
-    .nonempty()
-    .refine(
-      (value) =>
-        value
-          .split(',')
-          .every((v) => GetLeasesStatusSchema.safeParse(v.trim()).success),
-      {
-        message: `Status must be one or more of ${GetLeasesStatusSchema.options.join(', ')}`,
-      }
-    )
-    .transform((value) =>
-      value
-        .split(',')
-        .map((v) => v.trim() as z.infer<typeof GetLeasesStatusSchema>)
-    )
-    .optional(),
-  includeContacts: IncludeContactsQueryParamSchema,
-})
-
-const GetLeasesQueryParamsSchema = FilterLeasesQueryParamsSchema.merge(
-  IncludeContactsQueryParamSchema
-)
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -244,7 +203,7 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
-    const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
+    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -404,7 +363,7 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
-      const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
+      const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
       if (!queryParams.success) {
         ctx.status = 400
@@ -537,7 +496,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
-    const queryParams = IncludeContactsQueryParamSchema.safeParse(ctx.query)
+    const queryParams = leasing.v1.GetLeaseOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       ctx.status = 400
