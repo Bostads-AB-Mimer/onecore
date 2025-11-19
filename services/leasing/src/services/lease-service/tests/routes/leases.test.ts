@@ -2,18 +2,23 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import nock from 'nock'
 
 import { routes } from '../../index'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
+import config from '../../../../common/config'
+import { add, sub } from 'date-fns'
 
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
 app.use(router.routes())
+
+nock(config.tenfast.baseUrl).get(`/v1/auth`).reply(200)
 
 describe.skip('GET /getLeasesForNationalRegistrationNumber', () => {
   it('responds with an array of leases', async () => {
@@ -33,6 +38,26 @@ describe.skip('GET /getLeasesForNationalRegistrationNumber', () => {
 })
 
 describe('GET /leases/by-contact-code/:contactCode', () => {
+  it('responds with 404 if tenant not found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const res = await request(app.callback()).get(
+      '/leases/by-contact-code/P965339'
+    )
+
+    expect(res.status).toBe(404)
+  })
+
+  it('responds with 400 if query params are invalid', async () => {
+    const res = await request(app.callback()).get(
+      '/leases/by-contact-code/P965339?status=invalid'
+    )
+
+    expect(res.status).toBe(400)
+  })
+
   it('responds with an array of leases', async () => {
     const leaseMock = factory.tenfastLease.buildList(3)
     const tenantMock = factory.tenfastTenant.build()
@@ -54,6 +79,8 @@ describe('GET /leases/by-contact-code/:contactCode', () => {
     expect(getLeasesSpy).toHaveBeenCalled()
     expect(res.body.content.length).toBe(3)
   })
+
+  it.todo('includes contacts when includeContacts is true')
 })
 
 describe('GET /leases/by-rental-object-code/:rentalObjectCode', () => {

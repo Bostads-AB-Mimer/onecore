@@ -1,5 +1,4 @@
 import { logger } from '@onecore/utilities'
-import { match } from 'ts-pattern'
 import { Contact } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import { ZodError } from 'zod'
@@ -18,6 +17,7 @@ import {
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
+import { filterByStatus, GetLeasesFilters } from './filters'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -375,12 +375,8 @@ function buildTenantRequestData(contact: Contact) {
   }
 }
 
-export type GetLeasesFilters = {
-  status: ('active' | 'upcoming' | 'about-to-end' | 'ended')[]
-}
-
 const defaultFilters: GetLeasesFilters = {
-  status: ['active', 'upcoming', 'about-to-end', 'ended'],
+  status: ['current', 'upcoming', 'about-to-end', 'ended'],
 }
 
 export async function getLeasesByTenantId(
@@ -405,6 +401,7 @@ export async function getLeasesByTenantId(
       return { ok: false, err: { tag: 'schema-error', error: leases.error } }
     }
 
+    console.log(filters)
     return {
       ok: true,
       data: filterByStatus(leases.data, filters.status),
@@ -487,23 +484,6 @@ export async function getLeaseByLeaseId(
     logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByLeaseId')
     return { ok: false, err: 'unknown' }
   }
-}
-
-// prettier-ignore
-function filterByStatus(leases: TenfastLease[], status: GetLeasesFilters['status']) {
-  const now = new Date()
-  return status.reduce(
-    (acc, type) =>
-      acc.filter((l) =>
-        match(type)
-          .with('active', () => l.startDate < now)
-          .with('upcoming', () => l.startDate >= now)
-          .with('about-to-end', () => l.endDate && l.endDate >= now)
-          .with('ended', () => l.endDate && l.endDate < now)
-          .exhaustive()
-      ),
-    leases
-  )
 }
 
 // TODO: maybe move to utilities and rework

@@ -90,6 +90,7 @@
     "eslint": "^9.31.0",
     "globals": "^15.9.0",
     "jest": "^29.7.0",
+    "nock": "^13.5.6",
     "nodemon": "^3.1.7",
     "prettier": "^3.6.2",
     "supertest": "^7.0.0",
