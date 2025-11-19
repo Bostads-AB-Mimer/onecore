@@ -23,7 +23,19 @@ describe('leases routes', () => {
   describe('GET /leases/by-rental-property-id/:rentalPropertyId', () => {
     it('responds with 400 for invalid query parameters', async () => {
       const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeUpcomingLeases=invalid'
+        '/leases/by-rental-property-id/123?includeContacts=invalid'
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({
+        reason: 'Invalid query parameters',
+        error: expect.any(Object),
+      })
+    })
+
+    it('responds with 400 for invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        '/leases/by-rental-property-id/123?status=invalid'
       )
 
       expect(res.status).toBe(400)
@@ -46,20 +58,19 @@ describe('leases routes', () => {
     })
 
     it('responds with a list of leases for valid query parameters', async () => {
-      const getLeasesForPropertyIdSpy = jest
+      const getLeasesByRentalObjectCodeSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
         .mockResolvedValue(factory.lease.buildList(1))
 
       const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeUpcomingLeases=true&includeTerminatedLeases=false&includeContacts=true'
+        '/leases/by-rental-property-id/123?status=current&includeContacts=true'
       )
 
       expect(res.status).toBe(200)
-      expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith(
+      expect(getLeasesByRentalObjectCodeSpy).toHaveBeenCalledWith(
         '123',
         expect.objectContaining({
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: false,
+          status: ['current'],
           includeContacts: true,
         })
       )
