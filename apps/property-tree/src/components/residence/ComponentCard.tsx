@@ -20,7 +20,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
               {component.classification.componentType.name || '-'}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {component.classification.category.name}
+              {component.classification.category.name || '\u00A0'}
             </p>
           </div>
         </div>
