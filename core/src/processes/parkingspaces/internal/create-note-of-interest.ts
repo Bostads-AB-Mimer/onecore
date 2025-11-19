@@ -15,7 +15,6 @@ import {
   getActiveListingByRentalObjectCode,
   createNewListing,
   applyForListing,
-  getInternalCreditInformation,
   setApplicantStatusActive,
   getApplicantByContactCodeAndListingId,
   validateResidentialAreaRentalRules,
@@ -31,6 +30,8 @@ import {
 } from '../../../common/types'
 import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
+import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
+import dayjs from 'dayjs'
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
 export const createNoteOfInterestForInternalParkingSpace = async (
@@ -127,9 +128,19 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     }
 
     //step 3.a.1. Perform credit check
-    const creditCheck = await getInternalCreditInformation(
-      applicantContact.contactCode
+    const debtCollectionInvoices = await getInvoicesSentToDebtCollection(
+      applicantContact.contactCode,
+      dayjs().subtract(6, 'month').toDate()
     )
+    if (!debtCollectionInvoices.ok) {
+      return endFailingProcess(
+        log,
+        CreateNoteOfInterestErrorCodes.InternalError,
+        500,
+        `Failed to get invoices for contact ${applicantContact.contactCode}: ${debtCollectionInvoices.statusCode} ${debtCollectionInvoices.err}`
+      )
+    }
+    const creditCheck = debtCollectionInvoices.data.length === 0
 
     log.push(
       `Intern kreditkontroll genomförd, resultat: ${
