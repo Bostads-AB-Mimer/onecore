@@ -86,7 +86,7 @@ export function LogFilters({
               <SelectItem value="key">Nyckel</SelectItem>
               <SelectItem value="keySystem">Nyckelsystem</SelectItem>
               <SelectItem value="keyLoan">Nyckellån</SelectItem>
-              <SelectItem value="keyBundle">Nyckelknippe</SelectItem>
+              <SelectItem value="keyBundle">Nyckelsamling</SelectItem>
               <SelectItem value="receipt">Kvitto</SelectItem>
               <SelectItem value="keyEvent">Nyckelhändelse</SelectItem>
               <SelectItem value="signature">Signatur</SelectItem>

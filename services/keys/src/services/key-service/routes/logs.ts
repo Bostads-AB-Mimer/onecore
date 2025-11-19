@@ -645,7 +645,7 @@ export const routes = (router: KoaRouter) => {
           { value: 'key', label: 'Nyckel' },
           { value: 'keySystem', label: 'Nyckelsystem' },
           { value: 'keyLoan', label: 'Nyckellån' },
-          { value: 'keyBundle', label: 'Nyckelknippe' },
+          { value: 'keyBundle', label: 'Nyckelsamling' },
           { value: 'receipt', label: 'Kvitto' },
           { value: 'keyEvent', label: 'Nyckelhändelse' },
           { value: 'signature', label: 'Signatur' },
