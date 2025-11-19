@@ -30,7 +30,14 @@ const GetLeasesStatusSchema = z.enum([
   'ended',
 ])
 
-const GetLeasesQueryParamsSchema = z.object({
+const IncludeContactsQueryParamSchema = z.object({
+  includeContacts: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
+})
+
+const FilterLeasesQueryParamsSchema = z.object({
   status: z
     .string()
     .nonempty()
@@ -49,11 +56,12 @@ const GetLeasesQueryParamsSchema = z.object({
         .map((v) => v.trim() as z.infer<typeof GetLeasesStatusSchema>)
     )
     .optional(),
-  includeContacts: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
+  includeContacts: IncludeContactsQueryParamSchema,
 })
+
+const GetLeasesQueryParamsSchema = FilterLeasesQueryParamsSchema.merge(
+  IncludeContactsQueryParamSchema
+)
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -117,8 +125,7 @@ export const routes = (router: KoaRouter) => {
   //   const metadata = generateRouteMetadata(ctx, [
   //     'includeUpcomingLeases',
   //     'includeTerminatedLeases',
-  //     'includeContacts',
-  //   ])
+  //     'includeContacts', //   ])
 
   //   const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
   //   if (queryParams.success === false) {
@@ -233,14 +240,13 @@ export const routes = (router: KoaRouter) => {
   //     ...metadata,
   //   }
   // })
-
   // Tenfast equivalent of above route
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
     const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
 
-    if (queryParams.success === false) {
+    if (!queryParams.success) {
       ctx.status = 400
       ctx.body = { error: queryParams.error.issues, ...metadata }
       return
@@ -400,7 +406,7 @@ export const routes = (router: KoaRouter) => {
 
       const queryParams = GetLeasesQueryParamsSchema.safeParse(ctx.query)
 
-      if (queryParams.success === false) {
+      if (!queryParams.success) {
         ctx.status = 400
         ctx.body = { error: queryParams.error.issues, ...metadata }
         return
@@ -531,6 +537,14 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
+    const queryParams = IncludeContactsQueryParamSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.issues, ...metadata }
+      return
+    }
+
     try {
       const getLease = await tenfastAdapter.getLeaseByLeaseId(
         ctx.params.leaseId
@@ -547,7 +561,7 @@ export const routes = (router: KoaRouter) => {
 
       const onecoreLease = tenfastHelpers.mapToOnecoreLease(getLease.data)
 
-      if (ctx.params.includeContacts) {
+      if (queryParams.data.includeContacts) {
         const contacts = await getContactsByLeaseId(onecoreLease.leaseId)
         const lease = { ...onecoreLease, tenants: contacts }
 
@@ -558,6 +572,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = makeSuccessResponseBody(onecoreLease, metadata)
       }
     } catch (error) {
+      console.log(error)
       logger.error(error, 'Error when getting lease')
       ctx.status = 500
       ctx.body = {
@@ -711,8 +726,8 @@ async function patchLeasesWithContacts(
     }
 
     let contacts: Contact[] = []
-    for (const contactId of lease.tenantContactIds) {
-      const contact = await getContactByContactCode(contactId, false)
+    for (const contactCode of lease.tenantContactIds) {
+      const contact = await getContactByContactCode(contactCode, false)
       if (!contact.ok || !contact.data) {
         return { ok: false, err: 'no-contact' }
       }
