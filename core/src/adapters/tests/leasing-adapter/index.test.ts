@@ -5,49 +5,10 @@ import { leasing, WaitingListType } from '@onecore/types'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
-import {
-  mockedInvoices,
-  mockedOldProblematicInvoices,
-  mockedProblematicInvoices,
-} from './mocks'
+
 import * as factory from '../../../../test/factories'
 
 describe('leasing-adapter', () => {
-  describe(leasingAdapter.getInternalCreditInformation, () => {
-    it('returns true if no problematic invoices', async () => {
-      nock(config.tenantsLeasesService.url)
-        .get(/contact\/invoices\/contactCode/)
-        .reply(200, { content: mockedInvoices })
-
-      const result =
-        await leasingAdapter.getInternalCreditInformation('P123456')
-
-      expect(result).toBe(true)
-    })
-
-    it('returns false if current problematic invoices', async () => {
-      nock(config.tenantsLeasesService.url)
-        .get(/contact\/invoices\/contactCode/)
-        .reply(200, { content: mockedProblematicInvoices })
-
-      const result =
-        await leasingAdapter.getInternalCreditInformation('P123456')
-
-      expect(result).toBe(false)
-    })
-
-    it('returns true if old problematic invoices', async () => {
-      nock(config.tenantsLeasesService.url)
-        .get(/contact\/invoices\/contactCode/)
-        .reply(200, { content: mockedOldProblematicInvoices })
-
-      const result =
-        await leasingAdapter.getInternalCreditInformation('P123456')
-
-      expect(result).toBe(true)
-    })
-  })
-
   describe(leasingAdapter.getDetailedApplicantsByListingId, () => {
     it('should return detailed applicants by listing id', async () => {
       const detailedApplicants = factory.detailedApplicant.buildList(1)

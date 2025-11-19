@@ -1,11 +1,14 @@
 import {
   ConsumerReport,
   Contact,
+  Invoice,
+  InvoiceTransactionType,
   Lease,
   LeaseStatus,
   ParkingSpace,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
+  PaymentStatus,
 } from '@onecore/types'
 
 export const mockedParkingSpace: ParkingSpace = {
@@ -141,4 +144,48 @@ export const mockedLease: Lease = {
   tenants: undefined,
   terminationDate: undefined,
   type: '',
+}
+
+export const mockedPaidInvoice: Invoice = {
+  invoiceId: 'INV-001',
+  leaseId: '123-456-789/0',
+  amount: 1000,
+  reference: 'REF-001',
+  fromDate: new Date(),
+  toDate: new Date(),
+  invoiceDate: new Date(),
+  expirationDate: undefined,
+  debitStatus: 0,
+  paymentStatus: PaymentStatus.Paid,
+  transactionType: InvoiceTransactionType.Rent,
+  transactionTypeName: 'Rent',
+  paidAmount: undefined,
+  daysSinceLastDebitDate: undefined,
+  description: 'Parking rent',
+  sentToDebtCollection: undefined,
+  type: 'Regular',
+  source: 'legacy',
+  invoiceRows: [],
+}
+
+export const mockedUnpaidInvoice: Invoice = {
+  invoiceId: 'INV-002',
+  leaseId: '123-456-789/0',
+  amount: 1000,
+  reference: 'REF-001',
+  fromDate: new Date(),
+  toDate: new Date(),
+  invoiceDate: new Date(),
+  expirationDate: undefined,
+  debitStatus: 0,
+  paymentStatus: PaymentStatus.Unpaid,
+  transactionType: InvoiceTransactionType.Reminder,
+  transactionTypeName: 'Rent',
+  paidAmount: undefined,
+  daysSinceLastDebitDate: undefined,
+  description: 'Parking rent',
+  sentToDebtCollection: undefined,
+  type: 'Regular',
+  source: 'legacy',
+  invoiceRows: [],
 }
