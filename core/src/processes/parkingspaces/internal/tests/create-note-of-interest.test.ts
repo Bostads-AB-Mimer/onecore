@@ -1,6 +1,7 @@
 import axios, { AxiosResponse, HttpStatusCode } from 'axios'
 import * as propertyManagementAdapter from '../../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import * as economyAdapter from '../../../../adapters/economy-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import { ProcessStatus } from '../../../../common/types'
 import * as parkingProcesses from '../index'
@@ -8,6 +9,7 @@ import { ApplicantStatus, ListingStatus, WaitingListType } from '@onecore/types'
 import * as factory from '../../../../../test/factories'
 import * as processUtils from '../../utils'
 import { ListingFactory } from '../../../../../test/factories/listing'
+import { mockedUnpaidInvoice } from '../../external/tests/index.mocks'
 
 const createAxiosResponse = (status: number, data: any): AxiosResponse => {
   return {
@@ -69,9 +71,9 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   const getLeasesForContactCodeSpy = jest
     .spyOn(leasingAdapter, 'getLeasesForContactCode')
     .mockResolvedValue(mockedLeases)
-  const getInternalCreditInformationSpy = jest
-    .spyOn(leasingAdapter, 'getInternalCreditInformation')
-    .mockResolvedValue(true)
+  const getInvoicesSentToDebtCollectionSpy = jest
+    .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
+    .mockResolvedValue({ ok: true, data: [] })
   const applyForListingSpy = jest.spyOn(leasingAdapter, 'applyForListing')
   const addApplicantToWaitingListSpy = jest
     .spyOn(leasingAdapter, 'addApplicantToWaitingList')
@@ -249,7 +251,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
 
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
       'foo',
@@ -257,14 +259,20 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
       'Additional'
     )
 
-    expect(getInternalCreditInformationSpy).toHaveBeenCalledWith('P12345')
+    expect(getInvoicesSentToDebtCollectionSpy).toHaveBeenCalledWith(
+      'P12345',
+      expect.any(Date)
+    )
   })
 
   it('returns an error if credit check fails', async () => {
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(false)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+      ok: true,
+      data: [mockedUnpaidInvoice],
+    })
 
     const result =
       await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
@@ -286,7 +294,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     addApplicantToWaitingListSpy.mockResolvedValue({} as any)
 
@@ -312,7 +320,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
 
     await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
@@ -328,7 +336,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
       ok: false,
@@ -358,7 +366,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     applyForListingSpy.mockResolvedValue({ status: 201 } as any)
     createNewListingSpy.mockResolvedValue({
       ok: true,
@@ -393,7 +401,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     getApplicantByContactCodeAndListingIdSpy.mockResolvedValue(
       createAxiosResponse(HttpStatusCode.NotFound, null)
     )
@@ -432,7 +440,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     createNewListingSpy.mockResolvedValue({
       ok: true,
       data: factory.listing.build({ status: ListingStatus.Active }),
@@ -466,7 +474,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     applyForListingSpy.mockResolvedValue({
       status: HttpStatusCode.Ok,
     } as any)
@@ -500,7 +508,7 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
     getParkingSpaceSpy.mockResolvedValue(mockedParkingSpace)
     getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
-    getInternalCreditInformationSpy.mockResolvedValue(true)
+    getInvoicesSentToDebtCollectionSpy.mockResolvedValue({ ok: true, data: [] })
     applyForListingSpy.mockResolvedValue({
       ok: false,
       err: 'conflict',
