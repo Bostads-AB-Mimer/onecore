@@ -24,7 +24,7 @@ import { AdapterResult } from '../adapters/types'
  */
 
 const GetLeasesStatusSchema = z.enum([
-  'active',
+  'current',
   'upcoming',
   'about-to-end',
   'ended',
@@ -40,7 +40,7 @@ const GetLeasesQueryParamsSchema = z.object({
           .split(',')
           .every((v) => GetLeasesStatusSchema.safeParse(v.trim()).success),
       {
-        message: `status must be one or more of ${GetLeasesStatusSchema.options.join(', ')}`,
+        message: `Status must be one or more of ${GetLeasesStatusSchema.options.join(', ')}`,
       }
     )
     .transform((value) =>
@@ -242,6 +242,7 @@ export const routes = (router: KoaRouter) => {
 
     if (queryParams.success === false) {
       ctx.status = 400
+      ctx.body = { error: queryParams.error.issues, ...metadata }
       return
     }
 
@@ -401,6 +402,7 @@ export const routes = (router: KoaRouter) => {
 
       if (queryParams.success === false) {
         ctx.status = 400
+        ctx.body = { error: queryParams.error.issues, ...metadata }
         return
       }
 
