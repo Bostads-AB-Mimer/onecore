@@ -16,7 +16,9 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <CardTitle className="text-base">{component.name}</CardTitle>
+            <CardTitle className="text-base">
+              {component.classification.componentType.name || '-'}
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               {component.classification.category.name}
             </p>
@@ -26,9 +28,9 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
       <CardContent className="pt-0">
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Komponenttyp:</span>
+            <span className="text-muted-foreground">Specifikation:</span>
             <span className="font-medium">
-              {component.classification.componentType.name || '-'}
+              {component.name || '-'}
             </span>
           </div>
           <div className="flex justify-between text-sm">
