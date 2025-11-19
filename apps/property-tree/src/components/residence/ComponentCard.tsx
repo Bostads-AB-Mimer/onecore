@@ -29,9 +29,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Specifikation:</span>
-            <span className="font-medium">
-              {component.name || '-'}
-            </span>
+            <span className="font-medium">{component.name || '-'}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Fabrikat:</span>
