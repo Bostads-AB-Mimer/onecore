@@ -50,6 +50,7 @@
     "koa-body": "^6.0.1",
     "koa-bodyparser": "^4.4.1",
     "koa-jwt": "^4.0.4",
+    "koa-okapi-router": "^0.1.1",
     "koa-pino-logger": "^4.0.0",
     "koa2-swagger-ui": "^5.11.0",
     "lodash": "^4.17.21",
