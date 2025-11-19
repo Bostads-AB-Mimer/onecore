@@ -765,7 +765,7 @@ export const routes = (router: KoaRouter) => {
         ],
         objectTypes: [
           { value: 'key', label: 'Nyckel' },
-          { value: 'keySystem', label: 'Nyckelsystem' },
+          { value: 'keySystem', label: 'Låssystem' },
           { value: 'keyLoan', label: 'Nyckellån' },
           { value: 'keyBundle', label: 'Nyckelsamling' },
           { value: 'receipt', label: 'Kvitto' },

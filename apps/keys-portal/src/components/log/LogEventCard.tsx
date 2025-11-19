@@ -71,7 +71,7 @@ export function LogEventCard({ log }: { log: Log }) {
                   {log.objectTypeLabel ||
                     {
                       key: 'Nyckel',
-                      keySystem: 'Nyckelsystem',
+                      keySystem: 'Låssystem',
                       keyLoan: 'Nyckellån',
                       keyBundle: 'Nyckelsamling',
                       receipt: 'Kvitto',
@@ -150,7 +150,7 @@ export function LogEventCard({ log }: { log: Log }) {
                         {eventLog.objectTypeLabel ||
                           {
                             key: 'Nyckel',
-                            keySystem: 'Nyckelsystem',
+                            keySystem: 'Låssystem',
                             keyLoan: 'Nyckellån',
                             keyBundle: 'Nyckelsamling',
                             receipt: 'Kvitto',

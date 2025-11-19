@@ -84,7 +84,7 @@ export function LogFilters({
             <SelectContent>
               <SelectItem value="all">Alla objekt</SelectItem>
               <SelectItem value="key">Nyckel</SelectItem>
-              <SelectItem value="keySystem">Nyckelsystem</SelectItem>
+              <SelectItem value="keySystem">Låssystem</SelectItem>
               <SelectItem value="keyLoan">Nyckellån</SelectItem>
               <SelectItem value="keyBundle">Nyckelsamling</SelectItem>
               <SelectItem value="receipt">Kvitto</SelectItem>

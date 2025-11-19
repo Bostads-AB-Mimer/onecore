@@ -186,7 +186,7 @@ export function TenantKeyLoans({ rentalPropertyId }: TenantKeyLoansProps) {
               <TableHead>Nyckeltyp</TableHead>
               <TableHead>Nyckelnamn</TableHead>
               <TableHead>Flexnummer</TableHead>
-              <TableHead>Nyckelsystem</TableHead>
+              <TableHead>Låssystem</TableHead>
               <TableHead>Löpnummer</TableHead>
               <TableHead>Utlämningsdatum</TableHead>
             </TableRow>

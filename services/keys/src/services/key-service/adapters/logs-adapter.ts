@@ -422,7 +422,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 
 const OBJECT_TYPE_LABELS: Record<string, string> = {
   key: 'Nyckel',
-  keySystem: 'Nyckelsystem',
+  keySystem: 'Låssystem',
   keyLoan: 'Nyckellån',
   keyBundle: 'Nyckelsamling',
   receipt: 'Kvitto',
@@ -529,7 +529,7 @@ export function buildKeySystemDescription(
   },
   action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad'
 ): string {
-  const parts: string[] = [`${action} nyckelsystem`]
+  const parts: string[] = [`${action} låssystem`]
 
   // System code and name
   parts.push(`${keySystem.systemCode} (${keySystem.name})`)

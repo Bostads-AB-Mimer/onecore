@@ -1,5 +1,5 @@
 export default async function teardown() {
-  // Cleanup tasks after all tests complete
-  // Currently just a placeholder - database connections are closed in withContext
+  // Note: Database connection is destroyed in teardown-in-worker.ts via afterAll
+  // globalTeardown runs in a separate process, so it cannot close the test worker's connections
   console.log('Test suite complete')
 }
