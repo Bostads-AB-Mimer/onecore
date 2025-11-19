@@ -1,3 +1,4 @@
+const utilities = jest.requireActual('@onecore/utilities')
 jest.mock('@onecore/utilities', () => {
   return {
     logger: {
@@ -8,6 +9,7 @@ jest.mock('@onecore/utilities', () => {
         return
       },
     },
-    generateRouteMetadata: jest.fn(() => ({})),
+    generateRouteMetadata: jest.fn(() => {}),
+    makeSuccessResponseBody: utilities.makeSuccessResponseBody,
   }
 })
