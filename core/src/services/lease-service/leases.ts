@@ -23,23 +23,20 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Rental roperty id of the building/residence to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
-   *       - in: query
-   *         name: includeTerminatedLeases
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include terminated leases in the response
-   *       - in: query
    *         name: includeContacts
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: Whether to include contact information in the response
+   *         required: false
+   *         description: Whether to include related contacts in the response.
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *         required: false
+   *         description: >-
+   *           Comma-separated list of statuses to include leases by.
+   *           Valid values are "current", "upcoming", "about-to-end", and "ended".
+   *           Default is all statuses.
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -109,6 +106,21 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Personal Number (PNR) of the individual to fetch leases for.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
+   *           type: boolean
+   *         required: false
+   *         description: Whether to include related contacts in the response.
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *         required: false
+   *         description: >-
+   *           Comma-separated list of statuses to include leases by.
+   *           Valid values are "current", "upcoming", "about-to-end", and "ended".
+   *           Default is all statuses.
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -162,6 +174,21 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Contact code of the individual to fetch leases for.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
+   *           type: boolean
+   *         required: false
+   *         description: Whether to include related contacts in the response.
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *         required: false
+   *         description: >-
+   *           Comma-separated list of statuses to include leases by.
+   *           Valid values are "current", "upcoming", "about-to-end", and "ended".
+   *           Default is all statuses.
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
