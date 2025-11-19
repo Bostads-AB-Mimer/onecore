@@ -1,11 +1,7 @@
+import { OkapiRouter } from 'koa-okapi-router'
 import { schemaRegistry } from './utils/openapi'
 
 const basePath = __dirname
-
-// apis: [
-//   './src/services/property-management-service/index.ts',
-//   './src/services/work-order-service/index.ts',
-// ],
 
 export const swaggerSpec = {
   definition: {
@@ -27,6 +23,7 @@ export const swaggerSpec = {
     `${basePath}/services/property-base-service/*.{ts,js}`,
     `${basePath}/services/search-service/*.{ts,js}`,
   ],
+  paths: [],
 }
 
 export function updateSwaggerSchemas() {
