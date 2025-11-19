@@ -23,25 +23,30 @@ export default function ActivityLog() {
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
 
+  // Clean search query by removing trailing punctuation
+  const cleanSearchQuery = useCallback((query: string): string => {
+    return query.trim().replace(/[,.\s]+$/, '')
+  }, [])
+
   // Detect search type based on pattern
   const detectSearchType = useCallback(
     (query: string): 'rentalObject' | 'contact' | 'text' => {
-      const trimmed = query.trim()
+      const cleaned = cleanSearchQuery(query)
 
       // Rental object code pattern: XXX-XXX-XX-XXXX (e.g., 705-011-03-0102)
-      if (/^\d{3}-\d{3}-\d{2}-\d{4}$/.test(trimmed)) {
+      if (/^\d{3}-\d{3}-\d{2}-\d{4}$/.test(cleaned)) {
         return 'rentalObject'
       }
 
       // Contact code pattern: Letter + 6 digits (e.g., P079586, F123456)
-      if (/^[A-Z]\d{6}$/i.test(trimmed)) {
+      if (/^[A-Z]\d{6}$/i.test(cleaned)) {
         return 'contact'
       }
 
       // Default to text search
       return 'text'
     },
-    []
+    [cleanSearchQuery]
   )
 
   const fetchLogs = useCallback(async () => {
@@ -49,20 +54,30 @@ export default function ActivityLog() {
     try {
       let response
       const searchType = detectSearchType(searchQuery)
+      const cleanedQuery = cleanSearchQuery(searchQuery)
+
+      // Build filters object for specialized endpoints
+      const filters = {
+        eventType: eventTypeFilter === 'all' ? undefined : eventTypeFilter,
+        objectType: objectTypeFilter === 'all' ? undefined : objectTypeFilter,
+        userName: userNameFilter === 'all' ? undefined : userNameFilter,
+      }
 
       if (searchType === 'rentalObject') {
-        // Use dedicated rental object endpoint
+        // Use dedicated rental object endpoint with filters
         response = await logService.fetchLogsByRentalObject(
-          searchQuery.trim(),
+          cleanedQuery,
           pagination.currentPage,
-          pagination.currentLimit
+          pagination.currentLimit,
+          filters
         )
       } else if (searchType === 'contact') {
-        // Use dedicated contact endpoint
+        // Use dedicated contact endpoint with filters
         response = await logService.fetchLogsByContact(
-          searchQuery.trim(),
+          cleanedQuery,
           pagination.currentPage,
-          pagination.currentLimit
+          pagination.currentLimit,
+          filters
         )
       } else {
         // Use regular search with filters (text search)
@@ -73,7 +88,7 @@ export default function ActivityLog() {
             objectType:
               objectTypeFilter === 'all' ? undefined : [objectTypeFilter],
             userName: userNameFilter === 'all' ? undefined : userNameFilter,
-            q: searchQuery.trim().length >= 3 ? searchQuery.trim() : undefined,
+            q: cleanedQuery.length >= 3 ? cleanedQuery : undefined,
           },
           pagination.currentPage,
           pagination.currentLimit
@@ -94,6 +109,7 @@ export default function ActivityLog() {
     objectTypeFilter,
     userNameFilter,
     detectSearchType,
+    cleanSearchQuery,
     pagination,
   ])
 
@@ -204,12 +220,13 @@ export default function ActivityLog() {
                   {detectSearchType(searchQuery) === 'rentalObject' && (
                     <>
                       🏠 Söker efter lägenhetskod:{' '}
-                      <strong>{searchQuery}</strong>
+                      <strong>{cleanSearchQuery(searchQuery)}</strong>
                     </>
                   )}
                   {detectSearchType(searchQuery) === 'contact' && (
                     <>
-                      👤 Söker efter kontaktkod: <strong>{searchQuery}</strong>
+                      👤 Söker efter kontaktkod:{' '}
+                      <strong>{cleanSearchQuery(searchQuery)}</strong>
                     </>
                   )}
                 </p>

@@ -2736,6 +2736,21 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: eventType
+   *         schema:
+   *           type: string
+   *         description: Filter by event type (creation, update, delete)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: string
+   *         description: Filter by object type (key, keyLoan, receipt, etc.)
+   *       - in: query
+   *         name: userName
+   *         schema:
+   *           type: string
+   *         description: Filter by user name
    *     responses:
    *       200:
    *         description: Paginated list of logs for the rental object
@@ -2760,10 +2775,18 @@ export const routes = (router: KoaRouter) => {
       ? parseInt(ctx.query.limit as string)
       : undefined
 
+    // Extract filter parameters
+    const filters = {
+      eventType: ctx.query.eventType as string | undefined,
+      objectType: ctx.query.objectType as string | undefined,
+      userName: ctx.query.userName as string | undefined,
+    }
+
     const result = await LogsApi.getByRentalObjectCode(
       ctx.params.rentalObjectCode,
       page,
-      limit
+      limit,
+      filters
     )
 
     if (!result.ok) {
@@ -2817,6 +2840,21 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: eventType
+   *         schema:
+   *           type: string
+   *         description: Filter by event type (creation, update, delete)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: string
+   *         description: Filter by object type (key, keyLoan, receipt, etc.)
+   *       - in: query
+   *         name: userName
+   *         schema:
+   *           type: string
+   *         description: Filter by user name
    *     responses:
    *       200:
    *         description: Paginated list of logs for the contact
@@ -2841,10 +2879,18 @@ export const routes = (router: KoaRouter) => {
       ? parseInt(ctx.query.limit as string)
       : undefined
 
+    // Extract filter parameters
+    const filters = {
+      eventType: ctx.query.eventType as string | undefined,
+      objectType: ctx.query.objectType as string | undefined,
+      userName: ctx.query.userName as string | undefined,
+    }
+
     const result = await LogsApi.getByContactId(
       ctx.params.contactId,
       page,
-      limit
+      limit,
+      filters
     )
 
     if (!result.ok) {

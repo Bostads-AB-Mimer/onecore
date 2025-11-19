@@ -438,6 +438,21 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: eventType
+   *         schema:
+   *           type: string
+   *         description: Filter by event type (creation, update, delete)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: string
+   *         description: Filter by object type (key, keyLoan, receipt, etc.)
+   *       - in: query
+   *         name: userName
+   *         schema:
+   *           type: string
+   *         description: Filter by user name
    *     responses:
    *       200:
    *         description: Paginated list of logs for the rental object
@@ -455,10 +470,56 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs/rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const query = logsAdapter.getLogsByRentalObjectCodeQuery(
+      const baseQuery = logsAdapter.getLogsByRentalObjectCodeQuery(
         ctx.params.rentalObjectCode,
         db
       )
+
+      // Check if any filters are provided
+      const hasFilters =
+        (typeof ctx.query.eventType === 'string' &&
+          ctx.query.eventType.trim()) ||
+        (typeof ctx.query.objectType === 'string' &&
+          ctx.query.objectType.trim()) ||
+        (typeof ctx.query.userName === 'string' && ctx.query.userName.trim())
+
+      let query
+      if (hasFilters) {
+        // Wrap in subquery and apply filters
+        // Note: We need to clear the ORDER BY from baseQuery since it can't be in a subquery
+        query = db.from(baseQuery.clear('order').as('union_result'))
+
+        // Apply eventType filter
+        if (
+          typeof ctx.query.eventType === 'string' &&
+          ctx.query.eventType.trim()
+        ) {
+          query.where('eventType', ctx.query.eventType.trim())
+        }
+
+        // Apply objectType filter
+        if (
+          typeof ctx.query.objectType === 'string' &&
+          ctx.query.objectType.trim()
+        ) {
+          query.where('objectType', ctx.query.objectType.trim())
+        }
+
+        // Apply userName filter
+        if (
+          typeof ctx.query.userName === 'string' &&
+          ctx.query.userName.trim()
+        ) {
+          query.where('userName', ctx.query.userName.trim())
+        }
+
+        // Apply ordering after filtering
+        query.orderBy('eventTime', 'desc')
+      } else {
+        // No filters, use the original query directly
+        query = baseQuery
+      }
+
       const paginatedResult = await paginate(query, ctx)
 
       // Enrich logs with Swedish labels
@@ -512,6 +573,21 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: eventType
+   *         schema:
+   *           type: string
+   *         description: Filter by event type (creation, update, delete)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: string
+   *         description: Filter by object type (key, keyLoan, receipt, etc.)
+   *       - in: query
+   *         name: userName
+   *         schema:
+   *           type: string
+   *         description: Filter by user name
    *     responses:
    *       200:
    *         description: Paginated list of logs for the contact
@@ -529,10 +605,56 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs/contact/:contactId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const query = logsAdapter.getLogsByContactIdQuery(
+      const baseQuery = logsAdapter.getLogsByContactIdQuery(
         ctx.params.contactId,
         db
       )
+
+      // Check if any filters are provided
+      const hasFilters =
+        (typeof ctx.query.eventType === 'string' &&
+          ctx.query.eventType.trim()) ||
+        (typeof ctx.query.objectType === 'string' &&
+          ctx.query.objectType.trim()) ||
+        (typeof ctx.query.userName === 'string' && ctx.query.userName.trim())
+
+      let query
+      if (hasFilters) {
+        // Wrap in subquery and apply filters
+        // Note: We need to clear the ORDER BY from baseQuery since it can't be in a subquery
+        query = db.from(baseQuery.clear('order').as('union_result'))
+
+        // Apply eventType filter
+        if (
+          typeof ctx.query.eventType === 'string' &&
+          ctx.query.eventType.trim()
+        ) {
+          query.where('eventType', ctx.query.eventType.trim())
+        }
+
+        // Apply objectType filter
+        if (
+          typeof ctx.query.objectType === 'string' &&
+          ctx.query.objectType.trim()
+        ) {
+          query.where('objectType', ctx.query.objectType.trim())
+        }
+
+        // Apply userName filter
+        if (
+          typeof ctx.query.userName === 'string' &&
+          ctx.query.userName.trim()
+        ) {
+          query.where('userName', ctx.query.userName.trim())
+        }
+
+        // Apply ordering after filtering
+        query.orderBy('eventTime', 'desc')
+      } else {
+        // No filters, use the original query directly
+        query = baseQuery
+      }
+
       const paginatedResult = await paginate(query, ctx)
 
       // Enrich logs with Swedish labels

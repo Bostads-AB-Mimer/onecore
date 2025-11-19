@@ -100,14 +100,26 @@ export const logService = {
   async fetchLogsByRentalObject(
     rentalObjectCode: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    filters?: {
+      eventType?: string
+      objectType?: string
+      userName?: string
+    }
   ): Promise<PaginatedResponse<Log>> {
+    const queryParams: Record<string, any> = { page, limit }
+
+    // Add optional filters
+    if (filters?.eventType) queryParams.eventType = filters.eventType
+    if (filters?.objectType) queryParams.objectType = filters.objectType
+    if (filters?.userName) queryParams.userName = filters.userName
+
     const { data, error } = await GET(
       '/logs/rental-object/{rentalObjectCode}',
       {
         params: {
           path: { rentalObjectCode },
-          query: { page, limit },
+          query: queryParams,
         },
       }
     )
@@ -137,12 +149,24 @@ export const logService = {
   async fetchLogsByContact(
     contactId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    filters?: {
+      eventType?: string
+      objectType?: string
+      userName?: string
+    }
   ): Promise<PaginatedResponse<Log>> {
+    const queryParams: Record<string, any> = { page, limit }
+
+    // Add optional filters
+    if (filters?.eventType) queryParams.eventType = filters.eventType
+    if (filters?.objectType) queryParams.objectType = filters.objectType
+    if (filters?.userName) queryParams.userName = filters.userName
+
     const { data, error } = await GET('/logs/contact/{contactId}', {
       params: {
         path: { contactId },
-        query: { page, limit },
+        query: queryParams,
       },
     })
     if (error) throw error

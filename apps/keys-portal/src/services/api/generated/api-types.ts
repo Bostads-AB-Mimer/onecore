@@ -1902,6 +1902,12 @@ export interface paths {
           page?: number;
           /** @description Number of records per page */
           limit?: number;
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string;
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string;
+          /** @description Filter by user name */
+          userName?: string;
         };
         path: {
           /** @description The rental object code (e.g., "705-011-03-0102") */
@@ -1944,6 +1950,12 @@ export interface paths {
           page?: number;
           /** @description Number of records per page */
           limit?: number;
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string;
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string;
+          /** @description Filter by user name */
+          userName?: string;
         };
         path: {
           /** @description The contact code (e.g., "P079586", "F123456") */

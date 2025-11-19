@@ -595,11 +595,19 @@ export const LogsApi = {
   getByRentalObjectCode: async (
     rentalObjectCode: string,
     page?: number,
-    limit?: number
+    limit?: number,
+    filters?: {
+      eventType?: string
+      objectType?: string
+      userName?: string
+    }
   ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
     const params = new URLSearchParams()
     if (page) params.append('page', page.toString())
     if (limit) params.append('limit', limit.toString())
+    if (filters?.eventType) params.append('eventType', filters.eventType)
+    if (filters?.objectType) params.append('objectType', filters.objectType)
+    if (filters?.userName) params.append('userName', filters.userName)
 
     const queryString = params.toString()
     const url = queryString
@@ -613,11 +621,19 @@ export const LogsApi = {
   getByContactId: async (
     contactId: string,
     page?: number,
-    limit?: number
+    limit?: number,
+    filters?: {
+      eventType?: string
+      objectType?: string
+      userName?: string
+    }
   ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
     const params = new URLSearchParams()
     if (page) params.append('page', page.toString())
     if (limit) params.append('limit', limit.toString())
+    if (filters?.eventType) params.append('eventType', filters.eventType)
+    if (filters?.objectType) params.append('objectType', filters.objectType)
+    if (filters?.userName) params.append('userName', filters.userName)
 
     const queryString = params.toString()
     const url = queryString

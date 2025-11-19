@@ -226,6 +226,21 @@ export function getLogsByRentalObjectCodeQuery(
   // NOTE: objectType='keySystem' is explicitly excluded - keySystem logs are
   // infrastructure-level and don't have a single rental object relationship
 
+  // 8. Fallback: Search description for rental object code
+  // This catches logs where the related entity was deleted (INNER JOINs fail for deleted entities)
+  // We exclude logs already found by other queries to avoid duplicates
+  const descriptionFallback = db(`${TABLE} as logs`)
+    .select('logs.*')
+    .where('logs.description', 'like', `%${rentalObjectCode}%`)
+    .whereNotExists(function () {
+      // Exclude logs that would be found by the key query (if key still exists)
+      this.select(db.raw(1))
+        .from('keys')
+        .whereRaw('logs.objectId = keys.id')
+        .andWhereRaw("logs.objectType = 'key'")
+        .andWhere('keys.rentalObjectCode', rentalObjectCode)
+    })
+
   // UNION all queries and sort by eventTime
   return db
     .unionAll([
@@ -236,6 +251,7 @@ export function getLogsByRentalObjectCodeQuery(
       keyNoteLogs,
       keyBundleLogs,
       signatureLogs,
+      descriptionFallback,
     ])
     .orderBy('eventTime', 'desc')
 }
@@ -536,7 +552,7 @@ export function buildKeySystemDescription(
       parts.push(
         `${propertyCount} ${propertyCount === 1 ? 'fastighet' : 'fastigheter'}`
       )
-    } catch (error) {
+    } catch (_error) {
       // If parsing fails, skip property count
     }
   }
@@ -592,7 +608,7 @@ export async function buildReceiptDescription(
         const keyIds = JSON.parse(loan.keys)
         const keyCount = Array.isArray(keyIds) ? keyIds.length : 0
         parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
-      } catch (error) {
+      } catch (_error) {
         // Skip if parsing fails
       }
     }
