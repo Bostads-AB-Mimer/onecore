@@ -5,7 +5,10 @@
  */
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { getComponentByMaintenanceUnitCode } from '../adapters/component-adapter'
+import {
+  getComponentByMaintenanceUnitCode,
+  getComponentsByRoomId,
+} from '../adapters/component-adapter'
 import {
   componentsQueryParamsSchema,
   ComponentSchema,
@@ -114,4 +117,64 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /components/by-room/{roomId}:
+   *   get:
+   *     summary: Gets a list of components for a room
+   *     description: |
+   *       Retrieves all components associated with a specific room ID.
+   *       Components are returned ordered by installation date (newest first).
+   *     tags:
+   *       - Components
+   *     parameters:
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the room
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the components list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Component'
+   *       404:
+   *         description: Room not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/components/by-room/:roomId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const roomId = ctx.params.roomId
+
+    try {
+      const components = await getComponentsByRoomId(roomId)
+
+      if (components === null) {
+        ctx.status = 404
+        ctx.body = { reason: 'Room not found', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: ComponentSchema.omit({ maintenanceUnits: true })
+          .array()
+          .parse(components),
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
 }
