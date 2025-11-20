@@ -1,11 +1,11 @@
-import { Info, Building, Home, BarChart3 } from 'lucide-react'
+import { Info, Building, Home, BarChart3, Wrench } from 'lucide-react'
 import { PropertyInfoTab } from './tabs/PropertyInfoTab'
 import { PropertyDocumentsTab } from './tabs/PropertyDocumentsTab'
 import { PropertyPlanningTab } from './tabs/PropertyPlanningTab'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 //import { PropertyMapTab } from './tabs/PropertyMapTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
-//import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
+import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 //import { PropertyAccessTab } from './tabs/PropertyAccessTab'
 import {
@@ -30,7 +30,7 @@ export const PropertyDetailTabsMobile = ({
     showPropertyDocuments: false,
     showPropertyPlanning: false,
     showPropertyBuildings: true,
-    showPropertyMaintenance: false,
+    showPropertyMaintenance: true,
     showPropertyOrders: true,
     showPropertyAccess: false,
     showPropertyMap: false,
@@ -55,18 +55,13 @@ export const PropertyDetailTabsMobile = ({
       title: 'Byggnader',
       content: <PropertyBuildingsTab buildings={propertyDetail.buildings} />,
     },
-    /*
     features.showPropertyMaintenance && {
       id: 'maintenance',
       icon: Wrench,
       title: 'Underhållsenheter',
-      content: (
-        <PropertyMaintenanceUnitsTab
-          maintenanceUnits={propertyDetail.maintenanceUnits}
-        />
-      ),
+      content: <PropertyMaintenanceUnitsTab propertyDetail={propertyDetail} />,
     },
-
+    /*
     features.showPropertyDocuments && {
       id: 'documents',
       icon: FileText,

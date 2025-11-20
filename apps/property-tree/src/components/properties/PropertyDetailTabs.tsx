@@ -5,7 +5,7 @@ import { PropertyDocumentsTab } from './tabs/PropertyDocumentsTab'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 //import { PropertyMapTab } from './tabs/PropertyMapTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
-//import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
+import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 //import { PropertyAccessTab } from './tabs/PropertyAccessTab'
 import { PropertyDetailTabsMobile } from './PropertyDetailTabsMobile'
@@ -30,7 +30,7 @@ export const PropertyDetailTabs = ({
     showPropertyDocuments: false,
     showPropertyPlanning: false,
     showPropertyBuildings: true,
-    showPropertyMaintenance: false,
+    showPropertyMaintenance: true,
     showPropertyOrders: true,
     showPropertyAccess: false,
     showPropertyMap: false,
@@ -108,20 +108,11 @@ export const PropertyDetailTabs = ({
         </TabsContent>
       )}
 
-      {/*
       {features.showPropertyMaintenance && (
         <TabsContent value="maintenance">
-          <FeatureGatedContent
-            isEnabled={features.showPropertyMaintenance}
-            fallbackMessage="För att se underhållsenheter, aktivera funktionen i inställningarna."
-          >
-            <PropertyMaintenanceUnitsTab
-              maintenanceUnits={propertyDetail.maintenanceUnits}
-            />
-          </FeatureGatedContent>
+          <PropertyMaintenanceUnitsTab propertyDetail={propertyDetail} />
         </TabsContent>
       )}
-        */}
 
       {features.showPropertyOrders && (
         <TabsContent value="orders">
