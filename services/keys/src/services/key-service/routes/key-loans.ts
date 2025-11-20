@@ -911,7 +911,6 @@ export const routes = (router: KoaRouter) => {
             return
           }
 
-
           // Log reactivation (clearing returnedAt)
           if (!payload.returnedAt && existingLoan.returnedAt) {
             logger.info(
