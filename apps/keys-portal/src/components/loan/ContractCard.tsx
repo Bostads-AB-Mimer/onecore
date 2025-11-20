@@ -49,16 +49,18 @@ function statusBadge(status: 'active' | 'upcoming' | 'ended') {
 type Props = {
   lease: Lease
   defaultOpen?: boolean
+  defaultKeyLoansOpen?: boolean
   rentalAddress?: string
 }
 
 export function ContractCard({
   lease,
   defaultOpen = false,
+  defaultKeyLoansOpen = false,
   rentalAddress,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
-  const [keyLoansOpen, setKeyLoansOpen] = useState(false)
+  const [keyLoansOpen, setKeyLoansOpen] = useState(defaultKeyLoansOpen)
   const [addressStr, setAddressStr] = useState<string | null>(
     rentalAddress ?? null
   )
@@ -68,12 +70,7 @@ export function ContractCard({
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
-  const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
-
-  // Stabilize callback reference to prevent unnecessary re-renders in child components
-  const handleUnsignedLoansChange = useCallback((hasUnsigned: boolean) => {
-    setHasUnsignedLoans(hasUnsigned)
-  }, [])
+  const [hasUnsignedLoans] = useState(false) // TODO: Wire up unsigned loans detection
 
   const handleReceiptUploaded = useCallback(() => {
     // Trigger refresh of key statuses when a receipt is uploaded
@@ -175,6 +172,26 @@ export function ContractCard({
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls={keysRegionId}
+              className="h-7 px-2 text-xs gap-1"
+            >
+              {open ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Dölj nycklar
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Visa nycklar
+                </>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => setKeyLoansOpen((v) => !v)}
               aria-expanded={keyLoansOpen}
               aria-controls={keyLoansRegionId}
@@ -193,26 +210,6 @@ export function ContractCard({
                 <>
                   <ChevronDown className="h-3.5 w-3.5" />
                   Visa nyckellån
-                </>
-              )}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              aria-controls={keysRegionId}
-              className="h-7 px-2 text-xs gap-1"
-            >
-              {open ? (
-                <>
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  Dölj nycklar
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                  Visa nycklar
                 </>
               )}
             </Button>
@@ -297,17 +294,6 @@ export function ContractCard({
           )}
         </div>
 
-        {keyLoansOpen && (
-          <div className="pt-2" id={keyLoansRegionId}>
-            <KeyLoansAccordion
-              lease={lease}
-              refreshKey={keyLoansRefreshKey}
-              onUnsignedLoansChange={handleUnsignedLoansChange}
-              onReceiptUploaded={handleReceiptUploaded}
-            />
-          </div>
-        )}
-
         {open && (
           <div id={keysRegionId} className="pt-2">
             <LeaseKeyStatusList
@@ -327,6 +313,16 @@ export function ContractCard({
                 setKeyLoansRefreshKey((prev) => prev + 1)
               }}
               onKeyCreated={refetchKeys}
+            />
+          </div>
+        )}
+
+        {keyLoansOpen && (
+          <div className="pt-2" id={keyLoansRegionId}>
+            <KeyLoansAccordion
+              lease={lease}
+              refreshKey={keyLoansRefreshKey}
+              onReceiptUploaded={handleReceiptUploaded}
             />
           </div>
         )}

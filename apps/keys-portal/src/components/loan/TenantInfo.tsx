@@ -55,6 +55,8 @@ export function TenantInfo({
     upcomingContracts,
     endedRecentContracts,
     endedOlderContracts,
+    autoOpenLeaseId,
+    shouldOpenOlderAccordion,
   } = useMemo(() => {
     const active: Lease[] = []
     const upcoming: Lease[] = []
@@ -67,6 +69,27 @@ export function TenantInfo({
       else ended.push(c)
     })
 
+    // Sort active contracts: Bostadskontrakt first, then by start date (descending)
+    active.sort((a, b) => {
+      const aIsBostadskontrakt = (a.type || '')
+        .toLowerCase()
+        .includes('bostad')
+      const bIsBostadskontrakt = (b.type || '')
+        .toLowerCase()
+        .includes('bostad')
+
+      // Bostadskontrakt first
+      if (aIsBostadskontrakt && !bIsBostadskontrakt) return -1
+      if (!aIsBostadskontrakt && bIsBostadskontrakt) return 1
+
+      // If both same type, sort by start date (latest first)
+      return toMs(b.leaseStartDate) - toMs(a.leaseStartDate)
+    })
+
+    // Sort upcoming contracts by start date (latest first)
+    upcoming.sort((a, b) => toMs(b.leaseStartDate) - toMs(a.leaseStartDate))
+
+    // Sort ended contracts by end date (latest first)
     ended.sort((a, b) => toMs(pickEndDate(b)) - toMs(pickEndDate(a)))
 
     const cutoff = (() => {
@@ -84,11 +107,31 @@ export function TenantInfo({
       else endedOlder.push(lease)
     })
 
+    // Determine which contract to auto-open
+    let autoOpenId: string | null = null
+    let shouldOpenOlderAccordion = false
+
+    if (active.length > 0) {
+      autoOpenId = active[0].leaseId
+    } else if (upcoming.length > 0) {
+      autoOpenId = upcoming[0].leaseId
+    } else if (endedRecent.length > 0) {
+      // If there are recent ended contracts, open the first one
+      autoOpenId = endedRecent[0].leaseId
+      shouldOpenOlderAccordion = false
+    } else if (endedOlder.length > 0) {
+      // If only older ended contracts exist, open the first one and expand accordion
+      autoOpenId = endedOlder[0].leaseId
+      shouldOpenOlderAccordion = true
+    }
+
     return {
       activeContracts: active,
       upcomingContracts: upcoming,
       endedRecentContracts: endedRecent,
       endedOlderContracts: endedOlder,
+      autoOpenLeaseId: autoOpenId,
+      shouldOpenOlderAccordion,
     }
   }, [contracts])
 
@@ -224,7 +267,11 @@ export function TenantInfo({
             </CardHeader>
             <CardContent className="space-y-4">
               {activeContracts.map((lease) => (
-                <ContractCard key={lease.leaseId} lease={lease} />
+                <ContractCard
+                  key={lease.leaseId}
+                  lease={lease}
+                  defaultOpen={lease.leaseId === autoOpenLeaseId}
+                />
               ))}
             </CardContent>
           </Card>
@@ -239,7 +286,11 @@ export function TenantInfo({
             </CardHeader>
             <CardContent className="space-y-4">
               {upcomingContracts.map((lease) => (
-                <ContractCard key={lease.leaseId} lease={lease} />
+                <ContractCard
+                  key={lease.leaseId}
+                  lease={lease}
+                  defaultOpen={lease.leaseId === autoOpenLeaseId}
+                />
               ))}
             </CardContent>
           </Card>
@@ -257,13 +308,22 @@ export function TenantInfo({
               {endedRecentContracts.length > 0 && (
                 <div className="space-y-4">
                   {endedRecentContracts.map((lease) => (
-                    <ContractCard key={lease.leaseId} lease={lease} />
+                    <ContractCard
+                      key={lease.leaseId}
+                      lease={lease}
+                      defaultOpen={lease.leaseId === autoOpenLeaseId}
+                    />
                   ))}
                 </div>
               )}
 
               {endedOlderContracts.length > 0 && (
-                <Accordion type="single" collapsible className="w-full">
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  defaultValue={shouldOpenOlderAccordion ? 'older-ended' : undefined}
+                >
                   <AccordionItem value="older-ended">
                     <AccordionTrigger
                       className="
@@ -283,7 +343,11 @@ export function TenantInfo({
                     <AccordionContent>
                       <div className="space-y-4 pt-3">
                         {endedOlderContracts.map((lease) => (
-                          <ContractCard key={lease.leaseId} lease={lease} />
+                          <ContractCard
+                            key={lease.leaseId}
+                            lease={lease}
+                            defaultOpen={lease.leaseId === autoOpenLeaseId}
+                          />
                         ))}
                       </div>
                     </AccordionContent>
