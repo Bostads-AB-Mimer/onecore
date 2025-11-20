@@ -47,6 +47,7 @@ export function KeyBundleKeysList({
       keyName: true,
       sequence: true,
       flex: true,
+      keySystem: true, // Show key system code
       status: true,
       type: true,
       rentalObject: true,

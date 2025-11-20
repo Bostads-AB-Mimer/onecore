@@ -30,10 +30,11 @@ export const keyService = {
   // ------- KEYS -------
   async getAllKeys(
     page: number = 1,
-    limit: number = 60
+    limit: number = 60,
+    includeKeySystem: boolean = false
   ): Promise<PaginatedResponse<Key>> {
     const { data, error } = await GET('/keys', {
-      params: { query: { page, limit } },
+      params: { query: { page, limit, includeKeySystem } },
     })
     if (error) throw error
     return ensurePaginatedResponse<Key>(data)
@@ -70,10 +71,11 @@ export const keyService = {
   async searchKeys(
     searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
-    limit: number = 60
+    limit: number = 60,
+    includeKeySystem: boolean = false
   ): Promise<PaginatedResponse<Key>> {
     const { data, error } = await GET('/keys/search', {
-      params: { query: { ...searchParams, page, limit } },
+      params: { query: { ...searchParams, page, limit, includeKeySystem } },
       querySerializer,
     })
     if (error) throw error
@@ -93,14 +95,19 @@ export const keyService = {
 
   async getKeysWithLoanAndEvent(
     rentalObjectCode: string,
-    includeLatestEvent?: boolean
+    includeLatestEvent?: boolean,
+    includeKeySystem?: boolean
   ): Promise<KeyWithLoanAndEvent[]> {
+    const queryParams: Record<string, boolean> = {}
+    if (includeLatestEvent) queryParams.includeLatestEvent = true
+    if (includeKeySystem) queryParams.includeKeySystem = true
+
     const { data, error } = await GET(
       '/keys/with-loan-status/{rentalObjectCode}',
       {
         params: {
           path: { rentalObjectCode },
-          query: includeLatestEvent ? { includeLatestEvent: true } : {},
+          query: queryParams,
         },
       }
     )

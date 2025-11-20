@@ -67,6 +67,7 @@ export interface LoanableKeyTableConfig {
     keyName?: boolean
     sequence?: boolean
     flex?: boolean
+    keySystem?: boolean
     status?: boolean
     pickupAvailability?: boolean
     disposal?: boolean
@@ -110,6 +111,7 @@ export function LoanableKeyTableBase({
       keyName: true,
       sequence: true,
       flex: true,
+      keySystem: true,
       status: true,
       pickupAvailability: false,
       type: true,
@@ -272,6 +274,9 @@ export function LoanableKeyTableBase({
               <TableHead className="w-[8%]">Löpnr</TableHead>
             )}
             {columns.flex && <TableHead className="w-[8%]">Flex</TableHead>}
+            {columns.keySystem && (
+              <TableHead className="w-[12%]">Låssystem</TableHead>
+            )}
             {columns.type && <TableHead className="w-[15%]">Typ</TableHead>}
             {columns.status && (
               <TableHead className="w-[22%]">Status</TableHead>
@@ -524,6 +529,11 @@ function KeyRow({
       )}
       {columns.flex && (
         <TableCell className="w-[8%]">{keyData.flexNumber ?? '-'}</TableCell>
+      )}
+      {columns.keySystem && (
+        <TableCell className="w-[12%]">
+          {keyData.keySystem?.systemCode || '-'}
+        </TableCell>
       )}
       {columns.type && (
         <TableCell className="w-[15%]">

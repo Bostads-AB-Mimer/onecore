@@ -116,6 +116,7 @@ export function ContractCard({
     try {
       const keysWithStatus = await keyService.getKeysWithLoanAndEvent(
         lease.rentalPropertyId,
+        true,
         true
       )
       setKeys(keysWithStatus)

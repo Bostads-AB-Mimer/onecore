@@ -321,11 +321,7 @@ export function KeysTable({
                         {KeyTypeLabels[key.keyType]}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {key.keySystemId && keySystemMap[key.keySystemId]
-                        ? keySystemMap[key.keySystemId]
-                        : key.keySystemId || '-'}
-                    </TableCell>
+                    <TableCell>{key.keySystem?.systemCode || '-'}</TableCell>
                     <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                     <TableCell>{key.flexNumber || '-'}</TableCell>
                     <TableCell>

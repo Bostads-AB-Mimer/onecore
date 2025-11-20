@@ -81,7 +81,8 @@ export function LeaseKeyStatusList({
       try {
         const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
           lease.rentalPropertyId,
-          true // Include latest event to avoid N+1 queries
+          true, // Include latest event to avoid N+1 queries
+          true // Include key system to avoid N+1 queries
         )
         if (!cancelled) {
           setKeys(fetchedKeys)
@@ -120,6 +121,7 @@ export function LeaseKeyStatusList({
     // Only fetch directly if component is standalone (no parent providing data)
     const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
       lease.rentalPropertyId,
+      true,
       true
     )
     setKeys(fetchedKeys)

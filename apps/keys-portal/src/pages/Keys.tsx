@@ -72,37 +72,23 @@ const Index = () => {
         }
 
         // Use search endpoint if filtering/searching, otherwise use getAllKeys
+        // Include key system data in single request to avoid N+1 queries
         const hasFilters = Object.keys(searchParams).length > 0
         const response = hasFilters
-          ? await keyService.searchKeys(searchParams, page, limit)
-          : await keyService.getAllKeys(page, limit)
+          ? await keyService.searchKeys(searchParams, page, limit, true)
+          : await keyService.getAllKeys(page, limit, true)
 
         setKeys(response.content)
         pagination.setPaginationMeta(response._meta)
 
-        // Fetch key systems for keys that have a keySystemId
-        const uniqueKeySystemIds = [
-          ...new Set(
-            response.content
-              .map((k) => k.keySystemId)
-              .filter((id): id is string => id != null && id !== '')
-          ),
-        ]
-
-        if (uniqueKeySystemIds.length > 0) {
-          const systemMap: Record<string, string> = {}
-          await Promise.all(
-            uniqueKeySystemIds.map(async (id) => {
-              try {
-                const keySystem = await keyService.getKeySystem(id)
-                systemMap[id] = keySystem.systemCode
-              } catch (error) {
-                console.error(`Failed to fetch key system ${id}:`, error)
-              }
-            })
-          )
-          setKeySystemMap(systemMap)
-        }
+        // Build key system map from included key system data (no additional API calls needed!)
+        const systemMap: Record<string, string> = {}
+        response.content.forEach((key) => {
+          if (key.keySystemId && key.keySystem) {
+            systemMap[key.keySystemId] = key.keySystem.systemCode
+          }
+        })
+        setKeySystemMap(systemMap)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Okänt fel'
         setError(msg)

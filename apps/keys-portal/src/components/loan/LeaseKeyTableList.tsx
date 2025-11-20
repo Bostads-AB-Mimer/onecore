@@ -81,6 +81,7 @@ export function LeaseKeyTableList({
       keyName: true,
       sequence: true,
       flex: true,
+      keySystem: true, // Show key system code
       status: true,
       pickupAvailability: true, // Show pickup availability for key loans
       disposal: true, // Show disposal status (Kasserad/Aktiv)
