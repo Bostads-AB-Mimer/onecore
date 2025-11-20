@@ -92,6 +92,11 @@ export const KeySystemSchema = z.object({
   updatedBy: z.string().nullable().optional(),
 })
 
+// Key with optional key system information (for endpoints with includeKeySystem parameter)
+export const KeyWithSystemSchema = KeySchema.extend({
+  keySystem: KeySystemSchema.optional().nullable(), // Key system information (included when requested)
+})
+
 export const LogSchema = z.object({
   id: z.string().uuid(),
   userName: z.string(),
@@ -149,6 +154,7 @@ export const KeyWithLoanAndEventSchema = KeySchema.extend({
   loan: KeyLoanSchema.nullable(), // Active loan (null if not currently loaned)
   previousLoan: KeyLoanSchema.nullable().optional(), // Previous loan (for returned keys)
   latestEvent: KeyEventSchema.nullable().optional(),
+  keySystem: KeySystemSchema.optional().nullable(), // Key system information (included when requested)
 })
 
 // Response schema for key bundle with loan status endpoint

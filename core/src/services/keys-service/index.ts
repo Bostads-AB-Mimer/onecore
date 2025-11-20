@@ -1113,8 +1113,9 @@ export const routes = (router: KoaRouter) => {
     const limit = ctx.query.limit
       ? parseInt(ctx.query.limit as string)
       : undefined
+    const includeKeySystem = ctx.query.includeKeySystem === 'true'
 
-    const result = await KeysApi.list(page, limit)
+    const result = await KeysApi.list(page, limit, includeKeySystem)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching keys')
@@ -1227,7 +1228,8 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
-    const result = await KeysApi.search(ctx.query)
+    const includeKeySystem = ctx.query.includeKeySystem === 'true'
+    const result = await KeysApi.search(ctx.query, includeKeySystem)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
@@ -1283,8 +1285,10 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const includeKeySystem = ctx.query.includeKeySystem === 'true'
     const result = await KeysApi.getByRentalObjectCode(
-      ctx.params.rentalObjectCode
+      ctx.params.rentalObjectCode,
+      includeKeySystem
     )
 
     if (!result.ok) {
@@ -1342,10 +1346,12 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/with-loan-status/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const includeLatestEvent = ctx.query.includeLatestEvent === 'true'
+    const includeKeySystem = ctx.query.includeKeySystem === 'true'
 
     const result = await KeysApi.getWithLoanStatus(
       ctx.params.rentalObjectCode,
-      includeLatestEvent
+      includeLatestEvent,
+      includeKeySystem
     )
 
     if (!result.ok) {

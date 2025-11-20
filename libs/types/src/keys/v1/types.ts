@@ -10,6 +10,7 @@ import {
   SignatureResourceTypeSchema,
   // Main entity schemas
   KeySchema,
+  KeyWithSystemSchema,
   KeyLoanSchema,
   KeySystemSchema,
   LogSchema,
@@ -61,6 +62,7 @@ export type KeyEventStatus = z.infer<typeof KeyEventStatusSchema>
 
 // Main entity types
 export type Key = z.infer<typeof KeySchema>
+export type KeyWithSystem = z.infer<typeof KeyWithSystemSchema>
 export type KeyLoan = z.infer<typeof KeyLoanSchema>
 export type KeyLoanWithDetails = z.infer<typeof KeyLoanWithDetailsSchema>
 export type KeySystem = z.infer<typeof KeySystemSchema>

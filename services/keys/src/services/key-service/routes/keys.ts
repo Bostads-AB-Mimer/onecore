@@ -10,6 +10,8 @@ import { buildSearchQuery } from '../../../utils/search-builder'
 
 const {
   KeySchema,
+  KeyWithSystemSchema,
+  KeySystemSchema,
   KeyWithLoanAndEventSchema,
   KeyLoanSchema,
   CreateKeyRequestSchema,
@@ -75,6 +77,13 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
    *         description: A paginated list of keys.
@@ -96,8 +105,16 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const query = keysAdapter.getAllKeysQuery(db)
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
+      const query = keysAdapter.getAllKeysQuery(db, includeKeySystem)
       const paginatedResult = await paginate(query, ctx)
+
+      // Transform rows if keySystem was included
+      if (includeKeySystem) {
+        paginatedResult.content = paginatedResult.content.map((row: any) =>
+          keysAdapter.transformKeySystemFields(row)
+        )
+      }
 
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }
@@ -191,6 +208,13 @@ export const routes = (router: KoaRouter) => {
    *         name: updatedAt
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -212,10 +236,12 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     try {
-      const query = keysAdapter.getKeysSearchQuery(db)
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
+      const query = keysAdapter.getKeysSearchQuery(db, includeKeySystem)
 
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['keyName', 'rentalObjectCode'],
+        reservedParams: ['q', 'fields', 'page', 'limit', 'includeKeySystem'],
       })
 
       if (!searchResult.hasSearchParams) {
@@ -231,6 +257,13 @@ export const routes = (router: KoaRouter) => {
         query.orderBy('keyName', 'asc'),
         ctx
       )
+
+      // Transform rows if keySystem was included
+      if (includeKeySystem) {
+        paginatedResult.content = paginatedResult.content.map((row: any) =>
+          keysAdapter.transformKeySystemFields(row)
+        )
+      }
 
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }
@@ -255,6 +288,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The rental object code to filter keys by.
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
    *         description: List of keys for the rental object code.
@@ -281,9 +321,11 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
       const rows = await keysAdapter.getKeysByRentalObject(
         ctx.params.rentalObjectCode,
-        db
+        db,
+        includeKeySystem
       )
 
       ctx.status = 200
@@ -325,6 +367,13 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Include the latest key event for each key in the response.
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
    *         description: List of keys with enriched loan and event data.
@@ -352,10 +401,12 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const includeLatestEvent = ctx.query.includeLatestEvent === 'true'
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
       const rows = await keysAdapter.getKeysWithLoanStatus(
         ctx.params.rentalObjectCode,
         db,
-        includeLatestEvent
+        includeLatestEvent,
+        includeKeySystem
       )
 
       ctx.status = 200

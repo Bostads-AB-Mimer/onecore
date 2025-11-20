@@ -143,11 +143,13 @@ async function deleteJSON<T = unknown>(
 export const KeysApi = {
   list: async (
     page?: number,
-    limit?: number
+    limit?: number,
+    includeKeySystem?: boolean
   ): Promise<AdapterResult<PaginatedResponse<Key>, CommonErr>> => {
     const params = new URLSearchParams()
     if (page) params.append('page', page.toString())
     if (limit) params.append('limit', limit.toString())
+    if (includeKeySystem) params.append('includeKeySystem', 'true')
 
     const queryString = params.toString()
     const url = queryString ? `${BASE}/keys?${queryString}` : `${BASE}/keys`
@@ -157,7 +159,8 @@ export const KeysApi = {
   },
 
   search: async (
-    searchParams: Record<string, string | string[] | undefined>
+    searchParams: Record<string, string | string[] | undefined>,
+    includeKeySystem?: boolean
   ): Promise<
     AdapterResult<PaginatedResponse<Key>, 'bad-request' | CommonErr>
   > => {
@@ -173,6 +176,10 @@ export const KeysApi = {
       }
     }
 
+    if (includeKeySystem) {
+      params.append('includeKeySystem', 'true')
+    }
+
     const r = await getJSON<PaginatedResponse<Key>>(
       `${BASE}/keys/search?${params.toString()}`
     )
@@ -180,19 +187,28 @@ export const KeysApi = {
   },
 
   getByRentalObjectCode: async (
-    rentalObjectCode: string
+    rentalObjectCode: string,
+    includeKeySystem?: boolean
   ): Promise<AdapterResult<Key[], CommonErr>> => {
+    const queryParams = includeKeySystem ? '?includeKeySystem=true' : ''
     const r = await getJSON<{ content: Key[] }>(
-      `${BASE}/keys/by-rental-object/${rentalObjectCode}`
+      `${BASE}/keys/by-rental-object/${rentalObjectCode}${queryParams}`
     )
     return r.ok ? ok(r.data.content) : r
   },
 
   getWithLoanStatus: async (
     rentalObjectCode: string,
-    includeLatestEvent?: boolean
+    includeLatestEvent?: boolean,
+    includeKeySystem?: boolean
   ): Promise<AdapterResult<KeyWithLoanAndEvent[], CommonErr>> => {
-    const queryParams = includeLatestEvent ? '?includeLatestEvent=true' : ''
+    const params = new URLSearchParams()
+    if (includeLatestEvent) params.append('includeLatestEvent', 'true')
+    if (includeKeySystem) params.append('includeKeySystem', 'true')
+
+    const queryString = params.toString()
+    const queryParams = queryString ? `?${queryString}` : ''
+
     const r = await getJSON<{ content: KeyWithLoanAndEvent[] }>(
       `${BASE}/keys/with-loan-status/${rentalObjectCode}${queryParams}`
     )

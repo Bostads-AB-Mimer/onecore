@@ -14,6 +14,83 @@ const TABLE = 'keys'
  * These functions wrap database calls to make them easier to test.
  */
 
+/**
+ * Helper function to add key system join and field selections to a query
+ * Adds LEFT JOIN on key_systems table and selects all key system fields with keySystem_ prefix
+ */
+function addKeySystemJoin(query: Knex.QueryBuilder): void {
+  query
+    .select(
+      'key_systems.id as keySystem_id',
+      'key_systems.systemCode as keySystem_systemCode',
+      'key_systems.name as keySystem_name',
+      'key_systems.manufacturer as keySystem_manufacturer',
+      'key_systems.managingSupplier as keySystem_managingSupplier',
+      'key_systems.type as keySystem_type',
+      'key_systems.propertyIds as keySystem_propertyIds',
+      'key_systems.installationDate as keySystem_installationDate',
+      'key_systems.isActive as keySystem_isActive',
+      'key_systems.description as keySystem_description',
+      'key_systems.schemaFileId as keySystem_schemaFileId',
+      'key_systems.createdAt as keySystem_createdAt',
+      'key_systems.updatedAt as keySystem_updatedAt',
+      'key_systems.createdBy as keySystem_createdBy',
+      'key_systems.updatedBy as keySystem_updatedBy'
+    )
+    .leftJoin('key_systems', 'keys.keySystemId', 'key_systems.id')
+}
+
+/**
+ * Transform flat row with keySystem_ prefixed fields into nested keySystem object
+ * Removes the flat keySystem_ fields and adds a nested keySystem object
+ * Uses the same pattern as getKeysWithLoanStatus for consistency
+ */
+export function transformKeySystemFields(row: any): any {
+  const {
+    keySystem_id,
+    keySystem_systemCode,
+    keySystem_name,
+    keySystem_manufacturer,
+    keySystem_managingSupplier,
+    keySystem_type,
+    keySystem_propertyIds,
+    keySystem_installationDate,
+    keySystem_isActive,
+    keySystem_description,
+    keySystem_schemaFileId,
+    keySystem_createdAt,
+    keySystem_updatedAt,
+    keySystem_createdBy,
+    keySystem_updatedBy,
+    ...keyData
+  } = row
+
+  return {
+    ...keyData,
+    // Nest key system object (same pattern as loan/event nesting)
+    keySystem:
+      keySystem_id !== null && keySystem_id !== undefined
+        ? {
+            id: keySystem_id,
+            systemCode: keySystem_systemCode,
+            name: keySystem_name,
+            manufacturer: keySystem_manufacturer,
+            managingSupplier: keySystem_managingSupplier,
+            type: keySystem_type,
+            propertyIds: keySystem_propertyIds,
+            installationDate: keySystem_installationDate,
+            isActive: keySystem_isActive,
+            description: keySystem_description,
+            schemaFileId: keySystem_schemaFileId,
+            createdAt: keySystem_createdAt,
+            updatedAt: keySystem_updatedAt,
+            createdBy: keySystem_createdBy,
+            updatedBy: keySystem_updatedBy,
+          }
+        : null,
+  }
+}
+
 export async function getKeyById(
   id: string,
   dbConnection: Knex | Knex.Transaction = db
@@ -29,11 +106,21 @@ export async function getAllKeys(
 
 export async function getKeysByRentalObject(
   rentalObjectCode: string,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex | Knex.Transaction = db,
+  includeKeySystem = false
 ): Promise<Key[]> {
-  return await dbConnection(TABLE)
-    .where({ rentalObjectCode })
-    .orderBy('keyName', 'asc')
+  const query = dbConnection(TABLE)
+    .where({ 'keys.rentalObjectCode': rentalObjectCode })
+    .select('keys.*')
+
+  if (includeKeySystem) {
+    addKeySystemJoin(query)
+  }
+
+  const rows = await query.orderBy('keys.keyName', 'asc')
+
+  // Transform rows if keySystem was included
+  return includeKeySystem ? rows.map(transformKeySystemFields) : rows
 }
 
 export async function createKey(
@@ -87,16 +174,19 @@ export async function bulkUpdateFlexNumber(
  * - Active loan nested as object (loan field)
  * - Previous loan nested as object (previousLoan field)
  * - Optionally includes latest key event data
+ * - Optionally includes key system data
  *
  * @param rentalObjectCode - The rental object code to filter keys by
  * @param dbConnection - Database connection (optional, defaults to db)
  * @param includeLatestEvent - Whether to include the latest key event for each key
+ * @param includeKeySystem - Whether to include key system information
  * @returns Promise<KeyWithLoanAndEvent[]> - Keys with nested loan objects
  */
 export async function getKeysWithLoanStatus(
   rentalObjectCode: string,
   dbConnection: Knex | Knex.Transaction = db,
-  includeLatestEvent = false
+  includeLatestEvent = false,
+  includeKeySystem = false
 ): Promise<KeyWithLoanAndEvent[]> {
   const eventFields = includeLatestEvent
     ? `,
@@ -126,6 +216,30 @@ export async function getKeysWithLoanStatus(
       WHERE ke.keys LIKE '%"' + CAST(k.id AS NVARCHAR(36)) + '"%'
       ORDER BY ke.createdAt DESC
     ) event`
+    : ''
+
+  const keySystemFields = includeKeySystem
+    ? `,
+      -- Key system data
+      ks.id as keySystem_id,
+      ks.systemCode as keySystem_systemCode,
+      ks.name as keySystem_name,
+      ks.manufacturer as keySystem_manufacturer,
+      ks.managingSupplier as keySystem_managingSupplier,
+      ks.type as keySystem_type,
+      ks.propertyIds as keySystem_propertyIds,
+      ks.installationDate as keySystem_installationDate,
+      ks.isActive as keySystem_isActive,
+      ks.description as keySystem_description,
+      ks.schemaFileId as keySystem_schemaFileId,
+      ks.createdAt as keySystem_createdAt,
+      ks.updatedAt as keySystem_updatedAt,
+      ks.createdBy as keySystem_createdBy,
+      ks.updatedBy as keySystem_updatedBy`
+    : ''
+
+  const keySystemJoin = includeKeySystem
+    ? `LEFT JOIN key_systems ks ON k.keySystemId = ks.id`
     : ''
 
   const result = await dbConnection.raw(
@@ -161,7 +275,7 @@ export async function getKeysWithLoanStatus(
       prev.createdAt as prevLoan_createdAt,
       prev.updatedAt as prevLoan_updatedAt,
       prev.createdBy as prevLoan_createdBy,
-      prev.updatedBy as prevLoan_updatedBy${eventFields}
+      prev.updatedBy as prevLoan_updatedBy${eventFields}${keySystemFields}
 
     FROM keys k
 
@@ -202,6 +316,7 @@ export async function getKeysWithLoanStatus(
       ORDER BY kl2.createdAt DESC
     ) prev
     ${eventJoin}
+    ${keySystemJoin}
 
     WHERE k.rentalObjectCode = ?
       AND (
@@ -255,6 +370,22 @@ export async function getKeysWithLoanStatus(
       eventWorkOrderId,
       eventCreatedAt,
       eventUpdatedAt,
+      // Extract key system fields (if included)
+      keySystem_id,
+      keySystem_systemCode,
+      keySystem_name,
+      keySystem_manufacturer,
+      keySystem_managingSupplier,
+      keySystem_type,
+      keySystem_propertyIds,
+      keySystem_installationDate,
+      keySystem_isActive,
+      keySystem_description,
+      keySystem_schemaFileId,
+      keySystem_createdAt,
+      keySystem_updatedAt,
+      keySystem_createdBy,
+      keySystem_updatedBy,
       // Rest is key data
       ...keyData
     } = row
@@ -314,6 +445,27 @@ export async function getKeysWithLoanStatus(
               updatedAt: eventUpdatedAt,
             }
           : null,
+      // Nest key system object (if included)
+      keySystem:
+        includeKeySystem && keySystem_id !== null
+          ? {
+              id: keySystem_id,
+              systemCode: keySystem_systemCode,
+              name: keySystem_name,
+              manufacturer: keySystem_manufacturer,
+              managingSupplier: keySystem_managingSupplier,
+              type: keySystem_type,
+              propertyIds: keySystem_propertyIds,
+              installationDate: keySystem_installationDate,
+              isActive: keySystem_isActive,
+              description: keySystem_description,
+              schemaFileId: keySystem_schemaFileId,
+              createdAt: keySystem_createdAt,
+              updatedAt: keySystem_updatedAt,
+              createdBy: keySystem_createdBy,
+              updatedBy: keySystem_updatedBy,
+            }
+          : null,
     }
   }) as KeyWithLoanAndEvent[]
 }
@@ -321,19 +473,37 @@ export async function getKeysWithLoanStatus(
 /**
  * Get all keys query builder for pagination
  * Returns a query builder that can be used with paginate()
+ * @param dbConnection - Database connection
+ * @param includeKeySystem - Whether to join and include key system information
  */
 export function getAllKeysQuery(
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex | Knex.Transaction = db,
+  includeKeySystem = false
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*').orderBy('createdAt', 'desc')
+  const query = dbConnection(TABLE).select('keys.*')
+
+  if (includeKeySystem) {
+    addKeySystemJoin(query)
+  }
+
+  return query.orderBy('keys.createdAt', 'desc')
 }
 
 /**
  * Get keys search query builder for pagination
  * Returns a query builder that can be used with buildSearchQuery() and paginate()
+ * @param dbConnection - Database connection
+ * @param includeKeySystem - Whether to join and include key system information
  */
 export function getKeysSearchQuery(
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex | Knex.Transaction = db,
+  includeKeySystem = false
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*')
+  const query = dbConnection(TABLE).select('keys.*')
+
+  if (includeKeySystem) {
+    addKeySystemJoin(query)
+  }
+
+  return query
 }
