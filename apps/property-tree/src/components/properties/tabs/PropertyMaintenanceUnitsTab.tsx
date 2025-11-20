@@ -139,19 +139,6 @@ export const PropertyMaintenanceUnitsTab = ({
               </AccordionTrigger>
               <AccordionContent className="pt-3 pb-4">
                 <div className="space-y-4 px-3 sm:px-4">
-                  <div className="flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      className="opacity-50 cursor-not-allowed"
-                      title="Funktionalitet kommer snart"
-                    >
-                      <FilePlus className="h-4 w-4 mr-2" />
-                      Skapa ärende
-                    </Button>
-                  </div>
-
                   {unitCount > 0 ? (
                     <div className="space-y-2">
                       {units.map((unit) => (
@@ -159,14 +146,28 @@ export const PropertyMaintenanceUnitsTab = ({
                           key={unit.id}
                           className="p-3 bg-background rounded-lg border border-slate-200"
                         >
-                          <h4 className="font-medium text-sm mb-2">
-                            {unit.caption}
-                          </h4>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>
-                              <span className="font-medium">Kod:</span>{' '}
-                              {unit.code}
-                            </p>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm mb-2">
+                                {unit.caption}
+                              </h4>
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                <p>
+                                  <span className="font-medium">Kod:</span>{' '}
+                                  {unit.code}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled
+                              className="opacity-50 cursor-not-allowed shrink-0"
+                              title="Funktionalitet kommer snart"
+                            >
+                              <FilePlus className="h-4 w-4 mr-2" />
+                              Skapa ärende
+                            </Button>
                           </div>
                         </div>
                       ))}
