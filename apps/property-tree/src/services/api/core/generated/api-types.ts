@@ -5858,6 +5858,28 @@ export interface components {
         /** Format: date-time */
         updatedAt: string;
       }) | null;
+      keySystem?: ({
+        /** Format: uuid */
+        id: string;
+        systemCode: string;
+        name: string;
+        manufacturer: string;
+        managingSupplier?: string | null;
+        /** @enum {string} */
+        type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+        propertyIds?: string;
+        /** Format: date-time */
+        installationDate?: string | null;
+        isActive?: boolean;
+        description?: string | null;
+        schemaFileId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        createdBy?: string | null;
+        updatedBy?: string | null;
+      }) | null;
     };
     KeyLoanWithDetails: {
       /** Format: uuid */
@@ -6177,6 +6199,28 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+          }) | null;
+          keySystem?: ({
+            /** Format: uuid */
+            id: string;
+            systemCode: string;
+            name: string;
+            manufacturer: string;
+            managingSupplier?: string | null;
+            /** @enum {string} */
+            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+            propertyIds?: string;
+            /** Format: date-time */
+            installationDate?: string | null;
+            isActive?: boolean;
+            description?: string | null;
+            schemaFileId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            createdBy?: string | null;
+            updatedBy?: string | null;
           }) | null;
         })[];
     };

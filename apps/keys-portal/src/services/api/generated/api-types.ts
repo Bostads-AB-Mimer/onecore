@@ -1373,6 +1373,8 @@ export interface paths {
           page?: number;
           /** @description Number of records per page */
           limit?: number;
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean;
         };
       };
       responses: {
@@ -1469,6 +1471,8 @@ export interface paths {
           keySystemId?: string;
           createdAt?: string;
           updatedAt?: string;
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean;
         };
       };
       responses: {
@@ -1498,6 +1502,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean;
+        };
         path: {
           /** @description The rental object code to filter keys by. */
           rentalObjectCode: string;
@@ -1542,6 +1550,8 @@ export interface paths {
         query?: {
           /** @description Include the latest key event for each key in the response. */
           includeLatestEvent?: boolean;
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean;
         };
         path: {
           /** @description The rental object code to filter keys by. */
@@ -2410,6 +2420,28 @@ export interface components {
         createdAt: string;
         /** Format: date-time */
         updatedAt: string;
+      }) | null;
+      keySystem?: ({
+        /** Format: uuid */
+        id: string;
+        systemCode: string;
+        name: string;
+        manufacturer: string;
+        managingSupplier?: string | null;
+        /** @enum {string} */
+        type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+        propertyIds?: string;
+        /** Format: date-time */
+        installationDate?: string | null;
+        isActive?: boolean;
+        description?: string | null;
+        schemaFileId?: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        createdBy?: string | null;
+        updatedBy?: string | null;
       }) | null;
     };
     PaginationMeta: {
