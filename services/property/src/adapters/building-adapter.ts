@@ -29,99 +29,114 @@ export type BuildingWithRelations = Prisma.BuildingGetPayload<{
 const getBuildings = async (
   propertyCode: string
 ): Promise<BuildingWithRelations[]> => {
-  const propertyStructures = await prisma.propertyStructure.findMany({
-    where: {
-      propertyCode: {
-        contains: propertyCode,
-      },
-      NOT: {
-        buildingId: null,
-      },
-      staircaseId: null,
-    },
-  })
-
-  return prisma.building
-    .findMany({
+  try {
+    const propertyStructures = await prisma.propertyStructure.findMany({
       where: {
-        propertyObjectId: {
-          in: map(propertyStructures, 'propertyObjectId'),
+        propertyCode: {
+          contains: propertyCode,
         },
+        NOT: {
+          buildingId: null,
+        },
+        staircaseId: null,
       },
-      include: {
-        buildingType: true,
-        marketArea: true,
-        district: true,
-        propertyDesignation: true,
-        propertyObject: {
-          include: {
-            property: true,
-            quantityValues: {
-              include: {
-                quantityType: true,
+    })
+
+    return prisma.building
+      .findMany({
+        where: {
+          propertyObjectId: {
+            in: map(propertyStructures, 'propertyObjectId'),
+          },
+        },
+        include: {
+          buildingType: true,
+          marketArea: true,
+          district: true,
+          propertyDesignation: true,
+          propertyObject: {
+            include: {
+              property: true,
+              quantityValues: {
+                include: {
+                  quantityType: true,
+                },
               },
             },
           },
         },
-      },
-    })
-    .then(trimStrings)
+      })
+      .then(trimStrings)
+  } catch (err) {
+    logger.error({ err, propertyCode }, 'building-adapter.getBuildings')
+    throw err
+  }
 }
 
 const getBuildingById = async (
   id: string
 ): Promise<BuildingWithRelations | null> => {
-  return prisma.building
-    .findFirst({
-      where: {
-        id: id,
-      },
-      include: {
-        buildingType: true,
-        marketArea: true,
-        propertyDesignation: true,
-        district: true,
-        propertyObject: {
-          include: {
-            property: true,
-            quantityValues: {
-              include: {
-                quantityType: true,
+  try {
+    return prisma.building
+      .findFirst({
+        where: {
+          id: id,
+        },
+        include: {
+          buildingType: true,
+          marketArea: true,
+          propertyDesignation: true,
+          district: true,
+          propertyObject: {
+            include: {
+              property: true,
+              quantityValues: {
+                include: {
+                  quantityType: true,
+                },
               },
             },
           },
         },
-      },
-    })
-    .then(trimStrings)
+      })
+      .then(trimStrings)
+  } catch (err) {
+    logger.error({ err, id }, 'building-adapter.getBuildingById')
+    throw err
+  }
 }
 
 const getBuildingByCode = async (
   code: string
 ): Promise<BuildingWithRelations | null> => {
-  return prisma.building
-    .findFirst({
-      where: {
-        buildingCode: code,
-      },
-      include: {
-        buildingType: true,
-        marketArea: true,
-        propertyDesignation: true,
-        district: true,
-        propertyObject: {
-          include: {
-            property: true,
-            quantityValues: {
-              include: {
-                quantityType: true,
+  try {
+    return prisma.building
+      .findFirst({
+        where: {
+          buildingCode: code,
+        },
+        include: {
+          buildingType: true,
+          marketArea: true,
+          propertyDesignation: true,
+          district: true,
+          propertyObject: {
+            include: {
+              property: true,
+              quantityValues: {
+                include: {
+                  quantityType: true,
+                },
               },
             },
           },
         },
-      },
-    })
-    .then(trimStrings)
+      })
+      .then(trimStrings)
+  } catch (err) {
+    logger.error({ err, code }, 'building-adapter.getBuildingByCode')
+    throw err
+  }
 }
 
 /**
