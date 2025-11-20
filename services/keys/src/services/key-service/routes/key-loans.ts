@@ -911,17 +911,6 @@ export const routes = (router: KoaRouter) => {
             return
           }
 
-          // CRITICAL: Prevent marking loans as returned if they were never picked up
-          // This prevents the scenario where keys are marked as returned while still physically with tenant
-          if (payload.returnedAt && !existingLoan.pickedUpAt) {
-            ctx.status = 400
-            ctx.body = {
-              reason:
-                'Cannot mark loan as returned when it was never picked up. Loan must have pickedUpAt date set first.',
-              ...metadata,
-            }
-            return
-          }
 
           // Log reactivation (clearing returnedAt)
           if (!payload.returnedAt && existingLoan.returnedAt) {
