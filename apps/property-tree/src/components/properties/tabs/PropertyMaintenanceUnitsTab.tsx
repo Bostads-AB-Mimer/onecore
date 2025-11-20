@@ -54,6 +54,9 @@ const TYPE_CONFIG: Record<string, string> = {
   Skyddsrum: 'Skyddsrum',
   Lekplats: 'Lekplats',
   'Undercentral Värme': 'Installation',
+  'Undercentral Ventilation': 'Installation',
+  'Undercentral Data/IT': 'Installation',
+  'Lås & passage': 'Lås & passage',
 }
 
 export const PropertyMaintenanceUnitsTab = ({
