@@ -1,0 +1,12 @@
+model ComponentTypes {
+  id          String   @id @default(uuid()) @db.UniqueIdentifier
+  description String   @db.NVarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+
+  // Relations
+  componentSubtypes ComponentSubtypes[]
+  componentModels   ComponentModels[]
+
+  @@map("component_types")
+}
