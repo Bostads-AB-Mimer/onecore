@@ -99,7 +99,7 @@ const getContactForPnr = async (
 ): Promise<Contact> => {
   const contactResponse = await axios(
     tenantsLeasesServiceUrl +
-      '/contact/nationalRegistrationNumber/' +
+      '/contacts/by-national-registration-number/' +
       nationalRegistrationNumber
   )
 
@@ -132,7 +132,7 @@ const getContactByContactCode = async (
 ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> => {
   try {
     const res = await axios.get<{ content: Contact }>(
-      `${tenantsLeasesServiceUrl}/contact/contactCode/${contactCode}`
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}`
     )
 
     if (!res.data.content) return { ok: false, err: 'not-found' }
@@ -157,7 +157,7 @@ const getTenantByContactCode = async (
 > => {
   try {
     const res = await axios.get(
-      `${tenantsLeasesServiceUrl}/tenants/contactCode/${contactCode}`
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/tenant`
     )
 
     if (!res.data.content) {
@@ -179,7 +179,7 @@ const getContactByPhoneNumber = async (
 ): Promise<Contact | undefined> => {
   try {
     const contactResponse = await axios(
-      tenantsLeasesServiceUrl + '/contact/phoneNumber/' + phoneNumber
+      tenantsLeasesServiceUrl + '/contacts/by-phone-number/' + phoneNumber
     )
     return contactResponse.data.content
   } catch {
