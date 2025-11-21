@@ -1,6 +1,7 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
+import { addKeySystemJoin, transformKeySystemFields } from './keys-adapter'
 
 type KeyBundle = keys.v1.KeyBundle
 type KeyWithLoanAndEvent = keys.v1.KeyWithLoanAndEvent
@@ -117,12 +118,20 @@ export async function getKeyBundleWithLoanStatus(
   // 3. For each key, find if it's in any active loan (TENANT or MAINTENANCE)
   const keys: (KeyWithLoanAndEvent | null)[] = await Promise.all(
     keyIds.map(async (keyId) => {
-      const key = await dbConnection(KEYS_TABLE).where({ id: keyId }).first()
+      // Fetch key with key system information using LEFT JOIN
+      const query = dbConnection(KEYS_TABLE)
+        .where({ 'keys.id': keyId })
+        .select('keys.*')
+      addKeySystemJoin(query)
+      const keyRow = await query.first()
 
-      if (!key) {
+      if (!keyRow) {
         // Key not found, skip
         return null
       }
+
+      // Transform flat key system fields to nested object
+      const key = transformKeySystemFields(keyRow)
 
       // Find active loan containing this specific key (unified key_loans table)
       const activeLoan = await dbConnection(KEY_LOANS_TABLE)

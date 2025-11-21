@@ -18,7 +18,7 @@ const TABLE = 'keys'
  * Helper function to add key system join and field selections to a query
  * Adds LEFT JOIN on key_systems table and selects all key system fields with keySystem_ prefix
  */
-function addKeySystemJoin(query: Knex.QueryBuilder): void {
+export function addKeySystemJoin(query: Knex.QueryBuilder): void {
   query
     .select(
       'key_systems.id as keySystem_id',
