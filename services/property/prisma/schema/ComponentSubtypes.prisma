@@ -1,0 +1,14 @@
+model ComponentSubtypes {
+  id              String   @id @default(uuid()) @db.UniqueIdentifier
+  componentTypeId String   @map("component_type_id") @db.UniqueIdentifier
+  description     String   @db.NVarChar(255)
+  createdAt       DateTime @default(now()) @map("created_at") @db.DateTime
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+
+  // Relations
+  componentType   ComponentTypes      @relation(fields: [componentTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_component_subtypes_type")
+  componentModels ComponentModels[]
+
+  @@index([componentTypeId], map: "idx_component_subtypes_type")
+  @@map("component_subtypes")
+}
