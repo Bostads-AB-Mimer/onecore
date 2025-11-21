@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 
 import { routes as componentsRoutes } from './routes/components'
+import { routes as componentsNewRoutes } from './routes/components-new'
 import { routes as residencesRoutes } from './routes/residences'
 import { routes as buildingsRoutes } from './routes/buildings'
 import { routes as propertiesRoutes } from './routes/properties'
@@ -16,6 +17,7 @@ import { routes as healthRoutes } from './routes/health'
 const router = new KoaRouter()
 
 componentsRoutes(router)
+componentsNewRoutes(router)
 residencesRoutes(router)
 buildingsRoutes(router)
 propertiesRoutes(router)

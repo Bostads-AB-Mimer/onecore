@@ -1,0 +1,21 @@
+model ComponentInstallations {
+  id                  String    @id @default(uuid()) @db.UniqueIdentifier
+  componentId         String    @map("component_id") @db.UniqueIdentifier
+  spaceId             String?   @map("space_id") @db.UniqueIdentifier
+  buildingPartId      String?   @map("building_part_id") @db.UniqueIdentifier
+  installationDate    DateTime  @map("installation_date") @db.Date
+  deinstallationDate  DateTime? @map("deinstallation_date") @db.Date
+  orderNumber         String    @map("order_number") @db.NVarChar(100)
+  cost                Float     @db.Money
+  createdAt           DateTime  @default(now()) @map("created_at") @db.DateTime
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime
+
+  // Relations
+  component    Components @relation(fields: [componentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_installations_component")
+  // Note: spaceId and buildingPartId relations can be added later when those models are confirmed
+
+  @@index([componentId], map: "idx_installations_component")
+  @@index([spaceId], map: "idx_installations_space")
+  @@index([buildingPartId], map: "idx_installations_building_part")
+  @@map("component_installations")
+}
