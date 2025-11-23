@@ -2386,6 +2386,26 @@ export interface components {
       flexNumber: number;
     };
     Key: components["schemas"]["Key"];
+    KeySystem: components["schemas"]["KeySystem"];
+    KeyWithSystem: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      keySystem?: components["schemas"]["KeySystem"] | null;
+    };
     KeyLoan: components["schemas"]["KeyLoan"];
     KeyWithLoanAndEvent: {
       /** Format: uuid */
@@ -2486,9 +2506,61 @@ export interface components {
           rel: "self" | "first" | "last" | "prev" | "next";
         })[];
     };
+    PaginatedKeysWithSystemResponse: {
+      content: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          keySystem?: ({
+            /** Format: uuid */
+            id: string;
+            systemCode: string;
+            name: string;
+            manufacturer: string;
+            managingSupplier?: string | null;
+            /** @enum {string} */
+            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+            propertyIds?: string;
+            /** Format: date-time */
+            installationDate?: string | null;
+            isActive?: boolean;
+            description?: string | null;
+            schemaFileId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            createdBy?: string | null;
+            updatedBy?: string | null;
+          }) | null;
+        })[];
+      _meta: {
+        totalRecords: number;
+        page: number;
+        limit: number;
+        count: number;
+      };
+      _links: ({
+          href: string;
+          /** @enum {string} */
+          rel: "self" | "first" | "last" | "prev" | "next";
+        })[];
+    };
     CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
     UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
-    KeySystem: components["schemas"]["KeySystem"];
     PaginatedKeySystemsResponse: {
       content: ({
           /** Format: uuid */

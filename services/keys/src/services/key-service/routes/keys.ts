@@ -45,6 +45,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('Key', KeySchema)
+  registerSchema('KeyWithSystem', KeyWithSystemSchema, {
+    KeySystem: KeySystemSchema,
+  })
   registerSchema('KeyLoan', KeyLoanSchema)
   registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema, {
     KeyLoan: KeyLoanSchema,
@@ -54,6 +57,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema(
     'PaginatedKeysResponse',
     createPaginatedResponseSchema(KeySchema)
+  )
+  registerSchema(
+    'PaginatedKeysWithSystemResponse',
+    createPaginatedResponseSchema(KeyWithSystemSchema)
   )
   /**
    * @swagger

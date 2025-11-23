@@ -5801,6 +5801,47 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    KeySystem: {
+      /** Format: uuid */
+      id: string;
+      systemCode: string;
+      name: string;
+      manufacturer: string;
+      managingSupplier?: string | null;
+      /** @enum {string} */
+      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+      schemaFileId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+    };
+    KeyWithSystem: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      keySystem?: components["schemas"]["KeySystem"] | null;
+    };
     KeyLoan: {
       /** Format: uuid */
       id: string;
@@ -5936,28 +5977,6 @@ export interface components {
           /** Format: date-time */
           updatedAt: string;
         })[];
-    };
-    KeySystem: {
-      /** Format: uuid */
-      id: string;
-      systemCode: string;
-      name: string;
-      manufacturer: string;
-      managingSupplier?: string | null;
-      /** @enum {string} */
-      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-      propertyIds?: string;
-      /** Format: date-time */
-      installationDate?: string | null;
-      isActive?: boolean;
-      description?: string | null;
-      schemaFileId?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      createdBy?: string | null;
-      updatedBy?: string | null;
     };
     Log: {
       /** Format: uuid */
