@@ -57,7 +57,10 @@ export default function App() {
               <Route path="properties" element={<SearchView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
               <Route path="buildings/:buildingId" element={<BuildingView />} />
-              <Route path="components/:componentId" element={<ComponentView />} />
+              <Route
+                path="components/:componentId"
+                element={<ComponentView />}
+              />
               <Route
                 path="staircases/:buildingId/:staircaseId"
                 element={<StaircaseView />}
