@@ -35,13 +35,13 @@ export const UnpublishListing = (props: {
   return (
     <>
       <Button variant="dark" onClick={() => setOpen(true)}>
-        Tillsvidarelägg avpublicering
+        Tidigarelägg avpublicering
       </Button>
       <ActionDialog
         open={open}
         onClose={onUnpublish}
         onConfirm={onUnpublishListing}
-        title="Tillsvidarelägg avpublicering"
+        title="Tidigarelägg avpublicering"
         content="Publiceringstiden har ännu inte gått ut. Bekräfta att du vill avpublicera annonsen i förtid. Annonsen kommer att bli redo för erbjudande."
         submitButtonText="Bekräfta"
         closeButtonText="Stäng"
