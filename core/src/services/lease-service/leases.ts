@@ -61,39 +61,36 @@ export const routes = (router: KoaRouter) => {
 
   // TODO(BREAKING): Changed the query param structure
   // TODO(BREAKING): Changed the path by-rental-property-id => by-rental-object-code
-  router.get(
-    '/leases/by-rental-object-code/:rental-object-code',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+  router.get('/leases/by-rental-object-code/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
-      if (!queryParams.success) {
-        ctx.status = 400
-        ctx.body = {
-          reason: 'Invalid query parameters',
-          error: queryParams.error,
-          ...metadata,
-        }
-        return
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        error: queryParams.error,
+        ...metadata,
       }
-
-      try {
-        const leases = await leasingAdapter.getLeasesByRentalObjectCode(
-          ctx.params.rentalObjectCode,
-          queryParams.data
-        )
-
-        ctx.status = 200
-        ctx.body = {
-          content: leases.map(mapLease),
-          ...metadata,
-        }
-      } catch (err) {
-        logger.error({ err, metadata }, 'Error fetching leases from leasing')
-        ctx.status = 500
-      }
+      return
     }
-  )
+
+    try {
+      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
+        ctx.params.rentalObjectCode,
+        queryParams.data
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        content: leases.map(mapLease),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching leases from leasing')
+      ctx.status = 500
+    }
+  })
 
   /**
    * @swagger
