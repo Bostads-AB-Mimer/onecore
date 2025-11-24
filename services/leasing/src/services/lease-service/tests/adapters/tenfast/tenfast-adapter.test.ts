@@ -476,7 +476,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant,
+      data: mockTenant.records[0],
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -520,7 +520,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant })
+      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
@@ -559,7 +559,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant })
+      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
@@ -599,7 +599,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant,
+      data: mockTenant.records[0],
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -701,7 +701,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant,
+      data: mockTenant.records[0],
     })
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
@@ -739,7 +739,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant,
+      data: mockTenant.records[0],
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -783,7 +783,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant,
+      data: mockTenant.records[0],
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -827,7 +827,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant,
+      data: mockTenant.records[0],
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
