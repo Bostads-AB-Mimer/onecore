@@ -1,13 +1,14 @@
 import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
+import bodyParser from 'koa-bodyparser'
+
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as workOrderAdapter from '../../../adapters/work-order-adapter'
 import { routes } from '../index'
-import bodyParser from 'koa-bodyparser'
 import * as factory from '../../../../test/factories'
 import * as schemas from '../schemas'
 
@@ -65,8 +66,11 @@ describe('work-order-service index', () => {
     })
 
     it('should handle pnr case', async () => {
-      const getLeasesForPnrSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
+      const getContactForPnrSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactForPnr')
+        .mockResolvedValue(contactMock)
+      const getLeasesForContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
@@ -78,10 +82,14 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123', {
-        status: ['current', 'upcoming'],
-        includeContacts: true,
-      })
+      expect(getContactForPnrSpy).toHaveBeenCalledWith('123')
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
+        contactMock.contactCode,
+        {
+          status: ['current', 'upcoming'],
+          includeContacts: true,
+        }
+      )
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
