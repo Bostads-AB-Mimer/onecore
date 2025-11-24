@@ -1,4 +1,6 @@
 import KoaRouter from '@koa/router'
+import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
@@ -6,9 +8,6 @@ import * as workOrderAdapter from '../../adapters/work-order-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
-
-import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -133,8 +132,7 @@ export const routes = (router: KoaRouter) => {
         const leases = await leasingAdapter.getLeasesByRentalObjectCode(
           ctx.params.identifier,
           {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
+            status: ['current', 'upcoming'],
             includeContacts: true,
           }
         )
@@ -166,8 +164,7 @@ export const routes = (router: KoaRouter) => {
         const leases = await leasingAdapter.getLeasesForPnr(
           ctx.params.identifier,
           {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
+            status: ['current', 'upcoming'],
             includeContacts: true,
           }
         )
@@ -183,8 +180,7 @@ export const routes = (router: KoaRouter) => {
           const leases = await leasingAdapter.getLeasesByContactCode(
             contact.contactCode,
             {
-              includeUpcomingLeases: true,
-              includeTerminatedLeases: false,
+              status: ['current', 'upcoming'],
               includeContacts: false,
             }
           )
@@ -197,8 +193,7 @@ export const routes = (router: KoaRouter) => {
         const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.identifier,
           {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
+            status: ['current', 'upcoming'],
             includeContacts: true,
           }
         )

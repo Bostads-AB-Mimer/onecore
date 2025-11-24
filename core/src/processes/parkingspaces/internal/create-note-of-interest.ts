@@ -1,4 +1,5 @@
 import { HttpStatusCode } from 'axios'
+import dayjs from 'dayjs'
 import {
   parkingSpaceApplicationCategoryTranslation,
   Applicant,
@@ -98,8 +99,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
     //step 3a. Check if applicant is tenant
     const leases = await getLeasesByContactCode(contactCode, {
-      includeUpcomingLeases: true,
-      includeTerminatedLeases: false,
+      status: ['current', 'upcoming'],
       includeContacts: false,
     })
 

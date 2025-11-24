@@ -6,12 +6,13 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
+
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
 import { createNoteOfInterestForInternalParkingSpace } from '../../processes/parkingspaces/internal'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 /**
  * @swagger
@@ -747,8 +748,7 @@ export const routes = (router: KoaRouter) => {
       const leases = await leasingAdapter.getLeasesByContactCode(
         ctx.params.contactCode,
         {
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: false,
+          status: ['current', 'upcoming'],
           includeContacts: false,
         }
       )
