@@ -17,6 +17,7 @@ const axiosOptions = {
   },
 }
 
+// TODO: Atm we have two tenfast adapter and this is the only fn in this file. Move and remove this file
 export const getTenantByContactCode = async (
   contactCode: string
 ): Promise<AdapterResult<TenfastTenant | null, string>> => {
