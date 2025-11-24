@@ -10,14 +10,13 @@ import {
   SignatureResourceTypeSchema,
   // Main entity schemas
   KeySchema,
-  KeyWithSystemSchema,
+  KeyDetailsSchema,
   KeyLoanSchema,
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
   KeyBundleSchema,
-  KeyWithLoanAndEventSchema,
-  KeyBundleWithLoanStatusResponseSchema,
+  KeyBundleDetailsResponseSchema,
   BundleWithLoanedKeysInfoSchema,
   KeyEventSchema,
   ReceiptSchema,
@@ -52,6 +51,7 @@ import {
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
+  PaginatedResponseSchema,
 } from './schema'
 
 // Enum types
@@ -62,7 +62,7 @@ export type KeyEventStatus = z.infer<typeof KeyEventStatusSchema>
 
 // Main entity types
 export type Key = z.infer<typeof KeySchema>
-export type KeyWithSystem = z.infer<typeof KeyWithSystemSchema>
+export type KeyDetails = z.infer<typeof KeyDetailsSchema>
 export type KeyLoan = z.infer<typeof KeyLoanSchema>
 export type KeyLoanWithDetails = z.infer<typeof KeyLoanWithDetailsSchema>
 export type KeySystem = z.infer<typeof KeySystemSchema>
@@ -117,10 +117,9 @@ export type UpdateKeyBundleRequest = z.infer<
   typeof UpdateKeyBundleRequestSchema
 >
 
-// Key bundle types (with loan and event status)
-export type KeyWithLoanAndEvent = z.infer<typeof KeyWithLoanAndEventSchema>
-export type KeyBundleWithLoanStatusResponse = z.infer<
-  typeof KeyBundleWithLoanStatusResponseSchema
+// Key bundle types
+export type KeyBundleDetailsResponse = z.infer<
+  typeof KeyBundleDetailsResponseSchema
 >
 export type BundleWithLoanedKeysInfo = z.infer<
   typeof BundleWithLoanedKeysInfoSchema

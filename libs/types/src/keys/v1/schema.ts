@@ -13,6 +13,13 @@ export const PaginationLinksSchema = z.object({
   rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
 })
 
+// Generic pagination response wrapper (for OpenAPI allOf pattern)
+export const PaginatedResponseSchema = z.object({
+  content: z.array(z.any()),
+  _meta: PaginationMetaSchema,
+  _links: z.array(PaginationLinksSchema),
+})
+
 export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
   contentSchema: T
 ) =>
@@ -92,11 +99,6 @@ export const KeySystemSchema = z.object({
   updatedBy: z.string().nullable().optional(),
 })
 
-// Key with optional key system information (for endpoints with includeKeySystem parameter)
-export const KeyWithSystemSchema = KeySchema.extend({
-  keySystem: KeySystemSchema.optional().nullable(), // Key system information (included when requested)
-})
-
 export const LogSchema = z.object({
   id: z.string().uuid(),
   userName: z.string(),
@@ -148,19 +150,17 @@ export const KeyEventSchema = z.object({
   updatedAt: z.coerce.date(),
 })
 
-// Key with loan and event status (for key bundle table view and lease context)
-// Includes both active loan and previous loan for unified display
-export const KeyWithLoanAndEventSchema = KeySchema.extend({
-  loan: KeyLoanSchema.nullable(), // Active loan (null if not currently loaned)
-  previousLoan: KeyLoanSchema.nullable().optional(), // Previous loan (for returned keys)
-  latestEvent: KeyEventSchema.nullable().optional(),
-  keySystem: KeySystemSchema.optional().nullable(), // Key system information (included when requested)
+// Key with all optional relations (for API responses with include parameters)
+export const KeyDetailsSchema = KeySchema.extend({
+  keySystem: KeySystemSchema.optional().nullable(),
+  loans: z.array(KeyLoanSchema).optional().nullable(),
+  events: z.array(KeyEventSchema).optional().nullable(),
 })
 
 // Response schema for key bundle with loan status endpoint
-export const KeyBundleWithLoanStatusResponseSchema = z.object({
+export const KeyBundleDetailsResponseSchema = z.object({
   bundle: KeyBundleSchema,
-  keys: z.array(KeyWithLoanAndEventSchema),
+  keys: z.array(KeyDetailsSchema),
 })
 
 // Response schema for bundles with keys loaned to a specific contact
