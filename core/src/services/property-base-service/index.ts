@@ -45,16 +45,40 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ComponentModel', schemas.ComponentModelSchema)
   registerSchema('ComponentInstance', schemas.ComponentNewSchema)
   registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema)
-  registerSchema('CreateComponentTypeRequest', schemas.CreateComponentTypeSchema)
-  registerSchema('UpdateComponentTypeRequest', schemas.UpdateComponentTypeSchema)
-  registerSchema('CreateComponentSubtypeRequest', schemas.CreateComponentSubtypeSchema)
-  registerSchema('UpdateComponentSubtypeRequest', schemas.UpdateComponentSubtypeSchema)
-  registerSchema('CreateComponentModelRequest', schemas.CreateComponentModelSchema)
-  registerSchema('UpdateComponentModelRequest', schemas.UpdateComponentModelSchema)
+  registerSchema(
+    'CreateComponentTypeRequest',
+    schemas.CreateComponentTypeSchema
+  )
+  registerSchema(
+    'UpdateComponentTypeRequest',
+    schemas.UpdateComponentTypeSchema
+  )
+  registerSchema(
+    'CreateComponentSubtypeRequest',
+    schemas.CreateComponentSubtypeSchema
+  )
+  registerSchema(
+    'UpdateComponentSubtypeRequest',
+    schemas.UpdateComponentSubtypeSchema
+  )
+  registerSchema(
+    'CreateComponentModelRequest',
+    schemas.CreateComponentModelSchema
+  )
+  registerSchema(
+    'UpdateComponentModelRequest',
+    schemas.UpdateComponentModelSchema
+  )
   registerSchema('CreateComponentRequest', schemas.CreateComponentNewSchema)
   registerSchema('UpdateComponentRequest', schemas.UpdateComponentNewSchema)
-  registerSchema('CreateComponentInstallationRequest', schemas.CreateComponentInstallationSchema)
-  registerSchema('UpdateComponentInstallationRequest', schemas.UpdateComponentInstallationSchema)
+  registerSchema(
+    'CreateComponentInstallationRequest',
+    schemas.CreateComponentInstallationSchema
+  )
+  registerSchema(
+    'UpdateComponentInstallationRequest',
+    schemas.UpdateComponentInstallationSchema
+  )
 
   /**
    * @swagger
@@ -1691,7 +1715,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component type not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component type not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -1811,11 +1841,20 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentType(id.data, body.data)
+      const result = await propertyBaseAdapter.updateComponentType(
+        id.data,
+        body.data
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component type not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component type not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -1864,7 +1903,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component type not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component type not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -1929,7 +1974,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/component-subtypes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.ComponentSubtypesQueryParamsSchema.safeParse(ctx.query)
+    const params = schemas.ComponentSubtypesQueryParamsSchema.safeParse(
+      ctx.query
+    )
     if (!params.success) {
       ctx.status = 400
       ctx.body = { error: params.error.errors, ...metadata }
@@ -2003,7 +2050,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component subtype not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component subtype not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2046,7 +2099,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/component-subtypes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const body = schemas.CreateComponentSubtypeSchema.safeParse(ctx.request.body)
+    const body = schemas.CreateComponentSubtypeSchema.safeParse(
+      ctx.request.body
+    )
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -2117,7 +2172,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const body = schemas.UpdateComponentSubtypeSchema.safeParse(ctx.request.body)
+    const body = schemas.UpdateComponentSubtypeSchema.safeParse(
+      ctx.request.body
+    )
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -2125,11 +2182,20 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentSubtype(id.data, body.data)
+      const result = await propertyBaseAdapter.updateComponentSubtype(
+        id.data,
+        body.data
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component subtype not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component subtype not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2180,7 +2246,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component subtype not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component subtype not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2330,7 +2402,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component model not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2452,11 +2530,20 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentModel(id.data, body.data)
+      const result = await propertyBaseAdapter.updateComponentModel(
+        id.data,
+        body.data
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component model not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2507,7 +2594,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component model not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2651,7 +2744,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2784,7 +2883,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2835,7 +2940,13 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -2910,7 +3021,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/component-installations', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.ComponentInstallationsQueryParamsSchema.safeParse(ctx.query)
+    const params = schemas.ComponentInstallationsQueryParamsSchema.safeParse(
+      ctx.query
+    )
     if (!params.success) {
       ctx.status = 400
       ctx.body = { error: params.error.errors, ...metadata }
@@ -2982,11 +3095,19 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.getComponentInstallationById(id.data)
+      const result = await propertyBaseAdapter.getComponentInstallationById(
+        id.data
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component installation not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component installation not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -3029,7 +3150,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/component-installations', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const body = schemas.CreateComponentInstallationSchema.safeParse(ctx.request.body)
+    const body = schemas.CreateComponentInstallationSchema.safeParse(
+      ctx.request.body
+    )
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -3037,7 +3160,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.createComponentInstallation(body.data)
+      const result = await propertyBaseAdapter.createComponentInstallation(
+        body.data
+      )
 
       if (!result.ok) {
         ctx.status = 500
@@ -3101,7 +3226,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const body = schemas.UpdateComponentInstallationSchema.safeParse(ctx.request.body)
+    const body = schemas.UpdateComponentInstallationSchema.safeParse(
+      ctx.request.body
+    )
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -3109,11 +3236,20 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentInstallation(id.data, body.data)
+      const result = await propertyBaseAdapter.updateComponentInstallation(
+        id.data,
+        body.data
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component installation not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component installation not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
@@ -3160,11 +3296,19 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.deleteComponentInstallation(id.data)
+      const result = await propertyBaseAdapter.deleteComponentInstallation(
+        id.data
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = { error: result.err === 'not_found' ? 'Component installation not found' : 'Internal server error', ...metadata }
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component installation not found'
+              : 'Internal server error',
+          ...metadata,
+        }
         return
       }
 
