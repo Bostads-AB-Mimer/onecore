@@ -1,7 +1,7 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
-import transformFromXPandDb from './../../helpers/xpand-db'
-
 import { logger } from '@onecore/utilities'
+
+import transformFromXPandDb from './../../helpers/xpand-db'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
@@ -89,26 +89,6 @@ const transformFromDbContact = (
   return contact
 }
 
-const getLease = async (
-  leaseId: string,
-  includeContacts: string | string[] | undefined
-): Promise<Lease | undefined> => {
-  logger.info({ leaseId }, 'Getting lease Xpand DB')
-  const rows = await getLeaseById(leaseId)
-  if (rows.length > 0) {
-    logger.info({ leaseId }, 'Getting lease Xpand DB complete')
-    if (includeContacts) {
-      const tenants = await getContactsByLeaseId(leaseId)
-      return transformFromXPandDb.toLease(rows[0], [], tenants)
-    } else {
-      return transformFromXPandDb.toLease(rows[0], [], [])
-    }
-  }
-
-  logger.info({ leaseId }, 'Getting lease Xpand DB complete - no lease found')
-  return undefined
-}
-
 const getLeasesForContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
@@ -155,48 +135,6 @@ const getLeasesForContactCode = async (
     logger.error(err, 'tenantLeaseAdapter.getLeasesForContactCode')
     return { ok: false, err }
   }
-}
-
-const getLeasesForPropertyId = async (
-  propertyId: string,
-  options: GetLeasesOptions
-) => {
-  let leases: Lease[] = []
-  const rows = await xpandDb
-    .from('hyavk')
-    .select(
-      'hyobj.hyobjben as leaseId',
-      'hyhav.hyhavben as leaseType',
-      'hyobj.uppsagtav as noticeGivenBy',
-      'hyobj.avtalsdat as contractDate',
-      'hyobj.sistadeb as lastDebitDate',
-      'hyobj.godkdatum as approvalDate',
-      'hyobj.uppsdatum as noticeDate',
-      'hyobj.fdate as fromDate',
-      'hyobj.tdate as toDate',
-      'hyobj.uppstidg as noticeTimeTenant',
-      'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate'
-    )
-    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
-    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
-    .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
-
-  for (const row of rows) {
-    const lease = transformFromXPandDb.toLease(row, [], [])
-    leases.push(lease)
-  }
-
-  leases = filterLeasesByOptions(leases, options)
-
-  if (options.includeContacts) {
-    for (const lease of leases) {
-      const tenants = await getContactsByLeaseId(lease.leaseId)
-      lease.tenants = tenants
-    }
-  }
-
-  return leases
 }
 
 const getResidentialAreaByRentalPropertyId = async (
@@ -529,9 +467,7 @@ const formatDate = (date: Date) => {
 }
 
 export {
-  getLease,
   getLeasesForContactCode,
-  getLeasesForPropertyId,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactByPhoneNumber,
