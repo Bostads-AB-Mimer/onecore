@@ -58,8 +58,7 @@ describe('work-order-service index', () => {
       expect(res.status).toBe(200)
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith('123-456-789', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: true,
       })
       expect(res.body.content).toBeDefined()
@@ -80,8 +79,7 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: true,
       })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
@@ -107,8 +105,7 @@ describe('work-order-service index', () => {
       expect(res.status).toBe(200)
       expect(getContactByPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P158770', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: false,
       })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
@@ -130,8 +127,7 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: true,
       })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
