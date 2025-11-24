@@ -783,7 +783,7 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTenant.records[0],
     })
 
-    const mockRentalObject = factory.tenfastRentalObject.build()
+    const mockRentalObject = factory.tenfastRentalObjectResponse.build()
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
       data: mockRentalObject.records[0],
