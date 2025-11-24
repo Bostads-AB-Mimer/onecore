@@ -141,45 +141,6 @@ const getLease = async (
   return undefined
 }
 
-const getLeasesForNationalRegistrationNumber = async (
-  nationalRegistrationNumber: string,
-  options: GetLeasesOptions
-) => {
-  logger.info('Getting leases for national registration number from Xpand DB')
-  const contact = await xpandDb
-    .from('cmctc')
-    .select('cmctc.keycmctc as contactKey')
-    .limit(1)
-    .where({
-      persorgnr: nationalRegistrationNumber,
-    })
-    .limit(1)
-
-  if (contact != undefined && contact.length > 0) {
-    let leases = await getLeasesByContactKey(contact[0].contactKey)
-
-    logger.info(
-      'Getting leases for national registration number from Xpand DB complete'
-    )
-
-    leases = filterLeasesByOptions(leases, options)
-
-    if (options.includeContacts) {
-      for (const lease of leases) {
-        const tenants = await getContactsByLeaseId(lease.leaseId)
-        lease.tenants = tenants
-      }
-    }
-
-    return leases
-  }
-
-  logger.info(
-    'Getting leases for national registration number from Xpand DB complete - no leases found'
-  )
-  return undefined
-}
-
 const getLeasesForContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
@@ -640,7 +601,6 @@ const formatDate = (date: Date) => {
 export {
   getLease,
   getLeasesForContactCode,
-  getLeasesForNationalRegistrationNumber,
   getLeasesForPropertyId,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,

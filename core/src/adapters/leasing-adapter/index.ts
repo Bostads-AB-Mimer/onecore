@@ -275,7 +275,6 @@ export {
 export {
   createLease,
   getLease,
-  getLeasesForPnr,
   getLeasesByContactCode,
   getLeasesByRentalObjectCode,
 } from './leases'
