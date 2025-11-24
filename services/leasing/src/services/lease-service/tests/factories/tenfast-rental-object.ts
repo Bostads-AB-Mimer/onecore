@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { TenfastRentalObjectByRentalObjectCodeResponse } from '../../../../common/adapters/tenfast/schemas'
+import { TenfastRentalObjectByRentalObjectCodeResponse } from '../../adapters/tenfast/schemas'
 
 export const TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory =
   Factory.define<TenfastRentalObjectByRentalObjectCodeResponse>(

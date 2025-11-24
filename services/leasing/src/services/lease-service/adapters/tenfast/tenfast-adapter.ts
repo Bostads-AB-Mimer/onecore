@@ -13,7 +13,7 @@ import {
   TenfastTenantSchema,
   TenfastLease,
   TenfastLeaseSchema,
-} from '../../../../common/adapters/tenfast/schemas'
+} from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'

@@ -1,5 +1,5 @@
 import { Lease, LeaseStatus } from '@onecore/types'
-import { TenfastLease } from '../../../common/adapters/tenfast/schemas'
+import { TenfastLease } from '../adapters/tenfast/schemas'
 
 const calculateLeaseStatus = (
   startDate: Date,

@@ -4,7 +4,7 @@ import {
   TenfastLease,
   TenfastRentalObject,
   TenfastTenant,
-} from '../../../../common/adapters/tenfast/schemas'
+} from '../../adapters/tenfast/schemas'
 
 export const TenfastLeaseFactory = Factory.define<TenfastLease>(
   ({ sequence }) => ({
