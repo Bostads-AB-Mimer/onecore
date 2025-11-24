@@ -9,15 +9,15 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /leases/by-rental-property-id/{rentalPropertyId}:
+   * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get leases with related entities for a specific rental property id
+   *     summary: Get leases with related entities for a specific rental object code.
    *     tags:
    *       - Lease service
-   *     description: Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
+   *     description: Retrieves lease information along with related entities (such as tenants) for the specified rental object code.
    *     parameters:
    *       - in: path
-   *         name: rentalPropertyId
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
    *           type: string
@@ -60,36 +60,40 @@ export const routes = (router: KoaRouter) => {
    */
 
   // TODO(BREAKING): Changed the query param structure
-  router.get('/leases/by-rental-property-id/:rentalPropertyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+  // TODO(BREAKING): Changed the path by-rental-property-id => by-rental-object-code
+  router.get(
+    '/leases/by-rental-object-code/:rental-object-code',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'Invalid query parameters',
-        error: queryParams.error,
-        ...metadata,
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid query parameters',
+          error: queryParams.error,
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    try {
-      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
-        ctx.params.rentalPropertyId,
-        queryParams.data
-      )
+      try {
+        const leases = await leasingAdapter.getLeasesByRentalObjectCode(
+          ctx.params.rentalObjectCode,
+          queryParams.data
+        )
 
-      ctx.status = 200
-      ctx.body = {
-        content: leases.map(mapLease),
-        ...metadata,
+        ctx.status = 200
+        ctx.body = {
+          content: leases.map(mapLease),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err, metadata }, 'Error fetching leases from leasing')
+        ctx.status = 500
       }
-    } catch (err) {
-      logger.error({ err, metadata }, 'Error fetching leases from leasing')
-      ctx.status = 500
     }
-  })
+  )
 
   /**
    * @swagger
@@ -98,7 +102,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get leases with related entities for a specific Personal Number (PNR)
    *     tags:
    *       - Lease service
-   *     description: Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
+   *     description: Retrieves lease information along with related entities (such as tenants) for the specified Personal Number (PNR).
    *     parameters:
    *       - in: path
    *         name: pnr
@@ -133,6 +137,8 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+
+  // TODO: Can we remove this route and use contact code instead?
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
