@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/v2/Card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/v2/Card'
 
 export default function ComponentBasicInfo() {
   // Dummy data based on componentModel and component entities
@@ -94,12 +99,16 @@ export default function ComponentBasicInfo() {
 
           <div>
             <p className="text-sm text-muted-foreground">Kvantitetstyp</p>
-            <p className="font-medium">{formatQuantityType(dummyData.quantityType)}</p>
+            <p className="font-medium">
+              {formatQuantityType(dummyData.quantityType)}
+            </p>
           </div>
 
           <div>
             <p className="text-sm text-muted-foreground">Bytesintervall</p>
-            <p className="font-medium">{dummyData.replacementIntervalMonths} månader</p>
+            <p className="font-medium">
+              {dummyData.replacementIntervalMonths} månader
+            </p>
           </div>
         </div>
       </CardContent>

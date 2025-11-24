@@ -734,7 +734,10 @@ export const UpdateComponentNewSchema = z.object({
   warrantyStartDate: z.coerce.date().optional(),
   warrantyMonths: z.number().int().min(0).optional(),
   priceAtPurchase: z.number().min(0).optional(),
-  ncsCode: z.string().regex(/^\d{3}(\.\d{3})?$/).optional(),
+  ncsCode: z
+    .string()
+    .regex(/^\d{3}(\.\d{3})?$/)
+    .optional(),
   status: ComponentStatusEnum.optional(),
 })
 
@@ -765,11 +768,19 @@ export type ComponentNew = z.infer<typeof ComponentNewSchema>
 export type ComponentInstallation = z.infer<typeof ComponentInstallationSchema>
 export type CreateComponentType = z.infer<typeof CreateComponentTypeSchema>
 export type UpdateComponentType = z.infer<typeof UpdateComponentTypeSchema>
-export type CreateComponentSubtype = z.infer<typeof CreateComponentSubtypeSchema>
-export type UpdateComponentSubtype = z.infer<typeof UpdateComponentSubtypeSchema>
+export type CreateComponentSubtype = z.infer<
+  typeof CreateComponentSubtypeSchema
+>
+export type UpdateComponentSubtype = z.infer<
+  typeof UpdateComponentSubtypeSchema
+>
 export type CreateComponentModel = z.infer<typeof CreateComponentModelSchema>
 export type UpdateComponentModel = z.infer<typeof UpdateComponentModelSchema>
 export type CreateComponentNew = z.infer<typeof CreateComponentNewSchema>
 export type UpdateComponentNew = z.infer<typeof UpdateComponentNewSchema>
-export type CreateComponentInstallation = z.infer<typeof CreateComponentInstallationSchema>
-export type UpdateComponentInstallation = z.infer<typeof UpdateComponentInstallationSchema>
+export type CreateComponentInstallation = z.infer<
+  typeof CreateComponentInstallationSchema
+>
+export type UpdateComponentInstallation = z.infer<
+  typeof UpdateComponentInstallationSchema
+>
