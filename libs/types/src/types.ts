@@ -65,20 +65,18 @@ interface Lease {
   leaseStartDate: Date
   leaseEndDate: Date | undefined
   status: LeaseStatus
-  tenantContactIds: string[] | undefined // Kanske vi vill ha external id
+  tenantContactIds: string[] | undefined
   tenants: Contact[] | undefined
-  // sublet: Information om andrahandsuthyrning
-  // hyresrader vill vi ha också
   rentalPropertyId: string
-  type: string // Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
-  noticeGivenBy: string | undefined // Vem har gjort uppsägningen?
-  noticeDate: Date | undefined // När gjordes uppsägningen?
-  noticeTimeTenant: string | undefined // Uppsägningstid i antal månader
-  preferredMoveOutDate: Date | undefined // När vill den här hyresgästen flytta ut?
-  terminationDate: Date | undefined // När bekräftades uppsägningen av mimer?
-  contractDate: Date | undefined // När skapades kontraktet?
-  lastDebitDate: Date | undefined // Sista betaldatum
-  approvalDate: Date | undefined // När godkände mimer kontraktet?
+  type: string
+  noticeGivenBy: string | undefined
+  noticeDate: Date | undefined
+  noticeTimeTenant: string | undefined
+  preferredMoveOutDate: Date | undefined
+  terminationDate: Date | undefined
+  contractDate: Date | undefined
+  lastDebitDate: Date | undefined
+  approvalDate: Date | undefined
   residentialArea?: ResidentialArea
 }
 
