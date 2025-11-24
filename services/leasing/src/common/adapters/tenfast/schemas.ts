@@ -116,6 +116,7 @@ export const TenfastRentalObjectSchema = z.object({
   hyra: z.number(),
   article: z.string(),
   hyror: z.array(z.any()), //gör hyror??
+  externalId: z.string(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
@@ -263,7 +264,7 @@ export const TenfastLeaseSchema = z.object({
   _id: z.string(),
   hyresvard: z.string(),
   hyresgaster: z.array(TenfastTenantSchema),
-  hyresobjekt: z.array(z.string()),
+  hyresobjekt: z.array(TenfastRentalObjectSchema),
   invitations: z.array(
     z.object({
       _id: z.string(),

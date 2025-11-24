@@ -10,6 +10,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory =
           hyra: 287.17,
           hyror: [],
           article: '67eb8aea545c8f1195bea0ba',
+          externalId: `externalId-${sequence}`,
         },
       ],
       prev: null,

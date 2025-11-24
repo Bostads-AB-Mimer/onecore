@@ -47,7 +47,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
     residentialArea: undefined,
     tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
     tenants: undefined,
-    rentalPropertyId: 'missing',
+    rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
     type: 'missing',
   }
 }

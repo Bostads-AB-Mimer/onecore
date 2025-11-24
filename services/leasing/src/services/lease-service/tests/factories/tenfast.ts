@@ -44,7 +44,7 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     _id: `lease-mongo-${sequence}`,
     hyresvard: 'hyresvard-1',
     hyresgaster: [],
-    hyresobjekt: [`hyresobjekt-${sequence}`],
+    hyresobjekt: [TenfastRentalObjectFactory.build()],
     invitations: [],
     confirmedHyresgastInfo: [],
     avtalsbyggare: false,
@@ -92,5 +92,6 @@ export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
     hyra: 287.17,
     hyror: [],
     article: 'article-1',
+    externalId: 'externalId-1',
   })
 )
