@@ -25,7 +25,7 @@ import { AdapterResult } from '../adapters/types'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /leases/for/contactCode/{contactCode}:
+   * /leases/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get leases by contact code
    *     description: Retrieve leases associated with a contact by contact code.
@@ -38,10 +38,10 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The contact code of the contact.
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *         description: Include terminated leases in the result.
+   *           type: string
+   *         description: The status of the leases to include.
    *       - in: query
    *         name: includeContacts
    *         schema:
@@ -63,59 +63,6 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve leases.
    */
-
-  // const getLeasesForContactCodeQueryParamSchema = z.object({
-  //   includeUpcomingLeases: z
-  //     .enum(['true', 'false'])
-  //     .optional()
-  //     .transform((value) => value === 'true'),
-  //   includeTerminatedLeases: z
-  //     .enum(['true', 'false'])
-  //     .optional()
-  //     .transform((value) => value === 'true'),
-  //   includeContacts: z
-  //     .enum(['true', 'false'])
-  //     .optional()
-  //     .transform((value) => value === 'true'),
-  // })
-
-  // router.get('(.*)/leases/for/contactCode/:contactCode', async (ctx) => {
-  //   const metadata = generateRouteMetadata(ctx, [
-  //     'includeUpcomingLeases',
-  //     'includeTerminatedLeases',
-  //     'includeContacts',
-  //   ])
-
-  //   const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
-  //     ctx.query
-  //   )
-
-  //   if (queryParams.success === false) {
-  //     ctx.status = 400
-  //     return
-  //   }
-
-  //   const result = await getLeasesForContactCode(
-  //     ctx.params.contactCode,
-  //     queryParams.data
-  //   )
-
-  //   if (!result.ok) {
-  //     ctx.status = 500
-  //     ctx.body = {
-  //       error: result.err,
-  //       ...metadata,
-  //     }
-  //     return
-  //   }
-
-  //   ctx.status = 200
-  //   ctx.body = {
-  //     content: result.data,
-  //     ...metadata,
-  //   }
-  // })
-  // Tenfast equivalent of above route
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
@@ -193,23 +140,23 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/for/propertyId/{propertyId}:
+   * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get leases by property ID
-   *     description: Retrieve leases associated with a property by property ID.
+   *     summary: Get leases by rental object code
+   *     description: Retrieve leases associated with a rental object by rental object code.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
-   *         name: propertyId
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the property.
+   *         description: The code of the rental object.
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *         description: Include terminated leases in the result.
+   *           type: string
+   *         description: The status of the leases to include.
    *       - in: query
    *         name: includeContacts
    *         schema:
@@ -231,49 +178,6 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve leases.
    */
-
-  // const getLeasesForPropertyIdQueryParamSchema = z.object({
-  //   includeUpcomingLeases: z
-  //     .enum(['true', 'false'])
-  //     .optional()
-  //     .transform((value) => value === 'true'),
-  //   includeTerminatedLeases: z
-  //     .enum(['true', 'false'])
-  //     .optional()
-  //     .transform((value) => value === 'true'),
-  //   includeContacts: z
-  //     .enum(['true', 'false'])
-  //     .optional()
-  //     .transform((value) => value === 'true'),
-  // })
-
-  // router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
-  //   const metadata = generateRouteMetadata(ctx, [
-  //     'includeUpcomingLeases',
-  //     'includeTerminatedLeases',
-  //     'includeContacts',
-  //   ])
-
-  //   const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
-  //     ctx.query
-  //   )
-  //   if (queryParams.success === false) {
-  //     ctx.status = 400
-  //     return
-  //   }
-
-  //   const responseData = await getLeasesForPropertyId(ctx.params.propertyId, {
-  //     includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-  //     includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-  //     includeContacts: queryParams.data.includeContacts,
-  //   })
-
-  //   ctx.body = {
-  //     content: responseData,
-  //     ...metadata,
-  //   }
-  // })
-
   router.get(
     '(.*)/leases/by-rental-object-code/:rentalObjectCode',
     async (ctx) => {
@@ -397,19 +301,6 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve lease details.
    */
-  // router.get('(.*)/leases/:id', async (ctx) => {
-  //   const metadata = generateRouteMetadata(ctx, ['includeContacts'])
-  //   const responseData = await getLease(
-  //     ctx.params.id,
-  //     ctx.query.includeContacts
-  //   )
-
-  //   ctx.body = {
-  //     content: responseData,
-  //     ...metadata,
-  //   }
-  // })
-
   router.get('(.*)/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
     const queryParams = leasing.v1.GetLeaseOptionsSchema.safeParse(ctx.query)
