@@ -20,10 +20,10 @@ beforeEach(jest.resetAllMocks)
 describe('leases routes', () => {
   const leaseMock: Lease = factory.lease.build()
 
-  describe('GET /leases/by-rental-property-id/:rentalPropertyId', () => {
+  describe('GET /leases/by-rental-object-code/:rentalObjectCode', () => {
     it('responds with 400 for invalid query parameters', async () => {
       const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeContacts=invalid'
+        '/leases/by-rental-object-code/123?includeContacts=invalid'
       )
 
       expect(res.status).toBe(400)
@@ -35,7 +35,7 @@ describe('leases routes', () => {
 
     it('responds with 400 for invalid query parameters', async () => {
       const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?status=invalid'
+        '/leases/by-rental-object-code/123?status=invalid'
       )
 
       expect(res.status).toBe(400)
@@ -51,7 +51,7 @@ describe('leases routes', () => {
         .mockRejectedValue(new Error('Adapter error'))
 
       const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123'
+        '/leases/by-rental-object-code/123'
       )
 
       expect(res.status).toBe(500)
@@ -63,7 +63,7 @@ describe('leases routes', () => {
         .mockResolvedValue(factory.lease.buildList(1))
 
       const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?status=current&includeContacts=true'
+        '/leases/by-rental-object-code/123?status=current&includeContacts=true'
       )
 
       expect(res.status).toBe(200)
