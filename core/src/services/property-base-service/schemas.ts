@@ -769,6 +769,10 @@ export const UpdateComponentNewSchema = z.object({
     .string()
     .regex(/^\d{3}(\.\d{3})?$/)
     .optional(),
+  ncsCode: z
+    .string()
+    .regex(/^\d{3}(\.\d{3})?$/)
+    .optional(),
   status: ComponentStatusEnum.optional(),
 })
 
@@ -799,6 +803,12 @@ export type ComponentNew = z.infer<typeof ComponentNewSchema>
 export type ComponentInstallation = z.infer<typeof ComponentInstallationSchema>
 export type CreateComponentType = z.infer<typeof CreateComponentTypeSchema>
 export type UpdateComponentType = z.infer<typeof UpdateComponentTypeSchema>
+export type CreateComponentSubtype = z.infer<
+  typeof CreateComponentSubtypeSchema
+>
+export type UpdateComponentSubtype = z.infer<
+  typeof UpdateComponentSubtypeSchema
+>
 export type CreateComponentSubtype = z.infer<
   typeof CreateComponentSubtypeSchema
 >
