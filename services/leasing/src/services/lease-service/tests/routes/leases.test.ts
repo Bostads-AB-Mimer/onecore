@@ -19,23 +19,6 @@ app.use(router.routes())
 
 nock(config.tenfast.baseUrl).get(`/v1/auth`).reply(200)
 
-describe.skip('GET /getLeasesForNationalRegistrationNumber', () => {
-  it('responds with an array of leases', async () => {
-    const leaseMock = factory.lease.buildList(3)
-    const getLeasesSpy = jest
-      .spyOn(tenantLeaseAdapter, 'getLeasesForNationalRegistrationNumber')
-      .mockResolvedValueOnce(leaseMock)
-
-    const res = await request(app.callback()).get(
-      '/leases/for/nationalRegistrationNumber/194808075577'
-    )
-    expect(res.status).toBe(200)
-    expect(res.body.content).toBeInstanceOf(Array)
-    expect(getLeasesSpy).toHaveBeenCalled()
-    expect(res.body.content.length).toBe(3)
-  })
-})
-
 describe('GET /leases/by-contact-code/:contactCode', () => {
   it('responds with 404 if tenant not found', async () => {
     jest

@@ -25,26 +25,6 @@ export const getLease = async (
   return leaseResponse.data.content
 }
 
-// TODO: need this or get by contact code?
-export const getLeasesForPnr = async (
-  nationalRegistrationNumber: string,
-  options: GetLeasesOptions
-): Promise<Lease[]> => {
-  const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
-  })
-
-  if (options.status) {
-    queryParams.set('status', options.status.join(','))
-  }
-
-  const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/for/nationalRegistrationNumber/${nationalRegistrationNumber}?${queryParams.toString()}`
-  )
-
-  return leasesResponse.data.content
-}
-
 export const getLeasesByContactCode = async (
   contactCode: string,
   options: GetLeasesOptions

@@ -3,7 +3,6 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 
 import { mapLease } from './schemas/lease'
-
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -138,27 +137,34 @@ export const routes = (router: KoaRouter) => {
   // TODO: Can we remove this route and use contact code instead?
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+    try {
+      const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
-    if (!queryParams.success) {
-      ctx.status = 400
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid query parameters',
+          error: queryParams.error,
+          ...metadata,
+        }
+        return
+      }
+
+      const contact = await leasingAdapter.getContactForPnr(ctx.params.pnr)
+
+      // TODO(BREAKING): includeContacts no longer defaults to true
+      const leases = await leasingAdapter.getLeasesByContactCode(
+        contact.contactCode,
+        queryParams.data
+      )
+
       ctx.body = {
-        reason: 'Invalid query parameters',
-        error: queryParams.error,
+        content: leases,
         ...metadata,
       }
-      return
-    }
-
-    // TODO(BREAKING): includeContacts no longer defaults to true
-    const responseData = await leasingAdapter.getLeasesForPnr(
-      ctx.params.pnr,
-      queryParams.data
-    )
-
-    ctx.body = {
-      content: responseData,
-      ...metadata,
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching leases from leasing')
+      ctx.status = 500
     }
   })
 

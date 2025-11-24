@@ -6,7 +6,6 @@ import { Lease } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
-
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 
@@ -142,15 +141,18 @@ describe('leases routes', () => {
 
   describe('GET /leases/by-pnr/:pnr', () => {
     it('responds with a list of leases', async () => {
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
+      const getContactForPnrSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactForPnr')
+        .mockResolvedValue(factory.contact.build())
+      const getLeasesSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const res = await request(app.callback()).get(
         '/leases/by-pnr/101010-1010'
       )
       expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalled()
+      expect(getLeasesSpy).toHaveBeenCalled()
       expect(res.body.content).toBeInstanceOf(Array)
       expect(JSON.stringify(res.body.content[0])).toEqual(
         JSON.stringify(leaseMock)
