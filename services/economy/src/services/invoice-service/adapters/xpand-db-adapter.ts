@@ -3,8 +3,6 @@ import {
   Address,
   Invoice,
   InvoiceRow,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
@@ -460,9 +458,6 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     expirationDate: row.expirationDate,
     debitStatus: row.debitStatus,
     paymentStatus: getPaymentStatus(row.paymentStatus),
-    transactionType: getTransactionType(row.transactionType),
-    transactionTypeName: row.transactionTypeName.trim(),
-    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   }
@@ -660,12 +655,8 @@ export const getInvoiceRows = async (
         const type = invoiceRow['type'] as number
 
         const invoice: InvoiceRow = {
-          account: trim(invoiceRow['p1']),
           amount: sumColumns(invoiceRow['rowAmount']),
-          company: trim(invoiceRow['company']),
-          contactCode: trim(invoiceRow['cmctckod']),
           deduction: sumColumns(invoiceRow['rowReduction']),
-          freeCode: trim(invoiceRow['p5']),
           fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
@@ -673,31 +664,19 @@ export const getInvoiceRows = async (
           ),
           invoiceNumber: trim(invoiceRow['invoice']),
           invoiceRowText: trim(invoiceRow['text']),
-          invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
           printGroup: trim(invoiceRow['printGroup']),
-          printGroupLabel: trim(invoiceRow['printGroupLabel']),
-          projectCode: trim(invoiceRow['p4']),
           rentArticle: trim(invoiceRow['rentArticle']),
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
-          tenantName: trim(invoiceRow['cmctcben']),
           toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
-          totalAmount: sumColumns(
-            invoiceRow['rowAmount'],
-            invoiceRow['rowReduction'],
-            invoiceRow['rowVat']
-          ),
           vat: sumColumns(invoiceRow['rowVat']),
         }
 
         if (type === 2) {
-          // credit invoice, reverse signs
-          invoice.totalAmount = -invoice.totalAmount
           invoice.amount = -invoice.amount
           invoice.vat = -invoice.vat
           invoice.deduction = -invoice.deduction
           invoice.roundoff = -invoice.roundoff
-          invoice.invoiceTotalAmount = -invoice.invoiceTotalAmount
         }
 
         return invoice
@@ -712,21 +691,6 @@ export const getInvoiceRows = async (
   )
 
   return convertedInvoiceRows
-}
-
-function getTransactionType(transactionTypeString: any) {
-  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
-    return InvoiceTransactionType.Other
-  }
-
-  let transactionType =
-    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
-
-  if (!transactionType) {
-    transactionType = InvoiceTransactionType.Other
-  }
-
-  return transactionType
 }
 
 function getPaymentStatus(paymentStatusNumber: number) {

@@ -1,12 +1,16 @@
-import { randomUUID } from 'crypto'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
+<<<<<<< HEAD
 import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
   PaymentStatus,
 } from '@onecore/types'
+=======
+import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
+import { gql } from 'graphql-request'
+>>>>>>> 5f3d80b04 (Remove unused Invoice and InvoiceRow properties, and related code)
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
@@ -113,12 +117,6 @@ const dateToXledgerDateString = (date: Date): string => {
 }
 
 const transformToInvoice = (invoiceData: any[]): Invoice[] => {
-  const InvoiceTypeMap: Record<number, Invoice['type']> = {
-    600: 'Other',
-    797: 'Regular',
-    3536: 'Regular',
-  }
-
   // Match "Sergel Inkasso" and optionally a space followed by an 8-digit date string
   const debtCollectionRegex = /Sergel Inkasso(?: (?<date>\d{8}))?/
 
@@ -157,13 +155,10 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       expirationDate: dateFromString(invoiceData.node.dueDate),
       debitStatus: 0,
       paymentStatus: PaymentStatus.Unpaid,
-      transactionType: InvoiceTransactionType.Rent,
-      transactionTypeName: randomUUID(),
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),
       remainingAmount: parseFloat(invoiceData.node.invoiceRemaining),
-      type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
       description: invoiceData.node.text ?? undefined,
       sentToDebtCollection,
       source: 'next',
