@@ -14,6 +14,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory =
           hyraVat: 0, // total moms pa hyran
           hyraExcludingVat: 287.17, // hyran exklusive moms
           hyror: TenfastInvoiceRowSchemaFactory.buildList(3),
+          externalId: `externalId-${sequence}`,
         },
       ],
       prev: null,

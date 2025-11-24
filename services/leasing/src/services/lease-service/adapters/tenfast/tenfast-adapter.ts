@@ -386,7 +386,7 @@ export async function getLeasesByTenantId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal?populate=hyresobjekt`,
     })
 
     // Not sure we want to fail completely here if parsing fails
@@ -419,7 +419,7 @@ export async function getLeasesByRentalPropertyId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt`,
     })
 
     // Not sure we want to fail completely here if parsing fails
@@ -453,7 +453,7 @@ export async function getLeaseByLeaseId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${leaseId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${leaseId}?populate=hyresobjekt`,
     })
 
     if (res.status !== 200) {
