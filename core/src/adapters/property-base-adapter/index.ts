@@ -526,3 +526,604 @@ export async function getResidenceSummariesByBuildingCode(
     return { ok: false, err: 'unknown' }
   }
 }
+
+// ==================== COMPONENT TYPES ====================
+
+type GetComponentTypesResponse = components['schemas']['ComponentType'][]
+
+export async function getComponentTypes(
+  page?: number,
+  limit?: number
+): Promise<AdapterResult<GetComponentTypesResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/component-types', {
+      params: { query: { page, limit } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentTypes')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetComponentTypeResponse = components['schemas']['ComponentType']
+
+export async function getComponentTypeById(
+  id: string
+): Promise<AdapterResult<GetComponentTypeResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().GET('/component-types/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentTypeById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createComponentType(
+  data: components['schemas']['CreateComponentTypeRequest']
+): Promise<AdapterResult<GetComponentTypeResponse, 'unknown'>> {
+  try {
+    const response = await client().POST('/component-types', {
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentType')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateComponentType(
+  id: string,
+  data: components['schemas']['UpdateComponentTypeRequest']
+): Promise<AdapterResult<GetComponentTypeResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().PUT('/component-types/{id}', {
+      params: { path: { id } },
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateComponentType')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteComponentType(
+  id: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().DELETE('/component-types/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.deleteComponentType')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENT SUBTYPES ====================
+
+type GetComponentSubtypesResponse = components['schemas']['ComponentSubtype'][]
+
+export async function getComponentSubtypes(
+  componentTypeId?: string,
+  page?: number,
+  limit?: number
+): Promise<AdapterResult<GetComponentSubtypesResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/component-subtypes', {
+      params: { query: { componentTypeId, page, limit } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentSubtypes')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetComponentSubtypeResponse = components['schemas']['ComponentSubtype']
+
+export async function getComponentSubtypeById(
+  id: string
+): Promise<
+  AdapterResult<GetComponentSubtypeResponse, 'unknown' | 'not_found'>
+> {
+  try {
+    const response = await client().GET('/component-subtypes/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentSubtypeById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createComponentSubtype(
+  data: components['schemas']['CreateComponentSubtypeRequest']
+): Promise<AdapterResult<GetComponentSubtypeResponse, 'unknown'>> {
+  try {
+    const response = await client().POST('/component-subtypes', {
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentSubtype')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateComponentSubtype(
+  id: string,
+  data: components['schemas']['UpdateComponentSubtypeRequest']
+): Promise<
+  AdapterResult<GetComponentSubtypeResponse, 'unknown' | 'not_found'>
+> {
+  try {
+    const response = await client().PUT('/component-subtypes/{id}', {
+      params: { path: { id } },
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateComponentSubtype')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteComponentSubtype(
+  id: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().DELETE('/component-subtypes/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.deleteComponentSubtype')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENT MODELS ====================
+
+type GetComponentModelsResponse = components['schemas']['ComponentModel'][]
+
+export async function getComponentModels(
+  componentTypeId?: string,
+  subtypeId?: string,
+  manufacturer?: string,
+  page?: number,
+  limit?: number
+): Promise<AdapterResult<GetComponentModelsResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/component-models', {
+      params: {
+        query: { componentTypeId, subtypeId, manufacturer, page, limit },
+      },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentModels')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetComponentModelResponse = components['schemas']['ComponentModel']
+
+export async function getComponentModelById(
+  id: string
+): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().GET('/component-models/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentModelById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createComponentModel(
+  data: components['schemas']['CreateComponentModelRequest']
+): Promise<AdapterResult<GetComponentModelResponse, 'unknown'>> {
+  try {
+    const response = await client().POST('/component-models', {
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentModel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateComponentModel(
+  id: string,
+  data: components['schemas']['UpdateComponentModelRequest']
+): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().PUT('/component-models/{id}', {
+      params: { path: { id } },
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateComponentModel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteComponentModel(
+  id: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().DELETE('/component-models/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.deleteComponentModel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENTS ====================
+
+type GetComponentsResponse = components['schemas']['ComponentInstance'][]
+
+export async function getComponents(
+  modelId?: string,
+  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
+  page?: number,
+  limit?: number
+): Promise<AdapterResult<GetComponentsResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/components-new', {
+      params: { query: { modelId, status, page, limit } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponents')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetComponentResponse = components['schemas']['ComponentInstance']
+
+export async function getComponentById(
+  id: string
+): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().GET('/components-new/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createComponent(
+  data: components['schemas']['CreateComponentRequest']
+): Promise<AdapterResult<GetComponentResponse, 'unknown'>> {
+  try {
+    const response = await client().POST('/components-new', {
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponent')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateComponent(
+  id: string,
+  data: components['schemas']['UpdateComponentRequest']
+): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().PUT('/components-new/{id}', {
+      params: { path: { id } },
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateComponent')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteComponent(
+  id: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().DELETE('/components-new/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.deleteComponent')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENT INSTALLATIONS ====================
+
+type GetComponentInstallationsResponse =
+  components['schemas']['ComponentInstallation'][]
+
+export async function getComponentInstallations(
+  componentId?: string,
+  spaceId?: string,
+  buildingPartId?: string,
+  page?: number,
+  limit?: number
+): Promise<AdapterResult<GetComponentInstallationsResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/component-installations', {
+      params: { query: { componentId, spaceId, buildingPartId, page, limit } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentInstallations')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetComponentInstallationResponse =
+  components['schemas']['ComponentInstallation']
+
+export async function getComponentInstallationById(
+  id: string
+): Promise<
+  AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
+> {
+  try {
+    const response = await client().GET('/component-installations/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentInstallationById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createComponentInstallation(
+  data: components['schemas']['CreateComponentInstallationRequest']
+): Promise<AdapterResult<GetComponentInstallationResponse, 'unknown'>> {
+  try {
+    const response = await client().POST('/component-installations', {
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentInstallation')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateComponentInstallation(
+  id: string,
+  data: components['schemas']['UpdateComponentInstallationRequest']
+): Promise<
+  AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
+> {
+  try {
+    const response = await client().PUT('/component-installations/{id}', {
+      params: { path: { id } },
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateComponentInstallation')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteComponentInstallation(
+  id: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().DELETE('/component-installations/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.deleteComponentInstallation')
+    return { ok: false, err: 'unknown' }
+  }
+}
