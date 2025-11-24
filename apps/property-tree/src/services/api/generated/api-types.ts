@@ -167,7 +167,9 @@ export interface paths {
         /** @description Successfully retrieved the residence */
         200: {
           content: {
-            "application/json": components["schemas"]["GetResidenceByRentalIdResponse"];
+            "application/json": {
+              content?: components["schemas"]["ResidenceDetails"];
+            };
           };
         };
         /** @description Residence not found */
@@ -1200,46 +1202,6 @@ export interface components {
       estateCode: string | null;
       estate: string | null;
     };
-    ResidenceByRentalId: {
-      id: string;
-      code: string;
-      name: string | null;
-      accessibility: {
-        wheelchairAccessible: boolean;
-        elevator: boolean;
-      };
-      features: {
-        hygieneFacility: string | null;
-      };
-      entrance: string | null;
-      floor: string | null;
-      deleted: boolean;
-      type: {
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
-        type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
-      property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      areaSize: number | null;
-    };
     ResidenceSummary: {
       id: string;
       code: string;
@@ -1274,57 +1236,6 @@ export interface components {
             unitId: string | null;
           };
         })[];
-    };
-    GetResidenceByRentalIdResponse: {
-      content: {
-        id: string;
-        code: string;
-        name: string | null;
-        accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-        };
-        features: {
-          hygieneFacility: string | null;
-        };
-        entrance: string | null;
-        floor: string | null;
-        deleted: boolean;
-        type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
-          type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
-        property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        areaSize: number | null;
-      };
-      _links: {
-        self: {
-          href: string;
-        };
-        link: {
-          href: string;
-          templated: boolean;
-        };
-      };
     };
     ParkingSpace: {
       rentalId: string;

@@ -1,4 +1,4 @@
-import { Residence } from '@/services/types'
+import { ResidenceSummary } from '@/services/types'
 import { Hotel } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { useNavigate } from 'react-router-dom'
@@ -6,7 +6,7 @@ import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSele
 import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
 
 interface ResidenceNavigationProps {
-  residence: Residence
+  residence: ResidenceSummary
   buildingCode: string
   staircaseCode: string
   propertyId?: string
@@ -30,11 +30,14 @@ export function ResidenceNavigation({
     itemType: 'residence',
   })
 
+  const rentalId =
+    residence.rentalId || `${buildingCode}-${staircaseCode}-${residence.code}`
+
   return (
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton
         onClick={() => {
-          navigate(`/residences/${residence.id}`, {
+          navigate(`/residences/${rentalId}`, {
             state: {
               buildingCode,
               staircaseCode,
