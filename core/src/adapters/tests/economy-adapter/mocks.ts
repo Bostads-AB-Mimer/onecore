@@ -1,4 +1,4 @@
-import { Invoice, InvoiceTransactionType, PaymentStatus } from '@onecore/types'
+import { Invoice, PaymentStatus } from '@onecore/types'
 
 const oneDayMs = 24 * 60 * 60 * 1000
 const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
@@ -15,9 +15,6 @@ export const mockedInvoices: Invoice[] = [
     invoiceDate: new Date(Date.now() + thirtyDaysMs),
     invoiceId: '123456',
     leaseId: '123-456-789/01',
-    transactionType: InvoiceTransactionType.Rent,
-    transactionTypeName: 'HYRA',
-    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   },
@@ -32,9 +29,6 @@ export const mockedInvoices: Invoice[] = [
     invoiceDate: new Date(Date.now() - thirtyDaysMs),
     invoiceId: '3456711',
     leaseId: '123-456-789/01',
-    transactionType: InvoiceTransactionType.Rent,
-    transactionTypeName: 'HYRA',
-    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   },
@@ -49,9 +43,6 @@ export const mockedInvoices: Invoice[] = [
     invoiceDate: new Date(Date.now() - 395 * oneDayMs),
     invoiceId: '3456789',
     leaseId: '123-456-789/01',
-    transactionType: InvoiceTransactionType.DebtCollection,
-    transactionTypeName: 'INKASSOBYRÅ',
-    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   },
@@ -66,9 +57,6 @@ export const mockedInvoices: Invoice[] = [
     invoiceDate: new Date(Date.now() - thirtyDaysMs),
     invoiceId: '3456790',
     leaseId: '123-456-789/01',
-    transactionType: InvoiceTransactionType.Rent,
-    transactionTypeName: 'HYRA',
-    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   },
