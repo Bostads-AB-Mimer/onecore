@@ -1,6 +1,6 @@
 import { match } from 'ts-pattern'
 
-import { TenfastLease } from '../../../../common/adapters/tenfast/schemas'
+import { TenfastLease } from './schemas'
 
 export type GetLeasesFilters = {
   status: ('current' | 'upcoming' | 'about-to-end' | 'ended')[]
