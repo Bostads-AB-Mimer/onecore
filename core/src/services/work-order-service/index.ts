@@ -161,8 +161,11 @@ export const routes = (router: KoaRouter) => {
         }
       },
       pnr: async () => {
-        const leases = await leasingAdapter.getLeasesForPnr(
-          ctx.params.identifier,
+        const contact = await leasingAdapter.getContactForPnr(
+          ctx.params.identifier
+        )
+        const leases = await leasingAdapter.getLeasesByContactCode(
+          contact.contactCode,
           {
             status: ['current', 'upcoming'],
             includeContacts: true,
