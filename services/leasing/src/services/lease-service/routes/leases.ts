@@ -25,9 +25,6 @@ import { AdapterResult } from '../adapters/types'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-
-  /**
-   * @swagger
    * /leases/for/contactCode/{contactCode}:
    *   get:
    *     summary: Get leases by contact code

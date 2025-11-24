@@ -1,7 +1,7 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
-import transformFromXPandDb from './../../helpers/xpand-db'
-
 import { logger } from '@onecore/utilities'
+
+import transformFromXPandDb from './../../helpers/xpand-db'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
@@ -121,26 +121,6 @@ const transformFromDbContact = (
   return contact
 }
 
-const getLease = async (
-  leaseId: string,
-  includeContacts: string | string[] | undefined
-): Promise<Lease | undefined> => {
-  logger.info({ leaseId }, 'Getting lease Xpand DB')
-  const rows = await getLeaseById(leaseId)
-  if (rows.length > 0) {
-    logger.info({ leaseId }, 'Getting lease Xpand DB complete')
-    if (includeContacts) {
-      const tenants = await getContactsByLeaseId(leaseId)
-      return transformFromXPandDb.toLease(rows[0], [], tenants)
-    } else {
-      return transformFromXPandDb.toLease(rows[0], [], [])
-    }
-  }
-
-  logger.info({ leaseId }, 'Getting lease Xpand DB complete - no lease found')
-  return undefined
-}
-
 const getLeasesForContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
@@ -188,7 +168,9 @@ const getLeasesForContactCode = async (
     return { ok: false, err }
   }
 }
-
+// Leaving this while rebasing for reference.
+// There was changes here after i removed this function in my branch while moving to TenFAST.
+// FIgure our what the purpose of these changes are
 const getLeasesForPropertyId = async (
   propertyId: string,
   options: GetLeasesOptions
@@ -599,9 +581,7 @@ const formatDate = (date: Date) => {
 }
 
 export {
-  getLease,
   getLeasesForContactCode,
-  getLeasesForPropertyId,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactByPhoneNumber,
