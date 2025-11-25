@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+// Xpand ID validation - variable length IDs (max 15 chars) from legacy system
+const xpandIdSchema = z.string().max(15)
+
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -391,6 +394,39 @@ export const MaintenanceUnitSchema = z.object({
   estate: z.string().nullable(),
 })
 
+export const ComponentSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  details: z.object({
+    manufacturer: z.string().nullable(),
+    typeDesignation: z.string().nullable(),
+  }),
+  dates: z.object({
+    installation: z.string().datetime().nullable(),
+    warrantyEnd: z.string().datetime().nullable(),
+  }),
+  classification: z.object({
+    componentType: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+    category: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+  }),
+  maintenanceUnits: z
+    .array(
+      z.object({
+        id: z.string(),
+        code: z.string(),
+        name: z.string(),
+      })
+    )
+    .optional(),
+})
+
 export const FacilityDetailsSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -503,6 +539,7 @@ export type RoomType = z.infer<typeof RoomTypeSchema>
 export type Room = z.infer<typeof RoomSchema>
 export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
 export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>
+export type Component = z.infer<typeof ComponentSchema>
 export type FacilityDetails = z.infer<typeof FacilityDetailsSchema>
 
 // ==================== COMPONENTS NEW ====================
@@ -558,6 +595,24 @@ export const ComponentModelSchema = z.object({
   subtype: ComponentSubtypeSchema.optional(),
 })
 
+// ComponentInstallation schema without component reference (to avoid circular reference)
+// This is used when ComponentInstallations are included in Component responses
+// For direct ComponentInstallation queries, use ComponentInstallationSchema below
+export const ComponentInstallationWithoutComponentSchema = z.object({
+  id: z.string(),
+  componentId: z.string(),
+  spaceId: xpandIdSchema.nullable(),
+  buildingPartId: xpandIdSchema.nullable(),
+  installationDate: z.string(),
+  deinstallationDate: z.string().nullable(),
+  orderNumber: z.string(),
+  cost: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+// Component instance schema with installations included
+// The componentInstallations field uses the "WithoutComponent" version to break circular reference
 export const ComponentNewSchema = z.object({
   id: z.string(),
   modelId: z.string(),
@@ -571,13 +626,18 @@ export const ComponentNewSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   model: ComponentModelSchema.optional(),
+  componentInstallations: z
+    .array(ComponentInstallationWithoutComponentSchema)
+    .optional(),
 })
 
+// Full ComponentInstallation schema with component reference
+// Used for direct ComponentInstallation queries where the full component is needed
 export const ComponentInstallationSchema = z.object({
   id: z.string(),
   componentId: z.string(),
-  spaceId: z.string().nullable(),
-  buildingPartId: z.string().nullable(),
+  spaceId: xpandIdSchema.nullable(),
+  buildingPartId: xpandIdSchema.nullable(),
   installationDate: z.string(),
   deinstallationDate: z.string().nullable(),
   orderNumber: z.string(),
@@ -628,8 +688,8 @@ export const ComponentsNewQueryParamsSchema = z.object({
 
 export const ComponentInstallationsQueryParamsSchema = z.object({
   componentId: z.string().uuid().optional(),
-  spaceId: z.string().uuid().optional(),
-  buildingPartId: z.string().uuid().optional(),
+  spaceId: xpandIdSchema.optional(),
+  buildingPartId: xpandIdSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
@@ -711,8 +771,8 @@ export const UpdateComponentNewSchema = z.object({
 
 export const CreateComponentInstallationSchema = z.object({
   componentId: z.string().uuid(),
-  spaceId: z.string().uuid().optional(),
-  buildingPartId: z.string().uuid().optional(),
+  spaceId: xpandIdSchema.optional(),
+  buildingPartId: xpandIdSchema.optional(),
   installationDate: z.string(),
   deinstallationDate: z.string().optional(),
   orderNumber: z.string().min(1),
@@ -721,8 +781,8 @@ export const CreateComponentInstallationSchema = z.object({
 
 export const UpdateComponentInstallationSchema = z.object({
   componentId: z.string().uuid().optional(),
-  spaceId: z.string().uuid().optional(),
-  buildingPartId: z.string().uuid().optional(),
+  spaceId: xpandIdSchema.optional(),
+  buildingPartId: xpandIdSchema.optional(),
   installationDate: z.string().optional(),
   deinstallationDate: z.string().optional(),
   orderNumber: z.string().min(1).optional(),

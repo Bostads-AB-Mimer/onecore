@@ -5,50 +5,6 @@
 
 
 export interface paths {
-  "openapi": {
-  };
-  "/components": {
-    /**
-     * Gets a list of components for a maintenance unit
-     * @description Retrieves all components associated with a specific maintenance unit code.
-     * Components are returned ordered by installation date (newest first).
-     * Each component includes details about its type, category, manufacturer,
-     * and associated maintenance unit information.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The unique code identifying the maintenance unit. */
-          maintenanceUnit: string;
-        };
-      };
-      responses: {
-        /**
-         * @description Successfully retrieved the components list. Returns an array of component objects
-         * containing details like ID, code, name, manufacturer, installation date, etc.
-         */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Component"][];
-            };
-          };
-        };
-        /** @description Invalid maintenance unit code provided */
-        400: {
-          content: never;
-        };
-        /** @description No components found for the specified maintenance unit */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
   "/component-types": {
     /** Get all component types */
     get: {
@@ -371,7 +327,7 @@ export interface paths {
       };
     };
   };
-  "/components-new": {
+  "/components": {
     /** Get all component instances */
     get: {
       parameters: {
@@ -418,7 +374,7 @@ export interface paths {
       };
     };
   };
-  "/components-new/{id}": {
+  "/components/{id}": {
     /** Get component instance by ID */
     get: {
       parameters: {
@@ -474,6 +430,39 @@ export interface paths {
       responses: {
         /** @description Component instance deleted */
         204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/by-room/{roomId}": {
+    /**
+     * Get components installed in a specific room
+     * @description Retrieves all components currently installed in the specified room.
+     * Only returns components that are currently installed (no deinstallation date).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Room ID (variable length, max 15 characters, Xpand legacy format) */
+          roomId: string;
+        };
+      };
+      responses: {
+        /** @description List of components in the room */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentInstance"][];
+            };
+          };
+        };
+        /** @description Invalid room ID format */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
           content: never;
         };
       };
@@ -587,6 +576,8 @@ export interface paths {
         };
       };
     };
+  };
+  "openapi": {
   };
   "/residences": {
     /**
@@ -1496,36 +1487,6 @@ export interface components {
         id: string;
       }) | null;
     };
-    Component: {
-      id: string;
-      code: string;
-      name: string;
-      details: {
-        manufacturer: string | null;
-        typeDesignation: string | null;
-      };
-      dates: {
-        /** Format: date-time */
-        installation: string | null;
-        /** Format: date-time */
-        warrantyEnd: string | null;
-      };
-      classification: {
-        componentType: {
-          code: string;
-          name: string;
-        };
-        category: {
-          code: string;
-          name: string;
-        };
-      };
-      maintenanceUnits: {
-          id: string;
-          code: string;
-          name: string;
-        }[];
-    };
     Property: {
       id: string;
       propertyObjectId: string;
@@ -1692,6 +1653,12 @@ export interface components {
         allowSmallRoomsInValuation: number;
         timestamp: string;
       }) | null;
+      propertyObject?: {
+        quantityValues: {
+            value: number;
+            quantityTypeId: string;
+          }[];
+      };
     };
     Company: {
       id: string;
@@ -2116,15 +2083,31 @@ export interface components {
           };
         };
       };
+      componentInstallations?: ({
+          /** Format: uuid */
+          id: string;
+          /** Format: uuid */
+          componentId: string;
+          spaceId: string | null;
+          buildingPartId: string | null;
+          /** Format: date-time */
+          installationDate: string;
+          /** Format: date-time */
+          deinstallationDate: string | null;
+          orderNumber: string;
+          cost: number;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
     };
     ComponentInstallation: {
       /** Format: uuid */
       id: string;
       /** Format: uuid */
       componentId: string;
-      /** Format: uuid */
       spaceId: string | null;
-      /** Format: uuid */
       buildingPartId: string | null;
       /** Format: date-time */
       installationDate: string;
@@ -2207,6 +2190,24 @@ export interface components {
             };
           };
         };
+        componentInstallations?: ({
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            componentId: string;
+            spaceId: string | null;
+            buildingPartId: string | null;
+            /** Format: date-time */
+            installationDate: string;
+            /** Format: date-time */
+            deinstallationDate: string | null;
+            orderNumber: string;
+            cost: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          })[];
       };
     };
     CreateComponentTypeRequest: {
@@ -2293,9 +2294,7 @@ export interface components {
     CreateComponentInstallationRequest: {
       /** Format: uuid */
       componentId: string;
-      /** Format: uuid */
       spaceId?: string;
-      /** Format: uuid */
       buildingPartId?: string;
       /** Format: date-time */
       installationDate: string;
@@ -2307,9 +2306,7 @@ export interface components {
     UpdateComponentInstallationRequest: {
       /** Format: uuid */
       componentId?: string;
-      /** Format: uuid */
       spaceId?: string;
-      /** Format: uuid */
       buildingPartId?: string;
       /** Format: date-time */
       installationDate?: string;

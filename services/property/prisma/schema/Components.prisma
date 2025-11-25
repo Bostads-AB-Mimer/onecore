@@ -12,6 +12,7 @@ model Components {
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
   // Relations
+  // NoAction prevents deletion if component instances exist (SQL Server doesn't support Restrict)
   model                  ComponentModels           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_components_model")
   componentInstallations ComponentInstallations[]
 

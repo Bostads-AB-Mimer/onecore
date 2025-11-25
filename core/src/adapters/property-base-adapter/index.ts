@@ -896,7 +896,7 @@ export async function getComponents(
   limit?: number
 ): Promise<AdapterResult<GetComponentsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/components-new', {
+    const response = await client().GET('/components', {
       params: { query: { modelId, status, page, limit } },
     })
 
@@ -917,7 +917,7 @@ export async function getComponentById(
   id: string
 ): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/components-new/{id}', {
+    const response = await client().GET('/components/{id}', {
       params: { path: { id } },
     })
 
@@ -940,7 +940,7 @@ export async function createComponent(
   data: components['schemas']['CreateComponentRequest']
 ): Promise<AdapterResult<GetComponentResponse, 'unknown'>> {
   try {
-    const response = await client().POST('/components-new', {
+    const response = await client().POST('/components', {
       body: data as any,
     })
 
@@ -960,7 +960,7 @@ export async function updateComponent(
   data: components['schemas']['UpdateComponentRequest']
 ): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().PUT('/components-new/{id}', {
+    const response = await client().PUT('/components/{id}', {
       params: { path: { id } },
       body: data as any,
     })
@@ -984,7 +984,7 @@ export async function deleteComponent(
   id: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().DELETE('/components-new/{id}', {
+    const response = await client().DELETE('/components/{id}', {
       params: { path: { id } },
     })
 
@@ -1124,6 +1124,35 @@ export async function deleteComponentInstallation(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponentInstallation')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENTS BY ROOM ====================
+
+type GetComponentsByRoomIdResponse = components['schemas']['ComponentInstance'][]
+
+export async function getComponentsByRoomId(
+  roomId: string
+): Promise<
+  AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/components/by-room/{roomId}', {
+      params: { path: { roomId } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentsByRoomId')
     return { ok: false, err: 'unknown' }
   }
 }

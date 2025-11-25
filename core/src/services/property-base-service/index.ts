@@ -40,6 +40,7 @@ export const routes = (router: KoaRouter) => {
     schemas.ResidenceByRentalIdSchema
   )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
+  registerSchema('Component', schemas.ComponentSchema)
   registerSchema('ComponentType', schemas.ComponentTypeSchema)
   registerSchema('ComponentSubtype', schemas.ComponentSubtypeSchema)
   registerSchema('ComponentModel', schemas.ComponentModelSchema)
@@ -1138,6 +1139,111 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies Array<schemas.Room>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/by-room/{roomId}:
+   *   get:
+   *     summary: Get components by room ID
+   *     tags:
+   *       - Property base Service
+   *     description: |
+   *       Retrieves all components associated with a specific room ID.
+   *       Components are returned ordered by installation date (newest first).
+   *     parameters:
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           maxLength: 15
+   *         description: The ID of the room (variable length, max 15 characters, Xpand legacy format)
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the components list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentInstance'
+   *       '400':
+   *         description: Invalid room ID format
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Room ID must be at most 15 characters (Xpand format)
+   *       '404':
+   *         description: Room not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Room not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/components/by-room/:roomId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const roomIdValidation = z.string().max(15).safeParse(ctx.params.roomId)
+
+    if (!roomIdValidation.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Room ID must be at most 15 characters (Xpand format)',
+        ...metadata,
+      }
+      return
+    }
+
+    const roomId = roomIdValidation.data
+
+    try {
+      const result = await propertyBaseAdapter.getComponentsByRoomId(roomId)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Room not found', ...metadata }
+          return
+        }
+
+        logger.error({ err: result.err, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data,
         ...metadata,
       }
     } catch (error) {
@@ -2616,7 +2722,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new:
+   * /components:
    *   get:
    *     summary: Get all component instances
    *     tags:
@@ -2667,7 +2773,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components-new', async (ctx) => {
+  router.get('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentsNewQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -2703,7 +2809,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   get:
    *     summary: Get component instance by ID
    *     tags:
@@ -2730,7 +2836,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components-new/:id', async (ctx) => {
+  router.get('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -2767,7 +2873,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new:
+   * /components:
    *   post:
    *     summary: Create a new component instance
    *     tags:
@@ -2791,7 +2897,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/components-new', async (ctx) => {
+  router.post('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentNewSchema.safeParse(ctx.request.body)
     if (!body.success) {
@@ -2825,7 +2931,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   put:
    *     summary: Update a component instance
    *     tags:
@@ -2859,7 +2965,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/components-new/:id', async (ctx) => {
+  router.put('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -2906,7 +3012,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   delete:
    *     summary: Delete a component instance
    *     tags:
@@ -2926,7 +3032,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/components-new/:id', async (ctx) => {
+  router.delete('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {

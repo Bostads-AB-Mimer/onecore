@@ -2842,6 +2842,49 @@ export interface paths {
       };
     };
   };
+  "/components/by-room/{roomId}": {
+    /**
+     * Get all components for a specific room
+     * @description Retrieves all components associated with a specific room ID.
+     * Components are returned ordered by installation date (newest first).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the room */
+          roomId: string;
+        };
+      };
+      responses: {
+        /** @description List of components in the room */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"][];
+            };
+          };
+        };
+        /** @description Room not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Room not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/parking-spaces/by-rental-id/{rentalId}": {
     /**
      * Get parking space data by rentalId
@@ -3344,7 +3387,7 @@ export interface paths {
       };
     };
   };
-  "/components-new": {
+  "/components": {
     /** Get all component instances */
     get: {
       parameters: {
@@ -3391,7 +3434,7 @@ export interface paths {
       };
     };
   };
-  "/components-new/{id}": {
+  "/components/{id}": {
     /** Get component instance by ID */
     get: {
       parameters: {
@@ -4145,6 +4188,36 @@ export interface components {
       };
       areaSize: number | null;
     };
+    Component: {
+      id: string;
+      code: string;
+      name: string;
+      details: {
+        manufacturer: string | null;
+        typeDesignation: string | null;
+      };
+      dates: {
+        /** Format: date-time */
+        installation: string | null;
+        /** Format: date-time */
+        warrantyEnd: string | null;
+      };
+      classification: {
+        componentType: {
+          code: string;
+          name: string;
+        };
+        category: {
+          code: string;
+          name: string;
+        };
+      };
+      maintenanceUnits?: {
+          id: string;
+          code: string;
+          name: string;
+        }[];
+    };
     ComponentType: {
       id: string;
       description: string;
@@ -4402,9 +4475,7 @@ export interface components {
     CreateComponentInstallationRequest: {
       /** Format: uuid */
       componentId: string;
-      /** Format: uuid */
       spaceId?: string;
-      /** Format: uuid */
       buildingPartId?: string;
       installationDate: string;
       deinstallationDate?: string;
@@ -4414,9 +4485,7 @@ export interface components {
     UpdateComponentInstallationRequest: {
       /** Format: uuid */
       componentId?: string;
-      /** Format: uuid */
       spaceId?: string;
-      /** Format: uuid */
       buildingPartId?: string;
       installationDate?: string;
       deinstallationDate?: string;

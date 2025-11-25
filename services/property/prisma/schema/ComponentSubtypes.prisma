@@ -6,6 +6,7 @@ model ComponentSubtypes {
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
   // Relations
+  // NoAction prevents deletion if subtypes exist (SQL Server doesn't support Restrict)
   componentType   ComponentTypes      @relation(fields: [componentTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_component_subtypes_type")
   componentModels ComponentModels[]
 
