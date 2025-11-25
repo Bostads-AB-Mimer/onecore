@@ -441,7 +441,7 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
 
     expect(getKeyBundleDetailsSpy).toHaveBeenCalledWith(
       'bundle-123',
-      true,
+      { includeLoans: false, includeEvents: false, includeKeySystem: false },
       expect.anything()
     )
     expect(res.status).toBe(200)

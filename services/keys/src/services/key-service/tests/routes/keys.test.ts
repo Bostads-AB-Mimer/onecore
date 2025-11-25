@@ -193,18 +193,19 @@ describe('GET /keys/by-rental-object/:rentalObjectCode', () => {
     ]
 
     // Mock the adapter to return the keys
-    const getKeysByRentalObjectSpy = jest
-      .spyOn(keysAdapter, 'getKeysByRentalObject')
+    const getKeysDetailsSpy = jest
+      .spyOn(keysAdapter, 'getKeysDetails')
       .mockResolvedValueOnce(mockKeys)
 
     // Make HTTP request
     const res = await request(app.callback()).get('/keys/by-rental-object/A001')
 
-    // Verify the adapter was called
-    expect(getKeysByRentalObjectSpy).toHaveBeenCalledWith(
-      'A001',
-      expect.anything()
-    )
+    // Verify the adapter was called with options object
+    expect(getKeysDetailsSpy).toHaveBeenCalledWith('A001', expect.anything(), {
+      includeLoans: false,
+      includeEvents: false,
+      includeKeySystem: false,
+    })
 
     // Verify the response
     expect(res.status).toBe(200)
@@ -484,125 +485,6 @@ describe('POST /keys/bulk-update-flex', () => {
     expect(res.status).toBe(400)
     expect(res.body).toHaveProperty('status', 'error')
     expect(res.body.data).toBeDefined()
-  })
-})
-
-/**
- * Tests for GET /keys/with-loan-status/:rentalObjectCode endpoint
- *
- * Testing keys with loan status retrieval:
- * - Successful retrieval with loan status
- * - Including latest event data
- * - Empty results when no keys exist
- * - Database errors
- */
-describe('GET /keys/with-loan-status/:rentalObjectCode', () => {
-  it('returns keys with loan status for rental object', async () => {
-    const mockKeysWithStatus = [
-      {
-        ...factory.key.build({
-          id: 'key-1',
-          keyName: 'Apartment Key',
-          rentalObjectCode: 'A001',
-        }),
-        loanStatus: 'available',
-        currentLoanId: null,
-      },
-      {
-        ...factory.key.build({
-          id: 'key-2',
-          keyName: 'Mailbox Key',
-          rentalObjectCode: 'A001',
-        }),
-        loanStatus: 'loaned',
-        currentLoanId: 'loan-123',
-      },
-    ]
-
-    const getKeysDetailsSpy = jest
-      .spyOn(keysAdapter, 'getKeysDetails')
-      .mockResolvedValueOnce(mockKeysWithStatus as any)
-
-    const res = await request(app.callback()).get('/keys/with-loan-status/A001')
-
-    expect(getKeysDetailsSpy).toHaveBeenCalledWith(
-      'A001',
-      expect.anything(),
-      false // includeLatestEvent defaults to false
-    )
-    expect(res.status).toBe(200)
-    expect(res.body.content).toHaveLength(2)
-    expect(res.body.content[0]).toHaveProperty('loanStatus')
-  })
-
-  it('includes latest event data when query parameter is set', async () => {
-    const mockKeysWithEvent = [
-      {
-        ...factory.key.build({
-          id: 'key-1',
-          keyName: 'Test Key',
-          rentalObjectCode: 'B002',
-        }),
-        loanStatus: 'available',
-        latestEvent: {
-          id: 'event-123',
-          eventType: 'returned',
-          eventDate: new Date(),
-        },
-      },
-    ]
-
-    const getKeysDetailsSpy = jest
-      .spyOn(keysAdapter, 'getKeysDetails')
-      .mockResolvedValueOnce(mockKeysWithEvent as any)
-
-    const res = await request(app.callback()).get(
-      '/keys/with-loan-status/B002?includeLatestEvent=true'
-    )
-
-    expect(getKeysDetailsSpy).toHaveBeenCalledWith(
-      'B002',
-      expect.anything(),
-      true // includeLatestEvent set to true
-    )
-    expect(res.status).toBe(200)
-    expect(res.body.content[0]).toHaveProperty('latestEvent')
-  })
-
-  it('correctly interprets includeLatestEvent=false', async () => {
-    const mockKeys = [
-      {
-        ...factory.key.build({ rentalObjectCode: 'C003' }),
-        loanStatus: 'available',
-      },
-    ]
-
-    const getKeysDetailsSpy = jest
-      .spyOn(keysAdapter, 'getKeysDetails')
-      .mockResolvedValueOnce(mockKeys as any)
-
-    const res = await request(app.callback()).get(
-      '/keys/with-loan-status/C003?includeLatestEvent=false'
-    )
-
-    expect(getKeysDetailsSpy).toHaveBeenCalledWith(
-      'C003',
-      expect.anything(),
-      false
-    )
-    expect(res.status).toBe(200)
-  })
-
-  it('handles special characters in rental object code', async () => {
-    const specialCode = 'A-001/B'
-
-    jest.spyOn(keysAdapter, 'getKeysDetails').mockResolvedValueOnce([])
-
-    const res = await request(app.callback()).get(
-      `/keys/with-loan-status/${encodeURIComponent(specialCode)}`
-    )
-
-    expect(res.status).toBe(200)
   })
 })
 
