@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import { economy, InvoiceRow } from '@onecore/types'
 
 import {
   getInvoiceByInvoiceNumber,
@@ -16,6 +16,12 @@ import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
+import {
+  getInvoiceArticle,
+  getInvoiceByOcr,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
+import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
+import { getInvoiceDetails } from './service'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -94,12 +100,10 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // TODO: This route doesn't take xpand into account
-  // Also doesn't get invoice rows
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
+      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
       if (!result) {
         ctx.status = 404
         return
