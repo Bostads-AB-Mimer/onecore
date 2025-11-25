@@ -8,8 +8,7 @@ import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
 import * as logsAdapter from '../adapters/logs-adapter'
 
-const { LogSchema, CreateLogRequestSchema, createPaginatedResponseSchema } =
-  keys.v1
+const { LogSchema, CreateLogRequestSchema, PaginatedResponseSchema } = keys.v1
 type CreateLogRequest = keys.v1.CreateLogRequest
 type Log = keys.v1.Log
 
@@ -24,17 +23,12 @@ type Log = keys.v1.Log
  *       $ref: '#/components/schemas/CreateLogRequest'
  *     Log:
  *       $ref: '#/components/schemas/Log'
- *     PaginatedLogsResponse:
- *       $ref: '#/components/schemas/PaginatedLogsResponse'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('CreateLogRequest', CreateLogRequestSchema)
   registerSchema('Log', LogSchema)
-  registerSchema(
-    'PaginatedLogsResponse',
-    createPaginatedResponseSchema(LogSchema)
-  )
+  registerSchema('PaginatedResponse', PaginatedResponseSchema)
   /**
    * @swagger
    * /logs:
@@ -63,7 +57,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       500:
    *         description: Server error
    *         content:
@@ -164,7 +165,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       400:
    *         description: Bad request
    *       500:
@@ -459,7 +467,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       500:
    *         description: Server error
    *         content:
@@ -594,7 +609,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       500:
    *         description: Server error
    *         content:
