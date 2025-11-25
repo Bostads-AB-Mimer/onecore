@@ -431,15 +431,15 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
       keys: mockKeysWithStatus,
     }
 
-    const getKeyBundleWithLoanStatusSpy = jest
-      .spyOn(keyBundlesAdapter, 'getKeyBundleWithLoanStatus')
+    const getKeyBundleDetailsSpy = jest
+      .spyOn(keyBundlesAdapter, 'getKeyBundleDetails')
       .mockResolvedValueOnce(mockResult)
 
     const res = await request(app.callback()).get(
       '/key-bundles/bundle-123/keys-with-loan-status'
     )
 
-    expect(getKeyBundleWithLoanStatusSpy).toHaveBeenCalledWith(
+    expect(getKeyBundleDetailsSpy).toHaveBeenCalledWith(
       'bundle-123',
       true,
       expect.anything()
@@ -464,12 +464,10 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
       },
     ]
 
-    jest
-      .spyOn(keyBundlesAdapter, 'getKeyBundleWithLoanStatus')
-      .mockResolvedValueOnce({
-        bundle: mockBundle,
-        keys: mockKeysNoLoans,
-      })
+    jest.spyOn(keyBundlesAdapter, 'getKeyBundleDetails').mockResolvedValueOnce({
+      bundle: mockBundle,
+      keys: mockKeysNoLoans,
+    })
 
     const res = await request(app.callback()).get(
       '/key-bundles/bundle-123/keys-with-loan-status'
@@ -485,12 +483,10 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
       keys: JSON.stringify([]),
     })
 
-    jest
-      .spyOn(keyBundlesAdapter, 'getKeyBundleWithLoanStatus')
-      .mockResolvedValueOnce({
-        bundle: mockBundle,
-        keys: [],
-      })
+    jest.spyOn(keyBundlesAdapter, 'getKeyBundleDetails').mockResolvedValueOnce({
+      bundle: mockBundle,
+      keys: [],
+    })
 
     const res = await request(app.callback()).get(
       '/key-bundles/bundle-123/keys-with-loan-status'
@@ -538,12 +534,10 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
       },
     ]
 
-    jest
-      .spyOn(keyBundlesAdapter, 'getKeyBundleWithLoanStatus')
-      .mockResolvedValueOnce({
-        bundle: mockBundle,
-        keys: mockKeysWithMixedStatus,
-      })
+    jest.spyOn(keyBundlesAdapter, 'getKeyBundleDetails').mockResolvedValueOnce({
+      bundle: mockBundle,
+      keys: mockKeysWithMixedStatus,
+    })
 
     const res = await request(app.callback()).get(
       '/key-bundles/bundle-123/keys-with-loan-status'

@@ -10,7 +10,7 @@ import { withContext } from '../testUtils'
  * These tests verify:
  * - CRUD operations on key_bundles table
  * - JSON array handling for keys field
- * - Complex getKeyBundleWithLoanStatus query
+ * - Complex getKeyBundleDetails query
  * - Search functionality
  *
  * Pattern adopted from services/leasing adapter tests
@@ -173,7 +173,7 @@ describe('key-bundles-adapter', () => {
       }))
   })
 
-  describe('getKeyBundleWithLoanStatus', () => {
+  describe('getKeyBundleDetails', () => {
     it('returns bundle with keys and their loan status', () =>
       withContext(async (ctx) => {
         // Create real keys
@@ -212,7 +212,7 @@ describe('key-bundles-adapter', () => {
         )
 
         // Get bundle with loan status
-        const result = await keyBundlesAdapter.getKeyBundleWithLoanStatus(
+        const result = await keyBundlesAdapter.getKeyBundleDetails(
           bundle.id,
           true,
           ctx.db

@@ -72,7 +72,7 @@ describe('keys-adapter', () => {
       }))
   })
 
-  describe('getKeysWithLoanStatus', () => {
+  describe('getKeysDetails', () => {
     it('returns keys with active loan information aggregated', () =>
       withContext(async (ctx) => {
         // Create key
@@ -91,11 +91,7 @@ describe('keys-adapter', () => {
         })
 
         // Test the complex aggregation query
-        const result = await keysAdapter.getKeysWithLoanStatus(
-          'A001',
-          ctx.db,
-          false
-        )
+        const result = await keysAdapter.getKeysDetails('A001', ctx.db, false)
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe(key.id)
@@ -110,11 +106,7 @@ describe('keys-adapter', () => {
           ctx.db
         )
 
-        const result = await keysAdapter.getKeysWithLoanStatus(
-          'A001',
-          ctx.db,
-          false
-        )
+        const result = await keysAdapter.getKeysDetails('A001', ctx.db, false)
 
         expect(result).toHaveLength(1)
         expect(result[0].loan).toBeNull()

@@ -519,13 +519,13 @@ describe('GET /keys/with-loan-status/:rentalObjectCode', () => {
       },
     ]
 
-    const getKeysWithLoanStatusSpy = jest
-      .spyOn(keysAdapter, 'getKeysWithLoanStatus')
+    const getKeysDetailsSpy = jest
+      .spyOn(keysAdapter, 'getKeysDetails')
       .mockResolvedValueOnce(mockKeysWithStatus as any)
 
     const res = await request(app.callback()).get('/keys/with-loan-status/A001')
 
-    expect(getKeysWithLoanStatusSpy).toHaveBeenCalledWith(
+    expect(getKeysDetailsSpy).toHaveBeenCalledWith(
       'A001',
       expect.anything(),
       false // includeLatestEvent defaults to false
@@ -552,15 +552,15 @@ describe('GET /keys/with-loan-status/:rentalObjectCode', () => {
       },
     ]
 
-    const getKeysWithLoanStatusSpy = jest
-      .spyOn(keysAdapter, 'getKeysWithLoanStatus')
+    const getKeysDetailsSpy = jest
+      .spyOn(keysAdapter, 'getKeysDetails')
       .mockResolvedValueOnce(mockKeysWithEvent as any)
 
     const res = await request(app.callback()).get(
       '/keys/with-loan-status/B002?includeLatestEvent=true'
     )
 
-    expect(getKeysWithLoanStatusSpy).toHaveBeenCalledWith(
+    expect(getKeysDetailsSpy).toHaveBeenCalledWith(
       'B002',
       expect.anything(),
       true // includeLatestEvent set to true
@@ -577,15 +577,15 @@ describe('GET /keys/with-loan-status/:rentalObjectCode', () => {
       },
     ]
 
-    const getKeysWithLoanStatusSpy = jest
-      .spyOn(keysAdapter, 'getKeysWithLoanStatus')
+    const getKeysDetailsSpy = jest
+      .spyOn(keysAdapter, 'getKeysDetails')
       .mockResolvedValueOnce(mockKeys as any)
 
     const res = await request(app.callback()).get(
       '/keys/with-loan-status/C003?includeLatestEvent=false'
     )
 
-    expect(getKeysWithLoanStatusSpy).toHaveBeenCalledWith(
+    expect(getKeysDetailsSpy).toHaveBeenCalledWith(
       'C003',
       expect.anything(),
       false
@@ -596,7 +596,7 @@ describe('GET /keys/with-loan-status/:rentalObjectCode', () => {
   it('handles special characters in rental object code', async () => {
     const specialCode = 'A-001/B'
 
-    jest.spyOn(keysAdapter, 'getKeysWithLoanStatus').mockResolvedValueOnce([])
+    jest.spyOn(keysAdapter, 'getKeysDetails').mockResolvedValueOnce([])
 
     const res = await request(app.callback()).get(
       `/keys/with-loan-status/${encodeURIComponent(specialCode)}`
