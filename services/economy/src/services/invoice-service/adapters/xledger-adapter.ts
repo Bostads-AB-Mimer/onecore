@@ -145,7 +145,7 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
     }
 
     const invoice: Invoice = {
-      invoiceId: invoiceData.node.invoiceNumber,
+      invoiceId: '1912325112832', // invoiceData.node.invoiceNumber,
       leaseId: 'missing',
       reference: invoiceData.node.subledger.code,
       amount: parseFloat(invoiceData.node.amount),
