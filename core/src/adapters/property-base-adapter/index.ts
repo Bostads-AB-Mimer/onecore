@@ -1130,7 +1130,8 @@ export async function deleteComponentInstallation(
 
 // ==================== COMPONENTS BY ROOM ====================
 
-type GetComponentsByRoomIdResponse = components['schemas']['ComponentInstance'][]
+type GetComponentsByRoomIdResponse =
+  components['schemas']['ComponentInstance'][]
 
 export async function getComponentsByRoomId(
   roomId: string

@@ -218,7 +218,10 @@ export const CreateComponentNewSchema = z.object({
   warrantyStartDate: z.coerce.date().optional(),
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
-  ncsCode: z.string().trim().regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format'),
+  ncsCode: z
+    .string()
+    .trim()
+    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format'),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
 })
 

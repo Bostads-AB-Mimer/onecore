@@ -1147,7 +1147,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 400
       ctx.body = {
         error: 'Room ID must be at most 15 characters (Xpand format)',
-        ...metadata
+        ...metadata,
       }
       return
     }
