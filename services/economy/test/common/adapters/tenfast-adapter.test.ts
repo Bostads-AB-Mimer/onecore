@@ -104,8 +104,6 @@ describe('Tenfast Adapter', () => {
 
       const result = await getInvoicesForTenant('tenant-123')
 
-      console.log(result)
-
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.data).toHaveLength(1)
