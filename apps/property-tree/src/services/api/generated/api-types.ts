@@ -889,6 +889,16 @@ export interface components {
             name: string | null;
           };
         }) | null;
+        rentalBlocks: ({
+            id: string;
+            blockReasonId: string;
+            blockReason: string;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string;
+            amount: number | null;
+          })[];
       };
       property: {
         name: string | null;

@@ -521,6 +521,17 @@ export const routes = (router: KoaRouter) => {
                     .rentalInformationType.name,
                 },
               },
+          rentalBlocks:
+            residence.propertyObject?.rentalBlocks.map((rb) => {
+              return {
+                id: rb.id,
+                blockReasonId: rb.blockReasonId,
+                blockReason: rb.blockReason.caption,
+                fromDate: rb.fromDate,
+                toDate: rb.toDate,
+                amount: rb.amount,
+              }
+            }) || [],
         },
         property: {
           code: residence.propertyObject.propertyStructures[0].propertyCode,
