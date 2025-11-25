@@ -208,6 +208,7 @@ const transformToInvoiceRow = (
     toDate: tenfastInvoiceRow.to ?? '',
     vat: tenfastInvoiceRow.vat,
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
+    invoiceRowText: null, // Set later from related article
     // We do not have the fields below in tenfast at the moment
     deduction: 0,
     roundoff: 0,
@@ -216,6 +217,5 @@ const transformToInvoiceRow = (
     invoiceDate: '',
     invoiceDueDate: '',
     invoiceNumber: '',
-    invoiceRowText: '',
   }
 }
