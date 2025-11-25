@@ -10,16 +10,13 @@ export type PaginationLinks = keys.v1.PaginationLinks
 
 // Tables/response types from the generated schemas
 export type Key = components['schemas']['Key']
-export type KeyWithLoanStatus = components['schemas']['KeyWithLoanStatus']
+export type KeyDetails = components['schemas']['KeyDetails']
 export type KeySystem = components['schemas']['KeySystem']
-// Key with nested key system data (when includeKeySystem=true)
-export type KeyWithSystem = components['schemas']['KeyWithSystem']
 export type KeyLoan = components['schemas']['KeyLoan']
 export type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
 export type KeyBundle = components['schemas']['KeyBundle']
-export type KeyWithLoanAndEvent = components['schemas']['KeyWithLoanAndEvent']
-export type KeyBundleWithLoanStatusResponse =
-  components['schemas']['KeyBundleWithLoanStatusResponse']
+export type KeyBundleDetailsResponse =
+  components['schemas']['KeyBundleDetailsResponse']
 export type BundleWithLoanedKeysInfo =
   components['schemas']['BundleWithLoanedKeysInfo']
 export type Log = components['schemas']['Log']

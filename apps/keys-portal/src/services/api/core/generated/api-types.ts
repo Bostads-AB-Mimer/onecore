@@ -3383,37 +3383,6 @@ export interface paths {
       };
     };
   };
-  "/keys/with-loan-status/{rentalObjectCode}": {
-    /**
-     * Get keys with active loan status enriched
-     * @description Returns all relevant keys for a rental object with their active loan information
-     * pre-fetched in a single optimized query. This eliminates N+1 query problems.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code to filter keys by */
-          rentalObjectCode: string;
-        };
-      };
-      responses: {
-        /** @description List of keys with enriched active loan data */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyWithLoanAndEvent"][];
-            };
-          };
-        };
-        /** @description Server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
   "/keys/{id}": {
     /** Get key by ID */
     get: {
@@ -5226,7 +5195,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["KeyBundleWithLoanStatusResponse"];
+              content?: components["schemas"]["KeyBundleDetailsResponse"];
             };
           };
         };
@@ -5823,25 +5792,6 @@ export interface components {
       createdBy?: string | null;
       updatedBy?: string | null;
     };
-    KeyWithSystem: {
-      /** Format: uuid */
-      id: string;
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number | null;
-      rentalObjectCode?: string;
-      /** @enum {string} */
-      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-      /** Format: uuid */
-      keySystemId?: string | null;
-      /** @default false */
-      disposed?: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      keySystem?: components["schemas"]["KeySystem"] | null;
-    };
     KeyLoan: {
       /** Format: uuid */
       id: string;
@@ -5865,7 +5815,7 @@ export interface components {
       createdBy?: string | null;
       updatedBy?: string | null;
     };
-    KeyWithLoanAndEvent: {
+    KeyDetails: {
       /** Format: uuid */
       id: string;
       keyName: string;
@@ -5882,45 +5832,23 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      loan: components["schemas"]["KeyLoan"] | null;
-      previousLoan?: components["schemas"]["KeyLoan"] | null;
-      latestEvent?: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        type: "FLEX" | "ORDER" | "LOST";
-        /** @enum {string} */
-        status: "ORDERED" | "RECEIVED" | "COMPLETED";
-        /** Format: uuid */
-        workOrderId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-      }) | null;
-      keySystem?: ({
-        /** Format: uuid */
-        id: string;
-        systemCode: string;
-        name: string;
-        manufacturer: string;
-        managingSupplier?: string | null;
-        /** @enum {string} */
-        type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-        propertyIds?: string;
-        /** Format: date-time */
-        installationDate?: string | null;
-        isActive?: boolean;
-        description?: string | null;
-        schemaFileId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-        createdBy?: string | null;
-        updatedBy?: string | null;
-      }) | null;
+      keySystem?: components["schemas"]["KeySystem"] | null;
+      loans?: components["schemas"]["KeyLoan"][] | null;
+      events?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          /** @enum {string} */
+          type: "FLEX" | "ORDER" | "LOST";
+          /** @enum {string} */
+          status: "ORDERED" | "RECEIVED" | "COMPLETED";
+          /** Format: uuid */
+          workOrderId?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[]) | null;
     };
     KeyLoanWithDetails: {
       /** Format: uuid */
@@ -6177,7 +6105,7 @@ export interface components {
       keys?: string;
       description?: string | null;
     };
-    KeyBundleWithLoanStatusResponse: {
+    KeyBundleDetailsResponse: {
       bundle: {
         /** Format: uuid */
         id: string;
@@ -6202,23 +6130,6 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
-          loan: components["schemas"]["KeyLoan"] | null;
-          previousLoan?: components["schemas"]["KeyLoan"] | null;
-          latestEvent?: ({
-            /** Format: uuid */
-            id: string;
-            keys: string;
-            /** @enum {string} */
-            type: "FLEX" | "ORDER" | "LOST";
-            /** @enum {string} */
-            status: "ORDERED" | "RECEIVED" | "COMPLETED";
-            /** Format: uuid */
-            workOrderId?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-          }) | null;
           keySystem?: ({
             /** Format: uuid */
             id: string;
@@ -6241,6 +6152,22 @@ export interface components {
             createdBy?: string | null;
             updatedBy?: string | null;
           }) | null;
+          loans?: components["schemas"]["KeyLoan"][] | null;
+          events?: (({
+              /** Format: uuid */
+              id: string;
+              keys: string;
+              /** @enum {string} */
+              type: "FLEX" | "ORDER" | "LOST";
+              /** @enum {string} */
+              status: "ORDERED" | "RECEIVED" | "COMPLETED";
+              /** Format: uuid */
+              workOrderId?: string | null;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            })[]) | null;
         })[];
     };
     CreateKeyEventRequest: {

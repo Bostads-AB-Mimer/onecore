@@ -1,7 +1,7 @@
 import { GET, PATCH, POST, DELETE } from './core/base-api'
 import type {
   KeyBundle,
-  KeyBundleWithLoanStatusResponse,
+  KeyBundleDetailsResponse,
   BundleWithLoanedKeysInfo,
   CreateKeyBundleRequest,
   UpdateKeyBundleRequest,
@@ -114,12 +114,23 @@ export async function deleteKeyBundle(id: string): Promise<void> {
  * Get all keys in a bundle with their maintenance loan status
  * Returns bundle info and all keys with information about active maintenance loans
  */
-export async function getKeyBundleWithLoanStatus(
-  id: string
-): Promise<KeyBundleWithLoanStatusResponse | null> {
+export async function getKeyBundleDetails(
+  id: string,
+  options?: {
+    includeLoans?: boolean
+    includeEvents?: boolean
+    includeKeySystem?: boolean
+  }
+): Promise<KeyBundleDetailsResponse | null> {
+  const queryParams: Record<string, boolean> = {}
+  if (options?.includeLoans) queryParams.includeLoans = true
+  if (options?.includeEvents) queryParams.includeEvents = true
+  if (options?.includeKeySystem) queryParams.includeKeySystem = true
+
   const { data, error } = await GET('/key-bundles/{id}/keys-with-loan-status', {
     params: {
       path: { id },
+      query: queryParams,
     },
   })
 
@@ -127,7 +138,7 @@ export async function getKeyBundleWithLoanStatus(
     throw new Error('Failed to fetch key bundle with loan status')
   }
 
-  return (data?.content as KeyBundleWithLoanStatusResponse) ?? null
+  return (data?.content as KeyBundleDetailsResponse) ?? null
 }
 
 /**

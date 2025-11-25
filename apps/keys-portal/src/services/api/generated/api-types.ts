@@ -220,37 +220,30 @@ export interface paths {
   };
   "/key-bundles/{id}/keys-with-loan-status": {
     /**
-     * Get all keys in a bundle with their maintenance loan status
-     * @description Returns all keys that belong to this bundle along with information about
-     * any active maintenance loans they are currently part of.
-     * This endpoint is optimized for displaying keys in a table with loan status.
+     * Get all keys in a bundle with optional related data
+     * @description Returns all keys that belong to this bundle with optional loans, events, and key system information.
+     * Use query parameters to include related data as needed.
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Include loans array (active + previous loans) for each key */
+          includeLoans?: boolean;
+          /** @description Include events array (latest event) for each key */
+          includeEvents?: boolean;
+          /** @description Include key system information for each key */
+          includeKeySystem?: boolean;
+        };
         path: {
           /** @description The unique ID of the key bundle */
           id: string;
         };
       };
       responses: {
-        /** @description Bundle information and keys with loan status */
+        /** @description Bundle information and keys with optional related data */
         200: {
           content: {
-            "application/json": {
-              content?: {
-                bundle?: components["schemas"]["KeyBundle"];
-                keys?: (components["schemas"]["Key"] & ({
-                    /** @description ID of active maintenance loan, null if not loaned */
-                    maintenanceLoanId?: string | null;
-                    maintenanceLoanCompany?: string | null;
-                    maintenanceLoanContactPerson?: string | null;
-                    /** Format: date-time */
-                    maintenanceLoanPickedUpAt?: string | null;
-                    /** Format: date-time */
-                    maintenanceLoanCreatedAt?: string | null;
-                  }))[];
-              };
-            };
+            "application/json": components["schemas"]["KeyBundleDetailsResponse"];
           };
         };
         /** @description Key bundle not found */
@@ -1364,7 +1357,7 @@ export interface paths {
   "/keys": {
     /**
      * List keys with pagination
-     * @description Returns paginated keys ordered by createdAt (desc).
+     * @description Returns paginated keys ordered by createdAt (desc). Use includeKeySystem to include key system details in the response.
      */
     get: {
       parameters: {
@@ -1378,10 +1371,12 @@ export interface paths {
         };
       };
       responses: {
-        /** @description A paginated list of keys. */
+        /** @description A paginated list of keys. When includeKeySystem=true, each key includes keySystem details. */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeysResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyDetails"][];
+            };
           };
         };
         /** @description An error occurred while listing keys. */
@@ -1476,11 +1471,11 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Successfully retrieved search results */
+        /** @description Successfully retrieved search results. When includeKeySystem=true, each key includes keySystem details. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Key"][];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyDetails"][];
             };
           };
         };
@@ -1497,12 +1492,19 @@ export interface paths {
   };
   "/keys/by-rental-object/{rentalObjectCode}": {
     /**
-     * Get all keys by rental object code
-     * @description Returns all keys associated with a specific rental object code without pagination.
+     * Get all keys by rental object code with optional related data
+     * @description Returns all keys associated with a specific rental object code with optional related data.
+     * Use query parameters to include loans, events, and/or key system information.
+     *
+     * **Performance**: Optimized single-query fetch eliminates N+1 query problems (~95% faster).
      */
     get: {
       parameters: {
         query?: {
+          /** @description Include loans array (active + previous loans) for each key. */
+          includeLoans?: boolean;
+          /** @description Include events array (latest event) for each key. */
+          includeEvents?: boolean;
           /** @description Include key system information in the response. */
           includeKeySystem?: boolean;
         };
@@ -1512,58 +1514,11 @@ export interface paths {
         };
       };
       responses: {
-        /** @description List of keys for the rental object code. */
+        /** @description List of keys with optional related data (loans, events, keySystem). */
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["Key"][];
-            };
-          };
-        };
-        /** @description An error occurred while fetching keys. */
-        500: {
-          content: {
-            "application/json": {
-              /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/keys/with-loan-status/{rentalObjectCode}": {
-    /**
-     * Get keys with loan and event status enriched
-     * @description Returns all relevant keys for a rental object with their active and previous loan information
-     * pre-fetched in a single optimized query. This eliminates N+1 query problems.
-     *
-     * **Performance**: ~95% faster than fetching keys then looping for loan status.
-     *
-     * Returns:
-     * - `loan`: Active loan object (null if not currently loaned)
-     * - `previousLoan`: Most recent returned loan object (null if never returned)
-     * - `latestEvent`: Latest key event (included when includeLatestEvent=true)
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Include the latest key event for each key in the response. */
-          includeLatestEvent?: boolean;
-          /** @description Include key system information in the response. */
-          includeKeySystem?: boolean;
-        };
-        path: {
-          /** @description The rental object code to filter keys by. */
-          rentalObjectCode: string;
-        };
-      };
-      responses: {
-        /** @description List of keys with enriched loan and event data. */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyWithLoanAndEvent"][];
+              content?: components["schemas"]["KeyDetails"][];
             };
           };
         };
@@ -2387,7 +2342,8 @@ export interface components {
     };
     Key: components["schemas"]["Key"];
     KeySystem: components["schemas"]["KeySystem"];
-    KeyWithSystem: {
+    KeyLoan: components["schemas"]["KeyLoan"];
+    KeyDetails: {
       /** Format: uuid */
       id: string;
       keyName: string;
@@ -2405,64 +2361,22 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
       keySystem?: components["schemas"]["KeySystem"] | null;
-    };
-    KeyLoan: components["schemas"]["KeyLoan"];
-    KeyWithLoanAndEvent: {
-      /** Format: uuid */
-      id: string;
-      keyName: string;
-      keySequenceNumber?: number;
-      flexNumber?: number | null;
-      rentalObjectCode?: string;
-      /** @enum {string} */
-      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-      /** Format: uuid */
-      keySystemId?: string | null;
-      /** @default false */
-      disposed?: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      loan: components["schemas"]["KeyLoan"] | null;
-      previousLoan?: components["schemas"]["KeyLoan"] | null;
-      latestEvent?: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        type: "FLEX" | "ORDER" | "LOST";
-        /** @enum {string} */
-        status: "ORDERED" | "RECEIVED" | "COMPLETED";
-        /** Format: uuid */
-        workOrderId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-      }) | null;
-      keySystem?: ({
-        /** Format: uuid */
-        id: string;
-        systemCode: string;
-        name: string;
-        manufacturer: string;
-        managingSupplier?: string | null;
-        /** @enum {string} */
-        type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-        propertyIds?: string;
-        /** Format: date-time */
-        installationDate?: string | null;
-        isActive?: boolean;
-        description?: string | null;
-        schemaFileId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-        createdBy?: string | null;
-        updatedBy?: string | null;
-      }) | null;
+      loans?: components["schemas"]["KeyLoan"][] | null;
+      events?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          /** @enum {string} */
+          type: "FLEX" | "ORDER" | "LOST";
+          /** @enum {string} */
+          status: "ORDERED" | "RECEIVED" | "COMPLETED";
+          /** Format: uuid */
+          workOrderId?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[]) | null;
     };
     PaginationMeta: {
       totalRecords: number;
@@ -2475,78 +2389,8 @@ export interface components {
       /** @enum {string} */
       rel: "self" | "first" | "last" | "prev" | "next";
     };
-    PaginatedKeysResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number | null;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
-      _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
-    PaginatedKeysWithSystemResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number | null;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-          keySystem?: ({
-            /** Format: uuid */
-            id: string;
-            systemCode: string;
-            name: string;
-            manufacturer: string;
-            managingSupplier?: string | null;
-            /** @enum {string} */
-            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-            propertyIds?: string;
-            /** Format: date-time */
-            installationDate?: string | null;
-            isActive?: boolean;
-            description?: string | null;
-            schemaFileId?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            createdBy?: string | null;
-            updatedBy?: string | null;
-          }) | null;
-        })[];
+    PaginatedResponse: {
+      content: unknown[];
       _meta: {
         totalRecords: number;
         page: number;
