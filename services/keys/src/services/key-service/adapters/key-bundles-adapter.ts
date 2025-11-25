@@ -1,10 +1,11 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
-import { addKeySystemJoin, transformKeySystemFields } from './keys-adapter'
+import { getKeyDetails, type KeyIncludeOptions } from './keys-adapter'
 
 type KeyBundle = keys.v1.KeyBundle
-type KeyWithLoanAndEvent = keys.v1.KeyWithLoanAndEvent
+type KeyDetails = keys.v1.KeyDetails
+type Key = keys.v1.Key
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
 type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
@@ -12,7 +13,6 @@ type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
 const TABLE = 'key_bundles'
 const KEYS_TABLE = 'keys'
 const KEY_LOANS_TABLE = 'key_loans'
-const KEY_EVENTS_TABLE = 'key_events'
 
 /**
  * Database adapter functions for key bundles.
@@ -80,21 +80,21 @@ export function getKeyBundlesSearchQuery(
 }
 
 /**
- * Get all keys in a bundle with their current loan status
- * Returns all keys in the bundle with information about any active loans (both TENANT and MAINTENANCE)
+ * Get all keys in a bundle with optional related data
+ * Returns all keys in the bundle with optional information about loans, events, and key systems
  *
  * @param bundleId - The key bundle ID
- * @param includePreviousLoan - Whether to fetch the most recent returned loan for each key (default: true)
+ * @param options - Options for including related data (loans, events, keySystem)
  * @param dbConnection - Database connection
- * @returns Promise with bundle info and keys with loan status
+ * @returns Promise with bundle info and keys with optional details
  */
-export async function getKeyBundleWithLoanStatus(
+export async function getKeyBundleDetails(
   bundleId: string,
-  includePreviousLoan: boolean = true,
+  options: KeyIncludeOptions = {},
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<{
   bundle: KeyBundle
-  keys: KeyWithLoanAndEvent[]
+  keys: KeyDetails[]
 }> {
   // 1. Get the bundle
   const bundle = await dbConnection(TABLE).where({ id: bundleId }).first()
@@ -115,57 +115,25 @@ export async function getKeyBundleWithLoanStatus(
     return { bundle, keys: [] }
   }
 
-  // 3. For each key, find if it's in any active loan (TENANT or MAINTENANCE)
-  const keys: (KeyWithLoanAndEvent | null)[] = await Promise.all(
+  // 3. For each key, fetch it and optionally enrich with related data
+  const keys: (KeyDetails | null)[] = await Promise.all(
     keyIds.map(async (keyId) => {
-      // Fetch key with key system information using LEFT JOIN
-      const query = dbConnection(KEYS_TABLE)
-        .where({ 'keys.id': keyId })
-        .select('keys.*')
-      addKeySystemJoin(query)
-      const keyRow = await query.first()
+      // Fetch base key
+      const key = (await dbConnection(KEYS_TABLE)
+        .where({ id: keyId })
+        .first()) as Key | undefined
 
-      if (!keyRow) {
-        // Key not found, skip
+      if (!key) {
         return null
       }
 
-      // Transform flat key system fields to nested object
-      const key = transformKeySystemFields(keyRow)
-
-      // Find active loan containing this specific key (unified key_loans table)
-      const activeLoan = await dbConnection(KEY_LOANS_TABLE)
-        .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-        .whereNull('returnedAt')
-        .first()
-
-      // Find previous loan (most recent returned loan) for this key if requested
-      let previousLoan = null
-      if (includePreviousLoan) {
-        previousLoan = await dbConnection(KEY_LOANS_TABLE)
-          .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-          .whereNotNull('returnedAt')
-          .orderBy('returnedAt', 'desc')
-          .first()
-      }
-
-      // Find latest key event for this key
-      const latestEvent = await dbConnection(KEY_EVENTS_TABLE)
-        .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-        .orderBy('createdAt', 'desc')
-        .first()
-
-      return {
-        ...key,
-        loan: activeLoan || null,
-        previousLoan: previousLoan || null,
-        latestEvent: latestEvent || null,
-      } as KeyWithLoanAndEvent
+      // Use centralized helper to enrich with optional relations
+      return await getKeyDetails(key, dbConnection, options)
     })
   )
 
   // Filter out nulls (keys that weren't found)
-  const validKeys = keys.filter((k): k is KeyWithLoanAndEvent => k !== null)
+  const validKeys = keys.filter((k): k is KeyDetails => k !== null)
 
   return { bundle, keys: validKeys }
 }

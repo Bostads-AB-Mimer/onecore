@@ -410,11 +410,10 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /key-bundles/{id}/keys-with-loan-status:
    *   get:
-   *     summary: Get all keys in a bundle with their maintenance loan status
+   *     summary: Get all keys in a bundle with optional related data
    *     description: |
-   *       Returns all keys that belong to this bundle along with information about
-   *       any active maintenance loans they are currently part of.
-   *       This endpoint is optimized for displaying keys in a table with loan status.
+   *       Returns all keys that belong to this bundle with optional loans, events, and key system information.
+   *       Use query parameters to include related data as needed.
    *     tags: [Key Bundles]
    *     parameters:
    *       - in: path
@@ -423,58 +422,53 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The unique ID of the key bundle
+   *       - in: query
+   *         name: includeLoans
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include loans array (active + previous loans) for each key
+   *       - in: query
+   *         name: includeEvents
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include events array (latest event) for each key
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information for each key
    *     responses:
    *       200:
-   *         description: Bundle information and keys with loan status
+   *         description: Bundle information and keys with optional related data
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: object
-   *                   properties:
-   *                     bundle:
-   *                       $ref: '#/components/schemas/KeyBundle'
-   *                     keys:
-   *                       type: array
-   *                       items:
-   *                         allOf:
-   *                           - $ref: '#/components/schemas/Key'
-   *                           - type: object
-   *                             properties:
-   *                               maintenanceLoanId:
-   *                                 type: string
-   *                                 nullable: true
-   *                                 description: ID of active maintenance loan, null if not loaned
-   *                               maintenanceLoanCompany:
-   *                                 type: string
-   *                                 nullable: true
-   *                               maintenanceLoanContactPerson:
-   *                                 type: string
-   *                                 nullable: true
-   *                               maintenanceLoanPickedUpAt:
-   *                                 type: string
-   *                                 format: date-time
-   *                                 nullable: true
-   *                               maintenanceLoanCreatedAt:
-   *                                 type: string
-   *                                 format: date-time
-   *                                 nullable: true
+   *               $ref: '#/components/schemas/KeyBundleDetailsResponse'
    *       404:
    *         description: Key bundle not found
    *       500:
    *         description: Internal server error
    */
   router.get('/key-bundles/:id/keys-with-loan-status', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includePreviousLoan'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeLoans',
+      'includeEvents',
+      'includeKeySystem',
+    ])
     try {
-      // Parse includePreviousLoan query param (defaults to true)
-      const includePreviousLoan = ctx.query.includePreviousLoan !== 'false'
+      const includeLoans = ctx.query.includeLoans === 'true'
+      const includeEvents = ctx.query.includeEvents === 'true'
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
 
-      const result = await keyBundlesAdapter.getKeyBundleWithLoanStatus(
+      const result = await keyBundlesAdapter.getKeyBundleDetails(
         ctx.params.id,
-        includePreviousLoan,
+        { includeLoans, includeEvents, includeKeySystem },
         db
       )
       ctx.status = 200

@@ -17,15 +17,14 @@ import { registerSchema } from '../../utils/openapi'
 
 const {
   KeySchema,
-  KeyWithSystemSchema,
-  KeyWithLoanAndEventSchema,
+  KeyDetailsSchema,
   KeyLoanSchema,
   KeyLoanWithDetailsSchema,
   KeySystemSchema,
   LogSchema,
   KeyNoteSchema,
   KeyBundleSchema,
-  KeyBundleWithLoanStatusResponseSchema,
+  KeyBundleDetailsResponseSchema,
   BundleWithLoanedKeysInfoSchema,
   ReceiptSchema,
   KeyEventSchema,
@@ -92,10 +91,8 @@ const {
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('Key', KeySchema)
-  registerSchema('KeyWithSystem', KeyWithSystemSchema, {
+  registerSchema('KeyDetails', KeyDetailsSchema, {
     KeySystem: KeySystemSchema,
-  })
-  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema, {
     KeyLoan: KeyLoanSchema,
   })
   registerSchema('KeyLoan', KeyLoanSchema)
@@ -120,13 +117,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('BundleWithLoanedKeysInfo', BundleWithLoanedKeysInfoSchema)
   registerSchema('CreateKeyBundleRequest', CreateKeyBundleRequestSchema)
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
-  registerSchema(
-    'KeyBundleWithLoanStatusResponse',
-    KeyBundleWithLoanStatusResponseSchema,
-    {
-      KeyLoan: KeyLoanSchema,
-    }
-  )
+  registerSchema('KeyBundleDetailsResponse', KeyBundleDetailsResponseSchema, {
+    KeyLoan: KeyLoanSchema,
+  })
   registerSchema('CreateKeyEventRequest', CreateKeyEventRequestSchema)
   registerSchema('UpdateKeyEventRequest', UpdateKeyEventRequestSchema)
   registerSchema('CreateSignatureRequest', CreateSignatureRequestSchema)
@@ -1232,8 +1225,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
-    const includeKeySystem = ctx.query.includeKeySystem === 'true'
-    const result = await KeysApi.search(ctx.query, includeKeySystem)
+    const result = await KeysApi.search(ctx.query)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
@@ -1289,79 +1281,18 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const includeLoans = ctx.query.includeLoans === 'true'
+    const includeEvents = ctx.query.includeEvents === 'true'
     const includeKeySystem = ctx.query.includeKeySystem === 'true'
     const result = await KeysApi.getByRentalObjectCode(
       ctx.params.rentalObjectCode,
-      includeKeySystem
+      { includeLoans, includeEvents, includeKeySystem }
     )
 
     if (!result.ok) {
       logger.error(
         { err: result.err, metadata },
         'Error fetching keys by rental object code'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /keys/with-loan-status/{rentalObjectCode}:
-   *   get:
-   *     summary: Get keys with active loan status enriched
-   *     description: |
-   *       Returns all relevant keys for a rental object with their active loan information
-   *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
-   *
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: rentalObjectCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The rental object code to filter keys by
-   *     responses:
-   *       200:
-   *         description: List of keys with enriched active loan data
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyWithLoanAndEvent'
-   *       500:
-   *         description: Server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/keys/with-loan-status/:rentalObjectCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const includeLatestEvent = ctx.query.includeLatestEvent === 'true'
-    const includeKeySystem = ctx.query.includeKeySystem === 'true'
-
-    const result = await KeysApi.getWithLoanStatus(
-      ctx.params.rentalObjectCode,
-      includeLatestEvent,
-      includeKeySystem
-    )
-
-    if (!result.ok) {
-      logger.error(
-        { err: result.err, metadata },
-        'Error fetching keys with loan status'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -5553,7 +5484,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/KeyBundleWithLoanStatusResponse'
+   *                   $ref: '#/components/schemas/KeyBundleDetailsResponse'
    *       404:
    *         description: Key bundle not found
    *       500:
@@ -5562,15 +5493,21 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-bundles/:id/keys-with-loan-status', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includePreviousLoan'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeLoans',
+      'includeEvents',
+      'includeKeySystem',
+    ])
 
-    // Parse includePreviousLoan query param (defaults to true)
-    const includePreviousLoan = ctx.query.includePreviousLoan !== 'false'
+    const includeLoans = ctx.query.includeLoans === 'true'
+    const includeEvents = ctx.query.includeEvents === 'true'
+    const includeKeySystem = ctx.query.includeKeySystem === 'true'
 
-    const result = await KeyBundlesApi.getWithLoanStatus(
-      ctx.params.id,
-      includePreviousLoan
-    )
+    const result = await KeyBundlesApi.getWithLoanStatus(ctx.params.id, {
+      includeLoans,
+      includeEvents,
+      includeKeySystem,
+    })
 
     if (!result.ok) {
       if (result.err === 'not-found') {
