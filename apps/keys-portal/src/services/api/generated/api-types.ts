@@ -1065,7 +1065,9 @@ export interface paths {
         /** @description Successfully retrieved key systems */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeySystem"][];
+            };
           };
         };
         /** @description Internal server error */
@@ -1153,7 +1155,9 @@ export interface paths {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeySystem"][];
+            };
           };
         };
         /** @description Bad request. Invalid parameters or field names */
@@ -1730,7 +1734,9 @@ export interface paths {
         /** @description A paginated list of logs */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Server error */
@@ -1804,7 +1810,9 @@ export interface paths {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Bad request */
@@ -1883,7 +1891,9 @@ export interface paths {
         /** @description Paginated list of logs for the rental object */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Server error */
@@ -1931,7 +1941,9 @@ export interface paths {
         /** @description Paginated list of logs for the contact */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Server error */
@@ -2405,46 +2417,10 @@ export interface components {
     };
     CreateKeySystemRequest: components["schemas"]["CreateKeySystemRequest"];
     UpdateKeySystemRequest: components["schemas"]["UpdateKeySystemRequest"];
-    PaginatedKeySystemsResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          systemCode: string;
-          name: string;
-          manufacturer: string;
-          managingSupplier?: string | null;
-          /** @enum {string} */
-          type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-          propertyIds?: string;
-          /** Format: date-time */
-          installationDate?: string | null;
-          isActive?: boolean;
-          description?: string | null;
-          schemaFileId?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-          createdBy?: string | null;
-          updatedBy?: string | null;
-        })[];
-      _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
     CreateKeyLoanRequest: components["schemas"]["CreateKeyLoanRequest"];
     UpdateKeyLoanRequest: components["schemas"]["UpdateKeyLoanRequest"];
     CreateLogRequest: components["schemas"]["CreateLogRequest"];
     Log: components["schemas"]["Log"];
-    PaginatedLogsResponse: components["schemas"]["PaginatedLogsResponse"];
     CreateReceiptRequest: {
       /** Format: uuid */
       keyLoanId: string;

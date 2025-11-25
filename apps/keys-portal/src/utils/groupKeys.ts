@@ -1,4 +1,5 @@
 import type { KeyDetails } from '@/services/types'
+
 import { getActiveLoan } from './loanHelpers'
 
 /**
