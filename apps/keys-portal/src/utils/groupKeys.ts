@@ -1,4 +1,5 @@
-import type { KeyWithLoanAndEvent } from '@/services/types'
+import type { KeyDetails } from '@/services/types'
+import { getActiveLoan } from './loanHelpers'
 
 /**
  * Grouped key structure for display
@@ -10,7 +11,7 @@ export interface GroupedKeys {
 
 export interface DisposedGroup {
   loaned: LoanedGroup[]
-  unloaned: KeyWithLoanAndEvent[]
+  unloaned: KeyDetails[]
 }
 
 export interface LoanedGroup {
@@ -24,7 +25,7 @@ export interface LoanGroup {
   loanContactPerson: string | null
   loanPickedUpAt: string | null
   loanCreatedAt: string | null
-  keys: KeyWithLoanAndEvent[]
+  keys: KeyDetails[]
 }
 
 /**
@@ -36,7 +37,7 @@ export interface LoanGroup {
  * 5. Key type (within each loan or unloaned section)
  * 6. Key name (within each type)
  */
-export function groupAndSortKeys(keys: KeyWithLoanAndEvent[]): GroupedKeys {
+export function groupAndSortKeys(keys: KeyDetails[]): GroupedKeys {
   // 1. Primary split: disposed vs non-disposed
   const nonDisposedKeys = keys.filter((k) => !k.disposed)
   const disposedKeys = keys.filter((k) => k.disposed)
@@ -51,14 +52,10 @@ export function groupAndSortKeys(keys: KeyWithLoanAndEvent[]): GroupedKeys {
  * Process a group of keys (either disposed or non-disposed)
  * Split into loaned vs unloaned, then group loaned by contact and loan
  */
-function processDisposedGroup(keys: KeyWithLoanAndEvent[]): DisposedGroup {
-  // 2. Secondary split: loaned vs unloaned (check for maintenance loans only)
-  const loanedKeys = keys.filter(
-    (k) => k.loan !== null && k.loan.loanType === 'MAINTENANCE'
-  )
-  const unloanedKeys = keys.filter(
-    (k) => k.loan === null || k.loan.loanType !== 'MAINTENANCE'
-  )
+function processDisposedGroup(keys: KeyDetails[]): DisposedGroup {
+  // 2. Secondary split: loaned vs unloaned
+  const loanedKeys = keys.filter((k) => getActiveLoan(k) !== null)
+  const unloanedKeys = keys.filter((k) => getActiveLoan(k) === null)
 
   // 3. Group loaned keys by contact
   const loanedByContact = groupByContact(loanedKeys)
@@ -75,18 +72,19 @@ function processDisposedGroup(keys: KeyWithLoanAndEvent[]): DisposedGroup {
 /**
  * Group loaned keys by contact, then by specific loan
  */
-function groupByContact(keys: KeyWithLoanAndEvent[]): LoanedGroup[] {
+function groupByContact(keys: KeyDetails[]): LoanedGroup[] {
   // Group by contact
   const byContact = keys.reduce(
     (acc, key) => {
-      const contact = key.loan?.contact || 'Okänt företag'
+      const activeLoan = getActiveLoan(key)
+      const contact = activeLoan?.contact || 'Okänt företag'
       if (!acc[contact]) {
         acc[contact] = []
       }
       acc[contact].push(key)
       return acc
     },
-    {} as Record<string, KeyWithLoanAndEvent[]>
+    {} as Record<string, KeyDetails[]>
   )
 
   // For each contact, group by specific loan
@@ -103,24 +101,26 @@ function groupByContact(keys: KeyWithLoanAndEvent[]): LoanedGroup[] {
 /**
  * Group keys by specific loan ID
  */
-function groupByLoan(keys: KeyWithLoanAndEvent[]): LoanGroup[] {
+function groupByLoan(keys: KeyDetails[]): LoanGroup[] {
   const byLoan = keys.reduce(
     (acc, key) => {
-      const loanId = key.loan!.id
+      const activeLoan = getActiveLoan(key)
+      if (!activeLoan) return acc
+      const loanId = activeLoan.id
       if (!acc[loanId]) {
         acc[loanId] = []
       }
       acc[loanId].push(key)
       return acc
     },
-    {} as Record<string, KeyWithLoanAndEvent[]>
+    {} as Record<string, KeyDetails[]>
   )
 
   const result: LoanGroup[] = Object.entries(byLoan)
     .map(([loanId, loanKeys]) => {
       // Sort keys within this loan by type then name
       const sortedKeys = sortKeysByTypeAndName(loanKeys)
-      const loan = loanKeys[0].loan!
+      const loan = getActiveLoan(loanKeys[0])!
 
       return {
         loanId,
@@ -146,9 +146,7 @@ function groupByLoan(keys: KeyWithLoanAndEvent[]): LoanGroup[] {
 /**
  * Sort keys by type (alphabetically) then by name (alphabetically)
  */
-function sortKeysByTypeAndName(
-  keys: KeyWithLoanAndEvent[]
-): KeyWithLoanAndEvent[] {
+function sortKeysByTypeAndName(keys: KeyDetails[]): KeyDetails[] {
   return keys.sort((a, b) => {
     // First by type
     if (a.keyType !== b.keyType) {
@@ -163,8 +161,8 @@ function sortKeysByTypeAndName(
  * Get a flat array of all keys in the correct display order
  * Useful for iterating through keys in a table
  */
-export function getFlattenedKeys(grouped: GroupedKeys): KeyWithLoanAndEvent[] {
-  const result: KeyWithLoanAndEvent[] = []
+export function getFlattenedKeys(grouped: GroupedKeys): KeyDetails[] {
+  const result: KeyDetails[] = []
 
   // Non-disposed loaned keys
   grouped.nonDisposed.loaned.forEach((contactGroup) => {

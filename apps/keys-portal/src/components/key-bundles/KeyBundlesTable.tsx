@@ -23,7 +23,7 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react'
-import { KeyBundle, KeyWithLoanAndEvent } from '@/services/types'
+import { KeyBundle, KeyDetails } from '@/services/types'
 import { groupAndSortKeys } from '@/utils/groupKeys'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
@@ -34,7 +34,7 @@ interface KeyBundlesTableProps {
   onDelete: (id: string) => void
   expandedBundleId: string | null
   onToggleExpand: (bundleId: string) => void
-  keysForExpandedBundle: KeyWithLoanAndEvent[]
+  keysForExpandedBundle: KeyDetails[]
   isLoadingKeys: boolean
   isLoading: boolean
 }

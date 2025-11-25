@@ -4,7 +4,7 @@ import { KeyBundlesToolbar } from '@/components/key-bundles/KeyBundlesToolbar'
 import { KeyBundlesTable } from '@/components/key-bundles/KeyBundlesTable'
 import { AddKeyBundleForm } from '@/components/key-bundles/AddKeyBundleForm'
 
-import { KeyBundle, KeyWithLoanAndEvent } from '@/services/types'
+import { KeyBundle, KeyDetails } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import * as keyBundleService from '@/services/api/keyBundleService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
@@ -19,7 +19,7 @@ export default function KeyBundles() {
   )
   const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
   const [keysForExpandedBundle, setKeysForExpandedBundle] = useState<
-    KeyWithLoanAndEvent[]
+    KeyDetails[]
   >([])
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const { toast } = useToast()
@@ -179,8 +179,7 @@ export default function KeyBundles() {
       setExpandedBundleId(bundleId)
       setIsLoadingKeys(true)
       try {
-        const response =
-          await keyBundleService.getKeyBundleWithLoanStatus(bundleId)
+        const response = await keyBundleService.getKeyBundleDetails(bundleId)
         if (response) {
           setKeysForExpandedBundle(response.keys)
         } else {

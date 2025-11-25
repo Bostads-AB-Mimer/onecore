@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import type { KeyWithLoanAndEvent, Contact } from '@/services/types'
+import type { KeyDetails, Contact } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import {
   searchContacts,
@@ -15,8 +15,8 @@ import { SearchDropdown } from '@/components/ui/search-dropdown'
 interface LoanMaintenanceKeysDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  keys: KeyWithLoanAndEvent[] // Keys to loan out
-  allBundleKeys?: KeyWithLoanAndEvent[] // All keys in bundle for pre-suggestions
+  keys: KeyDetails[] // Keys to loan out
+  allBundleKeys?: KeyDetails[] // All keys in bundle for pre-suggestions
   preSelectedCompany?: Contact // Pre-selected company (e.g. from contact search page)
   onSuccess: () => void
 }

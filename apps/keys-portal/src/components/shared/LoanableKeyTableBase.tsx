@@ -12,28 +12,42 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import {
-  KeyWithLoanAndEvent,
+  KeyDetails,
   KeyTypeLabels,
   getKeyEventDisplayLabel,
+  KeyLoan,
+  KeyEvent,
 } from '@/services/types'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
+import { getActiveLoan, getPreviousLoan } from '@/utils/loanHelpers'
+
+/**
+ * Helper to get the latest event from events array
+ */
+function getLatestEvent(key: KeyDetails): KeyEvent | null {
+  if (!key.events || key.events.length === 0) return null
+  return key.events[0] // Backend already returns sorted by createdAt desc
+}
 
 /**
  * Helper function to compute pickup availability status for a key
  */
-function getPickupAvailability(key: KeyWithLoanAndEvent): {
+function getPickupAvailability(key: KeyDetails): {
   label: string
   variant: 'default' | 'destructive' | 'secondary' | 'outline'
 } {
+  const activeLoan = getActiveLoan(key)
+  const previousLoan = getPreviousLoan(key)
+
   // Case 1: Current loan exists AND has pickedUpAt
-  if (key.loan?.pickedUpAt) {
+  if (activeLoan?.pickedUpAt) {
     return { label: 'Utlämnad', variant: 'outline' }
   }
 
   // Case 2-4: No picked up loan (either no loan or loan without pickedUpAt)
   // Check previousLoan.availableToNextTenantFrom
-  const availableFrom = key.previousLoan?.availableToNextTenantFrom
+  const availableFrom = previousLoan?.availableToNextTenantFrom
 
   if (!availableFrom) {
     // No previous loan or no restriction - key can be picked up
@@ -78,15 +92,15 @@ export interface LoanableKeyTableConfig {
   showContactHeaders?: boolean
   showLoanHeaders?: boolean
   customLoanHeaderRenderer?: (
-    loan: NonNullable<KeyWithLoanAndEvent['loan']>,
-    keys: KeyWithLoanAndEvent[]
+    loan: KeyLoan,
+    keys: KeyDetails[]
   ) => React.ReactNode
   // Selection
   selectable?: boolean
 }
 
 interface LoanableKeyTableBaseProps {
-  keys: KeyWithLoanAndEvent[]
+  keys: KeyDetails[]
   companyNames?: Record<string, string>
   config?: LoanableKeyTableConfig
   selectedKeys?: string[]
@@ -125,28 +139,33 @@ export function LoanableKeyTableBase({
 
   // Group keys internally by loan
   const grouped = useMemo(() => {
-    const loanedKeys = keys.filter((k) => k.loan !== null)
-    const unloanedKeys = keys.filter((k) => k.loan === null)
+    const loanedKeys = keys.filter((k) => getActiveLoan(k) !== null)
+    const unloanedKeys = keys.filter((k) => getActiveLoan(k) === null)
 
     // Group loaned keys by loan ID
     const byLoanId = loanedKeys.reduce(
       (acc, key) => {
-        const loanId = key.loan!.id
+        const activeLoan = getActiveLoan(key)
+        if (!activeLoan) return acc
+        const loanId = activeLoan.id
         if (!acc[loanId]) {
           acc[loanId] = []
         }
         acc[loanId].push(key)
         return acc
       },
-      {} as Record<string, KeyWithLoanAndEvent[]>
+      {} as Record<string, KeyDetails[]>
     )
 
     // Create loan groups with sorted keys
-    const loans = Object.entries(byLoanId).map(([loanId, loanKeys]) => ({
-      loanId,
-      loan: loanKeys[0].loan!,
-      keys: sortKeysByTypeAndName(loanKeys),
-    }))
+    const loans = Object.entries(byLoanId).map(([loanId, loanKeys]) => {
+      const activeLoan = getActiveLoan(loanKeys[0])!
+      return {
+        loanId,
+        loan: activeLoan,
+        keys: sortKeysByTypeAndName(loanKeys),
+      }
+    })
 
     // Sort loans by creation date (newest first)
     loans.sort((a, b) => {
@@ -182,23 +201,27 @@ export function LoanableKeyTableBase({
     // Group unloaned keys by previousLoan ID
     const unloanedByPreviousLoan = unloanedKeys.reduce(
       (acc, key) => {
-        const prevLoanId = key.previousLoan?.id || 'never-loaned'
+        const previousLoan = getPreviousLoan(key)
+        const prevLoanId = previousLoan?.id || 'never-loaned'
         if (!acc[prevLoanId]) {
           acc[prevLoanId] = []
         }
         acc[prevLoanId].push(key)
         return acc
       },
-      {} as Record<string, KeyWithLoanAndEvent[]>
+      {} as Record<string, KeyDetails[]>
     )
 
     // Create unloaned groups with sorted keys
     const unloanedGroups = Object.entries(unloanedByPreviousLoan).map(
-      ([prevLoanId, groupKeys]) => ({
-        prevLoanId,
-        previousLoan: groupKeys[0].previousLoan || null,
-        keys: sortKeysByTypeAndName(groupKeys),
-      })
+      ([prevLoanId, groupKeys]) => {
+        const previousLoan = getPreviousLoan(groupKeys[0])
+        return {
+          prevLoanId,
+          previousLoan: previousLoan || null,
+          keys: sortKeysByTypeAndName(groupKeys),
+        }
+      }
     )
 
     // Sort unloaned groups: keys that were never loaned first, then by most recent return date
@@ -227,7 +250,7 @@ export function LoanableKeyTableBase({
   )
 
   // Handle key click - navigate to /Keys page with key details
-  const handleKeyClick = (key: KeyWithLoanAndEvent) => {
+  const handleKeyClick = (key: KeyDetails) => {
     const disposed = key.disposed ? 'true' : 'false'
     const params = new URLSearchParams({
       disposed,
@@ -342,7 +365,7 @@ export function LoanableKeyTableBase({
                       )}
 
                       {/* Key data rows for this loan */}
-                      {loan.keys.map((key: KeyWithLoanAndEvent) => (
+                      {loan.keys.map((key: KeyDetails) => (
                         <KeyRow
                           key={key.id}
                           keyData={key}
@@ -407,7 +430,7 @@ export function LoanableKeyTableBase({
                     )}
 
                     {/* Key data rows for this unloaned group */}
-                    {group.keys.map((key: KeyWithLoanAndEvent) => (
+                    {group.keys.map((key: KeyDetails) => (
                       <KeyRow
                         key={key.id}
                         keyData={key}
@@ -432,11 +455,7 @@ export function LoanableKeyTableBase({
 /**
  * Default loan header renderer
  */
-function DefaultLoanHeader({
-  loan,
-}: {
-  loan: NonNullable<KeyWithLoanAndEvent['loan']>
-}) {
+function DefaultLoanHeader({ loan }: { loan: KeyLoan }) {
   return (
     <div className="flex items-center gap-3">
       <Badge variant="outline">
@@ -480,13 +499,13 @@ function DefaultLoanHeader({
  * Individual key row component
  */
 interface KeyRowProps {
-  keyData: KeyWithLoanAndEvent
+  keyData: KeyDetails
   columns: LoanableKeyTableConfig['columns']
   indent?: boolean
   selectable?: boolean
   isSelected?: boolean
   onSelectionChange?: (keyId: string, checked: boolean) => void
-  onKeyClick?: (key: KeyWithLoanAndEvent) => void
+  onKeyClick?: (key: KeyDetails) => void
 }
 
 function KeyRow({
@@ -544,13 +563,16 @@ function KeyRow({
       )}
       {columns.status && (
         <TableCell className="w-[22%]">
-          {keyData.latestEvent && keyData.latestEvent.status !== 'COMPLETED' ? (
-            <Badge variant="outline">
-              {getKeyEventDisplayLabel(keyData.latestEvent)}
-            </Badge>
-          ) : (
-            '-'
-          )}
+          {(() => {
+            const latestEvent = getLatestEvent(keyData)
+            return latestEvent && latestEvent.status !== 'COMPLETED' ? (
+              <Badge variant="outline">
+                {getKeyEventDisplayLabel(latestEvent)}
+              </Badge>
+            ) : (
+              '-'
+            )
+          })()}
         </TableCell>
       )}
       {columns.pickupAvailability && (
@@ -580,9 +602,7 @@ function KeyRow({
 /**
  * Sort keys by type, then name, then sequence
  */
-function sortKeysByTypeAndName(
-  keys: KeyWithLoanAndEvent[]
-): KeyWithLoanAndEvent[] {
+function sortKeysByTypeAndName(keys: KeyDetails[]): KeyDetails[] {
   const KEY_TYPE_ORDER: Record<string, number> = {
     LGH: 1,
     PB: 2,

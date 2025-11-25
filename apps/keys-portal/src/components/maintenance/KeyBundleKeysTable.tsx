@@ -1,12 +1,12 @@
 import { useMemo, useEffect, useState } from 'react'
-import type { KeyWithLoanAndEvent, Contact } from '@/services/types'
+import type { KeyDetails, Contact } from '@/services/types'
 import { groupAndSortKeys, type GroupedKeys } from '@/utils/groupKeys'
+import { getActiveLoan } from '@/utils/loanHelpers'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
 import { LoanMaintenanceKeysDialog } from './dialogs/LoanMaintenanceKeysDialog'
-import { CreateMaintenanceLoanDialog } from './CreateMaintenanceLoanDialog'
 import { FlexMenu } from '@/components/loan/dialogs/FlexMenu'
 import { IncomingFlexMenu } from '@/components/loan/dialogs/IncomingFlexMenu'
 import { updateKeyBundle } from '@/services/api/keyBundleService'
@@ -16,7 +16,7 @@ import { handleDisposeKeys } from '@/services/loanHandlers'
 import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
 
 interface KeyBundleKeysTableProps {
-  keys: KeyWithLoanAndEvent[]
+  keys: KeyDetails[]
   bundleName: string
   bundleId: string
   onRefresh: () => void
@@ -95,14 +95,16 @@ export function KeyBundleKeysTable({
   const selectedKeysData = keys.filter((k) => selectedKeys.includes(k.id))
 
   // Determine which keys can be returned (currently loaned with MAINTENANCE type)
-  const returnableKeys = selectedKeysData.filter(
-    (k) => k.loan !== null && k.loan.loanType === 'MAINTENANCE'
-  )
+  const returnableKeys = selectedKeysData.filter((k) => {
+    const activeLoan = getActiveLoan(k)
+    return activeLoan !== null && activeLoan.loanType === 'MAINTENANCE'
+  })
 
   // Determine which keys can be loaned (not currently loaned or not a maintenance loan)
-  const loanableKeys = selectedKeysData.filter(
-    (k) => k.loan === null || k.loan.loanType !== 'MAINTENANCE'
-  )
+  const loanableKeys = selectedKeysData.filter((k) => {
+    const activeLoan = getActiveLoan(k)
+    return activeLoan === null || activeLoan.loanType !== 'MAINTENANCE'
+  })
 
   // Action handlers
   const handleRemoveFromBundle = async () => {

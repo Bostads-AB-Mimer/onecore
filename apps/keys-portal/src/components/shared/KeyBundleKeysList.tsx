@@ -4,7 +4,7 @@ import {
   type LoanableKeyTableConfig,
 } from './LoanableKeyTableBase'
 import type { GroupedKeys } from '@/utils/groupKeys'
-import type { KeyWithLoanAndEvent } from '@/services/types'
+import type { KeyDetails } from '@/services/types'
 
 interface KeyBundleKeysListProps {
   group: GroupedKeys['nonDisposed'] | GroupedKeys['disposed']
@@ -27,7 +27,7 @@ export function KeyBundleKeysList({
 }: KeyBundleKeysListProps) {
   // Flatten the grouped keys into a single array
   const keys = useMemo(() => {
-    const result: KeyWithLoanAndEvent[] = []
+    const result: KeyDetails[] = []
 
     // Add all loaned keys
     group.loaned.forEach((contactGroup) => {

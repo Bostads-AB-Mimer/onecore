@@ -35,7 +35,9 @@ const Index = () => {
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
   const [keySystemSearch, setKeySystemSearch] = useState('')
-  const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(null)
+  const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
+    null
+  )
 
   const fetchKeys = useCallback(
     async (page: number = 1, limit: number = 60) => {

@@ -16,7 +16,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react'
-import type { Lease, KeyWithLoanAndEvent, KeyType } from '@/services/types'
+import type { Lease, KeyDetails, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { KeyLoansAccordion } from './KeyLoansAccordion'
@@ -64,16 +64,10 @@ export function ContractCard({
   )
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
-  const [keys, setKeys] = useState<KeyWithLoanAndEvent[]>([])
+  const [keys, setKeys] = useState<KeyDetails[]>([])
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
-  const [hasUnsignedLoans, setHasUnsignedLoans] = useState(false)
-
-  // Stabilize callback reference to prevent unnecessary re-renders in child components
-  const handleUnsignedLoansChange = useCallback((hasUnsigned: boolean) => {
-    setHasUnsignedLoans(hasUnsigned)
-  }, [])
 
   const handleReceiptUploaded = useCallback(() => {
     // Trigger refresh of key statuses when a receipt is uploaded
@@ -114,10 +108,13 @@ export function ContractCard({
   // Refetch keys function that can be called externally
   const refetchKeys = useCallback(async () => {
     try {
-      const keysWithStatus = await keyService.getKeysWithLoanAndEvent(
+      const keysWithStatus = await keyService.getKeysByRentalObjectCode(
         lease.rentalPropertyId,
-        true,
-        true
+        {
+          includeLoans: true,
+          includeEvents: true,
+          includeKeySystem: true,
+        }
       )
       setKeys(keysWithStatus)
     } catch (err) {
@@ -179,11 +176,7 @@ export function ContractCard({
               onClick={() => setKeyLoansOpen((v) => !v)}
               aria-expanded={keyLoansOpen}
               aria-controls={keyLoansRegionId}
-              className={`h-7 px-2 text-xs gap-1 ${
-                hasUnsignedLoans
-                  ? 'border-yellow-600 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-200'
-                  : ''
-              }`}
+              className="h-7 px-2 text-xs gap-1"
             >
               {keyLoansOpen ? (
                 <>
@@ -303,7 +296,6 @@ export function ContractCard({
             <KeyLoansAccordion
               lease={lease}
               refreshKey={keyLoansRefreshKey}
-              onUnsignedLoansChange={handleUnsignedLoansChange}
               onReceiptUploaded={handleReceiptUploaded}
             />
           </div>
