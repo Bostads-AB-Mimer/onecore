@@ -214,7 +214,7 @@ describe('key-bundles-adapter', () => {
         // Get bundle with loan status
         const result = await keyBundlesAdapter.getKeyBundleDetails(
           bundle.id,
-          true,
+          { includeLoans: true },
           ctx.db
         )
 
@@ -224,17 +224,17 @@ describe('key-bundles-adapter', () => {
         // Find key2 in results
         const key2Result = result.keys.find((k) => k.id === key2.id)
         expect(key2Result).toBeDefined()
-        expect(key2Result?.loan).toBeDefined()
-        expect(key2Result?.loan?.loanType).toBe('MAINTENANCE')
-        expect(key2Result?.loan?.contact).toBe('ABC Company')
-        expect(key2Result?.loan?.contactPerson).toBe('John Doe')
+        expect(key2Result?.loans).toBeDefined()
+        expect(key2Result?.loans?.[0]?.loanType).toBe('MAINTENANCE')
+        expect(key2Result?.loans?.[0]?.contact).toBe('ABC Company')
+        expect(key2Result?.loans?.[0]?.contactPerson).toBe('John Doe')
 
         // Check key1 and key3 have no loan
         const key1Result = result.keys.find((k) => k.id === key1.id)
-        expect(key1Result?.loan).toBeFalsy()
+        expect(key1Result?.loans).toBeFalsy()
 
         const key3Result = result.keys.find((k) => k.id === key3.id)
-        expect(key3Result?.loan).toBeFalsy()
+        expect(key3Result?.loans).toBeFalsy()
       }))
   })
 })

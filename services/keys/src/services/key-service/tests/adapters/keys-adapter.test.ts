@@ -91,12 +91,14 @@ describe('keys-adapter', () => {
         })
 
         // Test the complex aggregation query
-        const result = await keysAdapter.getKeysDetails('A001', ctx.db, false)
+        const result = await keysAdapter.getKeysDetails('A001', ctx.db, {
+          includeLoans: true,
+        })
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe(key.id)
-        expect(result[0].loan).toBeDefined()
-        expect(result[0].loan?.contact).toBe('john@example.com')
+        expect(result[0].loans).toBeDefined()
+        expect(result[0].loans?.[0]?.contact).toBe('john@example.com')
       }))
 
     it('returns keys without active loans', () =>
@@ -106,10 +108,12 @@ describe('keys-adapter', () => {
           ctx.db
         )
 
-        const result = await keysAdapter.getKeysDetails('A001', ctx.db, false)
+        const result = await keysAdapter.getKeysDetails('A001', ctx.db, {
+          includeLoans: true,
+        })
 
         expect(result).toHaveLength(1)
-        expect(result[0].loan).toBeNull()
+        expect(result[0].loans).toBeNull()
       }))
   })
 
