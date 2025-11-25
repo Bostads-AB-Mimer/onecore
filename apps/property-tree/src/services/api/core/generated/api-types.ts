@@ -2844,23 +2844,32 @@ export interface paths {
   };
   "/components/by-room/{roomId}": {
     /**
-     * Get all components for a specific room
+     * Get components by room ID
      * @description Retrieves all components associated with a specific room ID.
      * Components are returned ordered by installation date (newest first).
      */
     get: {
       parameters: {
         path: {
-          /** @description The ID of the room */
+          /** @description The ID of the room (variable length, max 15 characters, Xpand legacy format) */
           roomId: string;
         };
       };
       responses: {
-        /** @description List of components in the room */
+        /** @description Successfully retrieved the components list */
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["Component"][];
+              content?: components["schemas"]["ComponentInstance"][];
+            };
+          };
+        };
+        /** @description Invalid room ID format */
+        400: {
+          content: {
+            "application/json": {
+              /** @example Room ID must be at most 15 characters (Xpand format) */
+              error?: string;
             };
           };
         };
@@ -4326,6 +4335,18 @@ export interface components {
           };
         };
       };
+      componentInstallations?: ({
+          id: string;
+          componentId: string;
+          spaceId: string | null;
+          buildingPartId: string | null;
+          installationDate: string;
+          deinstallationDate: string | null;
+          orderNumber: string;
+          cost: number;
+          createdAt: string;
+          updatedAt: string;
+        })[];
     };
     ComponentInstallation: {
       id: string;
@@ -4389,6 +4410,18 @@ export interface components {
             };
           };
         };
+        componentInstallations?: ({
+            id: string;
+            componentId: string;
+            spaceId: string | null;
+            buildingPartId: string | null;
+            installationDate: string;
+            deinstallationDate: string | null;
+            orderNumber: string;
+            cost: number;
+            createdAt: string;
+            updatedAt: string;
+          })[];
       };
     };
     CreateComponentTypeRequest: {
