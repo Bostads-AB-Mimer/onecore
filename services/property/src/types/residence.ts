@@ -158,7 +158,7 @@ export const ResidenceDetailedSchema = z.object({
         blockReasonId: z.string(),
         blockReason: z.string(),
         fromDate: z.date(),
-        toDate: z.date(),
+        toDate: z.date().nullable(),
         amount: z.number().nullable(),
       })
     ),
