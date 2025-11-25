@@ -123,36 +123,6 @@ describe('keys-adapter', () => {
       })
     })
 
-    describe(keysAdapter.KeysApi.getWithLoanStatus, () => {
-      it('returns ok with keys with loan status on 200', async () => {
-        const keyWithLoanStatus = {
-          ...mockedKey,
-          loanStatus: 'available',
-        }
-
-        nock(config.keysService.url)
-          .get(/\/keys\/with-loan-status\/.*/)
-          .reply(200, { content: [keyWithLoanStatus] })
-
-        const result =
-          await keysAdapter.KeysApi.getWithLoanStatus('123-456-789/1')
-
-        assert(result.ok)
-        expect(result.data).toEqual([keyWithLoanStatus])
-      })
-
-      it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get(/\/keys\/with-loan-status\/.*/)
-          .reply(500)
-
-        const result =
-          await keysAdapter.KeysApi.getWithLoanStatus('123-456-789/1')
-
-        expect(result).toEqual({ ok: false, err: 'unknown' })
-      })
-    })
-
     describe(keysAdapter.KeysApi.get, () => {
       it('returns ok with key on 200', async () => {
         nock(config.keysService.url)

@@ -139,44 +139,6 @@ describe('keys-service', () => {
     })
   })
 
-  describe('GET /keys/with-loan-status/:rentalObjectCode', () => {
-    it('responds with keys with loan status', async () => {
-      const mockKey = factory.key.build()
-      const keysWithStatus = [
-        {
-          ...mockKey,
-          loan: null,
-          previousLoan: null,
-          latestEvent: null,
-        },
-      ]
-
-      jest
-        .spyOn(keysAdapter.KeysApi, 'getWithLoanStatus')
-        .mockResolvedValue({ ok: true, data: keysWithStatus })
-
-      const res = await request(app.callback()).get(
-        '/keys/with-loan-status/123-456-789'
-      )
-
-      expect(res.status).toBe(200)
-      expect(res.body.content).toHaveLength(1)
-      expect(res.body.content[0]).toHaveProperty('loan')
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(keysAdapter.KeysApi, 'getWithLoanStatus')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
-
-      const res = await request(app.callback()).get(
-        '/keys/with-loan-status/123-456-789'
-      )
-
-      expect(res.status).toBe(500)
-    })
-  })
-
   describe('GET /keys/:id', () => {
     it('responds with key on success', async () => {
       const key = factory.key.build()
