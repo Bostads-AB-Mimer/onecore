@@ -31,12 +31,10 @@ const statusColors = {
 // This is legacy/dummy code that needs refactoring
 const getComponentType = (
   component: ComponentInstance
-): 'appliance' | 'fixture' | 'furniture' | 'other' =>
-  'other' // component.classification.componentType.code
+): 'appliance' | 'fixture' | 'furniture' | 'other' => 'other' // component.classification.componentType.code
 const getComponentStatus = (
   component: ComponentInstance
-): 'operational' | 'needs-service' | 'broken' =>
-  'operational' // component.details.typeDesignation || 'operational'
+): 'operational' | 'needs-service' | 'broken' => 'operational' // component.details.typeDesignation || 'operational'
 
 export function ComponentList({
   components,
