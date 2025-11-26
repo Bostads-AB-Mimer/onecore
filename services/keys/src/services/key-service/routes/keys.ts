@@ -23,6 +23,7 @@ const {
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 type BulkUpdateFlexRequest = keys.v1.BulkUpdateFlexRequest
+type Key = keys.v1.Key
 
 /**
  * @swagger
@@ -117,8 +118,10 @@ export const routes = (router: KoaRouter) => {
 
       // Fetch and attach key systems after pagination
       if (includeKeySystem && paginatedResult.content.length > 0) {
-        const keyIds = paginatedResult.content.map((k: any) => k.id)
-        const keySystemsById = await keysAdapter.fetchKeySystems(keyIds, db)
+        const keySystemsById = await keysAdapter.fetchKeySystems(
+          paginatedResult.content as Key[],
+          db
+        )
 
         paginatedResult.content = paginatedResult.content.map((key: any) => ({
           ...key,
@@ -274,8 +277,10 @@ export const routes = (router: KoaRouter) => {
 
       // Fetch and attach key systems after pagination
       if (includeKeySystem && paginatedResult.content.length > 0) {
-        const keyIds = paginatedResult.content.map((k: any) => k.id)
-        const keySystemsById = await keysAdapter.fetchKeySystems(keyIds, db)
+        const keySystemsById = await keysAdapter.fetchKeySystems(
+          paginatedResult.content as Key[],
+          db
+        )
 
         paginatedResult.content = paginatedResult.content.map((key: any) => ({
           ...key,

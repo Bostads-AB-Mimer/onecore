@@ -18,29 +18,24 @@ const TABLE = 'keys'
  */
 
 /**
- * Fetch and attach key systems to keys using Knex
+ * Fetch key systems for a list of keys using Knex
  * Returns a map of keySystemId -> keySystem for efficient lookups
  */
 export async function fetchKeySystems(
-  keyIds: string[],
+  keys: Key[],
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<Map<string, KeySystem>> {
   const keySystemsMap = new Map<string, KeySystem>()
 
-  if (keyIds.length === 0) return keySystemsMap
+  if (keys.length === 0) return keySystemsMap
 
-  // Get unique key system IDs from keys
-  const keyRecords = await dbConnection('keys')
-    .whereIn('id', keyIds)
-    .whereNotNull('keySystemId')
-    .select('keySystemId')
-    .distinct()
-
-  const keySystemIds = keyRecords.map((k) => k.keySystemId).filter(Boolean)
+  const keySystemIds = [
+    ...new Set(keys.map((k) => k.keySystemId).filter(Boolean)),
+  ] as string[]
 
   if (keySystemIds.length === 0) return keySystemsMap
 
-  // Fetch key systems
+  // Fetch key systems directly
   const keySystems = await dbConnection('key_systems').whereIn(
     'id',
     keySystemIds
@@ -59,12 +54,14 @@ export async function fetchKeySystems(
  * Loans are sorted by createdAt desc
  */
 export async function fetchLoans(
-  keyIds: string[],
+  keys: Key[],
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<Map<string, KeyLoan[]>> {
   const loansByKeyId = new Map<string, KeyLoan[]>()
 
-  if (keyIds.length === 0) return loansByKeyId
+  if (keys.length === 0) return loansByKeyId
+
+  const keyIds = keys.map((k) => k.id)
 
   // Fetch all loans for these keys
   const loans = await dbConnection('key_loans')
@@ -96,12 +93,14 @@ export async function fetchLoans(
  * Events are sorted by createdAt desc
  */
 export async function fetchEvents(
-  keyIds: string[],
+  keys: Key[],
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<Map<string, KeyEvent[]>> {
   const eventsByKeyId = new Map<string, KeyEvent[]>()
 
-  if (keyIds.length === 0) return eventsByKeyId
+  if (keys.length === 0) return eventsByKeyId
+
+  const keyIds = keys.map((k) => k.id)
 
   // Fetch all events for these keys
   const events = await dbConnection('key_events')
@@ -154,8 +153,7 @@ export async function getKeysByRentalObject(
   }
 
   // Fetch key systems using the new helper
-  const keyIds = keys.map((k) => k.id)
-  const keySystemsById = await fetchKeySystems(keyIds, dbConnection)
+  const keySystemsById = await fetchKeySystems(keys, dbConnection)
 
   // Attach key systems to keys
   return keys.map((key) => ({
@@ -261,18 +259,14 @@ export async function getKeysDetails(
     return keys as KeyDetails[]
   }
 
-  const keyIds = keys.map((k) => k.id)
-
   // Step 2: Fetch related data in parallel using reusable helpers
   const [loansByKeyId, eventsByKeyId, keySystemsById] = await Promise.all([
-    includeLoans
-      ? fetchLoans(keyIds, dbConnection)
-      : Promise.resolve(new Map()),
+    includeLoans ? fetchLoans(keys, dbConnection) : Promise.resolve(new Map()),
     includeEvents
-      ? fetchEvents(keyIds, dbConnection)
+      ? fetchEvents(keys, dbConnection)
       : Promise.resolve(new Map()),
     includeKeySystem
-      ? fetchKeySystems(keyIds, dbConnection)
+      ? fetchKeySystems(keys, dbConnection)
       : Promise.resolve(new Map()),
   ])
 
@@ -342,57 +336,44 @@ export async function getKeyDetails(
   } = options
   const result: any = { ...key }
 
-  // Include loans (active + previous)
+  // Fetch all related data in parallel using reusable helpers
+  const [loansByKeyId, eventsByKeyId, keySystemsById] = await Promise.all([
+    includeLoans ? fetchLoans([key], dbConnection) : Promise.resolve(new Map()),
+    includeEvents
+      ? fetchEvents([key], dbConnection)
+      : Promise.resolve(new Map()),
+    includeKeySystem
+      ? fetchKeySystems([key], dbConnection)
+      : Promise.resolve(new Map()),
+  ])
+
+  // Attach loans (active + previous)
   if (includeLoans) {
-    const loans: keys.v1.KeyLoan[] = []
+    const keyLoans = loansByKeyId.get(key.id) || []
+    const activeLoan = keyLoans.find(
+      (loan: KeyLoan) => loan.returnedAt === null
+    )
+    const returnedLoans = keyLoans.filter(
+      (loan: KeyLoan) => loan.returnedAt !== null
+    )
+    const previousLoan = returnedLoans.length > 0 ? returnedLoans[0] : null
 
-    // Find active loan
-    const activeLoan = await dbConnection('key_loans')
-      .whereRaw('keys LIKE ?', [`%"${key.id}"%`])
-      .whereNull('returnedAt')
-      .first()
-
-    if (activeLoan) {
-      loans.push(activeLoan)
-    }
-
-    // Find previous loan (most recent returned)
-    const previousLoan = await dbConnection('key_loans')
-      .whereRaw('keys LIKE ?', [`%"${key.id}"%`])
-      .whereNotNull('returnedAt')
-      .orderBy('returnedAt', 'desc')
-      .first()
-
-    if (previousLoan) {
-      loans.push(previousLoan)
-    }
+    const loans: KeyLoan[] = []
+    if (activeLoan) loans.push(activeLoan)
+    if (previousLoan) loans.push(previousLoan)
 
     result.loans = loans.length > 0 ? loans : null
   }
 
-  // Include events (latest event)
+  // Attach events (latest only)
   if (includeEvents) {
-    const events: keys.v1.KeyEvent[] = []
-
-    const latestEvent = await dbConnection('key_events')
-      .whereRaw('keys LIKE ?', [`%"${key.id}"%`])
-      .orderBy('createdAt', 'desc')
-      .first()
-
-    if (latestEvent) {
-      events.push(latestEvent)
-    }
-
-    result.events = events.length > 0 ? events : null
+    const keyEvents = eventsByKeyId.get(key.id) || []
+    result.events = keyEvents.length > 0 ? [keyEvents[0]] : null
   }
 
-  // Include key system
+  // Attach key system
   if (includeKeySystem && key.keySystemId) {
-    const keySystem = await dbConnection('key_systems')
-      .where({ id: key.keySystemId })
-      .first()
-
-    result.keySystem = keySystem || null
+    result.keySystem = keySystemsById.get(key.keySystemId) || null
   }
 
   return result as KeyDetails
