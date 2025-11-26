@@ -25,6 +25,11 @@ export type ResidenceWithRelations = Prisma.ResidenceGetPayload<{
     propertyObject: {
       include: {
         rentalInformation: { include: { rentalInformationType: true } }
+        rentalBlocks: {
+          include: {
+            blockReason: true
+          }
+        }
         propertyStructures: {
           select: {
             rentalId: true
@@ -147,8 +152,11 @@ export const getResidenceByRentalId = async (rentalId: string) => {
 }
 
 export const getResidenceById = async (
-  id: string
+  id: string,
+  options?: { includeActiveBlocksOnly?: boolean }
 ): Promise<ResidenceWithRelations | null> => {
+  const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+
   const response = await prisma.residence
     .findFirst({
       where: {
@@ -159,6 +167,28 @@ export const getResidenceById = async (
         propertyObject: {
           include: {
             rentalInformation: { include: { rentalInformationType: true } },
+            rentalBlocks: {
+              ...(includeActiveBlocksOnly && {
+                where: {
+                  fromDate: {
+                    lte: new Date(),
+                  },
+                  OR: [
+                    {
+                      toDate: {
+                        gte: new Date(),
+                      },
+                    },
+                    {
+                      toDate: null as any,
+                    },
+                  ],
+                },
+              }),
+              include: {
+                blockReason: true,
+              },
+            },
             propertyStructures: {
               select: {
                 rentalId: true,

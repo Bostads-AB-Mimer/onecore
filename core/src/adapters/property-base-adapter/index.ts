@@ -245,13 +245,20 @@ export async function getResidences(
 type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
 
 export async function getResidenceDetails(
-  residenceId: string
+  residenceId: string,
+  options?: { includeActiveBlocksOnly?: boolean }
 ): Promise<
   AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
 > {
   try {
     const fetchResponse = await client().GET('/residences/{id}', {
-      params: { path: { id: residenceId } },
+      params: {
+        path: { id: residenceId },
+        query: {
+          includeActiveBlocksOnly:
+            options?.includeActiveBlocksOnly === true ? 'true' : 'false',
+        },
+      },
     })
 
     if (fetchResponse.data?.content) {

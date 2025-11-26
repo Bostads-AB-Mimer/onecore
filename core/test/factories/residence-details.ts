@@ -55,6 +55,16 @@ export const ResidenceDetailsFactory = Factory.define<
     },
     rentalId: null,
     rentalInformation: null,
+    rentalBlocks: [
+      {
+        id: 'block-1',
+        blockReasonId: 'reason-1',
+        blockReason: 'Underhållsarbete',
+        fromDate: '2024-11-01T00:00:00Z',
+        toDate: null,
+        amount: null,
+      },
+    ],
   },
   property: { code: null, name: 'foo-property' },
   building: { code: null, name: 'foo-building' },
