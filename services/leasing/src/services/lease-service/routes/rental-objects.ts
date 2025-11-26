@@ -6,6 +6,8 @@ import {
   getParkingSpaces,
 } from '../adapters/xpand/rental-object-adapter'
 
+import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+
 /**
  * @swagger
  * tags:
@@ -131,8 +133,29 @@ export const routes = (router: KoaRouter) => {
     const result = await getParkingSpace(rentalObjectCode)
 
     if (result.ok) {
+      //get rent from tenfast
+      const rentalObjectResult =
+        await tenfastAdapter.getRentalObject(rentalObjectCode)
+
+      if (rentalObjectResult.ok) {
+        const rent =
+          rentalObjectResult.data?.hyra +
+            rentalObjectResult.data?.hyror
+              .map((h) => h.belopp)
+              .reduce((a, b) => a + b, 0) || 0
+
+        ctx.status = 200
+        ctx.body = { content: { ...result.data, rent: rent }, ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: rentalObjectResult.err, rentalObjectCode: rentalObjectCode },
+        `Could not get rent from Tenfast`
+      )
+
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: { ...result.data }, ...metadata }
       return
     }
 
