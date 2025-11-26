@@ -13,6 +13,7 @@ import {
   TenfastTenantSchema,
   TenfastLease,
   TenfastLeaseSchema,
+  TenfastInvoiceRow,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -481,6 +482,55 @@ export async function getLeaseByLeaseId(
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByLeaseId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createInvoiceRow(params: {
+  leaseId: string
+  invoiceRow: Omit<TenfastInvoiceRow, '_id'>
+}): Promise<AdapterResult<TenfastInvoiceRow, 'unknown'>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${params.leaseId}/rows`,
+      data: {
+        rowsToAdd: [params.invoiceRow],
+      },
+    })
+
+    // Guessing status here
+    if (res.status === 200 || res.status === 201) {
+      return { ok: true, data: res.data }
+    } else {
+      throw res
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.createInvoiceRow')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteInvoiceRow(params: {
+  leaseId: string
+  invoiceRowId: string
+}): Promise<AdapterResult<null, 'unknown'>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${params.leaseId}/rows`,
+      data: {
+        rowsToDelete: [params.invoiceRowId],
+      },
+    })
+
+    if (res.status === 200 || res.status === 204) {
+      return { ok: true, data: null }
+    } else {
+      throw res
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.deleteInvoiceRow')
     return { ok: false, err: 'unknown' }
   }
 }
