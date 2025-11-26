@@ -11,6 +11,7 @@ import { StickyNote } from 'lucide-react'
 
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
+import { TenantLedger } from '../TenantLedger'
 
 interface TenantDetailTabsContentProps {
   leases: Lease[]
@@ -45,13 +46,7 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="ledger">
-        <div>Placeholder Fakturor & betalningar</div>
-        {/* <TenantLedger
-          ledger={getMockLedgerForCustomer(personalNumber || customerNumber)}
-          invoices={getMockInvoicesForCustomer(
-            personalNumber || customerNumber
-          )}
-        /> */}
+        <TenantLedger contactCode={contactCode} />
       </TabsContent>
 
       {/*
