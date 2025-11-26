@@ -1,6 +1,6 @@
 import { Lease, Contact, LeaseStatus } from '@onecore/types'
 
-const calculateStatus = (
+const calculateLeaseStatus = (
   lastDebitDateString: string,
   startDateString: string
 ): LeaseStatus => {
@@ -38,7 +38,7 @@ const toLease = (
     type: row.leaseType,
     leaseStartDate: row.fromDate,
     leaseEndDate: row.toDate,
-    status: calculateStatus(row.lastDebitDate, row.fromDate),
+    status: calculateLeaseStatus(row.lastDebitDate, row.fromDate),
     tenantContactIds,
     tenants,
     rentalProperty: undefined,
@@ -57,4 +57,4 @@ const toLease = (
   return lease
 }
 
-export default { toLease }
+export default { toLease, calculateLeaseStatus }

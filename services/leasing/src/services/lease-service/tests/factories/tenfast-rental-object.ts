@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { TenfastRentalObjectByRentalObjectCodeResponse } from '../../../../common/adapters/tenfast/schemas'
+import { TenfastRentalObjectByRentalObjectCodeResponse } from '../../adapters/tenfast/schemas'
 
 export const TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory =
   Factory.define<TenfastRentalObjectByRentalObjectCodeResponse>(
@@ -10,6 +10,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory =
           hyra: 287.17,
           hyror: [],
           article: '67eb8aea545c8f1195bea0ba',
+          externalId: `externalId-${sequence}`,
         },
       ],
       prev: null,

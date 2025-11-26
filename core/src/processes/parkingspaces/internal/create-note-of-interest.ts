@@ -1,4 +1,5 @@
 import { HttpStatusCode } from 'axios'
+import dayjs from 'dayjs'
 import {
   parkingSpaceApplicationCategoryTranslation,
   Applicant,
@@ -20,7 +21,7 @@ import {
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
   getContactByContactCode,
-  getLeasesForContactCode,
+  getLeasesByContactCode,
 } from '../../../adapters/leasing-adapter'
 import { getPublishedParkingSpace } from '../../../adapters/property-management-adapter'
 import {
@@ -31,7 +32,6 @@ import {
 import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
-import dayjs from 'dayjs'
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
 export const createNoteOfInterestForInternalParkingSpace = async (
@@ -82,9 +82,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     const applicantContact = getApplicantContact.data
 
     //step 3a. Check if applicant is tenant
-    const leases = await getLeasesForContactCode(contactCode, {
-      includeUpcomingLeases: true,
-      includeTerminatedLeases: false,
+    const leases = await getLeasesByContactCode(contactCode, {
+      status: ['current', 'upcoming'],
       includeContacts: false,
     })
 

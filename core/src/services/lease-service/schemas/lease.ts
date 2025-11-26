@@ -126,21 +126,6 @@ export const Lease = z.object({
     .optional(),
 })
 
-export const GetLeasesByRentalPropertyIdQueryParams = z.object({
-  includeUpcomingLeases: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeTerminatedLeases: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeContacts: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-})
-
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {
     leaseId: lease.leaseId,
@@ -157,10 +142,7 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
             : 'Ended',
     tenantContactIds: lease.tenantContactIds,
     rentalPropertyId: lease.rentalPropertyId,
-    rentalProperty: lease.rentalProperty,
     type: lease.type,
-    rentInfo: lease.rentInfo,
-    address: lease.address,
     noticeGivenBy: lease.noticeGivenBy,
     noticeDate: lease.noticeDate,
     noticeTimeTenant: lease.noticeTimeTenant,
