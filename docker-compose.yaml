@@ -44,6 +44,19 @@ services:
     ports:
       - 5608:5601
 
+  minio:
+    image: minio/minio
+    container_name: onecore-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    volumes:
+      - minio:/usr/share/minio-data
+
 networks:
   onecore:
     driver: bridge
@@ -51,3 +64,4 @@ networks:
 volumes:
   sql:
   elasticsearch:
+  minio:
