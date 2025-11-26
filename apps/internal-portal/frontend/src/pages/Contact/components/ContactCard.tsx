@@ -133,9 +133,6 @@ function Leases(props: { leases: Lease[] }) {
         {yyyymmdd(new Date(lease.leaseStartDate))}
       </Grid>
       <Grid item xs={12} md={4} lg={2}>
-        <b>Adress</b>
-      </Grid>
-      <Grid item xs={12} md={4} lg={2}>
         <b>Slutdatum</b>
       </Grid>
       <Grid item xs={12} md={8} lg={4}>
