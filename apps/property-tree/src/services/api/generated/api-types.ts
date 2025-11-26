@@ -188,6 +188,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
         path: {
           /** @description The ID of the residence */
           id: string;
@@ -896,7 +900,7 @@ export interface components {
             /** Format: date-time */
             fromDate: string;
             /** Format: date-time */
-            toDate: string;
+            toDate: string | null;
             amount: number | null;
           })[];
       };

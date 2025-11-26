@@ -462,6 +462,14 @@ export const ResidenceSummaryQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
 })
 
+export const GetResidenceDetailsQueryParamsSchema = z.object({
+  includeActiveBlocksOnly: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+})
+
 export const ResidenceSummarySchema = z.object({
   id: z.string(),
   code: z.string(),

@@ -137,8 +137,11 @@ export const getResidenceByRentalId = async (rentalId: string) => {
 }
 
 export const getResidenceById = async (
-  id: string
+  id: string,
+  options?: { includeActiveBlocksOnly?: boolean }
 ): Promise<ResidenceWithRelations | null> => {
+  const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+
   const response = await prisma.residence
     .findFirst({
       where: {
@@ -150,21 +153,23 @@ export const getResidenceById = async (
           include: {
             rentalInformation: { include: { rentalInformationType: true } },
             rentalBlocks: {
-              where: {
-                fromDate: {
-                  lte: new Date(),
-                },
-                OR: [
-                  {
-                    toDate: {
-                      gte: new Date(),
+              ...(includeActiveBlocksOnly && {
+                where: {
+                  fromDate: {
+                    lte: new Date(),
+                  },
+                  OR: [
+                    {
+                      toDate: {
+                        gte: new Date(),
+                      },
                     },
-                  },
-                  {
-                    toDate: null as any,
-                  },
-                ],
-              },
+                    {
+                      toDate: null as any,
+                    },
+                  ],
+                },
+              }),
               include: {
                 blockReason: true,
               },
