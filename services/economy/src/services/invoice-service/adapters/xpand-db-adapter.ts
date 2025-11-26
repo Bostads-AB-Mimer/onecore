@@ -3,6 +3,8 @@ import {
   Address,
   Invoice,
   InvoiceRow,
+  InvoiceTransactionType,
+  invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
@@ -453,6 +455,9 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     expirationDate: row.expirationDate,
     debitStatus: row.debitStatus,
     paymentStatus: getPaymentStatus(row.paymentStatus),
+    transactionType: getTransactionType(row.transactionType),
+    transactionTypeName: row.transactionTypeName.trim(),
+    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   }
@@ -664,6 +669,11 @@ export const getInvoiceRows = async (
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
           toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          totalAmount: sumColumns(
+            invoiceRow['rowAmount'],
+            invoiceRow['rowReduction'],
+            invoiceRow['rowVat']
+          ),
           vat: sumColumns(invoiceRow['rowVat']),
         }
 
@@ -686,6 +696,21 @@ export const getInvoiceRows = async (
   )
 
   return convertedInvoiceRows
+}
+
+function getTransactionType(transactionTypeString: any) {
+  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
+    return InvoiceTransactionType.Other
+  }
+
+  let transactionType =
+    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
+
+  if (!transactionType) {
+    transactionType = InvoiceTransactionType.Other
+  }
+
+  return transactionType
 }
 
 function getPaymentStatus(paymentStatusNumber: number) {

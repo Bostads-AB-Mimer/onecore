@@ -12,7 +12,12 @@ import {
   TenfastRentArticleSchema,
   TenfastRentArticle,
 } from './schemas'
-import { Invoice, InvoiceRow, PaymentStatus } from '@onecore/types'
+import {
+  Invoice,
+  InvoiceRow,
+  InvoiceTransactionType,
+  PaymentStatus,
+} from '@onecore/types'
 
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
@@ -192,9 +197,12 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     leaseId: '',
     paymentStatus:
       remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
+    type: 'Regular', // ?
     reference: tenfastInvoice.ocrNumber,
     source: 'next', // ??
     invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
+    transactionType: InvoiceTransactionType.Rent, // ?
+    transactionTypeName: '', // ?
   }
 }
 
@@ -207,6 +215,7 @@ const transformToInvoiceRow = (
     fromDate: tenfastInvoiceRow.from ?? '',
     toDate: tenfastInvoiceRow.to ?? '',
     vat: tenfastInvoiceRow.vat,
+    totalAmount: tenfastInvoiceRow.amount + tenfastInvoiceRow.vat,
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
     invoiceRowText: null, // Set later from related article
     // We do not have the fields below in tenfast at the moment

@@ -34,6 +34,15 @@ enum ParkingSpaceApplicationCategory {
   external = 1,
 }
 
+enum InvoiceTransactionType {
+  Rent = 1,
+  Reminder = 10,
+  DebtCollection = 11,
+  RedemptionPlan = 12,
+  AbandondenRedemptionPlan = 13,
+  Other = 100,
+}
+
 enum PaymentStatus {
   Paid = 1,
   Unpaid = 2,
@@ -77,6 +86,7 @@ export {
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,
+  InvoiceTransactionType,
   ListingStatus,
   ApplicantStatus,
   OfferStatus,
