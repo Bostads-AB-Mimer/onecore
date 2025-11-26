@@ -22,28 +22,24 @@ import {
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 
-const axiosOptions = {
-  headers: {
-    'Content-type': 'application/json',
-    'api-token': apiKey,
-  },
-}
-
 const makeTenfastRequest = async (
   url: string,
   config?: {
     method?: string
-    params?: Record<string, string | string[] | number | number[]>
+    params?: Record<string, string | string[] | number | number[] | undefined>
     data?: any
   }
 ) => {
   return axios.request({
-    ...axiosOptions,
     baseURL: baseUrl,
     url,
     method: config?.method ?? 'GET',
     data: config?.data,
     params: config?.params,
+    headers: {
+      'Content-type': 'application/json',
+      'api-token': apiKey,
+    },
   })
 }
 
