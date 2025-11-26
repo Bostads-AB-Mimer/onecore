@@ -13,14 +13,12 @@ export const PaginationLinksSchema = z.object({
   rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
 })
 
-export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
-  contentSchema: T
-) =>
-  z.object({
-    content: z.array(contentSchema),
-    _meta: PaginationMetaSchema,
-    _links: z.array(PaginationLinksSchema),
-  })
+// Generic pagination response wrapper (for OpenAPI allOf pattern)
+export const PaginatedResponseSchema = z.object({
+  content: z.array(z.any()),
+  _meta: PaginationMetaSchema,
+  _links: z.array(PaginationLinksSchema),
+})
 
 export const KeyTypeSchema = z.enum([
   'HN',
@@ -143,18 +141,17 @@ export const KeyEventSchema = z.object({
   updatedAt: z.coerce.date(),
 })
 
-// Key with loan and event status (for key bundle table view and lease context)
-// Includes both active loan and previous loan for unified display
-export const KeyWithLoanAndEventSchema = KeySchema.extend({
-  loan: KeyLoanSchema.nullable(), // Active loan (null if not currently loaned)
-  previousLoan: KeyLoanSchema.nullable().optional(), // Previous loan (for returned keys)
-  latestEvent: KeyEventSchema.nullable().optional(),
+// Key with all optional relations (for API responses with include parameters)
+export const KeyDetailsSchema = KeySchema.extend({
+  keySystem: KeySystemSchema.optional().nullable(),
+  loans: z.array(KeyLoanSchema).optional().nullable(),
+  events: z.array(KeyEventSchema).optional().nullable(),
 })
 
 // Response schema for key bundle with loan status endpoint
-export const KeyBundleWithLoanStatusResponseSchema = z.object({
+export const KeyBundleDetailsResponseSchema = z.object({
   bundle: KeyBundleSchema,
-  keys: z.array(KeyWithLoanAndEventSchema),
+  keys: z.array(KeyDetailsSchema),
 })
 
 // Response schema for bundles with keys loaned to a specific contact

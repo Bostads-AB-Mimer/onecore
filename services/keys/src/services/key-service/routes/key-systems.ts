@@ -21,7 +21,7 @@ const {
   UpdateKeySystemRequestSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
-  createPaginatedResponseSchema,
+  PaginatedResponseSchema,
 } = keys.v1
 type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
 type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
@@ -58,10 +58,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('KeySystem', KeySystemSchema)
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
-  registerSchema(
-    'PaginatedKeySystemsResponse',
-    createPaginatedResponseSchema(KeySystemSchema)
-  )
+  registerSchema('PaginatedResponse', PaginatedResponseSchema)
   /**
    * @swagger
    * /key-systems:
@@ -90,7 +87,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeySystem'
    *       500:
    *         description: Internal server error
    */
@@ -215,7 +219,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeySystem'
    *       400:
    *         description: Bad request. Invalid parameters or field names
    *       500:

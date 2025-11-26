@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Lease, KeyWithLoanAndEvent } from '@/services/types'
+import type { Lease, KeyDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -34,14 +34,14 @@ export function LeaseKeyStatusList({
   refreshTrigger,
 }: {
   lease: Lease
-  keysData?: KeyWithLoanAndEvent[]
+  keysData?: KeyDetails[]
   onKeysLoaned?: () => void
   onKeysReturned?: () => void
   onKeyCreated?: () => void
   refreshTrigger?: number
 }) {
   const { toast } = useToast()
-  const [keys, setKeys] = useState<KeyWithLoanAndEvent[]>([])
+  const [keys, setKeys] = useState<KeyDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
@@ -81,7 +81,8 @@ export function LeaseKeyStatusList({
       try {
         const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
           lease.rentalPropertyId,
-          true // Include latest event to avoid N+1 queries
+          true, // Include latest event to avoid N+1 queries
+          true // Include key system to avoid N+1 queries
         )
         if (!cancelled) {
           setKeys(fetchedKeys)
@@ -120,6 +121,7 @@ export function LeaseKeyStatusList({
     // Only fetch directly if component is standalone (no parent providing data)
     const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
       lease.rentalPropertyId,
+      true,
       true
     )
     setKeys(fetchedKeys)

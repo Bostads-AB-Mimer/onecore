@@ -6,7 +6,7 @@ import { AdapterResult } from '../types'
 
 // ---- Import types from @onecore/types ---------------------------------------
 type Key = keys.v1.Key
-type KeyWithLoanAndEvent = keys.v1.KeyWithLoanAndEvent
+type KeyDetails = keys.v1.KeyDetails
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
 type KeySystem = keys.v1.KeySystem
@@ -22,7 +22,7 @@ type Signature = keys.v1.Signature
 type SendSignatureRequest = keys.v1.SendSignatureRequest
 type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
-type KeyBundleWithLoanStatusResponse = keys.v1.KeyBundleWithLoanStatusResponse
+type KeyBundleDetailsResponse = keys.v1.KeyBundleDetailsResponse
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 
 const BASE = Config.keysService.url
@@ -143,11 +143,13 @@ async function deleteJSON<T = unknown>(
 export const KeysApi = {
   list: async (
     page?: number,
-    limit?: number
+    limit?: number,
+    includeKeySystem?: boolean
   ): Promise<AdapterResult<PaginatedResponse<Key>, CommonErr>> => {
     const params = new URLSearchParams()
     if (page) params.append('page', page.toString())
     if (limit) params.append('limit', limit.toString())
+    if (includeKeySystem) params.append('includeKeySystem', 'true')
 
     const queryString = params.toString()
     const url = queryString ? `${BASE}/keys?${queryString}` : `${BASE}/keys`
@@ -173,6 +175,9 @@ export const KeysApi = {
       }
     }
 
+    // Note: includeKeySystem is already in searchParams from ctx.query
+    // so we don't need to add it again here
+
     const r = await getJSON<PaginatedResponse<Key>>(
       `${BASE}/keys/search?${params.toString()}`
     )
@@ -180,21 +185,23 @@ export const KeysApi = {
   },
 
   getByRentalObjectCode: async (
-    rentalObjectCode: string
-  ): Promise<AdapterResult<Key[], CommonErr>> => {
-    const r = await getJSON<{ content: Key[] }>(
-      `${BASE}/keys/by-rental-object/${rentalObjectCode}`
-    )
-    return r.ok ? ok(r.data.content) : r
-  },
-
-  getWithLoanStatus: async (
     rentalObjectCode: string,
-    includeLatestEvent?: boolean
-  ): Promise<AdapterResult<KeyWithLoanAndEvent[], CommonErr>> => {
-    const queryParams = includeLatestEvent ? '?includeLatestEvent=true' : ''
-    const r = await getJSON<{ content: KeyWithLoanAndEvent[] }>(
-      `${BASE}/keys/with-loan-status/${rentalObjectCode}${queryParams}`
+    options?: {
+      includeLoans?: boolean
+      includeEvents?: boolean
+      includeKeySystem?: boolean
+    }
+  ): Promise<AdapterResult<KeyDetails[], CommonErr>> => {
+    const params = new URLSearchParams()
+    if (options?.includeLoans) params.append('includeLoans', 'true')
+    if (options?.includeEvents) params.append('includeEvents', 'true')
+    if (options?.includeKeySystem) params.append('includeKeySystem', 'true')
+
+    const queryString = params.toString()
+    const queryParams = queryString ? `?${queryString}` : ''
+
+    const r = await getJSON<{ content: KeyDetails[] }>(
+      `${BASE}/keys/by-rental-object/${rentalObjectCode}${queryParams}`
     )
     return r.ok ? ok(r.data.content) : r
   },
@@ -961,12 +968,23 @@ export const KeyBundlesApi = {
 
   getWithLoanStatus: async (
     id: string,
-    includePreviousLoan: boolean = true
+    options?: {
+      includeLoans?: boolean
+      includeEvents?: boolean
+      includeKeySystem?: boolean
+    }
   ): Promise<
-    AdapterResult<KeyBundleWithLoanStatusResponse, 'not-found' | CommonErr>
+    AdapterResult<KeyBundleDetailsResponse, 'not-found' | CommonErr>
   > => {
-    const queryParams = includePreviousLoan ? '' : '?includePreviousLoan=false'
-    const r = await getJSON<{ content: KeyBundleWithLoanStatusResponse }>(
+    const params = new URLSearchParams()
+    if (options?.includeLoans) params.append('includeLoans', 'true')
+    if (options?.includeEvents) params.append('includeEvents', 'true')
+    if (options?.includeKeySystem) params.append('includeKeySystem', 'true')
+
+    const queryString = params.toString()
+    const queryParams = queryString ? `?${queryString}` : ''
+
+    const r = await getJSON<{ content: KeyBundleDetailsResponse }>(
       `${BASE}/key-bundles/${id}/keys-with-loan-status${queryParams}`
     )
     return r.ok ? ok(r.data.content) : r

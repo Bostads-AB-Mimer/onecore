@@ -10,18 +10,20 @@ import { buildSearchQuery } from '../../../utils/search-builder'
 
 const {
   KeySchema,
-  KeyWithLoanAndEventSchema,
+  KeyDetailsSchema,
+  KeySystemSchema,
   KeyLoanSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
-  createPaginatedResponseSchema,
+  PaginatedResponseSchema,
 } = keys.v1
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 type BulkUpdateFlexRequest = keys.v1.BulkUpdateFlexRequest
+type Key = keys.v1.Key
 
 /**
  * @swagger
@@ -43,22 +45,22 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('Key', KeySchema)
-  registerSchema('KeyLoan', KeyLoanSchema)
-  registerSchema('KeyWithLoanAndEvent', KeyWithLoanAndEventSchema, {
+  registerSchema('KeyDetails', KeyDetailsSchema, {
+    KeySystem: KeySystemSchema,
     KeyLoan: KeyLoanSchema,
   })
+  registerSchema('KeyLoan', KeyLoanSchema)
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
-  registerSchema(
-    'PaginatedKeysResponse',
-    createPaginatedResponseSchema(KeySchema)
-  )
+
+  // Generic pagination wrapper (used with allOf in swagger docs)
+  registerSchema('PaginatedResponse', PaginatedResponseSchema)
   /**
    * @swagger
    * /keys:
    *   get:
    *     summary: List keys with pagination
-   *     description: Returns paginated keys ordered by createdAt (desc).
+   *     description: Returns paginated keys ordered by createdAt (desc). Use includeKeySystem to include key system details in the response.
    *     tags: [Keys]
    *     parameters:
    *       - in: query
@@ -75,13 +77,27 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
-   *         description: A paginated list of keys.
+   *         description: A paginated list of keys. When includeKeySystem=true, each key includes keySystem details.
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeysResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyDetails'
    *       500:
    *         description: An error occurred while listing keys.
    *         content:
@@ -96,8 +112,24 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
       const query = keysAdapter.getAllKeysQuery(db)
       const paginatedResult = await paginate(query, ctx)
+
+      // Fetch and attach key systems after pagination
+      if (includeKeySystem && paginatedResult.content.length > 0) {
+        const keySystemsById = await keysAdapter.fetchKeySystems(
+          paginatedResult.content as Key[],
+          db
+        )
+
+        paginatedResult.content = paginatedResult.content.map((key: any) => ({
+          ...key,
+          keySystem: key.keySystemId
+            ? keySystemsById.get(key.keySystemId) || null
+            : null,
+        }))
+      }
 
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }
@@ -191,18 +223,27 @@ export const routes = (router: KoaRouter) => {
    *         name: updatedAt
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
-   *         description: Successfully retrieved search results
+   *         description: Successfully retrieved search results. When includeKeySystem=true, each key includes keySystem details.
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Key'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyDetails'
    *       400:
    *         description: Bad request. Invalid parameters or field names
    *       500:
@@ -212,10 +253,12 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
     try {
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
       const query = keysAdapter.getKeysSearchQuery(db)
 
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['keyName', 'rentalObjectCode'],
+        reservedParams: ['q', 'fields', 'page', 'limit', 'includeKeySystem'],
       })
 
       if (!searchResult.hasSearchParams) {
@@ -232,6 +275,21 @@ export const routes = (router: KoaRouter) => {
         ctx
       )
 
+      // Fetch and attach key systems after pagination
+      if (includeKeySystem && paginatedResult.content.length > 0) {
+        const keySystemsById = await keysAdapter.fetchKeySystems(
+          paginatedResult.content as Key[],
+          db
+        )
+
+        paginatedResult.content = paginatedResult.content.map((key: any) => ({
+          ...key,
+          keySystem: key.keySystemId
+            ? keySystemsById.get(key.keySystemId) || null
+            : null,
+        }))
+      }
+
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
@@ -245,8 +303,12 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /keys/by-rental-object/{rentalObjectCode}:
    *   get:
-   *     summary: Get all keys by rental object code
-   *     description: Returns all keys associated with a specific rental object code without pagination.
+   *     summary: Get all keys by rental object code with optional related data
+   *     description: |
+   *       Returns all keys associated with a specific rental object code with optional related data.
+   *       Use query parameters to include loans, events, and/or key system information.
+   *
+   *       **Performance**: Optimized single-query fetch eliminates N+1 query problems (~95% faster).
    *     tags: [Keys]
    *     parameters:
    *       - in: path
@@ -255,9 +317,30 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The rental object code to filter keys by.
+   *       - in: query
+   *         name: includeLoans
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include loans array (active + previous loans) for each key.
+   *       - in: query
+   *         name: includeEvents
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include events array (latest event) for each key.
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include key system information in the response.
    *     responses:
    *       200:
-   *         description: List of keys for the rental object code.
+   *         description: List of keys with optional related data (loans, events, keySystem).
    *         content:
    *           application/json:
    *             schema:
@@ -266,7 +349,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/Key'
+   *                     $ref: '#/components/schemas/KeyDetails'
    *       500:
    *         description: An error occurred while fetching keys.
    *         content:
@@ -281,87 +364,19 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await keysAdapter.getKeysByRentalObject(
+      const includeLoans = ctx.query.includeLoans === 'true'
+      const includeEvents = ctx.query.includeEvents === 'true'
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
+      const rows = await keysAdapter.getKeysDetails(
         ctx.params.rentalObjectCode,
-        db
+        db,
+        { includeLoans, includeEvents, includeKeySystem }
       )
 
       ctx.status = 200
       ctx.body = { content: rows, ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching keys by rental object code')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /keys/with-loan-status/{rentalObjectCode}:
-   *   get:
-   *     summary: Get keys with loan and event status enriched
-   *     description: |
-   *       Returns all relevant keys for a rental object with their active and previous loan information
-   *       pre-fetched in a single optimized query. This eliminates N+1 query problems.
-   *
-   *       **Performance**: ~95% faster than fetching keys then looping for loan status.
-   *
-   *       Returns:
-   *       - `loan`: Active loan object (null if not currently loaned)
-   *       - `previousLoan`: Most recent returned loan object (null if never returned)
-   *       - `latestEvent`: Latest key event (included when includeLatestEvent=true)
-   *     tags: [Keys]
-   *     parameters:
-   *       - in: path
-   *         name: rentalObjectCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The rental object code to filter keys by.
-   *       - in: query
-   *         name: includeLatestEvent
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Include the latest key event for each key in the response.
-   *     responses:
-   *       200:
-   *         description: List of keys with enriched loan and event data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyWithLoanAndEvent'
-   *       500:
-   *         description: An error occurred while fetching keys.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Internal server error
-   */
-  router.get('/keys/with-loan-status/:rentalObjectCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const includeLatestEvent = ctx.query.includeLatestEvent === 'true'
-      const rows = await keysAdapter.getKeysWithLoanStatus(
-        ctx.params.rentalObjectCode,
-        db,
-        includeLatestEvent
-      )
-
-      ctx.status = 200
-      ctx.body = { content: rows, ...metadata }
-    } catch (err) {
-      logger.error(err, 'Error fetching keys with loan status')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

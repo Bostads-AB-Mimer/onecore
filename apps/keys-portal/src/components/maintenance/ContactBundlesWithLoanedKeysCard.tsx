@@ -10,12 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   getBundlesByContactWithLoanedKeys,
-  getKeyBundleWithLoanStatus,
+  getKeyBundleDetails,
 } from '@/services/api/keyBundleService'
 import { keyService } from '@/services/api/keyService'
 import type {
   BundleWithLoanedKeysInfo,
-  KeyBundleWithLoanStatusResponse,
+  KeyBundleDetailsResponse,
 } from '@/services/types'
 import { MaintenanceKeysTable } from './MaintenanceKeysTable'
 
@@ -36,7 +36,7 @@ export function ContactBundlesWithLoanedKeysCard({
   // State for nested bundle expansion
   const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
   const [bundleDetails, setBundleDetails] = useState<
-    Record<string, KeyBundleWithLoanStatusResponse>
+    Record<string, KeyBundleDetailsResponse>
   >({})
   const [loadingBundleId, setLoadingBundleId] = useState<string | null>(null)
   const [keySystemMaps, setKeySystemMaps] = useState<
@@ -83,7 +83,7 @@ export function ContactBundlesWithLoanedKeysCard({
     // Fetch detailed bundle data
     setLoadingBundleId(bundleId)
     try {
-      const data = await getKeyBundleWithLoanStatus(bundleId)
+      const data = await getKeyBundleDetails(bundleId)
       if (data) {
         setBundleDetails((prev) => ({ ...prev, [bundleId]: data }))
 

@@ -1,6 +1,6 @@
 import type {
   Key,
-  KeyWithLoanAndEvent,
+  KeyDetails,
   KeySystem,
   CreateKeyRequest,
   UpdateKeyRequest,
@@ -30,10 +30,11 @@ export const keyService = {
   // ------- KEYS -------
   async getAllKeys(
     page: number = 1,
-    limit: number = 60
+    limit: number = 60,
+    includeKeySystem: boolean = false
   ): Promise<PaginatedResponse<Key>> {
     const { data, error } = await GET('/keys', {
-      params: { query: { page, limit } },
+      params: { query: { page, limit, includeKeySystem } },
     })
     if (error) throw error
     return ensurePaginatedResponse<Key>(data)
@@ -70,42 +71,41 @@ export const keyService = {
   async searchKeys(
     searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
-    limit: number = 60
+    limit: number = 60,
+    includeKeySystem: boolean = false
   ): Promise<PaginatedResponse<Key>> {
     const { data, error } = await GET('/keys/search', {
-      params: { query: { ...searchParams, page, limit } },
+      params: { query: { ...searchParams, page, limit, includeKeySystem } },
       querySerializer,
     })
     if (error) throw error
     return ensurePaginatedResponse<Key>(data)
   },
 
-  async getKeysByRentalObjectCode(rentalObjectCode: string): Promise<Key[]> {
+  async getKeysByRentalObjectCode(
+    rentalObjectCode: string,
+    options?: {
+      includeLoans?: boolean
+      includeEvents?: boolean
+      includeKeySystem?: boolean
+    }
+  ): Promise<KeyDetails[]> {
+    const queryParams: Record<string, boolean> = {}
+    if (options?.includeLoans) queryParams.includeLoans = true
+    if (options?.includeEvents) queryParams.includeEvents = true
+    if (options?.includeKeySystem) queryParams.includeKeySystem = true
+
     const { data, error } = await GET(
       '/keys/by-rental-object/{rentalObjectCode}',
       {
-        params: { path: { rentalObjectCode } },
-      }
-    )
-    if (error) throw error
-    return (data?.content ?? []) as Key[]
-  },
-
-  async getKeysWithLoanAndEvent(
-    rentalObjectCode: string,
-    includeLatestEvent?: boolean
-  ): Promise<KeyWithLoanAndEvent[]> {
-    const { data, error } = await GET(
-      '/keys/with-loan-status/{rentalObjectCode}',
-      {
         params: {
           path: { rentalObjectCode },
-          query: includeLatestEvent ? { includeLatestEvent: true } : {},
+          query: queryParams,
         },
       }
     )
     if (error) throw error
-    return (data?.content ?? []) as KeyWithLoanAndEvent[]
+    return (data?.content ?? []) as KeyDetails[]
   },
 
   async bulkUpdateFlex(

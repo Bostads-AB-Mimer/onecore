@@ -3,10 +3,11 @@ import {
   LoanableKeyTableBase,
   type LoanableKeyTableConfig,
 } from '@/components/shared/LoanableKeyTableBase'
-import { KeyWithLoanAndEvent } from '@/services/types'
+import { KeyDetails } from '@/services/types'
+import { getActiveLoan, getPreviousLoan } from '@/utils/loanHelpers'
 
 interface LeaseKeyTableListProps {
-  keys: KeyWithLoanAndEvent[]
+  keys: KeyDetails[]
   tenantContactCodes?: string[]
   selectable?: boolean
   selectedKeys?: string[]
@@ -54,25 +55,29 @@ export function LeaseKeyTableList({
     if (tenantContactCodes.length === 0) return keys
 
     return keys.map((key) => {
-      let transformedKey = { ...key }
+      // If there are no loans, no transformation needed
+      if (!key.loans || key.loans.length === 0) return key
 
-      // Transform current loan if it exists
-      if (key.loan) {
-        transformedKey = {
-          ...transformedKey,
-          loan: transformLoanIfMatchesTenant(key.loan),
+      const activeLoan = getActiveLoan(key)
+      const previousLoan = getPreviousLoan(key)
+
+      // Transform loans array
+      const transformedLoans = key.loans.map((loan) => {
+        // Transform active loan if it exists
+        if (activeLoan && loan.id === activeLoan.id) {
+          return transformLoanIfMatchesTenant(loan)
         }
-      }
-
-      // Transform previous loan ONLY if there's no active loan (key is in "Ej utlånade" section)
-      if (key.previousLoan && !key.loan) {
-        transformedKey = {
-          ...transformedKey,
-          previousLoan: transformLoanIfMatchesTenant(key.previousLoan),
+        // Transform previous loan ONLY if there's no active loan (key is in "Ej utlånade" section)
+        if (!activeLoan && previousLoan && loan.id === previousLoan.id) {
+          return transformLoanIfMatchesTenant(loan)
         }
-      }
+        return loan
+      })
 
-      return transformedKey
+      return {
+        ...key,
+        loans: transformedLoans,
+      }
     })
   }, [keys, tenantContactCodes])
 
@@ -81,6 +86,7 @@ export function LeaseKeyTableList({
       keyName: true,
       sequence: true,
       flex: true,
+      keySystem: true, // Show key system code
       status: true,
       pickupAvailability: true, // Show pickup availability for key loans
       disposal: true, // Show disposal status (Kasserad/Aktiv)

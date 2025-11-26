@@ -2,21 +2,21 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2 } from 'lucide-react'
 
-import type { KeyWithLoanAndEvent } from '@/services/types'
+import type { KeyDetails } from '@/services/types'
 import { FlexMenu } from './dialogs/FlexMenu'
 import { IncomingFlexMenu } from './dialogs/IncomingFlexMenu'
 import { IncomingOrderMenu } from './dialogs/IncomingOrderMenu'
 
 type Props = {
   selectedKeys: string[]
-  keysWithStatus: KeyWithLoanAndEvent[]
+  keysWithStatus: KeyDetails[]
   leaseIsNotPast: boolean
   isProcessing: boolean
   onRent: (keyIds: string[]) => void
   onReturn: (keyIds: string[]) => void
   onDispose?: (keyIds: string[]) => void
   onRefresh?: () => void
-  allKeys?: KeyWithLoanAndEvent[]
+  allKeys?: KeyDetails[]
   tenantContactCodes?: string[] // Add tenant contact codes for matching logic
 }
 
@@ -37,7 +37,7 @@ export function KeyActionButtons({
   const [incomingOrderMenuOpen, setIncomingOrderMenuOpen] = useState(false)
 
   // Helper to check if a key's loan matches current tenant
-  const matchesCurrentTenant = (key: KeyWithLoanAndEvent) => {
+  const matchesCurrentTenant = (key: KeyDetails) => {
     if (!key.loan) return false
     return (
       tenantContactCodes.includes(key.loan.contact || '') ||
@@ -47,7 +47,7 @@ export function KeyActionButtons({
 
   const selectedKeysData = selectedKeys
     .map((id) => keysWithStatus.find((k) => k.id === id))
-    .filter((k): k is KeyWithLoanAndEvent => k !== undefined)
+    .filter((k): k is KeyDetails => k !== undefined)
 
   const rentableKeys = selectedKeysData.filter((k) => !k.loan && leaseIsNotPast)
 

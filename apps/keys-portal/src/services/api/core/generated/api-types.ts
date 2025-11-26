@@ -3259,7 +3259,9 @@ export interface paths {
         /** @description Paginated list of keys */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeysResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyDetails"][];
+            };
           };
         };
         /** @description Server error */
@@ -3335,7 +3337,9 @@ export interface paths {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeysResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyDetails"][];
+            };
           };
         };
         /** @description Bad request */
@@ -3371,37 +3375,6 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["Key"][];
-            };
-          };
-        };
-        /** @description Server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/keys/with-loan-status/{rentalObjectCode}": {
-    /**
-     * Get keys with active loan status enriched
-     * @description Returns all relevant keys for a rental object with their active loan information
-     * pre-fetched in a single optimized query. This eliminates N+1 query problems.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code to filter keys by */
-          rentalObjectCode: string;
-        };
-      };
-      responses: {
-        /** @description List of keys with enriched active loan data */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["KeyWithLoanAndEvent"][];
             };
           };
         };
@@ -3569,7 +3542,9 @@ export interface paths {
         /** @description Successfully retrieved paginated key systems */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeySystem"][];
+            };
           };
         };
         /** @description Internal server error */
@@ -3658,7 +3633,9 @@ export interface paths {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedKeySystemsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeySystem"][];
+            };
           };
         };
         /** @description Bad request. Invalid parameters or field names */
@@ -3805,7 +3782,9 @@ export interface paths {
         /** @description Paginated list of logs */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Server error */
@@ -3879,7 +3858,9 @@ export interface paths {
         /** @description Successfully retrieved paginated search results */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Bad request */
@@ -3994,7 +3975,9 @@ export interface paths {
         /** @description Paginated list of logs for the rental object */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Server error */
@@ -4042,7 +4025,9 @@ export interface paths {
         /** @description Paginated list of logs for the contact */
         200: {
           content: {
-            "application/json": components["schemas"]["PaginatedLogsResponse"];
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
           };
         };
         /** @description Server error */
@@ -5226,7 +5211,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["KeyBundleWithLoanStatusResponse"];
+              content?: components["schemas"]["KeyBundleDetailsResponse"];
             };
           };
         };
@@ -5801,6 +5786,28 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
+    KeySystem: {
+      /** Format: uuid */
+      id: string;
+      systemCode: string;
+      name: string;
+      manufacturer: string;
+      managingSupplier?: string | null;
+      /** @enum {string} */
+      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+      schemaFileId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+    };
     KeyLoan: {
       /** Format: uuid */
       id: string;
@@ -5824,7 +5831,7 @@ export interface components {
       createdBy?: string | null;
       updatedBy?: string | null;
     };
-    KeyWithLoanAndEvent: {
+    KeyDetails: {
       /** Format: uuid */
       id: string;
       keyName: string;
@@ -5841,23 +5848,23 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      loan: components["schemas"]["KeyLoan"] | null;
-      previousLoan?: components["schemas"]["KeyLoan"] | null;
-      latestEvent?: ({
-        /** Format: uuid */
-        id: string;
-        keys: string;
-        /** @enum {string} */
-        type: "FLEX" | "ORDER" | "LOST";
-        /** @enum {string} */
-        status: "ORDERED" | "RECEIVED" | "COMPLETED";
-        /** Format: uuid */
-        workOrderId?: string | null;
-        /** Format: date-time */
-        createdAt: string;
-        /** Format: date-time */
-        updatedAt: string;
-      }) | null;
+      keySystem?: components["schemas"]["KeySystem"] | null;
+      loans?: components["schemas"]["KeyLoan"][] | null;
+      events?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          /** @enum {string} */
+          type: "FLEX" | "ORDER" | "LOST";
+          /** @enum {string} */
+          status: "ORDERED" | "RECEIVED" | "COMPLETED";
+          /** Format: uuid */
+          workOrderId?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[]) | null;
     };
     KeyLoanWithDetails: {
       /** Format: uuid */
@@ -5914,28 +5921,6 @@ export interface components {
           /** Format: date-time */
           updatedAt: string;
         })[];
-    };
-    KeySystem: {
-      /** Format: uuid */
-      id: string;
-      systemCode: string;
-      name: string;
-      manufacturer: string;
-      managingSupplier?: string | null;
-      /** @enum {string} */
-      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-      propertyIds?: string;
-      /** Format: date-time */
-      installationDate?: string | null;
-      isActive?: boolean;
-      description?: string | null;
-      schemaFileId?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-      createdBy?: string | null;
-      updatedBy?: string | null;
     };
     Log: {
       /** Format: uuid */
@@ -6136,7 +6121,7 @@ export interface components {
       keys?: string;
       description?: string | null;
     };
-    KeyBundleWithLoanStatusResponse: {
+    KeyBundleDetailsResponse: {
       bundle: {
         /** Format: uuid */
         id: string;
@@ -6161,23 +6146,44 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
-          loan: components["schemas"]["KeyLoan"] | null;
-          previousLoan?: components["schemas"]["KeyLoan"] | null;
-          latestEvent?: ({
+          keySystem?: ({
             /** Format: uuid */
             id: string;
-            keys: string;
+            systemCode: string;
+            name: string;
+            manufacturer: string;
+            managingSupplier?: string | null;
             /** @enum {string} */
-            type: "FLEX" | "ORDER" | "LOST";
-            /** @enum {string} */
-            status: "ORDERED" | "RECEIVED" | "COMPLETED";
-            /** Format: uuid */
-            workOrderId?: string | null;
+            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+            propertyIds?: string;
+            /** Format: date-time */
+            installationDate?: string | null;
+            isActive?: boolean;
+            description?: string | null;
+            schemaFileId?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            createdBy?: string | null;
+            updatedBy?: string | null;
           }) | null;
+          loans?: components["schemas"]["KeyLoan"][] | null;
+          events?: (({
+              /** Format: uuid */
+              id: string;
+              keys: string;
+              /** @enum {string} */
+              type: "FLEX" | "ORDER" | "LOST";
+              /** @enum {string} */
+              status: "ORDERED" | "RECEIVED" | "COMPLETED";
+              /** Format: uuid */
+              workOrderId?: string | null;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            })[]) | null;
         })[];
     };
     CreateKeyEventRequest: {
@@ -6275,87 +6281,8 @@ export interface components {
       /** @enum {string} */
       rel: "self" | "first" | "last" | "prev" | "next";
     };
-    PaginatedKeysResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          keyName: string;
-          keySequenceNumber?: number;
-          flexNumber?: number | null;
-          rentalObjectCode?: string;
-          /** @enum {string} */
-          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
-          /** Format: uuid */
-          keySystemId?: string | null;
-          /** @default false */
-          disposed?: boolean;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
-      _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
-    PaginatedKeySystemsResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          systemCode: string;
-          name: string;
-          manufacturer: string;
-          managingSupplier?: string | null;
-          /** @enum {string} */
-          type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-          propertyIds?: string;
-          /** Format: date-time */
-          installationDate?: string | null;
-          isActive?: boolean;
-          description?: string | null;
-          schemaFileId?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-          createdBy?: string | null;
-          updatedBy?: string | null;
-        })[];
-      _meta: {
-        totalRecords: number;
-        page: number;
-        limit: number;
-        count: number;
-      };
-      _links: ({
-          href: string;
-          /** @enum {string} */
-          rel: "self" | "first" | "last" | "prev" | "next";
-        })[];
-    };
-    PaginatedLogsResponse: {
-      content: ({
-          /** Format: uuid */
-          id: string;
-          userName: string;
-          /** @enum {string} */
-          eventType: "creation" | "update" | "delete";
-          /** @enum {string} */
-          objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
-          /** Format: uuid */
-          objectId?: string | null;
-          /** Format: date-time */
-          eventTime: string;
-          description?: string | null;
-        })[];
+    PaginatedResponse: {
+      content: unknown[];
       _meta: {
         totalRecords: number;
         page: number;

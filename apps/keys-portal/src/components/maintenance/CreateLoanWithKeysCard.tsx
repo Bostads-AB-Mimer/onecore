@@ -19,7 +19,7 @@ export function CreateLoanWithKeysCard({
 
   const handleValidateKey = (key: Key) => {
     // Check if key has any active loan (regardless of type)
-    // Note: We check loan status if available (from KeyWithLoanAndEvent type)
+    // Note: We check loan status if available (from KeyDetails type)
     const keyWithStatus = key as any
     if (keyWithStatus.loan && !keyWithStatus.loan?.returnedAt) {
       toast({

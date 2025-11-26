@@ -6,13 +6,14 @@ import { AddKeyForm } from '@/components/keys/AddKeyForm'
 import { PaginationControls } from '@/components/common/PaginationControls'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
-import { Key } from '@/services/types'
+import { Key, KeySystem, KeyWithSystem } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
+import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 
 const Index = () => {
   const pagination = useUrlPagination()
-  const [keys, setKeys] = useState<Key[]>([])
+  const [keys, setKeys] = useState<KeyWithSystem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
@@ -29,9 +30,14 @@ const Index = () => {
   const rentalObjectCode =
     pagination.searchParams.get('rentalObjectCode') || null
   const editKeyId = pagination.searchParams.get('editKeyId') || null
+  const keySystemIdFilter = pagination.searchParams.get('keySystemId') || null
 
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
+  const [keySystemSearch, setKeySystemSearch] = useState('')
+  const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
+    null
+  )
 
   const fetchKeys = useCallback(
     async (page: number = 1, limit: number = 60) => {
@@ -57,6 +63,9 @@ const Index = () => {
         if (rentalObjectCode) {
           searchParams.rentalObjectCode = rentalObjectCode
         }
+        if (keySystemIdFilter) {
+          searchParams.keySystemId = keySystemIdFilter
+        }
 
         // Add date filters
         const dateFilters: string[] = []
@@ -72,37 +81,23 @@ const Index = () => {
         }
 
         // Use search endpoint if filtering/searching, otherwise use getAllKeys
+        // Include key system data in single request to avoid N+1 queries
         const hasFilters = Object.keys(searchParams).length > 0
         const response = hasFilters
-          ? await keyService.searchKeys(searchParams, page, limit)
-          : await keyService.getAllKeys(page, limit)
+          ? await keyService.searchKeys(searchParams, page, limit, true)
+          : await keyService.getAllKeys(page, limit, true)
 
         setKeys(response.content)
         pagination.setPaginationMeta(response._meta)
 
-        // Fetch key systems for keys that have a keySystemId
-        const uniqueKeySystemIds = [
-          ...new Set(
-            response.content
-              .map((k) => k.keySystemId)
-              .filter((id): id is string => id != null && id !== '')
-          ),
-        ]
-
-        if (uniqueKeySystemIds.length > 0) {
-          const systemMap: Record<string, string> = {}
-          await Promise.all(
-            uniqueKeySystemIds.map(async (id) => {
-              try {
-                const keySystem = await keyService.getKeySystem(id)
-                systemMap[id] = keySystem.systemCode
-              } catch (error) {
-                console.error(`Failed to fetch key system ${id}:`, error)
-              }
-            })
-          )
-          setKeySystemMap(systemMap)
-        }
+        // Build key system map from included key system data (no additional API calls needed!)
+        const systemMap: Record<string, string> = {}
+        response.content.forEach((key) => {
+          if (key.keySystemId && key.keySystem) {
+            systemMap[key.keySystemId] = key.keySystem.systemCode
+          }
+        })
+        setKeySystemMap(systemMap)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Okänt fel'
         setError(msg)
@@ -120,6 +115,7 @@ const Index = () => {
       selectedTypeFilter,
       selectedDisposedFilter,
       rentalObjectCode,
+      keySystemIdFilter,
       createdAtAfter,
       createdAtBefore,
       toast,
@@ -138,6 +134,7 @@ const Index = () => {
     selectedTypeFilter,
     selectedDisposedFilter,
     rentalObjectCode,
+    keySystemIdFilter,
     createdAtAfter,
     createdAtBefore,
     // fetchKeys intentionally omitted to prevent infinite loop
@@ -197,6 +194,24 @@ const Index = () => {
     },
     [pagination]
   )
+
+  const handleKeySystemSelect = useCallback(
+    (keySystem: KeySystem | null) => {
+      setSelectedKeySystem(keySystem)
+      pagination.updateUrlParams({
+        keySystemId: keySystem?.id || null,
+        page: '1',
+      })
+    },
+    [pagination]
+  )
+
+  const searchKeySystems = async (query: string): Promise<KeySystem[]> => {
+    return await keySystemSearchService.search({
+      q: query,
+      fields: ['systemCode', 'name'],
+    })
+  }
 
   const handleAddNew = () => {
     if (showAddForm && !editingKey) {
@@ -494,6 +509,11 @@ const Index = () => {
           createdAtAfter={createdAtAfter}
           createdAtBefore={createdAtBefore}
           onDatesChange={handleDatesChange}
+          keySystemSearch={keySystemSearch}
+          onKeySystemSearchChange={setKeySystemSearch}
+          selectedKeySystem={selectedKeySystem}
+          onKeySystemSelect={handleKeySystemSelect}
+          onKeySystemSearch={searchKeySystems}
         />
 
         <PaginationControls

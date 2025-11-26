@@ -3,7 +3,10 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 
 type Key = keys.v1.Key
-type KeyWithLoanAndEvent = keys.v1.KeyWithLoanAndEvent
+type KeyDetails = keys.v1.KeyDetails
+type KeyLoan = keys.v1.KeyLoan
+type KeyEvent = keys.v1.KeyEvent
+type KeySystem = keys.v1.KeySystem
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 
@@ -13,6 +16,114 @@ const TABLE = 'keys'
  * Database adapter functions for keys.
  * These functions wrap database calls to make them easier to test.
  */
+
+/**
+ * Fetch key systems for a list of keys using Knex
+ * Returns a map of keySystemId -> keySystem for efficient lookups
+ */
+export async function fetchKeySystems(
+  keys: Key[],
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<Map<string, KeySystem>> {
+  const keySystemsMap = new Map<string, KeySystem>()
+
+  if (keys.length === 0) return keySystemsMap
+
+  const keySystemIds = [
+    ...new Set(keys.map((k) => k.keySystemId).filter(Boolean)),
+  ] as string[]
+
+  if (keySystemIds.length === 0) return keySystemsMap
+
+  // Fetch key systems directly
+  const keySystems = await dbConnection('key_systems').whereIn(
+    'id',
+    keySystemIds
+  )
+
+  keySystems.forEach((ks: KeySystem) => {
+    keySystemsMap.set(ks.id, ks)
+  })
+
+  return keySystemsMap
+}
+
+/**
+ * Fetch and attach loans to keys using Knex
+ * Returns a map of keyId -> loans[] for efficient lookups
+ * Loans are sorted by createdAt desc
+ */
+export async function fetchLoans(
+  keys: Key[],
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<Map<string, KeyLoan[]>> {
+  const loansByKeyId = new Map<string, KeyLoan[]>()
+
+  if (keys.length === 0) return loansByKeyId
+
+  const keyIds = keys.map((k) => k.id)
+
+  // Fetch all loans for these keys
+  const loans = await dbConnection('key_loans')
+    .whereRaw(
+      `EXISTS (
+      SELECT 1 FROM OPENJSON(keys) WHERE value IN (${keyIds.map(() => '?').join(',')})
+    )`,
+      keyIds
+    )
+    .orderBy('createdAt', 'desc')
+
+  // Build lookup map
+  loans.forEach((loan: KeyLoan) => {
+    const loanKeyIds = JSON.parse(loan.keys) as string[]
+    loanKeyIds.forEach((keyId) => {
+      if (!loansByKeyId.has(keyId)) {
+        loansByKeyId.set(keyId, [])
+      }
+      loansByKeyId.get(keyId)!.push(loan)
+    })
+  })
+
+  return loansByKeyId
+}
+
+/**
+ * Fetch and attach events to keys using Knex
+ * Returns a map of keyId -> events[] for efficient lookups
+ * Events are sorted by createdAt desc
+ */
+export async function fetchEvents(
+  keys: Key[],
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<Map<string, KeyEvent[]>> {
+  const eventsByKeyId = new Map<string, KeyEvent[]>()
+
+  if (keys.length === 0) return eventsByKeyId
+
+  const keyIds = keys.map((k) => k.id)
+
+  // Fetch all events for these keys
+  const events = await dbConnection('key_events')
+    .where(function () {
+      keyIds.forEach((keyId) => {
+        this.orWhere('keys', 'like', `%"${keyId}"%`)
+      })
+    })
+    .orderBy('createdAt', 'desc')
+
+  // Build lookup map
+  events.forEach((event: KeyEvent) => {
+    const eventKeyIds = JSON.parse(event.keys) as string[]
+    eventKeyIds.forEach((keyId) => {
+      if (!eventsByKeyId.has(keyId)) {
+        eventsByKeyId.set(keyId, [])
+      }
+      eventsByKeyId.get(keyId)!.push(event)
+    })
+  })
+
+  return eventsByKeyId
+}
 
 export async function getKeyById(
   id: string,
@@ -29,11 +140,28 @@ export async function getAllKeys(
 
 export async function getKeysByRentalObject(
   rentalObjectCode: string,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex | Knex.Transaction = db,
+  includeKeySystem = false
 ): Promise<Key[]> {
-  return await dbConnection(TABLE)
+  const keys = await dbConnection(TABLE)
     .where({ rentalObjectCode })
+    .select('*')
     .orderBy('keyName', 'asc')
+
+  if (!includeKeySystem || keys.length === 0) {
+    return keys
+  }
+
+  // Fetch key systems using the new helper
+  const keySystemsById = await fetchKeySystems(keys, dbConnection)
+
+  // Attach key systems to keys
+  return keys.map((key) => ({
+    ...key,
+    keySystem: key.keySystemId
+      ? keySystemsById.get(key.keySystemId) || null
+      : null,
+  }))
 }
 
 export async function createKey(
@@ -76,251 +204,186 @@ export async function bulkUpdateFlexNumber(
 }
 
 /**
- * Get keys with active loan information enriched in a single optimized query.
- * This eliminates N+1 queries by using LEFT JOINs and OUTER APPLY.
+ * Options for including related data when fetching keys
+ */
+export interface KeyIncludeOptions {
+  includeLoans?: boolean
+  includeEvents?: boolean
+  includeKeySystem?: boolean
+}
+
+/**
+ * Get keys with optional related data enriched using Knex query builder.
+ * This eliminates N+1 queries by fetching keys first, then related data in parallel.
  *
- * Performance: ~95% faster than fetching keys then looping to get loan status.
+ * Performance: ~95% faster than fetching keys then looping to get related data.
  *
  * Returns:
  * - All non-disposed keys
  * - Disposed keys that have an active loan
- * - Active loan nested as object (loan field)
- * - Previous loan nested as object (previousLoan field)
- * - Optionally includes latest key event data
+ * - Optionally includes loans array (active + previous loans)
+ * - Optionally includes events array (latest event)
+ * - Optionally includes key system data
  *
  * @param rentalObjectCode - The rental object code to filter keys by
  * @param dbConnection - Database connection (optional, defaults to db)
- * @param includeLatestEvent - Whether to include the latest key event for each key
- * @returns Promise<KeyWithLoanAndEvent[]> - Keys with nested loan objects
+ * @param options - Options for including related data
+ * @returns Promise<KeyDetails[]> - Keys with nested loan/event/keySystem objects
  */
-export async function getKeysWithLoanStatus(
+export async function getKeysDetails(
   rentalObjectCode: string,
   dbConnection: Knex | Knex.Transaction = db,
-  includeLatestEvent = false
-): Promise<KeyWithLoanAndEvent[]> {
-  const eventFields = includeLatestEvent
-    ? `,
-      -- Latest key event data
-      event.id as eventId,
-      event.keys as eventKeys,
-      event.type as eventType,
-      event.status as eventStatus,
-      event.workOrderId as eventWorkOrderId,
-      event.createdAt as eventCreatedAt,
-      event.updatedAt as eventUpdatedAt`
-    : ''
+  options: KeyIncludeOptions = {}
+): Promise<KeyDetails[]> {
+  const {
+    includeLoans = false,
+    includeEvents = false,
+    includeKeySystem = false,
+  } = options
 
-  const eventJoin = includeLatestEvent
-    ? `
-    -- OUTER APPLY for most recent key event
-    OUTER APPLY (
-      SELECT TOP 1
-        id,
-        keys,
-        type,
-        status,
-        workOrderId,
-        createdAt,
-        updatedAt
-      FROM key_events ke
-      WHERE ke.keys LIKE '%"' + CAST(k.id AS NVARCHAR(36)) + '"%'
-      ORDER BY ke.createdAt DESC
-    ) event`
-    : ''
+  // Step 1: Get base keys (non-disposed, or disposed with active loan)
+  let keysQuery = dbConnection(TABLE).where({ rentalObjectCode }).select('*')
 
-  const result = await dbConnection.raw(
-    `
-    SELECT
-      k.*,
-      -- Active loan data (full loan object fields prefixed with activeLoan_)
-      kl.id as activeLoan_id,
-      kl.keys as activeLoan_keys,
-      kl.loanType as activeLoan_loanType,
-      kl.contact as activeLoan_contact,
-      kl.contact2 as activeLoan_contact2,
-      kl.contactPerson as activeLoan_contactPerson,
-      kl.description as activeLoan_description,
-      kl.returnedAt as activeLoan_returnedAt,
-      kl.availableToNextTenantFrom as activeLoan_availableToNextTenantFrom,
-      kl.pickedUpAt as activeLoan_pickedUpAt,
-      kl.createdAt as activeLoan_createdAt,
-      kl.updatedAt as activeLoan_updatedAt,
-      kl.createdBy as activeLoan_createdBy,
-      kl.updatedBy as activeLoan_updatedBy,
-      -- Previous loan data (full loan object fields prefixed with prevLoan_)
-      prev.id as prevLoan_id,
-      prev.keys as prevLoan_keys,
-      prev.loanType as prevLoan_loanType,
-      prev.contact as prevLoan_contact,
-      prev.contact2 as prevLoan_contact2,
-      prev.contactPerson as prevLoan_contactPerson,
-      prev.description as prevLoan_description,
-      prev.returnedAt as prevLoan_returnedAt,
-      prev.availableToNextTenantFrom as prevLoan_availableToNextTenantFrom,
-      prev.pickedUpAt as prevLoan_pickedUpAt,
-      prev.createdAt as prevLoan_createdAt,
-      prev.updatedAt as prevLoan_updatedAt,
-      prev.createdBy as prevLoan_createdBy,
-      prev.updatedBy as prevLoan_updatedBy${eventFields}
+  // If not including loans, only get non-disposed keys
+  if (!includeLoans) {
+    keysQuery = keysQuery.where({ disposed: 0 })
+  }
 
-    FROM keys k
+  const keys = await keysQuery.orderBy(['keyType', 'keySequenceNumber'])
 
-    -- LEFT JOIN active loan (only ONE per key since returnedAt IS NULL)
-    LEFT JOIN key_loans kl ON (
-      EXISTS (
-        SELECT 1
-        FROM OPENJSON(kl.keys)
-        WHERE value = CAST(k.id AS NVARCHAR(36))
+  // If nothing to enrich, return early
+  if (
+    keys.length === 0 ||
+    (!includeLoans && !includeEvents && !includeKeySystem)
+  ) {
+    return keys as KeyDetails[]
+  }
+
+  // Step 2: Fetch related data in parallel using reusable helpers
+  const [loansByKeyId, eventsByKeyId, keySystemsById] = await Promise.all([
+    includeLoans ? fetchLoans(keys, dbConnection) : Promise.resolve(new Map()),
+    includeEvents
+      ? fetchEvents(keys, dbConnection)
+      : Promise.resolve(new Map()),
+    includeKeySystem
+      ? fetchKeySystems(keys, dbConnection)
+      : Promise.resolve(new Map()),
+  ])
+
+  // Step 3: Attach related data to keys
+  const enrichedKeys = keys.map((key) => {
+    const result: any = { ...key }
+
+    // Attach loans (active + previous, limit to 2)
+    if (includeLoans) {
+      const keyLoans = loansByKeyId.get(key.id) || []
+      const activeLoan = keyLoans.find(
+        (loan: KeyLoan) => loan.returnedAt === null
       )
-      AND kl.returnedAt IS NULL
-    )
-
-    -- OUTER APPLY for most recent returned loan (full loan data)
-    OUTER APPLY (
-      SELECT TOP 1
-        id,
-        keys,
-        loanType,
-        contact,
-        contact2,
-        contactPerson,
-        description,
-        returnedAt,
-        availableToNextTenantFrom,
-        pickedUpAt,
-        createdAt,
-        updatedAt,
-        createdBy,
-        updatedBy
-      FROM key_loans kl2
-      WHERE EXISTS (
-        SELECT 1
-        FROM OPENJSON(kl2.keys)
-        WHERE value = CAST(k.id AS NVARCHAR(36))
+      const returnedLoans = keyLoans.filter(
+        (loan: KeyLoan) => loan.returnedAt !== null
       )
-      AND kl2.returnedAt IS NOT NULL
-      ORDER BY kl2.createdAt DESC
-    ) prev
-    ${eventJoin}
+      const previousLoan = returnedLoans.length > 0 ? returnedLoans[0] : null
 
-    WHERE k.rentalObjectCode = ?
-      AND (
-        k.disposed = 0
-        OR kl.id IS NOT NULL  -- Include disposed keys only if they have active loan
-      )
+      const loans: KeyLoan[] = []
+      if (activeLoan) loans.push(activeLoan)
+      if (previousLoan) loans.push(previousLoan)
 
-    ORDER BY k.keyType, k.keySequenceNumber
-    `,
-    [rentalObjectCode]
-  )
+      result.loans = loans.length > 0 ? loans : null
 
-  // Transform the flat result to nest loan and event data
-  return result.map((row: any) => {
-    const {
-      // Extract active loan fields
-      activeLoan_id,
-      activeLoan_keys,
-      activeLoan_loanType,
-      activeLoan_contact,
-      activeLoan_contact2,
-      activeLoan_contactPerson,
-      activeLoan_description,
-      activeLoan_returnedAt,
-      activeLoan_availableToNextTenantFrom,
-      activeLoan_pickedUpAt,
-      activeLoan_createdAt,
-      activeLoan_updatedAt,
-      activeLoan_createdBy,
-      activeLoan_updatedBy,
-      // Extract previous loan fields
-      prevLoan_id,
-      prevLoan_keys,
-      prevLoan_loanType,
-      prevLoan_contact,
-      prevLoan_contact2,
-      prevLoan_contactPerson,
-      prevLoan_description,
-      prevLoan_returnedAt,
-      prevLoan_availableToNextTenantFrom,
-      prevLoan_pickedUpAt,
-      prevLoan_createdAt,
-      prevLoan_updatedAt,
-      prevLoan_createdBy,
-      prevLoan_updatedBy,
-      // Extract event fields (if included)
-      eventId,
-      eventKeys,
-      eventType,
-      eventStatus,
-      eventWorkOrderId,
-      eventCreatedAt,
-      eventUpdatedAt,
-      // Rest is key data
-      ...keyData
-    } = row
-
-    return {
-      ...keyData,
-      // Nest active loan object
-      loan:
-        activeLoan_id !== null
-          ? {
-              id: activeLoan_id,
-              keys: activeLoan_keys,
-              loanType: activeLoan_loanType,
-              contact: activeLoan_contact,
-              contact2: activeLoan_contact2,
-              contactPerson: activeLoan_contactPerson,
-              description: activeLoan_description,
-              returnedAt: activeLoan_returnedAt,
-              availableToNextTenantFrom: activeLoan_availableToNextTenantFrom,
-              pickedUpAt: activeLoan_pickedUpAt,
-              createdAt: activeLoan_createdAt,
-              updatedAt: activeLoan_updatedAt,
-              createdBy: activeLoan_createdBy,
-              updatedBy: activeLoan_updatedBy,
-            }
-          : null,
-      // Nest previous loan object
-      previousLoan:
-        prevLoan_id !== null
-          ? {
-              id: prevLoan_id,
-              keys: prevLoan_keys,
-              loanType: prevLoan_loanType,
-              contact: prevLoan_contact,
-              contact2: prevLoan_contact2,
-              contactPerson: prevLoan_contactPerson,
-              description: prevLoan_description,
-              returnedAt: prevLoan_returnedAt,
-              availableToNextTenantFrom: prevLoan_availableToNextTenantFrom,
-              pickedUpAt: prevLoan_pickedUpAt,
-              createdAt: prevLoan_createdAt,
-              updatedAt: prevLoan_updatedAt,
-              createdBy: prevLoan_createdBy,
-              updatedBy: prevLoan_updatedBy,
-            }
-          : null,
-      // Nest event object (if included)
-      latestEvent:
-        includeLatestEvent && eventId !== null
-          ? {
-              id: eventId,
-              keys: eventKeys,
-              type: eventType,
-              status: eventStatus,
-              workOrderId: eventWorkOrderId,
-              createdAt: eventCreatedAt,
-              updatedAt: eventUpdatedAt,
-            }
-          : null,
+      // Filter disposed keys: only include if they have an active loan
+      if (key.disposed && !activeLoan) {
+        return null // Will be filtered out
+      }
     }
-  }) as KeyWithLoanAndEvent[]
+
+    // Attach events (latest only)
+    if (includeEvents) {
+      const keyEvents = eventsByKeyId.get(key.id) || []
+      result.events = keyEvents.length > 0 ? [keyEvents[0]] : null
+    }
+
+    // Attach key system
+    if (includeKeySystem && key.keySystemId) {
+      result.keySystem = keySystemsById.get(key.keySystemId) || null
+    }
+
+    return result
+  })
+
+  // Filter out nulls (disposed keys without active loans)
+  return enrichedKeys.filter((k) => k !== null) as KeyDetails[]
+}
+
+/**
+ * Get a single key with optional related data
+ * Helper function that can be used by other adapters to build KeyDetails objects
+ *
+ * @param key - The base key object
+ * @param dbConnection - Database connection
+ * @param options - Options for including related data
+ * @returns Promise<KeyDetails> - Key with optional related data
+ */
+export async function getKeyDetails(
+  key: Key,
+  dbConnection: Knex | Knex.Transaction = db,
+  options: KeyIncludeOptions = {}
+): Promise<KeyDetails> {
+  const {
+    includeLoans = false,
+    includeEvents = false,
+    includeKeySystem = false,
+  } = options
+  const result: any = { ...key }
+
+  // Fetch all related data in parallel using reusable helpers
+  const [loansByKeyId, eventsByKeyId, keySystemsById] = await Promise.all([
+    includeLoans ? fetchLoans([key], dbConnection) : Promise.resolve(new Map()),
+    includeEvents
+      ? fetchEvents([key], dbConnection)
+      : Promise.resolve(new Map()),
+    includeKeySystem
+      ? fetchKeySystems([key], dbConnection)
+      : Promise.resolve(new Map()),
+  ])
+
+  // Attach loans (active + previous)
+  if (includeLoans) {
+    const keyLoans = loansByKeyId.get(key.id) || []
+    const activeLoan = keyLoans.find(
+      (loan: KeyLoan) => loan.returnedAt === null
+    )
+    const returnedLoans = keyLoans.filter(
+      (loan: KeyLoan) => loan.returnedAt !== null
+    )
+    const previousLoan = returnedLoans.length > 0 ? returnedLoans[0] : null
+
+    const loans: KeyLoan[] = []
+    if (activeLoan) loans.push(activeLoan)
+    if (previousLoan) loans.push(previousLoan)
+
+    result.loans = loans.length > 0 ? loans : null
+  }
+
+  // Attach events (latest only)
+  if (includeEvents) {
+    const keyEvents = eventsByKeyId.get(key.id) || []
+    result.events = keyEvents.length > 0 ? [keyEvents[0]] : null
+  }
+
+  // Attach key system
+  if (includeKeySystem && key.keySystemId) {
+    result.keySystem = keySystemsById.get(key.keySystemId) || null
+  }
+
+  return result as KeyDetails
 }
 
 /**
  * Get all keys query builder for pagination
  * Returns a query builder that can be used with paginate()
+ * Use fetchKeySystems() after pagination to attach key system data if needed
+ * @param dbConnection - Database connection
  */
 export function getAllKeysQuery(
   dbConnection: Knex | Knex.Transaction = db
@@ -331,6 +394,8 @@ export function getAllKeysQuery(
 /**
  * Get keys search query builder for pagination
  * Returns a query builder that can be used with buildSearchQuery() and paginate()
+ * Use fetchKeySystems() after pagination to attach key system data if needed
+ * @param dbConnection - Database connection
  */
 export function getKeysSearchQuery(
   dbConnection: Knex | Knex.Transaction = db

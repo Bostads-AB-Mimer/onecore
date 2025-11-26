@@ -33,6 +33,7 @@ import {
 } from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
+import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { useNavigate } from 'react-router-dom'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
@@ -50,6 +51,11 @@ interface KeysTableProps {
   createdAtAfter: string | null
   createdAtBefore: string | null
   onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
+  keySystemSearch: string
+  onKeySystemSearchChange: (query: string) => void
+  selectedKeySystem: any | null
+  onKeySystemSelect: (keySystem: any | null) => void
+  onKeySystemSearch: (query: string) => Promise<any[]>
 }
 
 export function KeysTable({
@@ -64,6 +70,11 @@ export function KeysTable({
   createdAtAfter,
   createdAtBefore,
   onDatesChange,
+  keySystemSearch,
+  onKeySystemSearchChange,
+  selectedKeySystem,
+  onKeySystemSelect,
+  onKeySystemSearch,
 }: KeysTableProps) {
   const navigate = useNavigate()
   const [expandedKeyId, setExpandedKeyId] = useState<string | null>(null)
@@ -238,7 +249,27 @@ export function KeysTable({
                 />
               </div>
             </TableHead>
-            <TableHead className="font-medium">Låssystem</TableHead>
+            <TableHead className="font-medium">
+              <div className="flex items-center gap-1">
+                Låssystem
+                <SearchDropdown
+                  preSuggestions={[]}
+                  searchFn={onKeySystemSearch}
+                  minSearchLength={1}
+                  formatItem={(item: any) => ({
+                    primaryText: item.systemCode,
+                    secondaryText: item.name || undefined,
+                    searchableText: `${item.systemCode} ${item.name || ''}`,
+                  })}
+                  getKey={(item: any) => item.id}
+                  value={keySystemSearch}
+                  onChange={onKeySystemSearchChange}
+                  onSelect={onKeySystemSelect}
+                  selectedValue={selectedKeySystem}
+                  placeholder="Filtrera..."
+                />
+              </div>
+            </TableHead>
             <TableHead className="font-medium">Löpnummer</TableHead>
             <TableHead className="font-medium">Flexnr</TableHead>
             <TableHead className="font-medium">
@@ -321,11 +352,7 @@ export function KeysTable({
                         {KeyTypeLabels[key.keyType]}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {key.keySystemId && keySystemMap[key.keySystemId]
-                        ? keySystemMap[key.keySystemId]
-                        : key.keySystemId || '-'}
-                    </TableCell>
+                    <TableCell>{key.keySystem?.systemCode || '-'}</TableCell>
                     <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                     <TableCell>{key.flexNumber || '-'}</TableCell>
                     <TableCell>

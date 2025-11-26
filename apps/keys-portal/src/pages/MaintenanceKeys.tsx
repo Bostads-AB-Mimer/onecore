@@ -19,15 +19,11 @@ import { Badge } from '@/components/ui/badge'
 import { InlineTextareaEditor } from '@/components/ui/inline-textarea-editor'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import {
-  getKeyBundleWithLoanStatus,
+  getKeyBundleDetails,
   updateKeyBundle,
 } from '@/services/api/keyBundleService'
 import { keyService } from '@/services/api/keyService'
-import type {
-  KeyLoanWithDetails,
-  KeyWithLoanAndEvent,
-  Contact,
-} from '@/services/types'
+import type { KeyLoanWithDetails, KeyDetails, Contact } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 
 export default function MaintenanceKeys() {
@@ -41,15 +37,13 @@ export default function MaintenanceKeys() {
   const [hasLoadedActive, setHasLoadedActive] = useState(false)
   const [hasLoadedReturned, setHasLoadedReturned] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [bundleKeys, setBundleKeys] = useState<KeyWithLoanAndEvent[]>([])
+  const [bundleKeys, setBundleKeys] = useState<KeyDetails[]>([])
   const [bundleKeysLoading, setBundleKeysLoading] = useState(false)
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [loansKeySystemMap, setLoansKeySystemMap] = useState<
     Record<string, string>
   >({})
-  const [preSelectedKeys, setPreSelectedKeys] = useState<KeyWithLoanAndEvent[]>(
-    []
-  )
+  const [preSelectedKeys, setPreSelectedKeys] = useState<KeyDetails[]>([])
   const [preSelectedCompany, setPreSelectedCompany] = useState<Contact | null>(
     null
   )
@@ -232,7 +226,11 @@ export default function MaintenanceKeys() {
     const fetchBundleKeys = async () => {
       setBundleKeysLoading(true)
       try {
-        const data = await getKeyBundleWithLoanStatus(searchResult.bundle!.id)
+        const data = await getKeyBundleDetails(searchResult.bundle!.id, {
+          includeLoans: true,
+          includeEvents: true,
+          includeKeySystem: true,
+        })
         if (data) {
           setBundleKeys(data.keys)
 
@@ -311,12 +309,12 @@ export default function MaintenanceKeys() {
                   <ContactInfoCard contacts={[searchResult.contact]} />
                   <CreateLoanWithKeysCard
                     onKeysSelected={(keys) => {
-                      // Cast keys to KeyWithLoanAndEvent[] - they don't have loan status since they're being selected for a new loan
+                      // Cast keys to KeyDetails[] - they don't have loan status since they're being selected for a new loan
                       const keysWithStatus = keys.map((k) => ({
                         ...k,
                         loan: null,
                         latestEvent: null,
-                      })) as KeyWithLoanAndEvent[]
+                      })) as KeyDetails[]
                       setPreSelectedKeys(keysWithStatus)
                       setPreSelectedCompany(searchResult.contact!)
                       setCreateDialogOpen(true)
@@ -373,8 +371,13 @@ export default function MaintenanceKeys() {
                     // Refetch bundle keys after adding
                     const fetchBundleKeys = async () => {
                       try {
-                        const data = await getKeyBundleWithLoanStatus(
-                          searchResult.bundle!.id
+                        const data = await getKeyBundleDetails(
+                          searchResult.bundle!.id,
+                          {
+                            includeLoans: true,
+                            includeEvents: true,
+                            includeKeySystem: true,
+                          }
                         )
                         if (data) {
                           setBundleKeys(data.keys)
@@ -436,8 +439,13 @@ export default function MaintenanceKeys() {
                   onRefresh={async () => {
                     try {
                       setBundleKeysLoading(true)
-                      const data = await getKeyBundleWithLoanStatus(
-                        searchResult.bundle!.id
+                      const data = await getKeyBundleDetails(
+                        searchResult.bundle!.id,
+                        {
+                          includeLoans: true,
+                          includeEvents: true,
+                          includeKeySystem: true,
+                        }
                       )
                       if (data) {
                         setBundleKeys(data.keys)
