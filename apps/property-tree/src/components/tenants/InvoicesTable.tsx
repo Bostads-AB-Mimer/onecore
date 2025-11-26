@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-import { Badge } from '@/components/ui/v2/Badge'
+import { Badge } from '@/components/ui/v3/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react'
 //import type { Invoice } from '@/types/invoice'
@@ -25,6 +25,13 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     if (!date) return '-'
     const dateObj = typeof date === 'string' ? new Date(date) : date
     return dateObj.toISOString().split('T')[0]
+  }
+
+  const formatSource = (source: string | undefined) => {
+    if (!source) return '-'
+    if (source.toLowerCase() === 'next') return 'XLedger'
+    if (source.toLowerCase() === 'legacy') return 'Xpand'
+    return source
   }
 
   // Todo: fix type
@@ -50,12 +57,17 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   }
 
   // Todo: fix ty
-  const getStatusText = (invoice: any): string => {
-    if (invoice.paymentStatus === 'Förfallen') {
-      const days = getOverdueDays(invoice.dueDate)
-      return `Förfallen (${days} dagar)`
+  const getStatusText = (invoice: Invoice): string => {
+    if (invoice.paymentStatus === PaymentStatus.Paid) {
+      return 'Betald'
+    } else {
+      return 'Obetald'
     }
-    return invoice.paymentStatus
+  }
+
+  const getInvoiceType = (invoice: Invoice): string => {
+    if (invoice.type === 'Other') return 'Ströfaktura'
+    return 'Avi'
   }
 
   const handleOpenPDF = (invoiceNumber: string) => {
@@ -82,7 +94,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                   <div className="space-y-1">
                     <div className="font-medium">{invoice.invoiceId}</div>
                     <div className="text-sm text-muted-foreground">
-                      {invoice.type}
+                      {getInvoiceType(invoice)}
                     </div>
                   </div>
                   <Badge variant={getStatusVariant(invoice.paymentStatus)}>
@@ -102,7 +114,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Källa:</span>
-                    <span>{invoice.source}</span>
+                    <span>{formatSource(invoice.source)}</span>
                   </div>
                 </div>
                 <div className="mt-2 flex items-center text-sm text-muted-foreground">
@@ -141,7 +153,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                               Källa:
                             </span>
                             <span className="font-semibold">
-                              {invoice.source || 'OCR'}
+                              {formatSource(invoice.source)}
                             </span>
                           </div>
                           <div>
@@ -245,11 +257,13 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                   <td className="p-3 text-sm text-right">
                     {formatCurrency(invoice.remainingAmount || 0)}
                   </td>
-                  <td className="p-3 text-sm">{invoice.type}</td>
+                  <td className="p-3 text-sm">{getInvoiceType(invoice)}</td>
                   <td className="p-3 text-sm">
                     {invoice.sentToDebtCollection ? 'Ja' : 'Nej'}
                   </td>
-                  <td className="p-3 text-sm">{invoice.source}</td>
+                  <td className="p-3 text-sm">
+                    {formatSource(invoice.source)}
+                  </td>
                   <td className="p-3 text-sm">
                     <Badge variant={getStatusVariant(invoice.paymentStatus)}>
                       {getStatusText(invoice)}
@@ -293,7 +307,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                                     Källa:
                                   </span>
                                   <span className="font-semibold">
-                                    {invoice.source || 'OCR'}
+                                    {formatSource(invoice.source)}
                                   </span>
                                 </div>
                                 <div>
