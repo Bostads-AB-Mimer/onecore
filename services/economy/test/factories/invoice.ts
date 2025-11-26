@@ -1,6 +1,11 @@
 import { Factory } from 'fishery'
 
-import { Invoice, InvoicePaymentEvent, InvoiceRow } from '@onecore/types'
+import {
+  Invoice,
+  InvoicePaymentEvent,
+  InvoiceRow,
+  InvoiceTransactionType,
+} from '@onecore/types'
 
 export const InvoiceFactory = Factory.define<Invoice>(() => {
   return {
@@ -14,6 +19,9 @@ export const InvoiceFactory = Factory.define<Invoice>(() => {
     expirationDate: new Date('2023-02-28T00:00:00.000Z'),
     debitStatus: 5,
     paymentStatus: 1,
+    transactionType: InvoiceTransactionType.Rent,
+    transactionTypeName: 'HYRA',
+    type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
   }

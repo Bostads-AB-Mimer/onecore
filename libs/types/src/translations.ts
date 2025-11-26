@@ -1,4 +1,5 @@
 import {
+  InvoiceTransactionType,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
   PaymentStatus,
@@ -36,6 +37,18 @@ export const parkingSpaceApplicationCategoryTranslation: Record<
 > = {
   'Bilplats (extern)': ParkingSpaceApplicationCategory.external,
   'Bilplats (intern)': ParkingSpaceApplicationCategory.internal,
+}
+
+// Keys from Xpand DB table REVRT
+export const invoiceTransactionTypeTranslation: Record<
+  string,
+  InvoiceTransactionType
+> = {
+  _S2Y14GIUN: InvoiceTransactionType.Rent,
+  PAMIN1: InvoiceTransactionType.Reminder,
+  PAMIN2: InvoiceTransactionType.DebtCollection,
+  AMORTINV: InvoiceTransactionType.RedemptionPlan,
+  _3XJ0UFUFVANHJS: InvoiceTransactionType.AbandondenRedemptionPlan,
 }
 
 // Keys from Xpand DB table KRFKH

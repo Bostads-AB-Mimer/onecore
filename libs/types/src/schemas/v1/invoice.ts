@@ -1,7 +1,8 @@
 import { z } from 'zod'
 
-import { PaymentStatus } from '../../enums'
+import { InvoiceTransactionType, PaymentStatus } from '../../enums'
 
+const InvoiceTransactionTypeSchema = z.nativeEnum(InvoiceTransactionType)
 const PaymentStatusSchema = z.nativeEnum(PaymentStatus)
 
 export const InvoiceRowSchema = z.object({
@@ -17,6 +18,7 @@ export const InvoiceRowSchema = z.object({
   roundoff: z.number(),
   rowType: z.number(), // TODO We will hopefully not need this anymore when we are using Tenfast for invoice rows
   toDate: z.string(),
+  totalAmount: z.number(),
   vat: z.number(),
 })
 
@@ -41,10 +43,13 @@ export const InvoiceSchema = z.object({
   expirationDate: z.coerce.date().optional(),
   debitStatus: z.number(),
   paymentStatus: PaymentStatusSchema,
+  transactionType: InvoiceTransactionTypeSchema,
+  transactionTypeName: z.string(),
   paidAmount: z.number().optional(),
   daysSinceLastDebitDate: z.number().optional(),
   description: z.string().optional(),
   sentToDebtCollection: z.coerce.date().optional(),
+  type: z.enum(['Regular', 'Other']),
   source: z.enum(['legacy', 'next']),
   invoiceRows: z.array(InvoiceRowSchema),
   invoiceFileUrl: z.string().optional(),
