@@ -36,11 +36,15 @@ const requiresSpecialHandling = (
 }
 
 const requiresPestControl = (
-  lease: components['schemas']['Lease']
+  residence: components['schemas']['ResidenceDetails']
 ): boolean => {
   // Where do we find pest control info?
 
-  return false
+  const hasPestIssues = residence?.propertyObject?.rentalBlocks.find(
+    (b) => b.blockReason === 'SKADEDJUR'
+  )
+
+  return Boolean(hasPestIssues)
 }
 
 export const ResidenceBasicInfo = ({
@@ -50,7 +54,7 @@ export const ResidenceBasicInfo = ({
 }: ResidenceBasicInfoProps) => {
   // Check if this is a secondary rental based on tenant data
   const needsSpecialHandling = requiresSpecialHandling(lease)
-  const hasPestIssues = requiresPestControl(lease)
+  const hasPestIssues = requiresPestControl(residence)
   const rent = getCurrentRent(lease)
 
   return (

@@ -30,7 +30,10 @@ export const residenceService = {
 
   async getById(residenceId: string): Promise<ResidenceDetails> {
     const { data, error } = await GET(`/residences/{residenceId}`, {
-      params: { path: { residenceId } },
+      params: {
+        path: { residenceId },
+        query: { includeActiveBlocksOnly: true },
+      },
     })
 
     if (error) throw error
