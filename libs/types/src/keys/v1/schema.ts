@@ -20,15 +20,6 @@ export const PaginatedResponseSchema = z.object({
   _links: z.array(PaginationLinksSchema),
 })
 
-export const createPaginatedResponseSchema = <T extends z.ZodTypeAny>(
-  contentSchema: T
-) =>
-  z.object({
-    content: z.array(contentSchema),
-    _meta: PaginationMetaSchema,
-    _links: z.array(PaginationLinksSchema),
-  })
-
 export const KeyTypeSchema = z.enum([
   'HN',
   'FS',

@@ -49,7 +49,7 @@ const {
   SimpleSignWebhookPayloadSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
-  createPaginatedResponseSchema,
+  PaginatedResponseSchema,
   CreateReceiptRequestSchema,
   UpdateReceiptRequestSchema,
   ReceiptTypeSchema,
@@ -138,18 +138,7 @@ export const routes = (router: KoaRouter) => {
   // Register pagination schemas
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
-  registerSchema(
-    'PaginatedKeysResponse',
-    createPaginatedResponseSchema(KeySchema)
-  )
-  registerSchema(
-    'PaginatedKeySystemsResponse',
-    createPaginatedResponseSchema(KeySystemSchema)
-  )
-  registerSchema(
-    'PaginatedLogsResponse',
-    createPaginatedResponseSchema(LogSchema)
-  )
+  registerSchema('PaginatedResponse', PaginatedResponseSchema)
 
   // ==================== KEY LOANS ROUTES ====================
 
@@ -1093,7 +1082,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeysResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyDetails'
    *       500:
    *         description: Server error
    *         content:
@@ -1206,7 +1202,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeysResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyDetails'
    *       400:
    *         description: Bad request
    *         content:
@@ -1748,7 +1751,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeySystem'
    *       500:
    *         description: Internal server error
    *         content:
@@ -1885,7 +1895,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedKeySystemsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeySystem'
    *       400:
    *         description: Bad request. Invalid parameters or field names
    *         content:
@@ -2321,7 +2338,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       500:
    *         description: Server error
    *         content:
@@ -2425,7 +2449,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       400:
    *         description: Bad request
    *         content:
@@ -2698,7 +2729,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       500:
    *         description: Server error
    *         content:
@@ -2802,7 +2840,14 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PaginatedLogsResponse'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Log'
    *       500:
    *         description: Server error
    *         content:
