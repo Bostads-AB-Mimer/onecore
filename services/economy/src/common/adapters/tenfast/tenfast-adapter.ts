@@ -197,12 +197,14 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     leaseId: '',
     paymentStatus:
       remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
-    type: 'Regular', // ?
+    type: 'Regular',
     reference: tenfastInvoice.ocrNumber,
     source: 'next', // ??
     invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
-    transactionType: InvoiceTransactionType.Rent, // ?
-    transactionTypeName: '', // ?
+    transactionType: InvoiceTransactionType.Rent,
+    // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
+    // We should maybe add a unique id property to the Invoice type instead
+    transactionTypeName: 'some random string',
   }
 }
 
