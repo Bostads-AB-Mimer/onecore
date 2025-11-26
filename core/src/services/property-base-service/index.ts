@@ -779,6 +779,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Id for the residence to fetch
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
    *     responses:
    *       '200':
    *         description: Successfully retrieved residence.
@@ -815,10 +822,23 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:residenceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { residenceId } = ctx.params
+    const queryParams = schemas.GetResidenceDetailsQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.errors, ...metadata }
+      return
+    }
+
+    const { includeActiveBlocksOnly } = queryParams.data
 
     try {
-      const getResidence =
-        await propertyBaseAdapter.getResidenceDetails(residenceId)
+      const getResidence = await propertyBaseAdapter.getResidenceDetails(
+        residenceId,
+        { includeActiveBlocksOnly }
+      )
 
       if (!getResidence.ok) {
         if (getResidence.err === 'not-found') {

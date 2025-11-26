@@ -152,6 +152,16 @@ export const ResidenceDetailedSchema = z.object({
         }),
       })
       .nullable(),
+    rentalBlocks: z.array(
+      z.object({
+        id: z.string(),
+        blockReasonId: z.string(),
+        blockReason: z.string(),
+        fromDate: z.date(),
+        toDate: z.date().nullable(),
+        amount: z.number().nullable(),
+      })
+    ),
   }),
   property: z.object({
     name: z.string().nullable(),
