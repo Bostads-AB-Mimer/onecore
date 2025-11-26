@@ -4,10 +4,9 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy, InvoiceRow } from '@onecore/types'
+import { economy } from '@onecore/types'
 
 import {
-  getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
@@ -16,11 +15,6 @@ import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
-import {
-  getInvoiceArticle,
-  getInvoiceByOcr,
-} from '@src/common/adapters/tenfast/tenfast-adapter'
-import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
 import { getInvoiceDetails } from './service'
 
 export const routes = (router: KoaRouter) => {
