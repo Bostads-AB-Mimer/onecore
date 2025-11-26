@@ -1,0 +1,10 @@
+model BlockReason {
+  id        String   @id(map: "pkhyspa") @map("keyhyspa") @db.Char(15)
+  caption   String   @map("caption") @db.VarChar(50)
+  timestamp String   @map("timestamp") @db.Char(10)
+
+  // Relations
+  rentalBlocks RentalBlock[]
+
+  @@map("hyspa")
+}

@@ -241,6 +241,16 @@ export const ResidenceDetailsSchema = z.object({
         }),
       })
       .nullable(),
+    rentalBlocks: z.array(
+      z.object({
+        id: z.string(),
+        blockReasonId: z.string(),
+        blockReason: z.string(),
+        fromDate: z.coerce.date(),
+        toDate: z.coerce.date().nullable(),
+        amount: z.number().nullable(),
+      })
+    ),
   }),
   property: z.object({
     name: z.string().nullable(),
@@ -464,6 +474,14 @@ export const StaircasesQueryParamsSchema = z.object({
 
 export const ResidenceSummaryQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
+})
+
+export const GetResidenceDetailsQueryParamsSchema = z.object({
+  includeActiveBlocksOnly: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
 })
 
 export const ResidenceSummarySchema = z.object({

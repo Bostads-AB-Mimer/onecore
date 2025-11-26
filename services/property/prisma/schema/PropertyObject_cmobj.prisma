@@ -57,6 +57,7 @@ model PropertyObject {
   residence       Residence?
   facility        Facility?
   maintenanceUnit MaintenanceUnit[]
+  rentalBlocks    RentalBlock[]
 
   @@index([objectTypeId], map: "fkcmobjcmobt")
   @@map("cmobj")
