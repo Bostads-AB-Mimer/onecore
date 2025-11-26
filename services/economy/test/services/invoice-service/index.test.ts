@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/invoice-service/adapters/xledger-adapter'
 import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
+import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -189,6 +190,9 @@ describe('Invoice Service', () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
         .mockResolvedValueOnce(factory.invoice.build())
+      jest
+        .spyOn(tenfastAdapter, 'getInvoiceByOcr')
+        .mockResolvedValueOnce({ ok: true, data: factory.invoice.build() })
 
       const res = await request(app.callback()).get(`/invoices/12345`)
 
