@@ -14,6 +14,8 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
+import { TenfastInvoiceRowSchema } from '../adapters/tenfast/schemas'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -481,6 +483,111 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /leases/{id}/invoice-row:
+   *   post:
+   *     summary: Create a invoice row
+   *     description: Create a invoice row.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       201:
+   *         description: Successfully created invoice row.
+   *       404:
+   *         description: Lease not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  const CreateInvoiceRowRequestBodySchema = TenfastInvoiceRowSchema.omit({
+    _id: true,
+  })
+
+  router.post(
+    '(.*)/leases/:leaseId/invoice-row',
+    parseRequestBody(CreateInvoiceRowRequestBodySchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const invoiceRow = ctx.request.body
+
+      const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
+        leaseId: ctx.params.leaseId,
+        invoiceRow: invoiceRow,
+      })
+
+      if (!createInvoiceRow.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: createInvoiceRow.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(createInvoiceRow.data, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{id}/invoice-row/{invoiceRowId}:
+   *   delete:
+   *     summary: Delete an invoice row
+   *     description: Delete an invoice row.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: invoiceRowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the invoice row.
+   *     responses:
+   *       201:
+   *         description: Successfully created invoice row.
+   *       404:
+   *         description: Lease not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.delete(
+    '(.*)/leases/:leaseId/invoice-row/:invoiceRowId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const deleteInvoiceRow = await tenfastAdapter.deleteInvoiceRow({
+        leaseId: ctx.params.leaseId,
+        invoiceRowId: ctx.params.invoiceRowId,
+      })
+
+      if (!deleteInvoiceRow.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: deleteInvoiceRow.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(null, metadata)
+    }
+  )
 }
 
 async function patchLeasesWithContacts(
