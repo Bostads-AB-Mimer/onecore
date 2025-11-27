@@ -145,6 +145,34 @@ const getContactByContactCode = async (
   }
 }
 
+const getContactCommentsByContactCode = async (
+  contactCode: string
+): Promise<
+  AdapterResult<
+    z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>,
+    'contact-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const res = await axios.get<{
+      content: z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`)
+
+    if (res.status === 404) {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    if (res.status === 200) {
+      return { ok: true, data: res.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactCommentsByContactCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getTenantByContactCode = async (
   contactCode: string
 ): Promise<
@@ -661,6 +689,7 @@ export {
   getApplicationProfileByContactCode,
   getContactByContactCode,
   getContactByPhoneNumber,
+  getContactCommentsByContactCode,
   getContactForPnr,
   getContactsDataBySearchQuery,
   getCreditInformation,
