@@ -3,12 +3,6 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import commentAdapter from '../adapters/comment-adapter'
 import { leasing } from '@onecore/types'
 
-/**
- * @swagger
- * tags:
- *   - name: Comments
- *     description: Endpoints related to operations regarding comments on leasing objects.
- */
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
