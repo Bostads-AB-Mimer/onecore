@@ -17,6 +17,19 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
+  // Sort invoices by invoice date, latest first
+  const sortedInvoices = [...invoices].sort((a, b) => {
+    const dateA =
+      typeof a.invoiceDate === 'string'
+        ? parseISO(a.invoiceDate)
+        : a.invoiceDate
+    const dateB =
+      typeof b.invoiceDate === 'string'
+        ? parseISO(b.invoiceDate)
+        : b.invoiceDate
+    return dateB.getTime() - dateA.getTime()
+  })
+
   const formatCurrency = (amount: number) => {
     return amount.toFixed(2).replace('.', ',') + ' SEK'
   }
@@ -34,34 +47,42 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return source
   }
 
-  // Todo: fix type
-  const getStatusVariant = (status: PaymentStatus) => {
-    switch (status) {
-      case PaymentStatus.Paid:
-        return 'success' // green success badge
-      case PaymentStatus.Unpaid:
-        return 'secondary' // neutral
-      default:
-        return 'secondary'
-    }
-  }
-
   const toggleExpand = (invoiceId: string) => {
     setExpandedInvoice(expandedInvoice === invoiceId ? null : invoiceId)
   }
 
-  const getOverdueDays = (dueDate: string): number => {
+  const isInvoiceOverdue = (invoice: Invoice): boolean => {
+    // If invoice is already paid, it's not overdue
+    if (invoice.paymentStatus === PaymentStatus.Paid) {
+      return false
+    }
+
+    // Check if expirationDate exists and is in the past
+    if (!invoice.expirationDate) {
+      return false
+    }
+
     const today = new Date()
-    const due = parseISO(dueDate)
-    return differenceInDays(today, due)
+    const dueDate =
+      typeof invoice.expirationDate === 'string'
+        ? parseISO(invoice.expirationDate)
+        : invoice.expirationDate
+
+    return today > dueDate
   }
 
-  // Todo: fix ty
-  const getStatusText = (invoice: Invoice): string => {
-    if (invoice.paymentStatus === PaymentStatus.Paid) {
-      return 'Betald'
-    } else {
-      return 'Obetald'
+  const getStatusBadge = (invoice: Invoice): JSX.Element => {
+    switch (invoice.paymentStatus) {
+      case PaymentStatus.Paid:
+        return <Badge variant={'success'}>Betald</Badge>
+      case PaymentStatus.Unpaid:
+        if (isInvoiceOverdue(invoice)) {
+          return <Badge variant={'destructive'}>Förfallen</Badge>
+        } else {
+          return <Badge variant={'secondary'}>Obetald</Badge>
+        }
+      default:
+        return <Badge variant={'secondary'}>Obetald</Badge>
     }
   }
 
@@ -82,7 +103,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   if (isMobile) {
     return (
       <div className="space-y-3">
-        {invoices.map((invoice) => {
+        {sortedInvoices.map((invoice) => {
           const isExpanded = expandedInvoice === invoice.invoiceId
           return (
             <Card key={invoice.invoiceId} className="overflow-hidden">
@@ -97,9 +118,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                       {getInvoiceType(invoice)}
                     </div>
                   </div>
-                  <Badge variant={getStatusVariant(invoice.paymentStatus)}>
-                    {getStatusText(invoice)}
-                  </Badge>
+                  {getStatusBadge(invoice)}
                 </div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
@@ -235,7 +254,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
           </tr>
         </thead>
         <tbody>
-          {invoices.map((invoice) => {
+          {sortedInvoices.map((invoice) => {
             const isExpanded = expandedInvoice === invoice.invoiceId
             return (
               <>
@@ -264,11 +283,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                   <td className="p-3 text-sm">
                     {formatSource(invoice.source)}
                   </td>
-                  <td className="p-3 text-sm">
-                    <Badge variant={getStatusVariant(invoice.paymentStatus)}>
-                      {getStatusText(invoice)}
-                    </Badge>
-                  </td>
+                  <td className="p-3 text-sm">{getStatusBadge(invoice)}</td>
                   {invoice.invoiceRows.length > 0 && (
                     <td className="p-3">
                       {isExpanded ? (
