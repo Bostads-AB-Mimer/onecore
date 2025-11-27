@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
+import * as contactCommentsAdapter from '../adapters/xpand/contact-comments-adapter'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
@@ -695,4 +696,95 @@ export const routes = (router: KoaRouter) => {
       return
     }
   )
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/comments:
+   *   get:
+   *     summary: Get comments/notes for a contact
+   *     description: Retrieve all comments (type 210) associated with a contact from Xpand. RTF formatted text is automatically converted to plain text.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code
+   *         example: "P086890"
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved contact comments
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       contactKey:
+   *                         type: string
+   *                       contactCode:
+   *                         type: string
+   *                       commentKey:
+   *                         type: string
+   *                       id:
+   *                         type: integer
+   *                       commentType:
+   *                         type: string
+   *                         nullable: true
+   *                         description: Comment type/category name
+   *                       text:
+   *                         type: string
+   *                         description: Plain text (converted from RTF)
+   *                       priority:
+   *                         type: integer
+   *                         nullable: true
+   *                       kind:
+   *                         type: integer
+   *                         nullable: true
+   *       404:
+   *         description: Contact not found
+   *       500:
+   *         description: Database error
+   */
+  router.get('(.*)/contacts/:contactCode/comments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await contactCommentsAdapter.getContactCommentsByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          type: result.err,
+          title: 'Contact not found',
+          status: 404,
+          detail: `No contact found with code: ${ctx.params.contactCode}`,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        type: 'database-error',
+        title: 'Internal server error',
+        status: 500,
+        ...metadata,
+      } satisfies RouteErrorResponse
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
 }
