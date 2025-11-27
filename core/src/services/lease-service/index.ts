@@ -382,6 +382,90 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /contacts/{contactCode}/comments:
+   *   get:
+   *     summary: Get comments for a contact
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves all comments/notes for a contact from Xpand
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique code identifying the contact.
+   *         example: "P086890"
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved comments
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       contactKey:
+   *                         type: string
+   *                       contactCode:
+   *                         type: string
+   *                       commentKey:
+   *                         type: string
+   *                       id:
+   *                         type: integer
+   *                       commentType:
+   *                         type: string
+   *                         nullable: true
+   *                       text:
+   *                         type: string
+   *                       priority:
+   *                         type: integer
+   *                         nullable: true
+   *                       kind:
+   *                         type: integer
+   *                         nullable: true
+   *       '404':
+   *         description: Contact not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/contacts/:contactCode/comments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getContactCommentsByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          reason: 'contact-not-found',
+          detail: `No contact found with code: ${ctx.params.contactCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /offers/{offerId}/applicants/{contactCode}:
    *   get:
    *     summary: Get a specific offer for an applicant
