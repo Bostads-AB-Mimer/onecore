@@ -2,7 +2,7 @@ import { TabsContent } from '@/components/ui/v2/Tabs'
 import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
-// import { TenantNotes } from '@/components/tenants/TenantNotes'
+import { TenantNotes } from '@/components/tenants/TenantNotes'
 // import { TenantOrders } from '@/components/tenants/TenantOrders'
 // import { TenantEventLog } from '@/components/tenants/TenantEventLog'
 // import { TenantDocuments } from '@/components/tenants/TenantDocuments'
@@ -56,8 +56,7 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="notes">
-        <div>Placeholder Noteringar</div>
-        {/* <TenantNotes /> */}
+        <TenantNotes contactCode={contactCode} />
       </TabsContent>
 
       <TabsContent value="keys">

@@ -224,3 +224,48 @@ export interface QueueData {
   }
   applicationProfile?: ApplicationProfileResponse
 }
+
+// Tenant Comments/Notes Types
+/**
+ * Individual note within a comment from the API
+ */
+export interface TenantCommentNote {
+  date: string // "2025-11-27"
+  time: string // "14:49"
+  author: string // "DAVLIN"
+  text: string // The actual comment text
+}
+
+/**
+ * Raw API response from /contacts/<contact>/comments
+ */
+export interface TenantCommentRaw {
+  contactKey: string
+  contactCode: string
+  commentKey: string
+  id: number
+  commentType: string
+  notes: TenantCommentNote[]
+  priority: number
+  kind: number
+}
+
+/**
+ * Transformed comment for UI display (flattened from notes array)
+ * Each note is transformed into its own TenantComment
+ */
+export interface TenantComment {
+  id: string
+  commentKey: string
+  text: string
+  author: string
+  createdAt: string // ISO datetime combining date + time
+}
+
+/**
+ * API response wrapper for comments endpoint
+ */
+export interface TenantCommentsResponse {
+  content: TenantCommentRaw[]
+  _links?: Record<string, { href: string }>
+}

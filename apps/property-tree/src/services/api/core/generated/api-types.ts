@@ -379,6 +379,20 @@ export interface paths {
                   commentKey?: string;
                   id?: number;
                   commentType?: string | null;
+                  /** @description Array of individual notes parsed from comment text */
+                  notes?: ({
+                      /**
+                       * Format: date
+                       * @description Date in YYYY-MM-DD format
+                       */
+                      date?: string | null;
+                      /** @description Time in HH:MM format */
+                      time?: string | null;
+                      /** @description Author initials (6 letters) or "Notering utan signatur" */
+                      author?: string;
+                      /** @description Note content (plain text) */
+                      text?: string;
+                    })[];
                   text?: string;
                   priority?: number | null;
                   kind?: number | null;

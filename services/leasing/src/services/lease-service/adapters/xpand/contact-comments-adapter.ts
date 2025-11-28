@@ -1,7 +1,7 @@
 import { xpandDb } from './xpandDb'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
-import { trimRow, convertRtfToPlainText } from '../utils'
+import { trimRow, convertRtfToPlainText, parseNotesFromText } from '../utils'
 import { leasing } from '@onecore/types'
 
 type ContactComment = leasing.v1.ContactComment
@@ -58,13 +58,19 @@ export const getContactCommentsByContactCode = async (
 const transformDbComment = (row: any): ContactComment => {
   const trimmedRow = trimRow(row)
 
+  // Convert RTF to plain text first
+  const plainText = convertRtfToPlainText(trimmedRow.text)
+
+  // Parse plain text into structured notes
+  const notes = parseNotesFromText(plainText)
+
   return {
     contactKey: trimmedRow.keycmctc,
     contactCode: trimmedRow.cmctckod,
     commentKey: trimmedRow.keycmmem,
     id: trimmedRow.id,
     commentType: trimmedRow.name,
-    text: convertRtfToPlainText(trimmedRow.text),
+    notes,
     priority: trimmedRow.priority,
     kind: trimmedRow.kind,
   }
