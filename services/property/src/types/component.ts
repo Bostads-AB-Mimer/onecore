@@ -23,6 +23,34 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
+// ==================== FILE METADATA SCHEMAS ====================
+
+export const FileMetadataSchema = z.object({
+  fileId: z.string(),
+  originalName: z.string(),
+  size: z.number(),
+  mimeType: z.string(),
+  uploadedAt: z.string().datetime(),
+})
+
+export const ComponentModelDocumentSchema = FileMetadataSchema
+
+export const ComponentFileSchema = FileMetadataSchema
+
+// Extend base schema with presigned URL (added at runtime by handlers)
+export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
+  url: z
+    .string()
+    .describe('Presigned URL for file access (valid for 24 hours)'),
+})
+
+export type FileMetadata = z.infer<typeof FileMetadataSchema>
+export type ComponentModelDocument = z.infer<
+  typeof ComponentModelDocumentSchema
+>
+export type ComponentFile = z.infer<typeof ComponentFileSchema>
+export type FileMetadataWithUrl = z.infer<typeof FileMetadataWithUrlSchema>
+
 // ==================== COMPONENT TYPES ====================
 
 // Query params for component types
@@ -119,6 +147,7 @@ export const ComponentModelSchema = z.object({
   replacementIntervalMonths: z.number().int().min(0),
   quantityType: QuantityTypeEnum,
   coclassCode: z.string(),
+  documents: z.string().nullable(), // JSON array stored as string
   createdAt: z.date(),
   updatedAt: z.date(),
   componentType: ComponentTypeSchema.optional(),
@@ -202,6 +231,7 @@ export const ComponentNewSchema = z.object({
   priceAtPurchase: z.number().min(0),
   ncsCode: z.string().regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format'),
   status: ComponentStatusEnum,
+  files: z.string().nullable(), // JSON array stored as string
   createdAt: z.date(),
   updatedAt: z.date(),
   model: ComponentModelSchema.optional(),
