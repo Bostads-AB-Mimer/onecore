@@ -140,3 +140,79 @@ const decodeXpandText = (text: string): string => {
 
   return decoded
 }
+
+/**
+ * Note structure for parsed comments
+ */
+export interface Note {
+  date: string | null
+  time: string | null
+  author: string
+  text: string
+}
+
+/**
+ * Parses plain text comment into structured notes array
+ * Signature pattern: YYYY-MM-DD HH:MM AUTHOR: (where AUTHOR is 6 uppercase letters)
+ *
+ * @param text - Plain text comment (already converted from RTF)
+ * @returns Array of parsed notes with metadata
+ */
+export const parseNotesFromText = (text: string): Note[] => {
+  // Handle empty text
+  if (!text || text.trim() === '') {
+    return []
+  }
+
+  // Regex to match signature pattern: YYYY-MM-DD HH:MM AUTHOR:
+  // Author must be exactly 6 uppercase letters
+  const signaturePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s+([A-Z]{6}):/g
+  const matches = Array.from(text.matchAll(signaturePattern))
+
+  if (matches.length === 0) {
+    // No signatures found - single unsigned note
+    return [
+      {
+        date: null,
+        time: null,
+        author: 'Notering utan signatur',
+        text: text.trim(),
+      },
+    ]
+  }
+
+  const notes: Note[] = []
+
+  // Check for leading content before first signature
+  const firstMatchIndex = matches[0].index!
+  if (firstMatchIndex > 0) {
+    const leadingText = text.substring(0, firstMatchIndex).trim()
+    if (leadingText) {
+      notes.push({
+        date: null,
+        time: null,
+        author: 'Notering utan signatur',
+        text: leadingText,
+      })
+    }
+  }
+
+  // Parse each signed note
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i]
+    const startIndex = match.index! + match[0].length
+    const endIndex =
+      i < matches.length - 1 ? matches[i + 1].index! : text.length
+
+    const content = text.substring(startIndex, endIndex).trim()
+
+    notes.push({
+      date: match[1], // YYYY-MM-DD
+      time: match[2], // HH:MM
+      author: match[3], // 6-letter initials
+      text: content,
+    })
+  }
+
+  return notes
+}
