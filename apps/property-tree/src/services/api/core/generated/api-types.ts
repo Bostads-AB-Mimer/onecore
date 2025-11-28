@@ -3631,6 +3631,180 @@ export interface paths {
       };
     };
   };
+  "/api/components/{id}/upload": {
+    /** Upload a file to a component */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Optional caption for the file */
+          caption?: string;
+        };
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/components/{id}/files": {
+    /** Get all files for a component */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description List of files with presigned URLs */
+        200: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/components/{id}/files/{fileId}": {
+    /** Delete a file from a component */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+          /** @description File ID */
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description File deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Component or file not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/upload": {
+    /** Upload a document to a component model */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/documents": {
+    /** Get all documents for a component model */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description List of documents with presigned URLs */
+        200: {
+          content: never;
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/documents/{fileId}": {
+    /** Delete a document from a component model */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+          /** @description File ID */
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Component model or document not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities

@@ -1,5 +1,6 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
+import { getBulkFileMetadata } from './minio-adapter'
 import type {
   CreateComponentType,
   UpdateComponentType,
@@ -11,6 +12,8 @@ import type {
   UpdateComponentNew,
   CreateComponentInstallation,
   UpdateComponentInstallation,
+  ComponentModelDocument,
+  ComponentFile,
 } from '../types/component'
 
 // ==================== COMPONENT TYPES ====================
@@ -456,4 +459,176 @@ export const getComponentsByRoomId = async (roomId: string) => {
   })
 
   return components.map(trimStrings)
+}
+
+// ==================== COMPONENT MODEL DOCUMENTS ====================
+
+export const getComponentModelDocuments = async (
+  modelId: string
+): Promise<ComponentModelDocument[]> => {
+  const model = await prisma.componentModels.findUnique({
+    where: { id: modelId },
+    select: { documents: true },
+  })
+
+  if (!model?.documents) {
+    return []
+  }
+
+  const fileIds: string[] = JSON.parse(model.documents)
+
+  if (fileIds.length === 0) {
+    return []
+  }
+
+  // Fetch metadata from MinIO
+  const metadataMap = await getBulkFileMetadata(fileIds)
+
+  // Combine fileId with MinIO metadata
+  return fileIds.map((fileId) => {
+    const metadata = metadataMap.get(fileId)
+    if (!metadata) {
+      throw new Error(`Metadata not found for fileId: ${fileId}`)
+    }
+    return {
+      fileId,
+      originalName: metadata.originalName,
+      size: metadata.size,
+      mimeType: metadata.mimeType,
+      uploadedAt: new Date().toISOString(),
+    }
+  })
+}
+
+export const addComponentModelDocument = async (
+  modelId: string,
+  fileId: string
+): Promise<void> => {
+  const model = await prisma.componentModels.findUnique({
+    where: { id: modelId },
+    select: { documents: true },
+  })
+
+  const currentFileIds: string[] = model?.documents
+    ? JSON.parse(model.documents)
+    : []
+
+  const updatedFileIds = [...currentFileIds, fileId]
+
+  await prisma.componentModels.update({
+    where: { id: modelId },
+    data: {
+      documents: JSON.stringify(updatedFileIds),
+    },
+  })
+}
+
+export const removeComponentModelDocument = async (
+  modelId: string,
+  fileId: string
+): Promise<void> => {
+  const model = await prisma.componentModels.findUnique({
+    where: { id: modelId },
+    select: { documents: true },
+  })
+
+  if (!model?.documents) {
+    return
+  }
+
+  const currentFileIds: string[] = JSON.parse(model.documents)
+  const filteredFileIds = currentFileIds.filter((id) => id !== fileId)
+
+  await prisma.componentModels.update({
+    where: { id: modelId },
+    data: {
+      documents: JSON.stringify(filteredFileIds),
+    },
+  })
+}
+
+// ==================== COMPONENT FILES ====================
+
+export const getComponentFiles = async (
+  componentId: string
+): Promise<ComponentFile[]> => {
+  const component = await prisma.components.findUnique({
+    where: { id: componentId },
+    select: { files: true },
+  })
+
+  if (!component?.files) {
+    return []
+  }
+
+  const fileIds: string[] = JSON.parse(component.files)
+
+  if (fileIds.length === 0) {
+    return []
+  }
+
+  // Fetch metadata from MinIO
+  const metadataMap = await getBulkFileMetadata(fileIds)
+
+  // Combine fileId with MinIO metadata
+  return fileIds.map((fileId) => {
+    const metadata = metadataMap.get(fileId)
+    if (!metadata) {
+      throw new Error(`Metadata not found for fileId: ${fileId}`)
+    }
+    return {
+      fileId,
+      originalName: metadata.originalName,
+      size: metadata.size,
+      mimeType: metadata.mimeType,
+      uploadedAt: new Date().toISOString(),
+    }
+  })
+}
+
+export const addComponentFile = async (
+  componentId: string,
+  fileId: string
+): Promise<void> => {
+  const component = await prisma.components.findUnique({
+    where: { id: componentId },
+    select: { files: true },
+  })
+
+  const currentFileIds: string[] = component?.files
+    ? JSON.parse(component.files)
+    : []
+
+  const updatedFileIds = [...currentFileIds, fileId]
+
+  await prisma.components.update({
+    where: { id: componentId },
+    data: {
+      files: JSON.stringify(updatedFileIds),
+    },
+  })
+}
+
+export const removeComponentFile = async (
+  componentId: string,
+  fileId: string
+): Promise<void> => {
+  const component = await prisma.components.findUnique({
+    where: { id: componentId },
+    select: { files: true },
+  })
+
+  if (!component?.files) {
+    return
+  }
+
+  const currentFileIds: string[] = JSON.parse(component.files)
+  const filteredFileIds = currentFileIds.filter((id) => id !== fileId)
+
+  await prisma.components.update({
+    where: { id: componentId },
+    data: {
+      files: JSON.stringify(filteredFileIds),
+    },
+  })
 }
