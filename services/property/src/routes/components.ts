@@ -1577,10 +1577,7 @@ export const routes = (router: KoaRouter) => {
           file,
           fileName,
           metadataHandler: async (fileId, sanitizedFile) => {
-            await addComponentModelDocument(
-              id,
-              fileId
-            )
+            await addComponentModelDocument(id, fileId)
             return { fileId, originalName: sanitizedFile.originalname }
           },
         })
@@ -1621,7 +1618,14 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentModelDocumentsResponse'
+   *                   type: object
+   *                   properties:
+   *                     documents:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/FileMetadataWithUrl'
+   *                     count:
+   *                       type: number
    *       404:
    *         description: Component model not found
    *       500:
@@ -1842,7 +1846,14 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentFilesResponse'
+   *                   type: object
+   *                   properties:
+   *                     files:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/FileMetadataWithUrl'
+   *                     count:
+   *                       type: number
    *       404:
    *         description: Component not found
    *       500:

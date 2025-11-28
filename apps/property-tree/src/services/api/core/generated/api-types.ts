@@ -353,6 +353,50 @@ export interface paths {
       };
     };
   };
+  "/contacts/{contactCode}/comments": {
+    /**
+     * Get comments for a contact
+     * @description Retrieves all comments/notes for a contact from Xpand
+     */
+    get: {
+      parameters: {
+        path: {
+          /**
+           * @description The unique code identifying the contact.
+           * @example P086890
+           */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved comments */
+        200: {
+          content: {
+            "application/json": {
+              content?: ({
+                  contactKey?: string;
+                  contactCode?: string;
+                  commentKey?: string;
+                  id?: number;
+                  commentType?: string | null;
+                  text?: string;
+                  priority?: number | null;
+                  kind?: number | null;
+                })[];
+            };
+          };
+        };
+        /** @description Contact not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/offers/{offerId}/applicants/{contactCode}": {
     /**
      * Get a specific offer for an applicant
@@ -3680,7 +3724,13 @@ export interface paths {
       responses: {
         /** @description List of files with presigned URLs */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: {
+                files?: components["schemas"]["FileMetadataWithUrl"][];
+              };
+            };
+          };
         };
         /** @description Component not found */
         404: {
@@ -3765,7 +3815,13 @@ export interface paths {
       responses: {
         /** @description List of documents with presigned URLs */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: {
+                documents?: components["schemas"]["FileMetadataWithUrl"][];
+              };
+            };
+          };
         };
         /** @description Component model not found */
         404: {
@@ -4698,6 +4754,15 @@ export interface components {
       deinstallationDate?: string;
       orderNumber?: string;
       cost?: number;
+    };
+    FileMetadataWithUrl: {
+      fileId: string;
+      originalName: string;
+      size: number;
+      mimeType: string;
+      uploadedAt: string;
+      /** @description Presigned URL for file access (valid for 24 hours) */
+      url: string;
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */

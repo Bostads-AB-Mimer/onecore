@@ -631,7 +631,10 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentModelDocumentsResponse"];
+              content?: {
+                documents?: components["schemas"]["FileMetadataWithUrl"][];
+                count?: number;
+              };
             };
           };
         };
@@ -721,7 +724,10 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentFilesResponse"];
+              content?: {
+                files?: components["schemas"]["FileMetadataWithUrl"][];
+                count?: number;
+              };
             };
           };
         };
@@ -2521,32 +2527,6 @@ export interface components {
       uploadedAt: string;
       /** @description Presigned URL for file access (valid for 24 hours) */
       url: string;
-    };
-    ComponentFilesResponse: {
-      files: {
-          fileId: string;
-          originalName: string;
-          size: number;
-          mimeType: string;
-          /** Format: date-time */
-          uploadedAt: string;
-          /** @description Presigned URL for file access (valid for 24 hours) */
-          url: string;
-        }[];
-      count: number;
-    };
-    ComponentModelDocumentsResponse: {
-      documents: {
-          fileId: string;
-          originalName: string;
-          size: number;
-          mimeType: string;
-          /** Format: date-time */
-          uploadedAt: string;
-          /** @description Presigned URL for file access (valid for 24 hours) */
-          url: string;
-        }[];
-      count: number;
     };
   };
   responses: never;

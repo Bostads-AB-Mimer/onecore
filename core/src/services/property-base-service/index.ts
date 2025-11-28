@@ -80,6 +80,7 @@ export const routes = (router: KoaRouter) => {
     'UpdateComponentInstallationRequest',
     schemas.UpdateComponentInstallationSchema
   )
+  registerSchema('FileMetadataWithUrl', schemas.FileMetadataWithUrlSchema)
 
   /**
    * @swagger
@@ -3534,6 +3535,18 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of files with presigned URLs
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     files:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/FileMetadataWithUrl'
    *       404:
    *         description: Component not found
    *       500:
@@ -3765,6 +3778,18 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of documents with presigned URLs
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     documents:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/FileMetadataWithUrl'
    *       404:
    *         description: Component model not found
    *       500:

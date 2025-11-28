@@ -53,8 +53,7 @@ export const componentService = {
 
     if (error) throw error
 
-    // Type assertion needed - OpenAPI spec has incomplete response schema
-    const images = ((data as any)?.content?.files as ComponentImage[]) || []
+    const images = data?.content?.files || []
     console.log(
       '[componentService.getImages] Returning:',
       images.length,
@@ -64,7 +63,7 @@ export const componentService = {
   },
 
   async deleteImage(componentId: string, fileId: string): Promise<void> {
-    const { error } = await DELETE('/api/components/{id}/files/{fileId}', {
+    const { error} = await DELETE('/api/components/{id}/files/{fileId}', {
       params: {
         path: { id: componentId, fileId },
       },
@@ -98,9 +97,7 @@ export const componentService = {
 
     if (error) throw error
 
-    // API returns {content: {documents: [...]}}
-    // Type assertion needed - OpenAPI spec has incomplete response schema
-    return ((data as any)?.content?.documents as ComponentModelDocument[]) || []
+    return data?.content?.documents || []
   },
 
   async deleteModelDocument(modelId: string, fileId: string): Promise<void> {
