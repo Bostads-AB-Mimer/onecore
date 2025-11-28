@@ -1,6 +1,6 @@
 import { TenantQueueSystem } from './TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
-// import { TenantNotes } from './TenantNotes'
+import { TenantNotes } from './TenantNotes'
 // import { TenantOrders } from './TenantOrders'
 // import { TenantLedger } from './TenantLedger'
 import {
@@ -66,8 +66,7 @@ export function TenantMobileAccordion({
     {
       id: 'notes',
       title: 'Noteringar',
-      content: <div>Placeholder Noteringar</div>,
-      // content: <TenantNotes />,
+      content: <TenantNotes contactCode={contactCode} />,
     },
     {
       id: 'keys',
