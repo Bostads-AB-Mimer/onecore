@@ -14,6 +14,7 @@ import {
 import { findExistingActiveLoansForTransfer } from '@/services/loanTransferHelpers'
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
 import { deriveDisplayStatus } from '@/lib/lease-status'
+import { getActiveLoan } from '@/utils/loanHelpers'
 import { KeyActionButtons } from './KeyActionButtons'
 import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './dialogs/ReceiptDialog'
@@ -79,10 +80,13 @@ export function LeaseKeyStatusList({
     ;(async () => {
       setLoading(true)
       try {
-        const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
+        const fetchedKeys = await keyService.getKeysByRentalObjectCode(
           lease.rentalPropertyId,
-          true, // Include latest event to avoid N+1 queries
-          true // Include key system to avoid N+1 queries
+          {
+            includeLoans: true,
+            includeEvents: true,
+            includeKeySystem: true,
+          }
         )
         if (!cancelled) {
           setKeys(fetchedKeys)
@@ -119,10 +123,13 @@ export function LeaseKeyStatusList({
     }
 
     // Only fetch directly if component is standalone (no parent providing data)
-    const fetchedKeys = await keyService.getKeysWithLoanAndEvent(
+    const fetchedKeys = await keyService.getKeysByRentalObjectCode(
       lease.rentalPropertyId,
-      true,
-      true
+      {
+        includeLoans: true,
+        includeEvents: true,
+        includeKeySystem: true,
+      }
     )
     setKeys(fetchedKeys)
   }
@@ -242,7 +249,7 @@ export function LeaseKeyStatusList({
     return keys.filter((key) => {
       if (!key.disposed) return true
       // Include disposed key only if it's currently loaned
-      return !!key.loan
+      return !!getActiveLoan(key)
     })
   }, [keys])
 
