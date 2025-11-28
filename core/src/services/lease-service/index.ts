@@ -420,8 +420,27 @@ export const routes = (router: KoaRouter) => {
    *                       commentType:
    *                         type: string
    *                         nullable: true
-   *                       text:
-   *                         type: string
+   *                       notes:
+   *                         type: array
+   *                         description: Array of individual notes parsed from comment text
+   *                         items:
+   *                           type: object
+   *                           properties:
+   *                             date:
+   *                               type: string
+   *                               format: date
+   *                               nullable: true
+   *                               description: Date in YYYY-MM-DD format
+   *                             time:
+   *                               type: string
+   *                               nullable: true
+   *                               description: Time in HH:MM format
+   *                             author:
+   *                               type: string
+   *                               description: Author initials (6 letters) or "Notering utan signatur"
+   *                             text:
+   *                               type: string
+   *                               description: Note content (plain text)
    *                       priority:
    *                         type: integer
    *                         nullable: true
