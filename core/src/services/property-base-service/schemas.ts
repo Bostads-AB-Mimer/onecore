@@ -569,7 +569,9 @@ export const FileMetadataSchema = z.object({
 })
 
 export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
-  url: z.string().describe('Presigned URL for file access (valid for 24 hours)'),
+  url: z
+    .string()
+    .describe('Presigned URL for file access (valid for 24 hours)'),
 })
 
 export type FileMetadata = z.infer<typeof FileMetadataSchema>
@@ -612,9 +614,6 @@ export const ComponentModelSchema = z.object({
   subtype: ComponentSubtypeSchema.optional(),
 })
 
-// ComponentInstallation schema without component reference (to avoid circular reference)
-// This is used when ComponentInstallations are included in Component responses
-// For direct ComponentInstallation queries, use ComponentInstallationSchema below
 export const ComponentInstallationWithoutComponentSchema = z.object({
   id: z.string(),
   componentId: z.string(),
@@ -628,8 +627,6 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
   updatedAt: z.string(),
 })
 
-// Component instance schema with installations included
-// The componentInstallations field uses the "WithoutComponent" version to break circular reference
 export const ComponentNewSchema = z.object({
   id: z.string(),
   modelId: z.string(),
@@ -648,8 +645,6 @@ export const ComponentNewSchema = z.object({
     .optional(),
 })
 
-// Full ComponentInstallation schema with component reference
-// Used for direct ComponentInstallation queries where the full component is needed
 export const ComponentInstallationSchema = z.object({
   id: z.string(),
   componentId: z.string(),

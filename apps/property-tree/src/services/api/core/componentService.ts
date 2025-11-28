@@ -63,7 +63,7 @@ export const componentService = {
   },
 
   async deleteImage(componentId: string, fileId: string): Promise<void> {
-    const { error} = await DELETE('/api/components/{id}/files/{fileId}', {
+    const { error } = await DELETE('/api/components/{id}/files/{fileId}', {
       params: {
         path: { id: componentId, fileId },
       },
