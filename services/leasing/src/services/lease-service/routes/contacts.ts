@@ -805,4 +805,95 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/comments:
+   *   post:
+   *     summary: Create or append to contact comment
+   *     description: Creates a new comment if none exists, or appends to existing comment
+   *     tags:
+   *       - Contacts
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: P000047
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - content
+   *               - author
+   *             properties:
+   *               content:
+   *                 type: string
+   *                 description: Plain text content of the note
+   *                 example: Contacted customer regarding payment
+   *               author:
+   *                 type: string
+   *                 description: Author name or code (1-50 characters, any format)
+   *                 minLength: 1
+   *                 maxLength: 50
+   *                 example: DAVLIN
+   *     responses:
+   *       200:
+   *         description: Comment updated successfully
+   *       201:
+   *         description: Comment created successfully
+   *       400:
+   *         description: Invalid request body
+   *       404:
+   *         description: Contact not found
+   *       500:
+   *         description: Database error
+   */
+  router.post(
+    '(.*)/contacts/:contactCode/comments',
+    parseRequestBody(leasing.v1.CreateContactCommentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { content, author } = ctx.request.body
+
+      const result = await contactCommentsAdapter.upsertContactComment(
+        ctx.params.contactCode,
+        content,
+        author
+      )
+
+      if (!result.ok) {
+        if (result.err === 'contact-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            type: result.err,
+            title: 'Contact not found',
+            status: 404,
+            detail: `No contact found with code: ${ctx.params.contactCode}`,
+            ...metadata,
+          } satisfies RouteErrorResponse
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          type: 'database-error',
+          title: 'Internal server error',
+          status: 500,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = result.data.operation === 'created' ? 201 : 200
+      ctx.body = {
+        content: result.data.comment,
+        ...metadata,
+      }
+    }
+  )
 }
