@@ -153,7 +153,7 @@ export interface Note {
 
 /**
  * Parses plain text comment into structured notes array
- * Signature pattern: YYYY-MM-DD HH:MM AUTHOR: (where AUTHOR is 6 uppercase letters)
+ * Signature pattern: YYYY-MM-DD HH:MM AUTHOR: (where AUTHOR is uppercase letters)
  *
  * @param text - Plain text comment (already converted from RTF)
  * @returns Array of parsed notes with metadata
@@ -165,8 +165,8 @@ export const parseNotesFromText = (text: string): Note[] => {
   }
 
   // Regex to match signature pattern: YYYY-MM-DD HH:MM AUTHOR:
-  // Author must be exactly 6 uppercase letters
-  const signaturePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s+([A-Z]{6}):/g
+  // Author can be any non-whitespace characters (flexible length and format)
+  const signaturePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s+(\S+):/g
   const matches = Array.from(text.matchAll(signaturePattern))
 
   if (matches.length === 0) {
@@ -209,10 +209,38 @@ export const parseNotesFromText = (text: string): Note[] => {
     notes.push({
       date: match[1], // YYYY-MM-DD
       time: match[2], // HH:MM
-      author: match[3], // 6-letter initials
+      author: match[3], // Author code (variable length)
       text: content,
     })
   }
 
   return notes
+}
+
+/**
+ * Formats a note with timestamp and author signature
+ * Pattern: YYYY-MM-DD HH:MM AUTHOR: content
+ *
+ * @param author - 6-letter uppercase author code
+ * @param content - Plain text content of the note
+ * @param timestamp - Optional timestamp (defaults to current time)
+ * @returns Formatted note string
+ */
+export const formatNoteWithSignature = (
+  author: string,
+  content: string,
+  timestamp?: Date
+): string => {
+  const date = timestamp || new Date()
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+
+  const dateStr = `${year}-${month}-${day}`
+  const timeStr = `${hours}:${minutes}`
+
+  return `${dateStr} ${timeStr} ${author}: ${content}`
 }
