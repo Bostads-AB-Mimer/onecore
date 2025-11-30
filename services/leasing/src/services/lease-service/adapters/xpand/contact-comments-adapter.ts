@@ -1,7 +1,12 @@
 import { xpandDb } from './xpandDb'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
-import { trimRow, convertRtfToPlainText, parseNotesFromText } from '../utils'
+import {
+  trimRow,
+  convertRtfToPlainText,
+  parseNotesFromText,
+  formatNoteWithSignature,
+} from '../utils'
 import { leasing } from '@onecore/types'
 
 type ContactComment = leasing.v1.ContactComment
@@ -73,5 +78,128 @@ const transformDbComment = (row: any): ContactComment => {
     notes,
     priority: trimmedRow.priority,
     kind: trimmedRow.kind,
+  }
+}
+
+/**
+ * Generates a unique Xpand key for the cmmem table
+ * Format: underscore + 10 random alphanumeric characters
+ *
+ * @returns Unique key string
+ */
+const generateXpandKey = async (): Promise<string> => {
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  let key = ''
+  let exists = true
+
+  while (exists) {
+    key =
+      '_' +
+      Array.from({ length: 10 }, () =>
+        chars.charAt(Math.floor(Math.random() * chars.length))
+      ).join('')
+
+    const existing = await xpandDb('cmmem').where('keycmmem', '=', key).first()
+
+    exists = !!existing
+  }
+
+  return key
+}
+
+/**
+ * Creates a new contact comment or appends to existing comment
+ * This is the first write operation to the Xpand database
+ *
+ * @param contactCode - Contact code (e.g., "P000047")
+ * @param content - Plain text content of the note
+ * @param author - 6-letter uppercase author code
+ * @returns Result with operation type and updated comment
+ */
+export const upsertContactComment = async (
+  contactCode: string,
+  content: string,
+  author: string
+): Promise<
+  AdapterResult<
+    { operation: 'created' | 'updated'; comment: ContactComment },
+    'contact-not-found' | 'database-error'
+  >
+> => {
+  try {
+    const result = await xpandDb.transaction(async (trx) => {
+      // 1. Verify contact exists and get key
+      const contact = await trx('cmctc')
+        .select('keycmctc')
+        .where('cmctckod', '=', contactCode)
+        .first()
+
+      if (!contact) {
+        throw new Error('contact-not-found')
+      }
+
+      const contactKey = contact.keycmctc
+
+      // 2. Check for existing comment
+      const existing = await trx('cmmem')
+        .select('*')
+        .whereRaw('RTRIM([keycode]) = ?', [contactKey.trim()])
+        .where('id', '=', 210)
+        .first()
+
+      const newNoteText = formatNoteWithSignature(author, content)
+
+      if (existing) {
+        // Update: prepend to existing (newest first) and migrate to plain text format
+        const existingPlainText = convertRtfToPlainText(existing.text)
+        const combinedPlainText = existingPlainText
+          ? `${newNoteText}\n\n${existingPlainText}`
+          : newNoteText
+
+        await trx('cmmem').where('keycmmem', '=', existing.keycmmem).update({
+          text: combinedPlainText,
+          kind: 0, // Migrate to plain text format
+        })
+
+        return { operation: 'updated' as const, keycmmem: existing.keycmmem }
+      } else {
+        // Create new comment with plain text format
+        const keycmmem = await generateXpandKey()
+
+        await trx('cmmem').insert({
+          keycmmem,
+          keycode: contactKey,
+          id: 210,
+          name: 'Standard',
+          text: newNoteText,
+          priority: 0,
+          kind: 0, // Use plain text format
+        })
+
+        return { operation: 'created' as const, keycmmem }
+      }
+    })
+
+    // Fetch and return the complete comment
+    const commentResult = await getContactCommentsByContactCode(contactCode)
+
+    if (!commentResult.ok) {
+      return { ok: false, err: 'database-error' }
+    }
+
+    return {
+      ok: true,
+      data: {
+        operation: result.operation,
+        comment: commentResult.data[0],
+      },
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'contact-not-found') {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    logger.error(err, 'contact-comments-adapter.upsertContactComment')
+    return { ok: false, err: 'database-error' }
   }
 }
