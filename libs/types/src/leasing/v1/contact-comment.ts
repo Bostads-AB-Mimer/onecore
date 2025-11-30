@@ -20,8 +20,19 @@ export const ContactCommentSchema = z.object({
 
 export const GetContactCommentsResponseSchema = z.array(ContactCommentSchema)
 
+export const CreateContactCommentRequestSchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty'),
+  author: z
+    .string()
+    .min(1, 'Author cannot be empty')
+    .max(50, 'Author must be 50 characters or less'),
+})
+
 export type Note = z.infer<typeof NoteSchema>
 export type ContactComment = z.infer<typeof ContactCommentSchema>
 export type GetContactCommentsResponse = z.infer<
   typeof GetContactCommentsResponseSchema
+>
+export type CreateContactCommentRequest = z.infer<
+  typeof CreateContactCommentRequestSchema
 >
