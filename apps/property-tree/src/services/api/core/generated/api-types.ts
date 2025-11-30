@@ -396,6 +396,59 @@ export interface paths {
         };
       };
     };
+    /**
+     * Create or append to contact comment
+     * @description Creates a new comment if none exists for the contact, or appends to existing comment in Xpand
+     */
+    post: {
+      parameters: {
+        path: {
+          /**
+           * @description The unique code identifying the contact
+           * @example P086890
+           */
+          contactCode: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * @description Plain text content of the note
+             * @example Customer contacted regarding lease renewal
+             */
+            content: string;
+            /**
+             * @description Author name or code (1-50 characters)
+             * @example DAVLIN
+             */
+            author: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Comment updated successfully (appended to existing comment) */
+        200: {
+          content: never;
+        };
+        /** @description Comment created successfully (new comment) */
+        201: {
+          content: never;
+        };
+        /** @description Invalid request body (validation failed) */
+        400: {
+          content: never;
+        };
+        /** @description Contact not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
   };
   "/offers/{offerId}/applicants/{contactCode}": {
     /**
