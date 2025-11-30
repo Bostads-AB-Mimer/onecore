@@ -173,6 +173,39 @@ const getContactCommentsByContactCode = async (
   }
 }
 
+const createContactComment = async (
+  contactCode: string,
+  params: z.infer<typeof leasing.v1.CreateContactCommentRequestSchema>
+): Promise<
+  AdapterResult<
+    z.infer<typeof leasing.v1.ContactCommentSchema>,
+    'contact-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const res = await axios.post<{
+      content: z.infer<typeof leasing.v1.ContactCommentSchema>
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`, params)
+
+    if (res.status === 404) {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    if (res.status === 200 || res.status === 201) {
+      return {
+        ok: true,
+        data: res.data.content,
+        statusCode: res.status,
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.createContactComment')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getTenantByContactCode = async (
   contactCode: string
 ): Promise<
@@ -701,6 +734,7 @@ export {
   getTenantByContactCode,
   resetWaitingList,
   setApplicantStatusActive,
+  createContactComment,
   createOrUpdateApplicationProfileByContactCode,
   updateApplicantStatus,
   validatePropertyRentalRules,
