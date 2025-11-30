@@ -10,6 +10,7 @@ import dayjs from 'dayjs'
 import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
+  leasing,
 } from '@onecore/types'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
@@ -477,6 +478,91 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/comments:
+   *   post:
+   *     summary: Create or append to contact comment
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new comment if none exists for the contact, or appends to existing comment in Xpand
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique code identifying the contact
+   *         example: "P086890"
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - content
+   *               - author
+   *             properties:
+   *               content:
+   *                 type: string
+   *                 description: Plain text content of the note
+   *                 minLength: 1
+   *                 example: "Customer contacted regarding lease renewal"
+   *               author:
+   *                 type: string
+   *                 description: Author name or code (1-50 characters)
+   *                 minLength: 1
+   *                 maxLength: 50
+   *                 example: "DAVLIN"
+   *     responses:
+   *       '200':
+   *         description: Comment updated successfully (appended to existing comment)
+   *       '201':
+   *         description: Comment created successfully (new comment)
+   *       '400':
+   *         description: Invalid request body (validation failed)
+   *       '404':
+   *         description: Contact not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/contacts/:contactCode/comments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = ctx.request.body as z.infer<
+      typeof leasing.v1.CreateContactCommentRequestSchema
+    >
+
+    const result = await leasingAdapter.createContactComment(
+      ctx.params.contactCode,
+      body
+    )
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'contact-not-found',
+          detail: `No contact found with code: ${ctx.params.contactCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = result.statusCode ?? 200
     ctx.body = {
       content: result.data,
       ...metadata,
