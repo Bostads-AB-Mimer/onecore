@@ -154,3 +154,31 @@ export const xledgerDateString = (date: Date | null | undefined) => {
     return ''
   }
 }
+
+export type ExportedInvoiceRow = {
+  amount?: number
+  deduction?: number
+  vat?: number
+  rowTotalAmount?: number
+  invoiceTotalAmount?: number
+  invoiceDate?: Date
+  invoiceDueDate?: Date
+  invoiceNumber?: string
+  invoiceRowText?: string | null
+  fromDate?: Date
+  toDate?: Date
+  contractCode?: string
+  rentArticle?: string | null
+  account?: string
+  costCode?: string
+  property?: string
+  freeCode?: string
+  totalAccount?: string
+  ledgerAccount?: string
+  contactCode?: string
+  tenantName?: string
+  company?: string
+
+  // remove?
+  roundoff?: number
+}

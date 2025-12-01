@@ -127,3 +127,12 @@ export const getInvoiceArticle = async (
     return { ok: false, err: err.statusCode }
   }
 }
+
+export const getInvoicesNotExported = async (maxCount: number) => {
+  // Dummy implementation awaiting exported flag in Tenfast
+  return await getInvoicesForTenant('67eb3cdbc334e091aa28f2fe')
+}
+
+export const convertToDate = (tenfastDate: string) => {
+  return new Date(tenfastDate)
+}

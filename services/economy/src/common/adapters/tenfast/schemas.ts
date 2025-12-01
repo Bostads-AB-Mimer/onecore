@@ -25,6 +25,7 @@ export const TenfastInvoiceSchema = z.object({
   simpleHyra: z.boolean(),
   amount: z.number(),
   amountPaid: z.number(),
+  roundingAmount: z.number(),
   acceptDiff: z.boolean(),
   aviseringsTyp: z.string(),
   expectedInvoiceDate: z.string(),
