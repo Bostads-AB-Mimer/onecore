@@ -5,7 +5,7 @@ export const TenfastInvoiceRowSchema = z.object({
   vat: z.number(),
   from: z.string(),
   to: z.string().nullable(),
-  article: z.string().nullable(),
+  article: z.string(),
   label: z.string().nullable(),
   accountingRows: z.array(z.any()),
   _id: z.string(),
