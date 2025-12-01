@@ -53,7 +53,6 @@ enum ListingStatus {
   Assigned = 2,
   Closed = 3,
   Expired = 4,
-  NoApplicants = 5,
 }
 
 enum ApplicantStatus {

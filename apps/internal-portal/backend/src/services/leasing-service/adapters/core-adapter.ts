@@ -4,7 +4,6 @@ import {
   CreateNoteOfInterestErrorCodes,
   DetailedApplicant,
   GetActiveOfferByListingIdErrorCodes,
-  InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
   Offer,
@@ -16,6 +15,7 @@ import {
   Comment,
   CommentThread,
   CommentThreadId,
+  RentalObject,
   Invoice,
   Lease,
 } from '@onecore/types'
@@ -40,12 +40,20 @@ const getListingsWithApplicants = async (
       url: url,
     })
 
+    const listings = listingsResponse.data?.content
+
+    listings.sort((a, b) => {
+      const dateA = new Date(a.publishedFrom).getTime()
+      const dateB = new Date(b.publishedFrom).getTime()
+      return dateB - dateA
+    })
+
     if (querystring !== 'type=offered') {
-      return { ok: true, data: listingsResponse.data.content }
+      return { ok: true, data: listings }
     }
 
     const withOffers = await Promise.all(
-      listingsResponse.data.content.map(async (listing) => {
+      listings.map(async (listing) => {
         const offer = await getActiveOfferByListingId(listing.id)
         if (!offer.ok) {
           throw new Error('Failed to get offer')
@@ -292,19 +300,42 @@ const createOffer = async (params: {
   }
 }
 
-const syncInternalParkingSpacesFromXpand = async (): Promise<
-  AdapterResult<InternalParkingSpaceSyncSuccessResponse, 'unknown'>
-> => {
+const createListings = async (
+  listingData: Omit<Listing, 'id' | 'rentalObject'>
+): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
   try {
-    const response = await getFromCore<{
-      content: InternalParkingSpaceSyncSuccessResponse
-    }>({
+    const response = await getFromCore<{ content: Listing }>({
       method: 'post',
-      url: `${coreBaseUrl}/listings/sync-internal-from-xpand`,
+      url: `${coreBaseUrl}/listings`,
+      data: listingData,
     })
 
     return { ok: true, data: response.data.content }
-  } catch {
+  } catch (err) {
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === HttpStatusCode.Conflict) {
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const createMultipleListings = async (
+  listingsData: Array<Omit<Listing, 'id' | 'rentalObject'>>
+): Promise<AdapterResult<Array<Listing>, 'partial-failure' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: Array<Listing> }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listings/batch`,
+      data: { listings: listingsData },
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === 207) {
+      return { ok: false, err: 'partial-failure', statusCode: 207 }
+    }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -313,9 +344,7 @@ const deleteListing = async (
   listingId: number
 ): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
   try {
-    await getFromCore<{
-      content: InternalParkingSpaceSyncSuccessResponse
-    }>({
+    await getFromCore({
       method: 'delete',
       url: `${coreBaseUrl}/listings/${listingId}`,
     })
@@ -340,6 +369,22 @@ const closeListing = async (
       method: 'put',
       url: `${coreBaseUrl}/listings/${listingId}/status`,
       data: { status: ListingStatus.Closed },
+    })
+
+    return { ok: true, data: null }
+  } catch {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const expireListing = async (
+  listingId: number
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    await getFromCore({
+      method: 'put',
+      url: `${coreBaseUrl}/listings/${listingId}/status`,
+      data: { status: ListingStatus.Expired },
     })
 
     return { ok: true, data: null }
@@ -565,6 +610,23 @@ const removeComment = async (
   }
 }
 
+const getVacantParkingSpaces = async (): Promise<
+  AdapterResult<RentalObject[], unknown>
+> => {
+  try {
+    const response = await getFromCore<{ content: RentalObject[] }>({
+      method: 'get',
+      url: `${coreBaseUrl}/vacant-parkingspaces`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (e) {
+    if (e instanceof AxiosError && e.response?.status === 401) {
+      return { ok: false, err: 'unauthorized', statusCode: 401 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 async function getInvoicesByContactCode(
   contactCode: string
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
@@ -603,6 +665,59 @@ async function getLeasesByContactCode(contactCode: string) {
   return { ok: true, data: response.data.content }
 }
 
+const createLeaseForNonScoredParkingSpace = async (params: {
+  parkingSpaceId: string
+  contactCode: string
+}): Promise<
+  AdapterResult<
+    unknown,
+    | 'internal-credit-check-failed'
+    | 'external-credit-check-failed'
+    | 'invalid-address'
+    | 'already-has-lease'
+    | 'unknown'
+  >
+> => {
+  try {
+    const response = await getFromCore<any>({
+      method: 'post',
+      url: `${coreBaseUrl}/parking-spaces/${params.parkingSpaceId}/leases`,
+      data: { contactCode: params.contactCode },
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.data) {
+      const statusCode = err.response.status
+      // Check error at root level first, then nested in content
+      const errorCode =
+        err.response.data?.error || err.response.data?.content?.errorCode
+
+      // Handle both 400 BadRequest and 404 NotFound for validation errors
+      if (statusCode === HttpStatusCode.BadRequest || statusCode === 404) {
+        // Map error codes from core service
+        if (errorCode === 'internal-credit-check-failed') {
+          return { ok: false, err: 'internal-credit-check-failed', statusCode }
+        }
+        if (errorCode === 'external-credit-check-failed') {
+          return { ok: false, err: 'external-credit-check-failed', statusCode }
+        }
+        if (
+          errorCode === 'invalid-address' ||
+          errorCode === 'applicant-missing-address'
+        ) {
+          return { ok: false, err: 'invalid-address', statusCode }
+        }
+        if (errorCode === 'already-has-lease') {
+          return { ok: false, err: 'already-has-lease', statusCode }
+        }
+      }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   addComment,
   removeComment,
@@ -614,18 +729,22 @@ export {
   getTenantByContactCode,
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
+  createListings,
+  createMultipleListings,
   createNoteOfInterestForInternalParkingSpace,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
-  syncInternalParkingSpacesFromXpand,
   createOffer,
   deleteListing,
   closeListing,
+  expireListing,
   acceptOffer,
   denyOffer,
   getActiveOfferByListingId,
   getApplicationProfileByContactCode,
   createOrUpdateApplicationProfile,
+  getVacantParkingSpaces,
   getInvoicesByContactCode,
   getLeasesByContactCode,
+  createLeaseForNonScoredParkingSpace,
 }

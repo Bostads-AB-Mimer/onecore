@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import {
   ApplicantStatus,
   DetailedApplicant,
-  InternalParkingSpaceSyncSuccessResponse,
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
@@ -13,7 +12,6 @@ import { match, P } from 'ts-pattern'
 
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as priorityListService from '../priority-list-service'
-import * as syncParkingSpacesFromXpandService from '../sync-internal-parking-space-listings-from-xpand'
 import * as listingAdapter from '../adapters/listing-adapter'
 import * as rentalObjectAdapter from '../adapters/xpand/rental-object-adapter'
 import { getTenant } from '../get-tenant'
@@ -53,6 +51,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The rental rule for the listings, either SCORED or NON_SCORED.
+   *       - in: query
+   *         name: rentalObjectCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The rental object code for the listings.
    *     responses:
    *       '200':
    *         description: Successful response with the requested list of listings.
@@ -75,6 +79,7 @@ export const routes = (router: KoaRouter) => {
         .optional()
         .transform((value) => value === 'true'),
       rentalRule: z.enum(['SCORED', 'NON_SCORED']).optional(),
+      rentalObjectCode: z.string().optional(),
     })
     const query = querySchema.safeParse(ctx.query)
 
@@ -82,9 +87,8 @@ export const routes = (router: KoaRouter) => {
       listingCategory: query.data?.listingCategory,
       published: query.data?.published,
       rentalRule: query.data?.rentalRule,
+      rentalObjectCode: query.data?.rentalObjectCode,
     })
-
-    //TODO: get correponding rental objects from xpand-adapter and add them to the listings
 
     if (!result.ok) {
       ctx.status = 500
@@ -154,6 +158,151 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 201
       ctx.body = { content: listing.data, ...metadata }
     } catch (error) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = { error: error.message, ...metadata }
+      } else {
+        ctx.body = { error: 'An unexpected error occurred.', ...metadata }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /listings/batch:
+   *   post:
+   *     summary: Create multiple listings
+   *     description: Create multiple listings in a single request.
+   *     tags: [Listings]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - listings
+   *               properties:
+   *                 listings:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     required:
+   *                       - rentalObjectCode
+   *                       - publishedFrom
+   *                       - status
+   *                       - rentalRule
+   *                       - listingCategory
+   *                     properties:
+   *                       rentalObjectCode:
+   *                         type: string
+   *                       publishedFrom:
+   *                         type: string
+   *                         format: date-time
+   *                       publishedTo:
+   *                         type: string
+   *                         format: date-time
+   *                         description: Optional. If not provided, the listing will not have an expiration date (for NON_SCORED listings)
+   *                       status:
+   *                         type: string
+   *                         enum: [ACTIVE, INACTIVE, CLOSED, ASSIGNED, EXPIRED, NO_APPLICANTS]
+   *                       rentalRule:
+   *                         type: string
+   *                         enum: [SCORED, NON_SCORED]
+   *                       listingCategory:
+   *                         type: string
+   *                         enum: [PARKING_SPACE, APARTMENT, STORAGE]
+   *     responses:
+   *       201:
+   *         description: All listings created successfully.
+   *         content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       207:
+   *         description: Partial success. Some listings created, some failed.
+   *         content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 partialResults:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Bad request. Invalid input data.
+   *       500:
+   *         description: Internal server error. Failed to create listings.
+   */
+  router.post('(.*)/listings/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const requestBodySchema = z.object({
+        listings: z.array(
+          z.object({
+            rentalObjectCode: z.string(),
+            publishedFrom: z.coerce.date(),
+            publishedTo: z.coerce.date().optional(),
+            status: z.nativeEnum(ListingStatus),
+            rentalRule: z.enum(['SCORED', 'NON_SCORED']),
+            listingCategory: z.enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE']),
+          })
+        ),
+      })
+
+      const parseResult = requestBodySchema.safeParse(ctx.request.body)
+
+      if (!parseResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          details: parseResult.error.issues,
+          ...metadata,
+        }
+        return
+      }
+
+      const { listings } = parseResult.data
+
+      const result = await listingAdapter.createMultipleListings(listings)
+
+      if (!result.ok) {
+        if (result.err === 'partial-failure') {
+          ctx.status = 207
+          ctx.body = {
+            error: 'Some listings could not be created',
+            message:
+              'Partial success - some listings were created successfully while others failed',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to create listings',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: result.data,
+        message: `Successfully created ${result.data.length} listings`,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error in createMultipleListings endpoint')
       ctx.status = 500
 
       if (error instanceof Error) {
@@ -454,7 +603,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *           enum: [published, ready-for-offer, offered, historical, needs-republish]
+   *           enum: [published, ready-for-offer, offered, historical, closed]
    *         description: Filters listings by one of the above types. Must be one of the specified values.
    *     responses:
    *       '200':
@@ -503,7 +652,7 @@ export const routes = (router: KoaRouter) => {
           'ready-for-offer',
           'offered',
           'historical',
-          'needs-republish'
+          'closed'
         ),
         (type) => ({ by: { type } })
       )
@@ -549,59 +698,6 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = {
       content: listings.data,
-      ...metadata,
-    }
-  })
-
-  router.post('/listings/sync-internal-from-xpand', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result =
-      await syncParkingSpacesFromXpandService.syncInternalParkingSpaces(db)
-
-    if (!result.ok) {
-      logger.error(
-        'Error when syncing internal parking spaces from Xpand SOAP API'
-      )
-
-      ctx.status = 500
-      ctx.body = { err: 'Internal server error', ...metadata }
-      return
-    }
-
-    logger.info('Finished syncing listings from Xpand SOAP API')
-    if (result.data.insertions.failed.length) {
-      logger.info(
-        result.data.insertions.failed.map((v) => ({
-          rentalObjectCode: v.listing.rentalObjectCode,
-          status: v.listing.status,
-          err: v.err,
-        })),
-        'Failed to insert the following listings when syncing from Xpand SOAP API:'
-      )
-    }
-
-    const mapToResponseData = (
-      data: (typeof result)['data']
-    ): InternalParkingSpaceSyncSuccessResponse => ({
-      invalid: result.data.invalid,
-      insertions: {
-        inserted: data.insertions.inserted.map((v) => ({
-          id: v.id,
-          rentalObjectCode: v.rentalObjectCode,
-        })),
-        failed: data.insertions.failed.map((v) => ({
-          rentalObjectCode: v.listing.rentalObjectCode,
-          err:
-            v.err === 'conflict-active-listing'
-              ? 'active-listing-exists'
-              : v.err,
-        })),
-      },
-    })
-
-    ctx.status = 200
-    ctx.body = {
-      content: mapToResponseData(result.data),
       ...metadata,
     }
   })

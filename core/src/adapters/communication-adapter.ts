@@ -63,6 +63,10 @@ export const sendNotificationToRole = async (
       )
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      subject = `${process.env.NODE_ENV?.toUpperCase()} - ${subject}`
+    }
+
     const axiosOptions = {
       method: 'POST',
       data: {

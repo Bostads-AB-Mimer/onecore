@@ -51,6 +51,11 @@ const ParkingSpaceTabs = (props: { listingId: number }) => {
     id: props.listingId,
   })
 
+  // Don't render tabs for NON_SCORED rental rules
+  if (data.rentalRule === 'NON_SCORED') {
+    return null
+  }
+
   return (
     <>
       {!data.offers.length ? (

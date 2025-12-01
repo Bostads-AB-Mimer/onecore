@@ -18,7 +18,7 @@ export const useCloseParkingSpaceListing = () => {
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: ['parkingSpaceListings'],
+        queryKey: ['parkingSpaceListings', 'published'],
       }),
   })
 }

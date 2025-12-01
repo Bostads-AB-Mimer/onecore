@@ -4,6 +4,7 @@ import { Listing, ListingStatus } from '@onecore/types'
 
 import { Applicants } from './Applicants'
 import { useCreateOffer } from '../hooks/useCreateOffer'
+import { UnpublishListing } from './UnpublishListing'
 
 const AllApplicantsTabContext = (props: { listing: Listing }) => {
   const createOffer = useCreateOffer()
@@ -27,6 +28,12 @@ const AllApplicantsTabContext = (props: { listing: Listing }) => {
               Starta erbjudandeomgång
             </Box>
           </Button>
+        </Box>
+      )
+    } else if (listingStatus == ListingStatus.Active) {
+      return (
+        <Box>
+          <UnpublishListing listingId={props.listing.id} />
         </Box>
       )
     }
@@ -62,7 +69,6 @@ const listingFormatMap: Record<ListingStatus, string> = {
   [ListingStatus.Active]: 'Publicerad',
   [ListingStatus.Assigned]: 'Tilldelad',
   [ListingStatus.Closed]: 'Stängd',
-  [ListingStatus.NoApplicants]: 'Inga sökande',
   [ListingStatus.Expired]: 'Klar för erbjudande',
 }
 

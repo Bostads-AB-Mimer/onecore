@@ -79,10 +79,21 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     monthlyRent = totalYearRent / 12
   }
 
+  // Determine if parking space is in special residential areas or properties
+  const isSpecialResidentialArea = ['CEN', 'OXB', 'GRY'].includes(
+    row.residentialareacode?.trim()
+  )
+  const isSpecialProperty = ['24104', '23001', '23002', '23003'].includes(
+    row.estatecode?.trim() || ''
+  )
   // Determine vacantFrom date
   const lastDebitDate = row.lastdebitdate
-  const lastBlockStartDate = row.blockstartdate
-  const lastBlockEndDate = row.blockenddate
+  const lastBlockStartDate = row.blockstartdate?.length
+    ? row.blockstartdate[row.blockstartdate.length - 1]
+    : row.blockstartdate
+  const lastBlockEndDate = row.blockenddate?.length
+    ? row.blockenddate[row.blockenddate.length - 1]
+    : row.blockenddate
   let vacantFrom
   if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
     //if the object is blocked to a date in the future, vacantFrom should be the day after
@@ -117,15 +128,17 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     districtCaption: district,
     districtCode: districtCode,
     braArea: row.braarea,
+    isSpecialResidentialArea: isSpecialResidentialArea,
+    isSpecialProperty: isSpecialProperty,
   }
 }
 
 const buildMainQuery = (queries: {
   parkingSpacesQuery: any
   activeRentalBlocksQuery?: any
-  activeContractsQuery?: any
+  latestContractPerParkingSpaceQuery?: any
   rentalBlockDatesQuery?: any
-  contractsWithLastDebitDate?: any
+  latestEndedContractPerParkingSpaceQuery?: any
 }) => {
   let query = xpandDb
     .from(queries.parkingSpacesQuery.as('ps'))
@@ -144,19 +157,9 @@ const buildMainQuery = (queries: {
       'ps.residentialareacaption'
     )
 
-  if (queries.activeRentalBlocksQuery && queries.activeContractsQuery) {
+  if (queries.latestContractPerParkingSpaceQuery) {
     query = query
       .select(
-        xpandDb.raw(`
-          CASE
-            WHEN rb.keycmobj IS NOT NULL THEN 'Has rental block: ' + rb.blocktype
-            WHEN ac.keycmobj IS NOT NULL THEN 'Has active contract: ' + ac.contractid
-            ELSE 'VACANT'
-          END AS status
-        `),
-        'rb.blocktype',
-        'rb.blockstartdate',
-        'rb.blockenddate',
         'ac.contractid',
         'ac.fromdate as contractfromdate',
         'ac.todate as contracttodate',
@@ -165,12 +168,22 @@ const buildMainQuery = (queries: {
         'cmvalbar.value as braarea'
       )
       .leftJoin(
-        queries.activeRentalBlocksQuery.as('rb'),
-        'rb.keycmobj',
+        queries.latestContractPerParkingSpaceQuery,
+        'ac.keycmobj',
         'ps.keycmobj'
       )
+  } else if (queries.latestEndedContractPerParkingSpaceQuery) {
+    query = query
+      .select(
+        'ac.contractid',
+        'ac.fromdate as contractfromdate',
+        'ac.todate as contracttodate',
+        'ac.lastdebitdate',
+        'rent.yearrentrows',
+        'cmvalbar.value as braarea'
+      )
       .leftJoin(
-        queries.activeContractsQuery.as('ac'),
+        queries.latestEndedContractPerParkingSpaceQuery,
         'ac.keycmobj',
         'ps.keycmobj'
       )
@@ -182,33 +195,16 @@ const buildMainQuery = (queries: {
       .leftJoin(queries.rentalBlockDatesQuery, 'orb.keycmobj', 'ps.keycmobj')
   }
 
-  if (queries.contractsWithLastDebitDate) {
-    query = query
-      .select(
-        'ac.contractid',
-        'ac.fromdate as contractfromdate',
-        'ac.todate as contracttodate',
-        'ac.lastdebitdate',
-        'rent.yearrentrows',
-        'cmvalbar.value as braarea'
-      )
-      .leftJoin(
-        queries.contractsWithLastDebitDate.as('ac'),
-        'ac.keycmobj',
-        'ps.keycmobj'
-      )
-  }
-
   return query
     .leftJoin(
       xpandDb.raw(`
           (
-            SELECT 
-              rentalpropertyid, 
+            SELECT
+              rentalpropertyid,
               (
                 SELECT yearrent
-                FROM hy_debitrowrentalproperty_xpand_api x2 
-                WHERE x2.rentalpropertyid = x1.rentalpropertyid 
+                FROM hy_debitrowrentalproperty_xpand_api x2
+                WHERE x2.rentalpropertyid = x1.rentalpropertyid
                 FOR JSON PATH
               ) as yearrentrows
             FROM hy_debitrowrentalproperty_xpand_api x1
@@ -258,92 +254,31 @@ const buildSubQueries = () => {
     .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
-  const activeRentalBlocksQuery = xpandDb
-    .from('hyspt')
-    .select(
-      'hyspt.keycmobj',
-      'hyspa.caption as blocktype',
-      'hyspt.fdate as blockstartdate',
-      'hyspt.tdate as blockenddate'
-    )
-    .innerJoin('hyspa', 'hyspa.keyhyspa', 'hyspt.keyhyspa')
-    .where(function () {
-      this.whereNull('hyspt.fdate').orWhere(
-        'hyspt.fdate',
-        '<=',
-        xpandDb.fn.now()
-      )
-    })
-    .andWhere(function () {
-      this.whereNull('hyspt.tdate').orWhere(
-        'hyspt.tdate',
-        '>',
-        xpandDb.fn.now()
-      )
-    })
-
-  //query that gets active contracts
-  const activeContractsQuery = xpandDb
-    .from('hyobj')
-    .select(
-      'hyinf.keycmobj',
-      'hyobj.hyobjben as contractid',
-      'hyobj.avtalsdat as contractdate',
-      'hyobj.fdate as fromdate',
-      'hyobj.tdate as todate',
-      'hyobj.sistadeb as lastdebitdate'
-    )
-    .innerJoin('hykop', function () {
-      this.on('hykop.keyhyobj', '=', 'hyobj.keyhyobj').andOn(
-        'hykop.ordning',
-        '=',
-        xpandDb.raw('?', [1])
-      )
-    })
-    .innerJoin('hyinf', 'hyinf.keycmobj', 'hykop.keycmobj')
-    //contract types to include
-    .whereIn('hyobj.keyhyobt', ['3', '5', '_1WP0JXVK8', '_1WP0KDMOO'])
-    .whereNull('hyobj.makuldatum')
-    .andWhere('hyobj.deletemark', '=', 0)
-    .whereNull('hyobj.sistadeb')
-
-  //query that gets contracts with lastdebitdate
-  const contractsWithLastDebitDate = xpandDb
-    .from('hyobj')
-    .select(
-      'hyinf.keycmobj',
-      'hyobj.hyobjben as contractid',
-      'hyobj.avtalsdat as contractdate',
-      'hyobj.fdate as fromdate',
-      'hyobj.tdate as todate',
-      'hyobj.sistadeb as lastdebitdate'
-    )
-    .innerJoin('hykop', function () {
-      this.on('hykop.keyhyobj', '=', 'hyobj.keyhyobj').andOn(
-        'hykop.ordning',
-        '=',
-        xpandDb.raw('?', [1])
-      )
-    })
-    .innerJoin('hyinf', 'hyinf.keycmobj', 'hykop.keycmobj')
-    //contract types to include
-    .whereIn('hyobj.keyhyobt', ['3', '5', '_1WP0JXVK8', '_1WP0KDMOO'])
-    .whereNull('hyobj.makuldatum')
-    .andWhere('hyobj.deletemark', '=', 0)
-    //pick the last debit date from the contracts
-    .whereRaw(
-      `hyobj.sistadeb = (
-    SELECT MAX(h2.sistadeb)
-    FROM hyobj h2
-    INNER JOIN hykop h2kop ON h2kop.keyhyobj = h2.keyhyobj AND h2kop.ordning = ?
-    INNER JOIN hyinf h2inf ON h2inf.keycmobj = h2kop.keycmobj
-    WHERE h2inf.keycmobj = hyinf.keycmobj
-      AND h2.keyhyobt IN (?, ?, ?, ?)
-      AND h2.makuldatum IS NULL
-      AND h2.deletemark = 0
-  )`,
-      [1, '3', '5', '_1WP0JXVK8', '_1WP0KDMOO']
-    )
+  const latestContractPerParkingSpaceQuery = xpandDb.raw(`
+  (
+    SELECT *
+    FROM (
+      SELECT
+        hyinf.keycmobj,
+        hyobj.hyobjben as contractid,
+        hyobj.avtalsdat as contractdate,
+        hyobj.fdate as fromdate,
+        hyobj.tdate as todate,
+        hyobj.sistadeb as lastdebitdate,
+        ROW_NUMBER() OVER (
+          PARTITION BY hyinf.keycmobj
+          ORDER BY hyobj.fdate DESC
+        ) as rn
+      FROM hyobj
+      INNER JOIN hykop ON hykop.keyhyobj = hyobj.keyhyobj AND hykop.ordning = 1
+      INNER JOIN hyinf ON hyinf.keycmobj = hykop.keycmobj
+      WHERE hyobj.keyhyobt IN ('3', '5', '_1WP0JXVK8', '_1WP0KDMOO')
+        AND hyobj.makuldatum IS NULL
+        AND hyobj.deletemark = 0
+    ) sub
+    WHERE sub.rn = 1
+  ) as ac
+`)
 
   //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
   const rentalBlockDatesQuery = xpandDb.raw(`
@@ -367,9 +302,7 @@ const buildSubQueries = () => {
 
   return {
     parkingSpacesQuery,
-    activeRentalBlocksQuery,
-    activeContractsQuery,
-    contractsWithLastDebitDate,
+    latestContractPerParkingSpaceQuery,
     rentalBlockDatesQuery,
   }
 }
@@ -380,29 +313,29 @@ const getAllVacantParkingSpaces = async (): Promise<
   try {
     const {
       parkingSpacesQuery,
-      activeRentalBlocksQuery,
-      activeContractsQuery,
+      latestContractPerParkingSpaceQuery,
+      rentalBlockDatesQuery,
     } = buildSubQueries()
 
     const results = await buildMainQuery({
       parkingSpacesQuery,
-      activeRentalBlocksQuery,
-      activeContractsQuery,
+      latestContractPerParkingSpaceQuery,
+      rentalBlockDatesQuery,
     })
+      //exclude parking spaces with a blocks that has no end date
       .where(function () {
-        this.whereNull('rb.keycmobj').orWhere(
-          'rb.blockenddate',
-          '<=',
-          xpandDb.fn.now()
-        )
+        this.whereNull('orb.keycmobj').orWhereNotNull('orb.blockenddate')
       })
-      //exclude parking spaces with active contracts
-      .whereNull('ac.keycmobj')
+      // Exkludera parkeringsplatser som har ett aktivt kontrakt utan lastdebitdate
+      .where(function () {
+        this.whereNull('ac.keycmobj').orWhereNotNull('ac.lastdebitdate')
+      })
       .orderBy('ps.rentalObjectCode', 'asc')
 
     const listings: RentalObject[] = results.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
+
     return { ok: true, data: listings }
   } catch (err) {
     logger.error(err, 'tenantLeaseAdapter.getAllAvailableParkingSpaces')
@@ -418,13 +351,13 @@ const getParkingSpace = async (
   try {
     const {
       parkingSpacesQuery,
-      contractsWithLastDebitDate,
+      latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
     const mainQuery = buildMainQuery({
       parkingSpacesQuery,
-      contractsWithLastDebitDate,
+      latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     })
       .where('ps.rentalObjectCode', '=', rentalObjectCode)
@@ -459,13 +392,13 @@ const getParkingSpaces = async (
   try {
     const {
       parkingSpacesQuery,
-      contractsWithLastDebitDate,
+      latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
     let query = buildMainQuery({
       parkingSpacesQuery,
-      contractsWithLastDebitDate,
+      latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     })
     if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
@@ -482,18 +415,22 @@ const getParkingSpaces = async (
       return { ok: false, err: 'parking-spaces-not-found' }
     }
 
-    if (
-      includeRentalObjectCodes &&
-      results.length < includeRentalObjectCodes.length
-    ) {
-      logger.error(
-        {
-          includeRentalObjectCodes: includeRentalObjectCodes.filter(
-            (code) => !results.some((row) => row.rentalObjectCode === code)
-          ),
-        },
-        `Some rental object codes could not be found (the rest will be returned)`
-      )
+    // Calculate if any codes were not found and write an error log
+    if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
+      const uniqueIncludeCodes = [...new Set(includeRentalObjectCodes)]
+      const foundCodes = results.map((row) => row.rentalObjectCode)
+
+      if (foundCodes.length < uniqueIncludeCodes.length) {
+        const missingCodes = uniqueIncludeCodes.filter(
+          (code) => !foundCodes.includes(code)
+        )
+        if (missingCodes.length > 0) {
+          logger.error(
+            { includeRentalObjectCodes: missingCodes },
+            `${missingCodes.length} rental object codes could not be found (the rest will be returned)`
+          )
+        }
+      }
     }
 
     const rentalObjects = results.map((row) =>

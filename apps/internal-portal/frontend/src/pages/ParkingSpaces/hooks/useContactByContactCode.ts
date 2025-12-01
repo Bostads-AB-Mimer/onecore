@@ -4,8 +4,8 @@ import { Tenant } from '@onecore/types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-export const useContactByContactCode = (contactCode?: string) =>
-  useQuery<Tenant, AxiosError>({
+export const useContactByContactCode = <T = Tenant>(contactCode?: string) =>
+  useQuery<T, AxiosError>({
     queryKey: ['contact', contactCode],
     enabled: Boolean(contactCode),
     queryFn: () =>
