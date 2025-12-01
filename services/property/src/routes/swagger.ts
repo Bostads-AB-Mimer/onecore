@@ -149,22 +149,6 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  // File metadata schemas
-  ...zodToJsonSchema(types.ComponentFileSchema, {
-    name: 'ComponentFile',
-    target: 'openApi3',
-    $refStrategy: 'none',
-  }).definitions,
-  ...zodToJsonSchema(types.ComponentModelDocumentSchema, {
-    name: 'ComponentModelDocument',
-    target: 'openApi3',
-    $refStrategy: 'none',
-  }).definitions,
-  ...zodToJsonSchema(types.FileMetadataWithUrlSchema, {
-    name: 'FileMetadataWithUrl',
-    target: 'openApi3',
-    $refStrategy: 'none',
-  }).definitions,
 }
 
 swaggerSpec.definition.components = {
