@@ -10,6 +10,10 @@ import {
   addPresignedUrls,
 } from '../utils/file-upload'
 import {
+  componentCategoriesQueryParamsSchema,
+  ComponentCategorySchema,
+  CreateComponentCategorySchema,
+  UpdateComponentCategorySchema,
   componentTypesQueryParamsSchema,
   ComponentTypeSchema,
   CreateComponentTypeSchema,
@@ -32,6 +36,11 @@ import {
   UpdateComponentInstallationSchema,
 } from '../types/component'
 import {
+  getComponentCategories,
+  getComponentCategoryById,
+  createComponentCategory,
+  updateComponentCategory,
+  deleteComponentCategory,
   getComponentTypes,
   getComponentTypeById,
   createComponentType,
@@ -69,6 +78,8 @@ import {
 /**
  * @swagger
  * tags:
+ *   - name: Component Categories
+ *     description: Operations for managing component categories
  *   - name: Component Types
  *     description: Operations for managing component types
  *   - name: Component Subtypes
@@ -81,6 +92,141 @@ import {
  *     description: Operations for managing component installations
  */
 export const routes = (router: KoaRouter) => {
+  // ==================== COMPONENT CATEGORIES ROUTES ====================
+
+  /**
+   * @swagger
+   * /component-categories:
+   *   get:
+   *     summary: Get all component categories
+   *     tags: [Component Categories]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: List of component categories
+   */
+  router.get(
+    '(.*)/component-categories',
+    parseRequest({ query: componentCategoriesQueryParamsSchema }),
+    async (ctx) => {
+      const { page, limit } = ctx.request.parsedQuery
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const result = await getComponentCategories(page, limit)
+
+        ctx.body = {
+          content: ComponentCategorySchema.array().parse(result.categories),
+          pagination: result.pagination,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error'
+        ctx.body = { error: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  router.get('(.*)/component-categories/:id', async (ctx) => {
+    const id = z.string().uuid().parse(ctx.params.id)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const category = await getComponentCategoryById(id)
+
+      if (!category) {
+        ctx.status = 404
+        ctx.body = { error: 'Component category not found', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: ComponentCategorySchema.parse(category),
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
+
+  router.post(
+    '(.*)/component-categories',
+    parseRequest({ body: CreateComponentCategorySchema }),
+    async (ctx) => {
+      const data = ctx.request.parsedBody
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const category = await createComponentCategory(data)
+
+        ctx.status = 201
+        ctx.body = {
+          content: ComponentCategorySchema.parse(category),
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error'
+        ctx.body = { error: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  router.put(
+    '(.*)/component-categories/:id',
+    parseRequest({
+      body: UpdateComponentCategorySchema,
+    }),
+    async (ctx) => {
+      const id = z.string().uuid().parse(ctx.params.id)
+      const data = ctx.request.parsedBody
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const category = await updateComponentCategory(id, data)
+
+        ctx.body = {
+          content: ComponentCategorySchema.parse(category),
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error'
+        ctx.body = { error: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  router.delete('(.*)/component-categories/:id', async (ctx) => {
+    const id = z.string().uuid().parse(ctx.params.id)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      await deleteComponentCategory(id)
+      ctx.status = 204
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
+
   // ==================== COMPONENT TYPES ROUTES ====================
 
   /**
@@ -128,11 +274,11 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-types',
     parseRequest({ query: componentTypesQueryParamsSchema }),
     async (ctx) => {
-      const { page, limit } = ctx.request.parsedQuery
+      const { categoryId, page, limit } = ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const result = await getComponentTypes(page, limit)
+        const result = await getComponentTypes(categoryId, page, limit)
 
         ctx.body = {
           content: ComponentTypeSchema.array().parse(result.types),
@@ -381,11 +527,11 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-subtypes',
     parseRequest({ query: componentSubtypesQueryParamsSchema }),
     async (ctx) => {
-      const { componentTypeId, page, limit } = ctx.request.parsedQuery
+      const { typeId, page, limit } = ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const result = await getComponentSubtypes(componentTypeId, page, limit)
+        const result = await getComponentSubtypes(typeId, page, limit)
 
         ctx.body = {
           content: ComponentSubtypeSchema.array().parse(result.subtypes),
@@ -646,13 +792,13 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-models',
     parseRequest({ query: componentModelsQueryParamsSchema }),
     async (ctx) => {
-      const { componentTypeId, subtypeId, manufacturer, page, limit } =
+      const { componentSubtypeId, manufacturer, page, limit } =
         ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
         const result = await getComponentModels(
-          { componentTypeId, subtypeId, manufacturer },
+          { componentSubtypeId, manufacturer },
           page,
           limit
         )
@@ -1242,13 +1388,13 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-installations',
     parseRequest({ query: componentInstallationsQueryParamsSchema }),
     async (ctx) => {
-      const { componentId, spaceId, buildingPartId, page, limit } =
+      const { componentId, spaceId, page, limit } =
         ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
         const result = await getComponentInstallations(
-          { componentId, spaceId, buildingPartId },
+          { componentId, spaceId },
           page,
           limit
         )
