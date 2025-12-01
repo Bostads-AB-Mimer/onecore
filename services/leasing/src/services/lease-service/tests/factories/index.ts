@@ -21,3 +21,4 @@ export { TenfastTenantByContactCodeResponseFactory as tenfastTenantByContactCode
 export { TenfastLeaseFactory as tenfastLease } from './tenfast'
 export { TenfastTenantFactory as tenfastTenant } from './tenfast'
 export { TenfastRentalObjectFactory as tenfastRentalObject } from './tenfast'
+export { TenfastInvoiceRowFactory as tenfastInvoiceRow } from './tenfast'

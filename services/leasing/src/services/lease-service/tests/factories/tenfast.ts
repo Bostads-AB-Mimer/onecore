@@ -1,6 +1,7 @@
 import { Factory } from 'fishery'
 
 import {
+  TenfastInvoiceRow,
   TenfastLease,
   TenfastRentalObject,
   TenfastTenant,
@@ -93,5 +94,18 @@ export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
     hyror: [],
     article: 'article-1',
     externalId: 'externalId-1',
+  })
+)
+
+export const TenfastInvoiceRowFactory = Factory.define<TenfastInvoiceRow>(
+  ({ sequence }) => ({
+    amount: 100,
+    vat: 10,
+    from: '2022-01-01',
+    to: '2022-01-31',
+    article: 'article-1',
+    label: 'label-1',
+    accountingRows: [],
+    _id: `invoice-row-${sequence}`,
   })
 )
