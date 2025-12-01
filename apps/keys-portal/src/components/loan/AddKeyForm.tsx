@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, Minus, Trash2 } from 'lucide-react'
-import type { Key, KeyType } from '@/services/types'
+import type { Key, KeyType, KeySystem } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
+import { keySystemSearchService } from '@/services/api/keySystemSearchService'
+import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { useToast } from '@/hooks/use-toast'
 
 type AddKeyButtonProps = {
@@ -34,6 +36,7 @@ type KeyRow = {
   flexNumber: number | null
   quantity: number
   startingSequenceNumber: number
+  keySystemId?: string
 }
 
 type Props = {
@@ -54,6 +57,38 @@ export function AddKeyForm({
   const { toast } = useToast()
   const [rows, setRows] = useState<KeyRow[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [keySystemSearch, setKeySystemSearch] = useState('')
+  const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
+    null
+  )
+
+  // Key system search function
+  const searchKeySystems = useCallback(
+    async (query: string): Promise<KeySystem[]> => {
+      return await keySystemSearchService.search({
+        q: query,
+        fields: ['systemCode'],
+      })
+    },
+    []
+  )
+
+  const handleSelectKeySystem = useCallback((result: KeySystem | null) => {
+    setSelectedKeySystem(result)
+    if (result) {
+      setKeySystemSearch(result.systemCode)
+      // Update all rows with the selected key system
+      setRows((prevRows) =>
+        prevRows.map((row) => ({ ...row, keySystemId: result.id }))
+      )
+    } else {
+      setKeySystemSearch('')
+      // Clear key system from all rows
+      setRows((prevRows) =>
+        prevRows.map((row) => ({ ...row, keySystemId: undefined }))
+      )
+    }
+  }, [])
 
   // Calculate next sequence number for a given type/name/flex combination
   // Uses the keys prop which contains all keys for this rental object
@@ -107,7 +142,7 @@ export function AddKeyForm({
       // No keys selected, add one empty row
       const defaultFlexNumber =
         keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ??
-        null
+        1
 
       const defaultKeyType: KeyType = 'LGH'
       const defaultKeyName = `${defaultKeyType}-1`
@@ -124,6 +159,7 @@ export function AddKeyForm({
             defaultKeyName,
             defaultFlexNumber
           ),
+          keySystemId: selectedKeySystem?.id,
         },
       ])
       return
@@ -153,11 +189,18 @@ export function AddKeyForm({
           firstKey.keyName,
           firstKey.flexNumber
         ),
+        keySystemId: selectedKeySystem?.id,
       }
     })
 
     setRows(newRows)
-  }, [selectedKeyIds, keys, rentalObjectCode, calculateNextSequenceNumber])
+  }, [
+    selectedKeyIds,
+    keys,
+    rentalObjectCode,
+    calculateNextSequenceNumber,
+    selectedKeySystem,
+  ])
 
   // Recalculate sequence numbers when keys changes
   useEffect(() => {
@@ -177,8 +220,7 @@ export function AddKeyForm({
 
   const handleAddRow = () => {
     const defaultFlexNumber =
-      keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ??
-      null
+      keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ?? 1
 
     const defaultKeyType: KeyType = 'LGH'
     const defaultKeyName = `${defaultKeyType}-1`
@@ -197,6 +239,7 @@ export function AddKeyForm({
           defaultFlexNumber,
           rows // Pass current rows to check for conflicts
         ),
+        keySystemId: selectedKeySystem?.id,
       },
     ])
   }
@@ -275,10 +318,12 @@ export function AddKeyForm({
         keySystemId?: string
       }> = []
 
-      // Determine default key system ID
-      const defaultKeySystemId = keys.find(
-        (k) => k.rentalObjectCode === rentalObjectCode && k.keySystemId
-      )?.keySystemId
+      // Use selected key system if available, otherwise use default from rental object
+      const keySystemId =
+        selectedKeySystem?.id ??
+        keys.find(
+          (k) => k.rentalObjectCode === rentalObjectCode && k.keySystemId
+        )?.keySystemId
 
       // Generate all keys from all rows
       for (const row of rows) {
@@ -289,7 +334,7 @@ export function AddKeyForm({
             keySequenceNumber: row.startingSequenceNumber + i,
             flexNumber: row.flexNumber,
             rentalObjectCode,
-            keySystemId: defaultKeySystemId,
+            keySystemId: row.keySystemId ?? keySystemId,
           })
         }
       }
@@ -322,6 +367,8 @@ export function AddKeyForm({
       })
 
       setRows([])
+      setKeySystemSearch('')
+      setSelectedKeySystem(null)
     } catch (e: any) {
       toast({
         title: 'Kunde inte skapa nycklar',
@@ -363,7 +410,7 @@ export function AddKeyForm({
             </div>
 
             {/* Name input */}
-            <div className="col-span-3">
+            <div className="col-span-2">
               <label className="text-xs block mb-1">Namn</label>
               <input
                 className="h-8 w-full border rounded px-2 bg-background text-sm"
@@ -376,8 +423,34 @@ export function AddKeyForm({
               />
             </div>
 
-            {/* Flex input */}
+            {/* Låssystem (searchable) */}
             <div className="col-span-2">
+              <label className="text-xs block mb-1">Låssystem</label>
+              <SearchDropdown
+                preSuggestions={[]}
+                searchFn={searchKeySystems}
+                minSearchLength={3}
+                debounceMs={500}
+                formatItem={(result) => ({
+                  primaryText: result.systemCode,
+                  secondaryText: `${result.name}${result.manufacturer ? ` · ${result.manufacturer}` : ''} · ${result.type}`,
+                  searchableText: `${result.systemCode} ${result.name} ${result.manufacturer || ''}`,
+                })}
+                getKey={(result) => result.id}
+                value={keySystemSearch}
+                onChange={setKeySystemSearch}
+                onSelect={handleSelectKeySystem}
+                selectedValue={selectedKeySystem}
+                placeholder="Sök"
+                emptyMessage="Inga låssystem hittades"
+                loadingMessage="Söker..."
+                showClearButton={true}
+                className="h-8"
+              />
+            </div>
+
+            {/* Flex input */}
+            <div className="col-span-1">
               <label className="text-xs block mb-1">Flex</label>
               <input
                 type="number"
@@ -398,7 +471,7 @@ export function AddKeyForm({
             </div>
 
             {/* Starting löpnummer (read-only) */}
-            <div className="col-span-2">
+            <div className="col-span-1">
               <label className="text-xs block mb-1">Löpnr</label>
               <input
                 className="h-8 w-full border rounded px-2 bg-muted text-muted-foreground text-sm"

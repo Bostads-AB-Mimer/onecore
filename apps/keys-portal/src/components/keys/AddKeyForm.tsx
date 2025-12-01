@@ -48,7 +48,7 @@ export function AddKeyForm({
   const [formData, setFormData] = useState({
     keyName: editingKey?.keyName || '',
     keySequenceNumber: editingKey?.keySequenceNumber || '',
-    flexNumber: editingKey?.flexNumber || '',
+    flexNumber: editingKey ? editingKey.flexNumber || '' : 1,
     rentalObject: editingKey?.rentalObjectCode || '',
     keyType: editingKey?.keyType || ('LGH' as KeyType),
     keySystemId: editingKey?.keySystemId || '',
@@ -229,7 +229,7 @@ export function AddKeyForm({
     setFormData({
       keyName: '',
       keySequenceNumber: '',
-      flexNumber: '',
+      flexNumber: 1,
       rentalObject: '',
       keyType: 'LGH',
       keySystemId: '',
@@ -250,7 +250,7 @@ export function AddKeyForm({
     setFormData({
       keyName: '',
       keySequenceNumber: '',
-      flexNumber: '',
+      flexNumber: 1,
       rentalObject: '',
       keyType: 'LGH',
       keySystemId: '',

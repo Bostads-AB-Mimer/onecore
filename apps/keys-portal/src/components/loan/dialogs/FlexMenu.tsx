@@ -61,7 +61,7 @@ export function FlexMenu({
         // Check if all keys have the same flexNumber
         const flexNumbers = keysInGroup
           .map((k) => k.flexNumber)
-          .filter((fn): fn is number => fn !== undefined)
+          .filter((fn): fn is number => fn !== null && fn !== undefined)
 
         const uniqueFlexNumbers = new Set(flexNumbers)
         const hasFlexConflict = uniqueFlexNumbers.size > 1
@@ -119,7 +119,7 @@ export function FlexMenu({
       // Create keys for each group
       for (const group of keyGroups.values()) {
         // Calculate the new flex number (current + 1)
-        const currentFlexNumber = group.sampleKey.flexNumber ?? 0
+        const currentFlexNumber = group.currentFlexNumber ?? 0
         const newFlexNumber = currentFlexNumber + 1
 
         // Create 'count' number of keys with sequence numbers 1, 2, 3, etc.
