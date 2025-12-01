@@ -467,8 +467,6 @@ export async function getFacilityByRentalId(
   }
 }
 
-type GetBuildingsResponse = components['schemas']['Building'][]
-
 export async function getBuildingsByPropertyCode(
   propertyCode: string
 ): Promise<AdapterResult<GetBuildingsResponse, unknown>> {
