@@ -11,12 +11,12 @@ export const useResidenceStaircaseLookupMap = (staircases: Staircase[]) => {
         return {
           queryKey: [
             'staircase-residence',
-            staircase.buildingCode,
+            staircase.building?.buildingCode,
             staircase.code,
           ],
           queryFn: () =>
             residenceService.getByBuildingCodeAndStaircaseCode(
-              staircase.buildingCode,
+              staircase.building?.buildingCode ?? '',
               staircase.code
             ),
           enabled: !!staircase.code,

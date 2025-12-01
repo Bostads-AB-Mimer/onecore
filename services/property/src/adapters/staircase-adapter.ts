@@ -27,22 +27,50 @@ async function getStaircasesByBuildingCode(buildingCode: string) {
     },
   })
 
-  return staircases.map(trimStrings).map((staircase) => ({
-    id: staircase.id,
-    code: staircase.code,
-    name: staircase.name,
-    buildingCode: buildingCode,
-    features: {
-      floorPlan: staircase.floorPlan,
-      accessibleByElevator: toBoolean(staircase.accessibleByElevator),
-    },
-    dates: {
-      from: staircase.fromDate,
-      to: staircase.toDate,
-    },
-    deleted: toBoolean(staircase.deleteMark),
-    timestamp: staircase.timestamp,
-  }))
+  const propertyStructureMap = new Map(
+    propertyStructures.map(trimStrings).map((ps) => [
+      ps.propertyObjectId,
+      {
+        propertyId: ps.propertyId,
+        propertyCode: ps.propertyCode,
+        propertyName: ps.propertyName,
+        buildingId: ps.buildingId,
+        buildingCode: ps.buildingCode,
+        buildingName: ps.buildingName,
+      },
+    ])
+  )
+
+  return staircases.map(trimStrings).map((staircase) => {
+    const propertyData = propertyStructureMap.get(staircase.propertyObjectId)
+
+    return {
+      id: staircase.id,
+      code: staircase.code,
+      name: staircase.name,
+      buildingCode: buildingCode,
+      features: {
+        floorPlan: staircase.floorPlan,
+        accessibleByElevator: toBoolean(staircase.accessibleByElevator),
+      },
+      dates: {
+        from: staircase.fromDate,
+        to: staircase.toDate,
+      },
+      deleted: toBoolean(staircase.deleteMark),
+      timestamp: staircase.timestamp,
+      property: {
+        propertyId: propertyData?.propertyId,
+        propertyCode: propertyData?.propertyCode,
+        propertyName: propertyData?.propertyName,
+      },
+      building: {
+        buildingId: propertyData?.buildingId,
+        buildingCode: propertyData?.buildingCode,
+        buildingName: propertyData?.buildingName,
+      },
+    }
+  })
 }
 
 export { getStaircasesByBuildingCode }

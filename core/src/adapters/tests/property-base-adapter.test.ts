@@ -657,7 +657,7 @@ describe('@onecore/property-adapter', () => {
     it('returns not-found if facility is not found', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => HttpResponse.json(null, { status: 404 })
         )
       )
@@ -671,7 +671,7 @@ describe('@onecore/property-adapter', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => new HttpResponse(null, { status: 500 })
         )
       )
@@ -686,7 +686,7 @@ describe('@onecore/property-adapter', () => {
       const facilityMock = factory.facilityDetails.build()
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => HttpResponse.json({ content: facilityMock }, { status: 200 })
         )
       )
@@ -696,6 +696,45 @@ describe('@onecore/property-adapter', () => {
       expect(result).toMatchObject({
         ok: true,
         data: facilityMock,
+      })
+    })
+  })
+
+  describe('getBuildings', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode('001-001')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/buildings`, () =>
+          HttpResponse.json(
+            {
+              content: buildingsMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode('001-001')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: buildingsMock,
       })
     })
   })

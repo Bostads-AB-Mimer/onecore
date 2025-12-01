@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createGenericResponseSchema } from './response'
+import { StaircaseSchema } from './staircase'
 
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
@@ -205,6 +206,7 @@ export const ResidenceByRentalIdSchema = z.object({
     name: z.string().nullable(),
     code: z.string().nullable(),
   }),
+  staircase: StaircaseSchema.nullable(),
   areaSize: z.number().nullable(),
 })
 

@@ -17,5 +17,15 @@ export const StaircaseFactory = Factory.define<
     floorPlan: '1',
     accessibleByElevator: true,
   },
+  property: {
+    propertyId: `_0J415BS4${sequence}`,
+    propertyName: 'Fastigheten',
+    propertyCode: `010${sequence}`,
+  },
+  building: {
+    buildingId: `_0J415BS4${sequence}`,
+    buildingName: 'Byggnaden',
+    buildingCode: `010${sequence}`,
+  },
   timestamp: '2024-10-01T00:00:00Z',
 }))

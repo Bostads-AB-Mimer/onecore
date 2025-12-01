@@ -16,7 +16,7 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "./src/index.ts",
+  "main": "src/index.ts",
   "scripts": {
     "build": "tsc && tsc-alias",
     "dev": "node --import tsx --watch src/index.ts",

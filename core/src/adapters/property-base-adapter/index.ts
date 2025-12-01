@@ -441,7 +441,7 @@ export async function getFacilityByRentalId(
 > {
   try {
     const fetchResponse = await client().GET(
-      '/facilities/rental-id/{rentalId}',
+      '/facilities/by-rental-id/{rentalId}',
       {
         params: { path: { rentalId } },
       }
@@ -464,6 +464,28 @@ export async function getFacilityByRentalId(
   } catch (err) {
     logger.error({ err }, '@onecore/property-adapter.getFacilityByRentalId')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getBuildingsByPropertyCode(
+  propertyCode: string
+): Promise<AdapterResult<GetBuildingsResponse, unknown>> {
+  try {
+    const fetchResponse = await client().GET('/buildings', {
+      params: { query: { propertyCode } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      '@onecore/property-adapter.getBuildingsByPropertyCode'
+    )
+    return { ok: false, err }
   }
 }
 
@@ -492,6 +514,67 @@ export async function getMaintenanceUnitsByPropertyCode(
       { err },
       'property-base-adapter.getMaintenanceUnitsByPropertyCode'
     )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetFacilitiesByPropertyCodeResponse =
+  components['schemas']['GetFacilitiesByPropertyCodeResponse']['content']
+
+export async function getFacilitiesByPropertyCode(
+  propertyCode: string
+): Promise<
+  AdapterResult<GetFacilitiesByPropertyCodeResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/facilities/by-property-code/{propertyCode}',
+      {
+        params: { path: { propertyCode } },
+      }
+    )
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (!fetchResponse.data?.content) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getFacilitiesByPropertyCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetFacilitiesByBuildingCodeResponse =
+  components['schemas']['GetFacilitiesByBuildingCodeResponse']['content']
+export async function getFacilitiesByBuildingCode(
+  buildingCode: string
+): Promise<
+  AdapterResult<GetFacilitiesByBuildingCodeResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/facilities/by-building-code/{buildingCode}',
+      {
+        params: { path: { buildingCode } },
+      }
+    )
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (!fetchResponse.data?.content) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getFacilitiesByBuildingCode')
     return { ok: false, err: 'unknown' }
   }
 }
