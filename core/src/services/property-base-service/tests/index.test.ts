@@ -163,7 +163,42 @@ describe('@onecore/property-service', () => {
     })
   })
 
-  describe('GET /property/companies', () => {
+  describe('GET /buildings/by-property-code/:propertyCode', () => {
+    it('returns 200 and a list of buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      const getBuildingsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingsByPropertyCode')
+        .mockResolvedValueOnce({ ok: true, data: buildingsMock })
+
+      const res = await request(app.callback()).get(
+        '/buildings/by-property-code/001-001'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getBuildingsSpy).toHaveBeenCalledWith('001-001')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(buildingsMock)
+      )
+      expect(() =>
+        z.array(BuildingSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 500 if no buildings can be retrieved', async () => {
+      const getBuildingsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getBuildingsByPropertyCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/buildings/by-property-code/001-001'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getBuildingsSpy).toHaveBeenCalledWith('001-001')
+    })
+  })
+
+  describe('GET /companies', () => {
     it('returns 200 and a list of companies', async () => {
       const companiesMock = factory.company.buildList(3)
       const getCompaniesSpy = jest
@@ -496,7 +531,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: maintenanceUnitsMock })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-building-code/123-456'
+        '/maintenance-units/by-building-code/123-456'
       )
 
       expect(res.status).toBe(200)
@@ -515,7 +550,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-building-code/123-456'
+        '/maintenance-units/by-building-code/123-456'
       )
 
       expect(res.status).toBe(404)
@@ -528,7 +563,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(
-        '/propertyBase/maintenance-units/by-building-code/123-456'
+        '/maintenance-units/by-building-code/123-456'
       )
 
       expect(res.status).toBe(500)

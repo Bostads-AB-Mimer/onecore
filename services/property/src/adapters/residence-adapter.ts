@@ -76,6 +76,19 @@ export const getResidenceByRentalId = async (rentalId: string) => {
         buildingId: true,
         staircaseCode: true,
         rentalId: true,
+        staircase: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            floorPlan: true,
+            accessibleByElevator: true,
+            deleteMark: true,
+            fromDate: true,
+            toDate: true,
+            timestamp: true,
+          },
+        },
         propertyObject: {
           select: {
             rentalInformation: {
@@ -119,11 +132,13 @@ export const getResidenceByRentalId = async (rentalId: string) => {
 
     const {
       propertyObject: { residence, rentalInformation },
+      staircase,
     } = propertyStructure
 
     return trimStrings({
       ...propertyStructure,
       propertyObject: { residence, rentalInformation },
+      staircase,
     })
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getResidenceByRentalId')
