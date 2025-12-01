@@ -498,7 +498,6 @@ export async function createInvoiceRow(params: {
         rowsToAdd: [params.invoiceRow],
       },
     })
-
     // Guessing status here
     if (res.status === 200 || res.status === 201) {
       return { ok: true, data: res.data }
