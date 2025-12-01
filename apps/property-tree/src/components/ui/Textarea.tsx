@@ -1,5 +1,15 @@
 import * as React from 'react'
 
+/**
+ * cn (className utility) to merge Tailwind CSS classes
+ * - Uses clsx to conditionally join classNames
+ * - Uses twMerge to resolve Tailwind class conflicts
+ *
+ * Example: If base styles have "min-h-[80px]" and user passes "min-h-[120px]",
+ * twMerge will correctly override to use only "min-h-[120px]" instead of both.
+ *
+ * Standard pattern in shadcn/ui components.
+ */
 import { cn } from '@/lib/utils'
 
 export interface TextareaProps
