@@ -161,6 +161,8 @@ const getTenantByContactCode = async (
       `${tenantsLeasesServiceUrl}/contacts/${contactCode}/tenant`
     )
 
+    if (res.status === 404) return { ok: false, err: 'contact-not-tenant' }
+
     if (!res.data.content) {
       return { ok: false, err: 'unknown' }
     }
