@@ -60,7 +60,11 @@ export function parseKeysArray(
     return { ok: false, err: 'invalid-keys-format' }
   }
 
-  return { ok: true, data: keyIds }
+  // Deduplicate key IDs to prevent duplicate keys in loan
+  // This handles cases where frontend accidentally sends duplicate key IDs
+  const uniqueKeyIds = Array.from(new Set(keyIds))
+
+  return { ok: true, data: uniqueKeyIds }
 }
 
 /**

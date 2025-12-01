@@ -51,15 +51,20 @@ export function KeyLoanTransferDialog({
       }
 
       // Step 3: Get transferred key IDs (non-disposed keys from old loans)
-      const transferredKeyIds = existingLoans.flatMap((loanInfo) =>
-        loanInfo.keysToTransfer.map((k) => k.id)
+      // Deduplicate to prevent same key appearing multiple times if it's in multiple loans
+      const transferredKeyIds = Array.from(
+        new Set(
+          existingLoans.flatMap((loanInfo) =>
+            loanInfo.keysToTransfer.map((k) => k.id)
+          )
+        )
       )
 
       // Step 4: Create new loan with new keys + transferred keys
-      const allNewLoanKeyIds = [
-        ...newKeys.map((k) => k.id),
-        ...transferredKeyIds,
-      ]
+      // Deduplicate to ensure no key appears twice in the new loan
+      const allNewLoanKeyIds = Array.from(
+        new Set([...newKeys.map((k) => k.id), ...transferredKeyIds])
+      )
       const loanResult = await handleLoanKeys({
         keyIds: allNewLoanKeyIds,
         contact,

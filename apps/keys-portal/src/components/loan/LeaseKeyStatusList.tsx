@@ -3,6 +3,7 @@ import type { Lease, KeyDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ToastAction } from '@/components/ui/toast'
 import { keyService } from '@/services/api/keyService'
 import { useToast } from '@/hooks/use-toast'
@@ -316,6 +317,25 @@ export function LeaseKeyStatusList({
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2">
+            {/* Select all / Deselect all button */}
+            {visibleKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (selectedKeys.length === visibleKeys.length) {
+                    setSelectedKeys([])
+                  } else {
+                    setSelectedKeys(visibleKeys.map((k) => k.id))
+                  }
+                }}
+                disabled={isProcessing}
+              >
+                {selectedKeys.length === visibleKeys.length
+                  ? 'Avmarkera alla'
+                  : 'Markera alla'}
+              </Button>
+            )}
             <KeyActionButtons
               selectedKeys={selectedKeys}
               keysWithStatus={visibleKeys}

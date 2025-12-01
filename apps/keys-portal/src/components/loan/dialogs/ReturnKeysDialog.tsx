@@ -125,8 +125,11 @@ export function ReturnKeysDialog({
 
     try {
       // Get all key IDs from all loans (must return entire loan)
-      const allKeyIdsToReturn = keysByLoan.flatMap((loanInfo) =>
-        loanInfo.keys.map((k) => k.id)
+      // Deduplicate to prevent same key appearing multiple times if it's in multiple loans
+      const allKeyIdsToReturn = Array.from(
+        new Set(
+          keysByLoan.flatMap((loanInfo) => loanInfo.keys.map((k) => k.id))
+        )
       )
 
       const result = await handleReturnKeys({

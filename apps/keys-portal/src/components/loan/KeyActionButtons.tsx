@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Plus, Copy, Trash2 } from 'lucide-react'
 
 import type { KeyDetails } from '@/services/types'
+import { getActiveLoan } from '@/utils/loanHelpers'
 import { FlexMenu } from './dialogs/FlexMenu'
 import { IncomingFlexMenu } from './dialogs/IncomingFlexMenu'
 import { IncomingOrderMenu } from './dialogs/IncomingOrderMenu'
@@ -38,10 +39,11 @@ export function KeyActionButtons({
 
   // Helper to check if a key's loan matches current tenant
   const matchesCurrentTenant = (key: KeyDetails) => {
-    if (!key.loan) return false
+    const activeLoan = getActiveLoan(key)
+    if (!activeLoan) return false
     return (
-      tenantContactCodes.includes(key.loan.contact || '') ||
-      tenantContactCodes.includes(key.loan.contact2 || '')
+      tenantContactCodes.includes(activeLoan.contact || '') ||
+      tenantContactCodes.includes(activeLoan.contact2 || '')
     )
   }
 
@@ -49,37 +51,45 @@ export function KeyActionButtons({
     .map((id) => keysWithStatus.find((k) => k.id === id))
     .filter((k): k is KeyDetails => k !== undefined)
 
-  const rentableKeys = selectedKeysData.filter((k) => !k.loan && leaseIsNotPast)
-
-  const returnableKeys = selectedKeysData.filter(
-    (k) => !!k.loan && matchesCurrentTenant(k)
+  const rentableKeys = selectedKeysData.filter(
+    (k) => !getActiveLoan(k) && leaseIsNotPast
   )
+
+  const returnableKeys = selectedKeysData.filter((k) => {
+    const activeLoan = getActiveLoan(k)
+    return !!activeLoan && matchesCurrentTenant(k)
+  })
 
   // Keys that have "beställd flex" status (latest event is FLEX type with ORDERED status)
-  const incomingFlexKeys = selectedKeysData.filter(
-    (k) =>
-      k.latestEvent &&
-      k.latestEvent.type === 'FLEX' &&
-      k.latestEvent.status === 'ORDERED'
-  )
+  const incomingFlexKeys = selectedKeysData.filter((k) => {
+    const latestEvent = k.events?.[0] // Events are sorted by createdAt desc
+    return (
+      latestEvent &&
+      latestEvent.type === 'FLEX' &&
+      latestEvent.status === 'ORDERED'
+    )
+  })
 
   // Keys that have "beställd extranyckel" status (latest event is ORDER type with ORDERED status)
-  const incomingOrderKeys = selectedKeysData.filter(
-    (k) =>
-      k.latestEvent &&
-      k.latestEvent.type === 'ORDER' &&
-      k.latestEvent.status === 'ORDERED'
-  )
+  const incomingOrderKeys = selectedKeysData.filter((k) => {
+    const latestEvent = k.events?.[0] // Events are sorted by createdAt desc
+    return (
+      latestEvent &&
+      latestEvent.type === 'ORDER' &&
+      latestEvent.status === 'ORDERED'
+    )
+  })
 
   // All available keys (excluding disposed keys)
   const allAvailableKeys = keysWithStatus.filter(
-    (k) => !k.loan && leaseIsNotPast && !k.disposed
+    (k) => !getActiveLoan(k) && leaseIsNotPast && !k.disposed
   )
 
   // All keys rented by this tenant
-  const allRentedByTenant = keysWithStatus.filter(
-    (k) => !!k.loan && matchesCurrentTenant(k)
-  )
+  const allRentedByTenant = keysWithStatus.filter((k) => {
+    const activeLoan = getActiveLoan(k)
+    return !!activeLoan && matchesCurrentTenant(k)
+  })
 
   const hasSelectedKeys = selectedKeys.length > 0
 
