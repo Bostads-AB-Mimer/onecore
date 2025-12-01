@@ -49,16 +49,18 @@ function statusBadge(status: 'active' | 'upcoming' | 'ended') {
 type Props = {
   lease: Lease
   defaultOpen?: boolean
+  defaultKeyLoansOpen?: boolean
   rentalAddress?: string
 }
 
 export function ContractCard({
   lease,
   defaultOpen = false,
+  defaultKeyLoansOpen = false,
   rentalAddress,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
-  const [keyLoansOpen, setKeyLoansOpen] = useState(false)
+  const [keyLoansOpen, setKeyLoansOpen] = useState(defaultKeyLoansOpen)
   const [addressStr, setAddressStr] = useState<string | null>(
     rentalAddress ?? null
   )
