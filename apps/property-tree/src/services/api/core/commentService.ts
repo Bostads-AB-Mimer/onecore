@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET, POST } from './base-api'
 import type {
   TenantComment,
   TenantCommentRaw,
@@ -66,6 +66,36 @@ async function getCommentsByContactCode(
   return response.content.flatMap(transformComment)
 }
 
+/**
+ * Create a new comment for a specific contact
+ */
+async function createContactComment(
+  contactCode: string,
+  content: string,
+  author: string
+): Promise<TenantCommentRaw> {
+  const { data, error } = await POST('/contacts/{contactCode}/comments', {
+    params: { path: { contactCode } },
+    body: {
+      content,
+      author,
+    },
+  })
+
+  if (error) {
+    console.error('Error creating comment:', error)
+    throw new Error(`Failed to create comment for contact ${contactCode}`)
+  }
+
+  const response = data as any
+  if (!response?.content) {
+    throw new Error('Invalid response from create comment API')
+  }
+
+  return response.content as TenantCommentRaw
+}
+
 export const commentService = {
   getCommentsByContactCode,
+  createContactComment,
 }
