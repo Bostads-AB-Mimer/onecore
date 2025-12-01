@@ -3,7 +3,7 @@ import {
   Contact,
   Listing,
   ListingStatus,
-  ParkingSpaceApplicationCategory,
+  Invoice,
 } from '@onecore/types'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 import * as economyAdapter from '../../../../adapters/economy-adapter'
