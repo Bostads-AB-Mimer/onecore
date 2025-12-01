@@ -207,7 +207,7 @@ interface Listing {
   id: number
   rentalObjectCode: string
   publishedFrom: Date
-  publishedTo: Date
+  publishedTo?: Date
   status: ListingStatus
   rentalRule: 'SCORED' | 'NON_SCORED'
   listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
@@ -338,6 +338,8 @@ interface RentalObject {
   braArea?: number
   btaArea?: number
   boaArea?: number
+  isSpecialResidentialArea?: boolean
+  isSpecialProperty?: boolean
 }
 
 interface MaintenanceUnitInfo {

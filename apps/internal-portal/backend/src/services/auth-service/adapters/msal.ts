@@ -1,4 +1,3 @@
-import config from '../../../common/config'
 import msal from '@azure/msal-node'
 import axios from 'axios'
 import {
@@ -8,10 +7,10 @@ import {
   KoaContext,
 } from './types'
 
-const redirectUri = config.auth.msal.redirectUri || config.msal.redirectUri
-const postLogoutRedirectUri =
-  config.auth.msal.postLogoutRedirectUri || config.msal.postLogoutRedirectUri
+import config from '../../../common/config'
 
+const redirectUri = config.msal.redirectUri
+const postLogoutRedirectUri = config.msal.postLogoutRedirectUri
 const cryptoProvider = new msal.CryptoProvider()
 
 const defaultOptions: AuthOptions = {

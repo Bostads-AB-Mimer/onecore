@@ -1,6 +1,7 @@
 import { alpha, createTheme } from '@mui/material/styles'
 import type {} from '@mui/x-data-grid/themeAugmentation'
 import { radioClasses } from '@mui/material'
+import { svSE } from '@mui/x-data-grid/locales'
 
 import BisonBold from '../assets/Bison-Bold.woff2'
 import Bison from '../assets/Bison-Regular.woff2'
@@ -150,203 +151,207 @@ const theme = createTheme({
   },
 })
 
-export const mdTheme = createTheme(theme, {
-  components: {
-    MuiRadio: {
-      styleOverrides: {
-        root: {
-          color: 'black',
-          [`&.${radioClasses.checked}`]: {
+export const mdTheme = createTheme(
+  theme,
+  {
+    components: {
+      MuiRadio: {
+        styleOverrides: {
+          root: {
+            color: 'black',
+            [`&.${radioClasses.checked}`]: {
+              color: '#007BC4',
+            },
+          },
+        },
+      },
+      MuiCssBaseline: {
+        styleOverrides: {
+          html: [
+            { '@font-face': bison },
+            { '@font-face': bisonBold },
+            { '@font-face': graphikRegular },
+            { '@font-face': graphikBold },
+          ],
+          fieldset: {
+            border: 'none',
+            margin: 0,
+            padding: 0,
+          },
+          textarea: {
+            resize: 'none',
+            overflow: 'auto',
+            fontFamily: 'graphikRegular',
+            fontSize: 14,
+            padding: '8.5px 14px',
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          input: {
+            paddingTop: 8.5,
+            paddingBottom: 8.5,
+          },
+        },
+      },
+      MuiDivider: {
+        styleOverrides: {
+          root: {
+            marginTop: 7,
+            marginBottom: 7,
+            'form &': {
+              marginTop: '20px',
+              marginBottom: '20px',
+            },
+          },
+        },
+      },
+      MuiTypography: {
+        defaultProps: {
+          variantMapping: {
+            title: 'h1',
+            hMenu: 'h4',
+          },
+        },
+      },
+      MuiButton: {
+        defaultProps: {
+          disableElevation: true,
+        },
+        styleOverrides: {
+          root: {
+            textTransform: 'initial',
+            fontFamily: 'graphikRegular',
+            fontSize: 14,
+            fontWeight: 500,
+          },
+        },
+        variants: [
+          {
+            props: { variant: 'dark' },
+            style: {
+              textTransform: 'none',
+              fontWeight: 700,
+              backgroundColor: 'black',
+              color: 'white',
+              transition: 'none',
+              ':hover': {
+                background: 'black',
+              },
+              ':disabled': {
+                background: 'rgba(0, 0, 0, 0.2)',
+              },
+            },
+          },
+          {
+            props: { variant: 'dark-outlined' },
+            style: {
+              textTransform: 'none',
+              border: '1px solid black',
+              fontWeight: 700,
+              color: 'rgba(0, 0, 0, 1)',
+              background: 'white',
+              ':hover': {
+                background: 'white',
+              },
+            },
+          },
+          {
+            props: { variant: 'dark-outlined-utility' },
+            style: {
+              borderRadius: '6px',
+              textTransform: 'none',
+              border: '2px solid black',
+              fontWeight: 700,
+              color: 'rgba(0, 0, 0, 1)',
+              padding: 4,
+              lineHeight: 1,
+              background: 'white',
+              ':hover': {
+                background: 'white',
+              },
+            },
+          },
+        ],
+      },
+      MuiLink: {
+        styleOverrides: {
+          root: {
+            fontSize: 12,
+            fontFamily: 'graphikRegular',
+            color: '#951B81',
+            fontWeight: 900,
+            textDecoration: 'none',
+          },
+        },
+      },
+      MuiBackdrop: {
+        styleOverrides: {
+          root: {
+            backgroundColor: alpha('#000', 0.2),
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            marginTop: 15,
+            backgroundColor: '#F4EFE9',
+            borderWidth: 0,
+            borderRadius: 0,
+          },
+        },
+      },
+      MuiCardContent: {
+        styleOverrides: {
+          root: {
+            paddingLeft: 43,
+            paddingRight: 10,
+            paddingTop: 0,
+            paddingBottom: 0,
+            marginBottom: 0,
+          },
+        },
+      },
+      MuiDataGrid: {
+        styleOverrides: {
+          root: {
+            backgroundColor: 'white',
+            border: 'none',
+          },
+          columnHeader: {
+            borderBottom: '2px solid black',
+            fontFamily: 'bisonBold',
+            fontSize: '1.125rem',
+            color: theme.palette.warmGrey.main,
+          },
+          cell: { fontSize: '1.25em' },
+          checkboxInput: {
             color: '#007BC4',
           },
         },
       },
-    },
-    MuiCssBaseline: {
-      styleOverrides: {
-        html: [
-          { '@font-face': bison },
-          { '@font-face': bisonBold },
-          { '@font-face': graphikRegular },
-          { '@font-face': graphikBold },
-        ],
-        fieldset: {
-          border: 'none',
-          margin: 0,
-          padding: 0,
-        },
-        textarea: {
-          resize: 'none',
-          overflow: 'auto',
-          fontFamily: 'graphikRegular',
-          fontSize: 14,
-          padding: '8.5px 14px',
-        },
-      },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        input: {
-          paddingTop: 8.5,
-          paddingBottom: 8.5,
-        },
-      },
-    },
-    MuiDivider: {
-      styleOverrides: {
-        root: {
-          marginTop: 7,
-          marginBottom: 7,
-          'form &': {
-            marginTop: '20px',
-            marginBottom: '20px',
+      MuiCardActions: {
+        styleOverrides: {
+          root: {
+            paddingTop: 5,
+            justifyContent: 'right',
           },
         },
       },
-    },
-    MuiTypography: {
-      defaultProps: {
-        variantMapping: {
-          title: 'h1',
-          hMenu: 'h4',
-        },
-      },
-    },
-    MuiButton: {
-      defaultProps: {
-        disableElevation: true,
-      },
-      styleOverrides: {
-        root: {
-          textTransform: 'initial',
-          backgroundColor: 'black',
-          fontFamily: 'graphikRegular',
-          fontSize: 14,
-          fontWeight: 500,
-        },
-      },
-      variants: [
-        {
-          props: { variant: 'dark' },
-          style: {
-            borderRadius: '6px',
-            textTransform: 'none',
-            fontWeight: 700,
-            backgrund: 'rgba(0, 0, 0, 1)',
-            color: 'rgba(255, 255, 255, 1)',
-            transition: 'none',
-            ':hover': {
-              background: 'black',
-            },
-            ':disabled': {
-              background: 'rgba(0, 0, 0, 0.2)',
-            },
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            borderBottom: 'none',
+            padding: 8,
+            paddingLeft: 0,
+            paddingRight: 0,
+            fontSize: 14,
           },
-        },
-        {
-          props: { variant: 'dark-outlined' },
-          style: {
-            borderRadius: '6px',
-            textTransform: 'none',
-            border: '2px solid black',
-            fontWeight: 700,
-            color: 'rgba(0, 0, 0, 1)',
-            background: 'white',
-            ':hover': {
-              background: 'white',
-            },
-          },
-        },
-        {
-          props: { variant: 'dark-outlined-utility' },
-          style: {
-            borderRadius: '6px',
-            textTransform: 'none',
-            border: '2px solid black',
-            fontWeight: 700,
-            color: 'rgba(0, 0, 0, 1)',
-            padding: 4,
-            lineHeight: 1,
-            background: 'white',
-            ':hover': {
-              background: 'white',
-            },
-          },
-        },
-      ],
-    },
-    MuiLink: {
-      styleOverrides: {
-        root: {
-          fontSize: 12,
-          fontFamily: 'graphikRegular',
-          color: '#951B81',
-          fontWeight: 900,
-          textDecoration: 'none',
-        },
-      },
-    },
-    MuiBackdrop: {
-      styleOverrides: {
-        root: {
-          backgroundColor: alpha('#000', 0.2),
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          marginTop: 15,
-          backgroundColor: '#F4EFE9',
-          borderWidth: 0,
-          borderRadius: 0,
-        },
-      },
-    },
-    MuiCardContent: {
-      styleOverrides: {
-        root: {
-          paddingLeft: 43,
-          paddingRight: 10,
-          paddingTop: 0,
-          paddingBottom: 0,
-          marginBottom: 0,
-        },
-      },
-    },
-    MuiDataGrid: {
-      styleOverrides: {
-        root: {
-          backgroundColor: 'white',
-          border: 'none',
-        },
-        columnHeader: {
-          borderBottom: '2px solid black',
-          fontFamily: 'bisonBold',
-          fontSize: '1.125rem',
-          color: theme.palette.warmGrey.main,
-        },
-        cell: { fontSize: '1.25em' },
-      },
-    },
-    MuiCardActions: {
-      styleOverrides: {
-        root: {
-          paddingTop: 5,
-          justifyContent: 'right',
-        },
-      },
-    },
-    MuiTableCell: {
-      styleOverrides: {
-        root: {
-          borderBottom: 'none',
-          padding: 8,
-          paddingLeft: 0,
-          paddingRight: 0,
-          fontSize: 14,
         },
       },
     },
   },
-})
+  svSE
+)

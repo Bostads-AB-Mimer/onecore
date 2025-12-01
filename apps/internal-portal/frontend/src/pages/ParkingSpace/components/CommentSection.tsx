@@ -84,7 +84,7 @@ const CommentCard = ({
             {dayjs(comment.createdAt).fromNow()}
           </Typography>
           <Typography variant="subtitle2" fontWeight="bold">
-            {comment.authorName} skrev...
+            {comment.authorName}
           </Typography>
           <Typography variant="body1">{comment.comment}</Typography>
         </div>

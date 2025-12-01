@@ -20,6 +20,8 @@ import ParkingSpaces from './pages/ParkingSpaces'
 import ParkingSpace from './pages/ParkingSpace'
 import { mdTheme } from './theme'
 import Residences from './pages/Residences/Residences'
+import SearchParkingSpaces from './pages/ParkingSpaces/search'
+import PublishParkingSpacesPage from './pages/PublishParkingSpacesListings/PublishParkingSpacesListingsPage'
 import { ContactPage } from './pages/Contact/index'
 
 const queryClient = new QueryClient({
@@ -62,8 +64,16 @@ function App() {
               <Routes>
                 <Route element={<PageBase />}>
                   <Route path="/" element={<ParkingSpaces />} />
+                  <Route
+                    path="/sok-bilplats"
+                    element={<SearchParkingSpaces />}
+                  />
                   <Route path="/bilplatser" element={<ParkingSpaces />} />
                   <Route path="/bilplatser/:id" element={<ParkingSpace />} />
+                  <Route
+                    path="/bilplatser/publicera"
+                    element={<PublishParkingSpacesPage />}
+                  />
                   <Route path="/materialval" element={<Home />} />
                   <Route
                     path="/materialval/utskrift"

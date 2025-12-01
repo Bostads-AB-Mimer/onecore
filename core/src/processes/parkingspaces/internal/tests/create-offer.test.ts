@@ -104,7 +104,7 @@ describe('createOfferForInternalParkingSpace', () => {
       error: CreateOfferErrorCodes.NoApplicants,
       httpStatus: 500,
       response: {
-        message: 'No eligible applicant found, cannot create new offer',
+        message: 'No eligible applicant found, no offer created.',
         errorCode: CreateOfferErrorCodes.NoApplicants,
       },
     })
@@ -140,7 +140,7 @@ describe('createOfferForInternalParkingSpace', () => {
       error: CreateOfferErrorCodes.UpdateListingStatusFailure,
       httpStatus: 500,
       response: {
-        message: 'Error updating listing status to NoApplicants',
+        message: 'Error updating listing status to Closed.',
         errorCode: CreateOfferErrorCodes.UpdateListingStatusFailure,
       },
     })
