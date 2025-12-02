@@ -558,6 +558,23 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
+export const ComponentCategorySchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  timestamp: z.string(),
+})
+
+export const CreateComponentCategorySchema = z.object({
+  code: z.string().trim().min(1).max(10, 'Code must be at most 10 characters'),
+  name: z.string().trim().min(1).max(60, 'Name must be at most 60 characters'),
+})
+
+export const UpdateComponentCategorySchema = z.object({
+  code: z.string().trim().min(1).max(10, 'Code must be at most 10 characters').optional(),
+  name: z.string().trim().min(1).max(60, 'Name must be at most 60 characters').optional(),
+})
+
 export const ComponentTypeSchema = z.object({
   id: z.string(),
   description: z.string(),
