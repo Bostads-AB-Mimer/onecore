@@ -83,7 +83,7 @@ describe('Tenfast Adapter', () => {
       const result = await getTenantByContactCode('P999999')
 
       assert(!result.ok)
-      expect(result.err).toContain('Failed to parse Tenfast response')
+      expect(result.err).toBe('schema-error')
     })
   })
 
@@ -187,7 +187,7 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr('55123456')
 
       assert(!result.ok)
-      expect(result.err).toContain('Failed to parse Tenfast response')
+      expect(result.err).toBe('schema-error')
     })
   })
 
@@ -229,7 +229,7 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceArticle('HYRAB')
 
       assert(!result.ok)
-      expect(result.err).toContain('Failed to parse Tenfast response')
+      expect(result.err).toBe('schema-error')
     })
   })
 })
