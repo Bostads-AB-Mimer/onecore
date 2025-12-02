@@ -30,7 +30,7 @@ describe('Tenfast Adapter', () => {
     jest.clearAllMocks()
   })
 
-  describe('getTenantByContactCode', () => {
+  describe(getTenantByContactCode, () => {
     it('should return tenant data when request is successful', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
@@ -88,7 +88,7 @@ describe('Tenfast Adapter', () => {
     })
   })
 
-  describe('getInvoicesForTenant', () => {
+  describe(getInvoicesForTenant, () => {
     it('should return transformed invoice data when request is successful', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
@@ -150,7 +150,7 @@ describe('Tenfast Adapter', () => {
     })
   })
 
-  describe('getInvoiceByOcr', () => {
+  describe(getInvoiceByOcr, () => {
     it('should return transformed invoice data when found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
@@ -200,7 +200,7 @@ describe('Tenfast Adapter', () => {
     })
   })
 
-  describe('getInvoiceArticle', () => {
+  describe(getInvoiceArticle, () => {
     it('should return article data when request is successful', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
