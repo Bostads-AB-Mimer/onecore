@@ -8,11 +8,13 @@ import {
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
-  mockTenfastTenantResponse,
-  mockTenfastInvoices,
-  mockTenfastInvoiceByOcrResponse,
-  mockTenfastArticleResponse,
-} from './mocks'
+  TenfastTenantByContactCodeResponseFactory,
+  TenfastInvoicesByTenantIdResponseFactory,
+  TenfastInvoicesByOcrResponseFactory,
+  TenfastRentArticleFactory,
+  TenfastInvoiceFactory,
+  TenfastInvoiceRowFactory,
+} from '../../factories'
 
 // Mock axios
 jest.mock('axios')
@@ -33,16 +35,17 @@ describe('Tenfast Adapter', () => {
 
   describe(getTenantByContactCode, () => {
     it('should return tenant data when request is successful', async () => {
+      const mockResponse = TenfastTenantByContactCodeResponseFactory.build()
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockTenfastTenantResponse,
+        data: mockResponse,
       })
 
       const result = await getTenantByContactCode('P999999')
 
       expect(result).toEqual({
         ok: true,
-        data: mockTenfastTenantResponse.records[0],
+        data: mockResponse.records[0],
       })
     })
 
@@ -89,9 +92,10 @@ describe('Tenfast Adapter', () => {
 
   describe(getInvoicesForTenant, () => {
     it('should return transformed invoice data when request is successful', async () => {
+      const mockInvoices = TenfastInvoicesByTenantIdResponseFactory.build()
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockTenfastInvoices,
+        data: mockInvoices,
       })
 
       const result = await getInvoicesForTenant('tenant-123')
@@ -126,10 +130,10 @@ describe('Tenfast Adapter', () => {
 
     it('should transform paid invoices correctly', async () => {
       const paidInvoice = [
-        {
-          ...mockTenfastInvoices[0],
+        TenfastInvoiceFactory.build({
           amountPaid: 1000,
-        },
+          hyror: [TenfastInvoiceRowFactory.build()],
+        }),
       ]
 
       mockAxios.request.mockResolvedValue({
@@ -147,9 +151,10 @@ describe('Tenfast Adapter', () => {
 
   describe(getInvoiceByOcr, () => {
     it('should return transformed invoice data when found', async () => {
+      const mockResponse = TenfastInvoicesByOcrResponseFactory.build()
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockTenfastInvoiceByOcrResponse,
+        data: mockResponse,
       })
 
       const result = await getInvoiceByOcr('55123456')
@@ -193,16 +198,17 @@ describe('Tenfast Adapter', () => {
 
   describe(getInvoiceArticle, () => {
     it('should return article data when request is successful', async () => {
+      const mockArticle = TenfastRentArticleFactory.build()
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockTenfastArticleResponse,
+        data: mockArticle,
       })
 
       const result = await getInvoiceArticle('HYRAB')
 
       expect(result).toEqual({
         ok: true,
-        data: mockTenfastArticleResponse,
+        data: mockArticle,
       })
     })
 
