@@ -7,7 +7,6 @@ import {
   InvoiceTransactionType,
   PaymentStatus,
 } from '@onecore/types'
-import { gql } from 'graphql-request'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
@@ -387,32 +386,27 @@ export const getInvoicesByContactCode = async (
     return null
   }
 
+  const fromDateFilter = filters?.from
+    ? `, invoiceDate_gte: "${dateToXledgerDateString(filters.from)}"`
+    : ''
+
   const query = {
-    query: gql`
-      query GetInvoices($xledgerId: Int!, $fromDate: String) {
-        arTransactions(
-          first: 100,
-          filter: {
-            subledgerDbId: $xledgerId,
-            headerTransactionSourceDbId_in: [600, 797, 3536],
-            invoiceDate_gte: $fromDate
-          }
-        )
-        {
-          edges {
-            node {
-              ${invoiceNodeFragment}
-            }
+    query: `{
+      arTransactions(
+        first: 100,
+        filter: {
+          subledgerDbId: ${xledgerId},
+          headerTransactionSourceDbId_in: [600, 797, 3536]${fromDateFilter}
+        }
+      )
+      {
+        edges {
+          node {
+            ${invoiceNodeFragment}
           }
         }
       }
-    `,
-    variables: {
-      xledgerId,
-      fromDate: filters?.from
-        ? dateToXledgerDateString(filters.from)
-        : undefined,
-    },
+    }`,
   }
 
   const result = await makeXledgerRequest(query)
