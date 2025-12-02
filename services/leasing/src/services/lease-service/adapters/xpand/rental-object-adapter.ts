@@ -383,6 +383,16 @@ const getParkingSpace = async (
     return { ok: false, err: 'unknown' }
   }
 }
+/**
+ * Helper to split array into batches
+ */
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size))
+  }
+  return result
+}
 
 const getParkingSpaces = async (
   includeRentalObjectCodes?: string[]
@@ -396,18 +406,32 @@ const getParkingSpaces = async (
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
-    let query = buildMainQuery({
-      parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
-      rentalBlockDatesQuery,
-    })
+    let allResults: any[] = []
+
     if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
-      query = query.whereIn('ps.rentalObjectCode', includeRentalObjectCodes)
+      const batchSize = 2000
+      const batches = chunkArray(includeRentalObjectCodes, batchSize)
+      for (const batch of batches) {
+        let query = buildMainQuery({
+          parkingSpacesQuery,
+          latestContractPerParkingSpaceQuery,
+          rentalBlockDatesQuery,
+        }).whereIn('ps.rentalObjectCode', batch)
+
+        const results = await query
+        if (results && results.length) {
+          allResults = allResults.concat(results)
+        }
+      }
+    } else {
+      allResults = await buildMainQuery({
+        parkingSpacesQuery,
+        latestContractPerParkingSpaceQuery,
+        rentalBlockDatesQuery,
+      })
     }
 
-    const results = await query
-
-    if (!results || results.length === 0) {
+    if (!allResults || allResults.length === 0) {
       logger.error(
         { includeRentalObjectCodes: includeRentalObjectCodes },
         `No parking spaces found for rental object codes`
@@ -418,7 +442,7 @@ const getParkingSpaces = async (
     // Calculate if any codes were not found and write an error log
     if (includeRentalObjectCodes && includeRentalObjectCodes.length) {
       const uniqueIncludeCodes = [...new Set(includeRentalObjectCodes)]
-      const foundCodes = results.map((row) => row.rentalObjectCode)
+      const foundCodes = allResults.map((row) => row.rentalObjectCode)
 
       if (foundCodes.length < uniqueIncludeCodes.length) {
         const missingCodes = uniqueIncludeCodes.filter(
@@ -433,7 +457,7 @@ const getParkingSpaces = async (
       }
     }
 
-    const rentalObjects = results.map((row) =>
+    const rentalObjects = allResults.map((row) =>
       trimRow(transformFromXpandRentalObject(row))
     )
     return { ok: true, data: rentalObjects }
