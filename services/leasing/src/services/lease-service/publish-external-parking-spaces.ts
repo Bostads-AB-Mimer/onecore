@@ -232,8 +232,9 @@ export async function publishExternalParkingSpaces(
 
   // Step 3: Create a Set of vacant parking space codes for fast lookup
   // This allows us to quickly check if a parking space from the old system exists in our system
+  // Normalize codes by trimming whitespace to handle potential formatting differences
   const vacantSpacesCodes = new Set(
-    vacantSpaces.map((space) => space.rentalObjectCode)
+    vacantSpaces.map((space) => space.rentalObjectCode.trim())
   )
 
   logger.info(
@@ -250,7 +251,9 @@ export async function publishExternalParkingSpaces(
 
     // Step 6: Check if this parking space exists in our vacant parking spaces
     // We compare by rentalObjectCode - only create listing if it exists in both systems
-    if (!vacantSpacesCodes.has(space.rentalObjectCode)) {
+    // Normalize by trimming whitespace to handle potential formatting differences
+    const normalizedCode = space.rentalObjectCode.trim()
+    if (!vacantSpacesCodes.has(normalizedCode)) {
       result.notVacant++
       logger.warn(
         { rentalObjectCode: space.rentalObjectCode },
@@ -263,8 +266,9 @@ export async function publishExternalParkingSpaces(
     result.alreadyVacant++
 
     // Step 7: Prepare the listing data object
+    // Use the normalized code to ensure consistency
     const listingData: CreateListingData = {
-      rentalObjectCode: space.rentalObjectCode,
+      rentalObjectCode: normalizedCode,
       publishedFrom: new Date(space.publishedFrom),
       status: ListingStatus.Active,
       rentalRule: 'NON_SCORED', // External parking spaces are non-scored (first come, first served)
