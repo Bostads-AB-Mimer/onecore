@@ -25,13 +25,6 @@ jest.mock('@src/common/config', () => ({
   },
 }))
 
-// Mock logger
-jest.mock('@onecore/utilities', () => ({
-  logger: {
-    error: jest.fn(),
-  },
-}))
-
 describe('Tenfast Adapter', () => {
   beforeEach(() => {
     jest.clearAllMocks()
