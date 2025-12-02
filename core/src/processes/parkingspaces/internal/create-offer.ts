@@ -111,7 +111,7 @@ export const createOfferForInternalParkingSpace = async (
     if (!eligibleApplicant) {
       const updateListingStatus = await leasingAdapter.updateListingStatus(
         listing.id,
-        ListingStatus.NoApplicants
+        ListingStatus.Closed
       )
 
       if (!updateListingStatus.ok) {
@@ -119,16 +119,17 @@ export const createOfferForInternalParkingSpace = async (
           log,
           CreateOfferErrorCodes.UpdateListingStatusFailure,
           500,
-          `Error updating listing status to NoApplicants`
+          `Error updating listing status to Closed.`
         )
       }
 
-      return endFailingProcess(
-        log,
-        CreateOfferErrorCodes.NoApplicants,
-        500,
-        `No eligible applicant found, cannot create new offer`
+      logger.info(
+        { listingId: listing.id },
+        'No eligible applicant found, no offer created.'
       )
+      return makeProcessError(CreateOfferErrorCodes.NoApplicants, 500, {
+        message: 'No eligible applicant found, no offer created.',
+      })
     }
 
     const getContact = await leasingAdapter.getContactByContactCode(

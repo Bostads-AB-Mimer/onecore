@@ -31,7 +31,7 @@ export function CompanyView() {
 
   if (isLoading) {
     return (
-      <div className="p-8 animate-in">
+      <div className="py-4 animate-in">
         <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-8 animate-pulse" />
 
@@ -50,7 +50,7 @@ export function CompanyView() {
   if (error) {
     console.error('Failed to load company:', error)
     return (
-      <div className="p-8 text-center">
+      <div className="py-4 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           Ett fel uppstod när företaget skulle hämtas
         </h2>
@@ -63,7 +63,7 @@ export function CompanyView() {
 
   if (!company) {
     return (
-      <div className="p-8 text-center">
+      <div className="py-4 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           Företaget kunde inte hittas
         </h2>
@@ -75,7 +75,7 @@ export function CompanyView() {
   }
 
   return (
-    <div className="p-8 animate-in">
+    <div className="py-4 animate-in">
       <ViewHeader
         title={company.name}
         subtitle={`${propertiesQuery.data?.length} fastigheter`}
@@ -108,11 +108,14 @@ export function CompanyView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2">
-          <PropertyList properties={propertiesQuery.data || []} />
+          <PropertyList
+            properties={propertiesQuery.data || []}
+            companyId={companyId}
+          />
         </div>
 
         <div className="space-y-6">
-          <Card title="Karta" icon={MapPin}>
+          <Card title="Karta">
             <PropertyMap
               properties={propertiesQuery.data || []}
               companyName={company.name}

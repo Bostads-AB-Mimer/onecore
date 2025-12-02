@@ -62,7 +62,7 @@ const periodMonthInformation: Record<number, number> = {
   8: -1,
   9: 0,
   10: -1, // TEMPORARY for 2025! Should be 0 from 2026 onward.
-  11: 0,
+  11: -1, // TEMPORARY for 2025! Should be 0 from 2026 onward.
 }
 
 const ledgerAccount = '2460'

@@ -20,6 +20,94 @@ describe('@onecore/property-adapter', () => {
     mockServer.close()
   })
 
+  describe('getBuildings', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getBuildings('001-001')
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/buildings`, () =>
+          HttpResponse.json(
+            {
+              content: buildingsMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getBuildings('001-001')
+      expect(result).toMatchObject({
+        ok: true,
+        data: buildingsMock,
+      })
+    })
+  })
+
+  describe('getBuildingById', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings/building-id-123`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingById('building-id-123')
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns not-found if building is not found', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings/building-id-123`,
+          () => new HttpResponse(null, { status: 404 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingById('building-id-123')
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('not-found')
+    })
+
+    it('returns building', async () => {
+      const buildingMock = factory.building.build()
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings/building-id-123`,
+          () =>
+            HttpResponse.json(
+              {
+                content: buildingMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingById('building-id-123')
+      expect(result).toMatchObject({
+        ok: true,
+        data: buildingMock,
+      })
+    })
+  })
+
   describe('getBuildingByCode', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
@@ -569,7 +657,7 @@ describe('@onecore/property-adapter', () => {
     it('returns not-found if facility is not found', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => HttpResponse.json(null, { status: 404 })
         )
       )
@@ -583,7 +671,7 @@ describe('@onecore/property-adapter', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => new HttpResponse(null, { status: 500 })
         )
       )
@@ -598,7 +686,7 @@ describe('@onecore/property-adapter', () => {
       const facilityMock = factory.facilityDetails.build()
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/facilities/rental-id/1234`,
+          `${config.propertyBaseService.url}/facilities/by-rental-id/1234`,
           () => HttpResponse.json({ content: facilityMock }, { status: 200 })
         )
       )
@@ -608,6 +696,45 @@ describe('@onecore/property-adapter', () => {
       expect(result).toMatchObject({
         ok: true,
         data: facilityMock,
+      })
+    })
+  })
+
+  describe('getBuildings', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/buildings`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode('001-001')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns buildings', async () => {
+      const buildingsMock = factory.building.buildList(3)
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/buildings`, () =>
+          HttpResponse.json(
+            {
+              content: buildingsMock,
+            },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getBuildingsByPropertyCode('001-001')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: buildingsMock,
       })
     })
   })
@@ -648,6 +775,76 @@ describe('@onecore/property-adapter', () => {
 
       const result =
         await propertyBaseAdapter.getMaintenanceUnitsByPropertyCode('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+  })
+
+  describe('getResidenceSummariesByBuildingCode', () => {
+    it('returns residence summaries for a building', async () => {
+      const residenceSummariesMock = factory.residenceSummary.buildList(3)
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/summary/by-building-code/202-002`,
+          () =>
+            HttpResponse.json(
+              {
+                content: residenceSummariesMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getResidenceSummariesByBuildingCode('202-002')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: residenceSummariesMock,
+      })
+    })
+
+    it('returns residence summaries filtered by staircase code', async () => {
+      const residenceSummariesMock = factory.residenceSummary.buildList(2)
+
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/summary/by-building-code/202-002`,
+          () =>
+            HttpResponse.json(
+              {
+                content: residenceSummariesMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getResidenceSummariesByBuildingCode(
+          '202-002',
+          'A1'
+        )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: residenceSummariesMock,
+      })
+    })
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/summary/by-building-code/202-002`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getResidenceSummariesByBuildingCode('202-002')
 
       expect(result.ok).toBe(false)
       if (!result.ok) expect(result.err).toBe('unknown')

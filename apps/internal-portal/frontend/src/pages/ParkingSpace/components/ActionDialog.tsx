@@ -17,6 +17,7 @@ interface ActionDialogProps {
   title: string
   content: string
   submitButtonText: string
+  closeButtonText?: string
   isPending: boolean
   error?: JSX.Element
 }
@@ -27,6 +28,7 @@ export const ActionDialog = ({
   onConfirm,
   title,
   content,
+  closeButtonText = 'Avbryt',
   submitButtonText,
   isPending,
   error,
@@ -66,7 +68,7 @@ export const ActionDialog = ({
               onClick={onClose}
               disabled={isPending}
             >
-              Avbryt
+              {closeButtonText}
             </Button>
             <LoadingButton
               variant="dark"

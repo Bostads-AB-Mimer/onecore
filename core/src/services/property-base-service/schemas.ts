@@ -3,26 +3,39 @@ import { z } from 'zod'
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),
-  name: z.string(),
+  name: z.string().nullable(),
   buildingType: z.object({
-    id: z.string(),
-    code: z.string(),
-    name: z.string(),
+    id: z.string().nullable(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
   }),
   construction: z.object({
-    constructionYear: z.number(),
-    renovationYear: z.number(),
+    constructionYear: z.number().nullable(),
+    renovationYear: z.number().nullable(),
     valueYear: z.number().nullable(),
   }),
   features: z.object({
-    heating: z.string().nullable(),
-    fireRating: z.string().nullable(),
+    heating: z.string().nullable().optional(),
+    fireRating: z.string().nullable().optional(),
   }),
   insurance: z.object({
     class: z.string().nullable(),
     value: z.number().nullable(),
   }),
+  quantityValues: z
+    .array(
+      z.object({
+        id: z.string(),
+        value: z.number(),
+        name: z.string(),
+        unitId: z.string().nullable(),
+      })
+    )
+    .optional(),
   deleted: z.boolean(),
+  property: z
+    .object({ name: z.string().nullable(), code: z.string(), id: z.string() })
+    .nullish(),
 })
 
 export const CompanySchema = z.object({
@@ -36,9 +49,9 @@ export const CompanySchema = z.object({
 export const PropertySchema = z.object({
   id: z.string(),
   propertyObjectId: z.string(),
-  marketAreaId: z.string(),
-  districtId: z.string(),
-  propertyDesignationId: z.string(),
+  marketAreaId: z.string().nullable(),
+  districtId: z.string().nullable(),
+  propertyDesignationId: z.string().nullable(),
   valueAreaId: z.string().nullable(),
   code: z.string(),
   designation: z.string(),
@@ -47,10 +60,10 @@ export const PropertySchema = z.object({
   block: z.string(),
   sector: z.string().nullable(),
   propertyIndexNumber: z.string().nullable(),
-  congregation: z.string(),
+  congregation: z.string().nullable(),
   builtStatus: z.number(),
   separateAssessmentUnit: z.number(),
-  consolidationNumber: z.string(),
+  consolidationNumber: z.string().nullable(),
   ownershipType: z.string(),
   registrationDate: z.string().nullable(),
   acquisitionDate: z.string().nullable(),
@@ -70,11 +83,11 @@ export const PropertySchema = z.object({
 })
 
 export const PropertyDetailsSchema = z.object({
-  id: z.string(),
-  propertyObjectId: z.string(),
-  marketAreaId: z.string(),
-  districtId: z.string(),
-  propertyDesignationId: z.string(),
+  id: z.string().trim(),
+  propertyObjectId: z.string().trim(),
+  marketAreaId: z.string().trim().nullable(),
+  districtId: z.string().trim().nullable(),
+  propertyDesignationId: z.string().trim().nullable(),
   valueAreaId: z.string().nullable(),
   code: z.string(),
   designation: z.string(),
@@ -83,42 +96,63 @@ export const PropertyDetailsSchema = z.object({
   block: z.string(),
   sector: z.string().nullable(),
   propertyIndexNumber: z.string().nullable(),
-  congregation: z.string(),
-  builtStatus: z.number(),
-  separateAssessmentUnit: z.number(),
-  consolidationNumber: z.string(),
+  congregation: z.string().nullable(),
+  builtStatus: z.number().int(),
+  separateAssessmentUnit: z.number().int(),
+  consolidationNumber: z.string().nullable(),
   ownershipType: z.string(),
   registrationDate: z.string().nullable(),
   acquisitionDate: z.string().nullable(),
-  isLeasehold: z.number(),
+  isLeasehold: z.number().int(),
   leaseholdTerminationDate: z.string().nullable(),
   area: z.string().nullable(),
   purpose: z.string().nullable(),
   buildingType: z.string().nullable(),
   propertyTaxNumber: z.string().nullable(),
-  mainPartAssessedValue: z.number(),
-  includeInAssessedValue: z.number(),
-  grading: z.number(),
-  deleteMark: z.number(),
-  fromDate: z.string().datetime(),
-  toDate: z.string().datetime(),
+  mainPartAssessedValue: z.number().int(),
+  includeInAssessedValue: z.number().int(),
+  grading: z.number().int(),
+  deleteMark: z.number().int(),
+  fromDate: z.string(),
+  toDate: z.string(),
   timestamp: z.string(),
+  marketArea: z
+    .object({
+      id: z.string().trim(),
+      code: z.string().trim(),
+      name: z.string().trim(),
+    })
+    .nullable(),
+  district: z
+    .object({
+      id: z.string().trim(),
+      code: z.string().trim(),
+      caption: z.string().trim(),
+    })
+    .nullable(),
   propertyObject: z.object({
-    id: z.string(),
-    deleteMark: z.number(),
+    id: z.string().trim(),
+    deleteMark: z.number().int(),
     timestamp: z.string(),
-    objectTypeId: z.string(),
+    objectTypeId: z.string().trim(),
     barcode: z.string().nullable(),
-    barcodeType: z.number(),
-    condition: z.number(),
+    barcodeType: z.number().int(),
+    condition: z.number().int(),
     conditionInspectionDate: z.string().nullable(),
-    vatAdjustmentPrinciple: z.number(),
-    energyClass: z.number(),
+    vatAdjustmentPrinciple: z.number().int(),
+    energyClass: z.number().int(),
     energyRegistered: z.string().nullable(),
     energyReceived: z.string().nullable(),
     energyIndex: z.string().nullable(),
-    heatingNature: z.number(),
+    heatingNature: z.number().int(),
   }),
+  propertyValues: z.array(
+    z.object({
+      value: z.number().nullable(),
+      name: z.string(),
+      unitId: z.string(),
+    })
+  ),
 })
 
 export const ResidenceSchema = z.object({
@@ -220,6 +254,36 @@ export const ResidenceDetailsSchema = z.object({
   size: z.number().nullable(),
 })
 
+export const StaircaseSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  features: z.object({
+    floorPlan: z.string().nullable(),
+    accessibleByElevator: z.boolean(),
+  }),
+  dates: z.object({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+  }),
+  property: z
+    .object({
+      propertyId: z.string().nullable(),
+      propertyName: z.string().nullable(),
+      propertyCode: z.string().nullable(),
+    })
+    .optional(),
+  building: z
+    .object({
+      buildingId: z.string().nullable(),
+      buildingName: z.string().nullable(),
+      buildingCode: z.string().nullable(),
+    })
+    .optional(),
+  deleted: z.boolean(),
+  timestamp: z.string().datetime(),
+})
+
 export const ResidenceByRentalIdSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -260,23 +324,8 @@ export const ResidenceByRentalIdSchema = z.object({
     name: z.string().nullable(),
     code: z.string().nullable(),
   }),
+  staircase: StaircaseSchema.nullable(),
   areaSize: z.number().nullable(),
-})
-
-export const StaircaseSchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
-  features: z.object({
-    floorPlan: z.string().nullable(),
-    accessibleByElevator: z.boolean(),
-  }),
-  dates: z.object({
-    from: z.string().datetime(),
-    to: z.string().datetime(),
-  }),
-  deleted: z.boolean(),
-  timestamp: z.string().datetime(),
 })
 
 export const RoomTypeSchema = z.object({
@@ -393,6 +442,10 @@ export const GetRoomsQueryParamsSchema = z.object({
   residenceId: z.string().min(1, { message: 'residenceId is required.' }),
 })
 
+export const GetBuildingsQueryParamsSchema = z.object({
+  propertyCode: z.string().min(1, { message: 'propertyCode is required.' }),
+})
+
 export const GetResidencesQueryParamsSchema = z.object({
   buildingCode: z.string(),
   staircaseCode: z.string().optional(),
@@ -409,6 +462,46 @@ export const StaircasesQueryParamsSchema = z.object({
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
 })
 
+export const ResidenceSummaryQueryParamsSchema = z.object({
+  staircaseCode: z.string().optional(),
+})
+
+export const ResidenceSummarySchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  deleted: z.boolean(),
+  rentalId: z.string(),
+  buildingCode: z.string(),
+  buildingName: z.string(),
+  staircaseCode: z.string(),
+  staircaseName: z.string(),
+  elevator: z.number().nullable(),
+  floor: z.string(),
+  hygieneFacility: z.string().nullable(),
+  wheelchairAccessible: z.number(),
+  validityPeriod: z.object({
+    fromDate: z.string().datetime().nullable(),
+    toDate: z.string().datetime().nullable(),
+  }),
+  residenceType: z.object({
+    code: z.string(),
+    name: z.string(),
+    roomCount: z.number(),
+    kitchen: z.number(),
+  }),
+  quantityValues: z.array(
+    z.object({
+      value: z.number(),
+      quantityTypeId: z.string(),
+      quantityType: z.object({
+        name: z.string(),
+        unitId: z.string().nullable(),
+      }),
+    })
+  ),
+})
+
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
@@ -418,6 +511,7 @@ export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
 export type ResidenceByRentalIdDetails = z.infer<
   typeof ResidenceByRentalIdSchema
 >
+export type ResidenceSummary = z.infer<typeof ResidenceSummarySchema>
 export type Staircase = z.infer<typeof StaircaseSchema>
 export type RoomType = z.infer<typeof RoomTypeSchema>
 export type Room = z.infer<typeof RoomSchema>

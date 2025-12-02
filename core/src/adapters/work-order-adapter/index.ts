@@ -82,6 +82,35 @@ export const getWorkOrdersByRentalPropertyId = async (
   }
 }
 
+export const getWorkOrdersByPropertyId = async (
+  propertyId: string
+): Promise<AdapterResult<OdooWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/propertyId/{propertyId}',
+      {
+        params: { path: { propertyId } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders,
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getWorkOrdersByPropertyId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const getXpandWorkOrdersByRentalPropertyId = async (
   rentalPropertyId: string,
   {
@@ -118,6 +147,111 @@ export const getXpandWorkOrdersByRentalPropertyId = async (
       { error },
       'work-order-adapter.getXpandWorkOrdersByRentalPropertyId'
     )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getXpandWorkOrdersByPropertyId = async (
+  propertyId: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<XpandWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/xpand/propertyId/{propertyId}',
+      {
+        params: {
+          path: { propertyId },
+          query: { skip, limit, sortAscending },
+        },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders,
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getXpandWorkOrdersByPropertyId')
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getWorkOrdersByBuildingId = async (
+  buildingId: string
+): Promise<AdapterResult<OdooWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/buildingId/{buildingId}',
+      {
+        params: { path: { buildingId } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders,
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getWorkOrdersByBuildingId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getXpandWorkOrdersByBuildingId = async (
+  buildingId: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<XpandWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/xpand/buildingId/{buildingId}',
+      {
+        params: {
+          path: { buildingId },
+          query: { skip, limit, sortAscending },
+        },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders,
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getXpandWorkOrdersByBuildingId')
 
     return { ok: false, err: 'unknown' }
   }

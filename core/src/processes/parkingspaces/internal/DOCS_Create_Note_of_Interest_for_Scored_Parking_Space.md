@@ -4,8 +4,9 @@
 
 ```mermaid
 flowchart LR
-A[Start] -->B(Get Parking Space)
-B --> C{Is the Parking<br/>Space Scored?}
+A[Start] -->B(Get Listing)
+B --> R(Get Parking Space)
+R --> C{Is the Listing Rental Rule Internal/Scored?}
 C --> |No| O
 C --> |Yes| D[Get Contact]
 D --> E{Is Contact<br/>a Tenant?}
@@ -17,9 +18,8 @@ P --> Q{Is Applicant Eligable for Lease?}
 Q --> |No| O
 Q --> |Yes| H{Is Contact in Waiting<br/>List for Parking Space?}
 H --> |No| I[Add Contact<br/>to Waiting List]
-I --> J[Create Listing]
-J --> K[Create Application]
-H --> |Yes| J
+I --> K[Create Application]
+H --> |Yes| I
 K --> O
 ```
 
@@ -39,11 +39,15 @@ sequenceDiagram
 
     User ->> Core: Create Note Of Interest
 
-    Core ->> Property Mgmt: Get Publ. Parking Space
-    Property Mgmt ->> XPand SOAP: Get Publ. Parking Space
-    XPand SOAP -->> Property Mgmt:Publ. Parking Space
-    Property Mgmt -->> Core: Publ. Parking Space
-    break when Parking Space is None Scored
+    Core ->> Leasing: Get Active Listing
+    Leasing ->> OneCore DB: Get Listing
+    OneCore DB -->> Leasing: Listing
+    Leasing -->> Core: Listing
+    Core ->> Leasing: Get Rental Object
+    Leasing ->> XPand DB: Get Rental Object
+    XPand DB -->> Leasing:Rental Object
+    Leasing -->> Core: Rental Object
+    break when Listing Rental Rule is not Scored
         Core-->User: show error message
     end
 
@@ -88,11 +92,6 @@ sequenceDiagram
     alt Contact is not in Waiting List
         Core ->> Leasing: Add Contact to Waiting List
         Leasing ->> XPand SOAP: Add Contact to Waiting List
-    end
-
-    alt Listing has not been Added to OneCore
-        Core ->> Leasing: Create Listing
-        Leasing ->> OneCore DB: Create Listing
     end
 
     Core ->> Leasing: Create Applicant

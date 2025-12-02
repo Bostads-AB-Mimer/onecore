@@ -6,7 +6,6 @@ import assert from 'node:assert'
 import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
-
 //todo: add types
 
 export type Residence = Prisma.ResidenceGetPayload<{
@@ -77,6 +76,19 @@ export const getResidenceByRentalId = async (rentalId: string) => {
         buildingId: true,
         staircaseCode: true,
         rentalId: true,
+        staircase: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            floorPlan: true,
+            accessibleByElevator: true,
+            deleteMark: true,
+            fromDate: true,
+            toDate: true,
+            timestamp: true,
+          },
+        },
         propertyObject: {
           select: {
             rentalInformation: {
@@ -120,11 +132,13 @@ export const getResidenceByRentalId = async (rentalId: string) => {
 
     const {
       propertyObject: { residence, rentalInformation },
+      staircase,
     } = propertyStructure
 
     return trimStrings({
       ...propertyStructure,
       propertyObject: { residence, rentalInformation },
+      staircase,
     })
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getResidenceByRentalId')
@@ -229,6 +243,79 @@ export const getResidencesByBuildingCodeAndStaircaseCode = async (
       },
     })
     .then(trimStrings)
+}
+
+export const getResidenceSummariesByBuildingCodeAndStaircaseCode = async (
+  buildingCode: string,
+  staircaseCode?: string
+) => {
+  const residences = await prisma.propertyStructure
+    .findMany({
+      select: {
+        rentalId: true,
+        buildingCode: true,
+        buildingName: true,
+        staircaseCode: true,
+        staircaseName: true,
+        propertyObject: {
+          select: {
+            /*
+            rentalInformation: {
+              select: {
+                apartmentNumber: true,
+                rentalInformationType: { select: { name: true, code: true } },
+              },
+            },
+            */
+            quantityValues: {
+              where: {
+                quantityTypeId: 'BOA',
+              },
+              select: {
+                value: true,
+                quantityTypeId: true,
+                quantityType: { select: { name: true, unitId: true } },
+              },
+            },
+            residence: {
+              select: {
+                id: true,
+                elevator: true,
+                floor: true,
+                deleted: true,
+                code: true,
+                hygieneFacility: true,
+                name: true,
+                wheelchairAccessible: true,
+                fromDate: true,
+                toDate: true,
+                residenceType: {
+                  select: {
+                    code: true,
+                    name: true,
+                    roomCount: true,
+                    kitchen: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      where: {
+        roomId: null,
+        propertyObject: { objectTypeId: 'balgh' },
+        buildingCode: {
+          contains: buildingCode,
+        },
+        ...(staircaseCode && { staircaseCode: staircaseCode }),
+        NOT: [{ staircaseId: null }, { residenceId: null }, { rentalId: null }],
+        localeId: null,
+      },
+    })
+    .then(trimStrings)
+
+  return residences
 }
 
 export type ResidenceSearchResult = Prisma.ResidenceGetPayload<{

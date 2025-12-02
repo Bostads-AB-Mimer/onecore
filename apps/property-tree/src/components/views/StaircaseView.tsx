@@ -9,8 +9,7 @@ import {
   ArrowRight,
   AlertCircle,
 } from 'lucide-react'
-import { buildingService } from '../../services/api'
-import { residenceService } from '../../services/api/core'
+import { buildingService, residenceService } from '../../services/api/core'
 import { Issue } from '@/services/types'
 
 const mockIssues: Issue[] = [

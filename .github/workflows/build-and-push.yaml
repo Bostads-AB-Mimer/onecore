@@ -55,8 +55,8 @@ jobs:
     env:
       # Prefer workflow_run context if present, otherwise fall back defaults
       HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || (github.ref_type == 'branch' && github.ref_name) }}
-      HEAD_TAG:    ${{ github.event.workflow_run.head_branch == null && github.ref_type == 'tag' && github.ref_name || '' }}
-      HEAD_SHA:    ${{ github.event.workflow_run.head_sha || github.sha }}
+      HEAD_TAG: ${{ github.event.workflow_run.head_branch == null && github.ref_type == 'tag' && github.ref_name || '' }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     outputs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
       build_type: ${{ steps.build-type.outputs.build_type }}
@@ -145,7 +145,7 @@ jobs:
         run: |
           BRANCH_TAG="${{ steps.build-type.outputs.build_tag_base }}"
 
-          LATEST=$(crane ls "ghcr.io/bostads-ab-mimer/onecore/onecore-core" \
+          LATEST=$(crane ls $IMAGE \
             | grep "^${BRANCH_TAG}\." \
             | sed "s/^${BRANCH_TAG}\.//" \
             | sort -n \
@@ -214,7 +214,7 @@ jobs:
       - name: Render build_args
         id: render-build-args
         env:
-          BUILD_TYPE:  ${{ needs.prepare.outputs.build_type }}
+          BUILD_TYPE: ${{ needs.prepare.outputs.build_type }}
           RELEASE_BUILD_ARGS: ${{ (matrix.build_args.release && toJSON(matrix.build_args.release)) }}
           TEST_BUILD_ARGS: ${{ (matrix.build_args.test && toJSON(matrix.build_args.test)) }}
         run: |
@@ -267,7 +267,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           cache: pnpm
 
       - name: Configure Git
@@ -286,4 +286,3 @@ jobs:
           git add $(git ls-files -m '*package*.json')
           git commit -m "chore: bump version to ${new_version} [skip ci]"
           git push --follow-tags
-

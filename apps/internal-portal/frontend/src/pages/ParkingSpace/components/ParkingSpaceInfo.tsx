@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import currency from 'currency.js'
 
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
 import { printVacantFrom } from '../../../common/formattingUtils'
@@ -26,7 +27,6 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           display: 'flex',
           justifyContent: 'space-between',
           gap: '4rem',
-          height: '21rem',
           '@media (max-width: 62.5rem)': {
             flexDirection: 'column',
             gap: '2rem',
@@ -100,24 +100,52 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               )}/mån`}</Typography>
             </Box>
           </Box>
+          {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
+            <Box display="flex" justifyContent="space-between" flex="1">
+              <Typography>Hyra inkl. moms *</Typography>
+              <Box>
+                <Typography fontWeight="bold">{`${numberFormatter.format(
+                  currency(
+                    parkingSpaceListing.rentalObject.monthlyRent
+                  ).multiply(1.25).value
+                )}/mån`}</Typography>
+              </Box>
+            </Box>
+          )}
           <Box display="flex" justifyContent="space-between" flex="1">
-            <Typography>Sökande</Typography>
+            <Typography>Uthyrningsmetod</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {parkingSpaceListing.applicants?.length ?? 0}
+                {parkingSpaceListing.rentalRule === 'NON_SCORED'
+                  ? 'Poängfri'
+                  : 'Intern'}
               </Typography>
             </Box>
           </Box>
-          <Box display="flex" justifyContent="space-between" flex="1">
-            <Typography>Datum tilldelas</Typography>
-            <Box>
-              <Typography fontWeight="bold">
-                {dateFormatter.format(
-                  new Date(parkingSpaceListing.publishedTo)
-                )}
-              </Typography>
-            </Box>
-          </Box>
+          {parkingSpaceListing.rentalRule === 'SCORED' && (
+            <>
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography>Sökande</Typography>
+                <Box>
+                  <Typography fontWeight="bold">
+                    {parkingSpaceListing.applicants?.length ?? 0}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography>Datum tilldelas</Typography>
+                <Box>
+                  <Typography fontWeight="bold">
+                    {parkingSpaceListing.publishedTo
+                      ? dateFormatter.format(
+                          new Date(parkingSpaceListing.publishedTo)
+                        )
+                      : '-'}
+                  </Typography>
+                </Box>
+              </Box>
+            </>
+          )}
           <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Ledig från och med</Typography>
             <Box>
@@ -129,12 +157,25 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               </Typography>
             </Box>
           </Box>
+          {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
+            <>
+              <Box height="50px" />
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography fontStyle={'italic'}>
+                  * moms på bilplatser betalas för hyresgäster som saknar bostad
+                  i området
+                </Typography>
+              </Box>
+            </>
+          )}
         </Box>
+
         <Box
           flex="1"
           sx={{
             width: '100%',
             cursor: 'pointer',
+            maxHeight: '21rem',
           }}
           onClick={() =>
             window.open(

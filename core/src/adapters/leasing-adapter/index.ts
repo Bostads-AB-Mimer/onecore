@@ -17,6 +17,7 @@ import { z } from 'zod'
 import { AdapterResult } from './../types'
 import config from '../../common/config'
 import { getListingByListingId } from './listings'
+import { getParkingSpaceByCode } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -159,6 +160,8 @@ const getTenantByContactCode = async (
     const res = await axios.get(
       `${tenantsLeasesServiceUrl}/contacts/${contactCode}/tenant`
     )
+
+    if (res.status === 404) return { ok: false, err: 'contact-not-tenant' }
 
     if (!res.data.content) {
       return { ok: false, err: 'unknown' }
@@ -306,6 +309,19 @@ const getApplicantsAndListingByContactCode = async (
     for (const applicant of applicantsResponse) {
       const listingResponse = await getListingByListingId(applicant.listingId)
       if (listingResponse) {
+        //also get rental object for the listing
+        const rentalObjectResponse = await getParkingSpaceByCode(
+          listingResponse.rentalObjectCode
+        )
+        if (rentalObjectResponse.ok) {
+          listingResponse.rentalObject = rentalObjectResponse.data
+        } else {
+          logger.info(
+            { rentalObjectCode: listingResponse.rentalObjectCode },
+            'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
+          )
+        }
+
         applicantsAndListings.push({ applicant, listing: listingResponse })
       }
     }
@@ -623,11 +639,11 @@ export {
 export {
   applyForListing,
   createNewListing,
+  createMultipleListings,
   deleteListing,
   getListingByListingId,
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
-  syncInternalParkingSpacesFromXpand,
   updateListingStatus,
   getExpiredListingsWithNoOffers,
   getListings,

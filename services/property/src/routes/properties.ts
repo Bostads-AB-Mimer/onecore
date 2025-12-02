@@ -11,6 +11,7 @@ import { etagMiddleware } from '../middleware/etag'
 import {
   getProperties,
   getPropertyById,
+  getPropertyValuesByPropertyObjectId,
   searchProperties,
 } from '../adapters/property-adapter'
 import {
@@ -236,8 +237,19 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Fetch property values such as BOA etc.
+      const propertyValues =
+        (await getPropertyValuesByPropertyObjectId(
+          property.propertyObjectId
+        )) || []
+
+      const mappedResponse = {
+        ...property,
+        propertyValues,
+      }
+
       ctx.body = {
-        content: PropertyDetailsSchema.parse(property),
+        content: PropertyDetailsSchema.parse(mappedResponse),
         ...metadata,
       }
     } catch (err) {

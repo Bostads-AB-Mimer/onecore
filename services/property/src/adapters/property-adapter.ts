@@ -22,6 +22,20 @@ const getPropertyById = async (
         id: id,
       },
       include: {
+        district: {
+          select: {
+            id: true,
+            code: true,
+            caption: true,
+          },
+        },
+        marketArea: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         propertyObject: {
           select: {
             id: true,
@@ -46,6 +60,44 @@ const getPropertyById = async (
     return trimStrings(result)
   } catch (err) {
     logger.error({ err }, 'property-adapter.getPropertyById')
+    throw err
+  }
+}
+
+const getPropertyValuesByPropertyObjectId = async (
+  propertyObjectId: string
+) => {
+  try {
+    const result = await prisma.quantityValue
+      .findMany({
+        select: {
+          value: true,
+          quantityType: {
+            select: {
+              name: true,
+              unitId: true,
+            },
+          },
+        },
+        where: {
+          code: propertyObjectId,
+        },
+      })
+      .then(trimStrings)
+      .then((values) =>
+        values.map((item) => ({
+          value: item.value,
+          unitId: item.quantityType.unitId,
+          name: item.quantityType.name,
+        }))
+      )
+
+    return result
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-adapter.getPropertyValuesByPropertyObjectId'
+    )
     throw err
   }
 }
@@ -114,4 +166,9 @@ const searchProperties = (
   }
 }
 
-export { getPropertyById, getProperties, searchProperties }
+export {
+  getPropertyById,
+  getProperties,
+  getPropertyValuesByPropertyObjectId,
+  searchProperties,
+}

@@ -58,6 +58,10 @@ const schemas = {
     name: 'ResidenceByRentalId',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.ResidenceSummarySchema, {
+    name: 'ResidenceSummary',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(types.GetResidenceByRentalIdResponseSchema, {
     name: 'GetResidenceByRentalIdResponse',
     target: 'openApi3',
@@ -72,6 +76,14 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(types.GetFacilityByRentalIdResponseSchema, {
     name: 'GetFacilityByRentalIdResponse',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.GetFacilitiesByPropertyCodeResponseSchema, {
+    name: 'GetFacilitiesByPropertyCodeResponse',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.GetFacilitiesByBuildingCodeResponseSchema, {
+    name: 'GetFacilitiesByBuildingCodeResponse',
     target: 'openApi3',
   }).definitions,
 }

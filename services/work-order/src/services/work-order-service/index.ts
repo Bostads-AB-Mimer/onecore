@@ -193,6 +193,154 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /workOrders/propertyId/{propertyId}:
+   *   get:
+   *     summary: Get work orders by property id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided property id.
+   *     parameters:
+   *       - in: path
+   *         name: propertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The property id to filter work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/propertyId/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const workOrders = await odooAdapter.getWorkOrdersByPropertyId(
+        ctx.params.propertyId
+      )
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrders: workOrders satisfies WorkOrder[],
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/buildingId/{buildingId}:
+   *   get:
+   *     summary: Get work orders by building id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided building id.
+   *     parameters:
+   *       - in: path
+   *         name: buildingId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building id to filter work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/buildingId/:buildingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const workOrders = await odooAdapter.getWorkOrdersByBuildingId(
+        ctx.params.buildingId
+      )
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrders: workOrders satisfies WorkOrder[],
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /workOrders/xpand/residenceId/{residenceId}:
    *   get:
    *     summary: Get work orders by residence id from xpand
@@ -275,6 +423,246 @@ export const routes = (router: KoaRouter) => {
     try {
       const xpandWorkOrders = await xpandAdapter.getWorkOrdersByResidenceId(
         ctx.params.residenceId,
+        {
+          skip,
+          limit,
+          sortAscending,
+        }
+      )
+
+      if (!xpandWorkOrders.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch work orders from Xpand: ${xpandWorkOrders.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrders: xpandWorkOrders.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error fetching work orders from Xpand')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/xpand/propertyId/{propertyId}:
+   *   get:
+   *     summary: Get work orders by property id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders from xpand based on the provided property id.
+   *     parameters:
+   *       - in: path
+   *         name: propertyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The property id to filter work orders.
+   *       - in: query
+   *         name: skip
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to skip.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to fetch.
+   *       - in: query
+   *         name: sortAscending
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Whether to sort the work orders by ascending creation date.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/xpand/propertyId/:propertyId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedQuery = GetWorkOrdersFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedQuery.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: parsedQuery.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedQuery.data
+
+    try {
+      const xpandWorkOrders = await xpandAdapter.getWorkOrdersByPropertyId(
+        ctx.params.propertyId,
+        {
+          skip,
+          limit,
+          sortAscending,
+        }
+      )
+
+      if (!xpandWorkOrders.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch work orders from Xpand: ${xpandWorkOrders.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrders: xpandWorkOrders.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error fetching work orders from Xpand')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/xpand/buildingId/{buildingId}:
+   *   get:
+   *     summary: Get work orders by building id from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders from xpand based on the provided building id.
+   *     parameters:
+   *       - in: path
+   *         name: buildingId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The building id to filter work orders.
+   *       - in: query
+   *         name: skip
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to skip.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to fetch.
+   *       - in: query
+   *         name: sortAscending
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Whether to sort the work orders by ascending creation date.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/xpand/buildingId/:buildingId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedQuery = GetWorkOrdersFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedQuery.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: parsedQuery.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedQuery.data
+
+    try {
+      const xpandWorkOrders = await xpandAdapter.getWorkOrdersByBuildingId(
+        ctx.params.buildingId,
         {
           skip,
           limit,
