@@ -81,7 +81,7 @@ pnpm run dev:init
 
 #### Run generate:static
 
-This will generate required code that is not subject to version control.
+This will generate required code that is not subject to version control, like Prisma schemas.
 
 ```sh
 pnpm run generate:static
