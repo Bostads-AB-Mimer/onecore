@@ -63,9 +63,7 @@ export const getTenantByContactCode = async (
       tenantResponse.data
     )
     if (!parsedResponse.success) {
-      throw new Error(
-        `Failed to parse Tenfast response: ${parsedResponse.error}`
-      )
+      return { ok: false, err: 'schema-error' }
     }
 
     return {
@@ -94,9 +92,7 @@ export const getInvoicesForTenant = async (
     )
 
     if (!parsedResponse.success) {
-      throw new Error(
-        `Failed to parse Tenfast response: ${parsedResponse.error}`
-      )
+      return { ok: false, err: 'schema-error' }
     }
 
     return { ok: true, data: parsedResponse.data.map(transformToInvoice) }
@@ -133,9 +129,7 @@ export const getInvoiceByOcr = async (
       result.data
     )
     if (!parsedResponse.success) {
-      throw new Error(
-        `Failed to parse Tenfast response: ${parsedResponse.error}`
-      )
+      return { ok: false, err: 'schema-error' }
     }
 
     return {
@@ -163,9 +157,7 @@ export const getInvoiceArticle = async (
 
     const parsedResponse = TenfastRentArticleSchema.safeParse(result.data)
     if (!parsedResponse.success) {
-      throw new Error(
-        `Failed to parse Tenfast response: ${parsedResponse.error}`
-      )
+      return { ok: false, err: 'schema-error' }
     }
 
     return { ok: true, data: parsedResponse.data }
