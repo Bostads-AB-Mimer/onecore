@@ -186,6 +186,16 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.AnalyzeComponentImageRequestSchema, {
+    name: 'AnalyzeComponentImageRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.AIComponentAnalysisSchema, {
+    name: 'AIComponentAnalysis',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

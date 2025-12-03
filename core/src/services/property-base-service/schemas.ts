@@ -916,3 +916,33 @@ export const DocumentWithUrlSchema = z.object({
 })
 
 export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
+
+// AI Component Analysis schemas
+export const AnalyzeComponentImageRequestSchema = z.object({
+  image: z.string().max(10 * 1024 * 1024), // 10MB max base64 string
+  additionalImage: z
+    .string()
+    .max(10 * 1024 * 1024)
+    .optional(),
+})
+
+export const AIComponentAnalysisSchema = z.object({
+  componentType: z.string().nullable(),
+  componentSubtype: z.string().nullable(),
+  manufacturer: z.string().nullable(),
+  model: z.string().nullable(),
+  serialNumber: z.string().nullable(),
+  estimatedAge: z.string().nullable(),
+  condition: z.string().nullable(),
+  specifications: z.string().nullable(),
+  dimensions: z.string().nullable(),
+  warrantyMonths: z.number().nullable(),
+  ncsCode: z.string().nullable(),
+  additionalInformation: z.string().nullable(),
+  confidence: z.number(),
+})
+
+export type AnalyzeComponentImageRequest = z.infer<
+  typeof AnalyzeComponentImageRequestSchema
+>
+export type AIComponentAnalysis = z.infer<typeof AIComponentAnalysisSchema>
