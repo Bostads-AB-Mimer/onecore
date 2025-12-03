@@ -3,7 +3,7 @@ import {
   RentInvoice,
   RentalProperty,
   RentInvoiceRow,
-} from '@src/services/debt-collection-service/types'
+} from '@src/services/common/types'
 
 // Mock data factories
 export const createMockContact = (
