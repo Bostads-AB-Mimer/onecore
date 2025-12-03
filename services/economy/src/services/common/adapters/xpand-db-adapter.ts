@@ -256,9 +256,7 @@ export const getInvoiceRows = async (
 
 export const getInvoicesForReport = async (
   companyId: string,
-  invoiceNumbers: string[],
-  offset: number,
-  size: number
+  invoiceNumbers: string[]
 ): Promise<Invoice[]> => {
   if (invoiceNumbers.length === 0) {
     return []
@@ -305,8 +303,6 @@ export const getInvoicesForReport = async (
         })
     })
     .orderBy('krfkh.expdate', 'desc')
-    .offset(offset)
-    // .limit(size)
     .then(trimStrings)
 
   logger.info(
