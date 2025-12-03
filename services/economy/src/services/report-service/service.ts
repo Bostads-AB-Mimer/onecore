@@ -1,14 +1,14 @@
 import {
   getInvoicePaymentEventsPaginated,
   getInvoicesWithMatchIdsPaginated,
-} from '../invoice-service/adapters/xledger-adapter'
+} from '../common/adapters/xledger-adapter'
 import {
   getInvoiceRows,
   getInvoicesForReport,
 } from '../common/adapters/xpand-db-adapter'
 import { InvoicePaymentSummary } from './types'
 
-export const getUnpaidShit = async (
+export const getInvoicePaymentSummaries = async (
   from: Date,
   to: Date,
   offset: number,

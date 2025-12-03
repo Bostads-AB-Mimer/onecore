@@ -3,7 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
-import * as xledgerAdapter from '@src/services/invoice-service/adapters/xledger-adapter'
+import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
 import { routes } from '@src/services/invoice-service'
 

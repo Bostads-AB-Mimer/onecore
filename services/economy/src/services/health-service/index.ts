@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { SystemHealth } from '@onecore/utilities'
 import config from '../../common/config'
-import { healthCheck as xledgerHealthCheck } from '../invoice-service/adapters/xledger-adapter'
+import { healthCheck as xledgerHealthCheck } from '../common/adapters/xledger-adapter'
 
 const healthChecks: Map<string, SystemHealth> = new Map()
 
