@@ -1,4 +1,4 @@
-import { EnrichedXledgerBalanceCorrection } from '../types'
+import { EnrichedXledgerBalanceCorrection } from '../../common/types'
 import {
   formatNumber,
   getDateString,
