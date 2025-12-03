@@ -90,6 +90,11 @@ export const routes = (router: KoaRouter) => {
     schemas.UpdateComponentInstallationSchema
   )
   registerSchema('DocumentWithUrl', schemas.DocumentWithUrlSchema)
+  registerSchema(
+    'AnalyzeComponentImageRequest',
+    schemas.AnalyzeComponentImageRequestSchema
+  )
+  registerSchema('AIComponentAnalysis', schemas.AIComponentAnalysisSchema)
 
   /**
    * @swagger
@@ -4264,6 +4269,69 @@ export const routes = (router: KoaRouter) => {
       ctx.body = result.data
     } catch (error) {
       logger.error({ error, metadata }, 'Failed to upload document')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/analyze-image:
+   *   post:
+   *     summary: Analyze component image(s) using AI
+   *     description: Analyzes one or two images of Swedish appliances (vitvaror) using AI to extract component information. Can accept a typeplate/label image, product photo, or both for improved accuracy.
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AnalyzeComponentImageRequest'
+   *     responses:
+   *       200:
+   *         description: Component analysis successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/AIComponentAnalysis'
+   *       400:
+   *         description: Invalid request (e.g., image too large, missing required fields)
+   *       500:
+   *         description: AI analysis failed
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/components/analyze-image', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.AnalyzeComponentImageRequestSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.analyzeComponentImage(body.data)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.AIComponentAnalysis,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

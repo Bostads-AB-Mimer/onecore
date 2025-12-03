@@ -3927,6 +3927,37 @@ export interface paths {
       };
     };
   };
+  "/components/analyze-image": {
+    /**
+     * Analyze component image(s) using AI
+     * @description Analyzes one or two images of Swedish appliances (vitvaror) using AI to extract component information. Can accept a typeplate/label image, product photo, or both for improved accuracy.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["AnalyzeComponentImageRequest"];
+        };
+      };
+      responses: {
+        /** @description Component analysis successful */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["AIComponentAnalysis"];
+            };
+          };
+        };
+        /** @description Invalid request (e.g., image too large, missing required fields) */
+        400: {
+          content: never;
+        };
+        /** @description AI analysis failed */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -4838,6 +4869,25 @@ export interface components {
       deinstallationDate?: string;
       orderNumber?: string;
       cost?: number;
+    };
+    AnalyzeComponentImageRequest: {
+      image: string;
+      additionalImage?: string;
+    };
+    AIComponentAnalysis: {
+      componentType: string | null;
+      componentSubtype: string | null;
+      manufacturer: string | null;
+      model: string | null;
+      serialNumber: string | null;
+      estimatedAge: string | null;
+      condition: string | null;
+      specifications: string | null;
+      dimensions: string | null;
+      warrantyMonths: number | null;
+      ncsCode: string | null;
+      additionalInformation: string | null;
+      confidence: number;
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
