@@ -1491,6 +1491,69 @@ export interface paths {
       };
     };
   };
+  "/components/analyze-image": {
+    /**
+     * Analyze component image(s) using AI
+     * @description MVP - Analyzes one or two images of Swedish appliances (vitvaror) using AI to extract component information. Can accept a typeplate/label image, product photo, or both for improved accuracy.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded primary image (max 10MB) - can be typeplate or product photo */
+            image: string;
+            /** @description Optional additional base64 encoded image (max 10MB) - combine typeplate + product photo for best results */
+            additionalImage?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Component analysis successful */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Main component category (e.g., Diskmaskin, Kylskåp) */
+                componentType?: string | null;
+                /** @description More specific subtype (e.g., 60cm integrerad diskmaskin) */
+                componentSubtype?: string | null;
+                /** @description Brand/manufacturer name */
+                manufacturer?: string | null;
+                /** @description Model name/number */
+                model?: string | null;
+                /** @description Serial number from nameplate */
+                serialNumber?: string | null;
+                /** @description Estimated age as text (e.g., 5-10 år) */
+                estimatedAge?: string | null;
+                /** @description Visual condition assessment (e.g., Gott skick) */
+                condition?: string | null;
+                /** @description Technical specifications from label */
+                specifications?: string | null;
+                /** @description Physical dimensions if visible (e.g., 60x60x85 cm) */
+                dimensions?: string | null;
+                /** @description Warranty duration in months if visible */
+                warrantyMonths?: number | null;
+                /** @description NCS color code if visible (format XXX or XXX.XXX) */
+                ncsCode?: string | null;
+                /** @description Any other relevant visible information */
+                additionalInformation?: string | null;
+                /** @description AI confidence score (0.0-1.0) */
+                confidence?: number;
+              };
+            };
+          };
+        };
+        /** @description Invalid request (e.g., image too large) */
+        400: {
+          content: never;
+        };
+        /** @description AI analysis failed */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -2517,6 +2580,25 @@ export interface components {
       deinstallationDate?: string;
       orderNumber?: string;
       cost?: number;
+    };
+    AnalyzeComponentImageRequest: {
+      image: string;
+      additionalImage?: string;
+    };
+    AIComponentAnalysis: {
+      componentType: string | null;
+      componentSubtype: string | null;
+      manufacturer: string | null;
+      model: string | null;
+      serialNumber: string | null;
+      estimatedAge: string | null;
+      condition: string | null;
+      specifications: string | null;
+      dimensions: string | null;
+      warrantyMonths: number | null;
+      ncsCode: string | null;
+      additionalInformation: string | null;
+      confidence: number;
     };
   };
   responses: never;
