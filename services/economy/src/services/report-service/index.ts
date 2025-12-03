@@ -1,14 +1,13 @@
 import KoaRouter from '@koa/router'
 import {
   generateRouteMetadata,
-  logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
-import { getUnpaidShit } from './service'
+import { getInvoicePaymentSummaries } from './service'
 
 export const routes = (router: KoaRouter) => {
-  router.get('(.*)/report/unpaid', async (ctx) => {
+  router.get('(.*)/report/invoice-payment-summaries', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = economy.GetUnpaidInvoicesQueryParams.safeParse(
       ctx.query
@@ -20,10 +19,15 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const { from, to, offset = 0, size = 50 } = queryParams.data
-      const bajskorv = await getUnpaidShit(from, to, offset, size)
+      const invoicePaymentSummaries = await getInvoicePaymentSummaries(
+        from,
+        to,
+        offset,
+        size
+      )
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(bajskorv, metadata)
+      ctx.body = makeSuccessResponseBody(invoicePaymentSummaries, metadata)
     } catch (error: any) {
       console.log('error: ', error)
       ctx.status = 500
