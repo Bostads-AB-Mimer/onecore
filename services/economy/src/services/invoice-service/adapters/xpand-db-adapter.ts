@@ -155,7 +155,6 @@ const getRentalRowSpecificRule = async (
     .andWhere('repst.name', 'Hyresrad')
     .andWhere('hyobj.hyobjben', row.contractCode)
     .andWhere('cmart.code', row.rentArticle)
-    .andWhere('hyrad.avitext', row.invoiceRowText)
 
   let rowIndex = 0
 

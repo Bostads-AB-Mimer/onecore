@@ -3558,7 +3558,6 @@ export interface components {
     };
     Staircase: {
       id: string;
-      buildingCode: string;
       code: string;
       name: string | null;
       features: {
