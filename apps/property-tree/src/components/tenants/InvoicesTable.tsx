@@ -96,6 +96,40 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     console.log('Opening PDF for invoice:', invoiceNumber)
   }
 
+  // Check if a row is a contract header (rowType 3)
+  const isContractHeader = (row: any): boolean => {
+    return row?.rowType === 3
+  }
+
+  // Calculate subtotals for rows under each header
+  const calculateSubtotals = (rows: any[]) => {
+    const subtotals: Record<
+      number,
+      { amount: number; vat: number; total: number }
+    > = {}
+
+    for (let i = 0; i < rows.length; i++) {
+      if (isContractHeader(rows[i])) {
+        let amount = 0
+        let vat = 0
+        let total = 0
+
+        // Sum up all rows until the next header or end
+        for (let j = i + 1; j < rows.length; j++) {
+          if (isContractHeader(rows[j])) break
+
+          amount += rows[j].amount || 0
+          vat += rows[j].vat || 0
+          total += rows[j].totalAmount || 0
+        }
+
+        subtotals[i] = { amount, vat, total }
+      }
+    }
+
+    return subtotals
+  }
+
   if (!invoices || invoices.length === 0) {
     return <div>Inga fakturor hittades.</div>
   }
@@ -199,33 +233,65 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                       </div>
                     )}
                   <div className="space-y-2">
-                    {invoice.invoiceRows.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-background rounded-lg p-3 text-sm"
-                      >
-                        <div className="font-medium mb-1">
-                          {item.invoiceRowText}
-                        </div>
-                        {item.rentArticle && (
-                          <div className="text-muted-foreground text-xs mb-1">
-                            {item.rentArticle}
+                    {(() => {
+                      const subtotals = calculateSubtotals(invoice.invoiceRows)
+                      return invoice.invoiceRows.map((item, idx) => {
+                        const isHeader = isContractHeader(item)
+
+                        if (isHeader) {
+                          const subtotal = subtotals[idx]
+                          return (
+                            <div key={idx}>
+                              <div className="bg-muted/70 rounded-lg p-3 font-semibold text-sm">
+                                {item.invoiceRowText}
+                              </div>
+                              {subtotal && (
+                                <div className="bg-muted/30 rounded-lg p-3 text-sm mt-1">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                      Summa:
+                                    </span>
+                                    <span className="font-medium">
+                                      {formatCurrency(subtotal.total)}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className="bg-background rounded-lg p-3 text-sm"
+                          >
+                            <div className="font-medium mb-1">
+                              {item.invoiceRowText}
+                            </div>
+                            {item.rentArticle && (
+                              <div className="text-muted-foreground text-xs mb-1">
+                                {item.rentArticle}
+                              </div>
+                            )}
+                            <div className="flex justify-between mt-2">
+                              <span className="text-muted-foreground">
+                                Belopp:
+                              </span>
+                              <span>{formatCurrency(item.amount)}</span>
+                            </div>
+                            {item.printGroup && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">
+                                  Grupp:
+                                </span>
+                                <span>{item.printGroup}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div className="flex justify-between mt-2">
-                          <span className="text-muted-foreground">Belopp:</span>
-                          <span>{formatCurrency(item.amount)}</span>
-                        </div>
-                        {item.printGroup && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Grupp:
-                            </span>
-                            <span>{item.printGroup}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        )
+                      })
+                    })()}
                   </div>
                 </div>
               )}
@@ -376,31 +442,51 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                               </tr>
                             </thead>
                             <tbody>
-                              {invoice.invoiceRows.map((item, idx) => (
-                                <tr
-                                  key={idx}
-                                  className="border-b last:border-0"
-                                >
-                                  <td className="p-2 text-sm">
-                                    {formatCurrency(item.amount)}
-                                  </td>
-                                  <td className="p-2 text-sm">
-                                    {formatCurrency(item.vat)}
-                                  </td>
-                                  <td className="p-2 text-sm">
-                                    {formatCurrency(item.totalAmount)}
-                                  </td>
-                                  <td className="p-2 text-sm">
-                                    {item.rentArticle}
-                                  </td>
-                                  <td className="p-2 text-sm">
-                                    {item.invoiceRowText}
-                                  </td>
-                                  <td className="p-2 text-sm">
-                                    {item.printGroup}
-                                  </td>
-                                </tr>
-                              ))}
+                              {(() => {
+                                const subtotals = calculateSubtotals(
+                                  invoice.invoiceRows
+                                )
+                                return invoice.invoiceRows.map((item, idx) => {
+                                  const isHeader = isContractHeader(item)
+                                  const subtotal = isHeader
+                                    ? subtotals[idx]
+                                    : null
+
+                                  return (
+                                    <tr
+                                      key={idx}
+                                      className={`border-b last:border-0 ${isHeader ? 'bg-slate-100/70 font-semibold' : ''}`}
+                                    >
+                                      <td className="p-2 text-sm">
+                                        {isHeader && subtotal
+                                          ? formatCurrency(subtotal.amount)
+                                          : formatCurrency(item.amount)}
+                                      </td>
+                                      <td className="p-2 text-sm">
+                                        {isHeader && subtotal
+                                          ? formatCurrency(subtotal.vat)
+                                          : formatCurrency(item.vat)}
+                                      </td>
+                                      <td className="p-2 text-sm">
+                                        {isHeader && subtotal
+                                          ? formatCurrency(subtotal.total)
+                                          : formatCurrency(item.totalAmount)}
+                                      </td>
+                                      <td className="p-2 text-sm">
+                                        {isHeader
+                                          ? 'Summa objekt:'
+                                          : item.rentArticle}
+                                      </td>
+                                      <td className="p-2 text-sm">
+                                        {item.invoiceRowText}
+                                      </td>
+                                      <td className="p-2 text-sm">
+                                        {item.printGroup}
+                                      </td>
+                                    </tr>
+                                  )
+                                })
+                              })()}
                             </tbody>
                           </table>
                         </div>
