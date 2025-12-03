@@ -716,18 +716,17 @@ export const getInvoiceRows = async (
   return convertedInvoiceRows
 }
 
-export const getInvoicesWithFilter = async (
+export const getInvoicesForReport = async (
   companyId: string,
   invoiceNumbers: string[],
   offset: number,
-  size: number,
-  filter?: { homeInsurance: boolean }
+  size: number
 ): Promise<Invoice[]> => {
   if (invoiceNumbers.length === 0) {
     return []
   }
 
-  const query = db('krfkh')
+  const invoices = await db('krfkh')
     .select(
       'krfkh.invoice AS invoiceId',
       'krfkh.reference AS leaseId',
@@ -756,12 +755,8 @@ export const getInvoicesWithFilter = async (
     .where(function () {
       this.where('krfkh.type', 1).orWhere('krfkh.type', 2)
     })
-    .orderBy('krfkh.invdate', 'desc')
-    .offset(offset)
-    .limit(size)
-
-  if (filter?.homeInsurance) {
-    query.whereExists(function () {
+    .where('krfkh.expdate', '<', db.fn.now())
+    .whereExists(function () {
       this.select(1)
         .from('krfkr')
         .whereRaw('krfkr.keykrfkh = krfkh.keykrfkh')
@@ -771,9 +766,10 @@ export const getInvoicesWithFilter = async (
             .orWhere('krfkr.code', 'like', 'VHK%')
         })
     })
-  }
-
-  const invoices = await query.then(trimStrings)
+    .orderBy('krfkh.expdate', 'desc')
+    .offset(offset)
+    // .limit(size)
+    .then(trimStrings)
 
   logger.info(
     {
