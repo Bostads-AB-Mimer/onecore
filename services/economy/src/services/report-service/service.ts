@@ -2,8 +2,10 @@ import {
   getInvoicePaymentEventsPaginated,
   getInvoicesWithMatchIdsPaginated,
 } from '../invoice-service/adapters/xledger-adapter'
-import { getInvoiceRows } from '../common/adapters/xpand-db-adapter'
-import { getInvoicesForReport } from '../invoice-service/adapters/xpand-db-adapter'
+import {
+  getInvoiceRows,
+  getInvoicesForReport,
+} from '../common/adapters/xpand-db-adapter'
 import { InvoicePaymentSummary } from './types'
 
 export const getUnpaidShit = async (
