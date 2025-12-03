@@ -367,7 +367,7 @@ export async function getInvoicePaymentEvents(
     )
 }
 
-export async function getInvoicePaymentEventsPaginated(
+export async function getAllInvoicePaymentEvents(
   invoiceMatchIds: number[],
   after?: string
 ): Promise<InvoicePaymentEvent[]> {
@@ -424,7 +424,7 @@ export async function getInvoicePaymentEventsPaginated(
 
   if (result.data.arTransactions.pageInfo.hasNextPage) {
     const lastEdge = result.data.arTransactions.edges.at(-1)
-    const nextEvents = await getInvoicePaymentEventsPaginated(
+    const nextEvents = await getAllInvoicePaymentEvents(
       invoiceMatchIds,
       lastEdge.cursor
     )
@@ -518,7 +518,7 @@ export const getInvoices = async (from?: Date, to?: Date) => {
   return result.data?.arTransactions?.edges.map(transformToInvoice) ?? []
 }
 
-export const getInvoicesWithMatchIdsPaginated = async (
+export const getAllInvoicesWithMatchIds = async (
   from: Date,
   to: Date,
   after?: string
@@ -570,7 +570,7 @@ export const getInvoicesWithMatchIdsPaginated = async (
 
   if (result.data.arTransactions.pageInfo.hasNextPage) {
     const lastEdge = result.data.arTransactions.edges.at(-1)
-    const nextInvoices = await getInvoicesWithMatchIdsPaginated(
+    const nextInvoices = await getAllInvoicesWithMatchIds(
       from,
       to,
       lastEdge.cursor
