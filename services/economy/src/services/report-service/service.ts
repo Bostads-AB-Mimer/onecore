@@ -8,12 +8,7 @@ import {
 } from '../common/adapters/xpand-db-adapter'
 import { InvoicePaymentSummary } from './types'
 
-export const getInvoicePaymentSummaries = async (
-  from: Date,
-  to: Date,
-  offset: number,
-  size: number
-) => {
+export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
   const xledgerInvoices = await getAllInvoicesWithMatchIds(from, to)
 
   const fullyOrPartiallyPaidInvoices = xledgerInvoices.filter(
@@ -38,9 +33,7 @@ export const getInvoicePaymentSummaries = async (
 
   const filteredInvoices = await getInvoicesForReport(
     '001',
-    invoicesWithPaymentEvents.map((i) => i.invoiceId),
-    offset,
-    size
+    invoicesWithPaymentEvents.map((i) => i.invoiceId)
   )
 
   const invoiceRows = await getInvoiceRows(

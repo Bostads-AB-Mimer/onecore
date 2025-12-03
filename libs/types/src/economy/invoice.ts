@@ -7,6 +7,4 @@ export const GetInvoicesByContactCodeQueryParams = z
 export const GetUnpaidInvoicesQueryParams = z.object({
   from: z.coerce.date(),
   to: z.coerce.date(),
-  offset: z.coerce.number().optional(),
-  size: z.coerce.number().optional(),
 })

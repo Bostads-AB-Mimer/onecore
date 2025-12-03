@@ -18,13 +18,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const { from, to, offset = 0, size = 50 } = queryParams.data
-      const invoicePaymentSummaries = await getInvoicePaymentSummaries(
-        from,
-        to,
-        offset,
-        size
-      )
+      const { from, to } = queryParams.data
+      const invoicePaymentSummaries = await getInvoicePaymentSummaries(from, to)
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(invoicePaymentSummaries, metadata)
