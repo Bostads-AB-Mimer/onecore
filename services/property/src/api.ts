@@ -10,6 +10,7 @@ import { routes as roomsRoutes } from './routes/rooms'
 import { routes as companiesRoutes } from './routes/companies'
 import { routes as maintenanceUnitsRoutes } from './routes/maintenance-units'
 import { routes as facilitiesRoutes } from './routes/facilities'
+import { routes as aiAnalysisRoutes } from './routes/ai-analysis'
 
 import { routes as healthRoutes } from './routes/health'
 
@@ -25,6 +26,7 @@ roomsRoutes(router)
 companiesRoutes(router)
 maintenanceUnitsRoutes(router)
 facilitiesRoutes(router)
+aiAnalysisRoutes(router)
 healthRoutes(router)
 
 export default router

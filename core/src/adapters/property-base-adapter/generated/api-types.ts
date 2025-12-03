@@ -5,6 +5,23 @@
 
 
 export interface paths {
+  "/component-categories": {
+    /** Get all component categories */
+    get: {
+      parameters: {
+        query?: {
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component categories */
+        200: {
+          content: never;
+        };
+      };
+    };
+  };
   "/component-types": {
     /** Get all component types */
     get: {
@@ -571,6 +588,188 @@ export interface paths {
       };
       responses: {
         /** @description Component installation deleted */
+        204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-models/{id}/upload": {
+    /** Upload a document to a component model */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /**
+             * Format: binary
+             * @description PDF document file (max 50MB)
+             */
+            file: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModelDocument"];
+            };
+          };
+        };
+        /** @description Invalid file type or size */
+        400: {
+          content: never;
+        };
+        /** @description Upload failed */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-models/{id}/documents": {
+    /** Get all documents for a component model with presigned URLs */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description List of documents with download URLs */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                documents?: components["schemas"]["FileMetadataWithUrl"][];
+                count?: number;
+              };
+            };
+          };
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+        /** @description Failed to retrieve documents */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-models/{id}/documents/{fileId}": {
+    /** Delete a document from a component model */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/upload": {
+    /** Upload images to a component */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Optional image caption */
+          caption?: string;
+        };
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /**
+             * Format: binary
+             * @description Image file (JPEG, PNG, or WebP, max 50MB)
+             */
+            file: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Image uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentFile"];
+            };
+          };
+        };
+        /** @description Invalid file type or size */
+        400: {
+          content: never;
+        };
+        /** @description Upload failed */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/files": {
+    /** Get all files for a component with presigned URLs */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description List of files with download URLs */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                files?: components["schemas"]["FileMetadataWithUrl"][];
+                count?: number;
+              };
+            };
+          };
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Failed to retrieve files */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/files/{fileId}": {
+    /** Delete a file from a component */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description File deleted successfully */
         204: {
           content: never;
         };
