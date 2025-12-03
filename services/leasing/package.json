@@ -43,6 +43,7 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui": "^3.52.4",
     "axios": "^1.9.0",
+    "currency.js": "^2.0.4",
     "date-fns": "^4.1.0",
     "dedent": "^1.5.1",
     "dotenv": "^16.4.5",
