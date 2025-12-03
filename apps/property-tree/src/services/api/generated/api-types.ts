@@ -17,103 +17,6 @@ export interface paths {
       responses: {
         /** @description List of component categories */
         200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component category */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category created successfully */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-categories/{id}": {
-    /** Get component category by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-        /** @description Component category not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a component category */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category updated successfully */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-        /** @description Component category not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Delete a component category */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category deleted successfully */
-        204: {
-          content: never;
-        };
-        /** @description Component category not found */
-        404: {
           content: never;
         };
       };
@@ -124,8 +27,6 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter types by category ID */
-          categoryId?: string;
           page?: number;
           limit?: number;
         };
@@ -232,8 +133,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter subtypes by type ID */
-          typeId?: string;
+          componentTypeId?: string;
           page?: number;
           limit?: number;
         };
@@ -340,14 +240,9 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter models by component type ID */
           componentTypeId?: string;
-          /** @description Filter models by subtype ID */
           subtypeId?: string;
-          /** @description Filter models by manufacturer name */
           manufacturer?: string;
-          /** @description Search by model name or manufacturer (case-insensitive) */
-          modelName?: string;
           page?: number;
           limit?: number;
         };
@@ -456,8 +351,6 @@ export interface paths {
         query?: {
           modelId?: string;
           status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-          /** @description Search by serial number (case-insensitive partial match) */
-          serialNumber?: string;
           page?: number;
           limit?: number;
         };
@@ -701,31 +594,23 @@ export interface paths {
       };
     };
   };
-  "/documents/upload": {
-    /**
-     * Upload a document
-     * @description Uploads a document (PDF or image) and attaches it to either a component model or component instance.
-     * Maximum file size is 50MB. Supported formats: PDF, JPEG, PNG, WebP.
-     */
+  "/component-models/{id}/upload": {
+    /** Upload a document to a component model */
     post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
       requestBody: {
         content: {
           "multipart/form-data": {
             /**
              * Format: binary
-             * @description The file to upload (PDF, JPEG, PNG, or WebP)
+             * @description PDF document file (max 50MB)
              */
             file: string;
-            /**
-             * Format: uuid
-             * @description The ID of the component model to attach the document to (required if componentInstanceId not provided)
-             */
-            componentModelId?: string;
-            /**
-             * Format: uuid
-             * @description The ID of the component instance to attach the document to (required if componentModelId not provided)
-             */
-            componentInstanceId?: string;
           };
         };
       };
@@ -733,108 +618,159 @@ export interface paths {
         /** @description Document uploaded successfully */
         200: {
           content: {
-            "application/json": components["schemas"]["Document"];
+            "application/json": {
+              content?: components["schemas"]["ComponentModelDocument"];
+            };
           };
         };
-        /**
-         * @description Bad request - either no file provided, neither componentModelId nor componentInstanceId provided,
-         * file size exceeds limit, or unsupported file type
-         */
+        /** @description Invalid file type or size */
         400: {
           content: never;
         };
-        /** @description Internal server error */
+        /** @description Upload failed */
         500: {
           content: never;
         };
       };
     };
   };
-  "/documents/component-models/{id}": {
-    /**
-     * Get documents for a component model
-     * @description Retrieves all documents attached to a specific component model, including presigned URLs
-     * for accessing the files. URLs are valid for 24 hours.
-     */
+  "/component-models/{id}/documents": {
+    /** Get all documents for a component model with presigned URLs */
     get: {
       parameters: {
         path: {
-          /** @description The component model ID */
+          /** @description Component model ID */
           id: string;
         };
       };
       responses: {
-        /** @description Successfully retrieved documents */
+        /** @description List of documents with download URLs */
         200: {
           content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
+            "application/json": {
+              content?: {
+                documents?: components["schemas"]["FileMetadataWithUrl"][];
+                count?: number;
+              };
+            };
           };
         };
         /** @description Component model not found */
         404: {
           content: never;
         };
-        /** @description Internal server error */
+        /** @description Failed to retrieve documents */
         500: {
           content: never;
         };
       };
     };
   };
-  "/documents/component-instances/{id}": {
-    /**
-     * Get documents for a component instance
-     * @description Retrieves all documents attached to a specific component instance, including presigned URLs
-     * for accessing the files. URLs are valid for 24 hours.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The component instance ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved documents */
-        200: {
-          content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
-          };
-        };
-        /** @description Component instance not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/documents/{id}": {
-    /**
-     * Delete a document
-     * @description Deletes a document and its associated file from storage. This action cannot be undone.
-     */
+  "/component-models/{id}/documents/{fileId}": {
+    /** Delete a document from a component model */
     delete: {
       parameters: {
         path: {
-          /** @description The document ID to delete */
+          id: string;
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/upload": {
+    /** Upload images to a component */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Optional image caption */
+          caption?: string;
+        };
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /**
+             * Format: binary
+             * @description Image file (JPEG, PNG, or WebP, max 50MB)
+             */
+            file: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Image uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentFile"];
+            };
+          };
+        };
+        /** @description Invalid file type or size */
+        400: {
+          content: never;
+        };
+        /** @description Upload failed */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/files": {
+    /** Get all files for a component with presigned URLs */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
           id: string;
         };
       };
       responses: {
-        /** @description Document deleted successfully (no content) */
-        204: {
-          content: never;
+        /** @description List of files with download URLs */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                files?: components["schemas"]["FileMetadataWithUrl"][];
+                count?: number;
+              };
+            };
+          };
         };
-        /** @description Document not found */
+        /** @description Component not found */
         404: {
           content: never;
         };
-        /** @description Internal server error */
+        /** @description Failed to retrieve files */
         500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/files/{fileId}": {
+    /** Delete a file from a component */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description File deleted successfully */
+        204: {
           content: never;
         };
       };
@@ -2193,122 +2129,85 @@ export interface components {
         };
       };
     };
-    ComponentCategory: {
-      /** Format: uuid */
-      id: string;
-      categoryName: string;
-      description: string;
-      createdAt: string;
-      updatedAt: string;
-    };
-    CreateComponentCategoryRequest: {
-      categoryName: string;
-      description: string;
-    };
-    UpdateComponentCategoryRequest: {
-      categoryName?: string;
-      description?: string;
-    };
     ComponentType: {
       /** Format: uuid */
       id: string;
-      typeName: string;
-      /** Format: uuid */
-      categoryId: string;
-      description: string | null;
+      description: string;
+      /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
       updatedAt: string;
-      category?: {
-        /** Format: uuid */
-        id: string;
-        categoryName: string;
-        description: string;
-        createdAt: string;
-        updatedAt: string;
-      };
     };
     ComponentSubtype: {
       /** Format: uuid */
       id: string;
-      subTypeName: string;
       /** Format: uuid */
-      typeId: string;
-      xpandCode: string | null;
-      depreciationPrice: number;
-      technicalLifespan: number;
-      economicLifespan: number;
-      replacementIntervalMonths: number;
-      /** @enum {string} */
-      quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+      componentTypeId: string;
+      description: string;
+      /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
       updatedAt: string;
       componentType?: {
         /** Format: uuid */
         id: string;
-        typeName: string;
-        /** Format: uuid */
-        categoryId: string;
-        description: string | null;
+        description: string;
+        /** Format: date-time */
         createdAt: string;
+        /** Format: date-time */
         updatedAt: string;
-        category?: {
-          /** Format: uuid */
-          id: string;
-          categoryName: string;
-          description: string;
-          createdAt: string;
-          updatedAt: string;
-        };
       };
     };
     ComponentModel: {
       /** Format: uuid */
       id: string;
-      modelName: string;
       /** Format: uuid */
-      componentSubtypeId: string;
+      componentTypeId: string;
+      /** Format: uuid */
+      subtypeId: string;
       currentPrice: number;
-      currentInstallPrice: number;
       warrantyMonths: number;
       manufacturer: string;
+      technicalLifespan: number;
       technicalSpecification: string | null;
       installationInstructions: string | null;
+      economicLifespan: number;
       dimensions: string | null;
-      coclassCode: string | null;
+      replacementIntervalMonths: number;
+      /** @enum {string} */
+      quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+      coclassCode: string;
+      /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
       updatedAt: string;
+      componentType?: {
+        /** Format: uuid */
+        id: string;
+        description: string;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+      };
       subtype?: {
         /** Format: uuid */
         id: string;
-        subTypeName: string;
         /** Format: uuid */
-        typeId: string;
-        xpandCode: string | null;
-        depreciationPrice: number;
-        technicalLifespan: number;
-        economicLifespan: number;
-        replacementIntervalMonths: number;
-        /** @enum {string} */
-        quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+        componentTypeId: string;
+        description: string;
+        /** Format: date-time */
         createdAt: string;
+        /** Format: date-time */
         updatedAt: string;
         componentType?: {
           /** Format: uuid */
           id: string;
-          typeName: string;
-          /** Format: uuid */
-          categoryId: string;
-          description: string | null;
+          description: string;
+          /** Format: date-time */
           createdAt: string;
+          /** Format: date-time */
           updatedAt: string;
-          category?: {
-            /** Format: uuid */
-            id: string;
-            categoryName: string;
-            description: string;
-            createdAt: string;
-            updatedAt: string;
-          };
         };
       };
     };
@@ -2318,67 +2217,69 @@ export interface components {
       /** Format: uuid */
       modelId: string;
       serialNumber: string;
-      specifications?: string | null;
-      additionalInformation?: string | null;
+      specifications: string | null;
+      additionalInformation: string | null;
+      /** Format: date-time */
       warrantyStartDate: string | null;
       warrantyMonths: number;
       priceAtPurchase: number;
-      depreciationPriceAtPurchase: number;
-      ncsCode?: string | null;
+      ncsCode: string;
       /** @enum {string} */
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-      quantity: number;
-      economicLifespan: number;
+      /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
       updatedAt: string;
       model?: {
         /** Format: uuid */
         id: string;
-        modelName: string;
         /** Format: uuid */
-        componentSubtypeId: string;
+        componentTypeId: string;
+        /** Format: uuid */
+        subtypeId: string;
         currentPrice: number;
-        currentInstallPrice: number;
         warrantyMonths: number;
         manufacturer: string;
+        technicalLifespan: number;
         technicalSpecification: string | null;
         installationInstructions: string | null;
+        economicLifespan: number;
         dimensions: string | null;
-        coclassCode: string | null;
+        replacementIntervalMonths: number;
+        /** @enum {string} */
+        quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+        coclassCode: string;
+        /** Format: date-time */
         createdAt: string;
+        /** Format: date-time */
         updatedAt: string;
+        componentType?: {
+          /** Format: uuid */
+          id: string;
+          description: string;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        };
         subtype?: {
           /** Format: uuid */
           id: string;
-          subTypeName: string;
           /** Format: uuid */
-          typeId: string;
-          xpandCode: string | null;
-          depreciationPrice: number;
-          technicalLifespan: number;
-          economicLifespan: number;
-          replacementIntervalMonths: number;
-          /** @enum {string} */
-          quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+          componentTypeId: string;
+          description: string;
+          /** Format: date-time */
           createdAt: string;
+          /** Format: date-time */
           updatedAt: string;
           componentType?: {
             /** Format: uuid */
             id: string;
-            typeName: string;
-            /** Format: uuid */
-            categoryId: string;
-            description: string | null;
+            description: string;
+            /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
             updatedAt: string;
-            category?: {
-              /** Format: uuid */
-              id: string;
-              categoryName: string;
-              description: string;
-              createdAt: string;
-              updatedAt: string;
-            };
           };
         };
       };
@@ -2388,13 +2289,16 @@ export interface components {
           /** Format: uuid */
           componentId: string;
           spaceId: string | null;
-          /** @enum {string} */
-          spaceType: "OBJECT";
+          buildingPartId: string | null;
+          /** Format: date-time */
           installationDate: string;
+          /** Format: date-time */
           deinstallationDate: string | null;
-          orderNumber?: string | null;
+          orderNumber: string;
           cost: number;
+          /** Format: date-time */
           createdAt: string;
+          /** Format: date-time */
           updatedAt: string;
         })[];
     };
@@ -2404,13 +2308,16 @@ export interface components {
       /** Format: uuid */
       componentId: string;
       spaceId: string | null;
-      /** @enum {string} */
-      spaceType: "OBJECT";
+      buildingPartId: string | null;
+      /** Format: date-time */
       installationDate: string;
+      /** Format: date-time */
       deinstallationDate: string | null;
-      orderNumber?: string | null;
+      orderNumber: string;
       cost: number;
+      /** Format: date-time */
       createdAt: string;
+      /** Format: date-time */
       updatedAt: string;
       component?: {
         /** Format: uuid */
@@ -2418,67 +2325,69 @@ export interface components {
         /** Format: uuid */
         modelId: string;
         serialNumber: string;
-        specifications?: string | null;
-        additionalInformation?: string | null;
+        specifications: string | null;
+        additionalInformation: string | null;
+        /** Format: date-time */
         warrantyStartDate: string | null;
         warrantyMonths: number;
         priceAtPurchase: number;
-        depreciationPriceAtPurchase: number;
-        ncsCode?: string | null;
+        ncsCode: string;
         /** @enum {string} */
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-        quantity: number;
-        economicLifespan: number;
+        /** Format: date-time */
         createdAt: string;
+        /** Format: date-time */
         updatedAt: string;
         model?: {
           /** Format: uuid */
           id: string;
-          modelName: string;
           /** Format: uuid */
-          componentSubtypeId: string;
+          componentTypeId: string;
+          /** Format: uuid */
+          subtypeId: string;
           currentPrice: number;
-          currentInstallPrice: number;
           warrantyMonths: number;
           manufacturer: string;
+          technicalLifespan: number;
           technicalSpecification: string | null;
           installationInstructions: string | null;
+          economicLifespan: number;
           dimensions: string | null;
-          coclassCode: string | null;
+          replacementIntervalMonths: number;
+          /** @enum {string} */
+          quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+          coclassCode: string;
+          /** Format: date-time */
           createdAt: string;
+          /** Format: date-time */
           updatedAt: string;
+          componentType?: {
+            /** Format: uuid */
+            id: string;
+            description: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
           subtype?: {
             /** Format: uuid */
             id: string;
-            subTypeName: string;
             /** Format: uuid */
-            typeId: string;
-            xpandCode: string | null;
-            depreciationPrice: number;
-            technicalLifespan: number;
-            economicLifespan: number;
-            replacementIntervalMonths: number;
-            /** @enum {string} */
-            quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+            componentTypeId: string;
+            description: string;
+            /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
             updatedAt: string;
             componentType?: {
               /** Format: uuid */
               id: string;
-              typeName: string;
-              /** Format: uuid */
-              categoryId: string;
-              description: string | null;
+              description: string;
+              /** Format: date-time */
               createdAt: string;
+              /** Format: date-time */
               updatedAt: string;
-              category?: {
-                /** Format: uuid */
-                id: string;
-                categoryName: string;
-                description: string;
-                createdAt: string;
-                updatedAt: string;
-              };
             };
           };
         };
@@ -2488,81 +2397,70 @@ export interface components {
             /** Format: uuid */
             componentId: string;
             spaceId: string | null;
-            /** @enum {string} */
-            spaceType: "OBJECT";
+            buildingPartId: string | null;
+            /** Format: date-time */
             installationDate: string;
+            /** Format: date-time */
             deinstallationDate: string | null;
-            orderNumber?: string | null;
+            orderNumber: string;
             cost: number;
+            /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
             updatedAt: string;
           })[];
       };
     };
     CreateComponentTypeRequest: {
-      typeName: string;
-      /** Format: uuid */
-      categoryId: string;
-      description?: string;
+      description: string;
     };
     UpdateComponentTypeRequest: {
-      typeName?: string;
-      /** Format: uuid */
-      categoryId?: string;
       description?: string;
     };
     CreateComponentSubtypeRequest: {
-      subTypeName: string;
       /** Format: uuid */
-      typeId: string;
-      xpandCode?: string;
-      /** @default 0 */
-      depreciationPrice?: number;
-      /** @default 0 */
-      technicalLifespan?: number;
-      /** @default 0 */
-      economicLifespan?: number;
-      /** @default 0 */
-      replacementIntervalMonths?: number;
-      /** @enum {string} */
-      quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+      componentTypeId: string;
+      description: string;
     };
     UpdateComponentSubtypeRequest: {
-      subTypeName?: string;
       /** Format: uuid */
-      typeId?: string;
-      xpandCode?: string;
-      depreciationPrice?: number;
+      componentTypeId?: string;
+      description?: string;
+    };
+    CreateComponentModelRequest: {
+      /** Format: uuid */
+      componentTypeId: string;
+      /** Format: uuid */
+      subtypeId: string;
+      currentPrice: number;
+      warrantyMonths: number;
+      manufacturer: string;
+      technicalLifespan: number;
+      technicalSpecification?: string;
+      installationInstructions?: string;
+      economicLifespan: number;
+      dimensions?: string;
+      replacementIntervalMonths: number;
+      /** @enum {string} */
+      quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
+      coclassCode: string;
+    };
+    UpdateComponentModelRequest: {
+      /** Format: uuid */
+      componentTypeId?: string;
+      /** Format: uuid */
+      subtypeId?: string;
+      currentPrice?: number;
+      warrantyMonths?: number;
+      manufacturer?: string;
       technicalLifespan?: number;
+      technicalSpecification?: string;
+      installationInstructions?: string;
       economicLifespan?: number;
+      dimensions?: string;
       replacementIntervalMonths?: number;
       /** @enum {string} */
       quantityType?: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
-    };
-    CreateComponentModelRequest: {
-      modelName: string;
-      /** Format: uuid */
-      componentSubtypeId: string;
-      currentPrice: number;
-      currentInstallPrice: number;
-      warrantyMonths: number;
-      manufacturer: string;
-      technicalSpecification?: string;
-      installationInstructions?: string;
-      dimensions?: string;
-      coclassCode?: string;
-    };
-    UpdateComponentModelRequest: {
-      modelName?: string;
-      /** Format: uuid */
-      componentSubtypeId?: string;
-      currentPrice?: number;
-      currentInstallPrice?: number;
-      warrantyMonths?: number;
-      manufacturer?: string;
-      technicalSpecification?: string;
-      installationInstructions?: string;
-      dimensions?: string;
       coclassCode?: string;
     };
     CreateComponentRequest: {
@@ -2571,19 +2469,16 @@ export interface components {
       serialNumber: string;
       specifications?: string;
       additionalInformation?: string;
+      /** Format: date-time */
       warrantyStartDate?: string;
       warrantyMonths: number;
       priceAtPurchase: number;
-      depreciationPriceAtPurchase: number;
-      ncsCode?: string | null;
+      ncsCode: string;
       /**
        * @default ACTIVE
        * @enum {string}
        */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-      /** @default 1 */
-      quantity?: number;
-      economicLifespan: number;
     };
     UpdateComponentRequest: {
       /** Format: uuid */
@@ -2591,59 +2486,37 @@ export interface components {
       serialNumber?: string;
       specifications?: string;
       additionalInformation?: string;
+      /** Format: date-time */
       warrantyStartDate?: string;
       warrantyMonths?: number;
       priceAtPurchase?: number;
-      depreciationPriceAtPurchase?: number;
-      ncsCode?: string | null;
+      ncsCode?: string;
       /** @enum {string} */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-      quantity?: number;
-      economicLifespan?: number;
     };
     CreateComponentInstallationRequest: {
       /** Format: uuid */
       componentId: string;
-      spaceId?: string | null;
-      /** @enum {string} */
-      spaceType: "OBJECT";
+      spaceId?: string;
+      buildingPartId?: string;
+      /** Format: date-time */
       installationDate: string;
+      /** Format: date-time */
       deinstallationDate?: string;
-      orderNumber?: string | null;
+      orderNumber: string;
       cost: number;
     };
     UpdateComponentInstallationRequest: {
       /** Format: uuid */
       componentId?: string;
-      spaceId?: string | null;
-      /** @enum {string} */
-      spaceType?: "OBJECT";
+      spaceId?: string;
+      buildingPartId?: string;
+      /** Format: date-time */
       installationDate?: string;
+      /** Format: date-time */
       deinstallationDate?: string;
-      orderNumber?: string | null;
+      orderNumber?: string;
       cost?: number;
-    };
-    Document: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      componentModelId: string | null;
-      /** Format: uuid */
-      componentInstanceId: string | null;
-      fileId: string;
-      createdAt: string;
-      updatedAt: string;
-    };
-    DocumentWithUrl: {
-      /** Format: uuid */
-      id: string;
-      fileId: string;
-      originalName: string;
-      mimeType: string;
-      size: number;
-      createdAt: string;
-      /** Format: uri */
-      url: string;
     };
   };
   responses: never;
