@@ -53,12 +53,13 @@ export const InvoiceRowFactory = Factory.define<InvoiceRow>(() => ({
 }))
 
 export const InvoicePaymentEventFactory = Factory.define<InvoicePaymentEvent>(
-  () => ({
+  ({ sequence }) => ({
     amount: 100,
     invoiceId: '552303315030452',
     paymentDate: new Date('2023-03-01T00:00:00.000Z'),
     text: null,
     transactionSourceCode: 'foo',
     type: 'OCR',
+    matchId: sequence,
   })
 )
