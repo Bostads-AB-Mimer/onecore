@@ -1664,3 +1664,30 @@ export async function deleteComponentModelDocument(
     return { ok: false, err: 'unknown' }
   }
 }
+
+// ==================== AI COMPONENT ANALYSIS ====================
+
+export async function analyzeComponentImage(
+  data: components['schemas']['AnalyzeComponentImageRequest']
+): Promise<
+  AdapterResult<components['schemas']['AIComponentAnalysis'], 'unknown'>
+> {
+  try {
+    const response = await client().POST('/components/analyze-image', {
+      body: data as any,
+    })
+
+    if (response.data?.content) {
+      return {
+        ok: true,
+        data: response.data
+          .content as components['schemas']['AIComponentAnalysis'],
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.analyzeComponentImage')
+    return { ok: false, err: 'unknown' }
+  }
+}
