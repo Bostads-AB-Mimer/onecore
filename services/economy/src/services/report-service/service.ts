@@ -1,6 +1,6 @@
 import {
-  getInvoicePaymentEventsPaginated,
-  getInvoicesWithMatchIdsPaginated,
+  getAllInvoicePaymentEvents,
+  getAllInvoicesWithMatchIds,
 } from '../common/adapters/xledger-adapter'
 import {
   getInvoiceRows,
@@ -14,13 +14,13 @@ export const getInvoicePaymentSummaries = async (
   offset: number,
   size: number
 ) => {
-  const xledgerInvoices = await getInvoicesWithMatchIdsPaginated(from, to)
+  const xledgerInvoices = await getAllInvoicesWithMatchIds(from, to)
 
   const fullyOrPartiallyPaidInvoices = xledgerInvoices.filter(
     (i) => i.paidAmount !== undefined && i.paidAmount > 0
   )
 
-  const allPaymentEvents = await getInvoicePaymentEventsPaginated(
+  const allPaymentEvents = await getAllInvoicePaymentEvents(
     fullyOrPartiallyPaidInvoices.map((m) => m.matchId)
   )
 
