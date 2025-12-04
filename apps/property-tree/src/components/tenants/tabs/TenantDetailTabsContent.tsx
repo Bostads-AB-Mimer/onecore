@@ -55,12 +55,11 @@ export const TenantDetailTabsContent = ({
         /> */}
       </TabsContent>
 
+      {/*
       <TabsContent value="notes">
         <div>Placeholder Noteringar</div>
-        {/* <TenantNotes /> */}
       </TabsContent>
 
-      {/*
       <TabsContent value="keys">
         <div>Placeholder Nyckelknippa</div>
       </TabsContent>
