@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/MobileAccordion'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 
 interface TenantMobileAccordionProps {
   leases: Lease[]
@@ -48,9 +49,8 @@ export function TenantMobileAccordion({
     },
     {
       id: 'cases',
-      title: hasActiveCases ? `Ärenden (2)` : 'Ärenden',
-      content: <div>Placeholder Ärenden</div>,
-      // content: <TenantOrders />,
+      title: 'Ärenden',
+      content: <WorkOrdersManagement id={contactCode} contextType="tenant" />,
     },
     {
       id: 'ledger',
