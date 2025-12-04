@@ -63,6 +63,7 @@ export function TenantMobileAccordion({
       //   />
       // ),
     },
+    /*
     {
       id: 'notes',
       title: 'Noteringar',
@@ -87,6 +88,7 @@ export function TenantMobileAccordion({
       content: <div>Placeholder Dokument</div>,
       // content: <TenantDocuments />,
     },
+    */
   ]
 
   return (
