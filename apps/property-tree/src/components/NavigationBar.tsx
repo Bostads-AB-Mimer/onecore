@@ -4,6 +4,8 @@ import { GlobalSearchBar } from './search/GlobalSearchBar'
 import { Menu, Search } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useUser } from '@/auth/useUser'
+import { Link } from 'react-router-dom'
+import onecoreLogo from '@/components/assets/logos/full/onecore_logo_black.svg'
 
 export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
   const [showMobileSearch, setShowMobileSearch] = useState(false)
@@ -44,13 +46,19 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
             size="icon"
             onClick={handleMenuClick}
             onTouchStart={handleMenuTouch}
-            className="min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform"
+            className="min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform lg:hidden"
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle Menu</span>
           </Button>
-          <span className="font-semibold">OneCore</span>
+          <Link
+            to="/"
+            className="hover:opacity-80 transition-opacity cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src={onecoreLogo} alt="OneCore" className="h-7" />
+          </Link>
         </div>
 
         <div className="mx-48 flex-1 hidden sm:block">
