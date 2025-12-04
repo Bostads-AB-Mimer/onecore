@@ -139,6 +139,18 @@ export const CreateApplicantForListing = (props: Props) => {
   const handleChange = (_e: React.SyntheticEvent, tab: string) =>
     setSelectedTab(tab)
 
+  const calculateStartDate = (vacantFrom: Date | undefined): string => {
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+
+    if (!vacantFrom) return today.toISOString()
+
+    const vacantDate = new Date(vacantFrom)
+    vacantDate.setUTCHours(0, 0, 0, 0)
+
+    return vacantDate > today ? vacantDate.toISOString() : today.toISOString()
+  }
+
   const renderTenantQueryError = (error: any) => {
     if (!error) return null
 
@@ -349,6 +361,9 @@ export const CreateApplicantForListing = (props: Props) => {
                           contactCode: selectedContact.contactCode,
                           parkingSpaceId: props.listing.rentalObjectCode,
                           listingId: props.listing.id,
+                          startDate: calculateStartDate(
+                            props.listing.rentalObject.vacantFrom
+                          ),
                         })
                       }
                     >

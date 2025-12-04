@@ -2,6 +2,7 @@ import { logger } from '@onecore/utilities'
 import { RentalObject } from '@onecore/types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
+import { calculateMonthlyRentFromYearRentRows } from './transformations-helper'
 
 const districts = {
   Mitt: ['Centrum', 'Gryta', 'Skallberget', 'Nordanby', 'Vega', 'Hökåsen'],
@@ -67,18 +68,6 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     }
   }
 
-  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
-  // Calculate monthlyRent from yearrent if available and numeric
-  let monthlyRent = 0
-  if (Array.isArray(yearRentRows) && yearRentRows.length > 0) {
-    const totalYearRent = yearRentRows
-      .map((r: any) =>
-        typeof r.yearrent === 'number' && !isNaN(r.yearrent) ? r.yearrent : 0
-      )
-      .reduce((sum: number, val: number) => sum + val, 0)
-    monthlyRent = totalYearRent / 12
-  }
-
   // Determine if parking space is in special residential areas or properties
   const isSpecialResidentialArea = ['CEN', 'OXB', 'GRY'].includes(
     row.residentialareacode?.trim()
@@ -113,6 +102,12 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom = new Date()
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
+
+  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
+  const monthlyRent = calculateMonthlyRentFromYearRentRows(
+    yearRentRows,
+    vacantFrom
+  )
 
   return {
     rentalObjectCode: row.rentalObjectCode,
@@ -202,7 +197,9 @@ const buildMainQuery = (queries: {
             SELECT
               rentalpropertyid,
               (
-                SELECT yearrent
+                SELECT yearrent,
+                  debittodate,
+                  debitfdate
                 FROM hy_debitrowrentalproperty_xpand_api x2
                 WHERE x2.rentalpropertyid = x1.rentalpropertyid
                 FOR JSON PATH
