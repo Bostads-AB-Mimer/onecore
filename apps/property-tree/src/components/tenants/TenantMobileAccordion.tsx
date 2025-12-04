@@ -1,7 +1,6 @@
 import { TenantQueueSystem } from './TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 // import { TenantNotes } from './TenantNotes'
-// import { TenantOrders } from './TenantOrders'
 // import { TenantLedger } from './TenantLedger'
 import {
   MobileAccordion as GenericMobileAccordion,
