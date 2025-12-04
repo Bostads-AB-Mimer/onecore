@@ -60,20 +60,19 @@ export const TenantDetailTabsContent = ({
         {/* <TenantNotes /> */}
       </TabsContent>
 
+      {/*
       <TabsContent value="keys">
         <div>Placeholder Nyckelknippa</div>
-        {/* <TenantKeys /> */}
       </TabsContent>
 
       <TabsContent value="events">
         <div>Placeholder Händelselogg</div>
-        {/* <TenantEventLog personalNumber={personalNumber || ''} /> */}
       </TabsContent>
 
       <TabsContent value="documents">
         <div>Placeholder Dokument</div>
-        {/* <TenantDocuments /> */}
       </TabsContent>
+      */}
     </>
   )
 }
