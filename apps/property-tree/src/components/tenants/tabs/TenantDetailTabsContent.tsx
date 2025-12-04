@@ -3,7 +3,6 @@ import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagem
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 // import { TenantNotes } from '@/components/tenants/TenantNotes'
-// import { TenantOrders } from '@/components/tenants/TenantOrders'
 // import { TenantEventLog } from '@/components/tenants/TenantEventLog'
 // import { TenantDocuments } from '@/components/tenants/TenantDocuments'
 // import { TenantLedger } from '@/components/tenants/TenantLedger'
