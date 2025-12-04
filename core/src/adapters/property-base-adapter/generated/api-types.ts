@@ -188,6 +188,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
         path: {
           /** @description The ID of the residence */
           id: string;
@@ -949,6 +953,16 @@ export interface components {
             name: string | null;
           };
         }) | null;
+        rentalBlocks: ({
+            id: string;
+            blockReasonId: string;
+            blockReason: string;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string | null;
+            amount: number | null;
+          })[];
       };
       property: {
         name: string | null;
@@ -1157,7 +1171,6 @@ export interface components {
     };
     Staircase: {
       id: string;
-      buildingCode: string;
       code: string;
       name: string | null;
       features: {
