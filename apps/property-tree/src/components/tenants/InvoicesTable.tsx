@@ -11,7 +11,8 @@ import { ChevronDown, ChevronRight, FileText } from 'lucide-react'
 //import type { Invoice } from '@/types/invoice'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { differenceInDays, parseISO } from 'date-fns'
-import { Invoice, PaymentStatus } from '@onecore/types'
+import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
+import { useInvoicePaymentEvents } from '@/components/hooks/useInvoicePaymentEvents'
 
 export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null)
@@ -30,8 +31,9 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return dateB.getTime() - dateA.getTime()
   })
 
-  const formatCurrency = (amount: number) => {
-    return amount.toFixed(2).replace('.', ',') + ' SEK'
+  const formatCurrency = (amount: number | string) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+    return numAmount.toFixed(2).replace('.', ',') + ' SEK'
   }
 
   const formatDate = (date: Date | string | undefined) => {
@@ -130,6 +132,78 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return subtotals
   }
 
+  // Component to display payment events for "next" system invoices
+  const InvoicePaymentEvents = ({ invoiceId }: { invoiceId: string }) => {
+    const { data, isLoading, error } = useInvoicePaymentEvents(invoiceId)
+
+    if (isLoading) {
+      return (
+        <div className="bg-background rounded-lg p-3 shadow-sm">
+          <div className="font-medium text-sm mb-3 text-muted-foreground">
+            Betalningshändelser
+          </div>
+          <div className="text-sm text-muted-foreground italic">
+            Laddar betalningshändelser...
+          </div>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="bg-background rounded-lg p-3 shadow-sm">
+          <div className="font-medium text-sm mb-3 text-muted-foreground">
+            Betalningshändelser
+          </div>
+          <div className="text-sm text-muted-foreground italic">
+            Inga betalningshändelser hittades
+          </div>
+        </div>
+      )
+    }
+
+    if (!data || data.length === 0) {
+      return (
+        <div className="bg-background rounded-lg p-3 shadow-sm">
+          <div className="font-medium text-sm mb-3 text-muted-foreground">
+            Betalningshändelser
+          </div>
+          <div className="text-sm text-muted-foreground italic">
+            Inga betalningshändelser hittades
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="bg-background rounded-lg p-3 shadow-sm">
+        <div className="font-medium text-sm mb-3 text-muted-foreground">
+          Betalningshändelser
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left p-2 text-xs font-medium">Källa</th>
+              <th className="text-left p-2 text-xs font-medium">Belopp</th>
+              <th className="text-left p-2 text-xs font-medium">Text</th>
+              <th className="text-left p-2 text-xs font-medium">Betaldatum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((event, idx) => (
+              <tr key={idx} className="border-b last:border-0">
+                <td className="p-2 text-sm">{event.transactionSourceCode}</td>
+                <td className="p-2 text-sm">{formatCurrency(event.amount)}</td>
+                <td className="p-2 text-sm">{event.text || '-'}</td>
+                <td className="p-2 text-sm">{formatDate(event.paymentDate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   if (!invoices || invoices.length === 0) {
     return <div>Inga fakturor hittades.</div>
   }
@@ -180,119 +254,128 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                 </div>
               </div>
 
-              {isExpanded && invoice.invoiceRows.length > 0 && (
+              {isExpanded && (
                 <div className="border-t bg-muted/30 p-4">
-                  {invoice.description && (
-                    <div className="mb-3 text-sm">
-                      <span className="font-medium">Text:</span>{' '}
-                      {invoice.description}
-                    </div>
-                  )}
-                  {invoice.paymentStatus === PaymentStatus.Paid &&
-                    //invoice.paymentDate &&
-                    invoice.paidAmount !== undefined && (
-                      <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-                        <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-                          <div>
-                            <span className="text-muted-foreground block mb-1">
-                              Betaldatum:
-                            </span>
-                            <span className="font-semibold">
-                              {/*invoice.paymentDate*/}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground block mb-1">
-                              Källa:
-                            </span>
-                            <span className="font-semibold">
-                              {formatSource(invoice.source)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground block mb-1">
-                              Inbetalat belopp:
-                            </span>
-                            <span className="font-semibold text-success">
-                              {formatCurrency(invoice.paidAmount)}
-                            </span>
-                          </div>
+                  {invoice.source?.toLowerCase() === 'next' ? (
+                    <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                  ) : (
+                    <>
+                      {invoice.description && (
+                        <div className="mb-3 text-sm">
+                          <span className="font-medium">Text:</span>{' '}
+                          {invoice.description}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenPDF(invoice.invoiceId)
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Öppna PDF
-                        </Button>
-                      </div>
-                    )}
-                  <div className="space-y-2">
-                    {(() => {
-                      const subtotals = calculateSubtotals(invoice.invoiceRows)
-                      return invoice.invoiceRows.map((item, idx) => {
-                        const isHeader = isContractHeader(item)
-
-                        if (isHeader) {
-                          const subtotal = subtotals[idx]
-                          return (
-                            <div key={idx}>
-                              <div className="bg-muted/70 rounded-lg p-3 font-semibold text-sm">
-                                {item.invoiceRowText}
-                              </div>
-                              {subtotal && (
-                                <div className="bg-muted/30 rounded-lg p-3 text-sm mt-1">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">
-                                      Summa:
-                                    </span>
-                                    <span className="font-medium">
-                                      {formatCurrency(subtotal.total)}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        }
-
-                        return (
-                          <div
-                            key={idx}
-                            className="bg-background rounded-lg p-3 text-sm"
-                          >
-                            <div className="font-medium mb-1">
-                              {item.invoiceRowText}
-                            </div>
-                            {item.rentArticle && (
-                              <div className="text-muted-foreground text-xs mb-1">
-                                {item.rentArticle}
-                              </div>
-                            )}
-                            <div className="flex justify-between mt-2">
-                              <span className="text-muted-foreground">
-                                Belopp:
-                              </span>
-                              <span>{formatCurrency(item.amount)}</span>
-                            </div>
-                            {item.printGroup && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  Grupp:
+                      )}
+                      {invoice.paymentStatus === PaymentStatus.Paid &&
+                        invoice.paidAmount !== undefined && (
+                          <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
+                            <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+                              <div>
+                                <span className="text-muted-foreground block mb-1">
+                                  Betaldatum:
                                 </span>
-                                <span>{item.printGroup}</span>
+                                <span className="font-semibold">
+                                  {/*invoice.paymentDate*/}
+                                </span>
                               </div>
-                            )}
+                              <div>
+                                <span className="text-muted-foreground block mb-1">
+                                  Källa:
+                                </span>
+                                <span className="font-semibold">
+                                  {formatSource(invoice.source)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground block mb-1">
+                                  Inbetalat belopp:
+                                </span>
+                                <span className="font-semibold text-success">
+                                  {formatCurrency(invoice.paidAmount)}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOpenPDF(invoice.invoiceId)
+                              }}
+                              className="w-full sm:w-auto"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Öppna PDF
+                            </Button>
                           </div>
-                        )
-                      })
-                    })()}
-                  </div>
+                        )}
+                      {invoice.invoiceRows.length > 0 && (
+                        <div className="space-y-2">
+                          {(() => {
+                            const subtotals = calculateSubtotals(
+                              invoice.invoiceRows
+                            )
+                            return invoice.invoiceRows.map((item, idx) => {
+                              const isHeader = isContractHeader(item)
+
+                              if (isHeader) {
+                                const subtotal = subtotals[idx]
+                                return (
+                                  <div key={idx}>
+                                    <div className="bg-muted/70 rounded-lg p-3 font-semibold text-sm">
+                                      {item.invoiceRowText}
+                                    </div>
+                                    {subtotal && (
+                                      <div className="bg-muted/30 rounded-lg p-3 text-sm mt-1">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">
+                                            Summa:
+                                          </span>
+                                          <span className="font-medium">
+                                            {formatCurrency(subtotal.total)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              }
+
+                              return (
+                                <div
+                                  key={idx}
+                                  className="bg-background rounded-lg p-3 text-sm"
+                                >
+                                  <div className="font-medium mb-1">
+                                    {item.invoiceRowText}
+                                  </div>
+                                  {item.rentArticle && (
+                                    <div className="text-muted-foreground text-xs mb-1">
+                                      {item.rentArticle}
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between mt-2">
+                                    <span className="text-muted-foreground">
+                                      Belopp:
+                                    </span>
+                                    <span>{formatCurrency(item.amount)}</span>
+                                  </div>
+                                  {item.printGroup && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">
+                                        Grupp:
+                                      </span>
+                                      <span>{item.printGroup}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </Card>
@@ -350,146 +433,160 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                     {formatSource(invoice.source)}
                   </td>
                   <td className="p-3 text-sm">{getStatusBadge(invoice)}</td>
-                  {invoice.invoiceRows.length > 0 && (
-                    <td className="p-3">
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </td>
-                  )}
+                  <td className="p-3">
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </td>
                 </tr>
-                {isExpanded && invoice.invoiceRows.length > 0 && (
+                {isExpanded && (
                   <tr>
                     <td colSpan={10} className="p-0">
                       <div className="bg-muted/50 border-l-4 border-primary/30 p-4 ml-4">
-                        {invoice.description && (
-                          <div className="mb-3 text-sm bg-background/50 rounded p-2">
-                            <span className="font-medium">Text:</span>{' '}
-                            {invoice.description}
-                          </div>
-                        )}
-                        {invoice.paymentStatus === PaymentStatus.Paid &&
-                          //invoice.paymentDate &&
-                          invoice.paidAmount !== undefined && (
-                            <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-                              <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-                                <div>
-                                  <span className="text-muted-foreground block mb-1">
-                                    Betaldatum:
-                                  </span>
-                                  <span className="font-semibold">
-                                    {/*invoice.paymentDate*/}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-1">
-                                    Källa:
-                                  </span>
-                                  <span className="font-semibold">
-                                    {formatSource(invoice.source)}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-1">
-                                    Inbetalat belopp:
-                                  </span>
-                                  <span className="font-semibold text-success">
-                                    {formatCurrency(invoice.paidAmount)}
-                                  </span>
-                                </div>
+                        {invoice.source?.toLowerCase() === 'next' ? (
+                          <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                        ) : (
+                          <>
+                            {invoice.description && (
+                              <div className="mb-3 text-sm bg-background/50 rounded p-2">
+                                <span className="font-medium">Text:</span>{' '}
+                                {invoice.description}
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOpenPDF(invoice.invoiceId)
-                                }}
-                                className="w-full sm:w-auto"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Öppna PDF
-                              </Button>
-                            </div>
-                          )}
-                        <div className="bg-background rounded-lg p-3 shadow-sm">
-                          <div className="font-medium text-sm mb-3 text-muted-foreground">
-                            Fakturarader
-                          </div>
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b bg-muted/50">
-                                <th className="text-left p-2 text-xs font-medium">
-                                  Belopp
-                                </th>
-                                <th className="text-left p-2 text-xs font-medium">
-                                  Moms
-                                </th>
-                                <th className="text-left p-2 text-xs font-medium">
-                                  Totalt
-                                </th>
-                                <th className="text-left p-2 text-xs font-medium">
-                                  Hyresartikel
-                                </th>
-                                <th className="text-left p-2 text-xs font-medium">
-                                  Beskrivning
-                                </th>
-                                <th className="text-left p-2 text-xs font-medium">
-                                  Utskriftsgrupp
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(() => {
-                                const subtotals = calculateSubtotals(
-                                  invoice.invoiceRows
-                                )
-                                return invoice.invoiceRows.map((item, idx) => {
-                                  const isHeader = isContractHeader(item)
-                                  const subtotal = isHeader
-                                    ? subtotals[idx]
-                                    : null
-
-                                  return (
-                                    <tr
-                                      key={idx}
-                                      className={`border-b last:border-0 ${isHeader ? 'bg-slate-100/70 font-semibold' : ''}`}
-                                    >
-                                      <td className="p-2 text-sm">
-                                        {isHeader && subtotal
-                                          ? formatCurrency(subtotal.amount)
-                                          : formatCurrency(item.amount)}
-                                      </td>
-                                      <td className="p-2 text-sm">
-                                        {isHeader && subtotal
-                                          ? formatCurrency(subtotal.vat)
-                                          : formatCurrency(item.vat)}
-                                      </td>
-                                      <td className="p-2 text-sm">
-                                        {isHeader && subtotal
-                                          ? formatCurrency(subtotal.total)
-                                          : formatCurrency(item.totalAmount)}
-                                      </td>
-                                      <td className="p-2 text-sm">
-                                        {isHeader
-                                          ? 'Summa objekt:'
-                                          : item.rentArticle}
-                                      </td>
-                                      <td className="p-2 text-sm">
-                                        {item.invoiceRowText}
-                                      </td>
-                                      <td className="p-2 text-sm">
-                                        {item.printGroup}
-                                      </td>
+                            )}
+                            {invoice.paymentStatus === PaymentStatus.Paid &&
+                              invoice.paidAmount !== undefined && (
+                                <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
+                                  <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+                                    <div>
+                                      <span className="text-muted-foreground block mb-1">
+                                        Betaldatum:
+                                      </span>
+                                      <span className="font-semibold">
+                                        {/*invoice.paymentDate*/}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground block mb-1">
+                                        Källa:
+                                      </span>
+                                      <span className="font-semibold">
+                                        {formatSource(invoice.source)}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground block mb-1">
+                                        Inbetalat belopp:
+                                      </span>
+                                      <span className="font-semibold text-success">
+                                        {formatCurrency(invoice.paidAmount)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleOpenPDF(invoice.invoiceId)
+                                    }}
+                                    className="w-full sm:w-auto"
+                                  >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Öppna PDF
+                                  </Button>
+                                </div>
+                              )}
+                            {invoice.invoiceRows.length > 0 && (
+                              <div className="bg-background rounded-lg p-3 shadow-sm">
+                                <div className="font-medium text-sm mb-3 text-muted-foreground">
+                                  Fakturarader
+                                </div>
+                                <table className="w-full">
+                                  <thead>
+                                    <tr className="border-b bg-muted/50">
+                                      <th className="text-left p-2 text-xs font-medium">
+                                        Belopp
+                                      </th>
+                                      <th className="text-left p-2 text-xs font-medium">
+                                        Moms
+                                      </th>
+                                      <th className="text-left p-2 text-xs font-medium">
+                                        Totalt
+                                      </th>
+                                      <th className="text-left p-2 text-xs font-medium">
+                                        Hyresartikel
+                                      </th>
+                                      <th className="text-left p-2 text-xs font-medium">
+                                        Beskrivning
+                                      </th>
+                                      <th className="text-left p-2 text-xs font-medium">
+                                        Utskriftsgrupp
+                                      </th>
                                     </tr>
-                                  )
-                                })
-                              })()}
-                            </tbody>
-                          </table>
-                        </div>
+                                  </thead>
+                                  <tbody>
+                                    {(() => {
+                                      const subtotals = calculateSubtotals(
+                                        invoice.invoiceRows
+                                      )
+                                      return invoice.invoiceRows.map(
+                                        (item, idx) => {
+                                          const isHeader =
+                                            isContractHeader(item)
+                                          const subtotal = isHeader
+                                            ? subtotals[idx]
+                                            : null
+
+                                          return (
+                                            <tr
+                                              key={idx}
+                                              className={`border-b last:border-0 ${isHeader ? 'bg-slate-100/70 font-semibold' : ''}`}
+                                            >
+                                              <td className="p-2 text-sm">
+                                                {isHeader && subtotal
+                                                  ? formatCurrency(
+                                                      subtotal.amount
+                                                    )
+                                                  : formatCurrency(item.amount)}
+                                              </td>
+                                              <td className="p-2 text-sm">
+                                                {isHeader && subtotal
+                                                  ? formatCurrency(subtotal.vat)
+                                                  : formatCurrency(item.vat)}
+                                              </td>
+                                              <td className="p-2 text-sm">
+                                                {isHeader && subtotal
+                                                  ? formatCurrency(
+                                                      subtotal.total
+                                                    )
+                                                  : formatCurrency(
+                                                      item.totalAmount
+                                                    )}
+                                              </td>
+                                              <td className="p-2 text-sm">
+                                                {isHeader
+                                                  ? 'Summa objekt:'
+                                                  : item.rentArticle}
+                                              </td>
+                                              <td className="p-2 text-sm">
+                                                {item.invoiceRowText}
+                                              </td>
+                                              <td className="p-2 text-sm">
+                                                {item.printGroup}
+                                              </td>
+                                            </tr>
+                                          )
+                                        }
+                                      )
+                                    })()}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

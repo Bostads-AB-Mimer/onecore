@@ -1,5 +1,5 @@
 import { GET } from './base-api'
-import { Invoice } from '@onecore/types'
+import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 
 // TODO: Fix the ts-ignore by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
@@ -24,4 +24,27 @@ async function getInvoicesByContactCode(
   return response.content.data as Invoice[]
 }
 
-export const economyService = { getInvoicesByContactCode }
+async function getInvoicePaymentEvents(
+  invoiceId: string
+): Promise<InvoicePaymentEvent[]> {
+  const { data, error } = await GET(
+    //@ts-ignore
+    `/invoices/${invoiceId}/payment-events`,
+    {
+      params: { path: { invoiceId } },
+    }
+  )
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as InvoicePaymentEvent[]
+}
+
+export const economyService = {
+  getInvoicesByContactCode,
+  getInvoicePaymentEvents,
+}
