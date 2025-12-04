@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/v2/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Plus, Save, Pin, PinOff, Trash2 } from 'lucide-react'
 import { useNotesState } from './hooks/useNotesState'

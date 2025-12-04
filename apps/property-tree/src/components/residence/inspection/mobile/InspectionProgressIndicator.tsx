@@ -3,7 +3,7 @@ import { Progress } from '@/components/ui/Progress'
 interface InspectionProgressIndicatorProps {
   current: number
   total: number
-  currentRoomName: string
+  currentRoomName: string | null
 }
 
 export function InspectionProgressIndicator({

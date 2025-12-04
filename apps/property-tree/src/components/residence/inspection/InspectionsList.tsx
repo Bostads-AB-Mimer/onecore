@@ -157,7 +157,10 @@ export function InspectionsList({
         <InspectionFormDialog
           isOpen={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
-          onSubmit={(inspectorName: string, roomsData: InspectionRoom[]) => {
+          onSubmit={(
+            inspectorName: string,
+            roomsData: Record<string, InspectionRoom>
+          ) => {
             const newInspection: Inspection = {
               id: `inspection-${Date.now()}`,
               date: new Date().toISOString(),

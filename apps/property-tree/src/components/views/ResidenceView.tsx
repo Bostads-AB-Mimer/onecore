@@ -5,7 +5,7 @@ import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { Grid } from '@/components/ui/Grid'
 import { residenceService } from '@/services/api/core'
-import { ResidenceWorkOrders } from '@/components/shared/ResidenceWorkOrders'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { ResidenceBasicInfo } from '@/components/residence/ResidenceBasicInfo'
 import {
   Tabs,
@@ -44,7 +44,7 @@ export function ResidenceView() {
       id: '1',
       code: 'RUM-101',
       name: 'Vardagsrum',
-      size: 22.5,
+      // size: 22.5, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -81,7 +81,7 @@ export function ResidenceView() {
       id: '2',
       code: 'RUM-102',
       name: 'Kök',
-      size: 12.0,
+      // size: 12.0, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -118,7 +118,7 @@ export function ResidenceView() {
       id: '3',
       code: 'RUM-103',
       name: 'Sovrum 1',
-      size: 15.8,
+      // size: 15.8, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -155,7 +155,7 @@ export function ResidenceView() {
       id: '4',
       code: 'RUM-104',
       name: 'Badrum',
-      size: 6.2,
+      // size: 6.2, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -192,7 +192,7 @@ export function ResidenceView() {
       id: '5',
       code: 'RUM-105',
       name: 'Sovrum 2',
-      size: 13.5,
+      // size: 13.5, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -229,7 +229,7 @@ export function ResidenceView() {
       id: '6',
       code: 'RUM-106',
       name: 'Hall',
-      size: 8.3,
+      // size: 8.3, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -266,7 +266,7 @@ export function ResidenceView() {
       id: '7',
       code: 'RUM-107',
       name: 'Uteplats',
-      size: 25.0,
+      // size: 25.0, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,
@@ -303,7 +303,7 @@ export function ResidenceView() {
       id: '8',
       code: 'RUM-108',
       name: 'Balkong',
-      size: 8.0,
+      // size: 8.0, Property does not exist in Room schema
       usage: {
         shared: false,
         allowPeriodicWorks: true,

@@ -214,7 +214,7 @@ export function DesktopInspectionForm({
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{room.name}</span>
                       <span className="text-sm text-muted-foreground">
-                        {room.size}
+                        {/* {room.size} // property does not exist in schema. Design assumes it does. Decide what to do when we know what data exists. */}
                       </span>
                     </div>
                     {isCompleted && (
