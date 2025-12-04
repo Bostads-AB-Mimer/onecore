@@ -256,7 +256,7 @@ export async function getResidenceDetails(
         path: { id: residenceId },
         query: {
           includeActiveBlocksOnly:
-            options?.includeActiveBlocksOnly === true ? 'true' : 'false',
+            options?.includeActiveBlocksOnly === true ? true : false,
         },
       },
     })
