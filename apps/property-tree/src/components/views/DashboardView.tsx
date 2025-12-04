@@ -27,6 +27,7 @@ import {
 import { useUser } from '@/auth/useUser'
 import type { DashboardCard } from '@/services/types'
 import { resolve } from '@/utils/env'
+import onecoreLogo from '@/components/assets/logos/stacked/onecore_logo_stacked_black.svg'
 
 export function DashboardView() {
   const navigate = useNavigate()
@@ -182,10 +183,17 @@ export function DashboardView() {
 
   return (
     <div className="p-8 space-y-6 animate-in">
-      <header className="text-center space-y-3">
+      <header className="text-center space-y-4">
         <h1 className="text-3xl font-bold">
-          Hej {userState.tag === 'success' ? userState.user.name : ''} välkommen
-          till ONECore
+          <div className="text-center my-[8px]">
+            Hej {userState.tag === 'success' ? userState.user.name : ''}{' '}
+            välkommen till
+          </div>
+          <img
+            src={onecoreLogo}
+            alt="OneCore"
+            className="h-20 md:h-24 mt-6 mx-auto"
+          />
         </h1>
       </header>
 
