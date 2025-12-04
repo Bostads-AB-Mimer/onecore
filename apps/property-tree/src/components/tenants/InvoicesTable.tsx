@@ -477,7 +477,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                                   </span>
                                 </div>
                               </div>
-                              <Button
+                              {/* <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={(e) => {
@@ -488,7 +488,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                               >
                                 <FileText className="h-4 w-4 mr-2" />
                                 Öppna PDF
-                              </Button>
+                              </Button> */}
                             </div>
                           )}
                         {invoice.invoiceRows.length > 0 && (
