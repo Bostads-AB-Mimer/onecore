@@ -1,43 +1,43 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACBklEQVR4Ae2av0tCURTHv0YGpoTa4KKgDlFEKdiQWwTSqktr9RdUf4H6F/gn5NDUFk1NVkuLhFSTQwk11FBK9AMyqHcfFGnP98N8PK7nfEDQqxc8H849957Lc2H34BOEGQFxWACIwwJAHBYA4rAAEIcFgDgsAMRhASAOCwBxLAvwu93Iz02hubqC6+wy1uNhyIzL7JWYCHxzOoatmZj6/jeNl1cUz+soX91CNgwF6AXejYwiDAWINI96x2GF/Zs7ZE+qkAHDGmA1eEEiOAFZ4F0ANtBP1jiFbRngHxuFDNgnwD0GGbBNQNTngQwY5mlg71BJZzesIs4EMmAooNVuq69hxdZKtRSaxE468We89f6BjdMaas0n9bPYNUR/YcT22aU6VyBOpdlISPf3R/ePhploq4Co16O9JXrxs6zE95XMoqmts3hRVwWI4CuZNJIB/QOXOJYXlDl6OHoQshL8N2aDN4tjm/VaPKIskaCl4MXOUkotDCx4gWMCsuGQWgMaz28d4+qy8WlLKaVmlSXQVtb2Q8e4qDX94piAnNItdgciKCjFMD+vXRBzx1XNolZOJ5WM6u9ihpshEIcFgDgsAMRhASDOUAswczvtsvth6V5nfb021eoc0SD1urRxtB028wcGMec/lzZcA0AcFgDisAAQhwWAOCwAxGEBIA4LAHFYAIhDXsAXbmaKq1WkhIEAAAAASUVORK5CYII="
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Property Tree Management System" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Property Tree</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/png"
-    href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACBklEQVR4Ae2av0tCURTHv0YGpoTa4KKgDlFEKdiQWwTSqktr9RdUf4H6F/gn5NDUFk1NVkuLhFSTQwk11FBK9AMyqHcfFGnP98N8PK7nfEDQqxc8H849957Lc2H34BOEGQFxWACIwwJAHBYA4rAAEIcFgDgsAMRhASAOCwBxLAvwu93Iz02hubqC6+wy1uNhyIzL7JWYCHxzOoatmZj6/jeNl1cUz+soX91CNgwF6AXejYwiDAWINI96x2GF/Zs7ZE+qkAHDGmA1eEEiOAFZ4F0ANtBP1jiFbRngHxuFDNgnwD0GGbBNQNTngQwY5mlg71BJZzesIs4EMmAooNVuq69hxdZKtRSaxE468We89f6BjdMaas0n9bPYNUR/YcT22aU6VyBOpdlISPf3R/ePhploq4Co16O9JXrxs6zE95XMoqmts3hRVwWI4CuZNJIB/QOXOJYXlDl6OHoQshL8N2aDN4tjm/VaPKIskaCl4MXOUkotDCx4gWMCsuGQWgMaz28d4+qy8WlLKaVmlSXQVtb2Q8e4qDX94piAnNItdgciKCjFMD+vXRBzx1XNolZOJ5WM6u9ihpshEIcFgDgsAMRhASDOUAswczvtsvth6V5nfb021eoc0SD1urRxtB028wcGMec/lzZcA0AcFgDisAAQhwWAOCwAxGEBIA4LAHFYAIhDXsAXbmaKq1WkhIEAAAAASUVORK5CYII=" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Property Tree Management System" />
-  <meta name="theme-color" content="#ffffff" />
-  <title>Property Tree</title>
-</head>
+  <body>
+    <div id="root"></div>
+    <script language="javascript">
+      window.__ENV = {
+        VITE_CORE_API_URL: '',
+        VITE_KEYCLOAK_URL: '',
+        VITE_KEYCLOAK_REALM: '',
+        VITE_KEYCLOAK_CLIENT_ID: '',
+        VITE_KEYCLOAK_REDIRECT_URI: '',
+        VITE_ODOO_URL: 'https://odoo-test.mimer.nu',
+        VITE_LEASING_URL: 'https://onecore-test.mimer.nu',
+        VITE_XLEDGER_URL:
+          'https://www.xledger.net/auth/signin?ReturnUrl=%2Frestricted%2Findex.aspx',
+        VITE_TENFAST_URL: '',
+        VITE_CURVES_URL: '',
+        VITE_GREENVIEW_URL: 'https://mimertest.greenview.se/',
+        VITE_PASSAGE_URL:
+          'http://srvmimhk21/Alliera/Account/LogOn?ReturnUrl=%2falliera',
+        VITE_KEYS_URL: 'http://localhost:3010',
+        VITE_INTERNAL_PORTAL: 'https://onecore-test.mimer.nu',
+        VITE_VIEWINGS: 'https://apps.mimer.nu/version-test/visningsportalen',
+        VITE_PROPERTYTREE: '/properties',
+      }
+    </script>
 
-<body>
-  <div id="root"></div>
-  <script language="javascript">
-    window.__ENV = {
-      VITE_CORE_API_URL: '',
-      VITE_KEYCLOAK_URL: '',
-      VITE_KEYCLOAK_REALM: '',
-      VITE_KEYCLOAK_CLIENT_ID: '',
-      VITE_KEYCLOAK_REDIRECT_URI: '',
-      VITE_ODOO_URL: 'https://odoo-test.mimer.nu',
-      VITE_LEASING_URL: 'https://onecore-test.mimer.nu',
-      VITE_CLIENTS_URL: 'https://onecore-test.mimer.nu/kundkort',
-      VITE_XLEDGER_URL:
-        'https://www.xledger.net/auth/signin?ReturnUrl=%2Frestricted%2Findex.aspx',
-      VITE_TENFAST_URL: '',
-      VITE_CURVES_URL: '',
-      VITE_GREENVIEW_URL: 'https://mimertest.greenview.se/',
-      VITE_PASSAGE_URL:
-        'http://srvmimhk21/Alliera/Account/LogOn?ReturnUrl=%2falliera',
-      VITE_KEYS_URL: 'http://localhost:3010',
-      VITE_INTERNAL_PORTAL: 'https://onecore-test.mimer.nu',
-      VITE_VIEWINGS: 'https://apps.mimer.nu/version-test/visningsportalen',
-      VITE_PROPERTYTREE: '/properties',
-    }
-  </script>
-
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
