@@ -69,7 +69,7 @@ export function DashboardView() {
       icon: Contact,
       description: 'Kundregister och hyresgästinformation',
       path: '/tenants',
-      isExternal: true,
+      isExternal: false,
       isDisabled: false,
     },
 
@@ -181,13 +181,20 @@ export function DashboardView() {
     }
   }
 
+  const getGivenName = () => {
+    if (userState.tag === 'success') {
+      // Extract first name from full name
+      return userState.user.name.split(' ')[0]
+    }
+    return ''
+  }
+
   return (
     <div className="p-8 space-y-6 animate-in">
       <header className="text-center space-y-4">
         <h1 className="text-3xl font-bold">
           <div className="text-center my-[8px]">
-            Hej {userState.tag === 'success' ? userState.user.name : ''}{' '}
-            välkommen till
+            Hej {getGivenName()} välkommen till
           </div>
           <img
             src={onecoreLogo}
