@@ -30,7 +30,7 @@ export async function callDaxCli<T>(command: string, params?: any): Promise<T> {
 
     const args = params ? [command, JSON.stringify(params)] : [command]
 
-    logger.info(`Calling DAX CLI: ${command}`)
+    logger.info(`Calling DAX CLI: ${command}${params ? ' with params: ' + JSON.stringify(params) : ''}`)
 
     const proc = spawn(CLI_PATH, args, { env })
 
@@ -73,4 +73,18 @@ export async function callDaxCli<T>(command: string, params?: any): Promise<T> {
  */
 export async function getContractsCli() {
   return callDaxCli('getcontracts')
+}
+
+/**
+ * Get all card owners for a specific partner and instance
+ */
+export async function getCardOwnersCli(partnerId: string, instanceId: string) {
+  return callDaxCli('getcardowners', { partnerId, instanceId })
+}
+
+/**
+ * Get a specific card owner
+ */
+export async function getCardOwnerCli(partnerId: string, instanceId: string, cardOwnerId: string) {
+  return callDaxCli('getcardowner', { partnerId, instanceId, cardOwnerId })
 }

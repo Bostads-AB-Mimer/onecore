@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Amido.Dax.Contracts.Contracts;
+using Amido.Dax.Contracts.CardOwners;
 using Amido.Dax.WebClient;
 using Amido.Dax.WebClient.Configuration;
 using Amido.Dax.WebClient.Requests;
@@ -9,11 +10,15 @@ using Microsoft.Extensions.Logging;
 if (args.Length < 1)
 {
     Console.Error.WriteLine("Usage: DaxCli <command> [json-params]");
-    Console.Error.WriteLine("Commands: getContracts");
+    Console.Error.WriteLine("Commands:");
+    Console.Error.WriteLine("  getcontracts");
+    Console.Error.WriteLine("  getcardowners {\"partnerId\":\"...\",\"instanceId\":\"...\"}");
+    Console.Error.WriteLine("  getcardowner {\"partnerId\":\"...\",\"instanceId\":\"...\",\"cardOwnerId\":\"...\"}");
     Environment.Exit(1);
 }
 
 var command = args[0];
+var paramsJson = args.Length > 1 ? args[1] : "{}";
 
 try
 {
@@ -40,6 +45,8 @@ try
     object? result = command.ToLower() switch
     {
         "getcontracts" => await GetContracts(client),
+        "getcardowners" => await GetCardOwners(client, paramsJson),
+        "getcardowner" => await GetCardOwner(client, paramsJson),
         _ => throw new ArgumentException($"Unknown command: {command}")
     };
 
@@ -61,6 +68,59 @@ static async Task<GetContractsResponse> GetContracts(DaxWebClient client)
 
     var response = await client.CallAsync(request);
     return response.Response;
+}
+
+static async Task<GetCardOwnersResponse> GetCardOwners(DaxWebClient client, string paramsJson)
+{
+    var parameters = JsonSerializer.Deserialize<CardOwnerParams>(paramsJson);
+    if (parameters == null)
+        throw new ArgumentException("Invalid parameters for GetCardOwners");
+
+    var request = new DaxWebRequestBuilder<GetCardOwnersRequest, GetCardOwnersResponse>()
+        .AddRequest(new GetCardOwnersRequest(
+            new CardOwnersResourceIdentifier(
+                Guid.Parse(parameters.PartnerId),
+                Guid.Parse(parameters.InstanceId)
+            )
+        ))
+        .SetContext("GetCardOwners")
+        .Build();
+
+    var response = await client.CallAsync(request);
+    return response.Response;
+}
+
+static async Task<GetCardOwnerResponse> GetCardOwner(DaxWebClient client, string paramsJson)
+{
+    var parameters = JsonSerializer.Deserialize<CardOwnerParams>(paramsJson);
+    if (parameters == null || string.IsNullOrEmpty(parameters.CardOwnerId))
+        throw new ArgumentException("Invalid parameters for GetCardOwner - cardOwnerId is required");
+
+    var request = new DaxWebRequestBuilder<GetCardOwnerRequest, GetCardOwnerResponse>()
+        .AddRequest(new GetCardOwnerRequest(
+            new SingleCardOwnerResourceIdentifier(
+                Guid.Parse(parameters.PartnerId),
+                Guid.Parse(parameters.InstanceId),
+                Guid.Parse(parameters.CardOwnerId)
+            )
+        ))
+        .SetContext("GetCardOwner")
+        .Build();
+
+    var response = await client.CallAsync(request);
+    return response.Response;
+}
+
+class CardOwnerParams
+{
+    [System.Text.Json.Serialization.JsonPropertyName("partnerId")]
+    public string PartnerId { get; set; } = "";
+
+    [System.Text.Json.Serialization.JsonPropertyName("instanceId")]
+    public string InstanceId { get; set; } = "";
+
+    [System.Text.Json.Serialization.JsonPropertyName("cardOwnerId")]
+    public string? CardOwnerId { get; set; }
 }
 
 class SimpleLogger : ILogger
