@@ -9,6 +9,7 @@ export type CreateNonScoredLeaseParams = {
   parkingSpaceId: string
   contactCode: string
   listingId: number
+  startDate: string
 }
 
 export enum CreateNonScoredLeaseErrorCodes {

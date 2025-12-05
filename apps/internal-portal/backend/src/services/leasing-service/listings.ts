@@ -75,6 +75,7 @@ export const routes = (router: KoaRouter) => {
     const result = await coreAdapter.createLeaseForNonScoredParkingSpace({
       parkingSpaceId: params.parkingSpaceId,
       contactCode: params.contactCode,
+      startDate: params.startDate,
     })
 
     if (result.ok) {

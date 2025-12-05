@@ -668,6 +668,7 @@ async function getLeasesByContactCode(contactCode: string) {
 const createLeaseForNonScoredParkingSpace = async (params: {
   parkingSpaceId: string
   contactCode: string
+  startDate: string
 }): Promise<
   AdapterResult<
     unknown,
@@ -682,7 +683,7 @@ const createLeaseForNonScoredParkingSpace = async (params: {
     const response = await getFromCore<any>({
       method: 'post',
       url: `${coreBaseUrl}/parking-spaces/${params.parkingSpaceId}/leases`,
-      data: { contactCode: params.contactCode },
+      data: { contactCode: params.contactCode, startDate: params.startDate },
     })
 
     return { ok: true, data: response.data.content }
