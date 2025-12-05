@@ -212,6 +212,12 @@ async function getAccessToken(): Promise<string> {
     cachedToken = response.access_token
     tokenExpiresAt = now + response.expires_in * 1000
 
+    console.log('=== OAUTH TOKEN RECEIVED ===')
+    console.log('Token length:', cachedToken?.length)
+    console.log('Token (first 50 chars):', cachedToken?.substring(0, 50))
+    console.log('Full token:', cachedToken)
+    console.log('============================')
+
     logger.debug('DAX access token acquired successfully')
     return cachedToken
   } catch (error: any) {
@@ -232,9 +238,18 @@ function createSignatureHeader(
 ): string {
   // Build signing string - .NET DAX SDK ONLY signs (request-target) and date
   // Content-Length is sent in headers but NOT signed
-  const requestTarget = `${method.toLowerCase()} ${path}`
+  // DAX docs: "Always trim the value before adding it"
+  const requestTarget = `${method.toLowerCase().trim()} ${path.trim()}`
   // HTTP Signatures spec uses \n (LF), not \r\n (CRLF)
-  const signingString = `(request-target): ${requestTarget}\ndate: ${date}`
+  // NO trailing newline - confirmed by comparing with working .NET SDK
+  const signingString = `(request-target): ${requestTarget}\ndate: ${date.trim()}`
+
+  // Check for any unexpected whitespace
+  console.log('=== WHITESPACE CHECK ===')
+  console.log('Method has whitespace:', method !== method.trim())
+  console.log('Path has whitespace:', path !== path.trim())
+  console.log('Date has whitespace:', date !== date.trim())
+  console.log('=========================')
 
   console.log('=== NODE.JS SIGNING STRING ===')
   console.log(signingString)
@@ -273,6 +288,12 @@ async function makeAuthenticatedRequest<T>(
 ): Promise<DaxApiResponse<T>> {
   // Get access token
   const token = await getAccessToken()
+
+  console.log('=== TOKEN BEING USED IN REQUEST ===')
+  console.log('Token exists:', !!token)
+  console.log('Token length:', token?.length)
+  console.log('Token (first 50 chars):', token?.substring(0, 50))
+  console.log('===================================')
 
   // Load private key
   const privateKey = fs.readFileSync(Config.alliera.pemKeyPath, 'utf8')
@@ -329,6 +350,16 @@ async function makeAuthenticatedRequest<T>(
         : new http.Agent({ keepAlive: false }),
       setHost: false, // Don't auto-add Host header since we're setting it manually
     }
+
+    console.log('=== FULL HTTP REQUEST DETAILS ===')
+    console.log('Method:', method)
+    console.log('URL:', url.toString())
+    console.log('Headers being sent:')
+    for (const [key, value] of Object.entries(headers)) {
+      console.log(`  ${key}: ${value}`)
+    }
+    console.log('Body:', bodyString || '(empty)')
+    console.log('==================================')
 
     logger.debug(
       { options, protocol: url.protocol },
