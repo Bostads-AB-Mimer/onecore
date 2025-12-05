@@ -1,0 +1,3 @@
+[submodule "services/keys/dax-cli/dax.net"]
+	path = services/keys/dax-cli/dax.net
+	url = https://github.com/AmidoAB/dax.net.git

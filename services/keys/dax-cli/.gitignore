@@ -1,0 +1,41 @@
+# .NET build outputs
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# .NET publish outputs
+publish/
+out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet packages (will be restored during build)
+*.nupkg
+*.snupkg
+.nuget/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+
+# Local test files
+*.local
+last-dotnet-request.txt
