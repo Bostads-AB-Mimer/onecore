@@ -35,7 +35,7 @@ import {
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
-} from './adapters/xledger-adapter'
+} from '../common/adapters/xledger-adapter'
 import { Contact } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
