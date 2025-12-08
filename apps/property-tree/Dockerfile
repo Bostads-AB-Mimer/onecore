@@ -13,11 +13,13 @@ RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
 # Copy package files for dependency installation
 COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-COPY apps/property-tree ./apps/property-tree
+# Copy relevant packages
 COPY libs ./libs
+COPY apps/property-tree ./apps/property-tree
 
 RUN pnpm install
-RUN pnpm run --filter ...@onecore/property-tree build
+RUN pnpm build:types
+RUN pnpm run --filter @onecore/property-tree build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/property-tree --prod /out
 
