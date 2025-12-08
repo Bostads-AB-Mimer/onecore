@@ -440,7 +440,9 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
     invoiceId: event.invoiceNumber,
     matchId: event.matchId,
     amount: event.amount,
-    paymentDate: event.transactionHeader.postedDate ?? event.paymentDate,
+    paymentDate: event.transactionHeader.postedDate
+      ? new Date(event.transactionHeader.postedDate)
+      : new Date(event.paymentDate),
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
   }

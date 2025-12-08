@@ -31,18 +31,16 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
     }
   })
 
-  const filteredInvoices = await getInvoicesForReport(
+  const invoices = await getInvoicesForReport(
     '001',
     invoicesWithPaymentEvents.map((i) => i.invoiceId)
   )
 
-  const invoiceRows = await getInvoiceRows(
-    filteredInvoices.map((i) => i.invoiceId)
-  )
+  const invoiceRows = await getInvoiceRows(invoices.map((i) => i.invoiceId))
 
   const invoicePaymentSummaries: InvoicePaymentSummary[] = []
 
-  filteredInvoices.forEach((i) => {
+  invoices.forEach((i) => {
     const invoiceRowsForInvoice = invoiceRows.filter(
       (r) => r.invoiceNumber === i.invoiceId
     )
@@ -72,6 +70,7 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
 
       invoicePaymentSummaries.push({
         ...i,
+        paymentDate: pe.paymentDate,
         paidAmount: -pe.amount,
         fractionPaid,
         hemforTotal,
