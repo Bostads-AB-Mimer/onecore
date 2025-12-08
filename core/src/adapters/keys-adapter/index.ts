@@ -24,6 +24,7 @@ type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
 type KeyBundle = keys.v1.KeyBundle
 type KeyBundleDetailsResponse = keys.v1.KeyBundleDetailsResponse
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
+type CardOwner = keys.v1.CardOwner
 
 const BASE = Config.keysService.url
 
@@ -1031,5 +1032,29 @@ export const SignaturesApi = {
       `${BASE}/signatures/resource/${resourceType}/${resourceId}`
     )
     return r.ok ? ok(r.data.content) : r
+  },
+}
+
+/**
+ * ---- DAX API (Card Owners) -------------------------------------------------
+ */
+export const DaxApi = {
+  searchCardOwners: async (params: {
+    name?: string
+    offset?: number
+    limit?: number
+  }): Promise<AdapterResult<CardOwner[], CommonErr>> => {
+    const queryParams = new URLSearchParams()
+    if (params.name) queryParams.append('name', params.name)
+    if (params.offset !== undefined)
+      queryParams.append('offset', params.offset.toString())
+    if (params.limit !== undefined)
+      queryParams.append('limit', params.limit.toString())
+
+    const query = queryParams.toString()
+    const url = `${BASE}/dax/card-owners${query ? `?${query}` : ''}`
+
+    const r = await getJSON<{ cardOwners: CardOwner[] }>(url)
+    return r.ok ? ok(r.data.cardOwners) : r
   },
 }

@@ -11,6 +11,7 @@ import {
   KeyEventsApi,
   KeyBundlesApi,
   SignaturesApi,
+  DaxApi,
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
@@ -5632,4 +5633,70 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { content: result.data, ...metadata }
     }
   )
+
+  /**
+   * @swagger
+   * /dax/card-owners:
+   *   get:
+   *     summary: Search card owners from DAX
+   *     description: Search for card owners in the DAX access control system, optionally filtered by name (rental object ID)
+   *     tags: [DAX API]
+   *     parameters:
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Filter by name (rental object ID / object code)
+   *       - in: query
+   *         name: offset
+   *         schema:
+   *           type: integer
+   *         description: Pagination offset
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Maximum number of results
+   *     responses:
+   *       200:
+   *         description: Card owners retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 cardOwners:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       500:
+   *         description: Failed to fetch card owners
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/dax/card-owners', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const params = {
+      name: ctx.query.name as string | undefined,
+      offset: ctx.query.offset ? parseInt(ctx.query.offset as string) : undefined,
+      limit: ctx.query.limit ? parseInt(ctx.query.limit as string) : undefined,
+    }
+
+    const result = await DaxApi.searchCardOwners(params)
+
+    if (!result.ok) {
+      logger.error({ err: result.err, metadata }, 'Error searching card owners')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { cardOwners: result.data, ...metadata }
+  })
 }
