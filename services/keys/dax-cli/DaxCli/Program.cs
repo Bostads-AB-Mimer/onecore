@@ -12,8 +12,8 @@ if (args.Length < 1)
     Console.Error.WriteLine("Usage: DaxCli <command> [json-params]");
     Console.Error.WriteLine("Commands:");
     Console.Error.WriteLine("  getcontracts");
-    Console.Error.WriteLine("  getcardowners {\"partnerId\":\"...\",\"instanceId\":\"...\"}");
     Console.Error.WriteLine("  getcardowner {\"partnerId\":\"...\",\"instanceId\":\"...\",\"cardOwnerId\":\"...\"}");
+    Console.Error.WriteLine("  searchcardowners {\"partnerId\":\"...\",\"instanceId\":\"...\",\"nameFilter\":\"...\",\"expand\":\"...\"}");
     Environment.Exit(1);
 }
 
@@ -45,8 +45,8 @@ try
     object? result = command.ToLower() switch
     {
         "getcontracts" => await GetContracts(client),
-        "getcardowners" => await GetCardOwners(client, paramsJson),
         "getcardowner" => await GetCardOwner(client, paramsJson),
+        "searchcardowners" => await SearchCardOwners(client, config, paramsJson),
         _ => throw new ArgumentException($"Unknown command: {command}")
     };
 
@@ -64,26 +64,6 @@ static async Task<GetContractsResponse> GetContracts(DaxWebClient client)
     var request = new DaxWebRequestBuilder<GetContractsRequest, GetContractsResponse>()
         .AddRequest(new GetContractsRequest(new ContractsResourceIdentifier()))
         .SetContext("GetContracts")
-        .Build();
-
-    var response = await client.CallAsync(request);
-    return response.Response;
-}
-
-static async Task<GetCardOwnersResponse> GetCardOwners(DaxWebClient client, string paramsJson)
-{
-    var parameters = JsonSerializer.Deserialize<CardOwnerParams>(paramsJson);
-    if (parameters == null)
-        throw new ArgumentException("Invalid parameters for GetCardOwners");
-
-    var request = new DaxWebRequestBuilder<GetCardOwnersRequest, GetCardOwnersResponse>()
-        .AddRequest(new GetCardOwnersRequest(
-            new CardOwnersResourceIdentifier(
-                Guid.Parse(parameters.PartnerId),
-                Guid.Parse(parameters.InstanceId)
-            )
-        ))
-        .SetContext("GetCardOwners")
         .Build();
 
     var response = await client.CallAsync(request);
@@ -111,6 +91,39 @@ static async Task<GetCardOwnerResponse> GetCardOwner(DaxWebClient client, string
     return response.Response;
 }
 
+static async Task<GetCardOwnersResponse> SearchCardOwners(DaxWebClient client, DaxWebClientConfiguration config, string paramsJson)
+{
+    var parameters = JsonSerializer.Deserialize<SearchCardOwnerParams>(paramsJson)
+        ?? throw new ArgumentException("Invalid parameters for SearchCardOwners");
+
+    var resourceId = new CardOwnersResourceIdentifier(
+        Guid.Parse(parameters.PartnerId),
+        Guid.Parse(parameters.InstanceId)
+    );
+
+    // Build request with query parameters using SDK's AddQueryParameter method
+    var requestBuilder = new DaxWebRequestBuilder<GetCardOwnersRequest, GetCardOwnersResponse>()
+        .AddRequest(new GetCardOwnersRequest(resourceId))
+        .SetContext("SearchCardOwners");
+
+    // Add nameFilter query parameter if provided
+    if (!string.IsNullOrEmpty(parameters.NameFilter))
+    {
+        requestBuilder.AddQueryParameter("nameFilter", parameters.NameFilter);
+    }
+
+    // Add expand query parameter if provided
+    if (!string.IsNullOrEmpty(parameters.Expand))
+    {
+        requestBuilder.AddQueryParameter("expand", parameters.Expand);
+    }
+
+    var request = requestBuilder.Build();
+
+    var response = await client.CallAsync(request);
+    return response.Response;
+}
+
 class CardOwnerParams
 {
     [System.Text.Json.Serialization.JsonPropertyName("partnerId")]
@@ -121,6 +134,21 @@ class CardOwnerParams
 
     [System.Text.Json.Serialization.JsonPropertyName("cardOwnerId")]
     public string? CardOwnerId { get; set; }
+}
+
+class SearchCardOwnerParams
+{
+    [System.Text.Json.Serialization.JsonPropertyName("partnerId")]
+    public string PartnerId { get; set; } = "";
+
+    [System.Text.Json.Serialization.JsonPropertyName("instanceId")]
+    public string InstanceId { get; set; } = "";
+
+    [System.Text.Json.Serialization.JsonPropertyName("nameFilter")]
+    public string? NameFilter { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("expand")]
+    public string? Expand { get; set; }
 }
 
 class SimpleLogger : ILogger

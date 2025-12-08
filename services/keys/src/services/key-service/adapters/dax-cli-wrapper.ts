@@ -76,15 +76,16 @@ export async function getContractsCli() {
 }
 
 /**
- * Get all card owners for a specific partner and instance
- */
-export async function getCardOwnersCli(partnerId: string, instanceId: string) {
-  return callDaxCli('getcardowners', { partnerId, instanceId })
-}
-
-/**
  * Get a specific card owner
  */
 export async function getCardOwnerCli(partnerId: string, instanceId: string, cardOwnerId: string) {
   return callDaxCli('getcardowner', { partnerId, instanceId, cardOwnerId })
+}
+
+/**
+ * Search for card owners by name filter
+ * If nameFilter is not provided, returns all card owners (up to default limit of 50)
+ */
+export async function searchCardOwnersCli(partnerId: string, instanceId: string, nameFilter?: string, expand?: string) {
+  return callDaxCli('searchcardowners', { partnerId, instanceId, nameFilter, expand })
 }

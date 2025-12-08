@@ -1,84 +1,16 @@
 import { logger } from '@onecore/utilities'
+import { keys } from '@onecore/types'
 import Config from '../../../common/config'
-import { getCardOwnersCli, getCardOwnerCli } from './dax-cli-wrapper'
+import { getCardOwnerCli, searchCardOwnersCli } from './dax-cli-wrapper'
+
+type CardOwner = keys.v1.CardOwner
+type GetCardOwnersResponse = keys.v1.GetCardOwnersResponse
+type GetCardOwnerResponse = keys.v1.GetCardOwnerResponse
 
 /**
  * Card Owners Adapter
  * Fetches card owners and their cards from DAX API using the .NET CLI wrapper
  */
-
-export interface CardOwner {
-  cardOwnerId: string
-  cardOwnerType: string
-  familyName: string
-  specificName: string
-  primaryOrganization: string | null
-  cards: Card[]
-  comment: string
-  disabled: boolean
-  startTime: string | null
-  stopTime: string | null
-  pinCode: string
-  attributes: any
-  state: string
-  archivedAt: string | null
-  createTime: string
-}
-
-export interface Card {
-  cardId: string
-  cardNumber: string
-  cardType: string
-  validFrom: string
-  validTo: string | null
-  state: string
-  issuedAt: string
-  revokedAt: string | null
-}
-
-export interface GetCardOwnersResponse {
-  CardOwners: CardOwner[]
-}
-
-export interface GetCardOwnerResponse {
-  CardOwner: CardOwner
-}
-
-/**
- * Get all card owners for a specific rental object (using partner + instance)
- * @param rentalObjectId - The rental object ID (used to look up partner/instance)
- */
-export async function getCardOwnersForRentalObject(
-  rentalObjectId: string
-): Promise<CardOwner[]> {
-  try {
-    const partnerId = Config.alliera.partnerId
-    const instanceId = Config.alliera.owningInstanceId
-
-    logger.info(
-      `Fetching card owners for rental object ${rentalObjectId} (partner: ${partnerId}, instance: ${instanceId})`
-    )
-
-    const response = (await getCardOwnersCli(
-      partnerId,
-      instanceId
-    )) as GetCardOwnersResponse
-
-    // Filter card owners by rental object ID (familyName matches rentalObjectId)
-    const matchingCardOwners = response.CardOwners.filter(
-      (co) => co.familyName === rentalObjectId
-    )
-
-    logger.info(
-      `Found ${matchingCardOwners.length} card owners for rental object ${rentalObjectId}`
-    )
-
-    return matchingCardOwners
-  } catch (error) {
-    logger.error({ error, rentalObjectId }, `Failed to fetch card owners for rental object ${rentalObjectId}`)
-    throw error
-  }
-}
 
 /**
  * Get a specific card owner by ID
@@ -106,42 +38,29 @@ export async function getCardOwner(
 }
 
 /**
- * Get all card owners (no filtering)
+ * Search card owners by name (rental object ID)
+ * Uses nameFilter to efficiently search at the API level
+ * If nameFilter is not provided, returns all card owners (up to default limit of 50)
  */
-export async function getAllCardOwners(): Promise<CardOwner[]> {
+export async function searchCardOwners(nameFilter?: string): Promise<CardOwner[]> {
   try {
     const partnerId = Config.alliera.partnerId
     const instanceId = Config.alliera.owningInstanceId
 
-    logger.info('Fetching all card owners')
+    logger.info(`Searching card owners with nameFilter: ${nameFilter || 'none (all)'}`)
 
-    const response = (await getCardOwnersCli(
+    const response = (await searchCardOwnersCli(
       partnerId,
-      instanceId
+      instanceId,
+      nameFilter, // nameFilter
+      'cards' // expand to include cards
     )) as GetCardOwnersResponse
 
-    logger.info(`Found ${response.CardOwners.length} total card owners`)
+    logger.info(`Found ${response.CardOwners.length} card owners`)
 
     return response.CardOwners
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch card owners')
+    logger.error({ error, nameFilter }, 'Failed to search card owners')
     throw error
   }
-}
-
-/**
- * Get cards for a specific rental object
- * This is a convenience method that fetches card owners and extracts their cards
- */
-export async function getCardsForRentalObject(
-  rentalObjectId: string
-): Promise<Card[]> {
-  const cardOwners = await getCardOwnersForRentalObject(rentalObjectId)
-
-  // Flatten all cards from all matching card owners
-  const cards = cardOwners.flatMap((co) => co.cards)
-
-  logger.info(`Found ${cards.length} total cards for rental object ${rentalObjectId}`)
-
-  return cards
 }

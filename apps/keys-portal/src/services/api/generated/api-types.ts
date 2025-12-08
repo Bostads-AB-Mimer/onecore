@@ -81,34 +81,20 @@ export interface paths {
       };
     };
   };
-  "/dax/card-owners/search": {
+  "/dax/card-owners": {
     /**
-     * Search for card owners in DAX
-     * @description Query card owners from the Amido DAX API by various criteria
+     * Get all card owners from DAX
+     * @description Retrieve all card owners from the Amido DAX API
      */
-    post: {
-      requestBody?: {
-        content: {
-          "application/json": {
-            /** @description Filter by first name */
-            firstname?: string;
-            /** @description Filter by last name */
-            lastname?: string;
-            /** @description Filter by email */
-            email?: string;
-            /** @description Filter by personnummer (Swedish personal number) */
-            personnummer?: string;
-            /**
-             * @description Pagination offset
-             * @default 0
-             */
-            offset?: number;
-            /**
-             * @description Maximum number of results
-             * @default 50
-             */
-            limit?: number;
-          };
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by name (rental object ID / object code) */
+          name?: string;
+          /** @description Pagination offset */
+          offset?: number;
+          /** @description Maximum number of results */
+          limit?: number;
         };
       };
       responses: {
@@ -120,7 +106,7 @@ export interface paths {
             };
           };
         };
-        /** @description Failed to search card owners */
+        /** @description Failed to fetch card owners */
         500: {
           content: never;
         };

@@ -38,31 +38,26 @@ export async function getCardOwnerById(cardOwnerId: string) {
 
 /**
  * Search for card owners
- * Card owners are identified by familyName which corresponds to rental object ID (object code)
+ * Card owners are identified by name (familyName) which corresponds to rental object ID (object code)
+ * Now uses DAX API's nameFilter for efficient server-side filtering
  */
 export async function searchCardOwners(params: {
-  familyName?: string // Rental object ID / object code
+  name?: string // Rental object ID / object code
   offset?: number
   limit?: number
 }) {
   try {
-    const allCardOwners = await cardOwnersAdapter.getAllCardOwners()
+    // Use the new searchCardOwners adapter that applies nameFilter at API level
+    const cardOwners = await cardOwnersAdapter.searchCardOwners(params.name)
 
-    let filtered = allCardOwners
-    if (params.familyName) {
-      filtered = filtered.filter((co) =>
-        co.familyName?.toLowerCase().includes(params.familyName!.toLowerCase())
-      )
-    }
-
-    // Apply pagination only if specified
+    // Apply client-side pagination if requested
     if (params.offset !== undefined || params.limit !== undefined) {
       const offset = params.offset || 0
-      const limit = params.limit || filtered.length
-      return filtered.slice(offset, offset + limit)
+      const limit = params.limit || cardOwners.length
+      return cardOwners.slice(offset, offset + limit)
     }
 
-    return filtered
+    return cardOwners
   } catch (error) {
     logger.error({ error, params }, 'Failed to search card owners from DAX')
     throw error

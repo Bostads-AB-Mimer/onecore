@@ -145,10 +145,10 @@ export const routes = (router: KoaRouter) => {
    *     tags: [DAX API]
    *     parameters:
    *       - in: query
-   *         name: familyName
+   *         name: name
    *         schema:
    *           type: string
-   *         description: Filter by family name (rental object ID / object code)
+   *         description: Filter by name (rental object ID / object code)
    *       - in: query
    *         name: offset
    *         schema:
@@ -177,7 +177,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/dax/card-owners', async (ctx) => {
     try {
       const params = {
-        familyName: ctx.query.familyName as string | undefined,
+        name: ctx.query.name as string | undefined,
         offset: ctx.query.offset ? parseInt(ctx.query.offset as string) : undefined,
         limit: ctx.query.limit ? parseInt(ctx.query.limit as string) : undefined,
       }

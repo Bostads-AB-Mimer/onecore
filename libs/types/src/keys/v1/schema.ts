@@ -441,3 +441,42 @@ export const SimpleSignWebhookPayloadSchema = z.object({
   status_updated_at: z.string(),
   // Other fields can be added as needed
 })
+
+// DAX API schemas (for Amido DAX access control integration)
+
+export const CardSchema = z.object({
+  cardId: z.string(),
+  cardNumber: z.string(),
+  cardType: z.string(),
+  validFrom: z.string(),
+  validTo: z.string().nullable(),
+  state: z.string(),
+  issuedAt: z.string(),
+  revokedAt: z.string().nullable(),
+})
+
+export const CardOwnerSchema = z.object({
+  cardOwnerId: z.string(),
+  cardOwnerType: z.string(),
+  familyName: z.string(),
+  specificName: z.string(),
+  primaryOrganization: z.string().nullable(),
+  cards: z.array(CardSchema),
+  comment: z.string(),
+  disabled: z.boolean(),
+  startTime: z.string().nullable(),
+  stopTime: z.string().nullable(),
+  pinCode: z.string(),
+  attributes: z.any(),
+  state: z.string(),
+  archivedAt: z.string().nullable(),
+  createTime: z.string(),
+})
+
+export const GetCardOwnerResponseSchema = z.object({
+  CardOwner: CardOwnerSchema,
+})
+
+export const GetCardOwnersResponseSchema = z.object({
+  CardOwners: z.array(CardOwnerSchema),
+})
