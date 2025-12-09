@@ -94,7 +94,7 @@ const createLease = async (
 
 const addApplicantToToWaitingList = async (
   contactCode: string,
-  waitingListType: WaitingListType.ParkingSpace
+  waitingListType: WaitingListType
 ): Promise<
   AdapterResult<
     undefined,
@@ -116,6 +116,17 @@ const addApplicantToToWaitingList = async (
     if (!resultInternalParkingSpace.ok) return resultInternalParkingSpace
     if (!resultExternalParkingSpace.ok) return resultExternalParkingSpace
   }
+
+  if (waitingListType == WaitingListType.Housing) {
+    const result = await addToWaitingList(contactCode, 'Bostad (intern)')
+    return result
+  }
+
+  if (waitingListType == WaitingListType.Storage) {
+    const result = await addToWaitingList(contactCode, 'Förråd (intern)')
+    return result
+  }
+
   logger.error(
     `Add to Waiting list type ${waitingListType} not implemented yet`
   )
@@ -210,6 +221,17 @@ const removeApplicantFromWaitingList = async (
     if (!resultInternalParkingSpace.ok) return resultInternalParkingSpace
     if (!resultExternalParkingSpace.ok) return resultExternalParkingSpace
   }
+
+  if (waitingListType == WaitingListType.Housing) {
+    const result = await removeFromWaitingList(contactCode, 'Bostad (intern)')
+    return result
+  }
+
+  if (waitingListType == WaitingListType.Storage) {
+    const result = await removeFromWaitingList(contactCode, 'Förråd (intern)')
+    return result
+  }
+
   logger.error(
     `Remove from Waiting list type ${waitingListType} not implemented yet`
   )

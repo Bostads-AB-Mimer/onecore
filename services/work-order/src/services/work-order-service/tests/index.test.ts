@@ -196,6 +196,51 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('GET /workOrders/xpand/contactCode/{contactCode}', () => {
+    const contactCode = 'P174958'
+    const xpandWorkOrdersMock = factory.xpandWorkOrder.buildList(4, {
+      ContactCode: contactCode,
+    })
+
+    it('should return work orders for the given contact code', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByContactCode')
+        .mockResolvedValue({ ok: true, data: xpandWorkOrdersMock })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/contactCode/${contactCode}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+        JSON.stringify(xpandWorkOrdersMock)
+      )
+    })
+
+    it('should return 400 on invalid query parameters', async () => {
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/contactCode/${contactCode}?skip=invalid`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(xpandAdapter, 'getWorkOrdersByContactCode')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        `/workOrders/xpand/contactCode/${contactCode}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'Failed to fetch work orders from Xpand: unknown'
+      )
+    })
+  })
+
   describe('POST /workOrders', () => {
     const CreateWorkOrderMock = factory.CreateWorkOrder.build()
 

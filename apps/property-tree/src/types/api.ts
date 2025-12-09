@@ -133,26 +133,6 @@ export interface PropertyMap {
   buildings: BuildingLocation[]
 }
 
-export interface MaintenanceUnit {
-  id: string
-  name: string
-  type:
-    | 'Parkeringsområde'
-    | 'Lekplats'
-    | 'Rekreationsytor'
-    | 'Återvinning'
-    | 'Tvättsugor'
-    | 'Skyddsrum'
-    | 'Förråd'
-    | 'Installation'
-    | 'Lås & passage'
-  area: number
-  constructionYear: number
-  lastRenovated?: string
-  status: 'Aktiv' | 'Under renovering' | 'Planerad'
-  description?: string
-}
-
 export type SpaceType =
   | 'Trapphus'
   | 'Vind'
