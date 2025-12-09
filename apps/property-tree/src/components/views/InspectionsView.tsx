@@ -40,10 +40,10 @@ import { InspectionReadOnly } from '@/components/residence/inspection/Inspection
 import { cn } from '@/lib/utils'
 import { InspectionsHeader } from '@/components/inspections/InspectionsHeader'
 import { InspectorCell } from '@/components/inspections/InspectorCell'
-import { DateCell } from './components/DateCell'
-import { SortableHeader } from './components/SortableHeader'
-import { useInspectionFilters } from './hooks/useInspectionFilters'
-import { useInspectionSorting } from './hooks/useInspectionSorting'
+import { DateCell } from '@/components/inspections/DateCell'
+// import { SortableHeader } from './components/SortableHeader' Unused?
+import { useInspectionFilters } from '@/components/hooks/useInspectionFilters'
+import { useInspectionSorting } from '@/components/hooks/useInspectionSorting'
 // temp mock data TODO replace with real data when available
 import {
   getAllInspections,
