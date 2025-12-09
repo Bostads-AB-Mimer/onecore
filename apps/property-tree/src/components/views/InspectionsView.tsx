@@ -38,17 +38,18 @@ import {
 import { Dialog, DialogContent } from '@/components/ui/v2/Dialog'
 import { InspectionReadOnly } from '@/components/residence/inspection/InspectionReadOnly'
 import { cn } from '@/lib/utils'
-import { InspectionsHeader } from './components/InspectionsHeader'
-import { InspectorCell } from './components/InspectorCell'
+import { InspectionsHeader } from '@/components/inspections/InspectionsHeader'
+import { InspectorCell } from '@/components/inspections/InspectorCell'
 import { DateCell } from './components/DateCell'
 import { SortableHeader } from './components/SortableHeader'
 import { useInspectionFilters } from './hooks/useInspectionFilters'
 import { useInspectionSorting } from './hooks/useInspectionSorting'
+// temp mock data TODO replace with real data when available
 import {
   getAllInspections,
   CURRENT_USER,
   type ExtendedInspection,
-} from './data/mockInspections'
+} from '@/components/inspections/mockdata/mockInspections'
 
 export default function AllInspectionsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
