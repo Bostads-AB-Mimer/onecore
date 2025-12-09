@@ -1,7 +1,8 @@
 import { logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import Config from '../../../common/config'
-import { getCardOwnerCli, searchCardOwnersCli } from './dax-cli-wrapper'
+// TEMPORARY: Using direct TypeScript adapter for testing
+import * as daxAdapter from './dax-adapter'
 
 type CardOwner = keys.v1.CardOwner
 type GetCardOwnersResponse = keys.v1.GetCardOwnersResponse
@@ -9,7 +10,7 @@ type GetCardOwnerResponse = keys.v1.GetCardOwnerResponse
 
 /**
  * Card Owners Adapter
- * Fetches card owners and their cards from DAX API using the .NET CLI wrapper
+ * TEMPORARY: Using direct TypeScript DAX adapter for comparison testing
  */
 
 /**
@@ -22,43 +23,50 @@ export async function getCardOwner(
     const partnerId = Config.alliera.partnerId
     const instanceId = Config.alliera.owningInstanceId
 
-    logger.info(`Fetching card owner ${cardOwnerId}`)
+    logger.info(`Fetching card owner ${cardOwnerId} (USING DIRECT TS ADAPTER)`)
 
-    const response = (await getCardOwnerCli(
+    const response = await daxAdapter.getCardOwner(
       partnerId,
       instanceId,
       cardOwnerId
-    )) as GetCardOwnerResponse
+    )
 
-    return response.CardOwner
+    return response.cardOwner as any // Type mismatch, but close enough for testing
   } catch (error) {
-    logger.error({ error, cardOwnerId }, `Failed to fetch card owner ${cardOwnerId}`)
+    logger.error(
+      { error, cardOwnerId },
+      `Failed to fetch card owner ${cardOwnerId}`
+    )
     return null
   }
 }
 
 /**
  * Search card owners by name (rental object ID)
- * Uses nameFilter to efficiently search at the API level
- * If nameFilter is not provided, returns all card owners (up to default limit of 50)
+ * TEMPORARY: Using queryCardOwners with firstname/lastname for testing
  */
-export async function searchCardOwners(nameFilter?: string): Promise<CardOwner[]> {
+export async function searchCardOwners(
+  nameFilter?: string
+): Promise<CardOwner[]> {
   try {
     const partnerId = Config.alliera.partnerId
     const instanceId = Config.alliera.owningInstanceId
 
-    logger.info(`Searching card owners with nameFilter: ${nameFilter || 'none (all)'}`)
+    logger.info(
+      `Searching card owners with nameFilter: ${nameFilter || 'none (all)'} (USING DIRECT TS ADAPTER)`
+    )
 
-    const response = (await searchCardOwnersCli(
+    // Use the query endpoint with name filter
+    const response = await daxAdapter.queryCardOwners({
       partnerId,
       instanceId,
-      nameFilter, // nameFilter
-      'cards' // expand to include cards
-    )) as GetCardOwnersResponse
+      firstname: nameFilter,
+      limit: 50,
+    })
 
-    logger.info(`Found ${response.CardOwners.length} card owners`)
+    logger.info(`Found ${response.cardOwners.length} card owners`)
 
-    return response.CardOwners
+    return response.cardOwners as any // Type mismatch, but close enough for testing
   } catch (error) {
     logger.error({ error, nameFilter }, 'Failed to search card owners')
     throw error

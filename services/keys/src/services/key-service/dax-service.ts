@@ -1,22 +1,24 @@
 import { logger } from '@onecore/utilities'
 import * as cardOwnersAdapter from './adapters/card-owners-adapter'
-// Using TEST DAX adapter with REAL OAuth + detailed logging
-import * as testDaxAdapter from './adapters/test-dax-adapter'
+// Using direct DAX adapter with fixed OAuth + RSA signature
+import * as daxAdapter from './adapters/dax-adapter'
 
 /**
  * DAX Service
  * Business logic layer for DAX API operations
- * Using TEST DAX adapter with real OAuth and detailed logging
+ * Using direct TypeScript DAX adapter with fixed signature
  */
 
 /**
  * Get all contracts from DAX
- * Using TEST DAX adapter with OAuth + correct RSA signature + detailed logging
+ * Using direct DAX adapter with OAuth + correct RSA signature
  */
 export async function getAllContracts() {
   try {
-    logger.info('Fetching contracts from DAX (USING TEST DAX ADAPTER WITH REAL OAUTH)')
-    const response = await testDaxAdapter.getContracts()
+    logger.info(
+      'Fetching contracts from DAX (USING DIRECT DAX ADAPTER WITH FIXED SIGNATURE)'
+    )
+    const response = await daxAdapter.getContracts()
     return response.contracts || []
   } catch (error) {
     logger.error({ error }, 'Failed to get contracts from DAX')

@@ -5256,6 +5256,40 @@ export interface paths {
       };
     };
   };
+  "/dax/card-owners": {
+    /**
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system, optionally filtered by name (rental object ID)
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by name (rental object ID / object code) */
+          name?: string;
+          /** @description Pagination offset */
+          offset?: number;
+          /** @description Maximum number of results */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Card owners retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwners?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Failed to fetch card owners */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
