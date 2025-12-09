@@ -13,7 +13,7 @@ import {
 import { ViewHeader } from '../shared/ViewHeader'
 
 export function TenantView() {
-  const { tenantId } = useParams()
+  const { contactCode } = useParams()
   const [tenant, setTenant] = React.useState<Tenant | null>(null)
   const [loading, setLoading] = React.useState(true)
 
@@ -23,7 +23,7 @@ export function TenantView() {
         // In a real application, we would fetch the tenant data here
         // For now, we'll use mock data
         setTenant({
-          id: tenantId!,
+          id: contactCode!,
           name: 'Anna Svensson',
           email: 'anna.svensson@example.com',
           phone: '070-123 45 67',
@@ -35,7 +35,7 @@ export function TenantView() {
       }
     }
     loadTenant()
-  }, [tenantId])
+  }, [contactCode])
 
   if (loading) return <div>Loading...</div>
   if (!tenant) return <div>Tenant not found</div>

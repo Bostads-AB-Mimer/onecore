@@ -12,13 +12,14 @@ import { CompanyView } from './components/views/CompanyView'
 import SearchView from './components/views/SearchView'
 import PropertyView from './components/views/v2/PropertyView'
 import BuildingView from './components/views/v2/BuildingView'
+import TenantView from './components/views/v2/TenantView'
 import { StaircaseView } from './components/views/StaircaseView'
 import { ResidenceView } from './components/views/ResidenceView'
-import { TenantView } from './components/views/TenantView'
 import { RoomView } from './components/views/RoomView'
 import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
+import AllTenantsPage from './components/tenants/AllTenantsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,7 +65,8 @@ export default function App() {
                 path="residences/:residenceId/rooms/:roomId"
                 element={<RoomView />}
               />
-              <Route path="tenants/:tenantId" element={<TenantView />} />
+              <Route path="tenants" element={<AllTenantsPage />} />
+              <Route path="tenants/:contactCode" element={<TenantView />} />
             </Route>
           </Routes>
         </Router>

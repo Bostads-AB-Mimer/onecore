@@ -44,6 +44,58 @@ export const db = knex({
   },
 })
 
+export async function getWorkOrdersByContactCode(
+  contactCode: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<XpandWorkOrder[], 'schema-error' | 'unknown'>> {
+  logger.info(`Getting work orders for contactCode: ${contactCode}`)
+
+  const workOrders = await db<XpandDbWorkOrder>('aoupp')
+    .select(
+      'aoupp.code',
+      'aoupp.caption AS caption',
+      'cmctc.cmctckod AS contactCode',
+      'aotlt.caption AS masterKey',
+      'aoupp.status AS status',
+      'resource.cmctcben AS resource',
+      'cmrgr.caption AS resourceGroup',
+      'aoupp.time AS createdAt',
+      'aoupp.timeforf AS expiresAt',
+      'aoupp.lastchged AS lastChanged',
+      'aopri.code AS priority',
+      'babuf.hyresid AS residenceId'
+    )
+    .innerJoin('babuf', 'babuf.keycmobj', 'aoupp.keycmobj')
+    .innerJoin('aotlt', 'aotlt.keyaotlt', 'aoupp.keyaotlt')
+    .leftJoin('cmctc', 'cmctc.keycmctc', 'aoupp.keycmctc')
+    .leftJoin('cmctc as resource', 'resource.keycmctc', 'aoupp.keycmctc2')
+    .leftJoin('cmrgr', 'cmrgr.keycmrgr', 'aoupp.keycmrgr')
+    .leftJoin('aopri', 'aopri.keyaopri', 'aoupp.keyaopri')
+    .where('cmctc.cmctckod', contactCode)
+    .orderBy('aoupp.time', sortAscending ? 'asc' : 'desc')
+    .offset(skip)
+    .limit(limit)
+    .then<XpandDbWorkOrder[]>(trimStrings)
+
+  const transformedWorkOrders = workOrders.map(transformXpandDbWorkOrder)
+
+  const parsed = XpandWorkOrderSchema.array().safeParse(transformedWorkOrders)
+  if (!parsed.success) {
+    logger.error(
+      { error: parsed.error.format() },
+      'Failed to parse work orders from Xpand DB'
+    )
+
+    return { ok: false, err: 'schema-error' }
+  }
+
+  return { ok: true, data: parsed.data }
+}
+
 export async function getWorkOrdersByResidenceId(
   residenceId: string,
   {
