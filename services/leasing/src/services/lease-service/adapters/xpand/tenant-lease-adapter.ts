@@ -411,13 +411,15 @@ const getContactQuery = () => {
       .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
       .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
       .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
-      //only get valid addresses
+      // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
       .where(function () {
         this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
       })
       .where(function () {
         this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
       })
+      // Sort addresses so that those with a non-null fdate come first (ordered by fdate ascending), and addresses with fdate = null come last.
+      // This is to prioritize addresses with a defined start date.
       .orderByRaw(
         'CASE WHEN cmadr.fdate IS NULL THEN 1 ELSE 0 END, cmadr.fdate ASC'
       )
