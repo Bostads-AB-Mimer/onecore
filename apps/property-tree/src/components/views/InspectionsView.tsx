@@ -52,7 +52,6 @@ import {
 } from '@/components/inspections/mockdata/mockInspections'
 
 export default function AllInspectionsPage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [inspections, setInspections] =
     useState<ExtendedInspection[]>(getAllInspections)
   const [selectedInspection, setSelectedInspection] =
@@ -577,7 +576,7 @@ export default function AllInspectionsPage() {
 
       <Dialog
         open={selectedInspection !== null}
-        onOpenChange={(open) => !open && setSelectedInspection(null)}
+        onOpenChange={(open: boolean) => !open && setSelectedInspection(null)}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedInspection && (
