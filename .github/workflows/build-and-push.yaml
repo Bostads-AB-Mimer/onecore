@@ -145,7 +145,7 @@ jobs:
         run: |
           BRANCH_TAG="${{ steps.build-type.outputs.build_tag_base }}"
 
-          LATEST=$(crane ls $IMAGE \
+          LATEST=$(crane ls "ghcr.io/bostads-ab-mimer/onecore/onecore-core" \
             | grep "^${BRANCH_TAG}\." \
             | sed "s/^${BRANCH_TAG}\.//" \
             | sort -n \
