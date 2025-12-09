@@ -27,16 +27,17 @@ const client = createDaxClient({
   apiVersion: '2.0', // optional, defaults to '2.0'
 })
 
-// CUrrently implemented methods
+// Currently implemented methods
 
 // Get contracts
-const { contracts } = await client.contracts.getAll('MyContext')
+const { contracts } = await client.contracts.getAll()
 
 // Query card owners
 const { cardOwners } = await client.cardOwners.query({
   owningPartnerId: 'partner-id',
   owningInstanceId: 'instance-id',
   nameFilter: 'John',
+  expand: 'cards',
   limit: 50,
 })
 
@@ -44,7 +45,16 @@ const { cardOwners } = await client.cardOwners.query({
 const { cardOwner } = await client.cardOwners.getById(
   'partner-id',
   'instance-id',
-  'cardowner-id'
+  'cardowner-id',
+  'cards' // expand parameter
+)
+
+// Get specific card
+const { card } = await client.cards.getById(
+  'partner-id',
+  'instance-id',
+  'card-id',
+  'codes' // expand parameter
 )
 ```
 
@@ -60,12 +70,19 @@ const { cardOwner } = await client.cardOwners.getById(
 
 ### Contracts
 
-- `client.contracts.getAll(context?)` - Get all contracts
+- `client.contracts.getAll()` - Get all contracts, useful for testing that auth is working correctly
 
 ### Card Owners
 
 - `client.cardOwners.query(params)` - Query card owners with filters
-- `client.cardOwners.getById(partnerId, instanceId, cardOwnerId, context?)` - Get specific card owner
+  - Supports: `nameFilter`, `expand`, `idfilter`, `attributeFilter`, `selectedAttributes`, `folderFilter`, `organisationFilter`
+- `client.cardOwners.getById(partnerId, instanceId, cardOwnerId, expand?)` - Get specific card owner
+  - `expand` parameter: e.g., `'cards'` to include related cards
+
+### Cards
+
+- `client.cards.getById(partnerId, instanceId, cardId, expand?)` - Get specific card
+  - `expand` parameter: e.g., `'codes'` to include card codes
 
 ## Configuration
 

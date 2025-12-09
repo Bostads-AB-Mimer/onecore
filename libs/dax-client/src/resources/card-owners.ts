@@ -26,10 +26,14 @@ export class CardOwnersResource {
     owningPartnerId: string,
     owningInstanceId: string,
     cardOwnerId: string,
+    expand?: string,
     context?: string
   ): Promise<{ cardOwner: CardOwner }> {
     const path = `/partners/${owningPartnerId}/instances/${owningInstanceId}/cardowners/${cardOwnerId}`
 
-    return this.client.request('GET', path, { context })
+    return this.client.request('GET', path, {
+      queryParams: expand ? { expand } : undefined,
+      context,
+    })
   }
 }

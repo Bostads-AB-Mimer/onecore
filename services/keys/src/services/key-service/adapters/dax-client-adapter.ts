@@ -6,6 +6,7 @@ import {
   createDaxClient,
   type Contract,
   type CardOwner,
+  type Card,
   type QueryCardOwnersParams,
 } from 'dax-client'
 import Config from '../../../common/config'
@@ -36,7 +37,7 @@ function getClient() {
  */
 export async function getContracts(): Promise<{ contracts: Contract[] }> {
   const client = getClient()
-  return client.contracts.getAll('Testrequest')
+  return client.contracts.getAll()
 }
 
 /**
@@ -55,13 +56,27 @@ export async function queryCardOwners(
 export async function getCardOwner(
   owningPartnerId: string,
   owningInstanceId: string,
-  cardOwnerId: string
+  cardOwnerId: string,
+  expand?: string
 ): Promise<{ cardOwner: CardOwner }> {
   const client = getClient()
   return client.cardOwners.getById(
     owningPartnerId,
     owningInstanceId,
     cardOwnerId,
-    'Testrequest'
+    expand
   )
+}
+
+/**
+ * Get a specific card by ID
+ */
+export async function getCard(
+  owningPartnerId: string,
+  owningInstanceId: string,
+  cardId: string,
+  expand?: string
+): Promise<{ card: Card }> {
+  const client = getClient()
+  return client.cards.getById(owningPartnerId, owningInstanceId, cardId, expand)
 }
