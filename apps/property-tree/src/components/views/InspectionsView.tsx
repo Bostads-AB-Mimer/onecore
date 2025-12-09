@@ -305,7 +305,7 @@ export default function AllInspectionsPage() {
   }
 
   return (
-    <div className="py-4 animate-in">
+    <div className="py-4 animate-in max-w-full overflow-hidden">
       <div className="space-y-6">
         <InspectionsHeader />
 
