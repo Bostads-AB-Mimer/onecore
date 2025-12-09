@@ -229,21 +229,27 @@ function getSigningString(
 
 /**
  * Make authenticated DAX API request
- * Mimics the C# Program.cs flow
+ * Mimics the C# Program.cs flow but NOW WITH REAL OAUTH
  */
 async function makeAuthenticatedRequest<T>(
   method: string,
   path: string,
   context?: string
 ): Promise<DaxApiResponse<T>> {
-  // Get access token (skipped for now in test, like C# Program.cs line 54)
-  // const token = await getAccessToken()
+  // Get access token - NOW ENABLED!
+  console.log('[TEST DAX] Getting OAuth access token...')
+  const token = await getAccessToken()
+  console.log('[TEST DAX] Got OAuth token:', token.substring(0, 50) + '...')
 
   // Load private key
   const privateKey = fs.readFileSync(Config.alliera.pemKeyPath, 'utf8')
 
-  // Use fixed date for testing (like C# Program.cs line 56)
-  const date = '2025-12-08T13:51:50.2437457Z'
+  // Use CURRENT date (not fixed) for real request
+  const now = new Date()
+  const isoString = now.toISOString()
+  const microSeconds = (now.getMilliseconds() * 10000).toString().padStart(7, '0')
+  const date = isoString.replace(/\.\d{3}Z$/, `.${microSeconds}Z`)
+  console.log('[TEST DAX] Using date:', date)
 
   return new Promise((resolve, reject) => {
     const url = new URL(`${Config.alliera.apiUrl}${path}`)
@@ -264,7 +270,7 @@ async function makeAuthenticatedRequest<T>(
 
     const headers: http.OutgoingHttpHeaders = {
       Host: includePort ? `${url.hostname}:${url.port}` : url.hostname,
-      // Authorization: `Bearer ${token}`, // Skipped for testing
+      Authorization: `Bearer ${token}`, // NOW ENABLED!
       Date: date,
       Signature: signature,
       'Content-Type': 'application/json; charset=utf-8',

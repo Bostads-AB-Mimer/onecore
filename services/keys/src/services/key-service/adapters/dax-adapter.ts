@@ -234,15 +234,15 @@ function createSignatureHeader(
   method: string,
   path: string,
   date: string,
+  requestBody: string,
   privateKey: string
 ): string {
-  // Build signing string - .NET DAX SDK ONLY signs (request-target) and date
-  // Content-Length is sent in headers but NOT signed
+  // Build signing string - Includes (request-target), date, AND request body
   // DAX docs: "Always trim the value before adding it"
   const requestTarget = `${method.toLowerCase().trim()} ${path.trim()}`
   // HTTP Signatures spec uses \n (LF), not \r\n (CRLF)
-  // NO trailing newline - confirmed by comparing with working .NET SDK
-  const signingString = `(request-target): ${requestTarget}\ndate: ${date.trim()}`
+  // The request body is appended after the headers
+  const signingString = `(request-target): ${requestTarget}\ndate: ${date.trim()}\n${requestBody}`
 
   // Check for any unexpected whitespace
   console.log('=== WHITESPACE CHECK ===')
@@ -259,13 +259,23 @@ function createSignatureHeader(
 
   logger.debug({ signingString }, 'Creating signature for request')
 
-  // Create signature using SHA256withRSA
-  // Note: In Node.js, 'sha256' with RSA key performs SHA256withRSA
-  const sign = crypto.createSign('sha256')
-  sign.update(signingString, 'utf-8')
-  sign.end()
+  // FIX: C# does rsa.SignData(hash, SHA256, PKCS1) which signs the HASH
+  // We need to: 1) Hash the signing string, 2) Sign the hash with RSA
+  const signingBytes = Buffer.from(signingString, 'utf-8')
+  const sha256Hash = crypto.createHash('sha256')
+  const signingHash = sha256Hash.update(signingBytes).digest()
 
-  const signature = sign.sign(privateKey, 'base64')
+  console.log('=== SHA256 HASH ===')
+  console.log(signingHash.toString('hex').toUpperCase())
+  console.log('===================')
+
+  // Sign the hash directly with RSA using PKCS1 padding (not createSign which would hash again)
+  const privateKeyObj = crypto.createPrivateKey(privateKey)
+  const signatureBytes = crypto.sign(null, signingHash, {
+    key: privateKeyObj,
+    padding: crypto.constants.RSA_PKCS1_PADDING
+  })
+  const signature = signatureBytes.toString('base64')
 
   console.log('=== NODE.JS SIGNATURE ===')
   console.log(signature)
@@ -317,8 +327,8 @@ async function makeAuthenticatedRequest<T>(
       bodyString = JSON.stringify(body)
     }
 
-    // Create signature header - ONLY signs (request-target) and date, NOT content-length
-    const signature = createSignatureHeader(method, path, date, privateKey)
+    // Create signature header - Signs (request-target), date, AND request body
+    const signature = createSignatureHeader(method, path, date, bodyString, privateKey)
 
     // Determine if we're using HTTP or HTTPS based on the URL protocol
     const isHttps = url.protocol === 'https:'
