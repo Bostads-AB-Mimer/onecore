@@ -3,6 +3,7 @@ import type { Inspection } from '@/components/residence/inspection/types'
 // Mock data for temporary use until we have real data
 
 // Extended inspection type for the overview page
+// TODO should live elsewhere
 export interface ExtendedInspection extends Inspection {
   contractId?: string
   address?: string
