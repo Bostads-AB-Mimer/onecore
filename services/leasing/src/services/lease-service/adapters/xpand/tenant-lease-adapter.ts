@@ -616,6 +616,89 @@ const formatDate = (date: Date) => {
   return date.toISOString().split('T')[0]
 }
 
+interface GetAllLeasesByDateFilterOptions {
+  fromDateStart?: Date
+  fromDateEnd?: Date
+  lastDebitDateStart?: Date
+  lastDebitDateEnd?: Date
+}
+
+const getAllLeasesByDateFilter = async (
+  filters?: GetAllLeasesByDateFilterOptions
+): Promise<
+  AdapterResult<
+    Array<{
+      leaseId: string
+      rentalPropertyId: string | null
+      fromDate: Date | null
+      lastDebitDate: Date | null
+      noticeDate: Date | null
+      preferredMoveOutDate: Date | null
+      leaseType: string | null
+    }>,
+    'internal-error'
+  >
+> => {
+  try {
+    logger.info({ filters }, 'Getting all leases by date filter from Xpand DB')
+
+    let query = xpandDb
+      .from('hy_contract')
+      .select(
+        'contractid',
+        'rentalpropertyid',
+        'fromdate',
+        'lastdebitdate',
+        'noticedate',
+        'preferredmove',
+        'contracttype'
+      )
+      .where(function () {
+        this.whereNull('lastdebitdate').orWhere(
+          'lastdebitdate',
+          '>=',
+          xpandDb.raw("DATEADD(YEAR, -5, GETDATE())")
+        )
+      })
+
+    // Apply optional filters
+    if (filters?.fromDateStart) {
+      query = query.where('fromdate', '>=', filters.fromDateStart)
+    }
+    if (filters?.fromDateEnd) {
+      query = query.where('fromdate', '<=', filters.fromDateEnd)
+    }
+    if (filters?.lastDebitDateStart) {
+      query = query.where('lastdebitdate', '>=', filters.lastDebitDateStart)
+    }
+    if (filters?.lastDebitDateEnd) {
+      query = query.where('lastdebitdate', '<=', filters.lastDebitDateEnd)
+    }
+
+    const rows = await query
+
+    const leases = rows.map((row) => ({
+      leaseId: row.contractid?.trim() || '',
+      rentalPropertyId: row.rentalpropertyid?.trim() || null,
+      fromDate: row.fromdate || null,
+      lastDebitDate: row.lastdebitdate || null,
+      noticeDate: row.noticedate || null,
+      preferredMoveOutDate: row.preferredmove || null,
+      leaseType: row.contracttype?.trim() || null,
+    }))
+
+    logger.info(
+      { count: leases.length },
+      'Getting all leases by date filter from Xpand DB complete'
+    )
+
+    return { ok: true, data: leases }
+  } catch (err) {
+    logger.error(err, 'tenantLeaseAdapter.getAllLeasesByDateFilter')
+    return { ok: false, err: 'internal-error' }
+  }
+}
+
 export {
   getLease,
   getLeasesForContactCode,
@@ -632,4 +715,5 @@ export {
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
   transformFromDbContact,
+  getAllLeasesByDateFilter,
 }
