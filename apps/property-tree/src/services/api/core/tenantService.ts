@@ -20,6 +20,22 @@ async function getByContactCode(contactCode: string): Promise<Tenant> {
   return response.content as Tenant
 }
 
+async function getContactByContactCode(contactCode: string): Promise<any> {
+  const { data, error } = await GET('/contacts/{contactCode}', {
+    params: {
+      path: { contactCode },
+      query: { includeTerminatedLeases: 'true' },
+    },
+  })
+
+  if (error) throw error
+
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content
+}
+
 async function searchContacts(query: string): Promise<ContactSearchResult[]> {
   const { data, error } = await GET('/contacts/search', {
     params: { query: { q: query } },
@@ -33,4 +49,8 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
   return response.content as ContactSearchResult[]
 }
 
-export const tenantService = { getByContactCode, searchContacts }
+export const tenantService = {
+  getByContactCode,
+  getContactByContactCode,
+  searchContacts,
+}
