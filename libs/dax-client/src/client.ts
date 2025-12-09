@@ -33,9 +33,7 @@ export class DaxClient {
     let fullPath = path
     let queryString = ''
     if (options?.queryParams) {
-      console.log('[DAX] Query params:', JSON.stringify(options.queryParams))
       queryString = this.buildQueryString(options.queryParams)
-      console.log('[DAX] Query string:', queryString)
       if (queryString) {
         fullPath += `?${queryString}`
       }

@@ -1,23 +1,21 @@
 import { logger } from '@onecore/utilities'
 import * as cardOwnersAdapter from './adapters/card-owners-adapter'
-// Using direct DAX adapter with fixed OAuth + RSA signature
-import * as daxAdapter from './adapters/dax-adapter'
+// Using standalone dax-client library
+import * as daxAdapter from './adapters/dax-client-adapter'
 
 /**
  * DAX Service
  * Business logic layer for DAX API operations
- * Using direct TypeScript DAX adapter with fixed signature
+ * Using standalone dax-client library
  */
 
 /**
  * Get all contracts from DAX
- * Using direct DAX adapter with OAuth + correct RSA signature
+ * Using standalone dax-client library
  */
 export async function getAllContracts() {
   try {
-    logger.info(
-      'Fetching contracts from DAX (USING DIRECT DAX ADAPTER WITH FIXED SIGNATURE)'
-    )
+    logger.info('Fetching contracts from DAX (using dax-client library)')
     const response = await daxAdapter.getContracts()
     return response.contracts || []
   } catch (error) {

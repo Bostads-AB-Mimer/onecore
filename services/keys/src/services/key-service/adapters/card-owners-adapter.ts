@@ -1,8 +1,8 @@
 import { logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import Config from '../../../common/config'
-// TEMPORARY: Using direct TypeScript adapter for testing
-import * as daxAdapter from './dax-adapter'
+// Using standalone dax-client library
+import * as daxClientAdapter from './dax-client-adapter'
 
 type CardOwner = keys.v1.CardOwner
 type GetCardOwnersResponse = keys.v1.GetCardOwnersResponse
@@ -10,7 +10,7 @@ type GetCardOwnerResponse = keys.v1.GetCardOwnerResponse
 
 /**
  * Card Owners Adapter
- * TEMPORARY: Using direct TypeScript DAX adapter for comparison testing
+ * Using standalone dax-client library
  */
 
 /**
@@ -23,15 +23,15 @@ export async function getCardOwner(
     const partnerId = Config.alliera.partnerId
     const instanceId = Config.alliera.owningInstanceId
 
-    logger.info(`Fetching card owner ${cardOwnerId} (USING DIRECT TS ADAPTER)`)
+    logger.info(`Fetching card owner ${cardOwnerId} (using dax-client library)`)
 
-    const response = await daxAdapter.getCardOwner(
+    const response = await daxClientAdapter.getCardOwner(
       partnerId,
       instanceId,
       cardOwnerId
     )
 
-    return response.cardOwner as any // Type mismatch, but close enough for testing
+    return response.cardOwner as any // Type mismatch between dax-client and @onecore/types
   } catch (error) {
     logger.error(
       { error, cardOwnerId },
@@ -53,20 +53,19 @@ export async function searchCardOwners(
     const instanceId = Config.alliera.owningInstanceId
 
     logger.info(
-      `Searching card owners with nameFilter: ${nameFilter || 'none (all)'} (USING DIRECT TS ADAPTER)`
+      `Searching card owners with nameFilter: ${nameFilter || 'none (all)'} (using dax-client library)`
     )
 
     // Use the query endpoint with name filter
-    const response = await daxAdapter.queryCardOwners({
-      partnerId,
-      instanceId,
-      firstname: nameFilter,
-      limit: 50,
+    const response = await daxClientAdapter.queryCardOwners({
+      owningPartnerId: partnerId,
+      owningInstanceId: instanceId,
+      ...(nameFilter && { nameFilter }),
     })
 
     logger.info(`Found ${response.cardOwners.length} card owners`)
 
-    return response.cardOwners as any // Type mismatch, but close enough for testing
+    return response.cardOwners as any // Type mismatch between dax-client and @onecore/types
   } catch (error) {
     logger.error({ error, nameFilter }, 'Failed to search card owners')
     throw error

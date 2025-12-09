@@ -5683,7 +5683,9 @@ export const routes = (router: KoaRouter) => {
 
     const params = {
       name: ctx.query.name as string | undefined,
-      offset: ctx.query.offset ? parseInt(ctx.query.offset as string) : undefined,
+      offset: ctx.query.offset
+        ? parseInt(ctx.query.offset as string)
+        : undefined,
       limit: ctx.query.limit ? parseInt(ctx.query.limit as string) : undefined,
     }
 

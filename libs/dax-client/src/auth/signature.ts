@@ -54,13 +54,6 @@ function signRequest(
   // Join with newlines and add request body
   const signingString = signingStringParts.join('\n') + '\n' + requestBody
 
-  console.log('[DAX Signature Debug]')
-  console.log('Method:', method)
-  console.log('Request Target:', requestTarget)
-  console.log('Date:', date)
-  console.log('Request Body:', requestBody)
-  console.log('Signing String:', signingString)
-
   const signingBytes = Buffer.from(signingString, 'utf-8')
 
   // Compute SHA256 hash
