@@ -240,12 +240,20 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, [
+      'includeUpcomingLeases',
+      'includeTerminatedLeases',
+    ])
+    const includeTerminatedLeases =
+      ctx.query.includeTerminatedLeases === 'true' ? true : false
+    const includeUpcomingLeases =
+      ctx.query.includeUpcomingLeases === 'true' ? true : false
+
     const responseData = await leasingAdapter.getLeasesForContactCode(
       ctx.params.contactCode,
       {
-        includeUpcomingLeases: false,
-        includeTerminatedLeases: false,
+        includeUpcomingLeases,
+        includeTerminatedLeases,
         includeContacts: true,
       }
     )
