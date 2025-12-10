@@ -355,6 +355,11 @@ export const createAggregateTotalRow = (
   totalRow.amount =
     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
+  if (!totalRow.account || totalRow.account == 'null') {
+    console.log(aggregatedRows[0])
+    throw new Error('Account is missing in aggregation')
+  }
+
   return totalRow
 }
 
@@ -579,11 +584,10 @@ const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
   let currentContractCode = ''
 
   invoiceRows.forEach((invoiceRow) => {
-    if (
-      (invoiceRow.rowType as number) === 3 &&
-      /^\d/.test(invoiceRow.invoiceRowText as string)
-    ) {
-      currentContractCode = getContractCode(invoiceRow)
+    if ((invoiceRow.rowType as number) === 3) {
+      if (/^\d/.test(invoiceRow.invoiceRowText as string)) {
+        currentContractCode = getContractCode(invoiceRow)
+      }
     } else {
       invoiceRow.contractCode = currentContractCode
       cleanedInvoiceRows.push(invoiceRow)
