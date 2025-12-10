@@ -93,9 +93,8 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return 'Avi'
   }
 
-  const handleOpenPDF = (invoiceNumber: string) => {
-    // TODO: Implement PDF opening logic
-    console.log('Opening PDF for invoice:', invoiceNumber)
+  const handleOpenPDF = (url: string) => {
+    window.open(url, '_blank')
   }
 
   // Check if a row is a contract header (rowType 3)
@@ -262,6 +261,22 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                       {invoice.description}
                     </div>
                   )}
+                  {invoice.invoiceFileUrl && (
+                    <div className="mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenPDF(invoice.invoiceFileUrl!)
+                        }}
+                        className="w-full sm:w-auto"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Se PDF
+                      </Button>
+                    </div>
+                  )}
                   {invoice.paymentStatus === PaymentStatus.Paid &&
                     invoice.paidAmount !== undefined && (
                       <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
@@ -291,18 +306,6 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                             </span>
                           </div>
                         </div>
-                        {/* <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenPDF(invoice.invoiceId)
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Öppna PDF
-                        </Button> */}
                       </div>
                     )}
                   {invoice.invoiceRows.length > 0 && (
@@ -448,6 +451,22 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                             {invoice.description}
                           </div>
                         )}
+                        {invoice.invoiceFileUrl && (
+                          <div className="mb-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOpenPDF(invoice.invoiceFileUrl!)
+                              }}
+                              className="w-full sm:w-auto"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Se PDF
+                            </Button>
+                          </div>
+                        )}
                         {invoice.paymentStatus === PaymentStatus.Paid &&
                           invoice.paidAmount !== undefined && (
                             <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
@@ -477,18 +496,6 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                                   </span>
                                 </div>
                               </div>
-                              {/* <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOpenPDF(invoice.invoiceId)
-                                }}
-                                className="w-full sm:w-auto"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Öppna PDF
-                              </Button> */}
                             </div>
                           )}
                         {invoice.invoiceRows.length > 0 && (
