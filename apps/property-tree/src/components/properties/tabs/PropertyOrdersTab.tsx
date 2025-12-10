@@ -1,4 +1,7 @@
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import {
+  ContextType,
+  WorkOrdersManagement,
+} from '@/components/work-orders/WorkOrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
 import type { PropertyDetail } from '@/types/api'
 
@@ -22,7 +25,11 @@ export const PropertyOrdersTab = ({
 
   return (
     <TabLayout title="Ärenden för fastighet" showCard={false}>
-      <WorkOrdersManagement contextType="property" id={propertyDetail.code} />
+      <WorkOrdersManagement
+        contextType={ContextType.Property}
+        metadata={{ propertyName: propertyDetail.designation }}
+        id={propertyDetail.code}
+      />
     </TabLayout>
   )
 }

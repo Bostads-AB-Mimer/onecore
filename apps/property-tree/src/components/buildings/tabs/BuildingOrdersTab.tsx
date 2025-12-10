@@ -1,6 +1,9 @@
 import { TabLayout } from '@/components/ui/TabLayout'
 import type { Building } from '@/services/types'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import {
+  ContextType,
+  WorkOrdersManagement,
+} from '@/components/work-orders/WorkOrdersManagement'
 
 interface BuildingOrdersTabProps {
   building: Building
@@ -9,7 +12,10 @@ interface BuildingOrdersTabProps {
 export const BuildingOrdersTab = ({ building }: BuildingOrdersTabProps) => {
   return (
     <TabLayout title="Ärenden för byggnad" showCard={false}>
-      <WorkOrdersManagement contextType="building" id={building.code} />
+      <WorkOrdersManagement
+        contextType={ContextType.Building}
+        id={building.code}
+      />
     </TabLayout>
   )
 }
