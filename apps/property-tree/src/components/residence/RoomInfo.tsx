@@ -43,19 +43,16 @@ export const RoomInfo = (props: RoomInfoProps) => {
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Rumsöversikt</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">
+              Översikt Utrymmen
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm text-muted-foreground mb-4">
-              Totalt antal rum: {rooms.length}
+              Totalt antal utrymmen: {rooms.length}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Uppvärmda rum</p>
-                <p className="font-medium">
-                  {rooms.filter((room) => room.features.isHeated).length}
-                </p>
-              </div>
+              <div></div>
               {/* Hiding for demo purposes */}
               {/*
               <div>
@@ -105,7 +102,9 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Rumsinformation</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">
+            Information Utrymmen
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-2">

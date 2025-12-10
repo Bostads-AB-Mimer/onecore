@@ -8,16 +8,25 @@ import { useClipboardCopy } from '@/components/hooks/useClipboardCopy'
 import { useToast } from '@/components/hooks/useToast'
 import { Copy, Check } from 'lucide-react'
 
+interface ActionButton {
+  icon: React.ReactNode
+  onClick: () => void
+  tooltip: string
+  ariaLabel: string
+}
+
 interface CopyableFieldProps {
   label: string
   value: string | undefined
   emptyText?: string
+  actions?: ActionButton[]
 }
 
 export function CopyableField({
   label,
   value,
   emptyText = '-',
+  actions,
 }: CopyableFieldProps) {
   const { toast } = useToast()
   const { copyToClipboard, isCopied } = useClipboardCopy({
@@ -69,6 +78,22 @@ export function CopyableField({
             <TooltipContent>Klicka för att kopiera</TooltipContent>
           </Tooltip>
         )}
+        {actions?.map((action, index) => (
+          <Tooltip key={index}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={action.onClick}
+                className="h-6 w-6 shrink-0"
+                aria-label={action.ariaLabel}
+              >
+                {action.icon}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{action.tooltip}</TooltipContent>
+          </Tooltip>
+        ))}
       </div>
     </div>
   )
