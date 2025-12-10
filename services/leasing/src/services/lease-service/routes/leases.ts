@@ -4,6 +4,7 @@ import {
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   getLeasesForPropertyId,
+  getAllLeasesByDateFilter,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
@@ -414,6 +415,175 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases:
+   *   get:
+   *     summary: Get all leases with optional date filters and pagination
+   *     description: Retrieve all leases with optional filtering by fromDate and lastDebitDate. Only returns leases that are either active (no lastDebitDate) or terminated within the last 5 years. Optionally include full tenant contact information. Supports pagination for large result sets default limit is 300.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: fromDateStart
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with fromDate greater than or equal to this date.
+   *       - in: query
+   *         name: fromDateEnd
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with fromDate less than or equal to this date.
+   *       - in: query
+   *         name: lastDebitDateStart
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with lastDebitDate greater than or equal to this date.
+   *       - in: query
+   *         name: lastDebitDateEnd
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter leases with lastDebitDate less than or equal to this date.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include full tenant contact information in the response.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 300
+   *         description: Maximum number of leases to return. Use for pagination.
+   *       - in: query
+   *         name: offset
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *         description: Number of leases to skip. Use for pagination.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved leases with full lease objects and pagination metadata.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     limit:
+   *                       type: integer
+   *                       description: Number of items requested per page
+   *                     offset:
+   *                       type: integer
+   *                       description: Number of items skipped
+   *                     total:
+   *                       type: integer
+   *                       description: Total number of leases matching the filters
+   *                     returned:
+   *                       type: integer
+   *                       description: Number of items returned in this response
+   *       400:
+   *         description: Bad request. Invalid query parameters.
+   *       500:
+   *         description: Internal server error. Failed to retrieve leases.
+   */
+  const getAllLeasesByDateFilterQueryParamSchema = z.object({
+    fromDateStart: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    fromDateEnd: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    lastDebitDateStart: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    lastDebitDateEnd: z
+      .string()
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    includeContacts: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true'),
+    limit: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 300)),
+    offset: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 0)),
+  })
+
+  router.get('(.*)/leases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'fromDateStart',
+      'fromDateEnd',
+      'lastDebitDateStart',
+      'lastDebitDateEnd',
+      'includeContacts',
+      'limit',
+      'offset',
+    ])
+
+    const queryParams = getAllLeasesByDateFilterQueryParamSchema.safeParse(
+      ctx.query
+    )
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await getAllLeasesByDateFilter({
+      fromDateStart: queryParams.data.fromDateStart,
+      fromDateEnd: queryParams.data.fromDateEnd,
+      lastDebitDateStart: queryParams.data.lastDebitDateStart,
+      lastDebitDateEnd: queryParams.data.lastDebitDateEnd,
+      includeContacts: queryParams.data.includeContacts,
+      limit: queryParams.data.limit,
+      offset: queryParams.data.offset,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data.leases,
+      pagination: {
+        limit: queryParams.data.limit,
+        offset: queryParams.data.offset,
+        total: result.data.total,
+        returned: result.data.leases.length,
+      },
+      ...metadata,
     }
   })
 }

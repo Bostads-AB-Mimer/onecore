@@ -353,6 +353,116 @@ export interface paths {
       };
     };
   };
+  "/contacts/{contactCode}/comments": {
+    /**
+     * Get comments for a contact
+     * @description Retrieves all comments/notes for a contact from Xpand
+     */
+    get: {
+      parameters: {
+        path: {
+          /**
+           * @description The unique code identifying the contact.
+           * @example P086890
+           */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved comments */
+        200: {
+          content: {
+            "application/json": {
+              content?: ({
+                  contactKey?: string;
+                  contactCode?: string;
+                  commentKey?: string;
+                  id?: number;
+                  commentType?: string | null;
+                  /** @description Array of individual notes parsed from comment text */
+                  notes?: ({
+                      /**
+                       * Format: date
+                       * @description Date in YYYY-MM-DD format
+                       */
+                      date?: string | null;
+                      /** @description Time in HH:MM format */
+                      time?: string | null;
+                      /** @description Author initials (6 letters) or "Notering utan signatur" */
+                      author?: string;
+                      /** @description Note content (plain text) */
+                      text?: string;
+                    })[];
+                  priority?: number | null;
+                  kind?: number | null;
+                })[];
+            };
+          };
+        };
+        /** @description Contact not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create or append to contact comment
+     * @description Creates a new comment if none exists for the contact, or appends to existing comment in Xpand
+     */
+    post: {
+      parameters: {
+        path: {
+          /**
+           * @description The unique code identifying the contact
+           * @example P086890
+           */
+          contactCode: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * @description Plain text content of the note
+             * @example Customer contacted regarding lease renewal
+             */
+            content: string;
+            /**
+             * @description Author name or code (1-50 characters)
+             * @example DAVLIN
+             */
+            author: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Comment updated successfully (appended to existing comment) */
+        200: {
+          content: never;
+        };
+        /** @description Comment created successfully (new comment) */
+        201: {
+          content: never;
+        };
+        /** @description Invalid request body (validation failed) */
+        400: {
+          content: never;
+        };
+        /** @description Contact not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/offers/{offerId}/applicants/{contactCode}": {
     /**
      * Get a specific offer for an applicant
@@ -564,6 +674,46 @@ export interface paths {
               data?: Record<string, never>;
             };
           };
+        };
+      };
+    };
+  };
+  "/leases": {
+    /**
+     * Get all leases with optional date filters
+     * @description Retrieves all leases with optional filtering by fromDate and lastDebitDate. Only returns leases that are either active (no lastDebitDate) or terminated within the last 5 years. Optionally include full tenant contact information.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter leases with fromDate greater than or equal to this date. */
+          fromDateStart?: string;
+          /** @description Filter leases with fromDate less than or equal to this date. */
+          fromDateEnd?: string;
+          /** @description Filter leases with lastDebitDate greater than or equal to this date. */
+          lastDebitDateStart?: string;
+          /** @description Filter leases with lastDebitDate less than or equal to this date. */
+          lastDebitDateEnd?: string;
+          /** @description Whether to include full tenant contact information in the response. */
+          includeContacts?: boolean;
+        };
+      };
+      responses: {
+        /** @description Successful response with full lease objects matching the filter criteria */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
         };
       };
     };
@@ -3631,6 +3781,192 @@ export interface paths {
       };
     };
   };
+  "/api/components/{id}/upload": {
+    /** Upload a file to a component */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Optional caption for the file */
+          caption?: string;
+        };
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/components/{id}/files": {
+    /** Get all files for a component */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description List of files with presigned URLs */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                files?: components["schemas"]["FileMetadataWithUrl"][];
+              };
+            };
+          };
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/components/{id}/files/{fileId}": {
+    /** Delete a file from a component */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+          /** @description File ID */
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description File deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Component or file not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/upload": {
+    /** Upload a document to a component model */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/documents": {
+    /** Get all documents for a component model */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description List of documents with presigned URLs */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                documents?: components["schemas"]["FileMetadataWithUrl"][];
+              };
+            };
+          };
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/documents/{fileId}": {
+    /** Delete a document from a component model */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+          /** @description File ID */
+          fileId: string;
+        };
+      };
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Component model or document not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -4227,6 +4563,12 @@ export interface components {
           name: string;
         }[];
     };
+    ComponentCategory: {
+      id: string;
+      code: string;
+      name: string;
+      timestamp: string;
+    };
     ComponentType: {
       id: string;
       description: string;
@@ -4425,6 +4767,14 @@ export interface components {
             updatedAt: string;
           })[];
       };
+    };
+    CreateComponentCategoryRequest: {
+      code: string;
+      name: string;
+    };
+    UpdateComponentCategoryRequest: {
+      code?: string;
+      name?: string;
     };
     CreateComponentTypeRequest: {
       description: string;
