@@ -571,8 +571,18 @@ export const CreateComponentCategorySchema = z.object({
 })
 
 export const UpdateComponentCategorySchema = z.object({
-  code: z.string().trim().min(1).max(10, 'Code must be at most 10 characters').optional(),
-  name: z.string().trim().min(1).max(60, 'Name must be at most 60 characters').optional(),
+  code: z
+    .string()
+    .trim()
+    .min(1)
+    .max(10, 'Code must be at most 10 characters')
+    .optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60, 'Name must be at most 60 characters')
+    .optional(),
 })
 
 export const ComponentTypeSchema = z.object({
