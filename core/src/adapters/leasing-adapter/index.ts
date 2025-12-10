@@ -301,50 +301,55 @@ const getApplicantsByContactCode = async (
 const getApplicantsAndListingByContactCode = async (
   contactCode: string
 ): Promise<any[] | undefined> => {
-  const applicantsAndListings: ApplicantWithListing[] = []
   try {
     const applicantsResponse = (await getApplicantsByContactCode(
       contactCode
     )) as Applicant[]
 
-    // Fetch all listings for the applicants
-    const listingsMap = new Map()
-    for (const applicant of applicantsResponse) {
-      const listingResponse = await getListingByListingId(applicant.listingId)
-      if (listingResponse) {
-        //also get rental object for the listing
-        const rentalObjectResponse = await getParkingSpaceByCode(
-          listingResponse.rentalObjectCode
-        )
-        if (rentalObjectResponse.ok) {
-          listingResponse.rentalObject = rentalObjectResponse.data
-        } else {
-          logger.info(
-            { rentalObjectCode: listingResponse.rentalObjectCode },
-            'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
-          )
-        }
-
-        applicantsAndListings.push({ applicant, listing: listingResponse })
-      }
+    if (!applicantsResponse || applicantsResponse.length === 0) {
+      return []
     }
 
-    // Collect all rental object codes to fetch parking spaces in batch
+    // Fetch all listings in parallel
+    const listingsPromises = applicantsResponse.map((applicant) =>
+      getListingByListingId(applicant.listingId)
+    )
+    const listingsResults = await Promise.all(listingsPromises)
+
+    // Create a map of listingId -> listing for easy lookup
+    const listingsMap = new Map()
+    listingsResults.forEach((listing, index) => {
+      if (listing) {
+        listingsMap.set(applicantsResponse[index].listingId, listing)
+      }
+    })
+
+    // Collect all rental object codes from listings
     const rentalObjectCodes = Array.from(listingsMap.values())
       .map((listing) => listing.rentalObjectCode)
       .filter(Boolean)
 
-    // Fetch all parking spaces in one batch call
-    const parkingSpacesResult = await getParkingSpaces(rentalObjectCodes)
+    // Fetch all parking spaces in parallel
+    const parkingSpacesPromises = rentalObjectCodes.map((code) =>
+      getParkingSpaceByCode(code)
+    )
+    const parkingSpacesResults = await Promise.all(parkingSpacesPromises)
+
+    // Create a map of rentalObjectCode -> parking space
     const parkingSpacesMap = new Map()
+    parkingSpacesResults.forEach((result, index) => {
+      if (result.ok && result.data) {
+        parkingSpacesMap.set(rentalObjectCodes[index], result.data)
+      } else {
+        logger.info(
+          { rentalObjectCode: rentalObjectCodes[index] },
+          'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
+        )
+      }
+    })
 
-    if (parkingSpacesResult.ok) {
-      parkingSpacesResult.data.forEach((space) => {
-        parkingSpacesMap.set(space.rentalObjectCode, space)
-      })
-    }
-
-    // Build the final result with listings and parking spaces
+    // Build the final result with applicants, listings, and rental objects
+    const applicantsAndListings: ApplicantWithListing[] = []
     for (const applicant of applicantsResponse) {
       const listing = listingsMap.get(applicant.listingId)
       if (listing) {
