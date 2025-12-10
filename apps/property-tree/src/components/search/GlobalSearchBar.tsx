@@ -24,7 +24,7 @@ interface GlobalSearchBarProps {
 
 export function GlobalSearchBar({
   className,
-  placeholder = 'Sök efter fastigheter, byggnader eller lägenheter...',
+  placeholder = 'Sök efter fastigheter, byggnade, lägenheter eller kunder...',
 }: GlobalSearchBarProps) {
   // Open current search function in command palette for now
   const { open } = useCommandPalette()
