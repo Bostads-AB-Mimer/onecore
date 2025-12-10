@@ -4,19 +4,40 @@ import { WorkOrdersTableSkeleton } from '@/components/work-orders/WorkOrdersTabl
 import { TabLayout } from '@/components/ui/TabLayout'
 import { FilePlus } from 'lucide-react'
 import useWorkOrders from '../hooks/useWorkOrders'
-import { linkToOdooCreateMaintenanceRequest } from '@/utils/odooUtils'
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/utils/odooUtils'
+
+export enum ContextType {
+  Property = 'property',
+  Building = 'building',
+  Residence = 'residence',
+  Tenant = 'tenant',
+}
 
 export interface WorkOrdersManagementProps {
   id: string
-  contextType?: 'property' | 'building' | 'residence' | 'tenant'
+  contextType?: ContextType
+  metadata?: Record<string, string>
 }
 
 export function WorkOrdersManagement({
   id,
-  contextType = 'residence',
+  contextType = ContextType.Residence,
+  metadata,
 }: WorkOrdersManagementProps) {
   // Fetch work orders based on context type and id
   const { workOrders, isLoading, error } = useWorkOrders(id, contextType)
+
+  const onClickHandler = (contextType: ContextType, id: string) => {
+    // Special handling for property context to use property name
+    if (contextType === ContextType.Property) {
+      if (metadata?.propertyName) {
+        const id = metadata.propertyName
+        linkToOdooCreateMaintenanceRequestForContext(contextType, id)
+        return
+      }
+    }
+    linkToOdooCreateMaintenanceRequestForContext(contextType, id)
+  }
 
   return (
     <TabLayout title="Ärenden" count={workOrders.length} showCard={true}>
@@ -25,7 +46,7 @@ export function WorkOrdersManagement({
           <Button
             size={'default'}
             variant={'default'}
-            onClick={linkToOdooCreateMaintenanceRequest}
+            onClick={() => onClickHandler(contextType, id)}
           >
             <FilePlus className="mr-2 h-4 w-4" />
             Skapa ärende

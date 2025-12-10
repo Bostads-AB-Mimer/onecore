@@ -1,5 +1,8 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import {
+  ContextType,
+  WorkOrdersManagement,
+} from '@/components/work-orders/WorkOrdersManagement'
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 // import { TenantNotes } from '@/components/tenants/TenantNotes'
@@ -42,7 +45,10 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="work-orders">
-        <WorkOrdersManagement id={contactCode} contextType="tenant" />
+        <WorkOrdersManagement
+          id={contactCode}
+          contextType={ContextType.Tenant}
+        />
       </TabsContent>
 
       <TabsContent value="ledger">
