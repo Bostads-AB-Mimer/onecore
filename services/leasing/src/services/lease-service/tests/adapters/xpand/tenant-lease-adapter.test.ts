@@ -13,6 +13,7 @@ jest.mock('knex', () => () => ({
   where: jest.fn().mockReturnThis(),
   whereNotNull: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  orderByRaw: jest.fn().mockReturnThis(),
   then: jest
     .fn()
     .mockImplementationOnce((callback) =>
