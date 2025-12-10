@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/v3/Badge'
 import { parseISO } from 'date-fns'
-import { Invoice, PaymentStatus } from '@onecore/types'
+import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 import { useInvoicePaymentEvents } from '@/components/hooks/useInvoicePaymentEvents'
 import {
   Tooltip,
@@ -11,6 +11,8 @@ import {
   CollapsibleTable,
   CollapsibleTableColumn,
 } from '@/components/ui/CollapsibleTable'
+import { Button } from '@/components/ui/v2/Button'
+import { FileText } from 'lucide-react'
 
 export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   // Sort invoices by invoice date, latest first
@@ -108,6 +110,10 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   const getInvoiceType = (invoice: Invoice): string => {
     if (invoice.type === 'Other') return 'Ströfaktura'
     return 'Avi'
+  }
+
+  const handleOpenPDF = (url: string) => {
+    window.open(url, '_blank')
   }
 
   // Check if a row is a contract header (rowType 3)
@@ -402,6 +408,22 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
         {invoice.description && (
           <div className="mb-3 text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Text:</span> {invoice.description}
+          </div>
+        )}
+        {invoice.invoiceFileUrl && (
+          <div className="mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenPDF(invoice.invoiceFileUrl!)
+              }}
+              className="w-full sm:w-auto"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Se PDF
+            </Button>
           </div>
         )}
         {invoice.paymentStatus === PaymentStatus.Paid &&
