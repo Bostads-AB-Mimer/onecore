@@ -323,14 +323,12 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   }
 
   // Component that wraps both payment info and events for XLedger invoices
-  const InvoiceDetailsWithPaymentInfo = ({
-    invoice,
-  }: {
-    invoice: Invoice
-  }) => {
-    const { data: events, isLoading, error } = useInvoicePaymentEvents(
-      invoice.invoiceId
-    )
+  const InvoiceDetailsWithPaymentInfo = ({ invoice }: { invoice: Invoice }) => {
+    const {
+      data: events,
+      isLoading,
+      error,
+    } = useInvoicePaymentEvents(invoice.invoiceId)
 
     return (
       <>
