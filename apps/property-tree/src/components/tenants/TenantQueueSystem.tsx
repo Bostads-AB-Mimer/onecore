@@ -8,9 +8,19 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/v2/Button'
-import { InfoIcon, Home, Car, Users, ExternalLink, Plus } from 'lucide-react'
+import {
+  InfoIcon,
+  Home,
+  Car,
+  Users,
+  ExternalLink,
+  Plus,
+  Loader2,
+} from 'lucide-react'
 import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
-import { useQueueData } from '@/components/hooks/useQueueData'
+import { useContactQueuePoints } from '@/components/hooks/useContactQueuePoints'
+import { useInterestApplications } from '@/components/hooks/useInterestApplications'
+import { useApplicationProfile } from '@/components/hooks/useApplicationProfile'
 import { resolve } from '@/utils/env'
 
 // Helper function to get status badge variant
@@ -107,17 +117,35 @@ export function TenantQueueSystem({
   customerNumber,
   customerName,
 }: TenantQueueSystemProps) {
-  const { data: queueData, isLoading, error } = useQueueData(customerNumber)
+  // Separate API calls - each loads independently
+  const {
+    data: queuePoints,
+    isLoading: queuePointsLoading,
+    error: queuePointsError,
+  } = useContactQueuePoints(customerNumber)
+
+  const {
+    data: interestApplications,
+    isLoading: interestApplicationsLoading,
+    error: interestApplicationsError,
+  } = useInterestApplications(customerNumber)
+
+  const {
+    data: profileData,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useApplicationProfile(customerNumber)
+
   const [activeInterests, setActiveInterests] = useState(
-    queueData?.interestApplications || []
+    interestApplications || []
   )
 
-  // Update active interests when queue data changes
+  // Update active interests when data changes
   useEffect(() => {
-    if (queueData?.interestApplications) {
-      setActiveInterests(queueData.interestApplications)
+    if (interestApplications) {
+      setActiveInterests(interestApplications)
     }
-  }, [queueData])
+  }, [interestApplications])
 
   // Listen for new parking interest applications
   useEffect(() => {
@@ -158,26 +186,6 @@ export function TenantQueueSystem({
     window.open(bilplatserUrl, '_blank')
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <p className="text-muted-foreground">Laddar köinformation...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <Alert>
-        <InfoIcon className="h-4 w-4" />
-        <AlertTitle>Kunde inte ladda köinformation</AlertTitle>
-        <AlertDescription>
-          Ett fel uppstod vid hämtning av köinformation. Försök igen senare.
-        </AlertDescription>
-      </Alert>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -191,17 +199,28 @@ export function TenantQueueSystem({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {queueData?.housing ? (
+              {queuePointsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : queuePointsError ? (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Kunde inte ladda köpoäng
+                  </AlertDescription>
+                </Alert>
+              ) : queuePoints?.housing ? (
                 <>
                   <div>
                     <p className="text-sm text-muted-foreground">Köpoäng</p>
                     <p className="text-2xl font-bold">
-                      {queueData.housing.queuePoints}
+                      {queuePoints.housing.queuePoints}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Motsvarar ca{' '}
-                      {Math.floor(queueData.housing.queuePoints / 365)} år och{' '}
-                      {queueData.housing.queuePoints % 365} dagar
+                      {Math.floor(queuePoints.housing.queuePoints / 365)} år och{' '}
+                      {queuePoints.housing.queuePoints % 365} dagar
                     </p>
                   </div>
                   <Button variant="outline" className="w-full" disabled>
@@ -231,17 +250,28 @@ export function TenantQueueSystem({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {queueData?.parking ? (
+              {queuePointsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : queuePointsError ? (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Kunde inte ladda köpoäng
+                  </AlertDescription>
+                </Alert>
+              ) : queuePoints?.parking ? (
                 <>
                   <div>
                     <p className="text-sm text-muted-foreground">Köpoäng</p>
                     <p className="text-2xl font-bold">
-                      {queueData.parking.queuePoints}
+                      {queuePoints.parking.queuePoints}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Motsvarar ca{' '}
-                      {Math.floor(queueData.parking.queuePoints / 365)} år och{' '}
-                      {queueData.parking.queuePoints % 365} dagar
+                      {Math.floor(queuePoints.parking.queuePoints / 365)} år och{' '}
+                      {queuePoints.parking.queuePoints % 365} dagar
                     </p>
                   </div>
                   <Button
@@ -275,17 +305,28 @@ export function TenantQueueSystem({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {queueData?.storage ? (
+              {queuePointsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : queuePointsError ? (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription className="text-sm">
+                    Kunde inte ladda köpoäng
+                  </AlertDescription>
+                </Alert>
+              ) : queuePoints?.storage ? (
                 <>
                   <div>
                     <p className="text-sm text-muted-foreground">Köpoäng</p>
                     <p className="text-2xl font-bold">
-                      {queueData.storage.queuePoints}
+                      {queuePoints.storage.queuePoints}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Motsvarar ca{' '}
-                      {Math.floor(queueData.storage.queuePoints / 365)} år och{' '}
-                      {queueData.storage.queuePoints % 365} dagar
+                      {Math.floor(queuePoints.storage.queuePoints / 365)} år och{' '}
+                      {queuePoints.storage.queuePoints % 365} dagar
                     </p>
                   </div>
                   <Button variant="outline" className="w-full" disabled>
@@ -315,10 +356,21 @@ export function TenantQueueSystem({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {queueData?.applicationProfile ? (
+          {profileLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : profileError ? (
+            <Alert>
+              <InfoIcon className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Kunde inte ladda sökandeprofil
+              </AlertDescription>
+            </Alert>
+          ) : profileData?.applicationProfile ? (
             <div className="space-y-4">
               <ApplicationProfileDisplay
-                profile={queueData.applicationProfile}
+                profile={profileData.applicationProfile}
               />
               <Button
                 variant="outline"
@@ -357,7 +409,23 @@ export function TenantQueueSystem({
           <CardTitle>Aktiva intresseanmälningar (Bilplatser)</CardTitle>
         </CardHeader>
         <CardContent>
-          {activeInterests && activeInterests.length > 0 ? (
+          {interestApplicationsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">
+                Laddar intresseanmälningar...
+              </span>
+            </div>
+          ) : interestApplicationsError ? (
+            <Alert>
+              <InfoIcon className="h-4 w-4" />
+              <AlertTitle>Kunde inte ladda intresseanmälningar</AlertTitle>
+              <AlertDescription>
+                Ett fel uppstod vid hämtning av intresseanmälningar. Försök igen
+                senare.
+              </AlertDescription>
+            </Alert>
+          ) : activeInterests && activeInterests.length > 0 ? (
             <div className="space-y-4">
               {activeInterests.map((interest) => {
                 const statusBadge = getStatusBadge(interest.status)
