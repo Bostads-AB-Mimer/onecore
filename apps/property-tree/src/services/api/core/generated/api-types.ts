@@ -681,7 +681,7 @@ export interface paths {
   "/leases": {
     /**
      * Get all leases with optional date filters
-     * @description Retrieves all leases with optional filtering by fromDate and lastDebitDate. Only returns leases that are either active (no lastDebitDate) or terminated within the last 5 years.
+     * @description Retrieves all leases with optional filtering by fromDate and lastDebitDate. Only returns leases that are either active (no lastDebitDate) or terminated within the last 5 years. Optionally include full tenant contact information.
      */
     get: {
       parameters: {
@@ -694,26 +694,16 @@ export interface paths {
           lastDebitDateStart?: string;
           /** @description Filter leases with lastDebitDate less than or equal to this date. */
           lastDebitDateEnd?: string;
+          /** @description Whether to include full tenant contact information in the response. */
+          includeContacts?: boolean;
         };
       };
       responses: {
-        /** @description Successful response with leases matching the filter criteria */
+        /** @description Successful response with full lease objects matching the filter criteria */
         200: {
           content: {
             "application/json": {
-              content?: {
-                  leaseId?: string;
-                  rentalPropertyId?: string;
-                  /** Format: date */
-                  fromDate?: string;
-                  /** Format: date */
-                  lastDebitDate?: string;
-                  /** Format: date */
-                  noticeDate?: string;
-                  /** Format: date */
-                  preferredMoveOutDate?: string;
-                  leaseType?: string;
-                }[];
+              content?: components["schemas"]["Lease"][];
             };
           };
         };

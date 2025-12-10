@@ -103,38 +103,60 @@ interface GetAllLeasesByDateFilterOptions {
   fromDateEnd?: Date
   lastDebitDateStart?: Date
   lastDebitDateEnd?: Date
+  includeContacts?: boolean
+  limit?: number
+  offset?: number
+}
+
+interface GetAllLeasesByDateFilterResult {
+  leases: Lease[]
+  total: number
+  pagination?: {
+    limit?: number
+    offset?: number
+    total: number
+    returned: number
+  }
 }
 
 const getAllLeasesByDateFilter = async (
   filters?: GetAllLeasesByDateFilterOptions
-): Promise<
-  AdapterResult<
-    Array<{
-      leaseId: string
-      rentalPropertyId: string | null
-      fromDate: Date | null
-      lastDebitDate: Date | null
-      noticeDate: Date | null
-      preferredMoveOutDate: Date | null
-      leaseType: string | null
-    }>,
-    'internal-error'
-  >
-> => {
+): Promise<AdapterResult<GetAllLeasesByDateFilterResult, 'internal-error'>> => {
   try {
     const queryParams = new URLSearchParams()
 
     if (filters?.fromDateStart) {
-      queryParams.append('fromDateStart', filters.fromDateStart.toISOString().split('T')[0])
+      queryParams.append(
+        'fromDateStart',
+        filters.fromDateStart.toISOString().split('T')[0]
+      )
     }
     if (filters?.fromDateEnd) {
-      queryParams.append('fromDateEnd', filters.fromDateEnd.toISOString().split('T')[0])
+      queryParams.append(
+        'fromDateEnd',
+        filters.fromDateEnd.toISOString().split('T')[0]
+      )
     }
     if (filters?.lastDebitDateStart) {
-      queryParams.append('lastDebitDateStart', filters.lastDebitDateStart.toISOString().split('T')[0])
+      queryParams.append(
+        'lastDebitDateStart',
+        filters.lastDebitDateStart.toISOString().split('T')[0]
+      )
     }
     if (filters?.lastDebitDateEnd) {
-      queryParams.append('lastDebitDateEnd', filters.lastDebitDateEnd.toISOString().split('T')[0])
+      queryParams.append(
+        'lastDebitDateEnd',
+        filters.lastDebitDateEnd.toISOString().split('T')[0]
+      )
+    }
+    if (filters?.includeContacts) {
+      queryParams.append('includeContacts', 'true')
+    }
+    if (filters?.limit !== undefined) {
+      queryParams.append('limit', filters.limit.toString())
+    }
+    if (filters?.offset !== undefined) {
+      queryParams.append('offset', filters.offset.toString())
     }
 
     const queryString = queryParams.toString()
@@ -143,7 +165,15 @@ const getAllLeasesByDateFilter = async (
     const response = await axios.get(url)
 
     if (response.status === 200) {
-      return { ok: true, data: response.data.content }
+      return {
+        ok: true,
+        data: {
+          leases: response.data.content,
+          total:
+            response.data.pagination?.total || response.data.content.length,
+          pagination: response.data.pagination,
+        },
+      }
     }
 
     return { ok: false, err: 'internal-error' }
