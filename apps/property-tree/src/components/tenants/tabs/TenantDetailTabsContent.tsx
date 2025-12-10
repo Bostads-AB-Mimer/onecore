@@ -18,7 +18,7 @@ import { TenantLedger } from '../TenantLedger'
 
 interface TenantDetailTabsContentProps {
   leases: Lease[]
-  rentalProperties: Record<string, RentalPropertyInfo>
+  rentalProperties: Record<string, RentalPropertyInfo | null>
   personalNumber?: string
   contactCode: string
   customerName: string

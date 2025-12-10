@@ -94,19 +94,6 @@ const TenantView = () => {
       )
     }
 
-    if (rentalPropertiesError) {
-      return (
-        <div className="text-center py-10 space-y-4">
-          <h2 className="text-2xl font-bold">
-            Kunde inte hämta objektsinformation
-          </h2>
-          <p className="text-muted-foreground">
-            Ett fel uppstod när objektsinformationen skulle hämtas
-          </p>
-        </div>
-      )
-    }
-
     return (
       <div className="w-full">
         <TooltipProvider>

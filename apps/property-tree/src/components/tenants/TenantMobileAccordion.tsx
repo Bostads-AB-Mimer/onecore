@@ -15,7 +15,7 @@ import {
 
 interface TenantMobileAccordionProps {
   leases: Lease[]
-  rentalProperties: Record<string, RentalPropertyInfo>
+  rentalProperties: Record<string, RentalPropertyInfo | null>
   hasActiveCases?: boolean
   contactCode: string
   customerName: string

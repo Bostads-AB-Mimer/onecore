@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/v2/Table'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/Tooltip'
+import { InfoIcon } from 'lucide-react'
 import type { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
@@ -27,7 +34,7 @@ const LeaseStatus = {
 
 interface TenantContractsProps {
   leases: Lease[] // replace with real type representing response from leases/by-contact-code
-  rentalProperties: Record<string, RentalPropertyInfo>
+  rentalProperties: Record<string, RentalPropertyInfo | null>
 }
 
 export function TenantContracts({
@@ -38,6 +45,30 @@ export function TenantContracts({
     return null
   }
 
+  // Sort leases with three tiers:
+  // 1. Active/upcoming leases (with property data)
+  // 2. Ended leases (with property data)
+  // 3. Leases with missing property data
+  const sortedLeases = [...leases].sort((a, b) => {
+    const aHasProperty = !!rentalProperties[a.rentalPropertyId]
+    const bHasProperty = !!rentalProperties[b.rentalPropertyId]
+    // API returns numeric values despite TypeScript types
+    const aIsEnded = Number(a.status) === LeaseStatus.Ended
+    const bIsEnded = Number(b.status) === LeaseStatus.Ended
+
+    // If both have property data or both don't, sort by ended status
+    if (aHasProperty === bHasProperty) {
+      if (aIsEnded && !bIsEnded) return 1 // a is ended, b is not -> a goes after b
+      if (!aIsEnded && bIsEnded) return -1 // a is not ended, b is -> a goes before b
+      return 0 // Keep original order for items in same category
+    }
+
+    // Otherwise, prioritize those with property data
+    if (aHasProperty && !bHasProperty) return -1
+    if (!aHasProperty && bHasProperty) return 1
+    return 0
+  })
+
   const formatRentalType = (rentalType: string) => {
     // Remove " hyresobjektstyp" suffix if present ("Standard hyresobjektstyp" -> "Standard")
     return rentalType.replace(/ hyresobjektstyp$/i, '').trim()
@@ -46,8 +77,7 @@ export function TenantContracts({
   const getStatusBadge = (status: Lease['status']) => {
     // Note: The generated TypeScript types say status is a string enum,
     // but the actual API returns numeric values (0, 1, 2, 3)
-    // We cast to any to handle this type mismatch
-    const numericStatus = status as any
+    const numericStatus = Number(status)
 
     switch (numericStatus) {
       case LeaseStatus.Current:
@@ -103,8 +133,10 @@ export function TenantContracts({
     }).format(amount)
   }
 
-  const getPropertyIdentifier = (rentalProperty: RentalPropertyInfo) => {
-    const type = rentalProperty?.type
+  const getPropertyIdentifier = (rentalProperty: RentalPropertyInfo | null) => {
+    if (!rentalProperty) return 'Data ej tillgänglig'
+
+    const type = rentalProperty.type
     const property = rentalProperty.property
 
     if (type === 'Lägenhet' && 'number' in property) {
@@ -145,36 +177,97 @@ export function TenantContracts({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {leases.map((lease) => {
+            {sortedLeases.map((lease) => {
               const rentalProperty = rentalProperties[lease.rentalPropertyId]
               return (
                 <TableRow key={lease.leaseId}>
                   <TableCell>
-                    <div className="flex items-center">
-                      <span>{rentalProperty?.type}</span>
-                    </div>
+                    {!rentalProperty ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                              <InfoIcon className="h-4 w-4" />
+                              <span>Data ej tillgänglig</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Observera att vi inte alltid kan hämta data för
+                              sålda objekt
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span>{rentalProperty.type}</span>
+                    )}
                   </TableCell>
                   <TableCell>{lease.leaseNumber}</TableCell>
                   <TableCell>
-                    <div className="whitespace-nowrap">
-                      {formatAddress(rentalProperty.property.address)}
-                    </div>
-                    <div>{lease.rentalPropertyId}</div>
+                    {!rentalProperty ? (
+                      <>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                <InfoIcon className="h-4 w-4" />
+                                <span>Data ej tillgänglig</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Observera att vi inte alltid kan hämta data för
+                                sålda objekt
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {lease.rentalPropertyId}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="whitespace-nowrap">
+                          {formatAddress(rentalProperty.property.address)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {lease.rentalPropertyId}
+                        </div>
+                      </>
+                    )}
                   </TableCell>
-                  <TableCell>{getPropertyIdentifier(rentalProperty)}</TableCell>
+                  <TableCell>
+                    {!rentalProperty ? (
+                      <span className="text-muted-foreground">
+                        Data ej tillgänglig
+                      </span>
+                    ) : (
+                      getPropertyIdentifier(rentalProperty)
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div>{formatDate(lease.leaseStartDate)}</div>
                   </TableCell>
                   <TableCell>
                     <div>
-                      {lease.leaseEndDate ? formatDate(lease.leaseEndDate) : ''}
+                      {lease.lastDebitDate
+                        ? formatDate(lease.lastDebitDate)
+                        : ''}
                     </div>
                   </TableCell>
                   <TableCell></TableCell>
                   <TableCell>
-                    {rentalProperty?.property.rentalType
-                      ? formatRentalType(rentalProperty.property.rentalType)
-                      : ''}
+                    {!rentalProperty ? (
+                      <span className="text-muted-foreground">
+                        Data ej tillgänglig
+                      </span>
+                    ) : rentalProperty.property.rentalType ? (
+                      formatRentalType(rentalProperty.property.rentalType)
+                    ) : (
+                      ''
+                    )}
                   </TableCell>
                   <TableCell>{getStatusBadge(lease.status)}</TableCell>
                   <TableCell>
