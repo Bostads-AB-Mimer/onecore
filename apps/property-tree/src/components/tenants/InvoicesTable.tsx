@@ -373,9 +373,10 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                       })()}
                     </div>
                   )}
-                  {invoice.source?.toLowerCase() === 'next' && (
-                    <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
-                  )}
+                  {invoice.source?.toLowerCase() === 'next' &&
+                    invoice.type !== 'Other' && (
+                      <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                    )}
                 </div>
               )}
             </Card>
@@ -580,9 +581,10 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                             </table>
                           </div>
                         )}
-                        {invoice.source?.toLowerCase() === 'next' && (
-                          <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
-                        )}
+                        {invoice.source?.toLowerCase() === 'next' &&
+                          invoice.type !== 'Other' && (
+                            <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                          )}
                       </div>
                     </td>
                   </tr>
