@@ -1,6 +1,11 @@
 import { useLocation, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { residenceService } from '@/services/api/core'
+import {
+  residenceService,
+  buildingService,
+  propertyService,
+  companyService,
+} from '@/services/api/core'
 
 interface SelectionState {
   selectedResidenceId: string | null
@@ -22,6 +27,74 @@ export function useHierarchicalSelection() {
       !!params.residenceId && location.pathname.startsWith('/residences/'),
   })
 
+  // Get building data when navigating to a building without propertyId in state
+  const { data: selectedBuilding } = useQuery({
+    queryKey: ['building', params.buildingId],
+    queryFn: () => buildingService.getById(params.buildingId!),
+    enabled:
+      !!params.buildingId &&
+      location.pathname.startsWith('/buildings/') &&
+      !(location.state as any)?.propertyId,
+  })
+
+  // Determine propertyId from various sources for the property query
+  const propertyIdForQuery =
+    params.propertyId || selectedBuilding?.property?.id || null
+
+  // Get property data when we have a propertyId but no companyId in state
+  const { data: selectedProperty } = useQuery({
+    queryKey: ['property', propertyIdForQuery],
+    queryFn: () => propertyService.getPropertyById(propertyIdForQuery!),
+    enabled:
+      !!propertyIdForQuery &&
+      !(location.state as any)?.companyId &&
+      (location.pathname.startsWith('/properties/') ||
+        location.pathname.startsWith('/buildings/') ||
+        location.pathname.startsWith('/residences/')),
+  })
+
+  // Get all companies to find which one owns the property
+  const { data: allCompanies } = useQuery({
+    queryKey: ['companies'],
+    queryFn: () => companyService.getAll(),
+    enabled:
+      !!selectedProperty &&
+      !(location.state as any)?.companyId,
+  })
+
+  // Find company that owns this property by checking companies 001 and 006
+  // 001 contains all properties except one, which is in 006
+  const { data: propertyCompany } = useQuery({
+    queryKey: ['propertyCompany', selectedProperty?.id, allCompanies],
+    queryFn: async () => {
+      if (!selectedProperty || !allCompanies) return null
+
+      // Only check companies 001 and 006, with 001 first (most likely)
+      const relevantCompanies = allCompanies
+        .filter((c) => c.code === '001' || c.code === '006')
+        .sort((a, b) => {
+          if (a.code === '001') return -1
+          if (b.code === '001') return 1
+          return 0
+        })
+
+      for (const company of relevantCompanies) {
+        try {
+          const properties = await propertyService.getFromCompany(company)
+          if (properties?.some((p: any) => p.id === selectedProperty.id)) {
+            return company
+          }
+        } catch (error) {
+          // Continue to next company if this one fails
+          continue
+        }
+      }
+      return null
+    },
+    enabled:
+      !!selectedProperty && !!allCompanies,
+  })
+
   const getSelectionState = (): SelectionState => {
     const path = location.pathname
 
@@ -35,8 +108,14 @@ export function useHierarchicalSelection() {
         selectedBuildingCode:
           state?.buildingCode || selectedResidence?.building?.code || null,
         selectedPropertyId:
-          state?.propertyId || selectedResidence?.property?.code || null,
-        selectedCompanyId: state?.companyId || null,
+          state?.propertyId ||
+          state?.propertyCode ||
+          selectedResidence?.property?.code ||
+          null,
+        selectedCompanyId:
+          state?.companyId ||
+          propertyCompany?.id ||
+          null,
       }
     }
 
@@ -48,7 +127,10 @@ export function useHierarchicalSelection() {
         selectedBuildingId: null,
         selectedBuildingCode: null,
         selectedPropertyId: params.propertyId,
-        selectedCompanyId: state?.companyId || null,
+        selectedCompanyId:
+          state?.companyId ||
+          propertyCompany?.id ||
+          null,
       }
     }
 
@@ -69,9 +151,14 @@ export function useHierarchicalSelection() {
       return {
         selectedResidenceId: null,
         selectedBuildingId: params.buildingId,
-        selectedBuildingCode: state?.buildingCode || null,
-        selectedPropertyId: state?.propertyId || null,
-        selectedCompanyId: state?.companyId || null,
+        selectedBuildingCode:
+          state?.buildingCode || selectedBuilding?.code || null,
+        selectedPropertyId:
+          state?.propertyId || selectedBuilding?.property?.id || null,
+        selectedCompanyId:
+          state?.companyId ||
+          propertyCompany?.id ||
+          null,
       }
     }
 
@@ -120,15 +207,7 @@ export function useHierarchicalSelection() {
 
   const isCompanyInHierarchy = (companyId: string): boolean => {
     // Company is in hierarchy if it's directly selected OR if any child is selected
-    return (
-      selectionState.selectedCompanyId === companyId ||
-      (selectionState.selectedPropertyId !== null &&
-        selectionState.selectedCompanyId === companyId) ||
-      (selectionState.selectedBuildingId !== null &&
-        selectionState.selectedCompanyId === companyId) ||
-      (selectionState.selectedResidenceId !== null &&
-        selectionState.selectedCompanyId === companyId)
-    )
+    return selectionState.selectedCompanyId === companyId
   }
 
   return {

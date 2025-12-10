@@ -26,6 +26,25 @@ const routeMap = {
   contact: '/tenants',
 } as const
 
+// Helper function to extract navigation state from search results
+const getNavigationState = (item: any) => {
+  switch (item.type) {
+    case 'building':
+      return {
+        propertyId: item.property?.id || null,
+      }
+    case 'residence':
+      return {
+        buildingCode: item.building?.code || null,
+        propertyCode: item.property?.code || null,
+      }
+    case 'property':
+    case 'contact':
+    default:
+      return {}
+  }
+}
+
 const iconMap = {
   area: MapPin,
   property: Building2,
@@ -76,7 +95,9 @@ export function CommandPalette() {
           const item = searchQuery.data[selectedIndex]
           const basePath = routeMap[item.type]
           if (basePath) {
-            navigate(`${basePath}/${item.id}`)
+            navigate(`${basePath}/${item.id}`, {
+              state: getNavigationState(item),
+            })
             close()
           }
         }
@@ -152,7 +173,11 @@ export function CommandPalette() {
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
                           onClick={() => {
-                            navigate(`${routeMap.building}/${v.id}`)
+                            navigate(`${routeMap.building}/${v.id}`, {
+                              state: {
+                                propertyId: v.property?.id || null,
+                              },
+                            })
                             close()
                           }}
                         />
@@ -167,7 +192,9 @@ export function CommandPalette() {
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
                           onClick={() => {
-                            navigate(`${routeMap.property}/${v.id}`)
+                            navigate(`${routeMap.property}/${v.id}`, {
+                              state: {},
+                            })
                             close()
                           }}
                         />
@@ -183,7 +210,12 @@ export function CommandPalette() {
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
                           onClick={() => {
-                            navigate(`${routeMap.residence}/${v.id}`)
+                            navigate(`${routeMap.residence}/${v.id}`, {
+                              state: {
+                                buildingCode: v.building?.code || null,
+                                propertyCode: v.property?.code || null,
+                              },
+                            })
                             close()
                           }}
                         />
@@ -199,7 +231,9 @@ export function CommandPalette() {
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }
                           onClick={() => {
-                            navigate(`${routeMap.contact}/${v.contactCode}`)
+                            navigate(`${routeMap.contact}/${v.contactCode}`, {
+                              state: {},
+                            })
                             close()
                           }}
                         />
