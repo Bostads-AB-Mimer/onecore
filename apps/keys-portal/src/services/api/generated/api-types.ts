@@ -113,6 +113,46 @@ export interface paths {
       };
     };
   };
+  "/dax/cards/{cardId}": {
+    /**
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the Amido DAX API
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              card?: {
+                cardId?: string;
+                name?: string;
+                codes?: unknown[];
+              };
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: never;
+        };
+        /** @description Failed to fetch card */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-bundles": {
     /**
      * List all key bundles

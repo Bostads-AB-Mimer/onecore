@@ -25,6 +25,8 @@ type KeyBundle = keys.v1.KeyBundle
 type KeyBundleDetailsResponse = keys.v1.KeyBundleDetailsResponse
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type CardOwner = keys.v1.CardOwner
+type Card = keys.v1.Card
+type QueryCardOwnersParams = keys.v1.QueryCardOwnersParams
 
 const BASE = Config.keysService.url
 
@@ -1036,25 +1038,52 @@ export const SignaturesApi = {
 }
 
 /**
- * ---- DAX API (Card Owners) -------------------------------------------------
+ * ---- DAX API ---------------------------------------------------------------
  */
 export const DaxApi = {
-  searchCardOwners: async (params: {
-    name?: string
-    offset?: number
-    limit?: number
-  }): Promise<AdapterResult<CardOwner[], CommonErr>> => {
+  searchCardOwners: async (
+    params: Partial<QueryCardOwnersParams>
+  ): Promise<AdapterResult<CardOwner[], CommonErr>> => {
     const queryParams = new URLSearchParams()
-    if (params.name) queryParams.append('name', params.name)
-    if (params.offset !== undefined)
-      queryParams.append('offset', params.offset.toString())
-    if (params.limit !== undefined)
-      queryParams.append('limit', params.limit.toString())
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString())
+      }
+    }
 
     const query = queryParams.toString()
     const url = `${BASE}/dax/card-owners${query ? `?${query}` : ''}`
 
     const r = await getJSON<{ cardOwners: CardOwner[] }>(url)
     return r.ok ? ok(r.data.cardOwners) : r
+  },
+
+  getCardOwner: async (
+    cardOwnerId: string,
+    expand?: string
+  ): Promise<AdapterResult<CardOwner, 'not-found' | CommonErr>> => {
+    const params = new URLSearchParams()
+    if (expand) params.append('expand', expand)
+
+    const query = params.toString()
+    const url = `${BASE}/dax/card-owners/${cardOwnerId}${query ? `?${query}` : ''}`
+
+    const r = await getJSON<{ cardOwner: CardOwner }>(url)
+    return r.ok ? ok(r.data.cardOwner) : r
+  },
+
+  getCard: async (
+    cardId: string,
+    expand?: string
+  ): Promise<AdapterResult<Card, 'not-found' | CommonErr>> => {
+    const params = new URLSearchParams()
+    if (expand) params.append('expand', expand)
+
+    const query = params.toString()
+    const url = `${BASE}/dax/cards/${cardId}${query ? `?${query}` : ''}`
+
+    const r = await getJSON<{ card: Card }>(url)
+    return r.ok ? ok(r.data.card) : r
   },
 }

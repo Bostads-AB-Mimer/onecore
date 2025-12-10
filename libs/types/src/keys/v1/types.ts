@@ -57,6 +57,7 @@ import {
   CardOwnerSchema,
   GetCardOwnerResponseSchema,
   GetCardOwnersResponseSchema,
+  QueryCardOwnersParamsSchema,
 } from './schema'
 
 // Enum types
@@ -165,3 +166,4 @@ export type Card = z.infer<typeof CardSchema>
 export type CardOwner = z.infer<typeof CardOwnerSchema>
 export type GetCardOwnerResponse = z.infer<typeof GetCardOwnerResponseSchema>
 export type GetCardOwnersResponse = z.infer<typeof GetCardOwnersResponseSchema>
+export type QueryCardOwnersParams = z.infer<typeof QueryCardOwnersParamsSchema>

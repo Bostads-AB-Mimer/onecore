@@ -480,3 +480,15 @@ export const GetCardOwnerResponseSchema = z.object({
 export const GetCardOwnersResponseSchema = z.object({
   CardOwners: z.array(CardOwnerSchema),
 })
+
+export const QueryCardOwnersParamsSchema = z.object({
+  nameFilter: z.string().optional(),
+  expand: z.string().optional(),
+  idfilter: z.string().optional(),
+  attributeFilter: z.string().optional(),
+  selectedAttributes: z.string().optional(),
+  folderFilter: z.string().optional(),
+  organisationFilter: z.string().optional(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+})
