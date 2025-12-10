@@ -23,6 +23,7 @@ const routeMap = {
   building: '/buildings',
   staircase: '/staircases',
   residence: '/residences',
+  contact: '/tenants',
 } as const
 
 const iconMap = {
@@ -33,6 +34,7 @@ const iconMap = {
   apartment: Home,
   tenant: User2,
   residence: SquareUser,
+  contact: User2,
 } as const
 
 export function CommandPalette() {
@@ -110,7 +112,7 @@ export function CommandPalette() {
                 type="text"
                 onChange={(e) => onSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Sök efter fastigheter, byggnader eller lägenheter..."
+                placeholder="Sök efter fastigheter, byggnader, lägenheter eller kunder..."
                 className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400"
               />
             </div>
@@ -182,6 +184,22 @@ export function CommandPalette() {
                           }
                           onClick={() => {
                             navigate(`${routeMap.residence}/${v.id}`)
+                            close()
+                          }}
+                        />
+                      ))
+                      .with({ type: 'contact' }, (v) => (
+                        <Contact
+                          key={v.id}
+                          name={v.fullName}
+                          contactCode={v.contactCode}
+                          className={
+                            selectedIndex === index
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                          }
+                          onClick={() => {
+                            navigate(`${routeMap.contact}/${v.contactCode}`)
                             close()
                           }}
                         />
@@ -271,6 +289,31 @@ function Residence(props: {
       </div>
       <span className="text-xs text-gray-400">{props.building.name}</span>
       <span className="flex-1 text-left">{props.name}</span>
+      <ArrowRight className="h-4 w-4 opacity-50" />
+    </motion.button>
+  )
+}
+
+function Contact(props: {
+  name: string
+  contactCode: string
+  className?: string
+  onClick: () => void
+}) {
+  const Icon = iconMap.contact
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`
+        w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm
+        ${props.className}
+      `}
+      onClick={props.onClick}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="text-xs text-gray-400">{props.name}</span>
+      <span className="flex-1 text-left">{props.contactCode}</span>
       <ArrowRight className="h-4 w-4 opacity-50" />
     </motion.button>
   )
