@@ -13,6 +13,11 @@ import { useIsMobile } from '@/components/hooks/useMobile'
 import { differenceInDays, parseISO } from 'date-fns'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 import { useInvoicePaymentEvents } from '@/components/hooks/useInvoicePaymentEvents'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/Tooltip'
 
 export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null)
@@ -53,24 +58,50 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     setExpandedInvoice(expandedInvoice === invoiceId ? null : invoiceId)
   }
 
+  // Extract deferment date from description like "Anstånd till 2025-12-31"
+  const getDefermentDate = (description: string | undefined): Date | null => {
+    if (!description) return null
+    const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
+    if (match && match[1]) {
+      return new Date(match[1])
+    }
+    return null
+  }
+
+  // Get the effective expiration date (deferment date if applicable, otherwise original)
+  const getEffectiveExpirationDate = (
+    invoice: Invoice
+  ): { date: Date | null; isDeferment: boolean; originalDate: Date | null } => {
+    const originalDate = invoice.expirationDate
+      ? typeof invoice.expirationDate === 'string'
+        ? new Date(invoice.expirationDate)
+        : invoice.expirationDate
+      : null
+
+    const defermentDate = getDefermentDate(invoice.description)
+
+    if (defermentDate && originalDate && defermentDate > originalDate) {
+      return { date: defermentDate, isDeferment: true, originalDate }
+    }
+
+    return { date: originalDate, isDeferment: false, originalDate: null }
+  }
+
   const isInvoiceOverdue = (invoice: Invoice): boolean => {
     // If invoice is already paid, it's not overdue
     if (invoice.paymentStatus === PaymentStatus.Paid) {
       return false
     }
 
-    // Check if expirationDate exists and is in the past
-    if (!invoice.expirationDate) {
+    // Get the effective expiration date (considering deferments)
+    const { date } = getEffectiveExpirationDate(invoice)
+
+    if (!date) {
       return false
     }
 
     const today = new Date()
-    const dueDate =
-      typeof invoice.expirationDate === 'string'
-        ? parseISO(invoice.expirationDate)
-        : invoice.expirationDate
-
-    return today > dueDate
+    return today > date
   }
 
   const getStatusBadge = (invoice: Invoice): JSX.Element => {
@@ -129,6 +160,29 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     }
 
     return subtotals
+  }
+
+  // Component to render expiration date with deferment indicator
+  const ExpirationDateCell = ({ invoice }: { invoice: Invoice }) => {
+    const { date, isDeferment, originalDate } =
+      getEffectiveExpirationDate(invoice)
+
+    if (!date) return <span>-</span>
+
+    if (isDeferment && originalDate) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{formatDate(date)}*</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            Ursprungligt förfallodatum: {formatDate(originalDate)}
+          </TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return <span>{formatDate(date)}</span>
   }
 
   // Component to display payment events for "next" system invoices
@@ -418,7 +472,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                     {formatDate(invoice.invoiceDate)}
                   </td>
                   <td className="p-3 text-sm">
-                    {formatDate(invoice.expirationDate)}
+                    <ExpirationDateCell invoice={invoice} />
                   </td>
                   <td className="p-3 text-sm text-right">
                     {formatCurrency(invoice.amount)}
@@ -583,7 +637,9 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                         )}
                         {invoice.source?.toLowerCase() === 'next' &&
                           invoice.type !== 'Other' && (
-                            <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                            <InvoicePaymentEvents
+                              invoiceId={invoice.invoiceId}
+                            />
                           )}
                       </div>
                     </td>
