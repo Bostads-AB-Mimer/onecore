@@ -13,6 +13,11 @@ import { useIsMobile } from '@/components/hooks/useMobile'
 import { differenceInDays, parseISO } from 'date-fns'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 import { useInvoicePaymentEvents } from '@/components/hooks/useInvoicePaymentEvents'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/Tooltip'
 
 export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null)
@@ -53,24 +58,50 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     setExpandedInvoice(expandedInvoice === invoiceId ? null : invoiceId)
   }
 
+  // Extract deferment date from description like "Anstånd till 2025-12-31"
+  const getDefermentDate = (description: string | undefined): Date | null => {
+    if (!description) return null
+    const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
+    if (match && match[1]) {
+      return new Date(match[1])
+    }
+    return null
+  }
+
+  // Get the effective expiration date (deferment date if applicable, otherwise original)
+  const getEffectiveExpirationDate = (
+    invoice: Invoice
+  ): { date: Date | null; isDeferment: boolean; originalDate: Date | null } => {
+    const originalDate = invoice.expirationDate
+      ? typeof invoice.expirationDate === 'string'
+        ? new Date(invoice.expirationDate)
+        : invoice.expirationDate
+      : null
+
+    const defermentDate = getDefermentDate(invoice.description)
+
+    if (defermentDate && originalDate && defermentDate > originalDate) {
+      return { date: defermentDate, isDeferment: true, originalDate }
+    }
+
+    return { date: originalDate, isDeferment: false, originalDate: null }
+  }
+
   const isInvoiceOverdue = (invoice: Invoice): boolean => {
     // If invoice is already paid, it's not overdue
     if (invoice.paymentStatus === PaymentStatus.Paid) {
       return false
     }
 
-    // Check if expirationDate exists and is in the past
-    if (!invoice.expirationDate) {
+    // Get the effective expiration date (considering deferments)
+    const { date } = getEffectiveExpirationDate(invoice)
+
+    if (!date) {
       return false
     }
 
     const today = new Date()
-    const dueDate =
-      typeof invoice.expirationDate === 'string'
-        ? parseISO(invoice.expirationDate)
-        : invoice.expirationDate
-
-    return today > dueDate
+    return today > date
   }
 
   const getStatusBadge = (invoice: Invoice): JSX.Element => {
@@ -93,9 +124,8 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return 'Avi'
   }
 
-  const handleOpenPDF = (invoiceNumber: string) => {
-    // TODO: Implement PDF opening logic
-    console.log('Opening PDF for invoice:', invoiceNumber)
+  const handleOpenPDF = (url: string) => {
+    window.open(url, '_blank')
   }
 
   // Check if a row is a contract header (rowType 3)
@@ -132,10 +162,98 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return subtotals
   }
 
-  // Component to display payment events for "next" system invoices
-  const InvoicePaymentEvents = ({ invoiceId }: { invoiceId: string }) => {
-    const { data, isLoading, error } = useInvoicePaymentEvents(invoiceId)
+  // Component to render expiration date with deferment indicator
+  const ExpirationDateCell = ({ invoice }: { invoice: Invoice }) => {
+    const { date, isDeferment, originalDate } =
+      getEffectiveExpirationDate(invoice)
 
+    if (!date) return <span>-</span>
+
+    if (isDeferment && originalDate) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{formatDate(date)}*</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            Ursprungligt förfallodatum: {formatDate(originalDate)}
+          </TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return <span>{formatDate(date)}</span>
+  }
+
+  // Calculate payment date from payment events (when invoice was fully paid)
+  const calculatePaymentDate = (
+    events: InvoicePaymentEvent[] | undefined,
+    invoiceAmount: number
+  ): Date | null => {
+    if (!events || events.length === 0) {
+      console.log('calculatePaymentDate: No events')
+      return null
+    }
+
+    // Sort events by payment date
+    const sortedEvents = [...events].sort(
+      (a, b) =>
+        new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()
+    )
+
+    console.log('calculatePaymentDate starting:', {
+      invoiceAmount,
+      eventsCount: sortedEvents.length,
+      events: sortedEvents,
+    })
+
+    // Start with the invoice amount, then add negative payment events until we reach 0
+    let remainingAmount = invoiceAmount
+    for (const event of sortedEvents) {
+      const eventAmount = Number(event.amount)
+      remainingAmount += eventAmount
+      console.log('After event:', {
+        eventAmount: event.amount,
+        eventAmountAsNumber: eventAmount,
+        remainingAmount,
+        paymentDate: event.paymentDate,
+        reached: remainingAmount <= 0,
+      })
+      if (remainingAmount <= 0) {
+        console.log('✅ Invoice fully paid on:', event.paymentDate)
+        return new Date(event.paymentDate)
+      }
+    }
+
+    console.log('❌ Invoice not fully paid. Final remaining:', remainingAmount)
+    return null
+  }
+
+  // Component to display payment date for paid invoices
+  const PaymentDateDisplay = ({
+    events,
+    invoiceAmount,
+  }: {
+    events: InvoicePaymentEvent[] | undefined
+    invoiceAmount: number
+  }) => {
+    const paymentDate = calculatePaymentDate(events, invoiceAmount)
+
+    if (!paymentDate) return <span>-</span>
+
+    return <span>{formatDate(paymentDate)}</span>
+  }
+
+  // Component to display payment events table
+  const InvoicePaymentEventsTable = ({
+    events,
+    isLoading,
+    error,
+  }: {
+    events: InvoicePaymentEvent[] | undefined
+    isLoading: boolean
+    error: Error | null
+  }) => {
     if (isLoading) {
       return (
         <div className="bg-background rounded-lg p-3 shadow-sm">
@@ -162,7 +280,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
       )
     }
 
-    if (!data || data.length === 0) {
+    if (!events || events.length === 0) {
       return (
         <div className="bg-background rounded-lg p-3 shadow-sm">
           <div className="font-medium text-sm mb-3 text-muted-foreground">
@@ -190,7 +308,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
             </tr>
           </thead>
           <tbody>
-            {data.map((event, idx) => (
+            {events.map((event, idx) => (
               <tr key={idx} className="border-b last:border-0">
                 <td className="p-2 text-sm">{event.transactionSourceCode}</td>
                 <td className="p-2 text-sm">{formatCurrency(event.amount)}</td>
@@ -201,6 +319,59 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
           </tbody>
         </table>
       </div>
+    )
+  }
+
+  // Component that wraps both payment info and events for XLedger invoices
+  const InvoiceDetailsWithPaymentInfo = ({ invoice }: { invoice: Invoice }) => {
+    const {
+      data: events,
+      isLoading,
+      error,
+    } = useInvoicePaymentEvents(invoice.invoiceId)
+
+    return (
+      <>
+        {invoice.paymentStatus === PaymentStatus.Paid &&
+          invoice.paidAmount !== undefined && (
+            <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
+              <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+                <div>
+                  <span className="text-muted-foreground block mb-1">
+                    Betaldatum:
+                  </span>
+                  <span className="font-semibold">
+                    <PaymentDateDisplay
+                      events={events}
+                      invoiceAmount={invoice.amount}
+                    />
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-1">
+                    Källa:
+                  </span>
+                  <span className="font-semibold">
+                    {formatSource(invoice.source)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block mb-1">
+                    Inbetalat belopp:
+                  </span>
+                  <span className="font-semibold text-success">
+                    {formatCurrency(invoice.paidAmount)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        <InvoicePaymentEventsTable
+          events={events}
+          isLoading={isLoading}
+          error={error}
+        />
+      </>
     )
   }
 
@@ -262,49 +433,22 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                       {invoice.description}
                     </div>
                   )}
-                  {invoice.paymentStatus === PaymentStatus.Paid &&
-                    invoice.paidAmount !== undefined && (
-                      <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-                        <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-                          <div>
-                            <span className="text-muted-foreground block mb-1">
-                              Betaldatum:
-                            </span>
-                            <span className="font-semibold">
-                              {/*invoice.paymentDate*/}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground block mb-1">
-                              Källa:
-                            </span>
-                            <span className="font-semibold">
-                              {formatSource(invoice.source)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground block mb-1">
-                              Inbetalat belopp:
-                            </span>
-                            <span className="font-semibold text-success">
-                              {formatCurrency(invoice.paidAmount)}
-                            </span>
-                          </div>
-                        </div>
-                        {/* <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenPDF(invoice.invoiceId)
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Öppna PDF
-                        </Button> */}
-                      </div>
-                    )}
+                  {invoice.invoiceFileUrl && (
+                    <div className="mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenPDF(invoice.invoiceFileUrl!)
+                        }}
+                        className="w-full sm:w-auto"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Se PDF
+                      </Button>
+                    </div>
+                  )}
                   {invoice.invoiceRows.length > 0 && (
                     <div className="space-y-2 mb-4">
                       {(() => {
@@ -371,7 +515,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                     </div>
                   )}
                   {invoice.source?.toLowerCase() === 'next' && (
-                    <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                    <InvoiceDetailsWithPaymentInfo invoice={invoice} />
                   )}
                 </div>
               )}
@@ -414,7 +558,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                     {formatDate(invoice.invoiceDate)}
                   </td>
                   <td className="p-3 text-sm">
-                    {formatDate(invoice.expirationDate)}
+                    <ExpirationDateCell invoice={invoice} />
                   </td>
                   <td className="p-3 text-sm text-right">
                     {formatCurrency(invoice.amount)}
@@ -448,49 +592,22 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                             {invoice.description}
                           </div>
                         )}
-                        {invoice.paymentStatus === PaymentStatus.Paid &&
-                          invoice.paidAmount !== undefined && (
-                            <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-                              <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-                                <div>
-                                  <span className="text-muted-foreground block mb-1">
-                                    Betaldatum:
-                                  </span>
-                                  <span className="font-semibold">
-                                    {/*invoice.paymentDate*/}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-1">
-                                    Källa:
-                                  </span>
-                                  <span className="font-semibold">
-                                    {formatSource(invoice.source)}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-1">
-                                    Inbetalat belopp:
-                                  </span>
-                                  <span className="font-semibold text-success">
-                                    {formatCurrency(invoice.paidAmount)}
-                                  </span>
-                                </div>
-                              </div>
-                              {/* <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOpenPDF(invoice.invoiceId)
-                                }}
-                                className="w-full sm:w-auto"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Öppna PDF
-                              </Button> */}
-                            </div>
-                          )}
+                        {invoice.invoiceFileUrl && (
+                          <div className="mb-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleOpenPDF(invoice.invoiceFileUrl!)
+                              }}
+                              className="w-full sm:w-auto"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Se PDF
+                            </Button>
+                          </div>
+                        )}
                         {invoice.invoiceRows.length > 0 && (
                           <div className="bg-background rounded-lg p-3 shadow-sm mb-4">
                             <div className="font-medium text-sm mb-3 text-muted-foreground">
@@ -574,7 +691,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                           </div>
                         )}
                         {invoice.source?.toLowerCase() === 'next' && (
-                          <InvoicePaymentEvents invoiceId={invoice.invoiceId} />
+                          <InvoiceDetailsWithPaymentInfo invoice={invoice} />
                         )}
                       </div>
                     </td>
