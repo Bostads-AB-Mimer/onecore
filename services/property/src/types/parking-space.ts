@@ -34,10 +34,10 @@ export const ParkingSpaceSearchResultSchema = z.object({
   id: z.string(),
   rentalId: z.string(),
   code: z.string(),
-  name: z.string(),
+  name: z.string().nullable(),
   property: z.object({
-    code: z.string(),
-    name: z.string(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
   }),
   building: z.object({
     code: z.string().nullable(),

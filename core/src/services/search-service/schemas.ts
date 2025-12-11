@@ -48,22 +48,22 @@ export const ParkingSpaceSearchResultSchema = z.object({
   type: z
     .literal('parking-space')
     .describe('Indicates this is a parking space result'),
-  name: z.string().describe('Name of the parking space').nullable(),
+  name: z.string().nullable().describe('Name of the parking space'),
   rentalId: z.string().describe('Rental ID of the parking space'),
   code: z.string().describe('Code of the parking space'),
   property: z.object({
-    code: z.string(),
+    code: z.string().nullable(),
     name: z
       .string()
-      .describe('Name of property associated with the parking space')
-      .nullable(),
+      .nullable()
+      .describe('Name of property associated with the parking space'),
   }),
   building: z.object({
     code: z.string().nullable(),
     name: z
       .string()
-      .describe('Name of building associated with the parking space')
-      .nullable(),
+      .nullable()
+      .describe('Name of building associated with the parking space'),
   }),
 })
 

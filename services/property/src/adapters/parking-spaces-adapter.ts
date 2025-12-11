@@ -41,10 +41,10 @@ export async function searchParkingSpaces(q: string) {
   })
 
   return parkingSpaces
-    .filter((p) => p.parkingSpace !== null)
+    .filter((p) => p.parkingSpace !== null && p.rentalId !== null)
     .map((p) => ({
-      id: p.rentalId,
-      rentalId: p.rentalId,
+      id: p.rentalId!,
+      rentalId: p.rentalId!,
       name: p.parkingSpace!.name,
       code: p.parkingSpace!.code,
       property: {
