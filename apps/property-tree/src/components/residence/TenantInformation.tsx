@@ -29,7 +29,7 @@ export function TenantInformation({ isLoading, error, lease }: Props) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Kontrakt hittades inte
+          Ingen nuvarande kontraktsinnehavare
         </h2>
       </div>
     )
