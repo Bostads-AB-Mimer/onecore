@@ -4,7 +4,7 @@ import { ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { parkingSpaceService } from '@/services/api/core'
 import { ParkingSpaceBasicInfo } from '../parking-space/ParkingSpaceBasicInfo'
-import { TenantInformation } from '../residence/TenantInformation'
+import { TenantInformationByRentalId } from '../residence/TenantInformationByRentalId'
 import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
@@ -54,7 +54,9 @@ export function ParkingSpaceView() {
             label: 'Hyresgäst',
             icon: Users,
             content: (
-              <TenantInformation rentalPropertyId={parkingSpace.rentalId} />
+              <TenantInformationByRentalId
+                rentalPropertyId={parkingSpace.rentalId}
+              />
             ),
           },
           {
