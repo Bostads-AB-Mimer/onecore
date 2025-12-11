@@ -6,7 +6,13 @@ import { useResidenceDetail } from '@/components/hooks/useResidenceDetail'
 import { ResidenceBasicInfo } from '@/components/residence/v2/ResidenceBasicInfo'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/v2/Tabs'
 import { TabsContent } from '@radix-ui/react-tabs'
-import { ClipboardList, Info, MessageSquare, Users } from 'lucide-react'
+import {
+  ClipboardList,
+  Info,
+  MessageSquare,
+  Users,
+  FileText,
+} from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
@@ -16,6 +22,7 @@ import {
 } from '@/components/work-orders/WorkOrdersManagement'
 import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
+import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -89,6 +96,13 @@ export const ResidenceView = () => {
                 Hyresgäst
               </TabsTrigger>
               <TabsTrigger
+                value="contracts"
+                className="flex items-center gap-1.5"
+              >
+                <FileText className="h-4 w-4" />
+                Kontrakt
+              </TabsTrigger>
+              <TabsTrigger
                 value="workorders"
                 className="flex items-center gap-1.5"
               >
@@ -127,6 +141,13 @@ export const ResidenceView = () => {
                   />
                 </CardContent>
               </Card>
+            </TabsContent>
+            <TabsContent value="contracts">
+              {residence?.propertyObject.rentalId && (
+                <RentalObjectContracts
+                  rentalPropertyId={residence.propertyObject.rentalId}
+                />
+              )}
             </TabsContent>
             <TabsContent value="workorders">
               {residence?.propertyObject.rentalId && (
