@@ -74,7 +74,7 @@ export const ResidenceView = () => {
                 value="floorplan"
                 className="flex items-center gap-1.5"
               >
-                Planritning
+                Bofaktablad
               </TabsTrigger>
               <TabsTrigger
                 disabled
