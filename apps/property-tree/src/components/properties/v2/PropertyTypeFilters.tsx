@@ -1,7 +1,7 @@
-import { Building, Home } from 'lucide-react'
+import { Building, Home, CarFront } from 'lucide-react'
 import { FilterChip } from '@/components/ui/v2/FilterChip'
 
-type SearchTypeFilter = 'property' | 'residence'
+type SearchTypeFilter = 'property' | 'residence' | 'parking-space'
 
 interface PropertyTypeFiltersProps {
   searchTypeFilter: SearchTypeFilter
@@ -27,6 +27,13 @@ export const PropertyTypeFilters = ({
       >
         <Home className="h-4 w-4" />
         <span>Lägenheter</span>
+      </FilterChip>
+      <FilterChip
+        selected={searchTypeFilter === 'parking-space'}
+        onSelect={() => setSearchTypeFilter('parking-space')}
+      >
+        <CarFront className="h-4 w-4" />
+        <span>Parkeringar</span>
       </FilterChip>
     </div>
   )

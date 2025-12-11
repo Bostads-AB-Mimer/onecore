@@ -30,4 +30,22 @@ export const ParkingSpaceSchema = z.object({
     .nullable(),
 })
 
+export const ParkingSpaceSearchResultSchema = z.object({
+  id: z.string(),
+  rentalId: z.string(),
+  code: z.string(),
+  name: z.string(),
+  property: z.object({
+    code: z.string(),
+    name: z.string(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
 export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
+export type ParkingSpaceSearchResult = z.infer<
+  typeof ParkingSpaceSearchResultSchema
+>

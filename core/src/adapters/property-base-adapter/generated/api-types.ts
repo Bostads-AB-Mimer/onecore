@@ -455,6 +455,38 @@ export interface paths {
       };
     };
   };
+  "/parking-spaces/search": {
+    /**
+     * Search parking spaces
+     * @description Searches for parking spaces by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved parking spaces matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ParkingSpaceSearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/parking-spaces/by-rental-id/{id}": {
     /**
      * Gets a list of parking space by rental id
@@ -1489,6 +1521,20 @@ export interface components {
         postalCode: string | null;
         city: string | null;
       }) | null;
+    };
+    ParkingSpaceSearchResult: {
+      id: string;
+      rentalId: string;
+      code: string;
+      name: string;
+      property: {
+        code: string;
+        name: string;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
+      };
     };
     FacilityDetails: {
       id: string;

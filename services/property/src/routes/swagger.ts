@@ -70,6 +70,10 @@ const schemas = {
     name: 'ParkingSpace',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.ParkingSpaceSearchResultSchema, {
+    name: 'ParkingSpaceSearchResult',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(types.FacilityDetailsSchema, {
     name: 'FacilityDetails',
     target: 'openApi3',
