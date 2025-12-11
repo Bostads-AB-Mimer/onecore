@@ -5,7 +5,10 @@ import { ClipboardList, Users, MessageSquare } from 'lucide-react'
 import { parkingSpaceService } from '@/services/api/core'
 import { ParkingSpaceBasicInfo } from '../parking-space/ParkingSpaceBasicInfo'
 import { TenantInformationByRentalId } from '../residence/TenantInformationByRentalId'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import {
+  WorkOrdersManagement,
+  ContextType,
+} from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 
@@ -71,7 +74,7 @@ export function ParkingSpaceView() {
             icon: MessageSquare,
             content: (
               <WorkOrdersManagement
-                contextType="residence"
+                contextType={ContextType.Residence}
                 id={parkingSpace.rentalId}
               />
             ),
