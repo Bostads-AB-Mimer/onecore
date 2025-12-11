@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
-import { InfoIcon } from 'lucide-react'
+import { InfoIcon, Loader2 } from 'lucide-react'
 import type { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
@@ -35,14 +35,46 @@ const LeaseStatus = {
 interface TenantContractsProps {
   leases: Lease[] // replace with real type representing response from leases/by-contact-code
   rentalProperties: Record<string, RentalPropertyInfo | null>
+  isLoadingLeases?: boolean
+  isLoadingProperties?: boolean
 }
 
 export function TenantContracts({
   leases,
   rentalProperties,
+  isLoadingLeases = false,
+  isLoadingProperties = false,
 }: TenantContractsProps) {
+  // Show loading state while leases are being fetched
+  if (isLoadingLeases) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Kontrakt</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-center py-8">
+            Hämtar kontrakt...
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show empty state if no leases
   if (!leases.length) {
-    return null
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Kontrakt</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-center py-8">
+            Inga kontrakt hittades
+          </p>
+        </CardContent>
+      </Card>
+    )
   }
 
   // Sort leases with three tiers:
@@ -158,7 +190,15 @@ export function TenantContracts({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Kontrakt</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Kontrakt</CardTitle>
+          {isLoadingProperties && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Hämtar objektsdetaljer...</span>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -179,10 +219,18 @@ export function TenantContracts({
           <TableBody>
             {sortedLeases.map((lease) => {
               const rentalProperty = rentalProperties[lease.rentalPropertyId]
+              const isPropertyLoading =
+                isLoadingProperties && rentalProperty === undefined
+
               return (
                 <TableRow key={lease.leaseId}>
                   <TableCell>
-                    {!rentalProperty ? (
+                    {isPropertyLoading ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Laddar...</span>
+                      </div>
+                    ) : !rentalProperty ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -205,7 +253,17 @@ export function TenantContracts({
                   </TableCell>
                   <TableCell>{lease.leaseNumber}</TableCell>
                   <TableCell>
-                    {!rentalProperty ? (
+                    {isPropertyLoading ? (
+                      <>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Laddar...</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {lease.rentalPropertyId}
+                        </div>
+                      </>
+                    ) : !rentalProperty ? (
                       <>
                         <TooltipProvider>
                           <Tooltip>
@@ -239,7 +297,12 @@ export function TenantContracts({
                     )}
                   </TableCell>
                   <TableCell>
-                    {!rentalProperty ? (
+                    {isPropertyLoading ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Laddar...</span>
+                      </div>
+                    ) : !rentalProperty ? (
                       <span className="text-muted-foreground">
                         Data ej tillgänglig
                       </span>
@@ -259,7 +322,12 @@ export function TenantContracts({
                   </TableCell>
                   <TableCell></TableCell>
                   <TableCell>
-                    {!rentalProperty ? (
+                    {isPropertyLoading ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Laddar...</span>
+                      </div>
+                    ) : !rentalProperty ? (
                       <span className="text-muted-foreground">
                         Data ej tillgänglig
                       </span>

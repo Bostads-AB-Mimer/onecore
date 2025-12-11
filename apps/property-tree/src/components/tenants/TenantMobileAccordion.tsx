@@ -19,6 +19,8 @@ interface TenantMobileAccordionProps {
   hasActiveCases?: boolean
   contactCode: string
   customerName: string
+  isLoadingLeases?: boolean
+  isLoadingProperties?: boolean
 }
 
 export function TenantMobileAccordion({
@@ -27,6 +29,8 @@ export function TenantMobileAccordion({
   hasActiveCases,
   contactCode,
   customerName,
+  isLoadingLeases = false,
+  isLoadingProperties = false,
 }: TenantMobileAccordionProps) {
   const accordionItems: MobileAccordionItem[] = [
     {
@@ -36,6 +40,8 @@ export function TenantMobileAccordion({
         <TenantContracts
           leases={contracts}
           rentalProperties={rentalProperties}
+          isLoadingLeases={isLoadingLeases}
+          isLoadingProperties={isLoadingProperties}
         />
       ),
     },

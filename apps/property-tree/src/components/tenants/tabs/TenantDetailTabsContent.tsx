@@ -22,6 +22,8 @@ interface TenantDetailTabsContentProps {
   personalNumber?: string
   contactCode: string
   customerName: string
+  isLoadingLeases?: boolean
+  isLoadingProperties?: boolean
 }
 
 export const TenantDetailTabsContent = ({
@@ -30,11 +32,18 @@ export const TenantDetailTabsContent = ({
   personalNumber,
   contactCode,
   customerName,
+  isLoadingLeases = false,
+  isLoadingProperties = false,
 }: TenantDetailTabsContentProps) => {
   return (
     <>
       <TabsContent value="contracts">
-        <TenantContracts leases={leases} rentalProperties={rentalProperties} />
+        <TenantContracts
+          leases={leases}
+          rentalProperties={rentalProperties}
+          isLoadingLeases={isLoadingLeases}
+          isLoadingProperties={isLoadingProperties}
+        />
       </TabsContent>
 
       <TabsContent value="queue">
