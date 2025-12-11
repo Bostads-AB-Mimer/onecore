@@ -57,9 +57,7 @@ export function useHierarchicalSelection() {
   const { data: allCompanies } = useQuery({
     queryKey: ['companies'],
     queryFn: () => companyService.getAll(),
-    enabled:
-      !!selectedProperty &&
-      !(location.state as any)?.companyId,
+    enabled: !!selectedProperty && !(location.state as any)?.companyId,
   })
 
   // Find company that owns this property by checking companies 001 and 006
@@ -91,8 +89,7 @@ export function useHierarchicalSelection() {
       }
       return null
     },
-    enabled:
-      !!selectedProperty && !!allCompanies,
+    enabled: !!selectedProperty && !!allCompanies,
   })
 
   const getSelectionState = (): SelectionState => {
@@ -112,10 +109,7 @@ export function useHierarchicalSelection() {
           state?.propertyCode ||
           selectedResidence?.property?.code ||
           null,
-        selectedCompanyId:
-          state?.companyId ||
-          propertyCompany?.id ||
-          null,
+        selectedCompanyId: state?.companyId || propertyCompany?.id || null,
       }
     }
 
@@ -127,10 +121,7 @@ export function useHierarchicalSelection() {
         selectedBuildingId: null,
         selectedBuildingCode: null,
         selectedPropertyId: params.propertyId,
-        selectedCompanyId:
-          state?.companyId ||
-          propertyCompany?.id ||
-          null,
+        selectedCompanyId: state?.companyId || propertyCompany?.id || null,
       }
     }
 
@@ -155,10 +146,7 @@ export function useHierarchicalSelection() {
           state?.buildingCode || selectedBuilding?.code || null,
         selectedPropertyId:
           state?.propertyId || selectedBuilding?.property?.id || null,
-        selectedCompanyId:
-          state?.companyId ||
-          propertyCompany?.id ||
-          null,
+        selectedCompanyId: state?.companyId || propertyCompany?.id || null,
       }
     }
 

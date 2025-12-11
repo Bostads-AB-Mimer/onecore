@@ -34,10 +34,11 @@ export function useRentalProperties(rentalPropertyIds: string[]): {
 
   // Aggregate loading and error states
   const isLoading = queries.some((q) => q.isLoading)
-  const error = queries.find((q) => {
-    if (!q.error) return false
-    return (q.error as any)?.status !== 404 // Only treat non-404 as errors
-  })?.error ?? undefined
+  const error =
+    queries.find((q) => {
+      if (!q.error) return false
+      return (q.error as any)?.status !== 404 // Only treat non-404 as errors
+    })?.error ?? undefined
 
   // Create a map of rental property ID to rental property data
   const rentalPropertiesMap: Record<string, RentalPropertyInfo | null> = {}
