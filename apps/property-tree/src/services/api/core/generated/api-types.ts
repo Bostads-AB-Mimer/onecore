@@ -3829,7 +3829,7 @@ export interface components {
       /** @description Code of the parking space */
       code: string;
       property: {
-        code: string;
+        code: string | null;
         /** @description Name of property associated with the parking space */
         name: string | null;
       };
@@ -3903,7 +3903,7 @@ export interface components {
       /** @description Code of the parking space */
       code: string;
       property: {
-        code: string;
+        code: string | null;
         /** @description Name of property associated with the parking space */
         name: string | null;
       };
