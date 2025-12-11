@@ -387,7 +387,7 @@ function Contact(props: {
 
 function ParkingSpace(props: {
   name: string
-  property: { name: string | null; code: string }
+  property: { name: string | null; code: string | null }
   className?: string
   onClick: () => void
 }) {
