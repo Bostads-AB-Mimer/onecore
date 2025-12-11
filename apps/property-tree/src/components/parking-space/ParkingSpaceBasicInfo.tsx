@@ -16,18 +16,6 @@ export const ParkingSpaceBasicInfo = ({
 }: ParkingSpaceBasicInfoProps) => {
   const isMobile = useIsMobile()
 
-  // Format address
-  const formatAddress = () => {
-    const parts = [
-      parkingSpace.address.streetAddress,
-      parkingSpace.address.streetAddress2,
-      parkingSpace.address.postalCode,
-      parkingSpace.address.city,
-    ].filter(Boolean)
-
-    return parts.length > 0 ? parts.join(', ') : '-'
-  }
-
   return (
     <>
       <div className="mb-6">
@@ -50,7 +38,9 @@ export const ParkingSpaceBasicInfo = ({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Adress</p>
-              <p className="font-medium">{formatAddress()}</p>
+              <p className="font-medium">
+                {parkingSpace.parkingSpace.name || '-'}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
@@ -58,22 +48,6 @@ export const ParkingSpaceBasicInfo = ({
               </p>
               <p className="font-medium">
                 {parkingSpace.parkingSpace.parkingSpaceType.name}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Parkeringsnummer</p>
-              <p className="font-medium">
-                {parkingSpace.parkingSpace.parkingNumber}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Kod</p>
-              <p className="font-medium">{parkingSpace.parkingSpace.code}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Namn</p>
-              <p className="font-medium">
-                {parkingSpace.parkingSpace.name || '-'}
               </p>
             </div>
           </div>
