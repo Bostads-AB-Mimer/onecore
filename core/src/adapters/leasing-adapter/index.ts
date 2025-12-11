@@ -890,6 +890,36 @@ const deleteListingTextContent = async (
     return { ok: false, err: 'unknown' }
   }
 }
+const preliminaryTerminateLease = async (
+  leaseId: string,
+  contactCode: string,
+  lastDebitDate: Date,
+  desiredMoveDate: Date
+): Promise<AdapterResult<any, 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
+      {
+        contactCode,
+        lastDebitDate: lastDebitDate.toISOString(),
+        desiredMoveDate: desiredMoveDate.toISOString(),
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(
+      { status: response.status, data: response.data },
+      'Failed to preliminary terminate lease'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, `Error preliminary terminating lease: ${leaseId}`)
+    return { ok: false, err: 'unknown' }
+  }
+}
 
 export {
   addApplicantToWaitingList,
@@ -913,6 +943,7 @@ export {
   getBuildingManagers,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
+  preliminaryTerminateLease,
   resetWaitingList,
   setApplicantStatusActive,
   createContactComment,
