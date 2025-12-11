@@ -100,6 +100,18 @@ export function RentalObjectContracts({
     )
   }
 
+  // Helper to render status badge (handles both string and numeric status values)
+  const renderStatusBadge = (status: Lease['status']): ReactNode => {
+    // Try the existing helper first
+    const badge = getStatusBadge(status)
+    if (badge) return badge
+
+    // Fallback: render status as text if badge is null
+    return (
+      <span className="text-sm text-muted-foreground">{String(status)}</span>
+    )
+  }
+
   // Define table columns
   const columns = [
     {
@@ -132,7 +144,7 @@ export function RentalObjectContracts({
     {
       key: 'status',
       label: 'Status',
-      render: (lease: Lease) => getStatusBadge(lease.status),
+      render: (lease: Lease) => renderStatusBadge(lease.status),
     },
     {
       key: 'actions',
@@ -148,7 +160,7 @@ export function RentalObjectContracts({
   // Mobile card renderer
   const mobileCardRenderer = (lease: Lease) => {
     const hasTenants = lease.tenants && lease.tenants.length > 0
-    const primaryTenant = hasTenants ? lease.tenants[0] : null
+    const primaryTenant = hasTenants ? lease.tenants?.[0] : null
     const phone = primaryTenant?.phoneNumbers?.find((p) => p.isMainNumber)
 
     return (
@@ -164,7 +176,7 @@ export function RentalObjectContracts({
               {lease.lastDebitDate && ` - ${formatDate(lease.lastDebitDate)}`}
             </div>
           </div>
-          {getStatusBadge(lease.status)}
+          {renderStatusBadge(lease.status)}
         </div>
 
         {/* Tenant Info Section */}
