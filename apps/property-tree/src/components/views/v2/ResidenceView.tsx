@@ -10,7 +10,10 @@ import { ClipboardList, Info, MessageSquare, Users } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import {
+  ContextType,
+  WorkOrdersManagement,
+} from '@/components/work-orders/WorkOrdersManagement'
 import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 
@@ -128,7 +131,7 @@ export const ResidenceView = () => {
             <TabsContent value="workorders">
               {residence?.propertyObject.rentalId && (
                 <WorkOrdersManagement
-                  contextType="residence"
+                  contextType={ContextType.Residence}
                   id={residence?.propertyObject.rentalId}
                 />
               )}
