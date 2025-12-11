@@ -360,9 +360,70 @@ function buildTenantRequestData(contact: Contact) {
       last: contact.lastName ?? '',
     },
     email: contact.emailAddress,
-    phone: contact.phoneNumbers?.find((p) => p.isMainNumber)?.phoneNumber,
+    phone: contact.phoneNumbers?.find(
+      (p: { isMainNumber: any }) => p.isMainNumber
+    )?.phoneNumber,
     postadress: `${contact.address?.street} ${contact.address?.number}`,
     postnummer: contact.address?.postalCode,
     stad: contact.address?.city,
   }
 }
+
+export const preliminaryTerminateLease = async (
+  leaseId: string,
+  contactCode: string,
+  lastDebitDate: Date,
+  desiredMoveDate: Date
+): Promise<
+  AdapterResult<
+    any,
+    | 'lease-not-found'
+    | 'termination-failed'
+    | 'bad-request'
+    | 'tenant-not-found'
+    | 'could-not-retrieve-tenant'
+    | 'could-not-parse-tenant-response'
+    | 'get-tenant-bad-request'
+    | 'unknown'
+  >
+> => {
+  try {
+    // Get the tenfast tenant by contactCode
+    const tenantResult = await getTenantByContactCode(contactCode)
+    if (!tenantResult.ok) {
+      return { ok: false, err: tenantResult.err }
+    }
+    if (!tenantResult.data) {
+      return { ok: false, err: 'tenant-not-found' }
+    }
+
+    const tenfastUserId = tenantResult.data._id
+
+    logger.info(
+      {
+        leaseId,
+        contactCode,
+        tenfastUserId,
+        lastDebitDate: lastDebitDate.toISOString(),
+        desiredMoveDate: desiredMoveDate.toISOString(),
+      },
+      'Preliminary lease termination request to tenfast'
+    )
+
+    // TODO: Implement the actual termination logic with tenfast API
+    // const terminationResponse = await tenfastApi.request({
+    //   method: 'post',
+    //   url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${leaseId}/terminate`,
+    //   data: {
+    //     tenfastUserId,
+    //     lastDebitDate: lastDebitDate.toISOString(),
+    //     desiredMoveDate: desiredMoveDate.toISOString(),
+    //   },
+    // })
+
+    return { ok: true, data: { message: 'Termination request logged' } }
+  } catch (err) {
+    return handleTenfastError(err, 'termination-failed')
+  }
+}
+
