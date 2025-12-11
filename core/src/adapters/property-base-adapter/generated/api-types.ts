@@ -1526,10 +1526,10 @@ export interface components {
       id: string;
       rentalId: string;
       code: string;
-      name: string;
+      name: string | null;
       property: {
-        code: string;
-        name: string;
+        code: string | null;
+        name: string | null;
       };
       building: {
         code: string | null;

@@ -36,7 +36,7 @@ export const ParkingSpaceSearchResultSchema = z.object({
   code: z.string(),
   name: z.string().nullable(),
   property: z.object({
-    code: z.string(),
+    code: z.string().nullable(),
     name: z.string().nullable(),
   }),
   building: z.object({

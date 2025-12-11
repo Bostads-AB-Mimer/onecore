@@ -26,7 +26,7 @@ export type SearchResult =
       rentalId: string
       code: string
       name: string | null
-      property: { name: string | null; code: string }
+      property: { name: string | null; code: string | null }
     }
 
 interface SearchResultsTableProps {
