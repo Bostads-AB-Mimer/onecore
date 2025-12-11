@@ -41,6 +41,7 @@ export const RoomSchema = z.object({
   deleted: z.boolean(),
   timestamp: z.string(),
   roomType: RoomTypeSchema.nullable(),
+  area: z.number().optional(),
 })
 
 export type Room = z.infer<typeof RoomSchema>

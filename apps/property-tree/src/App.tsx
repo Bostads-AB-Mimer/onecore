@@ -20,6 +20,7 @@ import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
 import AllTenantsPage from './components/tenants/AllTenantsPage'
+import InspectionsView from './components/views/InspectionsView'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +68,7 @@ export default function App() {
               />
               <Route path="tenants" element={<AllTenantsPage />} />
               <Route path="tenants/:contactCode" element={<TenantView />} />
+              <Route path="inspections" element={<InspectionsView />} />
             </Route>
           </Routes>
         </Router>

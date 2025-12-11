@@ -22,11 +22,11 @@ function AppLayoutContent() {
   const isDashboard = location.pathname === '/' || location.pathname === '/sv'
 
   return (
-    <div className="flex-1 min-h-screen bg-gradient-to-b from-white to-secondary">
+    <div className="flex-1 min-h-screen bg-gradient-to-b from-white to-secondary w-screen max-w-full overflow-x-hidden">
       {/* Header */}
       {!isDashboard && <NavigationBar onMenuClick={toggleSidebar} />}
       <div
-        className={`flex h-[calc(100vh-3.5rem)] mt-${isDashboard ? '0' : '14'} relative`}
+        className={`flex h-[calc(100vh-3.5rem)] mt-${isDashboard ? '0' : '14'} relative w-full overflow-x-hidden`}
       >
         <CommandPalette />
         {!isDashboard && <SidebarNavigation />}

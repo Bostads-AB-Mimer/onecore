@@ -84,7 +84,7 @@ export function RoomInspectionMobile({
           <CardTitle className="text-lg flex items-center gap-2">
             {room.name}
             <Badge variant="outline" className="ml-auto">
-              {/* {room.size} m² // property does not exist in schema. Design assumes it does. Decide what to do when we know what data exists. */}
+              {room.area} m²
             </Badge>
           </CardTitle>
         </CardHeader>
