@@ -320,40 +320,39 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
 
     return (
       <>
-        {invoice.paymentStatus === PaymentStatus.Paid &&
-          invoice.paidAmount !== undefined && (
-            <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-              <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-                <div>
-                  <span className="text-muted-foreground block mb-1">
-                    Betaldatum:
-                  </span>
-                  <span className="font-semibold">
-                    <PaymentDateDisplay
-                      events={events}
-                      invoiceAmount={invoice.amount}
-                    />
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block mb-1">
-                    Källa:
-                  </span>
-                  <span className="font-semibold">
-                    {formatSource(invoice.source)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block mb-1">
-                    Inbetalat belopp:
-                  </span>
-                  <span className="font-semibold text-success">
-                    {formatCurrency(invoice.paidAmount)}
-                  </span>
-                </div>
+        {invoice.paidAmount !== undefined && (
+          <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
+            <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+              <div>
+                <span className="text-muted-foreground block mb-1">
+                  Betaldatum:
+                </span>
+                <span className="font-semibold">
+                  <PaymentDateDisplay
+                    events={events}
+                    invoiceAmount={invoice.amount}
+                  />
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">
+                  Källa:
+                </span>
+                <span className="font-semibold">
+                  {formatSource(invoice.source)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">
+                  Inbetalat belopp:
+                </span>
+                <span className="font-semibold text-success">
+                  {formatCurrency(invoice.paidAmount)}
+                </span>
               </div>
             </div>
-          )}
+          </div>
+        )}
         <InvoicePaymentEventsTable
           events={events}
           isLoading={isLoading}
@@ -462,11 +461,6 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
             </Button>
           </div>
         )}
-        {invoice.source?.toLowerCase() === 'next' &&
-          invoice.paymentStatus === PaymentStatus.Paid &&
-          invoice.paidAmount !== undefined && (
-            <InvoiceDetailsWithPaymentInfo invoice={invoice} />
-          )}
         {invoice.invoiceRows.length > 0 && (
           <div className="bg-background rounded-lg p-3 shadow-sm mb-4">
             <div className="font-medium text-sm mb-3 text-muted-foreground">
@@ -529,14 +523,9 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
             </table>
           </div>
         )}
-        {invoice.source?.toLowerCase() === 'next' &&
-          invoice.paymentStatus !== PaymentStatus.Paid && (
-            <InvoicePaymentEventsTable
-              events={undefined}
-              isLoading={false}
-              error={null}
-            />
-          )}
+        {invoice.source?.toLowerCase() === 'next' && (
+          <InvoiceDetailsWithPaymentInfo invoice={invoice} />
+        )}
       </>
     )
   }
