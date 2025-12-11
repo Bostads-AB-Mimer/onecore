@@ -335,9 +335,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
                 </span>
               </div>
               <div>
-                <span className="text-muted-foreground block mb-1">
-                  Källa:
-                </span>
+                <span className="text-muted-foreground block mb-1">Källa:</span>
                 <span className="font-semibold">
                   {formatSource(invoice.source)}
                 </span>
