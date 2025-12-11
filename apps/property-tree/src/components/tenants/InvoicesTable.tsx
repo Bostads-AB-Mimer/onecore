@@ -10,7 +10,7 @@ import {
 import {
   CollapsibleTable,
   CollapsibleTableColumn,
-} from '@/components/shared/v2/CollapsibleTable'
+} from '@/components/ui/CollapsibleTable'
 
 export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   // Sort invoices by invoice date, latest first

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
-import { ResponsiveTable } from '@/components/shared/v2/ResponsiveTable'
+import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 
 export type SearchResult =
   | {
