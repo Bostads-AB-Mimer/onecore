@@ -490,6 +490,105 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/by-lease-id/{leaseId}/preliminary-termination:
+   *   post:
+   *     summary: Preliminary termination of a lease
+   *     tags:
+   *       - Lease service
+   *     description: Initiates a preliminary termination for the specified lease.
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique identifier of the lease to terminate.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contactCode
+   *               - lastDebitDate
+   *               - desiredMoveDate
+   *             properties:
+   *               contactCode:
+   *                 type: string
+   *                 description: The contact code of the tenant
+   *               lastDebitDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The last debit date for the lease
+   *               desiredMoveDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The desired move-out date
+   *     responses:
+   *       '200':
+   *         description: Preliminary termination initiated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '400':
+   *         description: Invalid request body
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/leases/by-lease-id/:leaseId/preliminary-termination',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      // TODO: Add proper schema validation with zod
+      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
+        .body as {
+        contactCode: string
+        lastDebitDate: string
+        desiredMoveDate: string
+      }
+
+      try {
+        const result = await leasingAdapter.preliminaryTerminateLease(
+          ctx.params.leaseId,
+          contactCode,
+          new Date(lastDebitDate),
+          new Date(desiredMoveDate)
+        )
+
+        if (!result.ok) {
+          ctx.status = 500
+          ctx.body = {
+            error: 'Failed to preliminary terminate lease',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: result.data,
+          message: 'Preliminary termination request received',
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(
+          { error, leaseId: ctx.params.leaseId },
+          'Error in preliminary lease termination'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: 'Internal server error',
+          ...metadata,
+        }
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /consumer-reports/by-pnr/{pnr}:
    *   get:
    *     summary: Get consumer report for a specific Personal Number (PNR)
