@@ -458,4 +458,105 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/preliminary-termination:
+   *   post:
+   *     summary: Preliminary termination of a lease
+   *     description: Initiates a preliminary termination for the specified lease in tenfast.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique identifier of the lease to terminate.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contractNumber
+   *               - contactCode
+   *               - lastDebitDate
+   *               - desiredMoveDate
+   *             properties:
+   *               contractNumber:
+   *                 type: string
+   *                 description: The contract number associated with the lease
+   *               contactCode:
+   *                 type: string
+   *                 description: The contact code of the tenant
+   *               lastDebitDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The last debit date for the lease
+   *               desiredMoveDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The desired move-out date
+   *     responses:
+   *       200:
+   *         description: Preliminary termination initiated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Internal server error. Failed to terminate lease.
+   */
+
+  const preliminaryTerminationSchema = z.object({
+    contactCode: z.string(),
+    lastDebitDate: z.string().datetime(),
+    desiredMoveDate: z.string().datetime(),
+  })
+
+  router.post('(.*)/leases/:leaseId/preliminary-termination', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const bodyValidation = preliminaryTerminationSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!bodyValidation.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: bodyValidation.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { contactCode, lastDebitDate, desiredMoveDate } = bodyValidation.data
+
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      ctx.params.leaseId,
+      contactCode,
+      new Date(lastDebitDate),
+      new Date(desiredMoveDate)
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
 }
