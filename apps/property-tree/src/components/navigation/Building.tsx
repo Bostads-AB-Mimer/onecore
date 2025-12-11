@@ -6,7 +6,6 @@ import { ResidenceList } from './ResidenceList'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
-import { toTitleCase } from '@/lib/text-utils'
 
 interface BuildingNavigationProps {
   building: Building
@@ -66,7 +65,7 @@ export function BuildingNavigation({
           isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
         >
           <Warehouse />
-          <span>{toTitleCase(building.code)}</span>
+          <span>{building.code}</span>
         </SidebarMenuButton>
       </div>
       {isExpanded && (

@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/v2/Button'
 import {
   Accordion,
   AccordionContent,
@@ -94,34 +93,30 @@ export const BuildingEntranceHierarchy = ({
                         ) : (
                           <>
                             {residences.map((residence) => (
-                              <div
+                              <Link
                                 key={residence.id}
-                                className={`flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors}`}
+                                to={`${basePath}/${residence.id}`}
+                                className="block"
                               >
-                                <div className="flex items-center gap-2">
-                                  <Home className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium text-foreground">
-                                    {residence.rentalId}
-                                  </span>
+                                <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer">
+                                  <div className="flex items-center gap-2">
+                                    <Home className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-foreground">
+                                      {residence.rentalId}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">
+                                      {residence.quantityValues?.find(
+                                        (x) => x.quantityTypeId === 'BOA'
+                                      )?.value || 0}
+                                      m² • {residence.residenceType.roomCount}{' '}
+                                      rum
+                                    </span>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-muted-foreground">
-                                    {residence.quantityValues?.find(
-                                      (x) => x.quantityTypeId === 'BOA'
-                                    )?.value || 0}
-                                    m² • {residence.residenceType.roomCount} rum
-                                  </span>
-                                  <Link to={`${basePath}/${residence.id}`}>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 hover:bg-muted"
-                                    >
-                                      <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                  </Link>
-                                </div>
-                              </div>
+                              </Link>
                             ))}
                           </>
                         )}

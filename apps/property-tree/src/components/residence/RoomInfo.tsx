@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
 import { roomService } from '@/services/api/core'
-import { getOrientationText } from './get-room-orientation'
+// import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
 
 interface RoomInfoProps {
@@ -139,6 +139,11 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
                 {expandedRoomId === room.id && (
                   <div className="mt-2 p-3 sm:p-4 border rounded-lg bg-muted/50 space-y-4">
+                    <p className="text-center text-muted-foreground">
+                      Här kommer du snart kunna se komponenter för detta utrymme
+                    </p>
+                    {/* Hiding for demo purposes */}
+                    {/*
                     <div
                       className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
                     >
@@ -208,6 +213,7 @@ export const RoomInfo = (props: RoomInfoProps) => {
                         </p>
                       </div>
                     </div>
+                    */}
                   </div>
                 )}
               </div>

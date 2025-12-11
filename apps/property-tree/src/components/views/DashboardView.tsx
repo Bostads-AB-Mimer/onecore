@@ -46,6 +46,15 @@ export function DashboardView() {
       isDisabled: false,
     },
     {
+      id: 'tenants',
+      title: 'Kunder',
+      icon: Contact,
+      description: 'Kundregister och hyresgästinformation',
+      path: '/tenants',
+      isExternal: false,
+      isDisabled: false,
+    },
+    {
       id: 'rental',
       title: 'Uthyrning',
       icon: Home,
@@ -64,12 +73,12 @@ export function DashboardView() {
       isDisabled: false,
     },
     {
-      id: 'tenants',
-      title: 'Kunder',
-      icon: Contact,
-      description: 'Kundregister och hyresgästinformation',
-      path: '/tenants',
-      isExternal: false,
+      id: 'odoo',
+      title: 'Ärendehantering (Odoo)',
+      icon: MessageSquare,
+      description: 'Hantera ärenden och support',
+      path: resolve('VITE_ODOO_URL', ''),
+      isExternal: true,
       isDisabled: false,
     },
 
@@ -88,15 +97,6 @@ export function DashboardView() {
       icon: Lock,
       description: 'Låssystem och passagekontroll',
       path: resolve('VITE_PASSAGE_URL', ''),
-      isExternal: true,
-      isDisabled: false,
-    },
-    {
-      id: 'odoo',
-      title: 'Ärendehantering (Odoo)',
-      icon: MessageSquare,
-      description: 'Hantera ärenden och support',
-      path: resolve('VITE_ODOO_URL', ''),
       isExternal: true,
       isDisabled: false,
     },
@@ -239,7 +239,7 @@ export function DashboardView() {
               transition={{ delay: 0.1 + index * 0.05 }}
             >
               <Card
-                className={`transition-all duration-200 ${
+                className={`h-full transition-all duration-200 ${
                   config.isDisabled
                     ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
                     : 'hover:scale-105 cursor-pointer'
