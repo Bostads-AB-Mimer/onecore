@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare } from 'lucide-react'
+import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
 import { parkingSpaceService } from '@/services/api/core'
 import { ParkingSpaceBasicInfo } from '../parking-space/ParkingSpaceBasicInfo'
@@ -11,6 +11,7 @@ import {
 } from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
+import { RentalObjectContracts } from '../rental-object/RentalObjectContracts'
 
 export function ParkingSpaceView() {
   const { rentalId } = useParams()
