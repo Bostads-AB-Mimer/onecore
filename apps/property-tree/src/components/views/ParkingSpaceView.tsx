@@ -64,6 +64,14 @@ export function ParkingSpaceView() {
             ),
           },
           {
+            value: 'contracts',
+            label: 'Kontrakt',
+            icon: FileText,
+            content: (
+              <RentalObjectContracts rentalPropertyId={parkingSpace.rentalId} />
+            ),
+          },
+          {
             value: 'inspections',
             label: 'Besiktningar',
             icon: ClipboardList,
