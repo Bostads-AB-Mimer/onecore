@@ -33,6 +33,7 @@ export const InvoiceRowSchema = z.object({
 export const InvoicePaymentEventSchema = z.object({
   type: z.string(),
   invoiceId: z.string(),
+  matchId: z.number(),
   amount: z.number().min(0),
   paymentDate: z.coerce.date(),
   text: z.string().nullable(),
