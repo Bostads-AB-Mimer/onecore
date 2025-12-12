@@ -14,6 +14,7 @@ import {
 } from '@/components/tenants/lease-helpers.tsx'
 import { useLeasesByRentalProperty } from '@/components/hooks/useLeasesByRentalProperty'
 import type { Lease } from '@/services/api/core/lease-service'
+import { Link } from 'react-router-dom'
 
 interface RentalObjectContractsProps {
   rentalPropertyId: string
@@ -66,16 +67,31 @@ export function RentalObjectContracts({
 
     return (
       <div className="space-y-1">
-        {lease.tenants.map((tenant, index) => (
-          <div key={tenant.contactCode}>
-            <div className="font-medium">{tenant.fullName}</div>
-            {index === 0 && (
-              <div className="text-sm text-muted-foreground">
-                {tenant.contactCode}
-              </div>
-            )}
-          </div>
-        ))}
+        {lease.tenants.map((tenant, index) => {
+          const isValidContact =
+            tenant.contactCode.startsWith('P') ||
+            tenant.contactCode.startsWith('F')
+
+          return (
+            <div key={tenant.contactCode}>
+              {isValidContact ? (
+                <Link
+                  to={`/tenants/${tenant.contactCode}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {tenant.fullName}
+                </Link>
+              ) : (
+                <span className="font-medium">{tenant.fullName}</span>
+              )}
+              {index === 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {tenant.contactCode}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -162,6 +178,9 @@ export function RentalObjectContracts({
     const hasTenants = lease.tenants && lease.tenants.length > 0
     const primaryTenant = hasTenants ? lease.tenants?.[0] : null
     const phone = primaryTenant?.phoneNumbers?.find((p) => p.isMainNumber)
+    const isValidContact =
+      primaryTenant?.contactCode.startsWith('P') ||
+      primaryTenant?.contactCode.startsWith('F')
 
     return (
       <div className="space-y-3 w-full">
@@ -185,7 +204,16 @@ export function RentalObjectContracts({
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Hyresgäst:</span>
-                <span className="font-medium">{primaryTenant?.fullName}</span>
+                {isValidContact ? (
+                  <Link
+                    to={`/tenants/${primaryTenant?.contactCode}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {primaryTenant?.fullName}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{primaryTenant?.fullName}</span>
+                )}
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Kundnummer:</span>
