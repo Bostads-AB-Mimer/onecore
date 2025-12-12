@@ -252,8 +252,10 @@ export function TenantContracts({
     )
   }
 
-  // Apply three-tier sorting
-  const sortedLeases = sortLeasesByStatus(leases, rentalProperties)
+  // Apply three-tier sorting and filter out leases with 'M' in lease number
+  const sortedLeases = sortLeasesByStatus(leases, rentalProperties).filter(
+    (x) => x.leaseNumber.includes('M') === false
+  )
 
   return (
     <Card>
