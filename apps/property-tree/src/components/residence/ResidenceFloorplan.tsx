@@ -7,7 +7,7 @@ export const ResidenceFloorplan = ({ rentalId }: { rentalId: string }) => {
   const [imageError, setImageError] = useState(false)
 
   return (
-    <TabLayout title="Planritning">
+    <TabLayout title="Bofaktablad">
       {imageError ? (
         <EmptyState
           icon={FileImage}
