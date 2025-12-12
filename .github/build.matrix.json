@@ -41,6 +41,15 @@
     "runGenerateStatic": true
   },
   {
+    "name": "inspection",
+    "label": "ONECore Inspection Service",
+    "package": "@onecore/inspection",
+    "path": "services/inspection",
+    "docker": true,
+    "imageName": "onecore-inspection",
+    "runGenerateStatic": true
+  },
+  {
     "name": "work-order",
     "label": "ONECore Work Order Service",
     "package": "@onecore/work-order",
