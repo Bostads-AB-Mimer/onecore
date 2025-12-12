@@ -1,5 +1,8 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import {
+  ContextType,
+  WorkOrdersManagement,
+} from '@/components/work-orders/WorkOrdersManagement'
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 // import { TenantNotes } from '@/components/tenants/TenantNotes'
@@ -15,10 +18,12 @@ import { TenantLedger } from '../TenantLedger'
 
 interface TenantDetailTabsContentProps {
   leases: Lease[]
-  rentalProperties: Record<string, RentalPropertyInfo>
+  rentalProperties: Record<string, RentalPropertyInfo | null>
   personalNumber?: string
   contactCode: string
   customerName: string
+  isLoadingLeases?: boolean
+  isLoadingProperties?: boolean
 }
 
 export const TenantDetailTabsContent = ({
@@ -27,11 +32,18 @@ export const TenantDetailTabsContent = ({
   personalNumber,
   contactCode,
   customerName,
+  isLoadingLeases = false,
+  isLoadingProperties = false,
 }: TenantDetailTabsContentProps) => {
   return (
     <>
       <TabsContent value="contracts">
-        <TenantContracts leases={leases} rentalProperties={rentalProperties} />
+        <TenantContracts
+          leases={leases}
+          rentalProperties={rentalProperties}
+          isLoadingLeases={isLoadingLeases}
+          isLoadingProperties={isLoadingProperties}
+        />
       </TabsContent>
 
       <TabsContent value="queue">
@@ -42,7 +54,10 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="work-orders">
-        <WorkOrdersManagement id={contactCode} contextType="tenant" />
+        <WorkOrdersManagement
+          id={contactCode}
+          contextType={ContextType.Tenant}
+        />
       </TabsContent>
 
       <TabsContent value="ledger">

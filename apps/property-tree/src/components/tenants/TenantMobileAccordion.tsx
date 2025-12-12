@@ -8,14 +8,19 @@ import {
 } from '@/components/ui/MobileAccordion'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import {
+  ContextType,
+  WorkOrdersManagement,
+} from '../work-orders/WorkOrdersManagement'
 
 interface TenantMobileAccordionProps {
   leases: Lease[]
-  rentalProperties: Record<string, RentalPropertyInfo>
+  rentalProperties: Record<string, RentalPropertyInfo | null>
   hasActiveCases?: boolean
   contactCode: string
   customerName: string
+  isLoadingLeases?: boolean
+  isLoadingProperties?: boolean
 }
 
 export function TenantMobileAccordion({
@@ -24,6 +29,8 @@ export function TenantMobileAccordion({
   hasActiveCases,
   contactCode,
   customerName,
+  isLoadingLeases = false,
+  isLoadingProperties = false,
 }: TenantMobileAccordionProps) {
   const accordionItems: MobileAccordionItem[] = [
     {
@@ -33,6 +40,8 @@ export function TenantMobileAccordion({
         <TenantContracts
           leases={contracts}
           rentalProperties={rentalProperties}
+          isLoadingLeases={isLoadingLeases}
+          isLoadingProperties={isLoadingProperties}
         />
       ),
     },
@@ -49,7 +58,12 @@ export function TenantMobileAccordion({
     {
       id: 'cases',
       title: 'Ärenden',
-      content: <WorkOrdersManagement id={contactCode} contextType="tenant" />,
+      content: (
+        <WorkOrdersManagement
+          id={contactCode}
+          contextType={ContextType.Tenant}
+        />
+      ),
     },
     {
       id: 'ledger',

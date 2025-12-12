@@ -245,13 +245,20 @@ export async function getResidences(
 type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
 
 export async function getResidenceDetails(
-  residenceId: string
+  residenceId: string,
+  options?: { includeActiveBlocksOnly?: boolean }
 ): Promise<
   AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
 > {
   try {
     const fetchResponse = await client().GET('/residences/{id}', {
-      params: { path: { id: residenceId } },
+      params: {
+        path: { id: residenceId },
+        query: {
+          includeActiveBlocksOnly:
+            options?.includeActiveBlocksOnly === true ? true : false,
+        },
+      },
     })
 
     if (fetchResponse.data?.content) {
@@ -344,6 +351,21 @@ export async function getRooms(
     logger.error({ err }, '@onecore/property-adapter.getRooms')
     return { ok: false, err: 'unknown' }
   }
+}
+
+type SearchParkingSpacesResponse =
+  components['schemas']['ParkingSpaceSearchResult'][]
+
+export async function searchParkingSpaces(
+  q: string
+): Promise<AdapterResult<SearchParkingSpacesResponse, 'unknown'>> {
+  const response = await client().GET('/parking-spaces/search', {
+    params: { query: { q } },
+  })
+  if (response.data) {
+    return { ok: true, data: response.data.content ?? [] }
+  }
+  throw { ok: false, err: 'missing response data invariant' }
 }
 
 type GetParkingSpaceResponse = components['schemas']['ParkingSpace']

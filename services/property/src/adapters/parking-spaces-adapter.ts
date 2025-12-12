@@ -1,5 +1,63 @@
 import { prisma } from './db'
 
+export async function searchParkingSpaces(q: string) {
+  /**
+   * Searches for parking spaces by rental id
+   */
+  const parkingSpaces = await prisma.propertyStructure.findMany({
+    select: {
+      rentalId: true,
+      companyCode: true,
+      companyName: true,
+      propertyCode: true,
+      propertyName: true,
+      buildingCode: true,
+      buildingName: true,
+      parkingSpace: {
+        select: {
+          propertyObjectId: true,
+          code: true,
+          name: true,
+          parkingNumber: true,
+          parkingSpaceType: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    where: {
+      companyCode: '001',
+      parkingSpace: {
+        isNot: null,
+      },
+      rentalId: {
+        contains: q,
+      },
+    },
+    take: 10,
+  })
+
+  return parkingSpaces
+    .filter((p) => p.parkingSpace !== null && p.rentalId !== null)
+    .map((p) => ({
+      id: p.rentalId!,
+      rentalId: p.rentalId!,
+      name: p.parkingSpace!.name,
+      code: p.parkingSpace!.code,
+      property: {
+        code: p.propertyCode,
+        name: p.propertyName,
+      },
+      building: {
+        code: p.buildingCode ?? null,
+        name: p.buildingName ?? null,
+      },
+    }))
+}
+
 export async function getParkingSpaceByRentalPropertyId(
   rentalPropertyId: string
 ) {

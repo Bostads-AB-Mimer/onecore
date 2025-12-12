@@ -27,6 +27,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PropertySearchResult', schemas.PropertySearchResultSchema)
   registerSchema('BuildingSearchResult', schemas.BuildingSearchResultSchema)
   registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
+  registerSchema(
+    'ParkingSpaceSearchResult',
+    schemas.ParkingSpaceSearchResultSchema
+  )
   registerSchema('SearchResult', schemas.SearchResultSchema)
 
   /**
@@ -36,7 +40,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Search Service
    *     summary: Omni-search for different entities
-   *     description: Search for properties, buildings, and residences.
+   *     description: Search for properties, buildings, residences, and parking spaces.
    *     parameters:
    *       - in: query
    *         name: q
@@ -87,7 +91,16 @@ export const routes = (router: KoaRouter) => {
       queryParams.data.q
     )
 
-    if (!getProperties.ok || !getBuildings.ok || !getResidences.ok) {
+    const getParkingSpaces = await propertyBaseAdapter.searchParkingSpaces(
+      queryParams.data.q
+    )
+
+    if (
+      !getProperties.ok ||
+      !getBuildings.ok ||
+      !getResidences.ok ||
+      !getParkingSpaces.ok
+    ) {
       ctx.status = 500
       return
     }
@@ -120,12 +133,25 @@ export const routes = (router: KoaRouter) => {
       })
     )
 
+    const mappedParkingSpaces = getParkingSpaces.data.map(
+      (parkingSpace): schemas.ParkingSpaceSearchResult => ({
+        id: parkingSpace.id,
+        type: 'parking-space',
+        name: parkingSpace.name,
+        rentalId: parkingSpace.rentalId,
+        code: parkingSpace.code,
+        property: parkingSpace.property,
+        building: parkingSpace.building,
+      })
+    )
+
     ctx.body = {
       ...metadata,
       content: [
         ...mappedProperties,
         ...mappedBuildings,
         ...mappedResidences,
+        ...mappedParkingSpaces,
       ] satisfies SearchResultResponseContent,
     }
   })

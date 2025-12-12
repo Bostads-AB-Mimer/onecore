@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
 import { roomService } from '@/services/api/core'
-import { getOrientationText } from './get-room-orientation'
+// import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
 
 interface RoomInfoProps {
@@ -43,19 +43,16 @@ export const RoomInfo = (props: RoomInfoProps) => {
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Rumsöversikt</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">
+              Översikt Utrymmen
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm text-muted-foreground mb-4">
-              Totalt antal rum: {rooms.length}
+              Totalt antal utrymmen: {rooms.length}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Uppvärmda rum</p>
-                <p className="font-medium">
-                  {rooms.filter((room) => room.features.isHeated).length}
-                </p>
-              </div>
+              <div></div>
               {/* Hiding for demo purposes */}
               {/*
               <div>
@@ -105,7 +102,9 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Rumsinformation</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">
+            Information Utrymmen
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-2">
@@ -140,6 +139,11 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
                 {expandedRoomId === room.id && (
                   <div className="mt-2 p-3 sm:p-4 border rounded-lg bg-muted/50 space-y-4">
+                    <p className="text-center text-muted-foreground">
+                      Här kommer du snart kunna se komponenter för detta utrymme
+                    </p>
+                    {/* Hiding for demo purposes */}
+                    {/*
                     <div
                       className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
                     >
@@ -209,6 +213,7 @@ export const RoomInfo = (props: RoomInfoProps) => {
                         </p>
                       </div>
                     </div>
+                    */}
                   </div>
                 )}
               </div>

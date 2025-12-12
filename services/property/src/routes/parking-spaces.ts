@@ -1,7 +1,10 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import * as parkingSpacesAdapter from '../adapters/parking-spaces-adapter'
-import { ParkingSpaceSchema } from '@src/types/parking-space'
+import {
+  ParkingSpaceSchema,
+  ParkingSpaceSearchResult,
+} from '@src/types/parking-space'
 import { trimStrings } from '@src/utils/data-conversion'
 
 /**
@@ -12,6 +15,78 @@ import { trimStrings } from '@src/utils/data-conversion'
  *     description: Operations related to parking spaces
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /parking-spaces/search:
+   *   get:
+   *     summary: Search parking spaces
+   *     description: |
+   *       Searches for parking spaces by rental id.
+   *     tags:
+   *       - Parking Spaces
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (rental id).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved parking spaces matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ParkingSpaceSearchResult'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/parking-spaces/search', async (ctx) => {
+    const q = ctx.query.q as string
+    const metadata = generateRouteMetadata(ctx)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const parkingSpaces = await parkingSpacesAdapter.searchParkingSpaces(q)
+
+      ctx.status = 200
+      ctx.body = {
+        content: parkingSpaces.map(
+          (p): ParkingSpaceSearchResult => ({
+            id: p.id,
+            rentalId: p.rentalId,
+            code: p.code,
+            name: p.name,
+            property: p.property,
+            building: p.building,
+          })
+        ),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err }, 'Error searching parking spaces')
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
   /**
    * @swagger
    * /parking-spaces/by-rental-id/{id}:

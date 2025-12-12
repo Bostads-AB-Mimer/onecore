@@ -10,11 +10,107 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
+import { Card, CardContent } from '@/components/ui/v2/Card'
 import { AlertTriangle } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
 import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
 import { TenantMobileAccordion } from '@/components/tenants/TenantMobileAccordion'
+import type { Tenant } from '@/services/types'
+import type { Lease } from '@/services/api/core/lease-service'
+import type { RentalPropertyInfo } from '@onecore/types'
+
+// Helper component: Tenant header with name and special attention badge
+function TenantHeader({ tenant }: { tenant: Tenant }) {
+  return (
+    <TooltipProvider>
+      <div className="flex items-center gap-3 mb-6">
+        <h1 className="text-3xl font-bold">
+          {tenant.firstName} {tenant.lastName}
+        </h1>
+        {tenant.specialAttention && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center justify-center w-8 h-8 bg-amber-100 rounded-full border border-amber-200 cursor-help">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                Åk aldrig ensam till kund. Ta alltid med dig en kollega vid
+                hembesök.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </TooltipProvider>
+  )
+}
+
+// Helper component: Tabs section with loading state handling
+interface TenantTabsSectionProps {
+  tenant: Tenant
+  leases: Lease[] | undefined
+  rentalProperties: Record<string, RentalPropertyInfo | null> | undefined
+  leasesLoading: boolean
+  leasesError: unknown
+  rentalPropertiesLoading: boolean
+  isMobile: boolean
+}
+
+function TenantTabsSection({
+  tenant,
+  leases,
+  rentalProperties,
+  leasesLoading,
+  leasesError,
+  rentalPropertiesLoading,
+  isMobile,
+}: TenantTabsSectionProps) {
+  // Show error state for leases
+  if (leasesError) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-bold">Kunde inte hämta kontrakt</h2>
+            <p className="text-muted-foreground">
+              Ett fel uppstod när kontrakten skulle hämtas
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <TenantMobileAccordion
+        leases={leases ?? []}
+        rentalProperties={rentalProperties ?? {}}
+        contactCode={tenant.contactCode}
+        customerName={`${tenant.firstName} ${tenant.lastName}`}
+        isLoadingLeases={leasesLoading}
+        isLoadingProperties={rentalPropertiesLoading}
+      />
+    )
+  }
+
+  return (
+    <TenantDetailTabs defaultValue="contracts">
+      <TenantDetailTabsContent
+        leases={leases ?? []}
+        rentalProperties={rentalProperties ?? {}}
+        personalNumber={tenant.nationalRegistrationNumber}
+        contactCode={tenant.contactCode}
+        customerName={`${tenant.firstName} ${tenant.lastName}`}
+        isLoadingLeases={leasesLoading}
+        isLoadingProperties={rentalPropertiesLoading}
+      />
+    </TenantDetailTabs>
+  )
+}
 
 const TenantView = () => {
   const { contactCode } = useParams<{ contactCode: string }>()
@@ -59,16 +155,16 @@ const TenantView = () => {
   }, [tenantError])
 
   const renderContent = () => {
-    if (tenantLoading || leasesLoading || rentalPropertiesLoading) {
+    // Show simple loading message while tenant data loads
+    if (tenantLoading) {
       return (
-        <div className="animate-pulse space-y-6 py-4">
-          <div className="h-8 bg-secondary rounded w-64"></div>
-          <div className="h-4 bg-secondary rounded w-32 mt-2"></div>
-          <div className="h-[200px] bg-secondary rounded mt-6"></div>
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">Hämtar hyresgäst...</p>
         </div>
       )
     }
 
+    // Show error if tenant not found
     if (tenantError || !tenant) {
       return (
         <div className="text-center py-10 space-y-4">
@@ -83,77 +179,22 @@ const TenantView = () => {
       )
     }
 
-    if (leasesError) {
-      return (
-        <div className="text-center py-10 space-y-4">
-          <h2 className="text-2xl font-bold">Kunde inte hämta kontrakt</h2>
-          <p className="text-muted-foreground">
-            Ett fel uppstod när kontrakten skulle hämtas
-          </p>
-        </div>
-      )
-    }
-
-    if (rentalPropertiesError) {
-      return (
-        <div className="text-center py-10 space-y-4">
-          <h2 className="text-2xl font-bold">
-            Kunde inte hämta objektsinformation
-          </h2>
-          <p className="text-muted-foreground">
-            Ett fel uppstod när objektsinformationen skulle hämtas
-          </p>
-        </div>
-      )
-    }
-
+    // Render tenant header and card immediately
     return (
       <div className="w-full">
-        <TooltipProvider>
-          <div className="flex items-center gap-3 mb-6">
-            <h1 className="text-3xl font-bold">
-              {tenant.firstName} {tenant.lastName}
-            </h1>
-            {tenant.specialAttention && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center justify-center w-8 h-8 bg-amber-100 rounded-full border border-amber-200 cursor-help">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    Åk aldrig ensam till kund. Ta alltid med dig en kollega vid
-                    hembesök.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </TooltipProvider>
-
+        <TenantHeader tenant={tenant} />
         <div className="grid grid-cols-1 gap-6 mb-6">
           <TenantCard tenant={tenant} />
         </div>
-
-        {isMobile ? (
-          <TenantMobileAccordion
-            leases={leases ?? []}
-            rentalProperties={rentalProperties}
-            contactCode={tenant.contactCode}
-            customerName={`${tenant.firstName} ${tenant.lastName}`}
-          />
-        ) : (
-          <TenantDetailTabs defaultValue="contracts">
-            <TenantDetailTabsContent
-              leases={leases ?? []}
-              rentalProperties={rentalProperties}
-              personalNumber={tenant.nationalRegistrationNumber}
-              contactCode={tenant.contactCode}
-              customerName={`${tenant.firstName} ${tenant.lastName}`}
-            />
-          </TenantDetailTabs>
-        )}
+        <TenantTabsSection
+          tenant={tenant}
+          leases={leases}
+          rentalProperties={rentalProperties}
+          leasesLoading={leasesLoading}
+          leasesError={leasesError}
+          rentalPropertiesLoading={rentalPropertiesLoading}
+          isMobile={isMobile}
+        />
       </div>
     )
   }

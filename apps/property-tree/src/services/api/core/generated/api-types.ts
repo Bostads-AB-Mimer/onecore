@@ -2763,6 +2763,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
         path: {
           /** @description Id for the residence to fetch */
           residenceId: string;
@@ -3145,7 +3149,7 @@ export interface paths {
   "/search": {
     /**
      * Omni-search for different entities
-     * @description Search for properties, buildings, and residences.
+     * @description Search for properties, buildings, residences, and parking spaces.
      */
     get: {
       parameters: {
@@ -3495,6 +3499,16 @@ export interface components {
             name: string | null;
           };
         }) | null;
+        rentalBlocks: ({
+            id: string;
+            blockReasonId: string;
+            blockReason: string;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string | null;
+            amount: number | null;
+          })[];
       };
       property: {
         name: string | null;
@@ -3800,7 +3814,32 @@ export interface components {
         name: string | null;
       };
     };
-    /** @description A search result that can be either a property, building or residence */
+    ParkingSpaceSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a parking space result
+       * @enum {string}
+       */
+      type: "parking-space";
+      /** @description Name of the parking space */
+      name: string | null;
+      /** @description Rental ID of the parking space */
+      rentalId: string;
+      /** @description Code of the parking space */
+      code: string;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the parking space */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the parking space */
+        name: string | null;
+      };
+    };
+    /** @description A search result that can be either a property, building, residence or parking space */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -3847,6 +3886,30 @@ export interface components {
       building: {
         code: string | null;
         /** @description Name of building associated with the residence */
+        name: string | null;
+      };
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a parking space result
+       * @enum {string}
+       */
+      type: "parking-space";
+      /** @description Name of the parking space */
+      name: string | null;
+      /** @description Rental ID of the parking space */
+      rentalId: string;
+      /** @description Code of the parking space */
+      code: string;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the parking space */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the parking space */
         name: string | null;
       };
     });

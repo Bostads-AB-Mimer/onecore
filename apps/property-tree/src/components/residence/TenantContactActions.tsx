@@ -15,9 +15,9 @@ export function TenantContactActions({
     window.location.href = `tel:${phoneNumber.replace(/[\s-]/g, '')}`
   }
 
-  const handleSMS = (phoneNumber: string) => {
-    window.location.href = `sms:${phoneNumber.replace(/[\s-]/g, '')}`
-  }
+  // const handleSMS = (phoneNumber: string) => {
+  //   window.location.href = `sms:${phoneNumber.replace(/[\s-]/g, '')}`
+  // }
 
   const handleEmail = (emailAddress: string) => {
     window.location.href = `mailto:${emailAddress}`
@@ -38,14 +38,14 @@ export function TenantContactActions({
             >
               <Phone className="h-4 w-4" />
             </Button>
-            <Button
+            {/* <Button
               variant="outline"
               size="icon"
               onClick={() => handleSMS(phone)}
               title="Skicka SMS"
             >
               <MessageSquare className="h-4 w-4" />
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

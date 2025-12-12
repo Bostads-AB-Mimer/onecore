@@ -14,8 +14,9 @@ import PropertyView from './components/views/v2/PropertyView'
 import BuildingView from './components/views/v2/BuildingView'
 import TenantView from './components/views/v2/TenantView'
 import { StaircaseView } from './components/views/StaircaseView'
-import { ResidenceView } from './components/views/ResidenceView'
+import ResidenceView from './components/views/v2/ResidenceView'
 import { RoomView } from './components/views/RoomView'
+import { ParkingSpaceView } from './components/views/ParkingSpaceView'
 import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
@@ -64,6 +65,10 @@ export default function App() {
               <Route
                 path="residences/:residenceId/rooms/:roomId"
                 element={<RoomView />}
+              />
+              <Route
+                path="parking-spaces/:rentalId"
+                element={<ParkingSpaceView />}
               />
               <Route path="tenants" element={<AllTenantsPage />} />
               <Route path="tenants/:contactCode" element={<TenantView />} />

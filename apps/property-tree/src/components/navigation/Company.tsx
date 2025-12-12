@@ -6,6 +6,7 @@ import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { PropertyList } from './PropertyList'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
+import { useCompanyExpansion } from './CompanyExpansionContext'
 
 interface CompanyNavigationProps {
   company: Company
@@ -15,16 +16,21 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
+  const { expandedCompanyCodes } = useCompanyExpansion()
 
   const isInHierarchy = isCompanyInHierarchy(company.id)
   const isDirectlySelected =
     selectionState.selectedCompanyId === company.id &&
     location.pathname.startsWith('/companies/')
 
-  const shouldAutoExpand = isInHierarchy || isDirectlySelected
+  // Check if this company should be expanded via context
+  const isRequestedToExpand = expandedCompanyCodes.has(company.code)
+
+  const shouldAutoExpand =
+    isInHierarchy || isDirectlySelected || isRequestedToExpand
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
 
-  // Auto-expand when this company is in the selection hierarchy
+  // Auto-expand when requested via context or hierarchy selection
   React.useEffect(() => {
     if (shouldAutoExpand) {
       setIsExpanded(true)

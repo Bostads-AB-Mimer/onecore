@@ -247,10 +247,35 @@ const getLeasesForPropertyId = async (
       'hyobj.tdate as toDate',
       'hyobj.uppstidg as noticeTimeTenant',
       'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate'
+      'hyobj.makuldatum AS terminationDate',
+      'rent.yearrentrows'
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
+    .leftJoin(
+      xpandDb.raw(`
+        (
+          SELECT
+            rentalpropertyid,
+            (
+              SELECT yearrent
+              FROM hy_debitrowrentalproperty_xpand_api x2
+              WHERE x2.rentalpropertyid = x1.rentalpropertyid
+              FOR JSON PATH
+            ) as yearrentrows
+          FROM hy_debitrowrentalproperty_xpand_api x1
+          GROUP BY rentalpropertyid
+        ) as rent
+      `),
+      'rent.rentalpropertyid',
+      xpandDb.raw(`
+        CASE
+          WHEN CHARINDEX('/', hyobj.hyobjben) > 0
+          THEN SUBSTRING(hyobj.hyobjben, 1, CHARINDEX('/', hyobj.hyobjben) - 1)
+          ELSE hyobj.hyobjben
+        END
+      `)
+    )
     .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
 
   for (const row of rows) {

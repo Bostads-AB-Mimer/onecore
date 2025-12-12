@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
-import { ResponsiveTable } from '@/components/shared/v2/ResponsiveTable'
+import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 
 export type SearchResult =
   | {
@@ -20,6 +20,14 @@ export type SearchResult =
       rentalId: string | null
     }
   | { type: 'building'; id: string; code: string; name: string | null }
+  | {
+      type: 'parking-space'
+      id: string
+      rentalId: string
+      code: string
+      name: string | null
+      property: { name: string | null; code: string | null }
+    }
 
 interface SearchResultsTableProps {
   results: SearchResult[]
@@ -37,6 +45,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'Byggnad'
       case 'residence':
         return 'Lägenhet'
+      case 'parking-space':
+        return 'Parkering'
       default:
         return type
     }
@@ -50,6 +60,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'bg-purple-100 text-purple-800'
       case 'residence':
         return 'bg-green-100 text-green-800'
+      case 'parking-space':
+        return 'bg-orange-100 text-orange-800'
       default:
         return 'bg-slate-100'
     }
@@ -63,6 +75,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return `/buildings/${result.id}`
       case 'residence':
         return `/residences/${result.id}`
+      case 'parking-space':
+        return `/parking-spaces/${result.rentalId}`
       default:
         return '#'
     }
@@ -75,6 +89,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'building':
         return result.name || result.code
       case 'residence':
+        return result.name || result.code
+      case 'parking-space':
         return result.name || result.code
       default:
         return ''
@@ -89,6 +105,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return result.code
       case 'residence':
         return result.rentalId || '-'
+      case 'parking-space':
+        return result.rentalId
       default:
         return ''
     }

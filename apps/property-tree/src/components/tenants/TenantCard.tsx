@@ -19,6 +19,7 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  MapPin,
 } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import type { Tenant } from '@/services/types'
@@ -63,6 +64,18 @@ export function TenantCard({ tenant }: TenantCardProps) {
       ? `${address.street} ${address.number.trim()}`
       : address.street
     return `${streetPart}, ${address.postalCode} ${address.city}`
+  }
+
+  // Open address in Google Maps
+  const handleOpenInMaps = (address: {
+    street: string
+    number: string
+    postalCode: string
+    city: string
+  }) => {
+    const formattedAddress = formatAddress(address)
+    const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(formattedAddress)}`
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer')
   }
 
   // Map contract status number to Swedish text
@@ -111,6 +124,14 @@ export function TenantCard({ tenant }: TenantCardProps) {
           <CopyableField
             label="Bostadsadress"
             value={formatAddress(tenant.address)}
+            actions={[
+              {
+                icon: <MapPin className="h-4 w-4" />,
+                onClick: () => handleOpenInMaps(tenant.address),
+                tooltip: 'Öppna i Google Maps',
+                ariaLabel: 'Öppna adress i Google Maps',
+              },
+            ]}
           />
 
           <CopyableField label="Kundnummer" value={tenant.contactCode} />

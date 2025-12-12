@@ -5,7 +5,11 @@ export type Lease = components['schemas']['Lease']
 
 async function getByRentalPropertyId(
   rentalPropertyId: string,
-  params: { includeContacts?: boolean }
+  params?: {
+    includeContacts?: boolean
+    includeUpcomingLeases?: boolean
+    includeTerminatedLeases?: boolean
+  }
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(
     '/leases/by-rental-property-id/{rentalPropertyId}',

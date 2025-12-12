@@ -4,6 +4,7 @@ import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
+import { toTitleCase } from '@/lib/text-utils'
 
 interface ResidenceNavigationProps {
   residence: Residence
@@ -47,7 +48,7 @@ export function ResidenceNavigation({
         isActive={isSelected}
       >
         <Hotel />
-        <span>LGH-{residence.code}</span>
+        <span>LGH-{toTitleCase(residence.code)}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

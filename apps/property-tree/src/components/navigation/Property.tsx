@@ -6,6 +6,7 @@ import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { BuildingList } from './BuildingList'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
+import { toTitleCase } from '@/lib/text-utils'
 
 interface PropertyNavigationProps {
   property: Property
@@ -56,7 +57,7 @@ export function PropertyNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Building />
-        <span>{property.designation}</span>
+        <span>{toTitleCase(property.designation)}</span>
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">
