@@ -250,15 +250,8 @@ export function RentalObjectContracts({
     )
   }
 
-  // Deduplicate leases by leaseId (in case API returns duplicates for multiple tenants)
-  const uniqueLeases = leases
-    ? Array.from(
-        new Map(leases.map((lease) => [lease.leaseId, lease])).values()
-      )
-    : []
-
   // Sort leases by contract number (highest first)
-  const sortedLeases = uniqueLeases.sort((a, b) => {
+  const sortedLeases = [...leases].sort((a, b) => {
     return b.leaseNumber.localeCompare(a.leaseNumber)
   })
 
