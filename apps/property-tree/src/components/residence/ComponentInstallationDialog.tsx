@@ -9,7 +9,10 @@ import {
 import { Button } from '@/components/ui/v2/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/v2/Label'
-import { ModelSelector, type ComponentModelWithHierarchy } from './ModelSelector'
+import {
+  ModelSelector,
+  type ComponentModelWithHierarchy,
+} from './ModelSelector'
 import { InstanceSelector } from './InstanceSelector'
 import { useInstallComponent } from '@/components/hooks/useInstallComponent'
 import { componentService } from '@/services/api/core/componentService'
@@ -29,8 +32,12 @@ export const ComponentInstallationDialog = ({
   roomName,
 }: ComponentInstallationDialogProps) => {
   const queryClient = useQueryClient()
-  const [installationMode, setInstallationMode] = useState<'new' | 'existing'>('new')
-  const [selectedModel, setSelectedModel] = useState<ComponentModelWithHierarchy | undefined>()
+  const [installationMode, setInstallationMode] = useState<'new' | 'existing'>(
+    'new'
+  )
+  const [selectedModel, setSelectedModel] = useState<
+    ComponentModelWithHierarchy | undefined
+  >()
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('')
   const installMutation = useInstallComponent(roomId)
 
@@ -42,7 +49,11 @@ export const ComponentInstallationDialog = ({
     priceAtPurchase: 0,
     depreciationPriceAtPurchase: 0,
     economicLifespan: 0,
-    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
+    status: 'ACTIVE' as
+      | 'ACTIVE'
+      | 'INACTIVE'
+      | 'MAINTENANCE'
+      | 'DECOMMISSIONED',
     quantity: 1,
     ncsCode: '',
     installationDate: new Date().toISOString().split('T')[0],
@@ -53,10 +64,10 @@ export const ComponentInstallationDialog = ({
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleChange = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev }
         delete newErrors[name]
         return newErrors
@@ -93,13 +104,14 @@ export const ComponentInstallationDialog = ({
   useEffect(() => {
     if (selectedModel) {
       // Auto-fill from model
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         warrantyMonths: selectedModel.warrantyMonths || 0,
         priceAtPurchase: selectedModel.currentPrice || 0,
         installationCost: selectedModel.currentInstallPrice || 0,
         economicLifespan: selectedModel.subtype?.economicLifespan || 0,
-        depreciationPriceAtPurchase: selectedModel.subtype?.depreciationPrice || 0,
+        depreciationPriceAtPurchase:
+          selectedModel.subtype?.depreciationPrice || 0,
       }))
     }
   }, [selectedModel])
@@ -150,7 +162,9 @@ export const ComponentInstallationDialog = ({
 
         // Manually invalidate queries to refresh the UI
         queryClient.invalidateQueries({ queryKey: ['components', roomId] })
-        queryClient.invalidateQueries({ queryKey: ['instances', 'uninstalled'] })
+        queryClient.invalidateQueries({
+          queryKey: ['instances', 'uninstalled'],
+        })
         queryClient.invalidateQueries({ queryKey: ['instances'] })
       }
       onClose()
@@ -228,14 +242,15 @@ export const ComponentInstallationDialog = ({
                 if (!id || !instance) return
 
                 // Pre-fill form with instance data
-                setFormData(prev => ({
+                setFormData((prev) => ({
                   ...prev,
                   serialNumber: instance.serialNumber,
                   priceAtPurchase: instance.priceAtPurchase,
                   status: instance.status,
                   quantity: instance.quantity,
                   economicLifespan: instance.economicLifespan,
-                  depreciationPriceAtPurchase: instance.depreciationPriceAtPurchase,
+                  depreciationPriceAtPurchase:
+                    instance.depreciationPriceAtPurchase,
                   ncsCode: instance.ncsCode || '',
                   warrantyMonths: instance.warrantyMonths,
                   warrantyStartDate: instance.warrantyStartDate || '',
@@ -247,58 +262,60 @@ export const ComponentInstallationDialog = ({
           {/* Instance Details (show in 'existing' mode when instance selected) */}
           {installationMode === 'existing' && selectedInstanceId && (
             <div className="space-y-4 border-t pt-4">
-              <h3 className="font-medium">Komponentinformation (skrivskyddad)</h3>
+              <h3 className="font-medium">
+                Komponentinformation (skrivskyddad)
+              </h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="serialNumber-existing">Serienummer</Label>
-                <Input
-                  id="serialNumber-existing"
-                  value={formData.serialNumber}
-                  disabled
-                  className="bg-muted"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="serialNumber-existing">Serienummer</Label>
+                  <Input
+                    id="serialNumber-existing"
+                    value={formData.serialNumber}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="status-existing">Status</Label>
+                  <select
+                    id="status-existing"
+                    value={formData.status}
+                    disabled
+                    className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm cursor-not-allowed"
+                  >
+                    <option value="ACTIVE">Aktiv</option>
+                    <option value="INACTIVE">Inaktiv</option>
+                    <option value="MAINTENANCE">Underhåll</option>
+                    <option value="DECOMMISSIONED">Ur drift</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="status-existing">Status</Label>
-                <select
-                  id="status-existing"
-                  value={formData.status}
-                  disabled
-                  className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm cursor-not-allowed"
-                >
-                  <option value="ACTIVE">Aktiv</option>
-                  <option value="INACTIVE">Inaktiv</option>
-                  <option value="MAINTENANCE">Underhåll</option>
-                  <option value="DECOMMISSIONED">Ur drift</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="quantity-existing">Antal</Label>
+                  <Input
+                    id="quantity-existing"
+                    type="number"
+                    value={formData.quantity}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ncsCode-existing">NCS-kod</Label>
+                  <Input
+                    id="ncsCode-existing"
+                    value={formData.ncsCode}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="quantity-existing">Antal</Label>
-                <Input
-                  id="quantity-existing"
-                  type="number"
-                  value={formData.quantity}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="ncsCode-existing">NCS-kod</Label>
-                <Input
-                  id="ncsCode-existing"
-                  value={formData.ncsCode}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-          </div>
           )}
 
           {/* Warranty Information (editable in 'existing' mode) */}
@@ -306,34 +323,45 @@ export const ComponentInstallationDialog = ({
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-medium">Garantiinformation (redigerbar)</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="warrantyStartDate-existing">Garantistartdatum (valfritt)</Label>
-                <Input
-                  id="warrantyStartDate-existing"
-                  type="date"
-                  value={formData.warrantyStartDate}
-                  onChange={(e) => handleChange('warrantyStartDate', e.target.value)}
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="warrantyStartDate-existing">
+                    Garantistartdatum (valfritt)
+                  </Label>
+                  <Input
+                    id="warrantyStartDate-existing"
+                    type="date"
+                    value={formData.warrantyStartDate}
+                    onChange={(e) =>
+                      handleChange('warrantyStartDate', e.target.value)
+                    }
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="warrantyMonths-existing">Garanti (månader)</Label>
-                <Input
-                  id="warrantyMonths-existing"
-                  type="number"
-                  min="0"
-                  value={formData.warrantyMonths}
-                  onChange={(e) => handleChange('warrantyMonths', parseInt(e.target.value) || 0)}
-                />
-                {errors.warrantyMonths && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.warrantyMonths}
-                  </p>
-                )}
+                <div>
+                  <Label htmlFor="warrantyMonths-existing">
+                    Garanti (månader)
+                  </Label>
+                  <Input
+                    id="warrantyMonths-existing"
+                    type="number"
+                    min="0"
+                    value={formData.warrantyMonths}
+                    onChange={(e) =>
+                      handleChange(
+                        'warrantyMonths',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                  />
+                  {errors.warrantyMonths && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.warrantyMonths}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
           )}
 
           {/* Pricing Information (read-only in 'existing' mode) */}
@@ -341,43 +369,47 @@ export const ComponentInstallationDialog = ({
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-medium">Prisinformation (skrivskyddad)</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="priceAtPurchase-existing">Inköpspris (kr)</Label>
-                <Input
-                  id="priceAtPurchase-existing"
-                  type="number"
-                  value={formData.priceAtPurchase}
-                  disabled
-                  className="bg-muted"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="priceAtPurchase-existing">
+                    Inköpspris (kr)
+                  </Label>
+                  <Input
+                    id="priceAtPurchase-existing"
+                    type="number"
+                    value={formData.priceAtPurchase}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="depreciationPriceAtPurchase-existing">
+                    Avskrivningspris (kr)
+                  </Label>
+                  <Input
+                    id="depreciationPriceAtPurchase-existing"
+                    type="number"
+                    value={formData.depreciationPriceAtPurchase}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
               </div>
 
               <div>
-                <Label htmlFor="depreciationPriceAtPurchase-existing">
-                  Avskrivningspris (kr)
+                <Label htmlFor="economicLifespan-existing">
+                  Ekonomisk livslängd (år)
                 </Label>
                 <Input
-                  id="depreciationPriceAtPurchase-existing"
+                  id="economicLifespan-existing"
                   type="number"
-                  value={formData.depreciationPriceAtPurchase}
+                  value={formData.economicLifespan}
                   disabled
                   className="bg-muted"
                 />
               </div>
             </div>
-
-            <div>
-              <Label htmlFor="economicLifespan-existing">Ekonomisk livslängd (år)</Label>
-              <Input
-                id="economicLifespan-existing"
-                type="number"
-                value={formData.economicLifespan}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-          </div>
           )}
 
           {/* Instance Details (only in 'new' mode) */}
@@ -385,71 +417,75 @@ export const ComponentInstallationDialog = ({
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-medium">Komponentinformation</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="serialNumber">Serienummer *</Label>
-                <Input
-                  id="serialNumber"
-                  value={formData.serialNumber}
-                  onChange={(e) => handleChange('serialNumber', e.target.value)}
-                  placeholder="SN-12345"
-                />
-                {errors.serialNumber && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.serialNumber}
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="serialNumber">Serienummer *</Label>
+                  <Input
+                    id="serialNumber"
+                    value={formData.serialNumber}
+                    onChange={(e) =>
+                      handleChange('serialNumber', e.target.value)
+                    }
+                    placeholder="SN-12345"
+                  />
+                  {errors.serialNumber && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.serialNumber}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <select
+                    id="status"
+                    value={formData.status}
+                    onChange={(e) => handleChange('status', e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="ACTIVE">Aktiv</option>
+                    <option value="INACTIVE">Inaktiv</option>
+                    <option value="MAINTENANCE">Underhåll</option>
+                    <option value="DECOMMISSIONED">Ur drift</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={(e) => handleChange('status', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="ACTIVE">Aktiv</option>
-                  <option value="INACTIVE">Inaktiv</option>
-                  <option value="MAINTENANCE">Underhåll</option>
-                  <option value="DECOMMISSIONED">Ur drift</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="quantity">Antal</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    value={formData.quantity}
+                    onChange={(e) =>
+                      handleChange('quantity', parseInt(e.target.value) || 0)
+                    }
+                  />
+                  {errors.quantity && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.quantity}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="ncsCode">NCS-kod (valfritt)</Label>
+                  <Input
+                    id="ncsCode"
+                    value={formData.ncsCode}
+                    onChange={(e) => handleChange('ncsCode', e.target.value)}
+                    placeholder="123 eller 123.456"
+                  />
+                  {errors.ncsCode && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.ncsCode}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="quantity">Antal</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="0"
-                  value={formData.quantity}
-                  onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
-                />
-                {errors.quantity && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.quantity}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="ncsCode">NCS-kod (valfritt)</Label>
-                <Input
-                  id="ncsCode"
-                  value={formData.ncsCode}
-                  onChange={(e) => handleChange('ncsCode', e.target.value)}
-                  placeholder="123 eller 123.456"
-                />
-                {errors.ncsCode && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.ncsCode}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
           )}
 
           {/* Warranty Information (only in 'new' mode) */}
@@ -457,34 +493,43 @@ export const ComponentInstallationDialog = ({
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-medium">Garantiinformation</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="warrantyStartDate">Garantistartdatum (valfritt)</Label>
-                <Input
-                  id="warrantyStartDate"
-                  type="date"
-                  value={formData.warrantyStartDate}
-                  onChange={(e) => handleChange('warrantyStartDate', e.target.value)}
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="warrantyStartDate">
+                    Garantistartdatum (valfritt)
+                  </Label>
+                  <Input
+                    id="warrantyStartDate"
+                    type="date"
+                    value={formData.warrantyStartDate}
+                    onChange={(e) =>
+                      handleChange('warrantyStartDate', e.target.value)
+                    }
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="warrantyMonths">Garanti (månader) *</Label>
-                <Input
-                  id="warrantyMonths"
-                  type="number"
-                  min="0"
-                  value={formData.warrantyMonths}
-                  onChange={(e) => handleChange('warrantyMonths', parseInt(e.target.value) || 0)}
-                />
-                {errors.warrantyMonths && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.warrantyMonths}
-                  </p>
-                )}
+                <div>
+                  <Label htmlFor="warrantyMonths">Garanti (månader) *</Label>
+                  <Input
+                    id="warrantyMonths"
+                    type="number"
+                    min="0"
+                    value={formData.warrantyMonths}
+                    onChange={(e) =>
+                      handleChange(
+                        'warrantyMonths',
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                  />
+                  {errors.warrantyMonths && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.warrantyMonths}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
           )}
 
           {/* Pricing Information (only in 'new' mode) */}
@@ -492,70 +537,87 @@ export const ComponentInstallationDialog = ({
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-medium">Prisinformation</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="priceAtPurchase">Inköpspris (kr) *</Label>
-                <Input
-                  id="priceAtPurchase"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.priceAtPurchase}
-                  onChange={(e) => handleChange('priceAtPurchase', parseFloat(e.target.value) || 0)}
-                />
-                {errors.priceAtPurchase && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.priceAtPurchase}
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="priceAtPurchase">Inköpspris (kr) *</Label>
+                  <Input
+                    id="priceAtPurchase"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.priceAtPurchase}
+                    onChange={(e) =>
+                      handleChange(
+                        'priceAtPurchase',
+                        parseFloat(e.target.value) || 0
+                      )
+                    }
+                  />
+                  {errors.priceAtPurchase && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.priceAtPurchase}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="depreciationPriceAtPurchase">
+                    Avskrivningspris (kr) *
+                  </Label>
+                  <Input
+                    id="depreciationPriceAtPurchase"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.depreciationPriceAtPurchase}
+                    onChange={(e) =>
+                      handleChange(
+                        'depreciationPriceAtPurchase',
+                        parseFloat(e.target.value) || 0
+                      )
+                    }
+                    placeholder={
+                      selectedModel?.subtype?.depreciationPrice
+                        ? `Standard: ${selectedModel.subtype.depreciationPrice} kr`
+                        : undefined
+                    }
+                  />
+                  {errors.depreciationPriceAtPurchase && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.depreciationPriceAtPurchase}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div>
-                <Label htmlFor="depreciationPriceAtPurchase">
-                  Avskrivningspris (kr) *
+                <Label htmlFor="economicLifespan">
+                  Ekonomisk livslängd (år) *
                 </Label>
                 <Input
-                  id="depreciationPriceAtPurchase"
+                  id="economicLifespan"
                   type="number"
                   min="0"
-                  step="0.01"
-                  value={formData.depreciationPriceAtPurchase}
-                  onChange={(e) => handleChange('depreciationPriceAtPurchase', parseFloat(e.target.value) || 0)}
+                  value={formData.economicLifespan}
+                  onChange={(e) =>
+                    handleChange(
+                      'economicLifespan',
+                      parseInt(e.target.value) || 0
+                    )
+                  }
                   placeholder={
-                    selectedModel?.subtype?.depreciationPrice
-                      ? `Standard: ${selectedModel.subtype.depreciationPrice} kr`
+                    selectedModel?.subtype?.economicLifespan
+                      ? `Standard: ${selectedModel.subtype.economicLifespan} år`
                       : undefined
                   }
                 />
-                {errors.depreciationPriceAtPurchase && (
+                {errors.economicLifespan && (
                   <p className="text-sm text-destructive mt-1">
-                    {errors.depreciationPriceAtPurchase}
+                    {errors.economicLifespan}
                   </p>
                 )}
               </div>
             </div>
-
-            <div>
-              <Label htmlFor="economicLifespan">Ekonomisk livslängd (år) *</Label>
-              <Input
-                id="economicLifespan"
-                type="number"
-                min="0"
-                value={formData.economicLifespan}
-                onChange={(e) => handleChange('economicLifespan', parseInt(e.target.value) || 0)}
-                placeholder={
-                  selectedModel?.subtype?.economicLifespan
-                    ? `Standard: ${selectedModel.subtype.economicLifespan} år`
-                    : undefined
-                }
-              />
-              {errors.economicLifespan && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.economicLifespan}
-                </p>
-              )}
-            </div>
-          </div>
           )}
 
           {/* Installation Details (always shown) */}
@@ -569,7 +631,9 @@ export const ComponentInstallationDialog = ({
                   id="installationDate"
                   type="date"
                   value={formData.installationDate}
-                  onChange={(e) => handleChange('installationDate', e.target.value)}
+                  onChange={(e) =>
+                    handleChange('installationDate', e.target.value)
+                  }
                 />
                 {errors.installationDate && (
                   <p className="text-sm text-destructive mt-1">
@@ -579,14 +643,21 @@ export const ComponentInstallationDialog = ({
               </div>
 
               <div>
-                <Label htmlFor="installationCost">Installationskostnad (kr) *</Label>
+                <Label htmlFor="installationCost">
+                  Installationskostnad (kr) *
+                </Label>
                 <Input
                   id="installationCost"
                   type="number"
                   min="0"
                   step="0.01"
                   value={formData.installationCost}
-                  onChange={(e) => handleChange('installationCost', parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleChange(
+                      'installationCost',
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
                 />
                 {errors.installationCost && (
                   <p className="text-sm text-destructive mt-1">

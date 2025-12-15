@@ -12,11 +12,12 @@ export function useComponentModelDocuments(modelId: string) {
     deleteFile: (id, fileId) =>
       componentService.deleteModelDocument(id, fileId),
     createOptimisticFile: ({ file }) => ({
+      id: `temp-${Date.now()}`,
       fileId: `temp-${Date.now()}`,
       originalName: file.name,
       size: file.size,
       mimeType: file.type,
-      uploadedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       url: '',
     }),
   })

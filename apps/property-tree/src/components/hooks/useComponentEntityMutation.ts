@@ -9,7 +9,7 @@ import type {
   EntityType,
   Operation,
   MutationVariables,
-  ComponentEntityMap,
+  EntityData,
   UpdateMutationVariables,
   DeleteMutationVariables,
 } from './useComponentEntity.types'
@@ -42,20 +42,20 @@ export function useComponentEntityMutation<T extends EntityType, Op extends Oper
   parentIdField?: string,
   options?: Omit<
     UseMutationOptions<
-      Op extends 'delete' ? void : ComponentEntityMap[T],
+      Op extends 'delete' ? void : EntityData<T>,
       Error,
       MutationVariables<T, Op>
     >,
     'mutationFn' | 'onSuccess'
   > & {
     onSuccess?: (
-      data: Op extends 'delete' ? void : ComponentEntityMap[T],
+      data: Op extends 'delete' ? void : EntityData<T>,
       variables: MutationVariables<T, Op>,
       context: any
     ) => void | Promise<void>
   }
 ): UseMutationResult<
-  Op extends 'delete' ? void : ComponentEntityMap[T],
+  Op extends 'delete' ? void : EntityData<T>,
   Error,
   MutationVariables<T, Op>
 > {
@@ -66,21 +66,21 @@ export function useComponentEntityMutation<T extends EntityType, Op extends Oper
     mutationFn: async (variables: MutationVariables<T, Op>) => {
       if (operation === 'create') {
         return config.service.create(variables) as Promise<
-          Op extends 'delete' ? void : ComponentEntityMap[T]
+          Op extends 'delete' ? void : EntityData<T>
         >
       }
 
       if (operation === 'update') {
         const { id, data } = variables as UpdateMutationVariables<T>
         return config.service.update(id, data) as Promise<
-          Op extends 'delete' ? void : ComponentEntityMap[T]
+          Op extends 'delete' ? void : EntityData<T>
         >
       }
 
       if (operation === 'delete') {
         const { id } = variables as DeleteMutationVariables
         return config.service.delete(id) as Promise<
-          Op extends 'delete' ? void : ComponentEntityMap[T]
+          Op extends 'delete' ? void : EntityData<T>
         >
       }
 

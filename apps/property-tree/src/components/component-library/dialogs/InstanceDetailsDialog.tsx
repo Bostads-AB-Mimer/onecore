@@ -109,9 +109,7 @@ export const InstanceDetailsDialog = ({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">
-                  Garantistart
-                </dt>
+                <dt className="text-sm text-muted-foreground">Garantistart</dt>
                 <dd className="text-sm font-medium">
                   {formatDate(instance.warrantyStartDate)}
                 </dd>

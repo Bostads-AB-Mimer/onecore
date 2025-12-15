@@ -22,7 +22,9 @@ export const ModelCard = ({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             <h3 className="text-base font-semibold">{model.modelName}</h3>
-            <p className="text-sm text-muted-foreground">{model.manufacturer}</p>
+            <p className="text-sm text-muted-foreground">
+              {model.manufacturer}
+            </p>
             {model.coclassCode && (
               <span className="inline-block mt-1 px-2 py-0.5 bg-secondary text-xs rounded">
                 {model.coclassCode}
@@ -64,9 +66,7 @@ export const ModelCard = ({
           </div>
           <div>
             <span className="text-muted-foreground">Garanti:</span>
-            <span className="ml-1 font-medium">
-              {model.warrantyMonths} mån
-            </span>
+            <span className="ml-1 font-medium">{model.warrantyMonths} mån</span>
           </div>
           {model.dimensions && (
             <div>

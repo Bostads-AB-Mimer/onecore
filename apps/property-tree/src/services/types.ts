@@ -308,3 +308,8 @@ export interface TenantCommentsResponse {
   content: TenantCommentRaw[]
   _links?: Record<string, { href: string }>
 }
+
+export type DocumentWithUrl = components['schemas']['DocumentWithUrl']
+
+export type ComponentImage = DocumentWithUrl
+export type ComponentModelDocument = DocumentWithUrl

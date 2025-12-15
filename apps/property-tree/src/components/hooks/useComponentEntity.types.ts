@@ -20,39 +20,35 @@ import type {
 export type EntityType = 'category' | 'type' | 'subtype' | 'model' | 'instance'
 export type Operation = 'create' | 'update' | 'delete'
 
-// Map entity types to their data types
-export interface ComponentEntityMap {
-  category: ComponentCategory
-  type: ComponentType
-  subtype: ComponentSubtype
-  model: ComponentModel
-  instance: ComponentInstance
-}
+// Conditional type helpers for entity data
+export type EntityData<T extends EntityType> =
+  T extends 'category' ? ComponentCategory :
+  T extends 'type' ? ComponentType :
+  T extends 'subtype' ? ComponentSubtype :
+  T extends 'model' ? ComponentModel :
+  T extends 'instance' ? ComponentInstance :
+  never
 
-// Map entity types to their create data types
-export interface ComponentCreateDataMap {
-  category: CreateComponentCategory
-  type: CreateComponentType
-  subtype: CreateComponentSubtype
-  model: CreateComponentModel
-  instance: CreateComponentInstance
-}
+export type CreateData<T extends EntityType> =
+  T extends 'category' ? CreateComponentCategory :
+  T extends 'type' ? CreateComponentType :
+  T extends 'subtype' ? CreateComponentSubtype :
+  T extends 'model' ? CreateComponentModel :
+  T extends 'instance' ? CreateComponentInstance :
+  never
 
-// Map entity types to their update data types
-export interface ComponentUpdateDataMap {
-  category: UpdateComponentCategory
-  type: UpdateComponentType
-  subtype: UpdateComponentSubtype
-  model: UpdateComponentModel
-  instance: UpdateComponentInstance
-}
+export type UpdateData<T extends EntityType> =
+  T extends 'category' ? UpdateComponentCategory :
+  T extends 'type' ? UpdateComponentType :
+  T extends 'subtype' ? UpdateComponentSubtype :
+  T extends 'model' ? UpdateComponentModel :
+  T extends 'instance' ? UpdateComponentInstance :
+  never
 
 // Mutation variable types
-export type CreateMutationVariables<T extends EntityType> = ComponentCreateDataMap[T]
-
 export type UpdateMutationVariables<T extends EntityType> = {
   id: string
-  data: ComponentUpdateDataMap[T]
+  data: UpdateData<T>
   parentId?: string
 }
 
@@ -62,14 +58,16 @@ export type DeleteMutationVariables = {
 }
 
 // Union type for all mutation variables based on operation
-export type MutationVariables<T extends EntityType, Op extends Operation> =
-  Op extends 'create'
-    ? CreateMutationVariables<T>
-    : Op extends 'update'
-      ? UpdateMutationVariables<T>
-      : Op extends 'delete'
-        ? DeleteMutationVariables
-        : never
+export type MutationVariables<
+  T extends EntityType,
+  Op extends Operation,
+> = Op extends 'create'
+  ? CreateData<T>
+  : Op extends 'update'
+    ? UpdateMutationVariables<T>
+    : Op extends 'delete'
+      ? DeleteMutationVariables
+      : never
 
 // Query key configuration
 export interface EntityQueryConfig {
@@ -79,7 +77,7 @@ export interface EntityQueryConfig {
 
 // Service configuration
 export interface EntityServiceConfig {
-  fetch: (parentId?: string) => Promise<any[]>
+  fetch: (parentId?: string, search?: string) => Promise<any[]>
   create: (data: any) => Promise<any>
   update: (id: string, data: any) => Promise<any>
   delete: (id: string) => Promise<void>

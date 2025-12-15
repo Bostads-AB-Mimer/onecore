@@ -880,3 +880,20 @@ export type CreateComponentInstallation = z.infer<
 export type UpdateComponentInstallation = z.infer<
   typeof UpdateComponentInstallationSchema
 >
+
+
+// Document schema for file uploads/downloads
+export const DocumentWithUrlSchema = z.object({
+  id: z.string(),
+  fileId: z.string(),
+  originalName: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  createdAt: z.string(),
+  url: z.string(),
+  uploadedAt: z.string().optional(),
+  caption: z.string().optional(),
+})
+
+export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
+
