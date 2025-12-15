@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/v2/Button'
 import { entityDialogConfig } from '../entity-dialog-config'
 import { FieldRenderer } from './FieldRenderer'
 import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
-import type { EntityType } from '@/components/hooks/useComponentEntity.types'
+import type { EntityType } from '@/services/types'
 
 interface GenericEntityDialogProps<T extends Record<string, any>> {
   isOpen: boolean
