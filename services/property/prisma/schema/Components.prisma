@@ -1,21 +1,25 @@
 model Components {
   id                    String   @id @default(uuid()) @db.UniqueIdentifier
   modelId               String   @map("model_id") @db.UniqueIdentifier
-  serialNumber          String   @map("serial_number") @db.NVarChar(Max)
-  specifications        String?  @db.NVarChar(Max)
-  additionalInformation String?  @map("additional_information") @db.NVarChar(Max)
-  warrantyStartDate     DateTime? @map("warranty_start_date") @db.Date
-  warrantyMonths     Int      @map("warranty_months")
-  priceAtPurchase    Float    @map("price_at_purchase") @db.Money
-  ncsCode            String   @map("ncs_code") @db.NVarChar(10)
-  status             String   @default("ACTIVE") @db.NVarChar(20)
-  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  serialNumber                 String    @map("serial_number") @db.NVarChar(Max)
+  specifications               String?   @db.NVarChar(Max)
+  additionalInformation        String?   @map("additional_information") @db.NVarChar(Max)
+  warrantyStartDate            DateTime? @map("warranty_start_date") @db.Date
+  warrantyMonths               Int       @map("warranty_months")
+  priceAtPurchase              Float     @map("price_at_purchase") @db.Money
+  depreciationPriceAtPurchase  Float     @map("depreciation_price_at_purchase") @db.Money
+  economicLifespan             Float     @map("economic_lifespan")
+  quantity                     Float     @map("quantity")
+  ncsCode                      String?   @map("ncs_code") @db.NVarChar(10)
+  status                       String    @default("ACTIVE") @db.NVarChar(20)
+  createdAt                    DateTime  @default(now()) @map("created_at") @db.DateTime
+  updatedAt                    DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
   // Relations
   // NoAction prevents deletion if component instances exist (SQL Server doesn't support Restrict)
   model                  ComponentModels           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_components_model")
   componentInstallations ComponentInstallations[]
+  documents              Documents[]
 
   @@index([modelId], map: "idx_components_model")
   @@index([status], map: "idx_components_status")
