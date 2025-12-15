@@ -139,6 +139,10 @@ export const GetLeasesByRentalPropertyIdQueryParams = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((value) => value === 'true'),
+  includeRentInfo: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value !== 'false'), // defaults to true
 })
 
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
