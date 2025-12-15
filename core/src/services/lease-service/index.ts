@@ -116,6 +116,12 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
+   *       - in: query
+   *         name: includeRentInfo
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include rent information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
