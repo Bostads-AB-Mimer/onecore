@@ -15,7 +15,7 @@ export interface MulterUploadOptions {
  * Options for generating a file name
  */
 export interface FileNameOptions {
-  entityType: 'component' | 'component-model'
+  entityType: 'component-instance' | 'component-model'
   entityId: string
   fileType?: string
   originalName: string
