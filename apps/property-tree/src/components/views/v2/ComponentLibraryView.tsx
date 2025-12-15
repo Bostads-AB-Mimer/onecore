@@ -11,7 +11,6 @@ import { ModelsTable } from '@/components/component-library/ModelsTable'
 import { InstancesTable } from '@/components/component-library/InstancesTable'
 import { TableToolbar } from '@/components/component-library/TableToolbar'
 import { GenericEntityDialog } from '@/components/component-library/dialogs/GenericEntityDialog'
-import { CreateInstanceDialog } from '@/components/component-library/dialogs/CreateInstanceDialog'
 import { InstanceDetailsDialog } from '@/components/component-library/dialogs/InstanceDetailsDialog'
 import type {
   ComponentCategory,
@@ -91,13 +90,6 @@ const ComponentLibraryView = () => {
     mode: 'create',
   })
 
-  const [createInstanceDialogState, setCreateInstanceDialogState] = useState<{
-    isOpen: boolean
-    model?: ComponentModel
-  }>({
-    isOpen: false,
-  })
-
   const [instanceDialogState, setInstanceDialogState] = useState<{
     isOpen: boolean
     mode: 'create' | 'edit'
@@ -106,6 +98,10 @@ const ComponentLibraryView = () => {
     isOpen: false,
     mode: 'create',
   })
+
+  const [instanceDefaults, setInstanceDefaults] = useState<
+    Record<string, any> | undefined
+  >()
 
   const [instanceDetailsDialogState, setInstanceDetailsDialogState] = useState<{
     isOpen: boolean
@@ -396,16 +392,17 @@ const ComponentLibraryView = () => {
   }
 
   const handleCreateInstance = (model: ComponentModel) => {
-    setCreateInstanceDialogState({
-      isOpen: true,
-      model,
+    // Pre-fill instance data from model
+    setInstanceDefaults({
+      warrantyMonths: model.warrantyMonths || 0,
+      priceAtPurchase: model.currentPrice || 0,
+      depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
+      economicLifespan: model.subtype?.economicLifespan || 0,
     })
-  }
-
-  const handleCloseCreateInstanceDialog = () => {
-    setCreateInstanceDialogState({
-      isOpen: false,
-      model: undefined,
+    setInstanceDialogState({
+      isOpen: true,
+      mode: 'create',
+      instance: undefined,
     })
   }
 
@@ -438,6 +435,7 @@ const ComponentLibraryView = () => {
   const handleCreateInstanceFromTable = () => {
     if (viewState.level !== 'instances') return
 
+    setInstanceDefaults(undefined) // Clear any pre-filled values
     setInstanceDialogState({
       isOpen: true,
       mode: 'create',
@@ -628,10 +626,6 @@ const ComponentLibraryView = () => {
             <p className="text-muted-foreground">
               Skapa din första undertyp för att komma igång
             </p>
-            <Button onClick={handleCreateSubtype} className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
-              Skapa undertyp
-            </Button>
           </div>
         )
       }
@@ -680,10 +674,6 @@ const ComponentLibraryView = () => {
             <p className="text-muted-foreground">
               Skapa din första modell för att komma igång
             </p>
-            <Button onClick={handleCreateModel} className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
-              Skapa modell
-            </Button>
           </div>
         )
       }
@@ -1030,21 +1020,14 @@ const ComponentLibraryView = () => {
         />
       ) : null}
 
-      {createInstanceDialogState.model && (
-        <CreateInstanceDialog
-          isOpen={createInstanceDialogState.isOpen}
-          onClose={handleCloseCreateInstanceDialog}
-          model={createInstanceDialogState.model}
-        />
-      )}
-
       {viewState.level === 'instances' ? (
         <>
           <GenericEntityDialog
             isOpen={instanceDialogState.isOpen}
             onClose={handleCloseInstanceDialog}
             entityType="instance"
-            entity={instanceDialogState.instance}
+            entity={instanceDialogState.mode === 'edit' ? instanceDialogState.instance : undefined}
+            defaultValues={instanceDialogState.mode === 'create' ? instanceDefaults : undefined}
             parentId={viewState.modelId}
             mode={instanceDialogState.mode}
           />
