@@ -12,7 +12,14 @@ export const getComponentTypes = async (
   page: number = 1,
   limit: number = 20
 ) => {
-  console.log('[component-type-adapter] getComponentTypes called with categoryId:', categoryId, 'type:', typeof categoryId, 'length:', categoryId?.length)
+  console.log(
+    '[component-type-adapter] getComponentTypes called with categoryId:',
+    categoryId,
+    'type:',
+    typeof categoryId,
+    'length:',
+    categoryId?.length
+  )
   const skip = (page - 1) * limit
 
   const where = categoryId && categoryId.length > 0 ? { categoryId } : {}

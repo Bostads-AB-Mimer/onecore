@@ -881,7 +881,6 @@ export type UpdateComponentInstallation = z.infer<
   typeof UpdateComponentInstallationSchema
 >
 
-
 // Document schema for file uploads/downloads
 export const DocumentWithUrlSchema = z.object({
   id: z.string(),
@@ -896,4 +895,3 @@ export const DocumentWithUrlSchema = z.object({
 })
 
 export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
-

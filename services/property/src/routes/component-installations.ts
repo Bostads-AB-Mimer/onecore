@@ -77,8 +77,7 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-installations',
     parseRequest({ query: componentInstallationsQueryParamsSchema }),
     async (ctx) => {
-      const { componentId, spaceId, page, limit } =
-        ctx.request.parsedQuery
+      const { componentId, spaceId, page, limit } = ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {

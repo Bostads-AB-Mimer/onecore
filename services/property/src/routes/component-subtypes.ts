@@ -75,7 +75,11 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const result = await getComponentSubtypes({ typeId, subtypeName }, page, limit)
+        const result = await getComponentSubtypes(
+          { typeId, subtypeName },
+          page,
+          limit
+        )
 
         ctx.body = {
           content: ComponentSubtypeSchema.array().parse(result.subtypes),

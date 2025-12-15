@@ -1,8 +1,4 @@
-import {
-  ComponentInstance,
-  ComponentImage,
-  ComponentModelDocument,
-} from '../../types'
+import { ComponentInstance, DocumentWithUrl } from '../../types'
 import { GET, POST, PUT, DELETE } from './base-api'
 
 export const componentService = {
@@ -234,16 +230,19 @@ export const componentService = {
     if (error) throw error
   },
 
-  async getImages(componentId: string): Promise<ComponentImage[]> {
+  async getImages(componentId: string): Promise<DocumentWithUrl[]> {
     console.log(
       '[componentService.getImages] Fetching images for:',
       componentId
     )
-    const { data, error } = await GET('/api/documents/component-instances/{id}', {
-      params: {
-        path: { id: componentId },
-      },
-    })
+    const { data, error } = await GET(
+      '/api/documents/component-instances/{id}',
+      {
+        params: {
+          path: { id: componentId },
+        },
+      }
+    )
 
     if (error) throw error
 
@@ -280,7 +279,7 @@ export const componentService = {
     if (error) throw error
   },
 
-  async getModelDocuments(modelId: string): Promise<ComponentModelDocument[]> {
+  async getModelDocuments(modelId: string): Promise<DocumentWithUrl[]> {
     const { data, error } = await GET('/api/documents/component-models/{id}', {
       params: {
         path: { id: modelId },

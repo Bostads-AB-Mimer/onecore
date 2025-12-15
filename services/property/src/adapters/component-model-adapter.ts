@@ -1,28 +1,16 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
-import { getBulkFileMetadata } from './minio-adapter'
 import type {
   CreateComponentModel,
   UpdateComponentModel,
 } from '../types/component'
-
-// File metadata types
-type ComponentModelDocument = {
-  fileId: string
-  originalName: string
-  size: number
-  mimeType: string
-  uploadedAt: string
-}
-
-// ==================== COMPONENT MODELS ====================
 
 export const getComponentModels = async (
   filters: {
     componentTypeId?: string
     subtypeId?: string
     manufacturer?: string
-    modelName?: string  // Search field
+    modelName?: string // Search field
   },
   page: number = 1,
   limit: number = 20
@@ -122,6 +110,6 @@ export const deleteComponentModel = async (id: string) => {
 export const getComponentModelWithDocuments = async (modelId: string) => {
   return prisma.componentModels.findUnique({
     where: { id: modelId },
-    include: { documents: true }
+    include: { documents: true },
   })
 }

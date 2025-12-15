@@ -1758,7 +1758,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/component-categories', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.ComponentCategoriesQueryParamsSchema.safeParse(ctx.query)
+    const params = schemas.ComponentCategoriesQueryParamsSchema.safeParse(
+      ctx.query
+    )
     if (!params.success) {
       ctx.status = 400
       ctx.body = { error: params.error.errors, ...metadata }
@@ -1880,7 +1882,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/component-categories', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const body = schemas.CreateComponentCategorySchema.safeParse(ctx.request.body)
+    const body = schemas.CreateComponentCategorySchema.safeParse(
+      ctx.request.body
+    )
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -1888,7 +1892,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.createComponentCategory(body.data)
+      const result = await propertyBaseAdapter.createComponentCategory(
+        body.data
+      )
 
       if (!result.ok) {
         ctx.status = 500
@@ -1949,7 +1955,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const body = schemas.UpdateComponentCategorySchema.safeParse(ctx.request.body)
+    const body = schemas.UpdateComponentCategorySchema.safeParse(
+      ctx.request.body
+    )
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -4260,5 +4268,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
-
 }

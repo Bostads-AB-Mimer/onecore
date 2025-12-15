@@ -530,7 +530,8 @@ export async function getResidenceSummariesByBuildingCode(
 
 // ==================== COMPONENT CATEGORIES ====================
 
-type GetComponentCategoriesResponse = components['schemas']['ComponentCategory'][]
+type GetComponentCategoriesResponse =
+  components['schemas']['ComponentCategory'][]
 
 export async function getComponentCategories(
   page?: number,
@@ -556,7 +557,9 @@ type GetComponentCategoryResponse = components['schemas']['ComponentCategory']
 
 export async function getComponentCategoryById(
   id: string
-): Promise<AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
+> {
   try {
     const response = await client().GET('/component-categories/{id}' as any, {
       params: { path: { id } },
@@ -599,7 +602,9 @@ export async function createComponentCategory(
 export async function updateComponentCategory(
   id: string,
   data: components['schemas']['UpdateComponentCategoryRequest']
-): Promise<AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
+> {
   try {
     const response = await client().PUT('/component-categories/{id}', {
       params: { path: { id } },
@@ -898,7 +903,14 @@ export async function getComponentModels(
   try {
     const response = await client().GET('/component-models' as any, {
       params: {
-        query: { componentTypeId, subtypeId, manufacturer, page, limit, modelName },
+        query: {
+          componentTypeId,
+          subtypeId,
+          manufacturer,
+          page,
+          limit,
+          modelName,
+        },
       },
     })
 
@@ -1161,9 +1173,12 @@ export async function getComponentInstallationById(
   AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
 > {
   try {
-    const response = await client().GET('/component-installations/{id}' as any, {
-      params: { path: { id } },
-    })
+    const response = await client().GET(
+      '/component-installations/{id}' as any,
+      {
+        params: { path: { id } },
+      }
+    )
 
     if ((response.data as any)?.content) {
       return { ok: true, data: (response.data as any).content }
@@ -1260,9 +1275,12 @@ export async function getComponentsByRoomId(
   AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'unknown'>
 > {
   try {
-    const fetchResponse = await client().GET('/components/by-room/{roomId}' as any, {
-      params: { path: { roomId } },
-    })
+    const fetchResponse = await client().GET(
+      '/components/by-room/{roomId}' as any,
+      {
+        params: { path: { roomId } },
+      }
+    )
 
     if ((fetchResponse.data as any)?.content) {
       return { ok: true, data: (fetchResponse.data as any).content }
@@ -1319,7 +1337,10 @@ export async function uploadComponentFile(
     if (err.response?.status === 403) {
       return { ok: false, err: 'forbidden' }
     }
-    logger.error({ err, componentId }, 'property-base-adapter.uploadComponentFile')
+    logger.error(
+      { err, componentId },
+      'property-base-adapter.uploadComponentFile'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1346,7 +1367,10 @@ export async function getComponentFiles(
     if (err.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
-    logger.error({ err, componentId }, 'property-base-adapter.getComponentFiles')
+    logger.error(
+      { err, componentId },
+      'property-base-adapter.getComponentFiles'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1366,7 +1390,10 @@ export async function deleteComponentFile(
     if (err.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
-    logger.error({ err, documentId }, 'property-base-adapter.deleteComponentFile')
+    logger.error(
+      { err, documentId },
+      'property-base-adapter.deleteComponentFile'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1407,7 +1434,10 @@ export async function uploadComponentModelDocument(
     if (err.response?.status === 403) {
       return { ok: false, err: 'forbidden' }
     }
-    logger.error({ err, modelId }, 'property-base-adapter.uploadComponentModelDocument')
+    logger.error(
+      { err, modelId },
+      'property-base-adapter.uploadComponentModelDocument'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1434,7 +1464,10 @@ export async function getComponentModelDocuments(
     if (err.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
-    logger.error({ err, modelId }, 'property-base-adapter.getComponentModelDocuments')
+    logger.error(
+      { err, modelId },
+      'property-base-adapter.getComponentModelDocuments'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1454,7 +1487,10 @@ export async function deleteComponentModelDocument(
     if (err.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
-    logger.error({ err, documentId }, 'property-base-adapter.deleteComponentModelDocument')
+    logger.error(
+      { err, documentId },
+      'property-base-adapter.deleteComponentModelDocument'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
