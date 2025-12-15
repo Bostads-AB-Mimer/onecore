@@ -25,12 +25,28 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
     `${fullyOrPartiallyPaidRentInvoices.length} fully or partially paid rent invoices`
   )
 
-  logger.info('Getting payment events')
-  const allPaymentEvents = (
-    await getAllInvoicePaymentEvents(
+  logger.info('Getting payment events and invoice rows')
+
+  const [allInvoiceRows, allPaymentEvents] = await Promise.all([
+    fetchInvoiceRowsChunked(
+      fullyOrPartiallyPaidRentInvoices.map((i) => i.invoiceId)
+    ),
+    getAllInvoicePaymentEvents(
       fullyOrPartiallyPaidRentInvoices.map((m) => m.matchId)
-    )
+    ),
+  ])
+
+  logger.info(`Got ${allInvoiceRows.length} invoice rows`)
+  logger.info(`Got ${allPaymentEvents.length} payment events`)
+
+  const filteredInvoiceRows = allInvoiceRows.filter(
+    (r) =>
+      r.code?.startsWith('HEMFÖR') ||
+      r.code?.startsWith('HYRSÄT') ||
+      r.code?.startsWith('VHK')
   )
+
+  const filteredPaymentEvents = allPaymentEvents
     .filter((pe) => pe.amount < 0) // We only want payments, not credits
     .map((pe) => {
       return {
@@ -42,7 +58,7 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
   const paymentEventsByInvoiceId = fullyOrPartiallyPaidRentInvoices.reduce<
     Record<string, InvoicePaymentEvent[]>
   >((acc, i) => {
-    const paymentEventsForInvoice = allPaymentEvents.filter(
+    const paymentEventsForInvoice = filteredPaymentEvents.filter(
       (e) =>
         e.matchId === i.matchId && e.paymentDate >= from && e.paymentDate <= to
     )
@@ -51,31 +67,6 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
 
     return acc
   }, {})
-
-  const chunkSize = 1000
-  const invoiceRows: RentInvoiceRow[] = []
-
-  logger.info('Getting invoice rows from Xpand')
-  for (
-    let start = 0;
-    start < fullyOrPartiallyPaidRentInvoices.length;
-    start += chunkSize
-  ) {
-    const rowsInChunk = await getInvoiceRows(
-      fullyOrPartiallyPaidRentInvoices
-        .slice(start, start + chunkSize)
-        .map((i) => i.invoiceId)
-    )
-    invoiceRows.push(...rowsInChunk)
-  }
-  logger.info(`Got ${invoiceRows.length} invoice rows`)
-
-  const filteredInvoiceRows = invoiceRows.filter(
-    (r) =>
-      r.code?.startsWith('HEMFÖR') ||
-      r.code?.startsWith('HYRSÄT') ||
-      r.code?.startsWith('VHK')
-  )
 
   const invoicePaymentSummaries: InvoicePaymentSummary[] = []
 
@@ -135,6 +126,20 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
   })
 
   return invoicePaymentSummaries
+}
+
+const fetchInvoiceRowsChunked = async (invoiceIds: string[]) => {
+  const chunkSize = 1000
+  const invoiceRows: RentInvoiceRow[] = []
+
+  for (let start = 0; start < invoiceIds.length; start += chunkSize) {
+    const rowsInChunk = await getInvoiceRows(
+      invoiceIds.slice(start, start + chunkSize)
+    )
+    invoiceRows.push(...rowsInChunk)
+  }
+
+  return invoiceRows
 }
 
 const getVerksamhetskostnadTotal = (rows: RentInvoiceRow[], code: string) => {
