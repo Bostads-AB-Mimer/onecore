@@ -1,10 +1,7 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import { getFileMetadataFromMinio } from './minio-adapter'
-import type {
-  CreateComponentNew,
-  UpdateComponentNew,
-} from '../types/component'
+import type { CreateComponentNew, UpdateComponentNew } from '../types/component'
 
 // ==================== COMPONENTS (INSTANCES) ====================
 
@@ -161,17 +158,19 @@ export const getComponentsByRoomId = async (roomId: string) => {
 
 // ==================== COMPONENT FILES ====================
 
-export const getComponentInstanceWithDocuments = async (componentId: string) => {
+export const getComponentInstanceWithDocuments = async (
+  componentId: string
+) => {
   return prisma.components.findUnique({
     where: { id: componentId },
-    include: { documents: true }
+    include: { documents: true },
   })
 }
 
 export const getComponentInstanceFiles = async (componentId: string) => {
   const documents = await prisma.documents.findMany({
     where: { componentInstanceId: componentId },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
   })
 
   return Promise.all(
@@ -183,7 +182,7 @@ export const getComponentInstanceFiles = async (componentId: string) => {
         originalName: metadata.originalName,
         size: metadata.size,
         mimeType: metadata.mimeType,
-        uploadedAt: doc.createdAt.toISOString()
+        uploadedAt: doc.createdAt.toISOString(),
       }
     })
   )
