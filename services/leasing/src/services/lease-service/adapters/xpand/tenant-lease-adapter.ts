@@ -233,8 +233,9 @@ const getLeasesForPropertyId = async (
   options: GetLeasesOptions
 ) => {
   let leases: Lease[] = []
+
   const rows = await xpandDb
-    .from('hyavk')
+    .from('hyobj')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
@@ -248,22 +249,14 @@ const getLeasesForPropertyId = async (
       'hyobj.uppstidg as noticeTimeTenant',
       'hyobj.onskflytt AS preferredMoveOutDate',
       'hyobj.makuldatum AS terminationDate',
-      'rent.yearrentrows'
+      'rent.totalYearRent'
     )
-    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
     .leftJoin(
       xpandDb.raw(`
         (
-          SELECT
-            rentalpropertyid,
-            (
-              SELECT yearrent
-              FROM hy_debitrowrentalproperty_xpand_api x2
-              WHERE x2.rentalpropertyid = x1.rentalpropertyid
-              FOR JSON PATH
-            ) as yearrentrows
-          FROM hy_debitrowrentalproperty_xpand_api x1
+          SELECT rentalpropertyid, SUM(yearrent) as totalYearRent
+          FROM hy_debitrowrentalproperty_xpand_api
           GROUP BY rentalpropertyid
         ) as rent
       `),
@@ -277,6 +270,7 @@ const getLeasesForPropertyId = async (
       `)
     )
     .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
+    .whereNotNull('hyobj.fdate')
 
   for (const row of rows) {
     const lease = transformFromXPandDb.toLease(row, [], [])
@@ -286,13 +280,131 @@ const getLeasesForPropertyId = async (
   leases = filterLeasesByOptions(leases, options)
 
   if (options.includeContacts) {
-    for (const lease of leases) {
-      const tenants = await getContactsByLeaseId(lease.leaseId)
-      lease.tenants = tenants
+    if (leases.length === 1) {
+      // Sequential is faster for single lease (~120ms vs ~200ms)
+      leases[0].tenants = await getContactsByLeaseId(leases[0].leaseId)
+    } else {
+      // Batched is faster for multiple leases (~300ms vs ~600ms for 5 leases)
+      const leaseIds = leases.map((l) => l.leaseId)
+      const contactsByLeaseId = await getContactsForLeaseIds(leaseIds)
+      leases.forEach((lease) => {
+        lease.tenants = contactsByLeaseId.get(lease.leaseId) ?? []
+      })
     }
   }
 
   return leases
+}
+
+const getContactsForLeaseIds = async (
+  leaseIds: string[]
+): Promise<Map<string, Contact[]>> => {
+  if (leaseIds.length === 0) {
+    return new Map()
+  }
+
+  const leaseContactRows = await xpandDb
+    .from('hyavk')
+    .select('hyavk.keycmctc as contactKey', 'hyobj.hyobjben as leaseId')
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .whereIn('hyobj.hyobjben', leaseIds)
+
+  const contactKeys = [
+    ...new Set(leaseContactRows.map((r) => r.contactKey as string)),
+  ]
+
+  if (contactKeys.length === 0) {
+    return new Map()
+  }
+
+  const contactRows = await xpandDb
+    .from('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.fnamn as firstName',
+      'cmctc.enamn as lastName',
+      'cmctc.cmctcben as fullName',
+      'cmctc.persorgnr as nationalRegistrationNumber',
+      'cmctc.birthdate as birthDate',
+      'cmadr.adress1 as street',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city',
+      'cmeml.cmemlben as emailAddress',
+      'cmctc.keycmobj as keycmobj',
+      'cmctc.keycmctc as contactKey',
+      'bkkty.bkktyben as queueName',
+      'bkqte.quetime as queueTime',
+      'cmctc.lagsokt as protectedIdentity',
+      'cmctc.utslag as specialAttention'
+    )
+    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+    .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
+    .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
+    .whereIn('cmctc.keycmctc', contactKeys)
+    .where(function () {
+      this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
+    })
+    .where(function () {
+      this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
+    })
+    .orderByRaw(
+      'CASE WHEN cmadr.fdate IS NULL THEN 1 ELSE 0 END, cmadr.fdate ASC'
+    )
+
+  const keycmobjs = [...new Set(contactRows.map((r) => r.keycmobj as string))]
+  const phoneRows = await xpandDb
+    .from('cmtel')
+    .select(
+      'keycmobj',
+      'cmtelben as phoneNumber',
+      'keycmtet as type',
+      'main as isMainNumber'
+    )
+    .whereIn('keycmobj', keycmobjs)
+
+  // Build lookup maps
+  const phonesByKeycmobj = new Map<string, typeof phoneRows>()
+  for (const row of phoneRows) {
+    const key = row.keycmobj as string
+    if (!phonesByKeycmobj.has(key)) {
+      phonesByKeycmobj.set(key, [])
+    }
+    phonesByKeycmobj.get(key)!.push(trimRow(row))
+  }
+
+  // Group contact rows by contactKey (may have duplicates from joins)
+  const contactRowsByKey = new Map<string, (typeof contactRows)[0]>()
+  for (const row of contactRows) {
+    const key = row.contactKey as string
+    if (!contactRowsByKey.has(key)) {
+      contactRowsByKey.set(key, row)
+    }
+  }
+
+  // Build contacts by contactKey
+  const contactsByKey = new Map<string, Contact>()
+  for (const [contactKey, row] of contactRowsByKey) {
+    const phoneNumbers = phonesByKeycmobj.get(row.keycmobj as string) ?? []
+    contactsByKey.set(
+      contactKey,
+      transformFromDbContact([row], phoneNumbers, [])
+    )
+  }
+
+  // Map contacts to leases
+  const result = new Map<string, Contact[]>()
+  for (const leaseId of leaseIds) {
+    result.set(leaseId, [])
+  }
+  for (const { leaseId, contactKey } of leaseContactRows) {
+    const contact = contactsByKey.get(contactKey as string)
+    if (contact) {
+      result.get(leaseId as string)!.push(contact)
+    }
+  }
+
+  return result
 }
 
 const getResidentialAreaByRentalPropertyId = async (
@@ -423,23 +535,29 @@ const getContactByPhoneNumber = async (
 }
 
 const getContactsByLeaseId = async (leaseId: string) => {
-  const contacts: Contact[] = []
   const rows = await xpandDb
     .from('hyavk')
     .select('hyavk.keycmctc as contactKey')
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ hyobjben: leaseId })
 
-  for (let row of rows) {
-    row = await getContactQuery().where({ 'cmctc.keycmctc': row.contactKey })
+  const contacts = await Promise.all(
+    rows.map(async (row) => {
+      const contactRows = await getContactQuery().where({
+        'cmctc.keycmctc': row.contactKey,
+      })
 
-    if (row && row.length > 0) {
-      const phoneNumbers = await getPhoneNumbersForContact(row[0].keycmobj)
-      contacts.push(transformFromDbContact(row, phoneNumbers, []))
-    }
-  }
+      if (contactRows && contactRows.length > 0) {
+        const phoneNumbers = await getPhoneNumbersForContact(
+          contactRows[0].keycmobj
+        )
+        return transformFromDbContact(contactRows, phoneNumbers, [])
+      }
+      return null
+    })
+  )
 
-  return contacts
+  return contacts.filter((c): c is Contact => c !== null)
 }
 
 const getContactQuery = () => {
