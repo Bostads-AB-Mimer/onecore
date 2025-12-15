@@ -29,7 +29,7 @@ export const ObjectPageTabs = ({ defaultTab, tabs }: ObjectPageTabsProps) => {
               className="flex items-center gap-1.5"
             >
               <tab.icon className="h-4 w-4" />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
