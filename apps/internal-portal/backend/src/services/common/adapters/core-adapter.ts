@@ -1,6 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import Config from '../../../common/config'
-import { Invoice } from '@onecore/types'
 
 const coreBaseUrl = Config.core.url
 const coreUsername = Config.core.username

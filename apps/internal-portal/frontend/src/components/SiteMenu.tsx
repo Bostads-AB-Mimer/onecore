@@ -77,11 +77,6 @@ const SiteMenu = () => (
                 <Typography>Kundkort</Typography>
               </MenuItem>
             </Link>
-            <Link to="/fakturor">
-              <MenuItem onClick={popupState.close}>
-                <Typography>Obetalda fakturor</Typography>
-              </MenuItem>
-            </Link>
           </Menu>
         </Backdrop>
       </>
