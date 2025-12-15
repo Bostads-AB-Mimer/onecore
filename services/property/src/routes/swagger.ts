@@ -94,6 +94,21 @@ const schemas = {
     name: 'GetFacilitiesByBuildingCodeResponse',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.ComponentCategorySchema, {
+    name: 'ComponentCategory',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentCategorySchema, {
+    name: 'CreateComponentCategoryRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentCategorySchema, {
+    name: 'UpdateComponentCategoryRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
   ...zodToJsonSchema(types.ComponentTypeSchema, {
     name: 'ComponentType',
     target: 'openApi3',
@@ -166,6 +181,16 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(types.UpdateComponentInstallationSchema, {
     name: 'UpdateComponentInstallationRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.DocumentSchema, {
+    name: 'Document',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.DocumentWithUrlSchema, {
+    name: 'DocumentWithUrl',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
