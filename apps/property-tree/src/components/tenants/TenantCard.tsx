@@ -55,20 +55,21 @@ export function TenantCard({ tenant }: TenantCardProps) {
 
   // Build address string from compound address object
   const formatAddress = (address: {
-    street: string
+    street?: string
     number: string
     postalCode: string
     city: string
   }) => {
+    const street = address.street ?? ''
     const streetPart = address.number?.trim()
-      ? `${address.street} ${address.number.trim()}`
-      : address.street
+      ? `${street} ${address.number.trim()}`
+      : street
     return `${streetPart}, ${address.postalCode} ${address.city}`
   }
 
   // Open address in Google Maps
   const handleOpenInMaps = (address: {
-    street: string
+    street?: string
     number: string
     postalCode: string
     city: string
