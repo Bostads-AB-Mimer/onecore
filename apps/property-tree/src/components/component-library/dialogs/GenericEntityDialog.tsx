@@ -123,14 +123,18 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
     try {
       // For mutations, we need to pass parentId separately for cache invalidation
-      const mutationData = mode === 'create'
-        ? { ...formData, parentId }
-        : { id: entity?.id, data: formData, parentId }
+      const mutationData =
+        mode === 'create'
+          ? { ...formData, parentId }
+          : { id: entity?.id, data: formData, parentId }
 
       await mutation.mutateAsync(mutationData as any)
       onClose()
     } catch (error) {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} ${entityType}:`, error)
+      console.error(
+        `Error ${mode === 'create' ? 'creating' : 'updating'} ${entityType}:`,
+        error
+      )
     }
   }
 

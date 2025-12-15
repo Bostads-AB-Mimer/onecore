@@ -21,11 +21,18 @@ export type ComponentModelWithHierarchy = ComponentModel & {
 
 interface ModelSelectorProps {
   value: string
-  onChange: (modelId: string, model: ComponentModelWithHierarchy | undefined) => void
+  onChange: (
+    modelId: string,
+    model: ComponentModelWithHierarchy | undefined
+  ) => void
   error?: string
 }
 
-export const ModelSelector = ({ value, onChange, error }: ModelSelectorProps) => {
+export const ModelSelector = ({
+  value,
+  onChange,
+  error,
+}: ModelSelectorProps) => {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
 
@@ -33,19 +40,25 @@ export const ModelSelector = ({ value, onChange, error }: ModelSelectorProps) =>
   const shouldSearch = debouncedSearch.trim().length >= 2
 
   // Use backend search via useComponentEntity
-  const { data: models, isLoading, error: modelsError } = useComponentEntity(
+  const {
+    data: models,
+    isLoading,
+    error: modelsError,
+  } = useComponentEntity(
     'model',
     '', // Empty parentId to search across all models
     { search: shouldSearch ? debouncedSearch : undefined }
   )
 
   // Backend returns models with full hierarchy already included
-  const modelsWithHierarchy: ComponentModelWithHierarchy[] = (models || []) as ComponentModelWithHierarchy[]
+  const modelsWithHierarchy: ComponentModelWithHierarchy[] = (models ||
+    []) as ComponentModelWithHierarchy[]
 
   // Build display options - no filtering needed, backend handles it
   const modelOptions = useMemo(() => {
     return modelsWithHierarchy.map((model) => {
-      const categoryName = model.subtype?.componentType?.category?.categoryName || ''
+      const categoryName =
+        model.subtype?.componentType?.category?.categoryName || ''
       const typeName = model.subtype?.componentType?.typeName || ''
       const subtypeName = model.subtype?.subTypeName || ''
 
@@ -64,7 +77,9 @@ export const ModelSelector = ({ value, onChange, error }: ModelSelectorProps) =>
     return (
       <div>
         <Label>Modell</Label>
-        <p className="text-sm text-destructive mt-1">Kunde inte ladda modeller</p>
+        <p className="text-sm text-destructive mt-1">
+          Kunde inte ladda modeller
+        </p>
       </div>
     )
   }
@@ -112,7 +127,9 @@ export const ModelSelector = ({ value, onChange, error }: ModelSelectorProps) =>
                   value === option.model.id ? 'bg-accent' : ''
                 }`}
               >
-                <div className="text-sm font-medium">{option.model.manufacturer} {option.model.modelName}</div>
+                <div className="text-sm font-medium">
+                  {option.model.manufacturer} {option.model.modelName}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {option.displayName.split(' - ')[0]}
                 </div>
@@ -125,7 +142,9 @@ export const ModelSelector = ({ value, onChange, error }: ModelSelectorProps) =>
       {selectedModel && (
         <div className="mt-2 p-3 bg-accent rounded-md">
           <p className="text-sm font-medium">Vald modell:</p>
-          <p className="text-sm text-muted-foreground">{selectedModel.displayName}</p>
+          <p className="text-sm text-muted-foreground">
+            {selectedModel.displayName}
+          </p>
         </div>
       )}
 

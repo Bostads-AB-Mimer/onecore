@@ -134,8 +134,8 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h3 className="text-base font-semibold">
-                  {component.model?.subtype?.componentType?.description || '-'} •{' '}
-                  {component.model?.subtype?.subTypeName || '-'}
+                  {component.model?.subtype?.componentType?.description || '-'}{' '}
+                  • {component.model?.subtype?.subTypeName || '-'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {component.model?.manufacturer || '-'}{' '}
@@ -221,8 +221,9 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Typ:</span>
                     <span className="font-medium">
-                      {component.model?.subtype?.componentType?.description || '-'} ›{' '}
-                      {component.model?.subtype?.subTypeName || '-'}
+                      {component.model?.subtype?.componentType?.description ||
+                        '-'}{' '}
+                      › {component.model?.subtype?.subTypeName || '-'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -420,7 +421,8 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                     )}
 
                     {component.model?.subtype?.economicLifespan !== null &&
-                      component.model?.subtype?.economicLifespan !== undefined && (
+                      component.model?.subtype?.economicLifespan !==
+                        undefined && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">
                             Ekonomisk livslängd:

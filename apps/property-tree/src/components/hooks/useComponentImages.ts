@@ -3,23 +3,19 @@ import { ComponentImage } from '@/services/types'
 import { useFileManagement } from './useFileManagement'
 
 export function useComponentImages(componentId: string) {
-  const result = useFileManagement<
-    ComponentImage,
-    { file: File; caption?: string }
-  >({
+  const result = useFileManagement<ComponentImage, { file: File }>({
     entityId: componentId,
     queryKey: 'component-images',
     fetchFiles: (id) => componentService.getImages(id),
-    uploadFile: (id, { file, caption }) =>
-      componentService.uploadImage(id, file, caption),
+    uploadFile: (id, { file }) => componentService.uploadImage(id, file),
     deleteFile: (id, fileId) => componentService.deleteImage(id, fileId),
-    createOptimisticFile: ({ file, caption }) => ({
+    createOptimisticFile: ({ file }) => ({
+      id: `temp-${Date.now()}`,
       fileId: `temp-${Date.now()}`,
       originalName: file.name,
       size: file.size,
       mimeType: file.type,
-      uploadedAt: new Date().toISOString(),
-      caption: caption,
+      createdAt: new Date().toISOString(),
       url: '',
     }),
   })
