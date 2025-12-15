@@ -76,31 +76,3 @@ export async function getInvoicesSentToDebtCollection(
 
   return { ok: true, data: hasDebtCollection }
 }
-
-export async function getUnpaidInvoices(
-  offset?: number,
-  size?: number
-): Promise<AdapterResult<Invoice[], 'unknown'>> {
-  try {
-    const params = new URLSearchParams()
-    if (offset !== undefined) {
-      params.append('offset', offset.toString())
-    }
-    if (size !== undefined) {
-      params.append('size', size.toString())
-    }
-
-    const url = `${config.economyService.url}/invoices/unpaid?${params.toString()}`
-    const response = await axios.get(url)
-
-    if (response.status === 200) {
-      return { ok: true, data: response.data }
-    }
-
-    logger.error(response.data, 'economy-adapter.getUnpaidInvoices')
-    return { ok: false, err: 'unknown' }
-  } catch (error) {
-    logger.error(error, 'economy-adapter.getUnpaidInvoices')
-    return { ok: false, err: 'unknown' }
-  }
-}

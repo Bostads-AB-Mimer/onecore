@@ -33,23 +33,6 @@ const createHeaders = (accessToken: string) => {
   return headers
 }
 
-const getUnpaidInvoices = async (offset?: number, size?: number) => {
-  const params = new URLSearchParams()
-  if (offset !== undefined) {
-    params.append('offset', offset.toString())
-  }
-  if (size !== undefined) {
-    params.append('size', size.toString())
-  }
-
-  const url = `${coreBaseUrl}/invoices/unpaid?${params.toString()}`
-
-  return getFromCore<{ content: Invoice[] }>({
-    method: 'GET',
-    url,
-  })
-}
-
 const getFromCore = async <T = any>(
   config: AxiosRequestConfig<any>
 ): Promise<AxiosResponse<T, any>> => {
@@ -73,4 +56,4 @@ const getFromCore = async <T = any>(
   }
 }
 
-export { getUnpaidInvoices, getFromCore }
+export { getFromCore }
