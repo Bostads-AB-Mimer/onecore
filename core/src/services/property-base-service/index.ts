@@ -99,6 +99,7 @@ export const routes = (router: KoaRouter) => {
   )
   registerSchema('Component', schemas.ComponentSchema)
   registerSchema('FileMetadataWithUrl', schemas.FileMetadataWithUrlSchema)
+  registerSchema('DocumentWithUrl', schemas.DocumentWithUrlSchema)
 
   /**
    * @swagger
@@ -3423,7 +3424,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: array
    *               items:
-   *                 $ref: '#/components/schemas/FileMetadataWithUrl'
+   *                 $ref: '#/components/schemas/DocumentWithUrl'
    *       404:
    *         description: Component model not found
    *       500:
@@ -4550,7 +4551,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: array
    *               items:
-   *                 $ref: '#/components/schemas/FileMetadataWithUrl'
+   *                 $ref: '#/components/schemas/DocumentWithUrl'
    *       404:
    *         description: Component not found
    *       500:

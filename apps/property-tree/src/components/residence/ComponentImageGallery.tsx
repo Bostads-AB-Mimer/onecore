@@ -16,8 +16,6 @@ import {
   DialogFooter,
 } from '@/components/ui/v2/Dialog'
 import { Button } from '@/components/ui/v2/Button'
-import { Input } from '@/components/ui/Input'
-import { Label } from '@/components/ui/v2/Label'
 import { cn } from '@/lib/utils'
 import { useComponentImages } from '@/components/hooks/useComponentImages'
 import { ComponentImageUpload } from './ComponentImageUpload'
@@ -39,7 +37,6 @@ export function ComponentImageGallery({
 
   // Inline upload state for empty state
   const [uploadFile, setUploadFile] = useState<File | null>(null)
-  const [uploadCaption, setUploadCaption] = useState('')
   const [uploadDragActive, setUploadDragActive] = useState(false)
   const [uploadValidationError, setUploadValidationError] = useState<
     string | null
@@ -202,12 +199,11 @@ export function ComponentImageGallery({
     }
 
     upload(
-      { file: uploadFile, caption: uploadCaption || undefined },
+      { file: uploadFile },
       {
         onSuccess: () => {
           // Reset form
           setUploadFile(null)
-          setUploadCaption('')
           setUploadValidationError(null)
         },
       }
@@ -334,21 +330,6 @@ export function ComponentImageGallery({
               <p className="text-sm text-red-600">{uploadValidationError}</p>
             )}
 
-            {/* Caption input */}
-            <div>
-              <Label htmlFor="empty-caption">Bildtext (valfritt)</Label>
-              <Input
-                id="empty-caption"
-                value={uploadCaption}
-                onChange={(e) => setUploadCaption(e.target.value)}
-                placeholder="Lägg till en beskrivning..."
-                maxLength={200}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {uploadCaption.length}/200
-              </p>
-            </div>
-
             {uploadError && (
               <p className="text-sm text-red-600">
                 Uppladdning misslyckades. Försök igen.
@@ -451,7 +432,7 @@ export function ComponentImageGallery({
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {formatFileSize(currentImage.size)} •{' '}
-                  {formatDate(currentImage.uploadedAt)}
+                  {formatDate(currentImage.createdAt)}
                 </p>
               </div>
               <div className="flex gap-2">

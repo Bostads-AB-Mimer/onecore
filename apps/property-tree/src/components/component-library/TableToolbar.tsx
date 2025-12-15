@@ -29,7 +29,9 @@ export const TableToolbar = ({
             <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground pointer-events-none -translate-y-1/2" />
             <Input
               type="search"
-              placeholder={searchPlaceholder || `Sök ${levelName.toLowerCase()}...`}
+              placeholder={
+                searchPlaceholder || `Sök ${levelName.toLowerCase()}...`
+              }
               value={searchValue || ''}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-9 h-10"

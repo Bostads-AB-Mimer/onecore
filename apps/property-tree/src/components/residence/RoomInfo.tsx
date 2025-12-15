@@ -53,20 +53,7 @@ const RoomComponents = ({ roomId, roomName }: RoomComponentsProps) => {
 
   const hasComponents = componentsQuery.data.length > 0
 
-  const sortedComponents = hasComponents
-    ? [...componentsQuery.data].sort((a, b) => {
-        const categoryOrder = (description: string | undefined) => {
-          if (!description) return 2
-          if (description === 'VIT') return 0
-          if (description === 'Lägenhet') return 1
-          return 2
-        }
-        return (
-          categoryOrder(a.model?.subtype?.componentType?.description) -
-          categoryOrder(b.model?.subtype?.componentType?.description)
-        )
-      })
-    : []
+  const sortedComponents = hasComponents ? componentsQuery.data : []
 
   return (
     <>

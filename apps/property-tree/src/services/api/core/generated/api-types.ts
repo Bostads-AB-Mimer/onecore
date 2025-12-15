@@ -3556,7 +3556,7 @@ export interface paths {
         /** @description Array of documents with presigned URLs */
         200: {
           content: {
-            "application/json": components["schemas"]["FileMetadataWithUrl"][];
+            "application/json": components["schemas"]["DocumentWithUrl"][];
           };
         };
         /** @description Component model not found */
@@ -3924,7 +3924,7 @@ export interface paths {
         /** @description Array of documents with presigned URLs */
         200: {
           content: {
-            "application/json": components["schemas"]["FileMetadataWithUrl"][];
+            "application/json": components["schemas"]["DocumentWithUrl"][];
           };
         };
         /** @description Component not found */
@@ -5057,6 +5057,17 @@ export interface components {
       deinstallationDate?: string;
       orderNumber?: string;
       cost?: number;
+    };
+    DocumentWithUrl: {
+      id: string;
+      fileId: string;
+      originalName: string;
+      mimeType: string;
+      size: number;
+      createdAt: string;
+      url: string;
+      uploadedAt?: string;
+      caption?: string;
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */

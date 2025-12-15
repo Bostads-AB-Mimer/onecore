@@ -129,7 +129,8 @@ export const componentService = {
     })
 
     if (instanceError) throw instanceError
-    if (!instance?.content) throw new Error('Failed to create component instance')
+    if (!instance?.content)
+      throw new Error('Failed to create component instance')
 
     const createdInstance = instance.content as ComponentInstance
 
@@ -213,23 +214,19 @@ export const componentService = {
     })
 
     if (error) throw error
-    if (!response?.content) throw new Error('Failed to update component instance')
+    if (!response?.content)
+      throw new Error('Failed to update component instance')
 
     return response.content as ComponentInstance
   },
 
   // Component Instance Image Operations
-  async uploadImage(
-    componentId: string,
-    file: File,
-    caption?: string
-  ): Promise<void> {
+  async uploadImage(componentId: string, file: File): Promise<void> {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('componentInstanceId', componentId)
-    if (caption) formData.append('caption', caption)
 
-    const { error } = await POST('/documents/upload', {
+    const { error } = await POST('/api/documents/upload', {
       body: formData as any,
       bodySerializer: (body) => body as any,
     })
@@ -242,7 +239,7 @@ export const componentService = {
       '[componentService.getImages] Fetching images for:',
       componentId
     )
-    const { data, error } = await GET('/documents/component-instances/{id}', {
+    const { data, error } = await GET('/api/documents/component-instances/{id}', {
       params: {
         path: { id: componentId },
       },
@@ -260,9 +257,9 @@ export const componentService = {
   },
 
   async deleteImage(componentId: string, documentId: string): Promise<void> {
-    const { error } = await DELETE('/documents/{documentId}', {
+    const { error } = await DELETE('/api/documents/{id}', {
       params: {
-        path: { documentId },
+        path: { id: documentId },
       },
     })
 
@@ -275,7 +272,7 @@ export const componentService = {
     formData.append('file', file)
     formData.append('componentModelId', modelId)
 
-    const { error } = await POST('/documents/upload', {
+    const { error } = await POST('/api/documents/upload', {
       body: formData as any,
       bodySerializer: (body) => body as any,
     })
@@ -284,7 +281,7 @@ export const componentService = {
   },
 
   async getModelDocuments(modelId: string): Promise<ComponentModelDocument[]> {
-    const { data, error } = await GET('/documents/component-models/{id}', {
+    const { data, error } = await GET('/api/documents/component-models/{id}', {
       params: {
         path: { id: modelId },
       },
@@ -295,10 +292,13 @@ export const componentService = {
     return data || []
   },
 
-  async deleteModelDocument(modelId: string, documentId: string): Promise<void> {
-    const { error } = await DELETE('/documents/{documentId}', {
+  async deleteModelDocument(
+    modelId: string,
+    documentId: string
+  ): Promise<void> {
+    const { error } = await DELETE('/api/documents/{id}', {
       params: {
-        path: { documentId },
+        path: { id: documentId },
       },
     })
 

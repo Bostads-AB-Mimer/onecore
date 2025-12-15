@@ -9,9 +9,19 @@ interface FieldRendererProps {
   error?: string
 }
 
-export function FieldRenderer({ field, value, onChange, error }: FieldRendererProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const newValue = field.type === 'number' ? Number(e.target.value) : e.target.value
+export function FieldRenderer({
+  field,
+  value,
+  onChange,
+  error,
+}: FieldRendererProps) {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const newValue =
+      field.type === 'number' ? Number(e.target.value) : e.target.value
     onChange(field.name, newValue)
   }
 
@@ -43,7 +53,11 @@ export function FieldRenderer({ field, value, onChange, error }: FieldRendererPr
             id={field.name}
             type="number"
             min="0"
-            step={field.name.includes('Price') || field.name.includes('cost') ? '0.01' : '1'}
+            step={
+              field.name.includes('Price') || field.name.includes('cost')
+                ? '0.01'
+                : '1'
+            }
             value={value ?? field.defaultValue ?? 0}
             onChange={handleChange}
             placeholder={field.placeholder}

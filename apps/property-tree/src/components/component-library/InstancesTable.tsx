@@ -54,9 +54,7 @@ export const InstancesTable = ({
     {
       key: 'serialNumber',
       label: 'Serienummer',
-      render: (item) => (
-        <div className="font-medium">{item.serialNumber}</div>
-      ),
+      render: (item) => <div className="font-medium">{item.serialNumber}</div>,
     },
     {
       key: 'status',

@@ -997,3 +997,18 @@ export const ComponentSchema = z.object({
 
 export type Component = z.infer<typeof ComponentSchema>
 export type CompanyDetails = z.infer<typeof CompanyDetailsSchema>
+
+// Document schema for file uploads/downloads
+export const DocumentWithUrlSchema = z.object({
+  id: z.string(),
+  fileId: z.string(),
+  originalName: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  createdAt: z.string(),
+  url: z.string(),
+  uploadedAt: z.string().optional(),
+  caption: z.string().optional(),
+})
+
+export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
