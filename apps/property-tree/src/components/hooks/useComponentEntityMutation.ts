@@ -36,7 +36,10 @@ import type {
  * const deleteModel = useComponentEntityMutation('model', 'delete')
  * deleteModel.mutate({ id: 'model-789', parentId: 'subtype-012' })
  */
-export function useComponentEntityMutation<T extends EntityType, Op extends Operation>(
+export function useComponentEntityMutation<
+  T extends EntityType,
+  Op extends Operation,
+>(
   entityType: T,
   operation: Op,
   parentIdField?: string,
@@ -88,7 +91,8 @@ export function useComponentEntityMutation<T extends EntityType, Op extends Oper
     },
     onSuccess: async (data: any, variables: any, context: any) => {
       // Extract parent ID from variables for cache invalidation
-      const parentId = (variables as any).parentId || (variables as any)[parentIdField || '']
+      const parentId =
+        (variables as any).parentId || (variables as any)[parentIdField || '']
 
       // Invalidate the appropriate query key
       const queryKey = buildQueryKey(entityType, parentId)

@@ -1,9 +1,9 @@
 import { componentService } from '@/services/api/core/componentService'
-import { ComponentImage } from '@/services/types'
+import { DocumentWithUrl } from '@/services/types'
 import { useFileManagement } from './useFileManagement'
 
 export function useComponentImages(componentId: string) {
-  const result = useFileManagement<ComponentImage, { file: File }>({
+  const result = useFileManagement<DocumentWithUrl, { file: File }>({
     entityId: componentId,
     queryKey: 'component-images',
     fetchFiles: (id) => componentService.getImages(id),

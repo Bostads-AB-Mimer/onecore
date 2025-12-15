@@ -1,9 +1,9 @@
 import { componentService } from '@/services/api/core/componentService'
-import { ComponentModelDocument } from '@/services/types'
+import { DocumentWithUrl } from '@/services/types'
 import { useFileManagement } from './useFileManagement'
 
 export function useComponentModelDocuments(modelId: string) {
-  const result = useFileManagement<ComponentModelDocument, { file: File }>({
+  const result = useFileManagement<DocumentWithUrl, { file: File }>({
     entityId: modelId,
     queryKey: 'component-model-documents',
     fetchFiles: (id) => componentService.getModelDocuments(id),
