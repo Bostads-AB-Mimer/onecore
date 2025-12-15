@@ -30,6 +30,7 @@ interface GetLeasesOptions {
   includeUpcomingLeases: boolean
   includeTerminatedLeases: boolean
   includeContacts: boolean
+  includeRentInfo?: boolean // defaults to true
 }
 
 const getLease = async (
@@ -88,6 +89,7 @@ const getLeasesForPropertyId = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    includeRentInfo: (options.includeRentInfo !== false).toString(),
   })
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
