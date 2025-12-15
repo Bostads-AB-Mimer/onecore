@@ -1,4 +1,4 @@
-import { logger, loggedAxios as axios } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 
 import { AdapterResult } from '../types'
@@ -15,6 +15,7 @@ const client = () =>
   })
 
 type SearchPropertiesResponse = components['schemas']['Property'][]
+type DocumentWithUrl = components['schemas']['DocumentWithUrl']
 
 export async function searchProperties(
   q: string
@@ -697,21 +698,143 @@ export async function getResidenceSummariesByBuildingCode(
   }
 }
 
+// ==================== COMPONENT CATEGORIES ====================
+
+type GetComponentCategoriesResponse =
+  components['schemas']['ComponentCategory'][]
+
+export async function getComponentCategories(
+  page?: number,
+  limit?: number
+): Promise<AdapterResult<GetComponentCategoriesResponse, 'unknown'>> {
+  try {
+    const response = await client().GET('/component-categories' as any, {
+      params: { query: { page, limit } },
+    })
+
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentCategories')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetComponentCategoryResponse = components['schemas']['ComponentCategory']
+
+export async function getComponentCategoryById(
+  id: string
+): Promise<
+  AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
+> {
+  try {
+    const response = await client().GET('/component-categories/{id}' as any, {
+      params: { path: { id } },
+    })
+
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentCategoryById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createComponentCategory(
+  data: components['schemas']['CreateComponentCategoryRequest']
+): Promise<AdapterResult<GetComponentCategoryResponse, 'unknown'>> {
+  try {
+    const response = await client().POST('/component-categories', {
+      body: data as any,
+    })
+
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentCategory')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateComponentCategory(
+  id: string,
+  data: components['schemas']['UpdateComponentCategoryRequest']
+): Promise<
+  AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
+> {
+  try {
+    const response = await client().PUT('/component-categories/{id}', {
+      params: { path: { id } },
+      body: data as any,
+    })
+
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateComponentCategory')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteComponentCategory(
+  id: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().DELETE('/component-categories/{id}', {
+      params: { path: { id } },
+    })
+
+    if (response.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.deleteComponentCategory')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENT TYPES ====================
 
 type GetComponentTypesResponse = components['schemas']['ComponentType'][]
 
 export async function getComponentTypes(
+  categoryId?: string,
   page?: number,
   limit?: number
 ): Promise<AdapterResult<GetComponentTypesResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-types', {
-      params: { query: { page, limit } },
+    const response = await client().GET('/component-types' as any, {
+      params: { query: { categoryId, page, limit } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -727,12 +850,12 @@ export async function getComponentTypeById(
   id: string
 ): Promise<AdapterResult<GetComponentTypeResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/component-types/{id}', {
+    const response = await client().GET('/component-types/{id}' as any, {
       params: { path: { id } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -754,8 +877,8 @@ export async function createComponentType(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -775,8 +898,8 @@ export async function updateComponentType(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -818,17 +941,18 @@ export async function deleteComponentType(
 type GetComponentSubtypesResponse = components['schemas']['ComponentSubtype'][]
 
 export async function getComponentSubtypes(
-  componentTypeId?: string,
+  typeId?: string,
   page?: number,
-  limit?: number
+  limit?: number,
+  subtypeName?: string
 ): Promise<AdapterResult<GetComponentSubtypesResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-subtypes', {
-      params: { query: { componentTypeId, page, limit } },
+    const response = await client().GET('/component-subtypes' as any, {
+      params: { query: { typeId, page, limit, subtypeName } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -846,12 +970,12 @@ export async function getComponentSubtypeById(
   AdapterResult<GetComponentSubtypeResponse, 'unknown' | 'not_found'>
 > {
   try {
-    const response = await client().GET('/component-subtypes/{id}', {
+    const response = await client().GET('/component-subtypes/{id}' as any, {
       params: { path: { id } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -873,8 +997,8 @@ export async function createComponentSubtype(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -896,8 +1020,8 @@ export async function updateComponentSubtype(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -943,17 +1067,25 @@ export async function getComponentModels(
   subtypeId?: string,
   manufacturer?: string,
   page?: number,
-  limit?: number
+  limit?: number,
+  modelName?: string
 ): Promise<AdapterResult<GetComponentModelsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-models', {
+    const response = await client().GET('/component-models' as any, {
       params: {
-        query: { componentTypeId, subtypeId, manufacturer, page, limit },
+        query: {
+          componentTypeId,
+          subtypeId,
+          manufacturer,
+          page,
+          limit,
+          modelName,
+        },
       },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -969,12 +1101,12 @@ export async function getComponentModelById(
   id: string
 ): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/component-models/{id}', {
+    const response = await client().GET('/component-models/{id}' as any, {
       params: { path: { id } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -996,8 +1128,8 @@ export async function createComponentModel(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1017,8 +1149,8 @@ export async function updateComponentModel(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -1063,15 +1195,16 @@ export async function getComponents(
   modelId?: string,
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
   page?: number,
-  limit?: number
+  limit?: number,
+  serialNumber?: string
 ): Promise<AdapterResult<GetComponentsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/components-new', {
-      params: { query: { modelId, status, page, limit } },
+    const response = await client().GET('/components' as any, {
+      params: { query: { modelId, status, page, limit, serialNumber } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1087,12 +1220,12 @@ export async function getComponentById(
   id: string
 ): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/components-new/{id}', {
+    const response = await client().GET('/components/{id}' as any, {
       params: { path: { id } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -1114,8 +1247,8 @@ export async function createComponent(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1135,8 +1268,8 @@ export async function updateComponent(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -1186,12 +1319,12 @@ export async function getComponentInstallations(
   limit?: number
 ): Promise<AdapterResult<GetComponentInstallationsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-installations', {
+    const response = await client().GET('/component-installations' as any, {
       params: { query: { componentId, spaceId, buildingPartId, page, limit } },
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1210,12 +1343,15 @@ export async function getComponentInstallationById(
   AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
 > {
   try {
-    const response = await client().GET('/component-installations/{id}', {
-      params: { path: { id } },
-    })
+    const response = await client().GET(
+      '/component-installations/{id}' as any,
+      {
+        params: { path: { id } },
+      }
+    )
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -1237,8 +1373,8 @@ export async function createComponentInstallation(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1260,8 +1396,8 @@ export async function updateComponentInstallation(
       body: data as any,
     })
 
-    if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
     }
 
     if (response.response.status === 404) {
@@ -1309,12 +1445,15 @@ export async function getComponentsByRoomId(
   AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'unknown'>
 > {
   try {
-    const fetchResponse = await client().GET('/components/by-room/{roomId}', {
-      params: { path: { roomId } },
-    })
+    const fetchResponse = await client().GET(
+      '/components/by-room/{roomId}' as any,
+      {
+        params: { path: { roomId } },
+      }
+    )
 
-    if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content }
+    if ((fetchResponse.data as any)?.content) {
+      return { ok: true, data: (fetchResponse.data as any).content }
     }
 
     if (fetchResponse.response.status === 404) {
@@ -1328,107 +1467,7 @@ export async function getComponentsByRoomId(
   }
 }
 
-// ==================== FILE OPERATION HELPERS ====================
-
-/**
- * Generic file upload using Node.js FormData
- */
-async function uploadFileWithFormData<T>(
-  endpoint: string,
-  fileBuffer: Buffer,
-  fileName: string,
-  mimeType: string,
-  queryParams?: Record<string, string>
-): Promise<AdapterResult<T, 'unknown' | 'bad_request' | 'forbidden'>> {
-  try {
-    const FormData = (await import('form-data')).default
-    const formData = new FormData()
-    formData.append('file', fileBuffer, {
-      filename: fileName,
-      contentType: mimeType,
-    })
-
-    const url = new URL(`${config.propertyBaseService.url}${endpoint}`)
-    if (queryParams) {
-      Object.entries(queryParams).forEach(([k, v]) =>
-        url.searchParams.set(k, v)
-      )
-    }
-
-    const response = await axios.post(url.toString(), formData, {
-      headers: formData.getHeaders(),
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-    })
-
-    return { ok: true, data: response.data.content }
-  } catch (err: any) {
-    // Extract HTTP status for better error handling
-    if (err.response?.status === 400) {
-      logger.warn({ err, endpoint }, 'File upload - bad request')
-      return { ok: false, err: 'bad_request' }
-    }
-    if (err.response?.status === 403) {
-      logger.warn({ err, endpoint }, 'File upload - forbidden')
-      return { ok: false, err: 'forbidden' }
-    }
-    logger.error({ err, endpoint }, 'File upload - unknown error')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-/**
- * Generic file list fetch
- */
-async function fetchFileList<T>(
-  endpoint: string,
-  dataPath: string // 'files' or 'documents'
-): Promise<AdapterResult<T[], 'unknown' | 'not_found'>> {
-  try {
-    const url = `${config.propertyBaseService.url}${endpoint}`
-    const response = await axios.get(url)
-
-    return { ok: true, data: response.data.content[dataPath] }
-  } catch (err: any) {
-    if (err.response?.status === 404) {
-      return { ok: false, err: 'not_found' }
-    }
-    logger.error({ err, endpoint }, 'Fetch file list failed')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-/**
- * Generic file delete
- */
-async function deleteFileHelper(
-  endpoint: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
-  try {
-    const url = `${config.propertyBaseService.url}${endpoint}`
-    await axios.delete(url)
-
-    return { ok: true, data: undefined }
-  } catch (err: any) {
-    if (err.response?.status === 404) {
-      return { ok: false, err: 'not_found' }
-    }
-    logger.error({ err, endpoint }, 'Delete file failed')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 // ==================== COMPONENT FILE UPLOADS ====================
-
-// Define file metadata type inline (MinIO integration)
-type FileMetadataWithUrl = {
-  fileId: string
-  originalName: string
-  size: number
-  mimeType: string
-  uploadedAt: string
-  url: string
-}
 
 export async function uploadComponentFile(
   componentId: string,
@@ -1437,28 +1476,96 @@ export async function uploadComponentFile(
   mimeType: string,
   caption?: string
 ): Promise<
-  AdapterResult<FileMetadataWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
+  AdapterResult<DocumentWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
 > {
-  return uploadFileWithFormData(
-    `/components/${componentId}/upload`,
-    fileBuffer,
-    fileName,
-    mimeType,
-    caption ? { caption } : undefined
-  )
+  try {
+    const FormData = (await import('form-data')).default
+    const formData = new FormData()
+    formData.append('file', fileBuffer, {
+      filename: fileName,
+      contentType: mimeType,
+    })
+    formData.append('componentInstanceId', componentId)
+    if (caption) {
+      formData.append('caption', caption)
+    }
+
+    const response = await client().POST('/documents/upload' as any, {
+      body: formData as any,
+      headers: formData.getHeaders() as any,
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data as DocumentWithUrl }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    if (err.response?.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+    if (err.response?.status === 403) {
+      return { ok: false, err: 'forbidden' }
+    }
+    logger.error(
+      { err, componentId },
+      'property-base-adapter.uploadComponentFile'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 export async function getComponentFiles(
   componentId: string
-): Promise<AdapterResult<FileMetadataWithUrl[], 'unknown' | 'not_found'>> {
-  return fetchFileList(`/components/${componentId}/files`, 'files')
+): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().GET(
+      '/documents/component-instances/{id}' as any,
+      {
+        params: {
+          path: { id: componentId } as any,
+        },
+      }
+    )
+
+    if (response.data) {
+      return { ok: true, data: response.data as DocumentWithUrl[] }
+    }
+
+    return { ok: false, err: 'not_found' }
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+    logger.error(
+      { err, componentId },
+      'property-base-adapter.getComponentFiles'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 export async function deleteComponentFile(
-  componentId: string,
-  fileId: string
+  documentId: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
-  return deleteFileHelper(`/components/${componentId}/files/${fileId}`)
+  try {
+    await client().DELETE('/documents/{id}' as any, {
+      params: {
+        path: { id: documentId } as any,
+      },
+    })
+
+    return { ok: true, data: undefined }
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+    logger.error(
+      { err, documentId },
+      'property-base-adapter.deleteComponentFile'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 // ==================== COMPONENT MODEL DOCUMENTS ====================
@@ -1469,25 +1576,91 @@ export async function uploadComponentModelDocument(
   fileName: string,
   mimeType: string
 ): Promise<
-  AdapterResult<FileMetadataWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
+  AdapterResult<DocumentWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
 > {
-  return uploadFileWithFormData(
-    `/component-models/${modelId}/upload`,
-    fileBuffer,
-    fileName,
-    mimeType
-  )
+  try {
+    const FormData = (await import('form-data')).default
+    const formData = new FormData()
+    formData.append('file', fileBuffer, {
+      filename: fileName,
+      contentType: mimeType,
+    })
+    formData.append('componentModelId', modelId)
+
+    const response = await client().POST('/documents/upload' as any, {
+      body: formData as any,
+      headers: formData.getHeaders() as any,
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data as DocumentWithUrl }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    if (err.response?.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+    if (err.response?.status === 403) {
+      return { ok: false, err: 'forbidden' }
+    }
+    logger.error(
+      { err, modelId },
+      'property-base-adapter.uploadComponentModelDocument'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 export async function getComponentModelDocuments(
   modelId: string
-): Promise<AdapterResult<FileMetadataWithUrl[], 'unknown' | 'not_found'>> {
-  return fetchFileList(`/component-models/${modelId}/documents`, 'documents')
+): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().GET(
+      '/documents/component-models/{id}' as any,
+      {
+        params: {
+          path: { id: modelId } as any,
+        },
+      }
+    )
+
+    if (response.data) {
+      return { ok: true, data: response.data as DocumentWithUrl[] }
+    }
+
+    return { ok: false, err: 'not_found' }
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+    logger.error(
+      { err, modelId },
+      'property-base-adapter.getComponentModelDocuments'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 export async function deleteComponentModelDocument(
-  modelId: string,
-  fileId: string
+  documentId: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
-  return deleteFileHelper(`/component-models/${modelId}/documents/${fileId}`)
+  try {
+    await client().DELETE('/documents/{id}' as any, {
+      params: {
+        path: { id: documentId } as any,
+      },
+    })
+
+    return { ok: true, data: undefined }
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+    logger.error(
+      { err, documentId },
+      'property-base-adapter.deleteComponentModelDocument'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }

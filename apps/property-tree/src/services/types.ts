@@ -62,6 +62,49 @@ export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
 export type FileMetadataWithUrl = components['schemas']['FileMetadataWithUrl']
 export type ComponentImage = FileMetadataWithUrl
 export type ComponentModelDocument = FileMetadataWithUrl
+export type ComponentInstance = components['schemas']['ComponentInstance']
+
+// Component Library entity types
+export type ComponentCategory = components['schemas']['ComponentCategory']
+export type ComponentType = components['schemas']['ComponentType']
+export type ComponentSubtype = components['schemas']['ComponentSubtype']
+export type ComponentModel = components['schemas']['ComponentModel']
+
+// Component Library request types
+export type CreateComponentCategory =
+  components['schemas']['CreateComponentCategoryRequest']
+export type UpdateComponentCategory =
+  components['schemas']['UpdateComponentCategoryRequest']
+export type CreateComponentType =
+  components['schemas']['CreateComponentTypeRequest']
+export type UpdateComponentType =
+  components['schemas']['UpdateComponentTypeRequest']
+export type CreateComponentSubtype =
+  components['schemas']['CreateComponentSubtypeRequest']
+export type UpdateComponentSubtype =
+  components['schemas']['UpdateComponentSubtypeRequest']
+export type CreateComponentModel =
+  components['schemas']['CreateComponentModelRequest']
+export type UpdateComponentModel =
+  components['schemas']['UpdateComponentModelRequest']
+
+// Component Instance request types
+export type CreateComponentInstance = {
+  modelId: string
+  serialNumber: string
+  specifications?: string | null
+  additionalInformation?: string | null
+  warrantyStartDate?: string | null
+  warrantyMonths: number
+  priceAtPurchase: number
+  depreciationPriceAtPurchase: number
+  ncsCode?: string | null
+  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+  quantity: number
+  economicLifespan: number
+}
+
+export type UpdateComponentInstance = Partial<CreateComponentInstance>
 
 // Custom types that aren't in the API
 export interface Issue {
