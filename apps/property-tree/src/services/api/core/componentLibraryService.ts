@@ -70,13 +70,22 @@ export const componentLibraryService = {
 
   // ===== Type Operations =====
   async getTypes(categoryId?: string): Promise<ComponentType[]> {
-    console.log('[componentLibraryService] getTypes called with categoryId:', categoryId)
-    const { data, error} = await GET('/component-types', {
-      params: categoryId ? {
-        query: { categoryId } as any, // Type override until swagger is regenerated
-      } : undefined,
+    console.log(
+      '[componentLibraryService] getTypes called with categoryId:',
+      categoryId
+    )
+    const { data, error } = await GET('/component-types', {
+      params: categoryId
+        ? {
+            query: { categoryId } as any, // Type override until swagger is regenerated
+          }
+        : undefined,
     })
-    console.log('[componentLibraryService] API response:', data?.content?.length, 'types')
+    console.log(
+      '[componentLibraryService] API response:',
+      data?.content?.length,
+      'types'
+    )
     if (error) throw error
     return (data?.content || []) as ComponentType[]
   },
@@ -210,9 +219,12 @@ export const componentLibraryService = {
     }
 
     const { data, error } = await GET('/component-models', {
-      params: Object.keys(queryParams).length > 0 ? {
-        query: queryParams as any,
-      } : undefined,
+      params:
+        Object.keys(queryParams).length > 0
+          ? {
+              query: queryParams as any,
+            }
+          : undefined,
     })
     if (error) throw error
     return (data?.content || []) as ComponentModel[]

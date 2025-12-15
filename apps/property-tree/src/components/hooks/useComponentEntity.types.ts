@@ -21,29 +21,41 @@ export type EntityType = 'category' | 'type' | 'subtype' | 'model' | 'instance'
 export type Operation = 'create' | 'update' | 'delete'
 
 // Conditional type helpers for entity data
-export type EntityData<T extends EntityType> =
-  T extends 'category' ? ComponentCategory :
-  T extends 'type' ? ComponentType :
-  T extends 'subtype' ? ComponentSubtype :
-  T extends 'model' ? ComponentModel :
-  T extends 'instance' ? ComponentInstance :
-  never
+export type EntityData<T extends EntityType> = T extends 'category'
+  ? ComponentCategory
+  : T extends 'type'
+    ? ComponentType
+    : T extends 'subtype'
+      ? ComponentSubtype
+      : T extends 'model'
+        ? ComponentModel
+        : T extends 'instance'
+          ? ComponentInstance
+          : never
 
-export type CreateData<T extends EntityType> =
-  T extends 'category' ? CreateComponentCategory :
-  T extends 'type' ? CreateComponentType :
-  T extends 'subtype' ? CreateComponentSubtype :
-  T extends 'model' ? CreateComponentModel :
-  T extends 'instance' ? CreateComponentInstance :
-  never
+export type CreateData<T extends EntityType> = T extends 'category'
+  ? CreateComponentCategory
+  : T extends 'type'
+    ? CreateComponentType
+    : T extends 'subtype'
+      ? CreateComponentSubtype
+      : T extends 'model'
+        ? CreateComponentModel
+        : T extends 'instance'
+          ? CreateComponentInstance
+          : never
 
-export type UpdateData<T extends EntityType> =
-  T extends 'category' ? UpdateComponentCategory :
-  T extends 'type' ? UpdateComponentType :
-  T extends 'subtype' ? UpdateComponentSubtype :
-  T extends 'model' ? UpdateComponentModel :
-  T extends 'instance' ? UpdateComponentInstance :
-  never
+export type UpdateData<T extends EntityType> = T extends 'category'
+  ? UpdateComponentCategory
+  : T extends 'type'
+    ? UpdateComponentType
+    : T extends 'subtype'
+      ? UpdateComponentSubtype
+      : T extends 'model'
+        ? UpdateComponentModel
+        : T extends 'instance'
+          ? UpdateComponentInstance
+          : never
 
 // Mutation variable types
 export type UpdateMutationVariables<T extends EntityType> = {
