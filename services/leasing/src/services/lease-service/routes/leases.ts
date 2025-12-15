@@ -216,6 +216,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Include contact information in the result.
+   *       - in: query
+   *         name: includeRentInfo
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Include rent information in the result. Defaults to true.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -246,6 +252,10 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value === 'true'),
+    includeRentInfo: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value !== 'false'), // defaults to true
   })
 
   router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
@@ -253,6 +263,7 @@ export const routes = (router: KoaRouter) => {
       'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
+      'includeRentInfo',
     ])
 
     const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
@@ -267,6 +278,7 @@ export const routes = (router: KoaRouter) => {
       includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
       includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
       includeContacts: queryParams.data.includeContacts,
+      includeRentInfo: queryParams.data.includeRentInfo,
     })
 
     ctx.body = {

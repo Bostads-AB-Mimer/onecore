@@ -9,6 +9,7 @@ async function getByRentalPropertyId(
     includeContacts?: boolean
     includeUpcomingLeases?: boolean
     includeTerminatedLeases?: boolean
+    includeRentInfo?: boolean
   }
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(

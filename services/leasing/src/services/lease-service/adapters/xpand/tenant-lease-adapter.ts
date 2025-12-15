@@ -10,6 +10,7 @@ interface GetLeasesOptions {
   includeUpcomingLeases: boolean
   includeTerminatedLeases: boolean
   includeContacts: boolean
+  includeRentInfo?: boolean // defaults to true for backwards compatibility
 }
 
 type PartialLease = {
@@ -233,26 +234,32 @@ const getLeasesForPropertyId = async (
   options: GetLeasesOptions
 ) => {
   let leases: Lease[] = []
+  const includeRentInfo = options.includeRentInfo !== false
 
-  const rows = await xpandDb
+  const baseColumns = [
+    'hyobj.hyobjben as leaseId',
+    'hyhav.hyhavben as leaseType',
+    'hyobj.uppsagtav as noticeGivenBy',
+    'hyobj.avtalsdat as contractDate',
+    'hyobj.sistadeb as lastDebitDate',
+    'hyobj.godkdatum as approvalDate',
+    'hyobj.uppsdatum as noticeDate',
+    'hyobj.fdate as fromDate',
+    'hyobj.tdate as toDate',
+    'hyobj.uppstidg as noticeTimeTenant',
+    'hyobj.onskflytt AS preferredMoveOutDate',
+    'hyobj.makuldatum AS terminationDate',
+  ]
+
+  let query = xpandDb
     .from('hyobj')
     .select(
-      'hyobj.hyobjben as leaseId',
-      'hyhav.hyhavben as leaseType',
-      'hyobj.uppsagtav as noticeGivenBy',
-      'hyobj.avtalsdat as contractDate',
-      'hyobj.sistadeb as lastDebitDate',
-      'hyobj.godkdatum as approvalDate',
-      'hyobj.uppsdatum as noticeDate',
-      'hyobj.fdate as fromDate',
-      'hyobj.tdate as toDate',
-      'hyobj.uppstidg as noticeTimeTenant',
-      'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate',
-      'rent.totalYearRent'
+      includeRentInfo ? [...baseColumns, 'rent.totalYearRent'] : baseColumns
     )
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
-    .leftJoin(
+
+  if (includeRentInfo) {
+    query = query.leftJoin(
       xpandDb.raw(`
         (
           SELECT rentalpropertyid, SUM(yearrent) as totalYearRent
@@ -269,6 +276,9 @@ const getLeasesForPropertyId = async (
         END
       `)
     )
+  }
+
+  const rows = await query
     .where('hyobj.hyobjben', 'like', `%${propertyId}%`)
     .whereNotNull('hyobj.fdate')
 
