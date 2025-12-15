@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
+import { gql } from 'graphql-request'
 import {
   Invoice,
   InvoicePaymentEvent,
@@ -23,6 +24,11 @@ const axiosOptions = {
   },
 }
 
+const TransactionSourceDbId = {
+  AR: 797,
+  SO: 600,
+  OS: 3536,
+}
 interface XledgerResponse {
   status: 'ok' | 'retry' | 'error'
   data: any
@@ -372,14 +378,12 @@ export async function getAllInvoicePaymentEvents(
   after?: string
 ): Promise<InvoicePaymentEvent[]> {
   const query = {
-    query: `
-      query($after: String, $matchIds: [Int!]) {
+    query: gql`
+      query ($after: String, $matchIds: [Int!]) {
         arTransactions(
           first: 1000
           after: $after
-          filter: {
-            matchId_in: $matchIds
-          }
+          filter: { matchId_in: $matchIds }
         ) {
           edges {
             cursor
@@ -526,15 +530,15 @@ export const getAllInvoicesWithMatchIds = async (
   after?: string
 ): Promise<InvoiceWithMatchId[]> => {
   const query = {
-    query: `
-      query($from: String, $to: String, $after: String) {
+    query: gql`
+      query($from: String, $to: String, $after: String, $transactionSourceDbIds: [Int!]) {
         arTransactions(
           first: 10000,
           after: $after
           filter: {
             invoiceDate_gte: $from
-            invoiceDate_lt: $to
-            headerTransactionSourceDbId_in: [600, 797, 3536]
+            invoiceDate_lte: $to
+            headerTransactionSourceDbId_in: $transactionSourceDbIds
           }
         ) {
           edges {
@@ -554,6 +558,10 @@ export const getAllInvoicesWithMatchIds = async (
       from: dateToGraphQlDateString(from),
       to: dateToGraphQlDateString(to),
       after: after ?? null,
+      transactionSourceDbIds: [
+        TransactionSourceDbId.AR,
+        TransactionSourceDbId.OS,
+      ],
     },
   }
   const result = await makeXledgerRequest(query)
