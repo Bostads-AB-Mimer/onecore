@@ -475,10 +475,21 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                   {component.model?.technicalSpecification && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Specifikationer:
+                        Modell-specifikationer:
                       </span>
-                      <span className="font-medium">
+                      <span className="font-medium whitespace-pre-wrap">
                         {component.model.technicalSpecification}
+                      </span>
+                    </div>
+                  )}
+
+                  {component.specifications && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Komponent-specifikationer:
+                      </span>
+                      <span className="font-medium whitespace-pre-wrap">
+                        {component.specifications}
                       </span>
                     </div>
                   )}
@@ -519,6 +530,22 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                 </div>
               </AccordionContent>
             </AccordionItem>
+
+            {/* SECTION 4: ADDITIONAL INFO (Collapsed by default) */}
+            {component.additionalInformation && (
+              <AccordionItem value="additional">
+                <AccordionTrigger className="text-sm font-medium">
+                  Övrig Information
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2 text-sm">
+                    <p className="whitespace-pre-wrap">
+                      {component.additionalInformation}
+                    </p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )}
           </Accordion>
 
           {/* Action Button */}
