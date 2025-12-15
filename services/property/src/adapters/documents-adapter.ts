@@ -7,10 +7,14 @@ export const createDocument = async (data: {
   fileId: string
 }) => {
   if (!data.componentModelId && !data.componentInstanceId) {
-    throw new Error('Either componentModelId or componentInstanceId must be provided')
+    throw new Error(
+      'Either componentModelId or componentInstanceId must be provided'
+    )
   }
   if (data.componentModelId && data.componentInstanceId) {
-    throw new Error('Cannot provide both componentModelId and componentInstanceId')
+    throw new Error(
+      'Cannot provide both componentModelId and componentInstanceId'
+    )
   }
 
   return prisma.documents.create({ data })
@@ -20,17 +24,21 @@ export const getDocumentById = async (id: string) => {
   return prisma.documents.findUnique({ where: { id } })
 }
 
-export const getDocumentsByComponentModel = async (componentModelId: string) => {
+export const getDocumentsByComponentModel = async (
+  componentModelId: string
+) => {
   return prisma.documents.findMany({
     where: { componentModelId },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
   })
 }
 
-export const getDocumentsByComponentInstance = async (componentInstanceId: string) => {
+export const getDocumentsByComponentInstance = async (
+  componentInstanceId: string
+) => {
   return prisma.documents.findMany({
     where: { componentInstanceId },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
   })
 }
 
@@ -44,7 +52,9 @@ export const deleteDocument = async (id: string) => {
   await prisma.documents.delete({ where: { id } })
 }
 
-export const getDocumentsWithMetadata = async (documents: Array<{ id: string; fileId: string; createdAt: Date }>) => {
+export const getDocumentsWithMetadata = async (
+  documents: Array<{ id: string; fileId: string; createdAt: Date }>
+) => {
   return Promise.all(
     documents.map(async (doc) => {
       const metadata = await getFileMetadataFromMinio(doc.fileId)
@@ -54,7 +64,7 @@ export const getDocumentsWithMetadata = async (documents: Array<{ id: string; fi
         originalName: metadata.originalName,
         mimeType: metadata.mimeType,
         size: metadata.size,
-        createdAt: doc.createdAt
+        createdAt: doc.createdAt,
       }
     })
   )

@@ -3,8 +3,8 @@ import {
   type UseQueryOptions,
   type UseQueryResult,
 } from '@tanstack/react-query'
-import { ENTITY_CONFIG, buildQueryKey } from './useComponentEntity.config'
-import type { EntityType, EntityData } from './useComponentEntity.types'
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+import type { EntityType, EntityData } from '@/services/types'
 
 /**
  * Generic hook for fetching component library entities
@@ -37,17 +37,53 @@ export function useComponentEntity<T extends EntityType>(
     'queryKey' | 'queryFn'
   >
 ): UseQueryResult<EntityData<T>[], Error> {
-  const config = ENTITY_CONFIG[entityType]
+  // Build query key based on entity type
+  const queryKey = buildQueryKey(entityType, parentId, searchOptions?.search)
 
-  // Note: Child entities (type, subtype, model) now support fetching all items when parentId is undefined
+  // Get fetch function based on entity type
+  const fetchFn = () => {
+    switch (entityType) {
+      case 'category':
+        return componentLibraryService.getCategories()
+      case 'type':
+        return componentLibraryService.getTypes(parentId)
+      case 'subtype':
+        return componentLibraryService.getSubtypes(parentId, searchOptions)
+      case 'model':
+        return componentLibraryService.getModels(parentId, searchOptions)
+      case 'instance':
+        return componentLibraryService.getInstances(parentId, searchOptions)
+      default:
+        throw new Error(`Unknown entity type: ${entityType}`)
+    }
+  }
+
+  // Child entities (type, subtype, model) now support fetching all items when parentId is undefined
   // The query should always be enabled unless explicitly disabled via options
   return useQuery<EntityData<T>[], Error>({
-    queryKey: buildQueryKey(entityType, parentId, searchOptions?.search),
-    queryFn: () =>
-      config.service.fetch(parentId, searchOptions?.search) as Promise<
-        EntityData<T>[]
-      >,
+    queryKey,
+    queryFn: fetchFn as () => Promise<EntityData<T>[]>,
     enabled: options?.enabled !== false,
     ...options,
   })
+}
+
+function buildQueryKey(
+  entityType: EntityType,
+  parentId?: string,
+  search?: string
+): (string | undefined)[] {
+  const roots = {
+    category: 'component-categories',
+    type: 'component-types',
+    subtype: 'component-subtypes',
+    model: 'component-models',
+    instance: 'component-instances',
+  }
+
+  if (entityType === 'category') {
+    return [roots[entityType]]
+  }
+
+  return [roots[entityType], parentId, search]
 }

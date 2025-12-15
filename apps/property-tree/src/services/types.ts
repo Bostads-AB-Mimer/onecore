@@ -103,6 +103,68 @@ export type CreateComponentInstance = {
 
 export type UpdateComponentInstance = Partial<CreateComponentInstance>
 
+// Component entity conditional helper types for generic hooks
+export type EntityType = 'category' | 'type' | 'subtype' | 'model' | 'instance'
+export type Operation = 'create' | 'update' | 'delete'
+
+export type EntityData<T extends EntityType> = T extends 'category'
+  ? ComponentCategory
+  : T extends 'type'
+    ? ComponentType
+    : T extends 'subtype'
+      ? ComponentSubtype
+      : T extends 'model'
+        ? ComponentModel
+        : T extends 'instance'
+          ? ComponentInstance
+          : never
+
+export type CreateData<T extends EntityType> = T extends 'category'
+  ? CreateComponentCategory
+  : T extends 'type'
+    ? CreateComponentType
+    : T extends 'subtype'
+      ? CreateComponentSubtype
+      : T extends 'model'
+        ? CreateComponentModel
+        : T extends 'instance'
+          ? CreateComponentInstance
+          : never
+
+export type UpdateData<T extends EntityType> = T extends 'category'
+  ? UpdateComponentCategory
+  : T extends 'type'
+    ? UpdateComponentType
+    : T extends 'subtype'
+      ? UpdateComponentSubtype
+      : T extends 'model'
+        ? UpdateComponentModel
+        : T extends 'instance'
+          ? UpdateComponentInstance
+          : never
+
+export type UpdateMutationVariables<T extends EntityType> = {
+  id: string
+  data: UpdateData<T>
+  parentId?: string
+}
+
+export type DeleteMutationVariables = {
+  id: string
+  parentId?: string
+}
+
+export type MutationVariables<
+  T extends EntityType,
+  Op extends Operation,
+> = Op extends 'create'
+  ? CreateData<T>
+  : Op extends 'update'
+    ? UpdateMutationVariables<T>
+    : Op extends 'delete'
+      ? DeleteMutationVariables
+      : never
+
 // Custom types that aren't in the API
 export interface Issue {
   id: string
