@@ -33,7 +33,8 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       parentIdField: 'typeId',
     },
     service: {
-      fetch: (parentId, search) => componentLibraryService.getSubtypes(parentId, { search }),
+      fetch: (parentId?: string, search?: string) =>
+        componentLibraryService.getSubtypes(parentId, { search }),
       create: (data) => componentLibraryService.createSubtype(data),
       update: (id, data) => componentLibraryService.updateSubtype(id, data),
       delete: (id) => componentLibraryService.deleteSubtype(id),
@@ -45,7 +46,8 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       parentIdField: 'subtypeId',
     },
     service: {
-      fetch: (parentId, search) => componentLibraryService.getModels(parentId, { search }),
+      fetch: (parentId?: string, search?: string) =>
+        componentLibraryService.getModels(parentId, { search }),
       create: (data) => componentLibraryService.createModel(data),
       update: (id, data) => componentLibraryService.updateModel(id, data),
       delete: (id) => componentLibraryService.deleteModel(id),
@@ -57,7 +59,8 @@ export const ENTITY_CONFIG: Record<EntityType, EntityConfig> = {
       parentIdField: 'modelId',
     },
     service: {
-      fetch: (parentId, search) => componentLibraryService.getInstances(parentId, { search }),
+      fetch: (parentId?: string, search?: string) =>
+        componentLibraryService.getInstances(parentId, { search }),
       create: (data) => componentLibraryService.createInstance(data),
       update: (id, data) => componentLibraryService.updateInstance(id, data),
       delete: (id) => componentLibraryService.deleteInstance(id),

@@ -9,7 +9,10 @@ import type { ComponentInstance } from '@/services/types'
 interface InstanceSelectorProps {
   modelId: string
   value: string // Selected instance ID
-  onChange: (instanceId: string, instance: ComponentInstance | undefined) => void
+  onChange: (
+    instanceId: string,
+    instance: ComponentInstance | undefined
+  ) => void
   error?: string
 }
 
@@ -27,7 +30,11 @@ export const InstanceSelector = ({
   const shouldSearch = debouncedSearch.trim().length >= MIN_SEARCH_LENGTH
 
   // Query with backend search - only enabled when search meets minimum length
-  const { data: instances = [], isLoading, isError } = useQuery({
+  const {
+    data: instances = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['instances', 'uninstalled', modelId, debouncedSearch],
     queryFn: () =>
       componentService.getUninstalledInstances(modelId, debouncedSearch),

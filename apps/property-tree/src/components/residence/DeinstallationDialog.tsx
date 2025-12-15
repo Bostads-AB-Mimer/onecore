@@ -88,8 +88,8 @@ export const DeinstallationDialog = ({
             <div>
               <p className="text-sm text-muted-foreground">Komponent</p>
               <p className="font-medium">
-                {component.model?.subtype?.componentType?.category?.categoryName ||
-                  ''}{' '}
+                {component.model?.subtype?.componentType?.category
+                  ?.categoryName || ''}{' '}
                 - {component.model?.manufacturer} {component.model?.modelName}
               </p>
             </div>

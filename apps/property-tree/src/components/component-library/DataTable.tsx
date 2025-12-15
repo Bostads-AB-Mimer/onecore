@@ -84,7 +84,11 @@ export function DataTable<T extends { id: string }>({
           {data.map((item) => (
             <TableRow
               key={item.id}
-              className={onRowClick ? 'hover:bg-muted/50 cursor-pointer' : 'hover:bg-muted/50'}
+              className={
+                onRowClick
+                  ? 'hover:bg-muted/50 cursor-pointer'
+                  : 'hover:bg-muted/50'
+              }
               onClick={() => onRowClick?.(item)}
             >
               {columns.map((col) => (

@@ -23,9 +23,7 @@ export const ModelsTable = ({
     {
       key: 'modelName',
       label: 'Modellnamn',
-      render: (item) => (
-        <div className="font-medium">{item.modelName}</div>
-      ),
+      render: (item) => <div className="font-medium">{item.modelName}</div>,
     },
     {
       key: 'manufacturer',
@@ -48,9 +46,7 @@ export const ModelsTable = ({
       key: 'dimensions',
       label: 'Dimensioner',
       render: (item) => (
-        <span className="text-muted-foreground">
-          {item.dimensions || '-'}
-        </span>
+        <span className="text-muted-foreground">{item.dimensions || '-'}</span>
       ),
     },
   ]

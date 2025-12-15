@@ -59,9 +59,6 @@ export type ResidenceSearchResult =
 export type ResidenceSummary = components['schemas']['ResidenceSummary']
 export type Room = components['schemas']['Room']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
-export type FileMetadataWithUrl = components['schemas']['FileMetadataWithUrl']
-export type ComponentImage = FileMetadataWithUrl
-export type ComponentModelDocument = FileMetadataWithUrl
 export type ComponentInstance = components['schemas']['ComponentInstance']
 
 // Component Library entity types
@@ -312,3 +309,5 @@ export interface TenantCommentsResponse {
   content: TenantCommentRaw[]
   _links?: Record<string, { href: string }>
 }
+
+export type DocumentWithUrl = components['schemas']['DocumentWithUrl']

@@ -23,7 +23,11 @@ export const CreateInstanceDialog = ({
   onClose,
   model,
 }: CreateInstanceDialogProps) => {
-  const createMutation = useComponentEntityMutation('instance', 'create', 'modelId')
+  const createMutation = useComponentEntityMutation(
+    'instance',
+    'create',
+    'modelId'
+  )
 
   const [formData, setFormData] = useState({
     serialNumber: '',
@@ -32,7 +36,11 @@ export const CreateInstanceDialog = ({
     priceAtPurchase: 0,
     depreciationPriceAtPurchase: 0,
     economicLifespan: 0,
-    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
+    status: 'ACTIVE' as
+      | 'ACTIVE'
+      | 'INACTIVE'
+      | 'MAINTENANCE'
+      | 'DECOMMISSIONED',
     quantity: 1,
     ncsCode: '',
   })
@@ -58,10 +66,10 @@ export const CreateInstanceDialog = ({
   }, [isOpen, model])
 
   const handleChange = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev }
         delete newErrors[name]
         return newErrors
@@ -150,7 +158,9 @@ export const CreateInstanceDialog = ({
                   type="number"
                   min="0"
                   value={formData.quantity}
-                  onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleChange('quantity', parseInt(e.target.value) || 0)
+                  }
                 />
                 {errors.quantity && (
                   <p className="text-sm text-destructive mt-1">
@@ -182,12 +192,16 @@ export const CreateInstanceDialog = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="warrantyStartDate">Garantistartdatum (valfritt)</Label>
+                <Label htmlFor="warrantyStartDate">
+                  Garantistartdatum (valfritt)
+                </Label>
                 <Input
                   id="warrantyStartDate"
                   type="date"
                   value={formData.warrantyStartDate}
-                  onChange={(e) => handleChange('warrantyStartDate', e.target.value)}
+                  onChange={(e) =>
+                    handleChange('warrantyStartDate', e.target.value)
+                  }
                 />
               </div>
 
@@ -198,7 +212,12 @@ export const CreateInstanceDialog = ({
                   type="number"
                   min="0"
                   value={formData.warrantyMonths}
-                  onChange={(e) => handleChange('warrantyMonths', parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleChange(
+                      'warrantyMonths',
+                      parseInt(e.target.value) || 0
+                    )
+                  }
                 />
                 {errors.warrantyMonths && (
                   <p className="text-sm text-destructive mt-1">
@@ -222,7 +241,12 @@ export const CreateInstanceDialog = ({
                   min="0"
                   step="0.01"
                   value={formData.priceAtPurchase}
-                  onChange={(e) => handleChange('priceAtPurchase', parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleChange(
+                      'priceAtPurchase',
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
                 />
                 {errors.priceAtPurchase && (
                   <p className="text-sm text-destructive mt-1">
@@ -241,7 +265,12 @@ export const CreateInstanceDialog = ({
                   min="0"
                   step="0.01"
                   value={formData.depreciationPriceAtPurchase}
-                  onChange={(e) => handleChange('depreciationPriceAtPurchase', parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleChange(
+                      'depreciationPriceAtPurchase',
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
                   placeholder={
                     model.subtype?.depreciationPrice
                       ? `Standard: ${model.subtype.depreciationPrice} kr`
@@ -257,13 +286,20 @@ export const CreateInstanceDialog = ({
             </div>
 
             <div>
-              <Label htmlFor="economicLifespan">Ekonomisk livslängd (år) *</Label>
+              <Label htmlFor="economicLifespan">
+                Ekonomisk livslängd (år) *
+              </Label>
               <Input
                 id="economicLifespan"
                 type="number"
                 min="0"
                 value={formData.economicLifespan}
-                onChange={(e) => handleChange('economicLifespan', parseInt(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleChange(
+                    'economicLifespan',
+                    parseInt(e.target.value) || 0
+                  )
+                }
                 placeholder={
                   model.subtype?.economicLifespan
                     ? `Standard: ${model.subtype.economicLifespan} år`

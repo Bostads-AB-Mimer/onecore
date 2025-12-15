@@ -21,17 +21,13 @@ export const SubtypesTable = ({
     {
       key: 'name',
       label: 'Namn',
-      render: (item) => (
-        <div className="font-medium">{item.subTypeName}</div>
-      ),
+      render: (item) => <div className="font-medium">{item.subTypeName}</div>,
     },
     {
       key: 'xpandCode',
       label: 'Xpand-kod',
       render: (item) => (
-        <span className="text-muted-foreground">
-          {item.xpandCode || '-'}
-        </span>
+        <span className="text-muted-foreground">{item.xpandCode || '-'}</span>
       ),
     },
     {
