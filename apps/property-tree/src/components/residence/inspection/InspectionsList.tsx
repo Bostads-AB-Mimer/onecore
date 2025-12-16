@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Tabs,
   TabsContent,
@@ -17,21 +18,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/v2/Table'
-import type { Room } from '@/services/types'
+import { roomService } from '@/services/api/core'
+import { Grid } from '@/components/ui/Grid'
 
 import type {
   InspectionRoom,
   Inspection,
 } from '@/components/residence/inspection/types'
 interface InspectionsListProps {
-  rooms: Room[]
+  residenceId: string
   inspections: Inspection[]
   onInspectionCreated: () => void
   tenant?: any
 }
 
 export function InspectionsList({
-  rooms,
+  residenceId,
   inspections,
   onInspectionCreated,
   tenant,
@@ -40,6 +42,27 @@ export function InspectionsList({
   const [selectedInspection, setSelectedInspection] =
     useState<Inspection | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+
+  const roomsQuery = useQuery({
+    queryKey: ['rooms', residenceId],
+    queryFn: () => roomService.getByResidenceId(residenceId),
+  })
+
+  if (roomsQuery.isLoading) {
+    return <LoadingSkeleton />
+  }
+
+  if (roomsQuery.error || !roomsQuery.data) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          Rum hittades inte
+        </h2>
+      </div>
+    )
+  }
+
+  const rooms = roomsQuery.data ?? []
 
   const activeInspection = inspections.find(
     (inspection) =>
@@ -184,6 +207,16 @@ export function InspectionsList({
           onClose={() => setIsViewDialogOpen(false)}
         />
       )}
+    </div>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="animate-in">
+      <Grid cols={1}>
+        <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+      </Grid>
     </div>
   )
 }
