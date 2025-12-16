@@ -15,6 +15,7 @@ interface ResponsiveTableProps<T> {
   keyExtractor: (item: T) => string
   emptyMessage?: string
   mobileCardRenderer?: (item: T) => ReactNode
+  onRowClick?: (item: T) => void
 }
 
 export function ResponsiveTable<T>({
@@ -23,6 +24,7 @@ export function ResponsiveTable<T>({
   keyExtractor,
   emptyMessage = 'Inga resultat hittades',
   mobileCardRenderer,
+  onRowClick,
 }: ResponsiveTableProps<T>) {
   if (data.length === 0) {
     return (
@@ -56,7 +58,11 @@ export function ResponsiveTable<T>({
             {data.map((item) => (
               <tr
                 key={keyExtractor(item)}
-                className="border-b hover:bg-muted/50 transition-colors"
+                className={cn(
+                  'border-b hover:bg-muted/50 transition-colors',
+                  onRowClick && 'cursor-pointer'
+                )}
+                onClick={() => onRowClick?.(item)}
               >
                 {columns.map((column) => (
                   <td
