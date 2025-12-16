@@ -397,9 +397,44 @@ export const preliminaryTerminateLease = async (
 
     const tenfastUserId = tenantResult.data._id
 
+    // Get all leases for the tenant from tenfast
+    const leasesResponse = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenfastUserId}/avtal`,
+    })
+
+    if (leasesResponse.status !== 200) {
+      logger.error(
+        { contactCode, tenfastUserId, status: leasesResponse.status },
+        'Failed to retrieve tenant leases from tenfast'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+
+    // Extract rental object code from leaseId (remove / and everything after)
+    // e.g., "216-704-00-0022/02" -> "216-704-00-0022"
+    const rentalObjectCode = leaseId.split('/')[0]
+
+    // Find the matching lease by comparing rental object externalId
+    const matchingLease = leasesResponse.data.find((lease: any) => {
+      const hyresobjekt = lease.originalData?.hyresobjekt?.[0]
+      return hyresobjekt?.externalId === rentalObjectCode
+    })
+
+    if (!matchingLease) {
+      logger.error(
+        { leaseId, rentalObjectCode, contactCode },
+        'Could not find matching lease in tenfast'
+      )
+      return { ok: false, err: 'lease-not-found' }
+    }
+
+    const tenfastLeaseId = matchingLease._id
+
     logger.info(
       {
         leaseId,
+        tenfastLeaseId,
         contactCode,
         tenfastUserId,
         lastDebitDate: lastDebitDate.toISOString(),
@@ -431,7 +466,7 @@ export const preliminaryTerminateLease = async (
 
     const terminationResponse = await tenfastApi.request({
       method: 'patch',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${leaseId}/send-simplesign-termination?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/send-simplesign-termination?hyresvard=${tenfastCompanyId}`,
       data: requestData,
     })
 
