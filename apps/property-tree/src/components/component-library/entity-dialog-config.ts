@@ -268,7 +268,8 @@ export const entityDialogConfig: Record<
         label: 'Specifikationer (komponent-specifik)',
         type: 'textarea',
         required: false,
-        placeholder: 'Ytterligare tekniska specifikationer för denna specifika komponent',
+        placeholder:
+          'Ytterligare tekniska specifikationer för denna specifika komponent',
       },
       {
         name: 'additionalInformation',
