@@ -11,15 +11,10 @@ import {
 import fs from 'fs/promises'
 import config from '../common/config'
 import { sep } from 'node:path'
-import { sendEmail } from '../common/adapters/infobip-adapter'
 
-const importRentalInvoicesScript = async (
-  companyIds: string[],
-  earliestStartDate: Date,
-  dryRun: boolean = false
-) => {
-  const notification: string[] = []
-  let hasErrors = false
+const importRentalInvoicesScript = async () => {
+  const companyIds = ['001' /*, '006'*/]
+  const earliestStartDate = new Date('2025-10-01T00:00:00.000Z')
 
   const startDate = new Date(
     Math.max(
@@ -30,22 +25,11 @@ const importRentalInvoicesScript = async (
   const endDate = new Date(new Date().setDate(startDate.getDate() + 180))
 
   for (const companyId of companyIds) {
-    notification.push(
-      `Körning startad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n`
-    )
-    notification.push(`Hanterar hyresavier för företag ${companyId}\n`)
     logger.info({ startDate, endDate }, 'Processing interval')
     const result = await importInvoiceRows(startDate, endDate, companyId)
     const batchId = result.batchId
 
     if (result.batchId) {
-      if (result.errors?.length && result.errors?.length > 0) {
-        hasErrors = true
-      }
-      notification.push(`
-Importerade avier: ${result.processedInvoices}
-Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
-        `)
       logger.info({ batchId }, 'Creating contact file for batch')
       const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
       const contactsCsv = await getBatchContactsCsv(batchId)
@@ -53,27 +37,16 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
         `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
         contactsCsv
       )
-      if (!dryRun) {
-        await uploadInvoiceFile(contactsFilename, contactsCsv)
-      }
-      logger.info({ contactsFilename }, 'Uploaded file')
 
-      if (companyId !== '006') {
-        // No aggregate export for Björnklockan
-        logger.info({ batchId }, 'Creating aggregate file for batch')
-        const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
-        const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
+      logger.info({ batchId }, 'Creating aggregate file for batch')
+      const aggregatedFilename = `${batchId}-${companyId}-aggregated.gl.csv`
+      const aggregatedCsv = await getBatchAggregatedRowsCsv(batchId)
 
-        if (aggregatedCsv) {
-          await fs.writeFile(
-            `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
-            aggregatedCsv
-          )
-          if (!dryRun) {
-            await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
-            logger.info({ aggregatedFilename }, 'Uploaded file')
-          }
-        }
+      if (aggregatedCsv) {
+        await fs.writeFile(
+          `${config.rentalInvoices.exportDirectory}${sep}${aggregatedFilename}`,
+          aggregatedCsv
+        )
       }
 
       logger.info({ batchId }, 'Creating ledger file for batch')
@@ -84,45 +57,22 @@ Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
         ledgerCsv
       )
 
-      if (!dryRun) {
-        await uploadInvoiceFile(ledgerFilename, ledgerCsv)
-        logger.info({ ledgerFilename }, 'Uploaded file')
-
-        await markBatchAsProcessed(parseInt(batchId))
-
-        notification.push('Filer uppladdade till Xledger för import')
+      await uploadInvoiceFile(contactsFilename, contactsCsv)
+      logger.info({ contactsFilename }, 'Uploaded file')
+      if (aggregatedCsv) {
+        await uploadInvoiceFile(aggregatedFilename, aggregatedCsv)
+        logger.info({ aggregatedFilename }, 'Uploaded file')
       }
+      await uploadInvoiceFile(ledgerFilename, ledgerCsv)
+      logger.info({ ledgerFilename }, 'Uploaded file')
+
+      await markBatchAsProcessed(parseInt(batchId))
     } else {
-      notification.push('Inga nya avier hittade sen senaste importen')
       logger.info({ companyId }, 'No new invoices found')
-    }
-
-    notification.push(
-      `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
-    )
-  }
-
-  if (config.scriptNotificationEmailAddresses) {
-    try {
-      await sendEmail(
-        config.scriptNotificationEmailAddresses,
-        hasErrors
-          ? 'Fel i körning: import av hyresavier till Xledger'
-          : 'Körning: import av hyresavier till Xledger',
-        notification.join('\n')
-      )
-    } catch {
-      // Do not fail script based on failed email.
     }
   }
 
   closeDatabases()
 }
 
-const companyIds = process.argv[2]?.split(',') ?? ['001', '006']
-const earliestStartDate = process.argv[3]
-  ? new Date(process.argv[3])
-  : new Date('2025-10-01T00:00:00.000Z')
-const dryRun = process.argv[4] ? true : false
-
-importRentalInvoicesScript(companyIds, earliestStartDate, dryRun)
+importRentalInvoicesScript()

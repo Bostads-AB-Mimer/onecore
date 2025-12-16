@@ -1,9 +1,4 @@
 import React from 'react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@radix-ui/react-collapsible'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Home, LayoutGrid, Contact, ChevronRight } from 'lucide-react'
 import { CompanyList } from './CompanyList'
@@ -16,6 +11,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/Sidebar'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/Collapsible'
 import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
 import {
   CompanyExpansionProvider,
