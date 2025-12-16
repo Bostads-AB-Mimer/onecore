@@ -743,11 +743,11 @@ describe(tenfastAdapter.createLease, () => {
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
-    mockRentalObject.records[0].hyror = [] // Remove rent articles to simulate missing rent article
+    mockRentalObject.hyror = [] // Remove rent articles to simulate missing rent article
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
 
     const contact = factory.contact.build()
