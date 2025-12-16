@@ -10,7 +10,6 @@ import {
   invoiceTransactionTypeTranslation,
   paymentStatusTranslation,
 } from '@onecore/types'
-import { logger } from '@onecore/utilities'
 
 const db = knex({
   connection: {
@@ -394,50 +393,4 @@ export const getContacts = async (
   })
 
   return contacts
-}
-
-function transformFromDbInvoice(row: any, contactCode: string): Invoice {
-  const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
-    (sum, value) => sum + value,
-    0
-  )
-
-  return {
-    reference: contactCode,
-    invoiceId: row.invoiceId.trim(),
-    leaseId: row.leaseId?.trim(),
-    amount: Math.round((amount + Number.EPSILON) * 100) / 100,
-    fromDate: row.fromDate,
-    toDate: row.toDate,
-    invoiceDate: row.invoiceDate,
-    expirationDate: row.expirationDate,
-    debitStatus: row.debitStatus,
-    paymentStatus: getPaymentStatus(row.paymentStatus),
-    transactionType: getTransactionType(row.transactionType),
-    transactionTypeName: row.transactionTypeName.trim(),
-    type: 'Regular',
-    source: 'legacy',
-    invoiceRows: [],
-  }
-}
-
-function getTransactionType(transactionTypeString: any) {
-  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
-    return InvoiceTransactionType.Other
-  }
-
-  let transactionType =
-    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
-
-  if (!transactionType) {
-    transactionType = InvoiceTransactionType.Other
-  }
-
-  return transactionType
-}
-
-function getPaymentStatus(paymentStatusNumber: number) {
-  const paymentStatus = paymentStatusTranslation[paymentStatusNumber]
-
-  return paymentStatus
 }
