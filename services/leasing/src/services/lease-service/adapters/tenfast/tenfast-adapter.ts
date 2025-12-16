@@ -31,6 +31,7 @@ export const createLease = async (
     | 'could-not-find-rental-object'
     | 'lease-could-not-be-created'
     | 'create-lease-bad-request'
+    | 'rent-article-is-missing'
     | 'unknown'
   >
 > => {
@@ -46,6 +47,10 @@ export const createLease = async (
   const rentalObjectResponse = await getRentalObject(rentalObjectCode)
   if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
     return { ok: false, err: 'could-not-find-rental-object' }
+
+  if (rentalObjectResponse.data.hyror.length === 0) {
+    return { ok: false, err: 'rent-article-is-missing' }
+  }
 
   try {
     const createLeaseRequestData = buildLeaseRequestData(
@@ -86,7 +91,7 @@ export const getRentalObject = async (
     TenfastRentalObject | null,
     | 'could-not-find-rental-object'
     | 'could-not-parse-rental-object'
-    | 'get-lease-bad-request'
+    | 'get-rental-object-bad-request'
   >
 > => {
   try {
@@ -98,7 +103,7 @@ export const getRentalObject = async (
     if (rentalObjectResponse.status === 400)
       return handleTenfastError(
         rentalObjectResponse.data.error,
-        'get-lease-bad-request'
+        'get-rental-object-bad-request'
       )
     else if (
       rentalObjectResponse.status !== 200 &&
@@ -325,15 +330,10 @@ function buildLeaseRequestData(
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,
-    hyror: [
-      {
-        article: rentalObject.article, //TODO: Add Article property once tenfast added it to staging env
-        amount: rentalObject.hyra,
-        vat: vat,
-        label: 'Hyra p-plats', //TODO: denna ska komma från rentalObject.label på samma vis som article gör alternativt från hyror:[]
-      },
-      ...rentalObject.hyror,
-    ],
+    hyror: rentalObject.hyror.map((hyra) => {
+      hyra.vat = vat //set vat according to includeVAT for all rent articles
+      return hyra
+    }),
     startDate: fromDate.toISOString(),
     aviseringsTyp: 'none',
     uppsagningstid: '3m',
