@@ -1,4 +1,5 @@
 import { History } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/v2/Badge'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
 import type { ComponentInstance } from '@/services/types'
@@ -18,6 +19,17 @@ export const InstancesTable = ({
   onDelete,
   onViewHistory,
 }: InstancesTableProps) => {
+  const navigate = useNavigate()
+
+  const handleNavigateToRoom = (
+    residenceId: string | null | undefined,
+    roomId: string | null | undefined
+  ) => {
+    if (residenceId && roomId) {
+      navigate(`/residences/${residenceId}/rooms/${roomId}`)
+    }
+  }
+
   const getStatusVariant = (
     status: string
   ): 'default' | 'secondary' | 'outline' | 'destructive' => {
@@ -97,6 +109,40 @@ export const InstancesTable = ({
           <Badge variant={hasActiveInstallation ? 'default' : 'secondary'}>
             {hasActiveInstallation ? 'Ja' : 'Nej'}
           </Badge>
+        )
+      },
+    },
+    {
+      key: 'location',
+      label: 'Plats',
+      render: (item) => {
+        const activeInstallation = item.componentInstallations?.find(
+          (install) => !install.deinstallationDate
+        )
+
+        if (!activeInstallation) {
+          return <span className="text-muted-foreground">Ej installerad</span>
+        }
+
+        const structure = activeInstallation.propertyObject?.propertyStructures?.[0]
+
+        if (!structure) {
+          return <span className="text-muted-foreground">-</span>
+        }
+
+        const displayText = `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`
+        const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
+
+        return (
+          <button
+            onClick={() =>
+              handleNavigateToRoom(structure.residenceId, structure.roomId)
+            }
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            title={tooltipText}
+          >
+            {displayText}
+          </button>
         )
       },
     },
