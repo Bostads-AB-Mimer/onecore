@@ -1,23 +1,26 @@
+import { leasing } from '@onecore/types'
+import z from 'zod'
+
 import { GET } from './base-api'
 import type { components } from './generated/api-types'
 
 export type Lease = components['schemas']['Lease']
 
+type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
+
 async function getByRentalPropertyId(
   rentalObjectCode: string,
-  params?: {
-    includeContacts?: boolean
-    includeUpcomingLeases?: boolean
-    includeTerminatedLeases?: boolean
-  }
+  params?: GetLeasesOptions
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(
     '/leases/by-rental-object-code/{rentalObjectCode}',
     {
       params: {
         path: { rentalObjectCode },
-        // TODO: Add status filter
-        query: { includeContacts: params?.includeContacts },
+        query: {
+          includeContacts: params?.includeContacts,
+          status: params?.status?.join(','),
+        },
       },
     }
   )
