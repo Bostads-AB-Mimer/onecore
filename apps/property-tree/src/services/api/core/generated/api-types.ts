@@ -3762,12 +3762,42 @@ export interface components {
         code: string | null
       }
       building: {
-        id: string | null
-        name: string | null
-        code: string | null
-      }
-      areaSize: number | null
-    }
+        id: string | null;
+        name: string | null;
+        code: string | null;
+      };
+      areaSize: number | null;
+    };
+    Component: {
+      id: string;
+      code: string;
+      name: string;
+      details: {
+        manufacturer: string | null;
+        typeDesignation: string | null;
+      };
+      dates: {
+        /** Format: date-time */
+        installation: string | null;
+        /** Format: date-time */
+        warrantyEnd: string | null;
+      };
+      classification: {
+        componentType: {
+          code: string;
+          name: string;
+        };
+        category: {
+          code: string;
+          name: string;
+        };
+      };
+      maintenanceUnits?: {
+          id: string;
+          code: string;
+          name: string;
+        }[];
+    };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
       q: string
