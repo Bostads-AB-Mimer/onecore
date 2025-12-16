@@ -21,7 +21,9 @@ export const ModelCard = ({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold break-words">{model.modelName}</h3>
+            <h3 className="text-base font-semibold break-words">
+              {model.modelName}
+            </h3>
             <p className="text-sm text-muted-foreground break-words">
               {model.manufacturer}
             </p>
@@ -56,22 +58,30 @@ export const ModelCard = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           <div className="flex justify-between gap-2">
             <span className="text-muted-foreground">Pris:</span>
-            <span className="font-medium break-words">{model.currentPrice} kr</span>
+            <span className="font-medium break-words">
+              {model.currentPrice} kr
+            </span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground text-xs sm:text-sm">Installationspris:</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Installationspris:
+            </span>
             <span className="font-medium break-words">
               {model.currentInstallPrice} kr
             </span>
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-muted-foreground">Garanti:</span>
-            <span className="font-medium break-words">{model.warrantyMonths} mån</span>
+            <span className="font-medium break-words">
+              {model.warrantyMonths} mån
+            </span>
           </div>
           {model.dimensions && (
             <div className="flex justify-between gap-2">
               <span className="text-muted-foreground">Mått:</span>
-              <span className="font-medium break-words">{model.dimensions}</span>
+              <span className="font-medium break-words">
+                {model.dimensions}
+              </span>
             </div>
           )}
         </div>

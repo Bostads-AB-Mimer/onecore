@@ -31,7 +31,9 @@ export const SubtypeCard = ({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold break-words">{subtype.subTypeName}</h3>
+            <h3 className="text-base font-semibold break-words">
+              {subtype.subTypeName}
+            </h3>
             {subtype.xpandCode && (
               <span className="inline-block mt-1 px-2 py-0.5 bg-secondary text-xs rounded break-all">
                 {subtype.xpandCode}
@@ -62,31 +64,41 @@ export const SubtypeCard = ({
       <CardContent className="pt-0 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground text-xs sm:text-sm">Avskrivningspris:</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Avskrivningspris:
+            </span>
             <span className="font-medium break-words">
               {subtype.depreciationPrice} kr
             </span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground text-xs sm:text-sm">Kvantitetstyp:</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Kvantitetstyp:
+            </span>
             <span className="font-medium break-words">
               {formatQuantityType(subtype.quantityType)}
             </span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground text-xs sm:text-sm">Teknisk livslängd:</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Teknisk livslängd:
+            </span>
             <span className="font-medium break-words">
               {subtype.technicalLifespan} år
             </span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground text-xs sm:text-sm">Ekonomisk livslängd:</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Ekonomisk livslängd:
+            </span>
             <span className="font-medium break-words">
               {subtype.economicLifespan} år
             </span>
           </div>
           <div className="flex justify-between gap-2 sm:col-span-2">
-            <span className="text-muted-foreground text-xs sm:text-sm">Underhållsintervall:</span>
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Underhållsintervall:
+            </span>
             <span className="font-medium break-words">
               {subtype.replacementIntervalMonths} månader
             </span>
