@@ -14,27 +14,28 @@ export const IncludeContactsQueryParamSchema = z.object({
     .transform((value) => value === 'true'),
 })
 
-export const FilterLeasesQueryParamsSchema = z.object({
-  status: z
-    .string()
-    .nonempty()
-    .refine(
-      (value) =>
+export const FilterLeasesQueryParamsSchema = z
+  .object({
+    status: z
+      .string()
+      .nonempty()
+      .refine(
+        (value) =>
+          value
+            .split(',')
+            .every((v) => GetLeasesStatusSchema.safeParse(v.trim()).success),
+        {
+          message: `Status must be one or more of ${GetLeasesStatusSchema.options.join(', ')}`,
+        }
+      )
+      .transform((value) =>
         value
           .split(',')
-          .every((v) => GetLeasesStatusSchema.safeParse(v.trim()).success),
-      {
-        message: `Status must be one or more of ${GetLeasesStatusSchema.options.join(', ')}`,
-      }
-    )
-    .transform((value) =>
-      value
-        .split(',')
-        .map((v) => v.trim() as z.infer<typeof GetLeasesStatusSchema>)
-    )
-    .optional(),
-  includeContacts: IncludeContactsQueryParamSchema,
-})
+          .map((v) => v.trim() as z.infer<typeof GetLeasesStatusSchema>)
+      )
+      .optional(),
+  })
+  .merge(IncludeContactsQueryParamSchema)
 
 export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
   IncludeContactsQueryParamSchema
