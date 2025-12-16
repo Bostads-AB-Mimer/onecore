@@ -7,5 +7,6 @@ export function registerSchema<T extends z.ZodType>(name: string, schema: T) {
   schemaRegistry[name] = zodToJsonSchema(schema, {
     name,
     target: 'openApi3',
+    $refStrategy: 'none',
   }).definitions?.[name]
 }

@@ -89,6 +89,26 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of component types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentType'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
    */
   router.get(
     '(.*)/component-types',
@@ -129,6 +149,13 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Component type details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentType'
    *       404:
    *         description: Component type not found
    */
@@ -167,13 +194,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               description:
-   *                 type: string
+   *             $ref: '#/components/schemas/CreateComponentTypeRequest'
    *     responses:
    *       201:
    *         description: Component type created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentType'
    */
   router.post(
     '(.*)/component-types',
@@ -211,9 +242,22 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentTypeRequest'
    *     responses:
    *       200:
    *         description: Component type updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentType'
    */
   router.put(
     '(.*)/component-types/:id',
@@ -298,6 +342,26 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of component subtypes
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentSubtype'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
    */
   router.get(
     '(.*)/component-subtypes',
@@ -339,6 +403,13 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Component subtype details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentSubtype'
    *       404:
    *         description: Component subtype not found
    */
@@ -377,19 +448,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - componentTypeId
-   *               - description
-   *             properties:
-   *               componentTypeId:
-   *                 type: string
-   *                 format: uuid
-   *               description:
-   *                 type: string
+   *             $ref: '#/components/schemas/CreateComponentSubtypeRequest'
    *     responses:
    *       201:
    *         description: Component subtype created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentSubtype'
    */
   router.post(
     '(.*)/component-subtypes',
@@ -433,16 +502,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               componentTypeId:
-   *                 type: string
-   *                 format: uuid
-   *               description:
-   *                 type: string
+   *             $ref: '#/components/schemas/UpdateComponentSubtypeRequest'
    *     responses:
    *       200:
    *         description: Component subtype updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentSubtype'
    */
   router.put(
     '(.*)/component-subtypes/:id',
@@ -537,6 +607,26 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of component models
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentModel'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
    */
   router.get(
     '(.*)/component-models',
@@ -583,6 +673,13 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Component model details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
    *       404:
    *         description: Component model not found
    */
@@ -621,51 +718,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - componentTypeId
-   *               - subtypeId
-   *               - currentPrice
-   *               - warrantyMonths
-   *               - manufacturer
-   *               - technicalLifespan
-   *               - economicLifespan
-   *               - replacementIntervalMonths
-   *               - quantityType
-   *               - coclassCode
-   *             properties:
-   *               componentTypeId:
-   *                 type: string
-   *                 format: uuid
-   *               subtypeId:
-   *                 type: string
-   *                 format: uuid
-   *               currentPrice:
-   *                 type: number
-   *               warrantyMonths:
-   *                 type: integer
-   *               manufacturer:
-   *                 type: string
-   *               technicalLifespan:
-   *                 type: number
-   *               technicalSpecification:
-   *                 type: string
-   *               installationInstructions:
-   *                 type: string
-   *               economicLifespan:
-   *                 type: number
-   *               dimensions:
-   *                 type: string
-   *               replacementIntervalMonths:
-   *                 type: integer
-   *               quantityType:
-   *                 type: string
-   *                 enum: [UNIT, METER, SQUARE_METER, CUBIC_METER]
-   *               coclassCode:
-   *                 type: string
+   *             $ref: '#/components/schemas/CreateComponentModelRequest'
    *     responses:
    *       201:
    *         description: Component model created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
    */
   router.post(
     '(.*)/component-models',
@@ -709,40 +772,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               componentTypeId:
-   *                 type: string
-   *                 format: uuid
-   *               subtypeId:
-   *                 type: string
-   *                 format: uuid
-   *               currentPrice:
-   *                 type: number
-   *               warrantyMonths:
-   *                 type: integer
-   *               manufacturer:
-   *                 type: string
-   *               technicalLifespan:
-   *                 type: number
-   *               technicalSpecification:
-   *                 type: string
-   *               installationInstructions:
-   *                 type: string
-   *               economicLifespan:
-   *                 type: number
-   *               dimensions:
-   *                 type: string
-   *               replacementIntervalMonths:
-   *                 type: integer
-   *               quantityType:
-   *                 type: string
-   *                 enum: [UNIT, METER, SQUARE_METER, CUBIC_METER]
-   *               coclassCode:
-   *                 type: string
+   *             $ref: '#/components/schemas/UpdateComponentModelRequest'
    *     responses:
    *       200:
    *         description: Component model updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
    */
   router.put(
     '(.*)/component-models/:id',
@@ -832,6 +872,26 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of component instances
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentInstance'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
    */
   router.get(
     '(.*)/components-new',
@@ -873,6 +933,13 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Component instance details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstance'
    *       404:
    *         description: Component not found
    */
@@ -911,37 +978,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - modelId
-   *               - serialNumber
-   *               - warrantyMonths
-   *               - priceAtPurchase
-   *               - ncsCode
-   *             properties:
-   *               modelId:
-   *                 type: string
-   *                 format: uuid
-   *               serialNumber:
-   *                 type: string
-   *               specifications:
-   *                 type: string
-   *               warrantyStartDate:
-   *                 type: string
-   *                 format: date
-   *               warrantyMonths:
-   *                 type: integer
-   *               priceAtPurchase:
-   *                 type: number
-   *               ncsCode:
-   *                 type: string
-   *                 pattern: ^\d{3}(\.\d{3})?$
-   *               status:
-   *                 type: string
-   *                 enum: [ACTIVE, INACTIVE, MAINTENANCE, DECOMMISSIONED]
+   *             $ref: '#/components/schemas/CreateComponentRequest'
    *     responses:
    *       201:
    *         description: Component instance created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstance'
    */
   router.post(
     '(.*)/components-new',
@@ -985,29 +1032,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               modelId:
-   *                 type: string
-   *                 format: uuid
-   *               serialNumber:
-   *                 type: string
-   *               specifications:
-   *                 type: string
-   *               warrantyStartDate:
-   *                 type: string
-   *                 format: date
-   *               warrantyMonths:
-   *                 type: integer
-   *               priceAtPurchase:
-   *                 type: number
-   *               ncsCode:
-   *                 type: string
-   *               status:
-   *                 type: string
+   *             $ref: '#/components/schemas/UpdateComponentRequest'
    *     responses:
    *       200:
    *         description: Component instance updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstance'
    */
   router.put(
     '(.*)/components-new/:id',
@@ -1103,6 +1138,26 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of component installations
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentInstallation'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
    */
   router.get(
     '(.*)/component-installations',
@@ -1151,6 +1206,13 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Component installation details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstallation'
    *       404:
    *         description: Component installation not found
    */
@@ -1192,35 +1254,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - componentId
-   *               - installationDate
-   *               - orderNumber
-   *               - cost
-   *             properties:
-   *               componentId:
-   *                 type: string
-   *                 format: uuid
-   *               spaceId:
-   *                 type: string
-   *                 format: uuid
-   *               buildingPartId:
-   *                 type: string
-   *                 format: uuid
-   *               installationDate:
-   *                 type: string
-   *                 format: date
-   *               deinstallationDate:
-   *                 type: string
-   *                 format: date
-   *               orderNumber:
-   *                 type: string
-   *               cost:
-   *                 type: number
+   *             $ref: '#/components/schemas/CreateComponentInstallationRequest'
    *     responses:
    *       201:
    *         description: Component installation created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstallation'
    */
   router.post(
     '(.*)/component-installations',
@@ -1264,30 +1308,17 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             properties:
-   *               componentId:
-   *                 type: string
-   *                 format: uuid
-   *               spaceId:
-   *                 type: string
-   *                 format: uuid
-   *               buildingPartId:
-   *                 type: string
-   *                 format: uuid
-   *               installationDate:
-   *                 type: string
-   *                 format: date
-   *               deinstallationDate:
-   *                 type: string
-   *                 format: date
-   *               orderNumber:
-   *                 type: string
-   *               cost:
-   *                 type: number
+   *             $ref: '#/components/schemas/UpdateComponentInstallationRequest'
    *     responses:
    *       200:
    *         description: Component installation updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstallation'
    */
   router.put(
     '(.*)/component-installations/:id',
