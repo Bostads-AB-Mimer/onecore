@@ -153,7 +153,7 @@ export function DashboardView() {
       description: 'Genomför och hantera besiktningar',
       path: '/inspections',
       isExternal: false,
-      isDisabled: true,
+      isDisabled: false,
     },
     {
       id: 'tenfast',

@@ -60,6 +60,9 @@ export const routes = (router: KoaRouter) => {
           (v): Room => ({
             ...v,
             deleted: Boolean(v.deleteMark),
+            area: v.propertyObject?.quantityValues?.find(
+              (qv) => qv.quantityTypeId === 'NTA'
+            )?.value,
             dates: {
               availableFrom: v.availableFrom,
               availableTo: v.availableTo,
@@ -131,8 +134,34 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      const mappedRoom: Room = {
+        ...room,
+        deleted: Boolean(room.deleteMark),
+        area: room.propertyObject?.quantityValues?.find(
+          (qv) => qv.quantityTypeId === 'NTA'
+        )?.value,
+        dates: {
+          availableFrom: room.availableFrom,
+          availableTo: room.availableTo,
+          from: room.fromDate,
+          to: room.toDate,
+          installation: room.installationDate,
+        },
+        features: {
+          hasThermostatValve: Boolean(room.hasThermostatValve),
+          hasToilet: Boolean(room.hasToilet),
+          isHeated: Boolean(room.isHeated),
+          orientation: room.orientation,
+        },
+        usage: {
+          allowPeriodicWorks: Boolean(room.allowPeriodicWorks),
+          shared: Boolean(room.sharedUse),
+          spaceType: room.spaceType,
+        },
+      }
+
       ctx.body = {
-        content: room,
+        content: mappedRoom,
         ...metadata,
         _links: generateMetaLinks(ctx, '/rooms', {
           id: ctx.params.response,

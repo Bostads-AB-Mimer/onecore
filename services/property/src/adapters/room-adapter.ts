@@ -72,6 +72,16 @@ export async function getRooms(residenceId: string) {
         availableTo: true,
         timestamp: true,
         roomType: true,
+        propertyObject: {
+          select: {
+            quantityValues: {
+              select: {
+                value: true,
+                quantityTypeId: true,
+              },
+            },
+          },
+        },
       },
     })
     .then(trimStrings)
@@ -103,6 +113,16 @@ export const getRoomById = async (id: string) => {
         availableTo: true,
         timestamp: true,
         roomType: true,
+        propertyObject: {
+          select: {
+            quantityValues: {
+              select: {
+                value: true,
+                quantityTypeId: true,
+              },
+            },
+          },
+        },
       },
     })
     .then(trimStrings)
