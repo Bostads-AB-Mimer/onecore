@@ -3,7 +3,13 @@ import config from '../../../common/config'
 import { RentInvoiceRow, RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import { Address } from '@onecore/types'
+import {
+  Address,
+  Invoice,
+  InvoiceTransactionType,
+  invoiceTransactionTypeTranslation,
+  paymentStatusTranslation,
+} from '@onecore/types'
 
 const db = knex({
   connection: {

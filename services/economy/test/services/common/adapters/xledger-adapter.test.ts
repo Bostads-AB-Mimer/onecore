@@ -1,6 +1,6 @@
 import nock from 'nock'
 
-import * as adapter from '@src/services/invoice-service/adapters/xledger-adapter'
+import * as adapter from '@src/services/common/adapters/xledger-adapter'
 import config from '@src/common/config'
 import { schemas } from '@onecore/types'
 
@@ -121,6 +121,7 @@ describe(adapter.getInvoicePaymentEvents, () => {
                     postedDate: '2025-01-01',
                     transactionSource: { code: 'AR' },
                   },
+                  matchId: 1,
                 },
               },
               {
@@ -134,6 +135,7 @@ describe(adapter.getInvoicePaymentEvents, () => {
                     postedDate: '2025-01-01',
                     transactionSource: { code: 'OS' },
                   },
+                  matchId: 2,
                 },
               },
               {
@@ -147,6 +149,7 @@ describe(adapter.getInvoicePaymentEvents, () => {
                     postedDate: '2025-01-01',
                     transactionSource: { code: 'OCR' },
                   },
+                  matchId: 3,
                 },
               },
             ],

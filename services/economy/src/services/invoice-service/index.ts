@@ -11,7 +11,7 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
-} from './adapters/xledger-adapter'
+} from '../common/adapters/xledger-adapter'
 import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
