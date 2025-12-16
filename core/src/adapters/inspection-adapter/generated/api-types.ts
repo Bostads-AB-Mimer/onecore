@@ -3,11 +3,9 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "openapi": {
-  };
-  "/health": {
+  openapi: {}
+  '/health': {
     /**
      * Check system health status
      * @description Retrieves the health status of the system and its subsystems.
@@ -17,100 +15,100 @@ export interface paths {
         /** @description Successful response with system health status */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /**
                * @description Name of the system.
                * @example inspection
                */
-              name?: string;
+              name?: string
               /**
                * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
                * @example active
                */
-              status?: string;
-              subsystems?: ({
-                  /** @description Name of the subsystem. */
-                  name?: string;
-                  /**
-                   * @description Status of the subsystem.
-                   * @enum {string}
-                   */
-                  status?: "active" | "impaired" | "failure" | "unknown";
-                  /** @description Additional details about the subsystem status. */
-                  details?: string;
-                })[];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/xpand": {
+              status?: string
+              subsystems?: {
+                /** @description Name of the subsystem. */
+                name?: string
+                /**
+                 * @description Status of the subsystem.
+                 * @enum {string}
+                 */
+                status?: 'active' | 'impaired' | 'failure' | 'unknown'
+                /** @description Additional details about the subsystem status. */
+                details?: string
+              }[]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/xpand': {
     /** Get inspections from Xpand */
     get: {
       parameters: {
         query?: {
           /** @description Number of records to skip for pagination. */
-          skip?: number;
+          skip?: number
           /** @description Maximum number of records to return. */
-          limit?: number;
+          limit?: number
           /** @description Whether to sort the results in ascending order. */
-          sortAscending?: true | false;
-        };
-      };
+          sortAscending?: true | false
+        }
+      }
       responses: {
         /** @description A list of inspections from Xpand */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                inspections?: components["schemas"]["XpandInspection"][];
-              };
+                inspections?: components['schemas']['XpandInspection'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal Server Error - Failed to fetch inspections from Xpand */
         500: {
           content: {
-            "application/json": {
-              error?: string;
+            'application/json': {
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
     XpandInspection: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
-      inspector: string;
-      type: string;
-      address: string;
-      apartmentCode: string;
-      leaseId: string;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+      date: string
+      inspector: string
+      type: string
+      address: string
+      apartmentCode: string
+      leaseId: string
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
 
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 
-export type external = Record<string, never>;
+export type external = Record<string, never>
 
-export type operations = Record<string, never>;
+export type operations = Record<string, never>

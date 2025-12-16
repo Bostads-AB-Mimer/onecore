@@ -21,7 +21,10 @@ describe('inspection-service', () => {
         .mockResolvedValueOnce({
           ok: true,
           data: [
-            XpandInspectionFactory.build({ id: 'INS001', status: 'Registrerad' }),
+            XpandInspectionFactory.build({
+              id: 'INS001',
+              status: 'Registrerad',
+            }),
             XpandInspectionFactory.build({ id: 'INS002', status: 'Genomförd' }),
           ],
         })

@@ -88,7 +88,9 @@ describe(xpandAdapter.getInspectionsFromXpand, () => {
 
   it('should return schema-error when validation fails', async () => {
     mockThen.mockImplementationOnce((callback) =>
-      callback([XpandDbInspectionFactory.build({ date: 'invalid-date' as any })])
+      callback([
+        XpandDbInspectionFactory.build({ date: 'invalid-date' as any }),
+      ])
     )
 
     const result = await xpandAdapter.getInspectionsFromXpand()
