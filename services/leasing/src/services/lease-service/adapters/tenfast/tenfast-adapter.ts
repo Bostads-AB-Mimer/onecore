@@ -236,12 +236,12 @@ export const getTenantByContactCode = async (
 
     const parsedTenantResponse =
       TenfastTenantByContactCodeResponseSchema.safeParse(tenantResponse.data)
-    if (!parsedTenantResponse.success)
+    if (!parsedTenantResponse.success) {
       return handleTenfastError(
         parsedTenantResponse.error,
         'could-not-parse-tenant-response'
       )
-
+    }
     return {
       ok: true,
       data: parsedTenantResponse.data.records[0] ?? null,
@@ -386,7 +386,7 @@ export async function getLeasesByTenantId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal?populate=hyresobjekt`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal?populate=hyresobjekt,hyresgaster`,
     })
 
     // Not sure we want to fail completely here if parsing fails

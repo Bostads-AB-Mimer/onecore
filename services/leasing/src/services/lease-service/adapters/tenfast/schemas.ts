@@ -215,7 +215,7 @@ export const NotificationTypeSchema = z.enum([
 export const TenfastLeaseSchema = z.object({
   externalId: z.string(), // This is Onecore canonical lease id
   reference: z.number(),
-  verson: z.number(),
+  version: z.number(),
   originalData: z.unknown(),
   hyror: z.array(TenfastInvoiceRowSchema),
   simpleHyra: z.boolean(),
@@ -224,24 +224,24 @@ export const TenfastLeaseSchema = z.object({
   aviseringsTyp: NotificationTypeSchema,
   uppsagningstid: z.string(),
   aviseringsFrekvens: z.string(),
-  forskottsAvisering: z.string(),
+  forskottAvisering: z.string(),
   betalningsOffset: z.string(),
   betalasForskott: z.boolean(),
   vatEnabled: z.boolean(),
-  originalTemplate: z.string(),
-  template: z.object({}),
   method: z.string(),
-  file: z.object({
-    key: z.string(),
-    location: z.string(),
-    originalName: z.string(),
-  }),
+  file: z
+    .object({
+      key: z.string(),
+      location: z.string(),
+      originalName: z.string(),
+    })
+    .optional()
+    .nullable(),
   bankidSigningEnabled: z.boolean(),
   bankidSignatures: z.array(z.string()),
   cancellation: z.object({
     cancelled: z.boolean(),
     doneAutomatically: z.boolean(),
-    hyresgastBankidSignature: z.string(),
     receivedCancellationAt: z.coerce.date().optional().nullable(), // When TenFAST received the cancellation
     notifiedAt: z.coerce.date().optional().nullable(), // When TenFAST notified the tenant about the cancellation
     handledAt: z.coerce.date().optional().nullable(), // When TenFAST handled the cancellation i.e termination date
@@ -265,7 +265,6 @@ export const TenfastLeaseSchema = z.object({
     })
   ),
   confirmedHyresgastInfo: z.array(z.string()),
-  avtalsbyggare: z.boolean(),
   acceptedByHyresgast: z.boolean(),
   comments: z.array(z.string()),
   files: z.array(
@@ -276,9 +275,6 @@ export const TenfastLeaseSchema = z.object({
     })
   ),
   versions: z.unknown(),
-  incudeHyrorInThePast: z.boolean(),
-  createdBy: z.string(),
-  updatedBy: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   startInvoicingFrom: z.coerce.date(),
