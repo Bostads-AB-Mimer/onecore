@@ -32,7 +32,7 @@ const calculateLeaseStatus = (
 export function mapToOnecoreLease(lease: TenfastLease): Lease {
   return {
     leaseId: lease.externalId,
-    leaseNumber: 'missing', // Do we need this?
+    leaseNumber: lease.externalId.split('/')[1],
     leaseStartDate: lease.startDate,
     leaseEndDate: lease.endDate ?? undefined,
     status: calculateLeaseStatus(lease.startDate, lease.endDate),

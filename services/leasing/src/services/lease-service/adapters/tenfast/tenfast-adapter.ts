@@ -401,7 +401,6 @@ export async function getLeasesByTenantId(
       return { ok: false, err: { tag: 'schema-error', error: leases.error } }
     }
 
-    console.log(filters)
     return {
       ok: true,
       data: filterByStatus(leases.data, filters.status),
