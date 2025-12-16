@@ -635,6 +635,24 @@ export const ComponentModelSchema = z.object({
   subtype: ComponentSubtypeSchema.optional(),
 })
 
+export const PropertyStructureSchema = z.object({
+  roomId: z.string().nullable().optional(),
+  roomCode: z.string().nullable().optional(),
+  roomName: z.string().nullable().optional(),
+  residenceId: z.string().nullable().optional(),
+  residenceCode: z.string().nullable().optional(),
+  residenceName: z.string().nullable().optional(),
+  rentalId: z.string().nullable().optional(),
+  buildingCode: z.string().nullable().optional(),
+  buildingName: z.string().nullable().optional(),
+})
+
+// PropertyObject schema with property structures
+export const PropertyObjectSchema = z.object({
+  id: z.string().uuid(),
+  propertyStructures: z.array(PropertyStructureSchema).optional(),
+})
+
 export const ComponentInstallationWithoutComponentSchema = z.object({
   id: z.string().uuid(),
   componentId: z.string().uuid(),
@@ -646,6 +664,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
   cost: z.number().min(0),
   createdAt: z.string(),
   updatedAt: z.string(),
+  propertyObject: PropertyObjectSchema.optional(),
 })
 
 // Component instance schema with installations included (Level 5)

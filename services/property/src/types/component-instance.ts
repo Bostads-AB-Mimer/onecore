@@ -23,6 +23,25 @@ export const componentsNewQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+// PropertyStructure schema for room/residence information
+export const PropertyStructureSchema = z.object({
+  roomId: z.string().nullable().optional(),
+  roomCode: z.string().nullable().optional(),
+  roomName: z.string().nullable().optional(),
+  residenceId: z.string().nullable().optional(),
+  residenceCode: z.string().nullable().optional(),
+  residenceName: z.string().nullable().optional(),
+  rentalId: z.string().nullable().optional(),
+  buildingCode: z.string().nullable().optional(),
+  buildingName: z.string().nullable().optional(),
+})
+
+// PropertyObject schema with property structures
+export const PropertyObjectSchema = z.object({
+  id: z.string().uuid(),
+  propertyStructures: z.array(PropertyStructureSchema).optional(),
+})
+
 // ComponentInstallation schema without component reference (to avoid circular reference)
 // This is used when ComponentInstallations are included in Component responses
 // For direct ComponentInstallation queries, use ComponentInstallationSchema in component-installation.ts
@@ -46,6 +65,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
   updatedAt: z
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
+  propertyObject: PropertyObjectSchema.optional(),
 })
 
 // Component instance response schema with installations included

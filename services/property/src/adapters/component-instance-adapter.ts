@@ -55,6 +55,26 @@ export const getComponents = async (
           orderBy: {
             installationDate: 'desc',
           },
+          include: {
+            propertyObject: {
+              select: {
+                id: true,
+                propertyStructures: {
+                  select: {
+                    roomId: true,
+                    roomCode: true,
+                    roomName: true,
+                    residenceId: true,
+                    residenceCode: true,
+                    residenceName: true,
+                    rentalId: true,
+                    buildingCode: true,
+                    buildingName: true,
+                  },
+                },
+              },
+            },
+          },
         },
       },
     }),
@@ -81,7 +101,28 @@ export const getComponentById = async (id: string) => {
           subtype: true,
         },
       },
-      componentInstallations: true,
+      componentInstallations: {
+        include: {
+          propertyObject: {
+            select: {
+              id: true,
+              propertyStructures: {
+                select: {
+                  roomId: true,
+                  roomCode: true,
+                  roomName: true,
+                  residenceId: true,
+                  residenceCode: true,
+                  residenceName: true,
+                  rentalId: true,
+                  buildingCode: true,
+                  buildingName: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   })
 
@@ -145,6 +186,26 @@ export const getComponentsByRoomId = async (roomId: string) => {
         take: 1,
         orderBy: {
           installationDate: 'desc',
+        },
+        include: {
+          propertyObject: {
+            select: {
+              id: true,
+              propertyStructures: {
+                select: {
+                  roomId: true,
+                  roomCode: true,
+                  roomName: true,
+                  residenceId: true,
+                  residenceCode: true,
+                  residenceName: true,
+                  rentalId: true,
+                  buildingCode: true,
+                  buildingName: true,
+                },
+              },
+            },
+          },
         },
       },
     },
