@@ -2,8 +2,11 @@ import { useState, Fragment } from 'react'
 import { Plus, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { useComponentEntity } from '@/components/hooks/useComponentEntity'
-import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
 import { useDebounce } from '@/components/hooks/useDebounce'
+import {
+  useComponentLibraryHandlers,
+  type ViewState,
+} from '@/components/hooks/useComponentLibraryHandlers'
 import { CategoryCard } from '@/components/component-library/CategoryCard'
 import { TypeCard } from '@/components/component-library/TypeCard'
 import { SubtypesTable } from '@/components/component-library/SubtypesTable'
@@ -32,44 +35,28 @@ function useDialogState<T>() {
   return {
     state,
     openCreate: (defaultValues?: Record<string, any>) =>
-      setState({ isOpen: true, mode: 'create', entity: undefined, defaultValues }),
+      setState({
+        isOpen: true,
+        mode: 'create',
+        entity: undefined,
+        defaultValues,
+      }),
     openEdit: (entity: T) =>
-      setState({ isOpen: true, mode: 'edit', entity, defaultValues: undefined }),
+      setState({
+        isOpen: true,
+        mode: 'edit',
+        entity,
+        defaultValues: undefined,
+      }),
     close: () =>
-      setState({ isOpen: false, mode: 'create', entity: undefined, defaultValues: undefined }),
+      setState({
+        isOpen: false,
+        mode: 'create',
+        entity: undefined,
+        defaultValues: undefined,
+      }),
   }
 }
-
-type ViewState =
-  | { level: 'categories' }
-  | { level: 'types'; categoryId: string; categoryName: string }
-  | {
-      level: 'subtypes'
-      typeId: string
-      typeName: string
-      categoryId: string
-      categoryName: string
-    }
-  | {
-      level: 'models'
-      subtypeId: string
-      subtypeName: string
-      typeId: string
-      typeName: string
-      categoryId: string
-      categoryName: string
-    }
-  | {
-      level: 'instances'
-      modelId: string
-      modelName: string
-      subtypeId: string
-      subtypeName: string
-      typeId: string
-      typeName: string
-      categoryId: string
-      categoryName: string
-    }
 
 const ComponentLibraryView = () => {
   const [viewState, setViewState] = useState<ViewState>({ level: 'categories' })
@@ -100,7 +87,6 @@ const ComponentLibraryView = () => {
     isLoading: categoriesLoading,
     error: categoriesError,
   } = useComponentEntity('category')
-  const deleteCategory = useComponentEntityMutation('category', 'delete')
 
   const {
     data: types,
@@ -110,7 +96,6 @@ const ComponentLibraryView = () => {
     'type',
     viewState.level !== 'categories' ? viewState.categoryId : ''
   )
-  const deleteType = useComponentEntityMutation('type', 'delete')
 
   const {
     data: subtypes,
@@ -128,7 +113,6 @@ const ComponentLibraryView = () => {
           : undefined,
     }
   )
-  const deleteSubtype = useComponentEntityMutation('subtype', 'delete')
 
   const {
     data: models,
@@ -144,7 +128,6 @@ const ComponentLibraryView = () => {
           : undefined,
     }
   )
-  const deleteModel = useComponentEntityMutation('model', 'delete')
 
   const {
     data: instances,
@@ -160,206 +143,43 @@ const ComponentLibraryView = () => {
           : undefined,
     }
   )
-  const deleteInstance = useComponentEntityMutation('instance', 'delete')
 
-  // Category handlers
-  const handleCreateCategory = () => categoryDialog.openCreate()
-  const handleEditCategory = (category: ComponentCategory) => categoryDialog.openEdit(category)
-
-  const handleDeleteCategory = async (category: ComponentCategory) => {
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort kategorin "${category.categoryName}"?`
-      )
-    ) {
-      try {
-        await deleteCategory.mutateAsync({ id: category.id })
-      } catch (error) {
-        console.error('Error deleting category:', error)
-        alert('Det gick inte att ta bort kategorin. Den kan ha kopplade typer.')
-      }
-    }
-  }
-
-  const handleNavigateToTypes = (category: ComponentCategory) => {
-    setViewState({
-      level: 'types',
-      categoryId: category.id,
-      categoryName: category.categoryName,
-    })
-  }
-
-  // Type handlers
-  const handleCreateType = () => typeDialog.openCreate()
-  const handleEditType = (type: ComponentType) => typeDialog.openEdit(type)
-
-  const handleDeleteType = async (type: ComponentType) => {
-    if (viewState.level !== 'types' && viewState.level !== 'subtypes') return
-
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort typen "${type.typeName}"?`
-      )
-    ) {
-      try {
-        await deleteType.mutateAsync({
-          id: type.id,
-          parentId: viewState.categoryId,
-        })
-      } catch (error) {
-        console.error('Error deleting type:', error)
-        alert(
-          'Det gick inte att ta bort typen. Den kan ha kopplade undertyper.'
-        )
-      }
-    }
-  }
-
-  const handleNavigateToSubtypes = (type: ComponentType) => {
-    if (viewState.level !== 'types') return
-
-    setViewState({
-      level: 'subtypes',
-      typeId: type.id,
-      typeName: type.typeName,
-      categoryId: viewState.categoryId,
-      categoryName: viewState.categoryName,
-    })
-  }
-
-  // Subtype handlers
-  const handleCreateSubtype = () => subtypeDialog.openCreate()
-  const handleEditSubtype = (subtype: ComponentSubtype) => subtypeDialog.openEdit(subtype)
-
-  const handleDeleteSubtype = async (subtype: ComponentSubtype) => {
-    if (viewState.level !== 'subtypes') return
-
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort undertypen "${subtype.subTypeName}"?`
-      )
-    ) {
-      try {
-        await deleteSubtype.mutateAsync({
-          id: subtype.id,
-          parentId: viewState.typeId,
-        })
-      } catch (error) {
-        console.error('Error deleting subtype:', error)
-        alert('Det gick inte att ta bort undertypen.')
-      }
-    }
-  }
-
-  const handleNavigateToModels = (subtype: ComponentSubtype) => {
-    if (viewState.level !== 'subtypes') return
-
-    setModelSearch('') // Reset search when navigating
-    setViewState({
-      level: 'models',
-      subtypeId: subtype.id,
-      subtypeName: subtype.subTypeName,
-      typeId: viewState.typeId,
-      typeName: viewState.typeName,
-      categoryId: viewState.categoryId,
-      categoryName: viewState.categoryName,
-    })
-  }
-
-  // Model handlers
-  const handleCreateModel = () => modelDialog.openCreate()
-  const handleEditModel = (model: ComponentModel) => modelDialog.openEdit(model)
-
-  const handleDeleteModel = async (model: ComponentModel) => {
-    if (viewState.level !== 'models') return
-
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort modellen "${model.modelName}"?`
-      )
-    ) {
-      try {
-        await deleteModel.mutateAsync({
-          id: model.id,
-          parentId: viewState.subtypeId,
-        })
-      } catch (error) {
-        console.error('Error deleting model:', error)
-        alert(
-          'Det gick inte att ta bort modellen. Den kan ha kopplade instanser.'
-        )
-      }
-    }
-  }
-
-  const handleCreateInstance = (model: ComponentModel) => {
-    // Pre-fill instance data from model
-    instanceDialog.openCreate({
-      warrantyMonths: model.warrantyMonths || 0,
-      priceAtPurchase: model.currentPrice || 0,
-      depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
-      economicLifespan: model.subtype?.economicLifespan || 0,
-    })
-  }
-
-  // Instance handlers
-  const handleNavigateToInstances = (model: ComponentModel) => {
-    if (viewState.level !== 'models') return
-
-    setInstanceSearch('') // Reset search when navigating
-    setViewState({
-      level: 'instances',
-      modelId: model.id,
-      modelName: model.modelName,
-      subtypeId: viewState.subtypeId,
-      subtypeName: viewState.subtypeName,
-      typeId: viewState.typeId,
-      typeName: viewState.typeName,
-      categoryId: viewState.categoryId,
-      categoryName: viewState.categoryName,
-    })
-  }
-
-  const handleCreateInstanceFromTable = () => {
-    if (viewState.level !== 'instances') return
-    instanceDialog.openCreate() // Clear any pre-filled values
-  }
-
-  const handleEditInstance = (instance: ComponentInstance) => instanceDialog.openEdit(instance)
-
-  const handleDeleteInstance = async (instance: ComponentInstance) => {
-    if (viewState.level !== 'instances') return
-
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort instansen "${instance.serialNumber}"?`
-      )
-    ) {
-      try {
-        await deleteInstance.mutateAsync({
-          id: instance.id,
-          parentId: viewState.modelId,
-        })
-      } catch (error) {
-        console.error('Error deleting instance:', error)
-        alert('Det gick inte att ta bort instansen.')
-      }
-    }
-  }
-
-  const handleViewHistory = (instance: ComponentInstance) => {
-    setInstanceDetailsDialogState({
-      isOpen: true,
-      instance,
-    })
-  }
-
-  const handleCloseInstanceDetailsDialog = () => {
-    setInstanceDetailsDialogState({
-      isOpen: false,
-      instance: undefined,
-    })
-  }
+  // Use handlers hook
+  const {
+    handleCreateCategory,
+    handleEditCategory,
+    handleDeleteCategory,
+    handleNavigateToTypes,
+    handleCreateType,
+    handleEditType,
+    handleDeleteType,
+    handleNavigateToSubtypes,
+    handleCreateSubtype,
+    handleEditSubtype,
+    handleDeleteSubtype,
+    handleNavigateToModels,
+    handleCreateModel,
+    handleEditModel,
+    handleDeleteModel,
+    handleCreateInstance,
+    handleNavigateToInstances,
+    handleCreateInstanceFromTable,
+    handleEditInstance,
+    handleDeleteInstance,
+    handleViewHistory,
+    handleCloseInstanceDetailsDialog,
+  } = useComponentLibraryHandlers({
+    viewState,
+    setViewState,
+    setModelSearch,
+    setInstanceSearch,
+    setInstanceDetailsDialogState,
+    categoryDialog,
+    typeDialog,
+    subtypeDialog,
+    modelDialog,
+    instanceDialog,
+  })
 
   const renderContent = () => {
     // Categories view
@@ -624,13 +444,19 @@ const ComponentLibraryView = () => {
     return null
   }
 
-  const getBreadcrumbItems = (): Array<{ label: string; onClick?: () => void }> => {
+  const getBreadcrumbItems = (): Array<{
+    label: string
+    onClick?: () => void
+  }> => {
     const items: Array<{ label: string; onClick?: () => void }> = []
 
     // Always start with Categories
     items.push({
       label: 'Kategorier',
-      onClick: viewState.level !== 'categories' ? () => setViewState({ level: 'categories' }) : undefined,
+      onClick:
+        viewState.level !== 'categories'
+          ? () => setViewState({ level: 'categories' })
+          : undefined,
     })
 
     if (viewState.level === 'categories') return items
@@ -638,11 +464,15 @@ const ComponentLibraryView = () => {
     // Add category
     items.push({
       label: viewState.categoryName,
-      onClick: viewState.level !== 'types' ? () => setViewState({
-        level: 'types',
-        categoryId: viewState.categoryId,
-        categoryName: viewState.categoryName,
-      }) : undefined,
+      onClick:
+        viewState.level !== 'types'
+          ? () =>
+              setViewState({
+                level: 'types',
+                categoryId: viewState.categoryId,
+                categoryName: viewState.categoryName,
+              })
+          : undefined,
     })
 
     if (viewState.level === 'types') return items
@@ -650,13 +480,17 @@ const ComponentLibraryView = () => {
     // Add type
     items.push({
       label: viewState.typeName,
-      onClick: viewState.level !== 'subtypes' ? () => setViewState({
-        level: 'subtypes',
-        typeId: viewState.typeId,
-        typeName: viewState.typeName,
-        categoryId: viewState.categoryId,
-        categoryName: viewState.categoryName,
-      }) : undefined,
+      onClick:
+        viewState.level !== 'subtypes'
+          ? () =>
+              setViewState({
+                level: 'subtypes',
+                typeId: viewState.typeId,
+                typeName: viewState.typeName,
+                categoryId: viewState.categoryId,
+                categoryName: viewState.categoryName,
+              })
+          : undefined,
     })
 
     if (viewState.level === 'subtypes') return items
@@ -664,15 +498,19 @@ const ComponentLibraryView = () => {
     // Add subtype
     items.push({
       label: viewState.subtypeName,
-      onClick: viewState.level !== 'models' ? () => setViewState({
-        level: 'models',
-        subtypeId: viewState.subtypeId,
-        subtypeName: viewState.subtypeName,
-        typeId: viewState.typeId,
-        typeName: viewState.typeName,
-        categoryId: viewState.categoryId,
-        categoryName: viewState.categoryName,
-      }) : undefined,
+      onClick:
+        viewState.level !== 'models'
+          ? () =>
+              setViewState({
+                level: 'models',
+                subtypeId: viewState.subtypeId,
+                subtypeName: viewState.subtypeName,
+                typeId: viewState.typeId,
+                typeName: viewState.typeName,
+                categoryId: viewState.categoryId,
+                categoryName: viewState.categoryName,
+              })
+          : undefined,
     })
 
     if (viewState.level === 'models') return items
@@ -692,7 +530,9 @@ const ComponentLibraryView = () => {
       <div className="flex items-center gap-2">
         {items.map((item, index) => (
           <Fragment key={index}>
-            {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            {index > 0 && (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
             {item.onClick ? (
               <button
                 onClick={item.onClick}
