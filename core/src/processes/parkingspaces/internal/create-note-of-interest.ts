@@ -9,7 +9,6 @@ import {
   CreateNoteOfInterestErrorCodes,
   WaitingListType,
 } from '@onecore/types'
-import dayjs from 'dayjs'
 import { logger } from '@onecore/utilities'
 
 import {
