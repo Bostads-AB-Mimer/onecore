@@ -382,61 +382,32 @@ export const preliminaryTerminateLease = async (
   >
 > => {
   try {
-    // Get the tenfast tenant by contactCode
-    const tenantResult = await getTenantByContactCode(contactCode)
-    if (!tenantResult.ok || !tenantResult.data) {
-      logger.error(
-        {
-          contactCode,
-          error: !tenantResult.ok ? tenantResult.err : 'not-found',
-        },
-        'Could not retrieve tenant for preliminary termination'
-      )
-      return { ok: false, err: 'tenant-not-found' }
-    }
-
-    const tenfastUserId = tenantResult.data._id
-
-    // Get all leases for the tenant from tenfast
-    const leasesResponse = await tenfastApi.request({
+    // Get the lease from tenfast using our leaseId (externalId)
+    const leaseResponse = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenfastUserId}/avtal`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}?hyresvard=${tenfastCompanyId}`,
     })
 
-    if (leasesResponse.status !== 200) {
+    if (leaseResponse.status === 404) {
+      logger.error({ leaseId }, 'Lease not found in tenfast')
+      return { ok: false, err: 'lease-not-found' }
+    }
+
+    if (leaseResponse.status !== 200) {
       logger.error(
-        { contactCode, tenfastUserId, status: leasesResponse.status },
-        'Failed to retrieve tenant leases from tenfast'
+        { leaseId, status: leaseResponse.status },
+        'Failed to retrieve lease from tenfast'
       )
       return { ok: false, err: 'termination-failed' }
     }
 
-    // Extract rental object code from leaseId (remove / and everything after)
-    // e.g., "216-704-00-0022/02" -> "216-704-00-0022"
-    const rentalObjectCode = leaseId.split('/')[0]
-
-    // Find the matching lease by comparing rental object externalId
-    const matchingLease = leasesResponse.data.find((lease: any) => {
-      const hyresobjekt = lease.originalData?.hyresobjekt?.[0]
-      return hyresobjekt?.externalId === rentalObjectCode
-    })
-
-    if (!matchingLease) {
-      logger.error(
-        { leaseId, rentalObjectCode, contactCode },
-        'Could not find matching lease in tenfast'
-      )
-      return { ok: false, err: 'lease-not-found' }
-    }
-
-    const tenfastLeaseId = matchingLease._id
+    const tenfastLeaseId = leaseResponse.data._id
 
     logger.info(
       {
         leaseId,
         tenfastLeaseId,
         contactCode,
-        tenfastUserId,
         lastDebitDate: lastDebitDate.toISOString(),
         desiredMoveDate: desiredMoveDate.toISOString(),
       },
