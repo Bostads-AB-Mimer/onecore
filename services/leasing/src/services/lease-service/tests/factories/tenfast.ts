@@ -8,12 +8,13 @@ import {
 
 export const TenfastLeaseFactory = Factory.define<TenfastLease>(
   ({ sequence }) => ({
+    externalId: `externalId-${sequence}`,
     reference: sequence,
     verson: 1,
     originalData: {},
     hyror: [],
     simpleHyra: false,
-    startDate: new Date(2022, 0, 1),
+    startDate: new Date(),
     endDate: null,
     aviseringsTyp: 'email',
     uppsagningstid: '3 månader',
@@ -36,6 +37,11 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
       cancelled: false,
       doneAutomatically: false,
       hyresgastBankidSignature: '',
+      receivedCancellationAt: null,
+      notifiedAt: null,
+      handledAt: null,
+      handledBy: null,
+      preferredMoveOutDate: null,
     },
     deposit: {
       ekoNotifications: [],
@@ -55,11 +61,11 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     incudeHyrorInThePast: false,
     createdBy: `user-${sequence}`,
     updatedBy: `user-${sequence}`,
-    createdAt: new Date(2022, 0, 1),
-    updatedAt: new Date(2022, 0, 2),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    startInvoicingFrom: new Date(),
+    signedAt: new Date(),
     tags: [],
-    wasNew: false,
-    wasAccepted: false,
   })
 )
 

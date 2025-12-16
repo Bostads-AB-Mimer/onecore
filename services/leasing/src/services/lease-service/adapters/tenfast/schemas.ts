@@ -212,8 +212,8 @@ export const NotificationTypeSchema = z.enum([
  * Currently there are several discrepancies between data model and actual response.
  * Some fields that I considered irrelevant at the time of writing are typed as unknown
  */
-
 export const TenfastLeaseSchema = z.object({
+  externalId: z.string(), // This is Onecore canonical lease id
   reference: z.number(),
   verson: z.number(),
   originalData: z.unknown(),
@@ -242,6 +242,11 @@ export const TenfastLeaseSchema = z.object({
     cancelled: z.boolean(),
     doneAutomatically: z.boolean(),
     hyresgastBankidSignature: z.string(),
+    receivedCancellationAt: z.coerce.date().optional().nullable(), // When TenFAST received the cancellation
+    notifiedAt: z.coerce.date().optional().nullable(), // When TenFAST notified the tenant about the cancellation
+    handledAt: z.coerce.date().optional().nullable(), // When TenFAST handled the cancellation i.e termination date
+    handledBy: z.string().optional().nullable(), // Which TenFAST user handled the cancellation
+    preferredMoveOutDate: z.coerce.date().optional().nullable(), // When the tenant prefers to move out
   }),
   deposit: z.object({
     ekoNotifications: z.array(z.any()),
@@ -276,9 +281,9 @@ export const TenfastLeaseSchema = z.object({
   updatedBy: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  startInvoicingFrom: z.coerce.date(),
+  signedAt: z.coerce.date().nullable(), // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
   tags: z.array(z.unknown()),
-  wasNew: z.boolean(),
-  wasAccepted: z.boolean(),
 })
 
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
