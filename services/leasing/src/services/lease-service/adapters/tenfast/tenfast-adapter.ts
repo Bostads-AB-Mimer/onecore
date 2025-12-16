@@ -408,18 +408,75 @@ export const preliminaryTerminateLease = async (
       'Preliminary lease termination request to tenfast'
     )
 
-    // TODO: Implement the actual termination logic with tenfast API
-    // const terminationResponse = await tenfastApi.request({
-    //   method: 'post',
-    //   url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${leaseId}/terminate`,
-    //   data: {
-    //     tenfastUserId,
-    //     lastDebitDate: lastDebitDate.toISOString(),
-    //     desiredMoveDate: desiredMoveDate.toISOString(),
-    //   },
-    // })
+    // Format dates to YYYY-MM-DD format as required by tenfast API
+    const endDate = lastDebitDate.toISOString().split('T')[0]
 
-    return { ok: true, data: { message: 'Termination request logged' } }
+    const requestData: {
+      endDate: string
+      cancelledByType: string
+      reason: string
+      preferredMoveOutDate?: string
+    } = {
+      endDate,
+      cancelledByType: 'hyresgast',
+      reason: 'Tenant requested termination',
+    }
+
+    // Only include preferredMoveOutDate if desiredMoveDate is provided
+    if (desiredMoveDate) {
+      requestData.preferredMoveOutDate = desiredMoveDate
+        .toISOString()
+        .split('T')[0]
+    }
+
+    const terminationResponse = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${leaseId}/send-simplesign-termination?hyresvard=${tenfastCompanyId}`,
+      data: requestData,
+    })
+
+    // Handle success
+    if (terminationResponse.status === 200) {
+      logger.info(
+        { leaseId, contactCode },
+        'Preliminary lease termination successful'
+      )
+      return { ok: true, data: { message: 'Signerings begäran skickad' } }
+    }
+
+    // Handle errors
+    const errorMap: Record<
+      number,
+      {
+        err: 'lease-not-found' | 'termination-failed' | 'unknown'
+        message: string
+      }
+    > = {
+      400: {
+        err: 'termination-failed',
+        message: 'Invalid termination request data',
+      },
+      404: { err: 'lease-not-found', message: 'Lease not found in tenfast' },
+      500: {
+        err: 'termination-failed',
+        message: 'Tenfast server error during termination',
+      },
+    }
+
+    const error = errorMap[terminationResponse.status] || {
+      err: 'unknown' as const,
+      message: 'Unexpected response from tenfast termination endpoint',
+    }
+
+    logger.error(
+      {
+        leaseId,
+        status: terminationResponse.status,
+        error: terminationResponse.data,
+      },
+      error.message
+    )
+    return { ok: false, err: error.err }
   } catch (err) {
     return handleTenfastError(err, 'termination-failed')
   }
