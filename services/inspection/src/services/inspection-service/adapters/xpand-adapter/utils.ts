@@ -1,3 +1,21 @@
+const STATUS_MAP: Record<number, string> = {
+  0: 'Registrerad',
+  1: 'Genomförd',
+  3: 'Besiktningsresultat skickat',
+  6: 'Makulerad',
+} as const
+
+export function mapInspectionStatus(
+  inspections: Array<{ status: number; [key: string]: any }>
+): Array<{ status: string; [key: string]: any }> {
+  return inspections.map((inspection) => ({
+    ...inspection,
+    status:
+      STATUS_MAP[inspection.status as number] ??
+      `Unknown (${inspection.status})`,
+  }))
+}
+
 export function trimStrings<T>(data: T): T {
   if (typeof data === 'string') {
     return data.trim() as T

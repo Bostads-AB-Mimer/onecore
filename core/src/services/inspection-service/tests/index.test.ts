@@ -5,6 +5,7 @@ import * as inspectionAdapter from '../../../adapters/inspection-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import * as schemas from '../schemas'
+import { XpandInspectionFactory } from '../../../../test/factories/inspection'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -14,28 +15,7 @@ app.use(router.routes())
 
 describe('inspection-service index', () => {
   describe('GET /inspections/xpand', () => {
-    const mockInspections = [
-      {
-        id: '1',
-        status: 'completed',
-        date: new Date('2024-01-01').toISOString(),
-        inspector: 'John Doe',
-        type: 'move-in',
-        address: '123 Main St',
-        apartmentCode: 'A101',
-        leaseId: 'lease-1',
-      },
-      {
-        id: '2',
-        status: 'pending',
-        date: new Date('2024-01-02').toISOString(),
-        inspector: 'Jane Smith',
-        type: 'move-out',
-        address: '456 Oak Ave',
-        apartmentCode: 'B202',
-        leaseId: 'lease-2',
-      },
-    ]
+    const mockInspections = XpandInspectionFactory.buildList(2)
 
     it('should return inspections from Xpand', async () => {
       const getXpandInspectionsSpy = jest
@@ -181,6 +161,139 @@ describe('inspection-service index', () => {
       expect(res.status).toBe(200)
       expect(res.body.content.inspections).toEqual([])
       expect(getXpandInspectionsSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /inspections/xpand/residence/:residenceId', () => {
+    const mockInspections = XpandInspectionFactory.buildList(2)
+
+    it('should return inspections for a specific residence ID', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockInspections,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('inspections')
+      expect(res.body.content.inspections).toHaveLength(2)
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        'residence-123'
+      )
+    })
+
+    it('should return 404 when no inspections found for residence ID', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: false,
+          err: 'not-found',
+          statusCode: 404,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-123'
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('not-found')
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        'residence-123'
+      )
+    })
+
+    it('should return 500 if adapter returns error', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: false,
+          err: 'unknown',
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalled()
+    })
+
+    it('should return 500 if adapter throws error', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockRejectedValue(new Error('Network error'))
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalled()
+    })
+
+    it('should validate response schema matches XpandInspectionSchema', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockInspections,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.XpandInspectionSchema.array().parse(
+          res.body.content.inspections
+        )
+      ).not.toThrow()
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalled()
+    })
+
+    it('should return empty array when no inspections found for residence', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: true,
+          data: [],
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspections).toEqual([])
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalled()
+    })
+
+    it('should handle special characters in residence ID', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockInspections,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/residence/residence-abc-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        'residence-abc-123'
+      )
     })
   })
 })

@@ -90,7 +90,7 @@ export const routes = (router: KoaRouter) => {
     const { skip, limit, sortAscending } = parsedQuery.data
 
     try {
-      const xpandInspections = await xpandAdapter.getInspectionsFromXpand({
+      const xpandInspections = await xpandAdapter.getInspections({
         skip,
         limit,
         sortAscending,
@@ -114,6 +114,91 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (error) {
       logger.error(error, 'Error fetching inspections from Xpand')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/residence/{residenceId}:
+   *   get:
+   *     tags:
+   *       - Inspection
+   *     summary: Get inspections from Xpand by residence ID
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence to fetch inspections for
+   *     responses:
+   *       200:
+   *         description: A list of inspections for the specified residence from Xpand
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandInspection'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       500:
+   *         description: Internal Server Error - Failed to fetch inspections from Xpand
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   */
+  router.get('(.*)/inspections/xpand/residence/:residenceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { residenceId } = ctx.params
+
+    try {
+      const xpandInspections =
+        await xpandAdapter.getInspectionsByResidenceId(residenceId)
+
+      if (!xpandInspections.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch inspections from Xpand: ${xpandInspections.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspections: xpandInspections.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        error,
+        `Error fetching inspections from Xpand for residenceId: ${residenceId}`
+      )
       ctx.status = 500
 
       if (error instanceof Error) {
