@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { Plus, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { useComponentEntity } from '@/components/hooks/useComponentEntity'
@@ -19,6 +19,26 @@ import type {
   ComponentModel,
   ComponentInstance,
 } from '@/services/types'
+
+// Helper function to create dialog state management
+function useDialogState<T>() {
+  const [state, setState] = useState<{
+    isOpen: boolean
+    mode: 'create' | 'edit'
+    entity?: T
+    defaultValues?: Record<string, any>
+  }>({ isOpen: false, mode: 'create' })
+
+  return {
+    state,
+    openCreate: (defaultValues?: Record<string, any>) =>
+      setState({ isOpen: true, mode: 'create', entity: undefined, defaultValues }),
+    openEdit: (entity: T) =>
+      setState({ isOpen: true, mode: 'edit', entity, defaultValues: undefined }),
+    close: () =>
+      setState({ isOpen: false, mode: 'create', entity: undefined, defaultValues: undefined }),
+  }
+}
 
 type ViewState =
   | { level: 'categories' }
@@ -54,55 +74,12 @@ type ViewState =
 const ComponentLibraryView = () => {
   const [viewState, setViewState] = useState<ViewState>({ level: 'categories' })
 
-  const [categoryDialogState, setCategoryDialogState] = useState<{
-    isOpen: boolean
-    mode: 'create' | 'edit'
-    category?: ComponentCategory
-  }>({
-    isOpen: false,
-    mode: 'create',
-  })
-
-  const [typeDialogState, setTypeDialogState] = useState<{
-    isOpen: boolean
-    mode: 'create' | 'edit'
-    type?: ComponentType
-  }>({
-    isOpen: false,
-    mode: 'create',
-  })
-
-  const [subtypeDialogState, setSubtypeDialogState] = useState<{
-    isOpen: boolean
-    mode: 'create' | 'edit'
-    subtype?: ComponentSubtype
-  }>({
-    isOpen: false,
-    mode: 'create',
-  })
-
-  const [modelDialogState, setModelDialogState] = useState<{
-    isOpen: boolean
-    mode: 'create' | 'edit'
-    model?: ComponentModel
-  }>({
-    isOpen: false,
-    mode: 'create',
-  })
-
-  const [instanceDialogState, setInstanceDialogState] = useState<{
-    isOpen: boolean
-    mode: 'create' | 'edit'
-    instance?: ComponentInstance
-  }>({
-    isOpen: false,
-    mode: 'create',
-  })
-
-  const [instanceDefaults, setInstanceDefaults] = useState<
-    Record<string, any> | undefined
-  >()
-
+  // Dialog states using helper
+  const categoryDialog = useDialogState<ComponentCategory>()
+  const typeDialog = useDialogState<ComponentType>()
+  const subtypeDialog = useDialogState<ComponentSubtype>()
+  const modelDialog = useDialogState<ComponentModel>()
+  const instanceDialog = useDialogState<ComponentInstance>()
   const [instanceDetailsDialogState, setInstanceDetailsDialogState] = useState<{
     isOpen: boolean
     instance?: ComponentInstance
@@ -186,21 +163,8 @@ const ComponentLibraryView = () => {
   const deleteInstance = useComponentEntityMutation('instance', 'delete')
 
   // Category handlers
-  const handleCreateCategory = () => {
-    setCategoryDialogState({
-      isOpen: true,
-      mode: 'create',
-      category: undefined,
-    })
-  }
-
-  const handleEditCategory = (category: ComponentCategory) => {
-    setCategoryDialogState({
-      isOpen: true,
-      mode: 'edit',
-      category,
-    })
-  }
+  const handleCreateCategory = () => categoryDialog.openCreate()
+  const handleEditCategory = (category: ComponentCategory) => categoryDialog.openEdit(category)
 
   const handleDeleteCategory = async (category: ComponentCategory) => {
     if (
@@ -225,30 +189,9 @@ const ComponentLibraryView = () => {
     })
   }
 
-  const handleCloseCategoryDialog = () => {
-    setCategoryDialogState({
-      isOpen: false,
-      mode: 'create',
-      category: undefined,
-    })
-  }
-
   // Type handlers
-  const handleCreateType = () => {
-    setTypeDialogState({
-      isOpen: true,
-      mode: 'create',
-      type: undefined,
-    })
-  }
-
-  const handleEditType = (type: ComponentType) => {
-    setTypeDialogState({
-      isOpen: true,
-      mode: 'edit',
-      type,
-    })
-  }
+  const handleCreateType = () => typeDialog.openCreate()
+  const handleEditType = (type: ComponentType) => typeDialog.openEdit(type)
 
   const handleDeleteType = async (type: ComponentType) => {
     if (viewState.level !== 'types' && viewState.level !== 'subtypes') return
@@ -284,30 +227,9 @@ const ComponentLibraryView = () => {
     })
   }
 
-  const handleCloseTypeDialog = () => {
-    setTypeDialogState({
-      isOpen: false,
-      mode: 'create',
-      type: undefined,
-    })
-  }
-
   // Subtype handlers
-  const handleCreateSubtype = () => {
-    setSubtypeDialogState({
-      isOpen: true,
-      mode: 'create',
-      subtype: undefined,
-    })
-  }
-
-  const handleEditSubtype = (subtype: ComponentSubtype) => {
-    setSubtypeDialogState({
-      isOpen: true,
-      mode: 'edit',
-      subtype,
-    })
-  }
+  const handleCreateSubtype = () => subtypeDialog.openCreate()
+  const handleEditSubtype = (subtype: ComponentSubtype) => subtypeDialog.openEdit(subtype)
 
   const handleDeleteSubtype = async (subtype: ComponentSubtype) => {
     if (viewState.level !== 'subtypes') return
@@ -344,30 +266,9 @@ const ComponentLibraryView = () => {
     })
   }
 
-  const handleCloseSubtypeDialog = () => {
-    setSubtypeDialogState({
-      isOpen: false,
-      mode: 'create',
-      subtype: undefined,
-    })
-  }
-
   // Model handlers
-  const handleCreateModel = () => {
-    setModelDialogState({
-      isOpen: true,
-      mode: 'create',
-      model: undefined,
-    })
-  }
-
-  const handleEditModel = (model: ComponentModel) => {
-    setModelDialogState({
-      isOpen: true,
-      mode: 'edit',
-      model,
-    })
-  }
+  const handleCreateModel = () => modelDialog.openCreate()
+  const handleEditModel = (model: ComponentModel) => modelDialog.openEdit(model)
 
   const handleDeleteModel = async (model: ComponentModel) => {
     if (viewState.level !== 'models') return
@@ -393,24 +294,11 @@ const ComponentLibraryView = () => {
 
   const handleCreateInstance = (model: ComponentModel) => {
     // Pre-fill instance data from model
-    setInstanceDefaults({
+    instanceDialog.openCreate({
       warrantyMonths: model.warrantyMonths || 0,
       priceAtPurchase: model.currentPrice || 0,
       depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
       economicLifespan: model.subtype?.economicLifespan || 0,
-    })
-    setInstanceDialogState({
-      isOpen: true,
-      mode: 'create',
-      instance: undefined,
-    })
-  }
-
-  const handleCloseModelDialog = () => {
-    setModelDialogState({
-      isOpen: false,
-      mode: 'create',
-      model: undefined,
     })
   }
 
@@ -434,22 +322,10 @@ const ComponentLibraryView = () => {
 
   const handleCreateInstanceFromTable = () => {
     if (viewState.level !== 'instances') return
-
-    setInstanceDefaults(undefined) // Clear any pre-filled values
-    setInstanceDialogState({
-      isOpen: true,
-      mode: 'create',
-      instance: undefined,
-    })
+    instanceDialog.openCreate() // Clear any pre-filled values
   }
 
-  const handleEditInstance = (instance: ComponentInstance) => {
-    setInstanceDialogState({
-      isOpen: true,
-      mode: 'edit',
-      instance,
-    })
-  }
+  const handleEditInstance = (instance: ComponentInstance) => instanceDialog.openEdit(instance)
 
   const handleDeleteInstance = async (instance: ComponentInstance) => {
     if (viewState.level !== 'instances') return
@@ -475,14 +351,6 @@ const ComponentLibraryView = () => {
     setInstanceDetailsDialogState({
       isOpen: true,
       instance,
-    })
-  }
-
-  const handleCloseInstanceDialog = () => {
-    setInstanceDialogState({
-      isOpen: false,
-      mode: 'create',
-      instance: undefined,
     })
   }
 
@@ -756,156 +624,89 @@ const ComponentLibraryView = () => {
     return null
   }
 
+  const getBreadcrumbItems = (): Array<{ label: string; onClick?: () => void }> => {
+    const items: Array<{ label: string; onClick?: () => void }> = []
+
+    // Always start with Categories
+    items.push({
+      label: 'Kategorier',
+      onClick: viewState.level !== 'categories' ? () => setViewState({ level: 'categories' }) : undefined,
+    })
+
+    if (viewState.level === 'categories') return items
+
+    // Add category
+    items.push({
+      label: viewState.categoryName,
+      onClick: viewState.level !== 'types' ? () => setViewState({
+        level: 'types',
+        categoryId: viewState.categoryId,
+        categoryName: viewState.categoryName,
+      }) : undefined,
+    })
+
+    if (viewState.level === 'types') return items
+
+    // Add type
+    items.push({
+      label: viewState.typeName,
+      onClick: viewState.level !== 'subtypes' ? () => setViewState({
+        level: 'subtypes',
+        typeId: viewState.typeId,
+        typeName: viewState.typeName,
+        categoryId: viewState.categoryId,
+        categoryName: viewState.categoryName,
+      }) : undefined,
+    })
+
+    if (viewState.level === 'subtypes') return items
+
+    // Add subtype
+    items.push({
+      label: viewState.subtypeName,
+      onClick: viewState.level !== 'models' ? () => setViewState({
+        level: 'models',
+        subtypeId: viewState.subtypeId,
+        subtypeName: viewState.subtypeName,
+        typeId: viewState.typeId,
+        typeName: viewState.typeName,
+        categoryId: viewState.categoryId,
+        categoryName: viewState.categoryName,
+      }) : undefined,
+    })
+
+    if (viewState.level === 'models') return items
+
+    // Add model (only for instances level)
+    items.push({
+      label: viewState.modelName,
+    })
+
+    return items
+  }
+
   const renderBreadcrumb = () => {
-    if (viewState.level === 'categories') {
-      return <span className="font-medium">Kategorier</span>
-    }
+    const items = getBreadcrumbItems()
 
-    if (viewState.level === 'types') {
-      return (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewState({ level: 'categories' })}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Kategorier
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{viewState.categoryName}</span>
-        </div>
-      )
-    }
-
-    if (viewState.level === 'subtypes') {
-      return (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewState({ level: 'categories' })}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Kategorier
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() =>
-              setViewState({
-                level: 'types',
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-            }
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {viewState.categoryName}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{viewState.typeName}</span>
-        </div>
-      )
-    }
-
-    if (viewState.level === 'models') {
-      return (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewState({ level: 'categories' })}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Kategorier
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() =>
-              setViewState({
-                level: 'types',
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-            }
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {viewState.categoryName}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() =>
-              setViewState({
-                level: 'subtypes',
-                typeId: viewState.typeId,
-                typeName: viewState.typeName,
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-            }
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {viewState.typeName}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{viewState.subtypeName}</span>
-        </div>
-      )
-    }
-
-    if (viewState.level === 'instances') {
-      return (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewState({ level: 'categories' })}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Kategorier
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() =>
-              setViewState({
-                level: 'types',
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-            }
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {viewState.categoryName}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() =>
-              setViewState({
-                level: 'subtypes',
-                typeId: viewState.typeId,
-                typeName: viewState.typeName,
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-            }
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {viewState.typeName}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() =>
-              setViewState({
-                level: 'models',
-                subtypeId: viewState.subtypeId,
-                subtypeName: viewState.subtypeName,
-                typeId: viewState.typeId,
-                typeName: viewState.typeName,
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-            }
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {viewState.subtypeName}
-          </button>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{viewState.modelName}</span>
-        </div>
-      )
-    }
+    return (
+      <div className="flex items-center gap-2">
+        {items.map((item, index) => (
+          <Fragment key={index}>
+            {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            {item.onClick ? (
+              <button
+                onClick={item.onClick}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {item.label}
+              </button>
+            ) : (
+              <span className="font-medium">{item.label}</span>
+            )}
+          </Fragment>
+        ))}
+      </div>
+    )
   }
 
   const renderNewButton = () => {
@@ -956,66 +757,58 @@ const ComponentLibraryView = () => {
 
       {/* Dialogs */}
       <GenericEntityDialog
-        isOpen={categoryDialogState.isOpen}
-        onClose={handleCloseCategoryDialog}
+        isOpen={categoryDialog.state.isOpen}
+        onClose={categoryDialog.close}
         entityType="category"
-        entity={categoryDialogState.category}
-        mode={categoryDialogState.mode}
+        entity={categoryDialog.state.entity}
+        mode={categoryDialog.state.mode}
       />
 
       {viewState.level === 'types' ||
       viewState.level === 'subtypes' ||
       viewState.level === 'models' ? (
         <GenericEntityDialog
-          isOpen={typeDialogState.isOpen}
-          onClose={handleCloseTypeDialog}
+          isOpen={typeDialog.state.isOpen}
+          onClose={typeDialog.close}
           entityType="type"
-          entity={typeDialogState.type}
+          entity={typeDialog.state.entity}
           parentId={viewState.categoryId}
-          mode={typeDialogState.mode}
+          mode={typeDialog.state.mode}
         />
       ) : null}
 
       {viewState.level === 'subtypes' || viewState.level === 'models' ? (
         <GenericEntityDialog
-          isOpen={subtypeDialogState.isOpen}
-          onClose={handleCloseSubtypeDialog}
+          isOpen={subtypeDialog.state.isOpen}
+          onClose={subtypeDialog.close}
           entityType="subtype"
-          entity={subtypeDialogState.subtype}
+          entity={subtypeDialog.state.entity}
           parentId={viewState.typeId}
-          mode={subtypeDialogState.mode}
+          mode={subtypeDialog.state.mode}
         />
       ) : null}
 
       {viewState.level === 'models' ? (
         <GenericEntityDialog
-          isOpen={modelDialogState.isOpen}
-          onClose={handleCloseModelDialog}
+          isOpen={modelDialog.state.isOpen}
+          onClose={modelDialog.close}
           entityType="model"
-          entity={modelDialogState.model}
+          entity={modelDialog.state.entity}
           parentId={viewState.subtypeId}
-          mode={modelDialogState.mode}
+          mode={modelDialog.state.mode}
         />
       ) : null}
 
       {viewState.level === 'instances' ? (
         <>
           <GenericEntityDialog
-            isOpen={instanceDialogState.isOpen}
-            onClose={handleCloseInstanceDialog}
+            isOpen={instanceDialog.state.isOpen}
+            onClose={instanceDialog.close}
             entityType="instance"
-            entity={
-              instanceDialogState.mode === 'edit'
-                ? instanceDialogState.instance
-                : undefined
-            }
-            defaultValues={
-              instanceDialogState.mode === 'create'
-                ? instanceDefaults
-                : undefined
-            }
+            entity={instanceDialog.state.entity}
+            defaultValues={instanceDialog.state.defaultValues}
             parentId={viewState.modelId}
-            mode={instanceDialogState.mode}
+            mode={instanceDialog.state.mode}
           />
 
           {instanceDetailsDialogState.instance && (
