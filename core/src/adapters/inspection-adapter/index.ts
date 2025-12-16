@@ -46,3 +46,36 @@ export const getXpandInspections = async ({
     return { ok: false, err: 'unknown' }
   }
 }
+
+export const getXpandInspectionsByResidenceId = async (
+  residenceId: string
+): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/inspections/xpand/residence/{residenceId}',
+      {
+        params: { path: { residenceId: residenceId } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.inspections) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data?.content.inspections,
+    }
+  } catch (error) {
+    logger.error(
+      { error, residenceId },
+      'inspection-adapter.getXpandInspectionsByResidenceId'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}

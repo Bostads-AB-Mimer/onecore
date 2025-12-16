@@ -138,4 +138,96 @@ export const routes = (router: KoaRouter) => {
       return
     }
   })
+
+  /**
+   * @swagger
+   * /inspections/xpand/residence/{residenceId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections by residence ID from Xpand
+   *     description: Retrieves inspections associated with a specific residence ID from Xpand.
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence to retrieve inspections for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections for the specified residence ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandInspection'
+   *       '404':
+   *         description: No inspections found for the specified residence ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: not-found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve inspections.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand/residence/:residenceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { residenceId } = ctx.params
+
+    try {
+      const result =
+        await inspectionAdapter.getXpandInspectionsByResidenceId(residenceId)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            inspections: result.data,
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            residenceId,
+            metadata,
+          },
+          'Error getting inspections by residenceId from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, residenceId },
+        'Error getting inspections by residenceId from xpand'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
 }

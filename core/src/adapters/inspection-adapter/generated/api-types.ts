@@ -82,6 +82,41 @@ export interface paths {
       }
     }
   }
+  '/inspections/xpand/residence/{residenceId}': {
+    /** Get inspections from Xpand by residence ID */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the residence to fetch inspections for */
+          residenceId: string
+        }
+      }
+      responses: {
+        /** @description A list of inspections for the specified residence from Xpand */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                inspections?: components['schemas']['XpandInspection'][]
+              }
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal Server Error - Failed to fetch inspections from Xpand */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
