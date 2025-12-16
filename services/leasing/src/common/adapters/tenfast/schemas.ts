@@ -2,12 +2,11 @@ import { z } from 'zod'
 
 export const TenfastInvoiceRowSchema = z.object({
   amount: z.number(),
-  vat: z.number(),
-  from: z.string(),
-  to: z.string().nullable(),
+  vat: z.number(), //moms, procentsats
+  from: z.string().nullable().optional(),
+  to: z.string().nullable().optional(),
   article: z.string().nullable(),
   label: z.string().nullable(),
-  accountingRows: z.array(z.any()),
   _id: z.string(),
 })
 
@@ -113,9 +112,10 @@ export const TenfastTenantSchema = z.object({
 
 export const TenfastRentalObjectSchema = z.object({
   _id: z.string(),
-  hyra: z.number(),
-  article: z.string(),
-  hyror: z.array(z.any()), //gör hyror??
+  hyra: z.number(), //total hyra inklusive moms
+  hyraVat: z.number(), // total moms pa hyran
+  hyraExcludingVat: z.number(), // hyran exklusive moms
+  hyror: z.array(TenfastInvoiceRowSchema),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({

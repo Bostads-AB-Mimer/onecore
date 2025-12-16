@@ -178,7 +178,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: false,
-      err: 'get-lease-bad-request',
+      err: 'get-rental-object-bad-request',
     })
   })
 
@@ -725,6 +725,47 @@ describe(tenfastAdapter.createLease, () => {
     expect(result).toEqual({
       ok: false,
       err: 'could-not-find-rental-object',
+    })
+  })
+
+  it('should return error "rent-article-is-missing" when getRentalObject returns a rental object without rent article', async () => {
+    // Arrange
+    const mockTemplate = factory.tenfastTemplate.build()
+    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
+      ok: true,
+      data: mockTemplate,
+    })
+
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: mockTenant.records[0],
+    })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    mockRentalObject.records[0].hyror = [] // Remove rent articles to simulate missing rent article
+
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject.records[0],
+    })
+
+    const contact = factory.contact.build()
+    const fromDate = new Date()
+
+    // Act
+    const result = await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      fromDate,
+      'PARKING_SPACE',
+      true
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'rent-article-is-missing',
     })
   })
 
