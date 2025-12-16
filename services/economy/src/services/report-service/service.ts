@@ -4,7 +4,7 @@ import {
   getAllInvoicesWithMatchIds,
 } from '../common/adapters/xledger-adapter'
 import { getInvoiceRows } from '../common/adapters/xpand-db-adapter'
-import { InvoicePaymentSummary } from './types'
+import { InvoicePaymentSummary, UnpaidInvoiceSummary } from './types'
 import { RentInvoiceRow } from '../common/types'
 import { logger } from '@onecore/utilities'
 
@@ -12,7 +12,7 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
   logger.info(
     `Getting invoices from Xledger between ${from.toISOString()} and ${to.toISOString()}`
   )
-  const xledgerInvoices = await getAllInvoicesWithMatchIds(from, to)
+  const xledgerInvoices = await getAllInvoicesWithMatchIds({ from, to })
   logger.info(`Got ${xledgerInvoices.length} invoices`)
 
   const fullyOrPartiallyPaidRentInvoices = xledgerInvoices.filter(
@@ -126,6 +126,62 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
   })
 
   return invoicePaymentSummaries
+}
+
+export const getUnpaidInvoiceSummaries = async (from: Date, to: Date) => {
+  logger.info(
+    `Getting unpaid invoices from Xledger between ${from.toISOString()} and ${to.toISOString()}`
+  )
+  const xledgerInvoices = await getAllInvoicesWithMatchIds({
+    from,
+    to,
+    remainingAmountGreaterThan: 0,
+  })
+  logger.info(`Got ${xledgerInvoices.length} invoices`)
+
+  logger.info('Getting invoice rows')
+
+  const allInvoiceRows = await fetchInvoiceRowsChunked(
+    xledgerInvoices.map((i) => i.invoiceId)
+  )
+
+  logger.info(`Got ${allInvoiceRows.length} invoice rows`)
+
+  const filteredInvoiceRows = allInvoiceRows.filter((r) =>
+    r.code?.startsWith('HEMFÖR')
+  )
+
+  const unpaidInvoicesWithHemforsakring: UnpaidInvoiceSummary[] = []
+
+  xledgerInvoices.forEach((i) => {
+    if (i.remainingAmount === undefined) {
+      throw new Error(`Invoice ${i.invoiceId} does not have remainingAmount`)
+    }
+
+    const invoiceRowsForInvoice = filteredInvoiceRows.filter(
+      (r) => r.invoiceNumber === i.invoiceId
+    )
+
+    if (invoiceRowsForInvoice.length === 0) {
+      return
+    }
+
+    const hemfor = invoiceRowsForInvoice.find((r) =>
+      r.code?.startsWith('HEMFÖR')
+    )
+
+    const hemforTotal = hemfor
+      ? hemfor.amount + hemfor.reduction + hemfor.vat
+      : 0
+
+    unpaidInvoicesWithHemforsakring.push({
+      ...i,
+      remainingAmount: i.remainingAmount,
+      hemforTotal,
+    })
+  })
+
+  return unpaidInvoicesWithHemforsakring
 }
 
 const fetchInvoiceRowsChunked = async (invoiceIds: string[]) => {
