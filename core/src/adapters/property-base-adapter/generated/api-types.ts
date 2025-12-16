@@ -2661,6 +2661,21 @@ export interface components {
           cost: number;
           createdAt: string;
           updatedAt: string;
+          propertyObject?: {
+            /** Format: uuid */
+            id: string;
+            propertyStructures?: ({
+                roomId?: string | null;
+                roomCode?: string | null;
+                roomName?: string | null;
+                residenceId?: string | null;
+                residenceCode?: string | null;
+                residenceName?: string | null;
+                rentalId?: string | null;
+                buildingCode?: string | null;
+                buildingName?: string | null;
+              })[];
+          };
         })[];
     };
     ComponentInstallation: {
@@ -2761,6 +2776,21 @@ export interface components {
             cost: number;
             createdAt: string;
             updatedAt: string;
+            propertyObject?: {
+              /** Format: uuid */
+              id: string;
+              propertyStructures?: ({
+                  roomId?: string | null;
+                  roomCode?: string | null;
+                  roomName?: string | null;
+                  residenceId?: string | null;
+                  residenceCode?: string | null;
+                  residenceName?: string | null;
+                  rentalId?: string | null;
+                  buildingCode?: string | null;
+                  buildingName?: string | null;
+                })[];
+            };
           })[];
       };
     };
