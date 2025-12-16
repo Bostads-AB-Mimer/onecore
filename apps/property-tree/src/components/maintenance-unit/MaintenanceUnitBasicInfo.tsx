@@ -33,18 +33,16 @@ export const MaintenanceUnitBasicInfo = ({
             className={`grid ${isMobile ? 'grid-cols-1 gap-y-4' : 'grid-cols-2 md:grid-cols-3 gap-4'}`}
           >
             <div>
-              <p className="text-sm text-muted-foreground">Hyres ID</p>
-              <p className="font-medium">
-                {maintenanceUnit.rentalPropertyId || '-'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Kod</p>
+              <p className="text-sm text-muted-foreground">Objektskod</p>
               <p className="font-medium">{maintenanceUnit.code}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Typ</p>
               <p className="font-medium">{maintenanceUnit.type || '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Fastighet</p>
+              <p className="font-medium">{maintenanceUnit.estate || '-'}</p>
             </div>
           </div>
         </CardContent>

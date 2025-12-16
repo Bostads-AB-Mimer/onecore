@@ -1653,6 +1653,70 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /maintenance-units/by-code/{code}:
+   *   get:
+   *     summary: Get a maintenance unit by its code
+   *     description: Returns a single maintenance unit by its unique code.
+   *     tags:
+   *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the maintenance unit to retrieve.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the maintenance unit.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/MaintenanceUnit'
+   *       404:
+   *         description: Maintenance unit not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/maintenance-units/by-code/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { code } = ctx.params
+
+    logger.info(metadata, `GET /maintenance-units/by-code/${code}`)
+
+    try {
+      const result = await propertyBaseAdapter.getMaintenanceUnitByCode(code)
+      if (!result.ok) {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting maintenance unit from property-base'
+        )
+        ctx.status = 404
+        ctx.body = { error: 'Maintenance unit not found', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.MaintenanceUnit,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /facilities/by-property-code/{propertyCode}:
    *   get:
    *     summary: Get facilities by property code.

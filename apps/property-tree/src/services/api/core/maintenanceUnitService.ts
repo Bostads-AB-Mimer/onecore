@@ -27,4 +27,15 @@ export const maintenanceUnitService = {
 
     return units[0]
   },
+
+  async getByCode(code: string): Promise<MaintenanceUnit> {
+    const { data, error } = await GET('/maintenance-units/by-code/{code}', {
+      params: { path: { code } },
+    })
+
+    if (error) throw error
+    if (!data?.content) throw new Error('No maintenance unit found')
+
+    return data.content as MaintenanceUnit
+  },
 }

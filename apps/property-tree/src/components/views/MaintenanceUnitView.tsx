@@ -1,10 +1,9 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare } from 'lucide-react'
+import { ClipboardList, MessageSquare } from 'lucide-react'
 
 import { maintenanceUnitService } from '@/services/api/core'
 import { MaintenanceUnitBasicInfo } from '../maintenance-unit/MaintenanceUnitBasicInfo'
-import { CurrentTenant } from '../rental-object/CurrentTenant'
 import {
   WorkOrdersManagement,
   ContextType,
@@ -13,12 +12,12 @@ import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 
 export function MaintenanceUnitView() {
-  const { rentalId } = useParams()
+  const { code } = useParams()
 
   const maintenanceUnitQuery = useQuery({
-    queryKey: ['maintenanceUnit', rentalId],
-    queryFn: () => maintenanceUnitService.getByRentalId(rentalId!),
-    enabled: !!rentalId,
+    queryKey: ['maintenanceUnit', code],
+    queryFn: () => maintenanceUnitService.getByCode(code!),
+    enabled: !!code,
   })
 
   const maintenanceUnit = maintenanceUnitQuery.data
@@ -30,7 +29,7 @@ export function MaintenanceUnitView() {
         error={maintenanceUnitQuery.error}
         data={maintenanceUnit}
         notFoundMessage="Serviceenhet hittades inte"
-        searchedFor={rentalId}
+        searchedFor={code}
       >
         <></>
       </ObjectPageLayout>
@@ -43,25 +42,15 @@ export function MaintenanceUnitView() {
       error={maintenanceUnitQuery.error}
       data={maintenanceUnit}
       notFoundMessage="Serviceenhet hittades inte"
-      searchedFor={rentalId}
+      searchedFor={code}
     >
       <div className="lg:col-span-3 space-y-6">
         <MaintenanceUnitBasicInfo maintenanceUnit={maintenanceUnit} />
       </div>
 
       <ObjectPageTabs
-        defaultTab="tenant"
+        defaultTab="inspections"
         tabs={[
-          {
-            value: 'tenant',
-            label: 'Hyresgäst',
-            icon: Users,
-            content: (
-              <CurrentTenant
-                rentalPropertyId={maintenanceUnit.rentalPropertyId!}
-              />
-            ),
-          },
           {
             value: 'inspections',
             label: 'Besiktningar',

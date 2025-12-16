@@ -73,7 +73,7 @@ export default function App() {
                 element={<ParkingSpaceView />}
               />
               <Route
-                path="maintenance-units/:rentalId"
+                path="maintenance-units/:code"
                 element={<MaintenanceUnitView />}
               />
               <Route path="facilities/:rentalId" element={<FacilityView />} />
