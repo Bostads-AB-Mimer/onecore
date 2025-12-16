@@ -116,7 +116,10 @@ export function DataTable<T extends { id: string }>({
       {/* Column data */}
       <div className="space-y-2">
         {columns.map((column) => (
-          <div key={column.key} className="flex justify-between items-start gap-2">
+          <div
+            key={column.key}
+            className="flex justify-between items-start gap-2"
+          >
             <span className="text-xs text-muted-foreground font-medium shrink-0">
               {column.label}:
             </span>
