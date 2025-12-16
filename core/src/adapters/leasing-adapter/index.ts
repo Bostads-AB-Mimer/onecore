@@ -895,7 +895,12 @@ const preliminaryTerminateLease = async (
   contactCode: string,
   lastDebitDate: Date,
   desiredMoveDate: Date
-): Promise<AdapterResult<any, 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    any,
+    'tenant-not-found' | 'lease-not-found' | 'termination-failed' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
@@ -916,6 +921,26 @@ const preliminaryTerminateLease = async (
     )
     return { ok: false, err: 'unknown' }
   } catch (err) {
+    if (err instanceof AxiosError && err.response) {
+      const errorType = err.response.data?.error
+      const status = err.response.status
+
+      if (status === 404) {
+        return {
+          ok: false,
+          err: errorType === 'tenant-not-found' || errorType === 'lease-not-found'
+            ? errorType
+            : 'lease-not-found',
+        }
+      }
+
+      logger.error(
+        { status, error: errorType, leaseId },
+        'Error preliminary terminating lease'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+
     logger.error(err, `Error preliminary terminating lease: ${leaseId}`)
     return { ok: false, err: 'unknown' }
   }
