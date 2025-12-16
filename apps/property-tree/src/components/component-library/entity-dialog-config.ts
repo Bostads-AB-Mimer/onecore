@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'number' | 'textarea' | 'select'
+export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'date'
 
 export interface FieldConfig {
   name: string
@@ -35,8 +35,8 @@ export const entityDialogConfig: Record<
         name: 'description',
         label: 'Beskrivning',
         type: 'text',
-        required: false,
-        placeholder: 'Valfri beskrivning',
+        required: true,
+        placeholder: 'Beskriv kategorin',
       },
     ],
   },
@@ -243,6 +243,13 @@ export const entityDialogConfig: Record<
         defaultValue: 0,
       },
       {
+        name: 'warrantyStartDate',
+        label: 'Garantistartdatum',
+        type: 'date',
+        required: false,
+        placeholder: '',
+      },
+      {
         name: 'economicLifespan',
         label: 'Ekonomisk livslängd (år)',
         type: 'number',
@@ -255,6 +262,21 @@ export const entityDialogConfig: Record<
         type: 'text',
         required: false,
         placeholder: 'Valfritt',
+      },
+      {
+        name: 'specifications',
+        label: 'Specifikationer (komponent-specifik)',
+        type: 'textarea',
+        required: false,
+        placeholder:
+          'Ytterligare tekniska specifikationer för denna specifika komponent',
+      },
+      {
+        name: 'additionalInformation',
+        label: 'Övrig information',
+        type: 'textarea',
+        required: false,
+        placeholder: 'Annan viktig information om komponenten',
       },
     ],
   },
