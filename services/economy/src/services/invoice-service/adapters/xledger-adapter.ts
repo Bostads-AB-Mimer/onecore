@@ -7,7 +7,6 @@ import {
   InvoiceTransactionType,
   PaymentStatus,
 } from '@onecore/types'
-import { gql } from 'graphql-request'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
