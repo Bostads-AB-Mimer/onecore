@@ -3348,6 +3348,33 @@ export interface paths {
       };
     };
   };
+  "/inspections/xpand": {
+    /** Retrieve inspections from Xpand */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Number of records to skip for pagination. */
+          skip?: number;
+          /** @description Maximum number of records to return. */
+          limit?: number;
+          /** @description Whether to sort the results in ascending order. */
+          sortAscending?: true | false;
+        };
+      };
+      responses: {
+        /** @description A list of inspections from Xpand */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                inspections?: components["schemas"]["XpandInspection"][];
+              };
+            };
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -4155,6 +4182,17 @@ export interface components {
         name: string | null;
       };
     });
+    XpandInspection: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      inspector: string;
+      type: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+    };
   };
   responses: never;
   parameters: never;

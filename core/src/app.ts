@@ -11,7 +11,7 @@ import { routes as healthRoutes } from './services/health-service'
 
 import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swagggerRoutes } from './services/swagger'
+import { routes as swaggerRoutes } from './services/swagger'
 import { requireAuth } from './middlewares/keycloak-auth'
 
 const app = new Koa()
@@ -48,7 +48,7 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
-swagggerRoutes(publicRouter)
+swaggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // JWT middleware with multiple options
