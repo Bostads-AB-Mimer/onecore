@@ -631,3 +631,41 @@ export async function getResidenceSummariesByBuildingCode(
     return { ok: false, err: 'unknown' }
   }
 }
+
+type GetRentalBlocksByRentalIdResponse = components['schemas']['RentalBlock'][]
+
+export async function getRentalBlocksByRentalId(
+  rentalId: string,
+  options?: { includeActiveBlocksOnly?: boolean }
+): Promise<
+  AdapterResult<GetRentalBlocksByRentalIdResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+
+    const fetchResponse = await client().GET(
+      '/residences/rental-id/{rentalId}/rental-blocks',
+      {
+        params: {
+          path: { rentalId },
+          query: { includeActiveBlocksOnly: includeActiveBlocksOnly },
+        },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalBlocksByRentalId')
+    return { ok: false, err: 'unknown' }
+  }
+}

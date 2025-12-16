@@ -181,6 +181,42 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-id/{rentalId}/rental-blocks": {
+    /**
+     * Get rental blocks by rental ID
+     * @description Returns all rental blocks for the specified rental ID
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
+        path: {
+          /** @description The rental ID */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental blocks */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["RentalBlock"][];
+            };
+          };
+        };
+        /** @description Rental ID not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/{id}": {
     /**
      * Get a residence by ID
@@ -1688,6 +1724,16 @@ export interface components {
           templated: boolean;
         };
       };
+    };
+    RentalBlock: {
+      id: string;
+      blockReasonId: string;
+      blockReason: string;
+      /** Format: date-time */
+      fromDate: string;
+      /** Format: date-time */
+      toDate: string | null;
+      amount: number | null;
     };
   };
   responses: never;
