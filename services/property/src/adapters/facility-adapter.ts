@@ -46,9 +46,7 @@ export async function searchFacilities(q: string) {
   })
 
   return facilities
-    .filter(
-      (f) => f.propertyObject?.facility !== null && f.rentalId !== null
-    )
+    .filter((f) => f.propertyObject?.facility !== null && f.rentalId !== null)
     .map((f) => ({
       id: f.rentalId!,
       rentalId: f.rentalId!,

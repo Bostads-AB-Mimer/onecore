@@ -368,8 +368,7 @@ export async function searchParkingSpaces(
   throw { ok: false, err: 'missing response data invariant' }
 }
 
-type SearchFacilitiesResponse =
-  components['schemas']['FacilitySearchResult'][]
+type SearchFacilitiesResponse = components['schemas']['FacilitySearchResult'][]
 
 export async function searchFacilities(
   q: string

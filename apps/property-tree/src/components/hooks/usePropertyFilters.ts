@@ -125,7 +125,8 @@ export const usePropertyFilters = () => {
   const isFiltering =
     (searchTypeFilter === 'property' && propertiesSearchQuery.isLoading) ||
     (searchTypeFilter === 'residence' && residencesSearchQuery.isLoading) ||
-    (searchTypeFilter === 'parking-space' && parkingSpacesSearchQuery.isLoading) ||
+    (searchTypeFilter === 'parking-space' &&
+      parkingSpacesSearchQuery.isLoading) ||
     (searchTypeFilter === 'facility' && facilitiesSearchQuery.isLoading)
 
   return {
