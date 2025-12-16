@@ -1,13 +1,17 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare } from 'lucide-react'
+import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
-import { facilityService } from '@/services/api/core'
+import { facilityService, leaseService } from '@/services/api/core'
 import { FacilityBasicInfo } from '../facility/FacilityBasicInfo'
-import { TenantInformation } from '../residence/TenantInformation'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { CurrentTenant } from '../rental-object/CurrentTenant'
+import {
+  WorkOrdersManagement,
+  ContextType,
+} from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
+import { RentalObjectContracts } from '../rental-object/RentalObjectContracts'
 
 export function FacilityView() {
   const { rentalId } = useParams()
@@ -19,6 +23,22 @@ export function FacilityView() {
   })
 
   const facility = facilityQuery.data
+
+  // Fetch lease data for rent info and to pass to CurrentTenant
+  const leasesQuery = useQuery({
+    queryKey: ['leases', facility?.rentalInformation?.rentalId],
+    queryFn: () =>
+      leaseService.getByRentalPropertyId(
+        facility!.rentalInformation!.rentalId!,
+        { includeContacts: true }
+      ),
+    enabled: !!facility?.rentalInformation?.rentalId,
+  })
+
+  const currentLease = leasesQuery.data?.find(
+    (lease) => lease.status === 'Current'
+  )
+  const currentRent = currentLease?.rentInfo?.currentRent?.currentRent
 
   if (!facility) {
     return (
@@ -43,7 +63,11 @@ export function FacilityView() {
       searchedFor={rentalId}
     >
       <div className="lg:col-span-3 space-y-6">
-        <FacilityBasicInfo facility={facility} />
+        <FacilityBasicInfo
+          facility={facility}
+          rent={currentRent}
+          isLoadingRent={leasesQuery.isLoading}
+        />
       </div>
 
       <ObjectPageTabs
@@ -54,7 +78,19 @@ export function FacilityView() {
             label: 'Hyresgäst',
             icon: Users,
             content: (
-              <TenantInformation
+              <CurrentTenant
+                rentalPropertyId={facility.rentalInformation?.rentalId!}
+                leases={leasesQuery.data}
+                isLoading={leasesQuery.isLoading}
+              />
+            ),
+          },
+          {
+            value: 'contracts',
+            label: 'Kontrakt',
+            icon: FileText,
+            content: (
+              <RentalObjectContracts
                 rentalPropertyId={facility.rentalInformation?.rentalId!}
               />
             ),
@@ -71,7 +107,7 @@ export function FacilityView() {
             icon: MessageSquare,
             content: (
               <WorkOrdersManagement
-                contextType="residence"
+                contextType={ContextType.Residence}
                 id={facility.rentalInformation?.rentalId!}
               />
             ),

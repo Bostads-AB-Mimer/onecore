@@ -4,8 +4,11 @@ import { ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { maintenanceUnitService } from '@/services/api/core'
 import { MaintenanceUnitBasicInfo } from '../maintenance-unit/MaintenanceUnitBasicInfo'
-import { TenantInformation } from '../residence/TenantInformation'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { CurrentTenant } from '../rental-object/CurrentTenant'
+import {
+  WorkOrdersManagement,
+  ContextType,
+} from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 
@@ -54,7 +57,7 @@ export function MaintenanceUnitView() {
             label: 'Hyresgäst',
             icon: Users,
             content: (
-              <TenantInformation
+              <CurrentTenant
                 rentalPropertyId={maintenanceUnit.rentalPropertyId!}
               />
             ),
@@ -69,12 +72,14 @@ export function MaintenanceUnitView() {
             value: 'workorders',
             label: 'Ärenden',
             icon: MessageSquare,
-            content: (
-              <WorkOrdersManagement
-                contextType="residence"
-                id={maintenanceUnit.rentalPropertyId!}
-              />
-            ),
+            disabled: true,
+            // TODO: Add MaintenanceUnit to ContextType enum in WorkOrdersManagement
+            // content: (
+            //   <WorkOrdersManagement
+            //     contextType={ContextType.MaintenanceUnit}
+            //     id={maintenanceUnit.rentalPropertyId!}
+            //   />
+            // ),
           },
         ]}
       />

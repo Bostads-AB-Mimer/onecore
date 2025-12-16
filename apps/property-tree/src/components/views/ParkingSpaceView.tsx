@@ -2,9 +2,9 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
-import { parkingSpaceService } from '@/services/api/core'
+import { parkingSpaceService, leaseService } from '@/services/api/core'
 import { ParkingSpaceBasicInfo } from '../parking-space/ParkingSpaceBasicInfo'
-import { TenantInformationByRentalId } from '../residence/TenantInformationByRentalId'
+import { CurrentTenant } from '../rental-object/CurrentTenant'
 import {
   WorkOrdersManagement,
   ContextType,
@@ -23,6 +23,21 @@ export function ParkingSpaceView() {
   })
 
   const parkingSpace = parkingSpaceQuery.data
+
+  // Fetch lease data for rent info and to pass to CurrentTenant
+  const leasesQuery = useQuery({
+    queryKey: ['leases', parkingSpace?.rentalId],
+    queryFn: () =>
+      leaseService.getByRentalPropertyId(parkingSpace!.rentalId!, {
+        includeContacts: true,
+      }),
+    enabled: !!parkingSpace?.rentalId,
+  })
+
+  const currentLease = leasesQuery.data?.find(
+    (lease) => lease.status === 'Current'
+  )
+  const currentRent = currentLease?.rentInfo?.currentRent?.currentRent
 
   if (!parkingSpace) {
     return (
@@ -47,7 +62,11 @@ export function ParkingSpaceView() {
       searchedFor={rentalId}
     >
       <div className="lg:col-span-3 space-y-6">
-        <ParkingSpaceBasicInfo parkingSpace={parkingSpace} />
+        <ParkingSpaceBasicInfo
+          parkingSpace={parkingSpace}
+          rent={currentRent}
+          isLoadingRent={leasesQuery.isLoading}
+        />
       </div>
 
       <ObjectPageTabs
@@ -58,8 +77,10 @@ export function ParkingSpaceView() {
             label: 'Hyresgäst',
             icon: Users,
             content: (
-              <TenantInformationByRentalId
+              <CurrentTenant
                 rentalPropertyId={parkingSpace.rentalId}
+                leases={leasesQuery.data}
+                isLoading={leasesQuery.isLoading}
               />
             ),
           },

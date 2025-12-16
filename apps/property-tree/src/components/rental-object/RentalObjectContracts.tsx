@@ -1,12 +1,7 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileText } from 'lucide-react'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
+import { TabLayout } from '@/components/ui/TabLayout'
 import type { ReactNode } from 'react'
 import {
   formatDate,
@@ -29,33 +24,19 @@ export function RentalObjectContracts({
   // Show loading state while leases are being fetched
   if (isLoadingLeases) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Kontrakt</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Hämtar kontrakt...</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span>Hämtar kontrakt...</span>
+      </div>
     )
   }
 
   // Show empty state if no leases
   if (!leases || leases.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Kontrakt</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-center py-8">
-            Inga kontrakt hittades
-          </p>
-        </CardContent>
-      </Card>
+      <p className="text-muted-foreground text-center py-8">
+        Inga kontrakt hittades
+      </p>
     )
   }
 
@@ -263,19 +244,14 @@ export function RentalObjectContracts({
   })
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Kontrakt</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveTable
-          data={sortedLeases}
-          columns={columns}
-          keyExtractor={(lease) => lease.leaseId}
-          emptyMessage="Inga kontrakt hittades"
-          mobileCardRenderer={mobileCardRenderer}
-        />
-      </CardContent>
-    </Card>
+    <TabLayout title="Kontrakt" showCard={true} showHeader={true}>
+      <ResponsiveTable
+        data={sortedLeases}
+        columns={columns}
+        keyExtractor={(lease) => lease.leaseId}
+        emptyMessage="Inga kontrakt hittades"
+        mobileCardRenderer={mobileCardRenderer}
+      />
+    </TabLayout>
   )
 }
