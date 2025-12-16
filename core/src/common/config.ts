@@ -35,6 +35,9 @@ export interface Config {
   economyService: {
     url: string
   }
+  inspectionService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: ms.StringValue | number
@@ -73,6 +76,14 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    economy: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    inspection: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
   }
 }
 
@@ -103,6 +114,9 @@ const config = configPackage({
     },
     economyService: {
       url: 'http://localhost:5080',
+    },
+    inspectionService: {
+      url: 'http://localhost:5090',
     },
     auth: {
       secret: 'very secret. replace this',
@@ -144,6 +158,10 @@ const config = configPackage({
         systemName: 'economy',
         minimumMinutesBetweenRequests: 1,
       },
+      inspection: {
+        systemName: 'inspection',
+        minimumMinutesBetweenRequests: 1,
+      },
     },
   },
 })
@@ -156,6 +174,7 @@ export default {
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
   economyService: config.get('economyService'),
+  inspectionService: config.get('inspectionService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),

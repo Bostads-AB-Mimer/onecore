@@ -11,6 +11,13 @@ export interface Config {
     port: number
     database: string
   }
+  xpandDatabase: {
+    host: string
+    user: string
+    password: string
+    port: number
+    database: string
+  }
   health: {
     inspectionDatabase: {
       systemName: string
@@ -30,6 +37,13 @@ const config = configPackage({
       port: 1438,
       database: '',
     },
+    xpandDatabase: {
+      host: '',
+      user: '',
+      password: '',
+      port: 5432,
+      database: '',
+    },
     health: {
       inspectionDatabase: {
         systemName: 'inspection database',
@@ -42,5 +56,6 @@ const config = configPackage({
 export default {
   port: config.get('port'),
   inspectionDatabase: config.get('inspectionDatabase'),
+  xpandDatabase: config.get('xpandDatabase'),
   health: config.get('health'),
 } as Config

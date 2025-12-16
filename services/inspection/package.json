@@ -8,7 +8,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
+    "dev": "nodemon -e ts,js --exec ts-node src/index ",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -32,6 +32,7 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui": "^3.52.4",
     "dotenv": "^16.4.5",
+    "fishery": "^2.2.2",
     "knex": "^3.1.0",
     "koa": "^2.16.2",
     "koa-bodyparser": "^4.4.1",
