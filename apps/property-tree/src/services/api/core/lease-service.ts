@@ -4,7 +4,7 @@ import type { components } from './generated/api-types'
 export type Lease = components['schemas']['Lease']
 
 async function getByRentalPropertyId(
-  rentalPropertyId: string,
+  rentalObjectCode: string,
   params?: {
     includeContacts?: boolean
     includeUpcomingLeases?: boolean
@@ -12,9 +12,13 @@ async function getByRentalPropertyId(
   }
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(
-    '/leases/by-rental-property-id/{rentalPropertyId}',
+    '/leases/by-rental-object-code/{rentalObjectCode}',
     {
-      params: { path: { rentalPropertyId }, query: params },
+      params: {
+        path: { rentalObjectCode },
+        // TODO: Add status filter
+        query: { includeContacts: params?.includeContacts },
+      },
     }
   )
 
@@ -26,10 +30,7 @@ async function getByRentalPropertyId(
 
 async function getByContactCode(contactCode: string): Promise<Array<Lease>> {
   const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
-    params: {
-      path: { contactCode },
-      query: { includeTerminatedLeases: 'true' },
-    },
+    params: { path: { contactCode } },
   })
 
   if (error) throw error
