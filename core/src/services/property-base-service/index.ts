@@ -48,6 +48,45 @@ export const routes = (router: KoaRouter) => {
     'ParkingSpaceSearchResult',
     schemas.ParkingSpaceSearchResultSchema
   )
+  registerSchema('ComponentType', schemas.ComponentTypeSchema)
+  registerSchema('ComponentSubtype', schemas.ComponentSubtypeSchema)
+  registerSchema('ComponentModel', schemas.ComponentModelSchema)
+  registerSchema('ComponentInstance', schemas.ComponentNewSchema)
+  registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema)
+  registerSchema(
+    'CreateComponentTypeRequest',
+    schemas.CreateComponentTypeSchema
+  )
+  registerSchema(
+    'UpdateComponentTypeRequest',
+    schemas.UpdateComponentTypeSchema
+  )
+  registerSchema(
+    'CreateComponentSubtypeRequest',
+    schemas.CreateComponentSubtypeSchema
+  )
+  registerSchema(
+    'UpdateComponentSubtypeRequest',
+    schemas.UpdateComponentSubtypeSchema
+  )
+  registerSchema(
+    'CreateComponentModelRequest',
+    schemas.CreateComponentModelSchema
+  )
+  registerSchema(
+    'UpdateComponentModelRequest',
+    schemas.UpdateComponentModelSchema
+  )
+  registerSchema('CreateComponentRequest', schemas.CreateComponentNewSchema)
+  registerSchema('UpdateComponentRequest', schemas.UpdateComponentNewSchema)
+  registerSchema(
+    'CreateComponentInstallationRequest',
+    schemas.CreateComponentInstallationSchema
+  )
+  registerSchema(
+    'UpdateComponentInstallationRequest',
+    schemas.UpdateComponentInstallationSchema
+  )
 
   /**
    * @swagger
@@ -68,7 +107,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The code of the property.
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved the buildings.
    *         content:
    *           application/json:
@@ -79,9 +118,9 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Building'
-   *       '400':
+   *       400:
    *         description: Invalid query parameters.
-   *       '500':
+   *       500:
    *         description: Internal server error.
    *     security:
    *       - bearerAuth: []
@@ -142,7 +181,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The unique id of the building
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved building information
    *         content:
    *           application/json:
@@ -151,7 +190,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Building'
-   *       '404':
+   *       404:
    *         description: Building not found
    *         content:
    *           application/json:
@@ -161,7 +200,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Building not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -227,7 +266,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The code of the building
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved building
    *         content:
    *           application/json:
@@ -236,7 +275,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Building'
-   *       '404':
+   *       404:
    *         description: Building not found
    *         content:
    *           application/json:
@@ -246,7 +285,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Building not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -532,7 +571,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Code for the staircase to fetch residences from
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved residences
    *         content:
    *           application/json:
@@ -543,7 +582,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Residence'
-   *       '400':
+   *       400:
    *         description: Missing building code or invalid query parameters
    *         content:
    *           application/json:
@@ -552,7 +591,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                   error:
    *                     type: object
-   *       '500':
+   *       500:
    *          description: Internal server error
    *          content:
    *            application/json:
@@ -626,7 +665,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Optional filter to get properties in a specific tract.
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved properties
    *         content:
    *           application/json:
@@ -637,7 +676,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Property'
-   *       '400':
+   *       400:
    *         description: Missing company code or invalid query parameters
    *         content:
    *           application/json:
@@ -646,7 +685,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 error:
    *                   type: object
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -785,7 +824,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The id of the property
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved property
    *         content:
    *           application/json:
@@ -794,7 +833,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Property'
-   *       '404':
+   *       404:
    *         description: Property not found
    *         content:
    *           application/json:
@@ -804,7 +843,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Property not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -864,7 +903,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Rental id for the residence to fetch
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved residence.
    *         content:
    *           application/json:
@@ -873,7 +912,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
-   *       '404':
+   *       404:
    *         description: Residence not found
    *         content:
    *           application/json:
@@ -883,7 +922,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Residence not found
-   *       '500':
+   *       500:
    *         description: Internal server error. Failed to retrieve residence data.
    *         content:
    *           application/json:
@@ -1019,7 +1058,7 @@ export const routes = (router: KoaRouter) => {
    *           default: false
    *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved residence.
    *         content:
    *           application/json:
@@ -1028,7 +1067,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       '404':
+   *       404:
    *         description: Residence not found
    *         content:
    *           application/json:
@@ -1038,7 +1077,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Residence not found
-   *       '500':
+   *       500:
    *         description: Internal server error. Failed to retrieve residence data.
    *         content:
    *           application/json:
@@ -1228,7 +1267,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Code for the building to fetch staircases for
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved staircases.
    *         content:
    *           application/json:
@@ -1239,7 +1278,7 @@ export const routes = (router: KoaRouter) => {
    *                  type: array
    *                  items:
    *                    $ref: '#/components/schemas/Staircase'
-   *       '400':
+   *       400:
    *         description: Missing buildingCode
    *         content:
    *           application/json:
@@ -1249,7 +1288,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Missing buildingCode
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -1376,7 +1415,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Rental id to fetch parking space for
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved parking space.
    *         content:
    *           application/json:
@@ -1385,7 +1424,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ParkingSpace'
-   *       '404':
+   *       404:
    *         description: Parking space not found
    *         content:
    *           application/json:
@@ -1395,7 +1434,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Parking space not found
-   *       '500':
+   *       500:
    *         description: Internal server error. Failed to retrieve parking space data.
    *         content:
    *           application/json:
@@ -2163,6 +2202,1721 @@ export const routes = (router: KoaRouter) => {
         content: result.data satisfies Array<schemas.ParkingSpaceSearchResult>,
         ...metadata,
       }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT TYPES ====================
+
+  /**
+   * @swagger
+   * /component-types:
+   *   get:
+   *     summary: Get all component types
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: List of component types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentType'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-types', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentTypesQueryParamsSchema.safeParse(ctx.query)
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentTypes(
+        params.data.page,
+        params.data.limit
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentType[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-types/{id}:
+   *   get:
+   *     summary: Get component type by ID
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Component type details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentType'
+   *       404:
+   *         description: Component type not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-types/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentTypeById(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component type not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentType,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-types:
+   *   post:
+   *     summary: Create a new component type
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentTypeRequest'
+   *     responses:
+   *       201:
+   *         description: Component type created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentType'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/component-types', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.CreateComponentTypeSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentType(body.data)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentType,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-types/{id}:
+   *   put:
+   *     summary: Update a component type
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentTypeRequest'
+   *     responses:
+   *       200:
+   *         description: Component type updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentType'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/component-types/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const body = schemas.UpdateComponentTypeSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentType(
+        id.data,
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component type not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentType,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-types/{id}:
+   *   delete:
+   *     summary: Delete a component type
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Component type deleted
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/component-types/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentType(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component type not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT SUBTYPES ====================
+
+  /**
+   * @swagger
+   * /component-subtypes:
+   *   get:
+   *     summary: Get all component subtypes
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: componentTypeId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: List of component subtypes
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentSubtype'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-subtypes', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentSubtypesQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentSubtypes(
+        params.data.componentTypeId,
+        params.data.page,
+        params.data.limit
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentSubtype[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-subtypes/{id}:
+   *   get:
+   *     summary: Get component subtype by ID
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Component subtype details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentSubtype'
+   *       404:
+   *         description: Component subtype not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-subtypes/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentSubtypeById(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component subtype not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentSubtype,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-subtypes:
+   *   post:
+   *     summary: Create a new component subtype
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentSubtypeRequest'
+   *     responses:
+   *       201:
+   *         description: Component subtype created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentSubtype'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/component-subtypes', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.CreateComponentSubtypeSchema.safeParse(
+      ctx.request.body
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentSubtype(body.data)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentSubtype,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-subtypes/{id}:
+   *   put:
+   *     summary: Update a component subtype
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentSubtypeRequest'
+   *     responses:
+   *       200:
+   *         description: Component subtype updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentSubtype'
+   *       404:
+   *         description: Component subtype not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/component-subtypes/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const body = schemas.UpdateComponentSubtypeSchema.safeParse(
+      ctx.request.body
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentSubtype(
+        id.data,
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component subtype not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentSubtype,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-subtypes/{id}:
+   *   delete:
+   *     summary: Delete a component subtype
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Component subtype deleted
+   *       404:
+   *         description: Component subtype not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/component-subtypes/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentSubtype(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component subtype not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT MODELS ====================
+
+  /**
+   * @swagger
+   * /component-models:
+   *   get:
+   *     summary: Get all component models
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: componentTypeId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: subtypeId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: manufacturer
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: List of component models
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentModel'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-models', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentModelsQueryParamsSchema.safeParse(ctx.query)
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentModels(
+        params.data.componentTypeId,
+        params.data.subtypeId,
+        params.data.manufacturer,
+        params.data.page,
+        params.data.limit
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentModel[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-models/{id}:
+   *   get:
+   *     summary: Get component model by ID
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Component model details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
+   *       404:
+   *         description: Component model not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-models/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentModelById(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentModel,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-models:
+   *   post:
+   *     summary: Create a new component model
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentModelRequest'
+   *     responses:
+   *       201:
+   *         description: Component model created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/component-models', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.CreateComponentModelSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentModel(body.data)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentModel,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-models/{id}:
+   *   put:
+   *     summary: Update a component model
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentModelRequest'
+   *     responses:
+   *       200:
+   *         description: Component model updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
+   *       404:
+   *         description: Component model not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/component-models/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const body = schemas.UpdateComponentModelSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentModel(
+        id.data,
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentModel,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-models/{id}:
+   *   delete:
+   *     summary: Delete a component model
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Component model deleted
+   *       404:
+   *         description: Component model not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/component-models/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentModel(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENTS ====================
+
+  /**
+   * @swagger
+   * /components-new:
+   *   get:
+   *     summary: Get all component instances
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: modelId
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *           enum: [ACTIVE, INACTIVE, MAINTENANCE, DECOMMISSIONED]
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: List of component instances
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentInstance'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/components-new', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentsNewQueryParamsSchema.safeParse(ctx.query)
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponents(
+        params.data.modelId,
+        params.data.status,
+        params.data.page,
+        params.data.limit
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentNew[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components-new/{id}:
+   *   get:
+   *     summary: Get component instance by ID
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Component instance details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstance'
+   *       404:
+   *         description: Component instance not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/components-new/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentById(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentNew,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components-new:
+   *   post:
+   *     summary: Create a new component instance
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentRequest'
+   *     responses:
+   *       201:
+   *         description: Component instance created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstance'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/components-new', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.CreateComponentNewSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponent({
+        ...body.data,
+        warrantyStartDate: body.data.warrantyStartDate?.toISOString(),
+      })
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentNew,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components-new/{id}:
+   *   put:
+   *     summary: Update a component instance
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component instance ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentRequest'
+   *     responses:
+   *       200:
+   *         description: Component instance updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstance'
+   *       404:
+   *         description: Component instance not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/components-new/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const body = schemas.UpdateComponentNewSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponent(id.data, {
+        ...body.data,
+        warrantyStartDate: body.data.warrantyStartDate?.toISOString(),
+      })
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentNew,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components-new/{id}:
+   *   delete:
+   *     summary: Delete a component instance
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Component instance deleted
+   *       404:
+   *         description: Component instance not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/components-new/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponent(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT INSTALLATIONS ====================
+
+  /**
+   * @swagger
+   * /component-installations:
+   *   get:
+   *     summary: Get all component installations
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: componentId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: spaceId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: buildingPartId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *     responses:
+   *       200:
+   *         description: List of component installations
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentInstallation'
+   *                 pagination:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     total:
+   *                       type: integer
+   *                     totalPages:
+   *                       type: integer
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-installations', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentInstallationsQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentInstallations(
+        params.data.componentId,
+        params.data.spaceId,
+        params.data.buildingPartId,
+        params.data.page,
+        params.data.limit
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentInstallation[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-installations/{id}:
+   *   get:
+   *     summary: Get component installation by ID
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Component installation details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstallation'
+   *       404:
+   *         description: Component installation not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-installations/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentInstallationById(
+        id.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component installation not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentInstallation,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-installations:
+   *   post:
+   *     summary: Create a new component installation
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentInstallationRequest'
+   *     responses:
+   *       201:
+   *         description: Component installation created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstallation'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/component-installations', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.CreateComponentInstallationSchema.safeParse(
+      ctx.request.body
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentInstallation(
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentInstallation,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-installations/{id}:
+   *   put:
+   *     summary: Update a component installation
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component installation ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentInstallationRequest'
+   *     responses:
+   *       200:
+   *         description: Component installation updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentInstallation'
+   *       404:
+   *         description: Component installation not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/component-installations/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const body = schemas.UpdateComponentInstallationSchema.safeParse(
+      ctx.request.body
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentInstallation(
+        id.data,
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component installation not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentInstallation,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-installations/{id}:
+   *   delete:
+   *     summary: Delete a component installation
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Component installation deleted
+   *       404:
+   *         description: Component installation not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/component-installations/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentInstallation(
+        id.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component installation not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
