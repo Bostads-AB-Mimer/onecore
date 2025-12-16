@@ -14,22 +14,19 @@ const client = () =>
     },
   })
 
-export const getXpandInspections = async (
-  {
-    skip = 0,
-    limit = 100,
-    sortAscending,
-  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
-): Promise<AdapterResult<XpandInspection[], 'unknown'>> => {
+export const getXpandInspections = async ({
+  skip = 0,
+  limit = 100,
+  sortAscending,
+}: { skip?: number; limit?: number; sortAscending?: boolean } = {}): Promise<
+  AdapterResult<XpandInspection[], 'unknown'>
+> => {
   try {
-    const fetchResponse = await client().GET(
-      '/inspections/xpand',
-      {
-        params: {
-          query: { skip, limit, sortAscending },
-        },
-      }
-    )
+    const fetchResponse = await client().GET('/inspections/xpand', {
+      params: {
+        query: { skip, limit, sortAscending },
+      },
+    })
 
     if (fetchResponse.error) {
       throw fetchResponse.error
@@ -44,12 +41,8 @@ export const getXpandInspections = async (
       data: fetchResponse.data?.content.inspections,
     }
   } catch (error) {
-    logger.error(
-      { error },
-      'inspection-adapter.getXpandInspections'
-    )
+    logger.error({ error }, 'inspection-adapter.getXpandInspections')
 
     return { ok: false, err: 'unknown' }
   }
 }
-

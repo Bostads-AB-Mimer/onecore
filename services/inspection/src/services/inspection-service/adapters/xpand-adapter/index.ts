@@ -66,10 +66,14 @@ export async function getInspectionsFromXpand({
 
   const inspectionsWithMappedStatus = inspections.map((inspection: any) => ({
     ...inspection,
-    status: STATUS_MAP[inspection.status as number] ?? `Unknown (${inspection.status})`,
+    status:
+      STATUS_MAP[inspection.status as number] ??
+      `Unknown (${inspection.status})`,
   }))
 
-  const parsed = XpandInspectionSchema.array().safeParse(inspectionsWithMappedStatus)
+  const parsed = XpandInspectionSchema.array().safeParse(
+    inspectionsWithMappedStatus
+  )
   if (!parsed.success) {
     logger.error(
       { error: parsed.error.format() },
