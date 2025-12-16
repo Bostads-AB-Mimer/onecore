@@ -768,6 +768,38 @@ export interface paths {
       };
     };
   };
+  "/facilities/search": {
+    /**
+     * Search facilities
+     * @description Searches for facilities by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved facilities matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FacilitySearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/facilities/by-rental-id/{rentalId}": {
     /**
      * Get a facility by rental ID
@@ -1565,6 +1597,20 @@ export interface components {
         code: string | null;
       };
       areaSize: number | null;
+    };
+    FacilitySearchResult: {
+      id: string;
+      rentalId: string;
+      code: string;
+      name: string | null;
+      property: {
+        code: string | null;
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
+      };
     };
     GetFacilityByRentalIdResponse: {
       content: {

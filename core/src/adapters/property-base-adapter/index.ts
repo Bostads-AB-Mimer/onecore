@@ -368,6 +368,21 @@ export async function searchParkingSpaces(
   throw { ok: false, err: 'missing response data invariant' }
 }
 
+type SearchFacilitiesResponse =
+  components['schemas']['FacilitySearchResult'][]
+
+export async function searchFacilities(
+  q: string
+): Promise<AdapterResult<SearchFacilitiesResponse, 'unknown'>> {
+  const response = await client().GET('/facilities/search', {
+    params: { query: { q } },
+  })
+  if (response.data) {
+    return { ok: true, data: response.data.content ?? [] }
+  }
+  throw { ok: false, err: 'missing response data invariant' }
+}
+
 type GetParkingSpaceResponse = components['schemas']['ParkingSpace']
 
 export async function getParkingSpaceByRentalId(

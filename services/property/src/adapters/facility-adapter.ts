@@ -5,6 +5,66 @@ import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
 
+export async function searchFacilities(q: string) {
+  /**
+   * Searches for facilities by rental id
+   */
+  const facilities = await prisma.propertyStructure.findMany({
+    select: {
+      rentalId: true,
+      companyCode: true,
+      companyName: true,
+      propertyCode: true,
+      propertyName: true,
+      buildingCode: true,
+      buildingName: true,
+      propertyObject: {
+        select: {
+          facility: {
+            select: {
+              propertyObjectId: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    where: {
+      companyCode: '001',
+      propertyObject: {
+        objectTypeId: 'balok',
+        facility: {
+          isNot: null,
+        },
+      },
+      rentalId: {
+        contains: q,
+      },
+    },
+    take: 10,
+  })
+
+  return facilities
+    .filter(
+      (f) => f.propertyObject?.facility !== null && f.rentalId !== null
+    )
+    .map((f) => ({
+      id: f.rentalId!,
+      rentalId: f.rentalId!,
+      name: f.propertyObject.facility!.name,
+      code: f.propertyObject.facility!.code,
+      property: {
+        code: f.propertyCode,
+        name: f.propertyName,
+      },
+      building: {
+        code: f.buildingCode ?? null,
+        name: f.buildingName ?? null,
+      },
+    }))
+}
+
 const getAreasByPropertyObjectIds = async (
   propertyObjectIds: string[]
 ): Promise<Map<string, number>> => {

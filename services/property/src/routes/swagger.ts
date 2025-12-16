@@ -78,6 +78,10 @@ const schemas = {
     name: 'FacilityDetails',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.FacilitySearchResultSchema, {
+    name: 'FacilitySearchResult',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(types.GetFacilityByRentalIdResponseSchema, {
     name: 'GetFacilityByRentalIdResponse',
     target: 'openApi3',

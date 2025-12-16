@@ -56,3 +56,20 @@ export const GetFacilitiesByBuildingCodeResponseSchema =
 export type GetFacilitiesByBuildingCodeResponse = z.infer<
   typeof GetFacilitiesByBuildingCodeResponseSchema
 >
+
+export const FacilitySearchResultSchema = z.object({
+  id: z.string(),
+  rentalId: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
+export type FacilitySearchResult = z.infer<typeof FacilitySearchResultSchema>

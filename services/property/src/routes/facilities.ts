@@ -5,11 +5,13 @@ import {
   getFacilitiesByBuildingCode,
   getFacilitiesByPropertyCode,
   getFacilityByRentalId,
+  searchFacilities,
 } from '@src/adapters/facility-adapter'
 import {
   GetFacilityByRentalIdResponse,
   GetFacilitiesByPropertyCodeResponse,
   GetFacilitiesByBuildingCodeResponse,
+  FacilitySearchResult,
 } from '@src/types/facility'
 
 /**
@@ -20,6 +22,78 @@ import {
  *     description: Operations related to facilities
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /facilities/search:
+   *   get:
+   *     summary: Search facilities
+   *     description: |
+   *       Searches for facilities by rental id.
+   *     tags:
+   *       - Facilities
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (rental id).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved facilities matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/FacilitySearchResult'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/facilities/search', async (ctx) => {
+    const q = ctx.query.q as string
+    const metadata = generateRouteMetadata(ctx)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const facilities = await searchFacilities(q)
+
+      ctx.status = 200
+      ctx.body = {
+        content: facilities.map(
+          (f): FacilitySearchResult => ({
+            id: f.id,
+            rentalId: f.rentalId,
+            code: f.code,
+            name: f.name,
+            property: f.property,
+            building: f.building,
+          })
+        ),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err }, 'Error searching facilities')
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
   /**
    * @swagger
    * /facilities/by-rental-id/{rentalId}:
