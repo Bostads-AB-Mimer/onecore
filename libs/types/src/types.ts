@@ -1,10 +1,12 @@
 import { z } from 'zod'
 import {
   ApplicantStatus,
+  InvoiceTransactionType,
   LeaseStatus,
   ListingStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
+  PaymentStatus,
   OfferStatus,
   WaitingListType,
 } from './enums'
@@ -15,10 +17,8 @@ import {
   CommentTypeSchema,
   CommentSchema,
   CommentThreadSchema,
-  InvoiceRowSchema,
-  InvoicePaymentEventSchema,
-  InvoiceSchema,
 } from './schemas/v1'
+import { InvoiceRowSchema } from './schemas/v1/invoice'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -199,6 +199,26 @@ interface Invoices {
   paidInvoices?: Invoice[]
 }
 
+interface Invoice {
+  invoiceId: string
+  leaseId: string
+  amount: number
+  reference: string
+  fromDate: Date
+  toDate: Date
+  invoiceDate: Date
+  expirationDate?: Date
+  debitStatus: number
+  paymentStatus: PaymentStatus
+  transactionType: InvoiceTransactionType
+  transactionTypeName: string
+  paidAmount?: number
+  daysSinceLastDebitDate?: number
+  description?: string
+  sentToDebtCollection?: Date
+  type: 'Regular' | 'Other'
+}
+
 interface WaitingList {
   queueTime: Date
   queuePoints: number
@@ -363,9 +383,7 @@ type CommentThreadId = z.infer<typeof CommentThreadIdSchema>
 type CommentType = z.infer<typeof CommentTypeSchema>
 type Comment = z.infer<typeof CommentSchema>
 type CommentThread = z.infer<typeof CommentThreadSchema>
-type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
-type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
 
 export type {
   Contact,
@@ -383,7 +401,6 @@ export type {
   Invoices,
   Invoice,
   InvoiceRow,
-  InvoicePaymentEvent,
   RentalObject,
   ParkingSpace,
   Email,
