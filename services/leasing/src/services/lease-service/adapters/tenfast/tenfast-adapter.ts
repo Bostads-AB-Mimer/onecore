@@ -7,6 +7,7 @@ import {
   TenfastLeaseTemplate,
   TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
+  PreliminaryTerminationResponse,
 } from '../../../../common/adapters/tenfast/schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -376,24 +377,21 @@ export const preliminaryTerminateLease = async (
   desiredMoveDate: Date
 ): Promise<
   AdapterResult<
-    any,
-    | 'lease-not-found'
-    | 'termination-failed'
-    | 'bad-request'
-    | 'tenant-not-found'
-    | 'could-not-retrieve-tenant'
-    | 'could-not-parse-tenant-response'
-    | 'get-tenant-bad-request'
-    | 'unknown'
+    PreliminaryTerminationResponse,
+    'tenant-not-found' | 'lease-not-found' | 'termination-failed' | 'unknown'
   >
 > => {
   try {
     // Get the tenfast tenant by contactCode
     const tenantResult = await getTenantByContactCode(contactCode)
-    if (!tenantResult.ok) {
-      return { ok: false, err: tenantResult.err }
-    }
-    if (!tenantResult.data) {
+    if (!tenantResult.ok || !tenantResult.data) {
+      logger.error(
+        {
+          contactCode,
+          error: !tenantResult.ok ? tenantResult.err : 'not-found',
+        },
+        'Could not retrieve tenant for preliminary termination'
+      )
       return { ok: false, err: 'tenant-not-found' }
     }
 
@@ -426,4 +424,3 @@ export const preliminaryTerminateLease = async (
     return handleTenfastError(err, 'termination-failed')
   }
 }
-
