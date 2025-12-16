@@ -32,8 +32,8 @@ export const handleInvoicePaymentSummaries = async (from: Date, to: Date) => {
           notification.join('\n'),
           resultFiles
         )
-      } catch {
-        // Do not fail script even if email fails
+      } catch (error: any) {
+        logger.error(error, 'Error sending notification email')
       }
     }
   } catch (err) {

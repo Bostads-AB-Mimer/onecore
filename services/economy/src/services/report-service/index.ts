@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import {
   generateRouteMetadata,
+  logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
@@ -24,7 +25,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(invoicePaymentSummaries, metadata)
     } catch (error: any) {
-      console.log('error: ', error)
+      logger.error(error, 'Error getting invoice payment summaries')
       ctx.status = 500
       ctx.body = {
         message: error.message,
