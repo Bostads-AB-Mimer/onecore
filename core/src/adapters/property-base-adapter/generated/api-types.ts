@@ -768,6 +768,38 @@ export interface paths {
       };
     };
   };
+  "/maintenance-units/by-code/{code}": {
+    /**
+     * Get a maintenance unit by its code
+     * @description Retrieves a single maintenance unit by its unique code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the maintenance unit to retrieve. */
+          code: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the maintenance unit. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"];
+            };
+          };
+        };
+        /** @description Maintenance unit not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/facilities/search": {
     /**
      * Search facilities

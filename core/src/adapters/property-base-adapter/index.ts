@@ -554,6 +554,29 @@ export async function getMaintenanceUnitsByPropertyCode(
   }
 }
 
+type GetMaintenanceUnitByCodeResponse = components['schemas']['MaintenanceUnit']
+
+export async function getMaintenanceUnitByCode(
+  code: string
+): Promise<AdapterResult<GetMaintenanceUnitByCodeResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/maintenance-units/by-code/{code}',
+      {
+        params: { path: { code } },
+      }
+    )
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getMaintenanceUnitByCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetFacilitiesByPropertyCodeResponse =
   components['schemas']['GetFacilitiesByPropertyCodeResponse']['content']
 
