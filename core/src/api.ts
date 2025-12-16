@@ -5,6 +5,7 @@ import { routes as workOrderRoutes } from './services/work-order-service'
 import { routes as propertyBaseRoutes } from './services/property-base-service'
 import { routes as searchRoutes } from './services/search-service'
 import { routes as economyRoutes } from './services/economy-service'
+import { routes as inspectionRoutes } from './services/inspection-service'
 
 import { updateSwaggerSchemas } from './swagger'
 
@@ -17,6 +18,7 @@ workOrderRoutes(router)
 propertyBaseRoutes(router)
 searchRoutes(router)
 economyRoutes(router)
+inspectionRoutes(router)
 
 updateSwaggerSchemas()
 

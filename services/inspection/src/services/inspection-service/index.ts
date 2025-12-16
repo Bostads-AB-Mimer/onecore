@@ -1,4 +1,11 @@
 import KoaRouter from '@koa/router'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { registerSchema } from '../../middlewares/swagger-middleware'
+import {
+  GetInspectionsFromXpandQuerySchema,
+  XpandInspectionSchema,
+} from './schemas'
+import * as xpandAdapter from './adapters/xpand-adapter'
 
 /**
  * @swagger
@@ -9,90 +16,112 @@ import KoaRouter from '@koa/router'
  */
 
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /inspections:
-   *   get:
-   *     summary: Get list of inspections
-   *     tags:
-   *       - Inspection
-   *     description: Retrieves a list of inspections. This is a placeholder endpoint.
-   *     responses:
-   *       '200':
-   *         description: Successful response with list of inspections
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 inspections:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: string
-   *                         description: Inspection ID
-   *                       status:
-   *                         type: string
-   *                         description: Inspection status
-   *                       createdAt:
-   *                         type: string
-   *                         format: date-time
-   *                         description: Creation timestamp
-   */
-  router.get('/inspections', async (ctx) => {
-    ctx.body = {
-      inspections: [
-        {
-          id: '1',
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    }
-  })
+  registerSchema('XpandInspection', XpandInspectionSchema)
 
   /**
    * @swagger
-   * /inspections/{id}:
+   * /inspections/xpand:
    *   get:
-   *     summary: Get inspection by ID
    *     tags:
    *       - Inspection
-   *     description: Retrieves a specific inspection by its ID. This is a placeholder endpoint.
+   *     summary: Get inspections from Xpand
    *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
+   *       - in: query
+   *         name: skip
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *         description: Number of records to skip for pagination.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 100
+   *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: sortAscending
    *         schema:
    *           type: string
-   *         description: Inspection ID
+   *           enum: [true, false]
+   *         description: Whether to sort the results in ascending order.
    *     responses:
-   *       '200':
-   *         description: Successful response with inspection details
+   *       200:
+   *         description: A list of inspections from Xpand
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 id:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandInspection'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       500:
+   *         description: Internal Server Error - Failed to fetch inspections from Xpand
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
    *                   type: string
-   *                   description: Inspection ID
-   *                 status:
-   *                   type: string
-   *                   description: Inspection status
-   *                 createdAt:
-   *                   type: string
-   *                   format: date-time
-   *                   description: Creation timestamp
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
    */
-  router.get('/inspections/:id', async (ctx) => {
-    const { id } = ctx.params
-    ctx.body = {
-      id,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+  router.get('(.*)/inspections/xpand', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedQuery = GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedQuery.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: parsedQuery.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { skip, limit, sortAscending } = parsedQuery.data
+
+    try {
+      const xpandInspections = await xpandAdapter.getInspectionsFromXpand({
+        skip,
+        limit,
+        sortAscending,
+      })
+
+      if (!xpandInspections.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch inspections from Xpand: ${xpandInspections.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspections: xpandInspections.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error fetching inspections from Xpand')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
     }
   })
 }
