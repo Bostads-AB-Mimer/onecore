@@ -209,3 +209,7 @@ export const TenfastLeaseTemplateSchema = z.object({
 })
 
 export type TenfastLeaseTemplate = z.infer<typeof TenfastLeaseTemplateSchema>
+
+export interface PreliminaryTerminationResponse {
+  message: string
+}
