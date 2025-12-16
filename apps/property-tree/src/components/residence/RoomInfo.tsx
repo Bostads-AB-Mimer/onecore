@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
 import { roomService } from '@/services/api/core'
-// import { getOrientationText } from './get-room-orientation'
+import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
 
 interface RoomInfoProps {
@@ -43,16 +43,19 @@ export const RoomInfo = (props: RoomInfoProps) => {
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">
-              Översikt Utrymmen
-            </CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Rumsöversikt</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm text-muted-foreground mb-4">
-              Totalt antal utrymmen: {rooms.length}
+              Totalt antal rum: {rooms.length}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div></div>
+              <div>
+                <p className="text-sm text-muted-foreground">Uppvärmda rum</p>
+                <p className="font-medium">
+                  {rooms.filter((room) => room.features.isHeated).length}
+                </p>
+              </div>
               {/* Hiding for demo purposes */}
               {/*
               <div>
@@ -100,15 +103,17 @@ export const RoomInfo = (props: RoomInfoProps) => {
         */}
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">
-            Information Utrymmen
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-2">
-            {rooms.map((room) => (
+      <div className="mt-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">
+          Rumsinformation ({rooms.length})
+        </h2>
+        <div className="grid grid-cols-1 gap-2">
+          {rooms.map((room) => {
+            const roomArea = room.propertyObject?.quantityValues?.find(
+              (qv) => qv.quantityTypeId === 'NTA'
+            )?.value
+
+            return (
               <div key={room.id}>
                 <button
                   className="w-full bg-card hover:bg-accent/50 border rounded-lg p-3 sm:p-4 transition-colors text-left"
@@ -120,13 +125,18 @@ export const RoomInfo = (props: RoomInfoProps) => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                         <span className="font-medium">
                           {room.name || room.roomType?.name || room.code}
                         </span>
                         <span className="text-sm text-muted-foreground">
                           {room.code}
                         </span>
+                        {roomArea && (
+                          <span className="text-sm text-muted-foreground">
+                            ({roomArea} m²)
+                          </span>
+                        )}
                       </div>
                     </div>
                     {expandedRoomId === room.id ? (
@@ -139,11 +149,6 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
                 {expandedRoomId === room.id && (
                   <div className="mt-2 p-3 sm:p-4 border rounded-lg bg-muted/50 space-y-4">
-                    <p className="text-center text-muted-foreground">
-                      Här kommer du snart kunna se komponenter för detta utrymme
-                    </p>
-                    {/* Hiding for demo purposes */}
-                    {/*
                     <div
                       className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-4`}
                     >
@@ -213,14 +218,13 @@ export const RoomInfo = (props: RoomInfoProps) => {
                         </p>
                       </div>
                     </div>
-                    */}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            )
+          })}
+        </div>
+      </div>
     </>
   )
 }
