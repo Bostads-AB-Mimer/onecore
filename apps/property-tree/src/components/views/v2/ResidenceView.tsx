@@ -39,10 +39,7 @@ export const ResidenceView = () => {
 
   const isMobile = useIsMobile()
 
-  // Get current lease
-  const currentLease: Lease | undefined = leases?.find(
-    (l) => l.status === 'Current'
-  ) as Lease
+  const currentLease: Lease | undefined = leases?.[0] as Lease
 
   const renderContent = () => {
     if (residenceIsLoading) {
