@@ -138,12 +138,7 @@ export const routes = (router: KoaRouter) => {
         await tenfastAdapter.getRentalObject(rentalObjectCode)
 
       if (rentalObjectResult.ok) {
-        const rent =
-          rentalObjectResult.data?.hyra +
-            rentalObjectResult.data?.hyror
-              .map((h) => h.belopp)
-              .reduce((a, b) => a + b, 0) || 0
-
+        const rent = rentalObjectResult.data?.hyra
         ctx.status = 200
         ctx.body = { content: { ...result.data, rent: rent }, ...metadata }
         return
