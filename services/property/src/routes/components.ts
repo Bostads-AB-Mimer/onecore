@@ -5,13 +5,29 @@
  */
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { getComponentByMaintenanceUnitCode } from '../adapters/component-adapter'
+import { parseRequest } from '../middleware/parse-request'
+import { z } from 'zod'
+import { deleteFile } from '../adapters/minio-adapter'
+import {
+  createMulterUpload,
+  generateFileName,
+  uploadAndSaveMetadata,
+  addPresignedUrls,
+} from '../utils/file-upload'
+import {
+  getComponentByMaintenanceUnitCode,
+  getComponentsByRoomId,
+  getComponentModelDocuments,
+  addComponentModelDocument,
+  removeComponentModelDocument,
+  getComponentFiles,
+  addComponentFile,
+  removeComponentFile,
+} from '../adapters/component-adapter'
 import {
   componentsQueryParamsSchema,
   ComponentSchema,
 } from '../types/component'
-import { parseRequest } from '../middleware/parse-request'
-import { z } from 'zod'
 
 /**
  * @swagger
@@ -114,8 +130,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
-<<<<<<< HEAD
-=======
 
   /**
    * @swagger
@@ -188,5 +202,462 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
->>>>>>> a628481c3 (Smol fix)
+
+  // ==================== FILE UPLOAD ROUTES ====================
+
+  // Configure multer for image uploads (components)
+  const imageUpload = createMulterUpload({
+    maxSizeBytes: 50 * 1024 * 1024, // 50MB
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    errorMessage:
+      'Endast JPEG-, PNG- och WebP-bilder är tillåtna. Max storlek är 50MB.',
+  })
+
+  // Configure multer for document uploads (component models)
+  // Note: Only PDFs are supported for documents. Word/Excel files should be converted to PDF before upload.
+  const documentUpload = createMulterUpload({
+    maxSizeBytes: 50 * 1024 * 1024, // 50MB
+    allowedMimeTypes: ['application/pdf'],
+    errorMessage:
+      'Endast PDF-filer är tillåtna. Konvertera Word- eller Excel-dokument till PDF innan uppladdning.',
+  })
+
+  /**
+   * @swagger
+   * /component-models/{id}/upload:
+   *   post:
+   *     summary: Upload a document to a component model
+   *     tags: [Component Models]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component model ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: PDF document file (max 50MB)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Document uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModelDocument'
+   *       400:
+   *         description: Invalid file type or size
+   *       500:
+   *         description: Upload failed
+   */
+  router.post(
+    '(.*)/component-models/:id/upload',
+    documentUpload.single('file'),
+    async (ctx) => {
+      const id = z.string().uuid().parse(ctx.params.id)
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const file = ctx.file
+        if (!file) {
+          ctx.status = 400
+          ctx.body = { error: 'Ingen fil uppladdad', ...metadata }
+          return
+        }
+
+        // Explicit PDF validation (defense in depth)
+        if (file.mimetype !== 'application/pdf') {
+          ctx.status = 400
+          ctx.body = {
+            error:
+              'Endast PDF-filer är tillåtna för komponentmodellsdokumentation',
+            ...metadata,
+          }
+          return
+        }
+
+        // Explicit file size validation (defense in depth)
+        const maxSize = 50 * 1024 * 1024 // 50MB
+        if (file.size > maxSize) {
+          ctx.status = 400
+          ctx.body = {
+            error: `Filen är för stor. Max storlek är ${Math.round(maxSize / 1024 / 1024)}MB`,
+            ...metadata,
+          }
+          return
+        }
+
+        // Validate file extension matches PDF
+        const extension = file.originalname.split('.').pop()?.toLowerCase()
+        if (extension !== 'pdf') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Filtillägget måste vara .pdf',
+            ...metadata,
+          }
+          return
+        }
+
+        // Generate unique filename
+        const fileName = generateFileName({
+          entityType: 'component-model',
+          entityId: id,
+          originalName: file.originalname,
+        })
+
+        // Upload to MinIO and save metadata to database
+        const document = await uploadAndSaveMetadata({
+          file,
+          fileName,
+          metadataHandler: async (fileId, sanitizedFile) => {
+            await addComponentModelDocument(
+              id,
+              fileId
+            )
+            return { fileId, originalName: sanitizedFile.originalname }
+          },
+        })
+
+        ctx.body = {
+          content: document,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error'
+        ctx.body = { error: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /component-models/{id}/documents:
+   *   get:
+   *     summary: Get all documents for a component model with presigned URLs
+   *     tags: [Component Models]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component model ID
+   *     responses:
+   *       200:
+   *         description: List of documents with download URLs
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModelDocumentsResponse'
+   *       404:
+   *         description: Component model not found
+   *       500:
+   *         description: Failed to retrieve documents
+   */
+  router.get('(.*)/component-models/:id/documents', async (ctx) => {
+    const id = z.string().uuid().parse(ctx.params.id)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const documents = await getComponentModelDocuments(id)
+
+      // Generate presigned URLs for each document (24 hour expiry)
+      const documentsWithUrls = await addPresignedUrls(documents, 86400)
+
+      ctx.body = {
+        content: {
+          documents: documentsWithUrls,
+          count: documentsWithUrls.length,
+        },
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-models/{id}/documents/{fileId}:
+   *   delete:
+   *     summary: Delete a document from a component model
+   *     tags: [Component Models]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: path
+   *         name: fileId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       204:
+   *         description: Document deleted successfully
+   */
+  router.delete('(.*)/component-models/:id/documents/:fileId', async (ctx) => {
+    const id = z.string().uuid().parse(ctx.params.id)
+    const fileId = z.string().parse(ctx.params.fileId)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      // Delete from MinIO
+      await deleteFile(fileId)
+
+      // Remove from database
+      await removeComponentModelDocument(id, fileId)
+
+      ctx.status = 204
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/{id}/upload:
+   *   post:
+   *     summary: Upload images to a component
+   *     tags: [Components New]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component instance ID
+   *       - in: query
+   *         name: caption
+   *         schema:
+   *           type: string
+   *         description: Optional image caption
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *                 description: Image file (JPEG, PNG, or WebP, max 50MB)
+   *             required:
+   *               - file
+   *     responses:
+   *       200:
+   *         description: Image uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentFile'
+   *       400:
+   *         description: Invalid file type or size
+   *       500:
+   *         description: Upload failed
+   */
+  router.post(
+    '(.*)/components/:id/upload',
+    imageUpload.single('file'),
+    async (ctx) => {
+      const id = z.string().uuid().parse(ctx.params.id)
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const file = ctx.file
+        if (!file) {
+          ctx.status = 400
+          ctx.body = { error: 'Ingen fil uppladdad', ...metadata }
+          return
+        }
+
+        // Explicit image type validation (defense in depth)
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Endast JPEG-, PNG- och WebP-bilder är tillåtna',
+            ...metadata,
+          }
+          return
+        }
+
+        // Explicit file size validation (defense in depth)
+        const maxSize = 50 * 1024 * 1024 // 50MB
+        if (file.size > maxSize) {
+          ctx.status = 400
+          ctx.body = {
+            error: `Bilden är för stor. Max storlek är ${Math.round(maxSize / 1024 / 1024)}MB`,
+            ...metadata,
+          }
+          return
+        }
+
+        // Validate file extension matches image type
+        const extension = file.originalname.split('.').pop()?.toLowerCase()
+        const validExtensions = ['jpg', 'jpeg', 'png', 'webp']
+        if (!extension || !validExtensions.includes(extension)) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Filtillägget måste vara .jpg, .jpeg, .png eller .webp',
+            ...metadata,
+          }
+          return
+        }
+
+        // Generate unique filename
+        const fileName = generateFileName({
+          entityType: 'component',
+          entityId: id,
+          originalName: file.originalname,
+        })
+
+        // Upload to MinIO and save metadata to database
+        const componentFile = await uploadAndSaveMetadata({
+          file,
+          fileName,
+          metadataHandler: async (fileId, sanitizedFile) => {
+            await addComponentFile(id, fileId)
+            return { fileId, originalName: sanitizedFile.originalname }
+          },
+        })
+
+        ctx.body = {
+          content: componentFile,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error'
+        ctx.body = { error: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /components/{id}/files:
+   *   get:
+   *     summary: Get all files for a component with presigned URLs
+   *     tags: [Components New]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component instance ID
+   *     responses:
+   *       200:
+   *         description: List of files with download URLs
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentFilesResponse'
+   *       404:
+   *         description: Component not found
+   *       500:
+   *         description: Failed to retrieve files
+   */
+  router.get('(.*)/components/:id/files', async (ctx) => {
+    const id = z.string().uuid().parse(ctx.params.id)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const files = await getComponentFiles(id)
+
+      // Generate presigned URLs for each file (24 hour expiry)
+      const filesWithUrls = await addPresignedUrls(files, 86400)
+
+      ctx.body = {
+        content: {
+          files: filesWithUrls,
+          count: filesWithUrls.length,
+        },
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/{id}/files/{fileId}:
+   *   delete:
+   *     summary: Delete a file from a component
+   *     tags: [Components New]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *       - in: path
+   *         name: fileId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       204:
+   *         description: File deleted successfully
+   */
+  router.delete('(.*)/components/:id/files/:fileId', async (ctx) => {
+    const id = z.string().uuid().parse(ctx.params.id)
+    const fileId = z.string().parse(ctx.params.fileId)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      // Delete from MinIO
+      await deleteFile(fileId)
+
+      // Remove from database
+      await removeComponentFile(id, fileId)
+
+      ctx.status = 204
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
 }
