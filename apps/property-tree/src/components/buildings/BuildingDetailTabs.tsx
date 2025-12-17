@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
 import { BuildingDetailTabsMobile } from './BuildingDetailTabsMobile'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { Building, Staircase } from '@/services/types'
@@ -38,6 +39,7 @@ export const BuildingDetailTabs = ({
     <Tabs defaultValue="entrances" className="space-y-6">
       <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
         <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
+        <TabsTrigger value="maintenance">Underhållsenheter</TabsTrigger>
         <TabsTrigger value="orders">Ärenden</TabsTrigger>
       </TabsList>
 
@@ -46,6 +48,13 @@ export const BuildingDetailTabs = ({
           isLoading={isStaircasesLoading}
           residenceStaircaseLookupMap={residenceStaircaseLookupMap}
           basePath={basePath}
+        />
+      </TabsContent>
+
+      <TabsContent value="maintenance">
+        <MaintenanceUnitsTab
+          contextType="building"
+          identifier={building.code}
         />
       </TabsContent>
 
