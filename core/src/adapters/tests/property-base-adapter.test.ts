@@ -622,7 +622,7 @@ describe('@onecore/property-adapter', () => {
       })
     })
 
-    it('returns not-found if building code is not found', async () => {
+    it('returns empty array if building code has no maintenance units', async () => {
       mockServer.use(
         http.get(
           `${config.propertyBaseService.url}/maintenance-units/by-building-code/123-123`,
@@ -633,8 +633,8 @@ describe('@onecore/property-adapter', () => {
       const result =
         await propertyBaseAdapter.getMaintenanceUnitsByBuildingCode('123-123')
 
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('not-found')
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.data).toEqual([])
     })
 
     it('returns err if request fails', async () => {
