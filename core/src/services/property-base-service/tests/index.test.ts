@@ -404,7 +404,7 @@ describe('@onecore/property-service', () => {
 
       const lease = factory.lease.build({ status: LeaseStatus.Current })
       const getLeasesSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+        .spyOn(leasingAdapter, 'getLeasesByRentalObjectCode')
         .mockResolvedValueOnce([lease])
 
       const res = await request(app.callback()).get(
