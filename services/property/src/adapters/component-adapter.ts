@@ -14,9 +14,24 @@ import type {
   UpdateComponentNew,
   CreateComponentInstallation,
   UpdateComponentInstallation,
-  ComponentModelDocument,
-  ComponentFile,
 } from '../types/component'
+
+// File metadata types
+type ComponentModelDocument = {
+  fileId: string
+  originalName: string
+  size: number
+  mimeType: string
+  uploadedAt: string
+}
+
+type ComponentFile = {
+  fileId: string
+  originalName: string
+  size: number
+  mimeType: string
+  uploadedAt: string
+}
 
 // ==================== COMPONENT CATEGORIES ====================
 
@@ -235,7 +250,8 @@ export const deleteComponentSubtype = async (id: string) => {
 
 export const getComponentModels = async (
   filters: {
-    componentSubtypeId?: string
+    componentTypeId?: string
+    subtypeId?: string
     manufacturer?: string
   },
   page: number = 1,
@@ -244,8 +260,8 @@ export const getComponentModels = async (
   const skip = (page - 1) * limit
 
   const where: any = {}
-  if (filters.componentSubtypeId)
-    where.componentSubtypeId = filters.componentSubtypeId
+  if (filters.subtypeId)
+    where.componentSubtypeId = filters.subtypeId
   if (filters.manufacturer) {
     where.manufacturer = { contains: filters.manufacturer }
   }

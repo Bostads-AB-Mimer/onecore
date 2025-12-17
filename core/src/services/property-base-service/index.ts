@@ -2538,7 +2538,7 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const result = await propertyBaseAdapter.getComponentSubtypes(
-        params.data.componentTypeId,
+        params.data.typeId,
         params.data.page,
         params.data.limit
       )
@@ -3587,7 +3587,7 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.getComponentInstallations(
         params.data.componentId,
         params.data.spaceId,
-        params.data.buildingPartId,
+        undefined,
         params.data.page,
         params.data.limit
       )
@@ -3713,9 +3713,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.createComponentInstallation(
-        body.data
-      )
+      const result = await propertyBaseAdapter.createComponentInstallation({
+        ...body.data,
+        installationDate: body.data.installationDate.toISOString(),
+        deinstallationDate: body.data.deinstallationDate?.toISOString(),
+      })
 
       if (!result.ok) {
         ctx.status = 500
@@ -3791,7 +3793,11 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await propertyBaseAdapter.updateComponentInstallation(
         id.data,
-        body.data
+        {
+          ...body.data,
+          installationDate: body.data.installationDate?.toISOString(),
+          deinstallationDate: body.data.deinstallationDate?.toISOString(),
+        }
       )
 
       if (!result.ok) {

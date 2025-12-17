@@ -792,13 +792,13 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-models',
     parseRequest({ query: componentModelsQueryParamsSchema }),
     async (ctx) => {
-      const { componentSubtypeId, manufacturer, page, limit } =
+      const { componentTypeId, subtypeId, manufacturer, page, limit } =
         ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
         const result = await getComponentModels(
-          { componentSubtypeId, manufacturer },
+          { componentTypeId, subtypeId, manufacturer },
           page,
           limit
         )

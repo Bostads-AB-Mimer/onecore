@@ -1420,8 +1420,15 @@ async function deleteFileHelper(
 
 // ==================== COMPONENT FILE UPLOADS ====================
 
-// Use generated type from OpenAPI schema
-type FileMetadataWithUrl = components['schemas']['FileMetadataWithUrl']
+// Define file metadata type inline (MinIO integration)
+type FileMetadataWithUrl = {
+  fileId: string
+  originalName: string
+  size: number
+  mimeType: string
+  uploadedAt: string
+  url: string
+}
 
 export async function uploadComponentFile(
   componentId: string,
