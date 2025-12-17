@@ -4,9 +4,6 @@ import { resolve } from '@/utils/env'
 
 export const { GET, POST, PUT, DELETE, PATCH } = createClient<paths>({
   baseUrl: resolve('VITE_CORE_API_URL', 'http://localhost:5010'),
-  headers: {
-    'Content-Type': 'application/json',
-  },
   credentials: 'include',
 })
 

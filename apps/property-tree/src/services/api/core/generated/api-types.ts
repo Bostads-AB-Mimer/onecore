@@ -3256,7 +3256,574 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Internal server error. */
+      }
+    }
+    /** Update a component subtype */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateComponentSubtypeRequest']
+        }
+      }
+      responses: {
+        /** @description Component subtype updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentSubtype']
+            }
+          }
+        }
+        /** @description Component subtype not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Delete a component subtype */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component subtype deleted */
+        204: {
+          content: never
+        }
+        /** @description Component subtype not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-models': {
+    /** Get all component models */
+    get: {
+      parameters: {
+        query?: {
+          componentTypeId?: string
+          subtypeId?: string
+          manufacturer?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description List of component models */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentModel'][]
+              pagination?: {
+                page?: number
+                limit?: number
+                total?: number
+                totalPages?: number
+              }
+            }
+          }
+        }
+      }
+    }
+    /** Create a new component model */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateComponentModelRequest']
+        }
+      }
+      responses: {
+        /** @description Component model created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentModel']
+            }
+          }
+        }
+      }
+    }
+  }
+  '/component-models/{id}': {
+    /** Get component model by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component model details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentModel']
+            }
+          }
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Update a component model */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateComponentModelRequest']
+        }
+      }
+      responses: {
+        /** @description Component model updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentModel']
+            }
+          }
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Delete a component model */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component model deleted */
+        204: {
+          content: never
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/components': {
+    /** Get all component instances */
+    get: {
+      parameters: {
+        query?: {
+          modelId?: string
+          status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description List of component instances */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstance'][]
+              pagination?: {
+                page?: number
+                limit?: number
+                total?: number
+                totalPages?: number
+              }
+            }
+          }
+        }
+      }
+    }
+    /** Create a new component instance */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateComponentRequest']
+        }
+      }
+      responses: {
+        /** @description Component instance created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstance']
+            }
+          }
+        }
+      }
+    }
+  }
+  '/components/{id}': {
+    /** Get component instance by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component instance details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstance']
+            }
+          }
+        }
+        /** @description Component instance not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Update a component instance */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateComponentRequest']
+        }
+      }
+      responses: {
+        /** @description Component instance updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstance']
+            }
+          }
+        }
+        /** @description Component instance not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Delete a component instance */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component instance deleted */
+        204: {
+          content: never
+        }
+        /** @description Component instance not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-installations': {
+    /** Get all component installations */
+    get: {
+      parameters: {
+        query?: {
+          componentId?: string
+          spaceId?: string
+          buildingPartId?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description List of component installations */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation'][]
+              pagination?: {
+                page?: number
+                limit?: number
+                total?: number
+                totalPages?: number
+              }
+            }
+          }
+        }
+      }
+    }
+    /** Create a new component installation */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateComponentInstallationRequest']
+        }
+      }
+      responses: {
+        /** @description Component installation created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation']
+            }
+          }
+        }
+      }
+    }
+  }
+  '/component-installations/{id}': {
+    /** Get component installation by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component installation details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation']
+            }
+          }
+        }
+        /** @description Component installation not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Update a component installation */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component installation ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateComponentInstallationRequest']
+        }
+      }
+      responses: {
+        /** @description Component installation updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation']
+            }
+          }
+        }
+        /** @description Component installation not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Delete a component installation */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component installation deleted */
+        204: {
+          content: never
+        }
+        /** @description Component installation not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/api/components/{id}/upload': {
+    /** Upload a file to a component */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Optional caption for the file */
+          caption?: string
+        }
+        path: {
+          /** @description Component ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'multipart/form-data': {
+            /** Format: binary */
+            file?: string
+          }
+        }
+      }
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never
+        }
+        /** @description Bad request */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/api/components/{id}/files': {
+    /** Get all files for a component */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description List of files with presigned URLs */
+        200: {
+          content: never
+        }
+        /** @description Component not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/api/components/{id}/files/{fileId}': {
+    /** Delete a file from a component */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string
+          /** @description File ID */
+          fileId: string
+        }
+      }
+      responses: {
+        /** @description File deleted successfully */
+        204: {
+          content: never
+        }
+        /** @description Component or file not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/api/component-models/{id}/upload': {
+    /** Upload a document to a component model */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'multipart/form-data': {
+            /** Format: binary */
+            file?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: never
+        }
+        /** @description Bad request */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/api/component-models/{id}/documents': {
+    /** Get all documents for a component model */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description List of documents with presigned URLs */
+        200: {
+          content: never
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/api/component-models/{id}/documents/{fileId}': {
+    /** Delete a document from a component model */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string
+          /** @description File ID */
+          fileId: string
+        }
+      }
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never
+        }
+        /** @description Component model or document not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
         500: {
           content: never
         }

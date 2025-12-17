@@ -40,11 +40,13 @@ export const initializeBucket = async (): Promise<void> => {
 export const uploadFile = async (
   fileName: string,
   fileBuffer: Buffer,
-  contentType: string
+  contentType: string,
+  originalName: string
 ): Promise<string> => {
   try {
     const metadata = {
       'Content-Type': contentType,
+      'x-amz-meta-original-name': originalName,
     }
 
     await minioClient.putObject(
@@ -55,7 +57,9 @@ export const uploadFile = async (
       metadata
     )
 
-    console.log(`File '${fileName}' uploaded successfully to bucket '${BUCKET_NAME}'`)
+    console.log(
+      `File '${fileName}' uploaded successfully to bucket '${BUCKET_NAME}'`
+    )
     return fileName
   } catch (error) {
     console.error(`Failed to upload file '${fileName}':`, error)
@@ -71,7 +75,9 @@ export const uploadFile = async (
 export const getFile = async (fileName: string) => {
   try {
     const stream = await minioClient.getObject(BUCKET_NAME, fileName)
-    console.log(`File '${fileName}' retrieved successfully from bucket '${BUCKET_NAME}'`)
+    console.log(
+      `File '${fileName}' retrieved successfully from bucket '${BUCKET_NAME}'`
+    )
     return stream
   } catch (error) {
     console.error(`Failed to get file '${fileName}':`, error)
@@ -95,10 +101,15 @@ export const getFileUrl = async (
       fileName,
       expirySeconds
     )
-    console.log(`Presigned URL generated for file '${fileName}' (expires in ${expirySeconds}s)`)
+    console.log(
+      `Presigned URL generated for file '${fileName}' (expires in ${expirySeconds}s)`
+    )
     return url
   } catch (error) {
-    console.error(`Failed to generate presigned URL for file '${fileName}':`, error)
+    console.error(
+      `Failed to generate presigned URL for file '${fileName}':`,
+      error
+    )
     throw error
   }
 }
@@ -110,7 +121,9 @@ export const getFileUrl = async (
 export const deleteFile = async (fileName: string): Promise<void> => {
   try {
     await minioClient.removeObject(BUCKET_NAME, fileName)
-    console.log(`File '${fileName}' deleted successfully from bucket '${BUCKET_NAME}'`)
+    console.log(
+      `File '${fileName}' deleted successfully from bucket '${BUCKET_NAME}'`
+    )
   } catch (error) {
     console.error(`Failed to delete file '${fileName}':`, error)
     throw error
@@ -158,7 +171,11 @@ export const listFiles = async (prefix: string): Promise<string[]> => {
     const files: string[] = []
 
     return new Promise<string[]>((resolve, reject) => {
-      stream.on('data', (obj) => files.push(obj.name))
+      stream.on('data', (obj) => {
+        if (obj.name) {
+          files.push(obj.name)
+        }
+      })
       stream.on('end', () => {
         console.log(`Listed ${files.length} files with prefix '${prefix}'`)
         resolve(files)
@@ -172,4 +189,48 @@ export const listFiles = async (prefix: string): Promise<string[]> => {
     console.error(`Failed to list files with prefix '${prefix}':`, error)
     throw error
   }
+}
+
+/**
+ * Get file metadata from MinIO (originalName, size, mimeType)
+ * @param fileId - The file ID (object key)
+ * @returns File metadata object
+ */
+export const getFileMetadataFromMinio = async (
+  fileId: string
+): Promise<{
+  originalName: string
+  size: number
+  mimeType: string
+}> => {
+  try {
+    const stat = await minioClient.statObject(BUCKET_NAME, fileId)
+    return {
+      originalName: stat.metaData['x-amz-meta-original-name'] || fileId,
+      size: stat.size,
+      mimeType: stat.metaData['content-type'] || 'application/octet-stream',
+    }
+  } catch (error) {
+    console.error(`Failed to get metadata for '${fileId}':`, error)
+    throw error
+  }
+}
+
+/**
+ * Get metadata for multiple files in parallel (bulk fetch for performance)
+ * @param fileIds - Array of file IDs
+ * @returns Map of fileId to metadata
+ */
+export const getBulkFileMetadata = async (
+  fileIds: string[]
+): Promise<
+  Map<string, { originalName: string; size: number; mimeType: string }>
+> => {
+  const results = await Promise.all(
+    fileIds.map(async (fileId) => {
+      const metadata = await getFileMetadataFromMinio(fileId)
+      return [fileId, metadata] as const
+    })
+  )
+  return new Map(results)
 }

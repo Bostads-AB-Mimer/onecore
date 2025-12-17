@@ -8,6 +8,7 @@ model Components {
   priceAtPurchase    Float    @map("price_at_purchase") @db.Money
   ncsCode            String   @map("ncs_code") @db.NVarChar(10)
   status             String   @default("ACTIVE") @db.NVarChar(20)
+  files              String?  @db.NVarChar(Max) // JSON array: ["fileId1", "fileId2"]
   createdAt          DateTime @default(now()) @map("created_at") @db.DateTime
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
