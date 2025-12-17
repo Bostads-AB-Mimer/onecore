@@ -114,4 +114,79 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+<<<<<<< HEAD
+=======
+
+  /**
+   * @swagger
+   * /components/by-room/{roomId}:
+   *   get:
+   *     summary: Gets a list of components for a room
+   *     description: |
+   *       Retrieves all components associated with a specific room ID.
+   *       Components are returned ordered by installation date (newest first).
+   *     tags:
+   *       - Components
+   *     parameters:
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the room
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the components list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Component'
+   *       404:
+   *         description: Room not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/components/by-room/:roomId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    // Validate roomId is at most 15 characters
+    const roomIdValidation = z.string().max(15).safeParse(ctx.params.roomId)
+    if (!roomIdValidation.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Room ID must be at most 15 characters (Xpand format)',
+        ...metadata,
+      }
+      return
+    }
+
+    const roomId = roomIdValidation.data
+
+    try {
+      const components = await getComponentsByRoomId(roomId)
+
+      if (components === null) {
+        ctx.status = 404
+        ctx.body = { reason: 'Room not found', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: ComponentSchema.omit({ maintenanceUnits: true })
+          .array()
+          .parse(components),
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+>>>>>>> a628481c3 (Smol fix)
 }
