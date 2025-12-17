@@ -558,8 +558,8 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the invoice row.
    *     responses:
-   *       201:
-   *         description: Successfully created invoice row.
+   *       200:
+   *         description: Successfully deleted invoice row.
    *       404:
    *         description: Lease not found.
    *       500:
