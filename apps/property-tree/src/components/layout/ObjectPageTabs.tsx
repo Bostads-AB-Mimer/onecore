@@ -1,7 +1,6 @@
 import { ReactNode } from 'react'
 import { LucideIcon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
-import { Card, CardContent } from '../ui/v2/Card'
 
 export interface TabConfig {
   value: string
@@ -29,17 +28,13 @@ export const ObjectPageTabs = ({ defaultTab, tabs }: ObjectPageTabsProps) => {
               className="flex items-center gap-1.5"
             >
               <tab.icon className="h-4 w-4" />
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
         {tabs.map((tab) => (
           <TabsContent key={tab.value} value={tab.value}>
-            {tab.content && (
-              <Card>
-                <CardContent className="p-4">{tab.content}</CardContent>
-              </Card>
-            )}
+            {tab.content}
           </TabsContent>
         ))}
       </Tabs>

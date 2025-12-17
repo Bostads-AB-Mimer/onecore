@@ -1,4 +1,4 @@
-import type { components } from './api/generated/api-types'
+import type { components } from './api/core/generated/api-types'
 import type {
   ResidentialArea,
   ApplicantStatus,

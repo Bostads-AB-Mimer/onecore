@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Users,
   FileText,
+  Map,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
@@ -72,13 +73,14 @@ export const ResidenceView = () => {
             <TabsList className="mb-4 bg-slate-100/70 p-1 rounded-lg">
               <TabsTrigger value="rooms" className="flex items-center gap-1.5">
                 <Info className="h-4 w-4" />
-                Rumsinformation
+                <span className="hidden sm:inline">Rumsinformation</span>
               </TabsTrigger>
               <TabsTrigger
                 value="floorplan"
                 className="flex items-center gap-1.5"
               >
-                Bofaktablad
+                <Map className="h-4 w-4" />
+                <span className="hidden sm:inline">Bofaktablad</span>
               </TabsTrigger>
               <TabsTrigger
                 disabled
@@ -86,25 +88,25 @@ export const ResidenceView = () => {
                 className="flex items-center gap-1.5"
               >
                 <ClipboardList className="h-4 w-4" />
-                Besiktningar
+                <span className="hidden sm:inline">Besiktningar</span>
               </TabsTrigger>
               <TabsTrigger value="tenant" className="flex items-center gap-1.5">
                 <Users className="h-4 w-4" />
-                Hyresgäst
+                <span className="hidden sm:inline">Hyresgäst</span>
               </TabsTrigger>
               <TabsTrigger
                 value="contracts"
                 className="flex items-center gap-1.5"
               >
                 <FileText className="h-4 w-4" />
-                Kontrakt
+                <span className="hidden sm:inline">Kontrakt</span>
               </TabsTrigger>
               <TabsTrigger
                 value="workorders"
                 className="flex items-center gap-1.5"
               >
                 <MessageSquare className="h-4 w-4" />
-                Ärenden
+                <span className="hidden sm:inline">Ärenden</span>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">

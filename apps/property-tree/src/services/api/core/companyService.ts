@@ -1,5 +1,4 @@
-import { Company } from '../../types'
-import { GET as LegacyGET } from '../baseApi'
+import { Company, CompanyDetails } from '../../types'
 import { GET } from './base-api'
 
 export const companyService = {
@@ -15,9 +14,8 @@ export const companyService = {
   },
 
   // Get company by ID
-  // TODO: This one is being called by the old baseApi, needs to be migrated to the new one
-  async getById(companyId: string): Promise<Company | null> {
-    const { data, error } = await LegacyGET('/companies/{id}', {
+  async getById(companyId: string): Promise<CompanyDetails | null> {
+    const { data, error } = await GET('/companies/{id}', {
       params: {
         path: { id: companyId },
       },

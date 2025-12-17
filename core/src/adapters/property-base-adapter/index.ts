@@ -171,6 +171,34 @@ export async function getCompanies(): Promise<
   }
 }
 
+type GetCompanyByIdResponse = components['schemas']['CompanyDetails']
+
+export async function getCompanyById(
+  id: string
+): Promise<AdapterResult<GetCompanyByIdResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/companies/{id}', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data.content,
+      }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, '@onecore/property-adapter.getCompanyById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetPropertiesResponse = components['schemas']['Property'][]
 
 export async function getProperties(
@@ -368,6 +396,20 @@ export async function searchParkingSpaces(
   throw { ok: false, err: 'missing response data invariant' }
 }
 
+type SearchFacilitiesResponse = components['schemas']['FacilitySearchResult'][]
+
+export async function searchFacilities(
+  q: string
+): Promise<AdapterResult<SearchFacilitiesResponse, 'unknown'>> {
+  const response = await client().GET('/facilities/search', {
+    params: { query: { q } },
+  })
+  if (response.data) {
+    return { ok: true, data: response.data.content ?? [] }
+  }
+  throw { ok: false, err: 'missing response data invariant' }
+}
+
 type GetParkingSpaceResponse = components['schemas']['ParkingSpace']
 
 export async function getParkingSpaceByRentalId(
@@ -536,6 +578,29 @@ export async function getMaintenanceUnitsByPropertyCode(
       { err },
       'property-base-adapter.getMaintenanceUnitsByPropertyCode'
     )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetMaintenanceUnitByCodeResponse = components['schemas']['MaintenanceUnit']
+
+export async function getMaintenanceUnitByCode(
+  code: string
+): Promise<AdapterResult<GetMaintenanceUnitByCodeResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/maintenance-units/by-code/{code}',
+      {
+        params: { path: { code } },
+      }
+    )
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getMaintenanceUnitByCode')
     return { ok: false, err: 'unknown' }
   }
 }

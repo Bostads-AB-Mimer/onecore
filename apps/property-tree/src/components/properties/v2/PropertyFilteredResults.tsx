@@ -17,7 +17,7 @@ interface PropertyFilteredResultsProps {
   showSearchResults: boolean
   filteredSearchResults: SearchResult[]
   filteredProperties: Property[]
-  searchTypeFilter: 'property' | 'residence' | 'parking-space'
+  searchTypeFilter: 'property' | 'residence' | 'parking-space' | 'facility'
   activeFilterCount?: number
   isFiltering?: boolean
   filterChips?: FilterChip[]

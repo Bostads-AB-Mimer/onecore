@@ -14,14 +14,20 @@ export type SearchResult =
   | {
       type: 'residence'
       id: string
-      code: string
       name: string | null
-      deleted: boolean
       rentalId: string | null
     }
   | { type: 'building'; id: string; code: string; name: string | null }
   | {
       type: 'parking-space'
+      id: string
+      rentalId: string
+      code: string
+      name: string | null
+      property: { name: string | null; code: string | null }
+    }
+  | {
+      type: 'facility'
       id: string
       rentalId: string
       code: string
@@ -36,6 +42,8 @@ interface SearchResultsTableProps {
 export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
   const hasResidences = results.some((r) => r.type === 'residence')
   const hasProperties = results.some((r) => r.type === 'property')
+  const hasParkingSpaces = results.some((r) => r.type === 'parking-space')
+  const hasFacilities = results.some((r) => r.type === 'facility')
 
   const getTypeDisplay = (type: string) => {
     switch (type) {
@@ -47,6 +55,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'Lägenhet'
       case 'parking-space':
         return 'Parkering'
+      case 'facility':
+        return 'Lokal'
       default:
         return type
     }
@@ -62,6 +72,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'bg-green-100 text-green-800'
       case 'parking-space':
         return 'bg-orange-100 text-orange-800'
+      case 'facility':
+        return 'bg-yellow-100 text-yellow-800'
       default:
         return 'bg-slate-100'
     }
@@ -77,6 +89,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return `/residences/${result.id}`
       case 'parking-space':
         return `/parking-spaces/${result.rentalId}`
+      case 'facility':
+        return `/facilities/${result.rentalId}`
       default:
         return '#'
     }
@@ -89,8 +103,10 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'building':
         return result.name || result.code
       case 'residence':
-        return result.name || result.code
+        return result.name || result.rentalId || '-'
       case 'parking-space':
+        return result.name || result.code
+      case 'facility':
         return result.name || result.code
       default:
         return ''
@@ -106,6 +122,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'residence':
         return result.rentalId || '-'
       case 'parking-space':
+        return result.rentalId
+      case 'facility':
         return result.rentalId
       default:
         return ''
@@ -134,30 +152,18 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         },
         {
           key: 'info',
-          label: hasResidences && !hasProperties ? 'Hyres ID' : 'Information',
+          label:
+            (hasResidences || hasParkingSpaces || hasFacilities) &&
+            !hasProperties
+              ? 'Objektsnummer'
+              : 'Information',
           render: (result) => getSecondaryInfo(result),
           hideOnMobile: true,
         },
         {
           key: 'status',
           label: 'Status',
-          render: (result) => (
-            <>
-              {result.type === 'residence' && (
-                <Badge
-                  variant="outline"
-                  className={
-                    result.deleted
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-green-100 text-green-800'
-                  }
-                >
-                  {result.deleted ? 'Borttagen' : 'Aktiv'}
-                </Badge>
-              )}
-              {result.type !== 'residence' && '-'}
-            </>
-          ),
+          render: () => '-',
           hideOnMobile: true,
         },
         {
@@ -186,18 +192,6 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
               {getTypeDisplay(result.type)}
             </Badge>
           </div>
-          {result.type === 'residence' && (
-            <Badge
-              variant="outline"
-              className={
-                result.deleted
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-green-100 text-green-800'
-              }
-            >
-              {result.deleted ? 'Borttagen' : 'Aktiv'}
-            </Badge>
-          )}
           <div className="flex justify-end">
             <Button asChild variant="link" size="sm">
               <Link to={getPath(result)}>Visa detaljer</Link>

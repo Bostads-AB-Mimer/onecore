@@ -8,24 +8,26 @@ import { useIsMobile } from '../hooks/useMobile'
 import { components } from '@/services/api/core/generated/api-types'
 import { Loader2 } from 'lucide-react'
 
-interface ParkingSpaceBasicInfoProps {
-  parkingSpace: components['schemas']['ParkingSpace']
+interface FacilityBasicInfoProps {
+  facility: components['schemas']['FacilityDetails']
   rent?: number
-  isLoadingRent?: boolean
+  isRented?: boolean
+  isLoadingLease?: boolean
 }
 
-export const ParkingSpaceBasicInfo = ({
-  parkingSpace,
+export const FacilityBasicInfo = ({
+  facility,
   rent,
-  isLoadingRent,
-}: ParkingSpaceBasicInfoProps) => {
+  isRented,
+  isLoadingLease,
+}: FacilityBasicInfoProps) => {
   const isMobile = useIsMobile()
 
   return (
     <>
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-          Parkering {parkingSpace.parkingSpace.parkingNumber}
+          {facility.name || facility.code}
         </h1>
       </div>
 
@@ -39,31 +41,33 @@ export const ParkingSpaceBasicInfo = ({
           >
             <div>
               <p className="text-sm text-muted-foreground">Adress</p>
-              <p className="font-medium">
-                {parkingSpace.parkingSpace.name || '-'}
-              </p>
+              <p className="font-medium">{facility.name || '-'}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
-                Parkeringsplatstyp
-              </p>
+              <p className="text-sm text-muted-foreground">Hyresobjektstyp</p>
               <p className="font-medium">
-                {parkingSpace.parkingSpace.parkingSpaceType.name}
+                {facility.rentalInformation?.type.name || '-'}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Objektsnummer</p>
-              <p className="font-medium">{parkingSpace.rentalId}</p>
+              <p className="font-medium">
+                {facility.rentalInformation?.rentalId || '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Typ</p>
+              <p className="font-medium">{facility.type.name || '-'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="font-medium">
-                {isLoadingRent ? (
+                {isLoadingLease ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Laddar...
                   </span>
-                ) : rent ? (
+                ) : isRented ? (
                   'Uthyrd'
                 ) : (
                   'Vakant'
@@ -71,9 +75,15 @@ export const ParkingSpaceBasicInfo = ({
               </p>
             </div>
             <div>
+              <p className="text-sm text-muted-foreground">Yta</p>
+              <p className="font-medium">
+                {facility.areaSize ? `${facility.areaSize} m²` : '-'}
+              </p>
+            </div>
+            <div>
               <p className="text-sm text-muted-foreground">Månadshyra</p>
               <p className="font-medium">
-                {isLoadingRent ? (
+                {isLoadingLease ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Laddar...

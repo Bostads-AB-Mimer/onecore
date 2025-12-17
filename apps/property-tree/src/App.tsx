@@ -17,6 +17,8 @@ import { StaircaseView } from './components/views/StaircaseView'
 import ResidenceView from './components/views/v2/ResidenceView'
 import { RoomView } from './components/views/RoomView'
 import { ParkingSpaceView } from './components/views/ParkingSpaceView'
+import { MaintenanceUnitView } from './components/views/MaintenanceUnitView'
+import { FacilityView } from './components/views/FacilityView'
 import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
@@ -70,6 +72,11 @@ export default function App() {
                 path="parking-spaces/:rentalId"
                 element={<ParkingSpaceView />}
               />
+              <Route
+                path="maintenance-units/:code"
+                element={<MaintenanceUnitView />}
+              />
+              <Route path="facilities/:rentalId" element={<FacilityView />} />
               <Route path="tenants" element={<AllTenantsPage />} />
               <Route path="tenants/:contactCode" element={<TenantView />} />
             </Route>

@@ -161,3 +161,43 @@ export const getMaintenanceUnitsByPropertyCode = async (
     }
   })
 }
+
+export const getMaintenanceUnitByCode = async (
+  code: string
+): Promise<MaintenanceUnit | null> => {
+  const maintenanceUnit = await prisma.maintenanceUnit.findUnique({
+    where: {
+      code: code,
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      maintenanceUnitType: {
+        select: {
+          name: true,
+        },
+      },
+      propertyStructures: {
+        select: {
+          propertyCode: true,
+          propertyName: true,
+        },
+      },
+    },
+  })
+
+  if (!maintenanceUnit) {
+    return null
+  }
+
+  const trimmed = trimStrings(maintenanceUnit)
+  return {
+    id: trimmed.id,
+    code: trimmed.code,
+    caption: trimmed.name,
+    type: trimmed.maintenanceUnitType?.name ?? null,
+    estateCode: trimmed.propertyStructures[0]?.propertyCode ?? null,
+    estate: trimmed.propertyStructures[0]?.propertyName ?? null,
+  }
+}

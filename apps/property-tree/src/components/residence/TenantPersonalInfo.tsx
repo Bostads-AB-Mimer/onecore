@@ -3,25 +3,31 @@ import { Calendar } from 'lucide-react'
 interface TenantPersonalInfoProps {
   firstName: string
   lastName: string
+  fullName?: string
   moveInDate: string
   moveOutDate?: string
   personalNumber: string
+  contactCode: string
 }
 
 export function TenantPersonalInfo({
   firstName,
   lastName,
+  fullName,
   moveInDate,
   moveOutDate,
   personalNumber,
+  contactCode,
 }: TenantPersonalInfoProps) {
+  const isOrganization = contactCode.startsWith('F')
+  const displayName =
+    firstName && lastName ? `${firstName} ${lastName}` : fullName || '-'
+
   return (
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">Namn</p>
-        <p className="font-medium">
-          {firstName} {lastName}
-        </p>
+        <p className="font-medium">{displayName}</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">Inflyttningsdatum</p>
@@ -44,7 +50,9 @@ export function TenantPersonalInfo({
         </div>
       )}
       <div>
-        <p className="text-sm text-muted-foreground">Personnummer</p>
+        <p className="text-sm text-muted-foreground">
+          {isOrganization ? 'Organisationsnummer' : 'Personnummer'}
+        </p>
         <p className="font-medium">{personalNumber}</p>
       </div>
     </div>

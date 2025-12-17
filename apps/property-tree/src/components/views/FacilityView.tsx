@@ -2,8 +2,8 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
-import { parkingSpaceService, leaseService } from '@/services/api/core'
-import { ParkingSpaceBasicInfo } from '../parking-space/ParkingSpaceBasicInfo'
+import { facilityService, leaseService } from '@/services/api/core'
+import { FacilityBasicInfo } from '../facility/FacilityBasicInfo'
 import { CurrentTenant } from '../rental-object/CurrentTenant'
 import {
   WorkOrdersManagement,
@@ -13,25 +13,26 @@ import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 import { RentalObjectContracts } from '../rental-object/RentalObjectContracts'
 
-export function ParkingSpaceView() {
+export function FacilityView() {
   const { rentalId } = useParams()
 
-  const parkingSpaceQuery = useQuery({
-    queryKey: ['parkingSpace', rentalId],
-    queryFn: () => parkingSpaceService.getByRentalId(rentalId!),
+  const facilityQuery = useQuery({
+    queryKey: ['facility', rentalId],
+    queryFn: () => facilityService.getByRentalId(rentalId!),
     enabled: !!rentalId,
   })
 
-  const parkingSpace = parkingSpaceQuery.data
+  const facility = facilityQuery.data
 
   // Fetch lease data for rent info and to pass to CurrentTenant
   const leasesQuery = useQuery({
-    queryKey: ['leases', parkingSpace?.rentalId],
+    queryKey: ['leases', facility?.rentalInformation?.rentalId],
     queryFn: () =>
-      leaseService.getByRentalPropertyId(parkingSpace!.rentalId!, {
-        includeContacts: true,
-      }),
-    enabled: !!parkingSpace?.rentalId,
+      leaseService.getByRentalPropertyId(
+        facility!.rentalInformation!.rentalId!,
+        { includeContacts: true }
+      ),
+    enabled: !!facility?.rentalInformation?.rentalId,
   })
 
   const currentLease = leasesQuery.data?.find(
@@ -39,13 +40,13 @@ export function ParkingSpaceView() {
   )
   const currentRent = currentLease?.rentInfo?.currentRent?.currentRent
 
-  if (!parkingSpace) {
+  if (!facility) {
     return (
       <ObjectPageLayout
-        isLoading={parkingSpaceQuery.isLoading}
-        error={parkingSpaceQuery.error}
-        data={parkingSpace}
-        notFoundMessage="Parkering hittades inte"
+        isLoading={facilityQuery.isLoading}
+        error={facilityQuery.error}
+        data={facility}
+        notFoundMessage="Lokal hittades inte"
         searchedFor={rentalId}
       >
         <></>
@@ -55,17 +56,18 @@ export function ParkingSpaceView() {
 
   return (
     <ObjectPageLayout
-      isLoading={parkingSpaceQuery.isLoading}
-      error={parkingSpaceQuery.error}
-      data={parkingSpace}
-      notFoundMessage="Parkering hittades inte"
+      isLoading={facilityQuery.isLoading}
+      error={facilityQuery.error}
+      data={facility}
+      notFoundMessage="Lokal hittades inte"
       searchedFor={rentalId}
     >
       <div className="lg:col-span-3 space-y-6">
-        <ParkingSpaceBasicInfo
-          parkingSpace={parkingSpace}
+        <FacilityBasicInfo
+          facility={facility}
           rent={currentRent}
-          isLoadingRent={leasesQuery.isLoading}
+          isRented={!!currentLease}
+          isLoadingLease={leasesQuery.isLoading}
         />
       </div>
 
@@ -78,7 +80,7 @@ export function ParkingSpaceView() {
             icon: Users,
             content: (
               <CurrentTenant
-                rentalPropertyId={parkingSpace.rentalId}
+                rentalPropertyId={facility.rentalInformation?.rentalId!}
                 leases={leasesQuery.data}
                 isLoading={leasesQuery.isLoading}
               />
@@ -89,7 +91,9 @@ export function ParkingSpaceView() {
             label: 'Kontrakt',
             icon: FileText,
             content: (
-              <RentalObjectContracts rentalPropertyId={parkingSpace.rentalId} />
+              <RentalObjectContracts
+                rentalPropertyId={facility.rentalInformation?.rentalId!}
+              />
             ),
           },
           {
@@ -105,7 +109,7 @@ export function ParkingSpaceView() {
             content: (
               <WorkOrdersManagement
                 contextType={ContextType.Residence}
-                id={parkingSpace.rentalId}
+                id={facility.rentalInformation?.rentalId!}
               />
             ),
           },

@@ -27,6 +27,8 @@ import { calculateResidenceStatus } from './calculate-residence-status'
 export const routes = (router: KoaRouter) => {
   registerSchema('Building', schemas.BuildingSchema)
   registerSchema('Company', schemas.CompanySchema)
+  registerSchema('CompanyDetails', schemas.CompanyDetailsSchema)
+  registerSchema('Component', schemas.ComponentSchema)
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
@@ -40,6 +42,12 @@ export const routes = (router: KoaRouter) => {
     schemas.ResidenceByRentalIdSchema
   )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
+  registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
+  registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
+  registerSchema(
+    'ParkingSpaceSearchResult',
+    schemas.ParkingSpaceSearchResultSchema
+  )
 
   /**
    * @swagger
@@ -407,6 +415,92 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: response.data satisfies schemas.Company[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /companies/{id}:
+   *   get:
+   *     summary: Get detailed information about a specific company
+   *     tags:
+   *       - Property base Service
+   *     description: |
+   *       Retrieves comprehensive information about a company using its unique identifier.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the company.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved company information
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/CompanyDetails'
+   *       '404':
+   *         description: Company not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Company not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/companies/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    try {
+      const result = await propertyBaseAdapter.getCompanyById(id)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Company not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.CompanyDetails,
         ...metadata,
       }
     } catch (error) {
@@ -826,6 +920,79 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
       ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /residences/search:
+   *   get:
+   *     summary: Search residences
+   *     description: |
+   *       Searches for residences by rental object id.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (rental object id).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved residences matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ResidenceSearchResult'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const q = ctx.query.q as string
+
+    logger.info(metadata, `GET /residences/search?q=${q}`)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.searchResidences(q)
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error searching residences from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.ResidenceSearchResult>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
 
@@ -1653,6 +1820,70 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /maintenance-units/by-code/{code}:
+   *   get:
+   *     summary: Get a maintenance unit by its code
+   *     description: Returns a single maintenance unit by its unique code.
+   *     tags:
+   *       - Property base Service
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The code of the maintenance unit to retrieve.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the maintenance unit.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/MaintenanceUnit'
+   *       404:
+   *         description: Maintenance unit not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/maintenance-units/by-code/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { code } = ctx.params
+
+    logger.info(metadata, `GET /maintenance-units/by-code/${code}`)
+
+    try {
+      const result = await propertyBaseAdapter.getMaintenanceUnitByCode(code)
+      if (!result.ok) {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting maintenance unit from property-base'
+        )
+        ctx.status = 404
+        ctx.body = { error: 'Maintenance unit not found', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.MaintenanceUnit,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /facilities/by-property-code/{propertyCode}:
    *   get:
    *     summary: Get facilities by property code.
@@ -1784,6 +2015,152 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies Array<schemas.FacilityDetails>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /facilities/search:
+   *   get:
+   *     summary: Search facilities
+   *     description: |
+   *       Searches for facilities by rental id.
+   *     tags:
+   *       - Facilities
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (rental id).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved facilities matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/FacilitySearchResult'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/facilities/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const q = ctx.query.q as string
+
+    logger.info(metadata, `GET /facilities/search?q=${q}`)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.searchFacilities(q)
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error searching facilities from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.FacilitySearchResult>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /parking-spaces/search:
+   *   get:
+   *     summary: Search parking spaces
+   *     description: |
+   *       Searches for parking spaces by rental id.
+   *     tags:
+   *       - Parking Spaces
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (rental id).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved parking spaces matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ParkingSpaceSearchResult'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/parking-spaces/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const q = ctx.query.q as string
+
+    logger.info(metadata, `GET /parking-spaces/search?q=${q}`)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.searchParkingSpaces(q)
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error searching parking spaces from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.ParkingSpaceSearchResult>,
         ...metadata,
       }
     } catch (error) {
