@@ -404,7 +404,7 @@ export function ComponentImageGallery({
                 <motion.img
                   key={currentImage.fileId}
                   src={currentImage.url}
-                  alt={currentImage.caption || currentImage.originalName}
+                  alt={currentImage.originalName}
                   className="max-h-full max-w-full object-contain"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -447,7 +447,7 @@ export function ComponentImageGallery({
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">
-                  {currentImage.caption || currentImage.originalName}
+                  {currentImage.originalName}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {formatFileSize(currentImage.size)} •{' '}

@@ -89,29 +89,12 @@ export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
     .describe('Presigned URL for file access (valid for 24 hours)'),
 })
 
-// Response schemas for file list endpoints
-export const ComponentFilesResponseSchema = z.object({
-  files: z.array(FileMetadataWithUrlSchema),
-  count: z.number(),
-})
-
-export const ComponentModelDocumentsResponseSchema = z.object({
-  documents: z.array(FileMetadataWithUrlSchema),
-  count: z.number(),
-})
-
 export type FileMetadata = z.infer<typeof FileMetadataSchema>
 export type ComponentModelDocument = z.infer<
   typeof ComponentModelDocumentSchema
 >
 export type ComponentFile = z.infer<typeof ComponentFileSchema>
 export type FileMetadataWithUrl = z.infer<typeof FileMetadataWithUrlSchema>
-export type ComponentFilesResponse = z.infer<
-  typeof ComponentFilesResponseSchema
->
-export type ComponentModelDocumentsResponse = z.infer<
-  typeof ComponentModelDocumentsResponseSchema
->
 
 // ==================== COMPONENT TYPES ====================
 
