@@ -481,8 +481,9 @@ export async function getMaintenanceUnitsByBuildingCode(
       return { ok: true, data: fetchResponse.data.content }
     }
 
+    // Return empty array for 404 (no maintenance units found)
     if (fetchResponse.response.status === 404) {
-      return { ok: false, err: 'not-found' }
+      return { ok: true, data: [] }
     }
 
     return { ok: false, err: 'unknown' }

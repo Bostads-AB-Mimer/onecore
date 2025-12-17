@@ -1682,12 +1682,6 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        if (result.data.length === 0) {
-          ctx.status = 404
-          ctx.body = { error: 'No maintenance units found', ...metadata }
-          return
-        }
-
         ctx.body = {
           content: result.data satisfies Array<schemas.MaintenanceUnit>,
           ...metadata,
