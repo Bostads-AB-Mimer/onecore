@@ -15,6 +15,9 @@ export const componentsQueryParamsSchema = z.discriminatedUnion('type', [
   }),
 ])
 
+// ==================== LEGACY COMPONENT SCHEMA ====================
+// Used by getComponentByMaintenanceUnitCode for backwards compatibility
+
 export const ComponentSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -45,6 +48,259 @@ export const ComponentSchema = z.object({
         name: z.string(),
       })
     )
+    .optional(),
+})
+
+// ==================== NEW COMPONENT SYSTEM ====================
+
+export const ComponentStatusEnum = z.enum([
+  'ACTIVE',
+  'INACTIVE',
+  'MAINTENANCE',
+  'DECOMMISSIONED',
+])
+
+export const QuantityTypeEnum = z.enum([
+  'UNIT',
+  'METER',
+  'SQUARE_METER',
+  'CUBIC_METER',
+])
+
+// Xpand IDs are strings with max 15 characters
+export const xpandIdSchema = z.string().max(15)
+
+// ==================== FILE METADATA SCHEMAS ====================
+
+export const FileMetadataSchema = z.object({
+  fileId: z.string(),
+  originalName: z.string(),
+  size: z.number(),
+  mimeType: z.string(),
+  uploadedAt: z.string().datetime(),
+})
+
+export const ComponentModelDocumentSchema = FileMetadataSchema
+
+export const ComponentFileSchema = FileMetadataSchema
+
+// Extend base schema with presigned URL (added at runtime by handlers)
+export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
+  url: z
+    .string()
+    .describe('Presigned URL for file access (valid for 24 hours)'),
+})
+
+// Response schemas for file list endpoints
+export const ComponentFilesResponseSchema = z.object({
+  files: z.array(FileMetadataWithUrlSchema),
+  count: z.number(),
+})
+
+export const ComponentModelDocumentsResponseSchema = z.object({
+  documents: z.array(FileMetadataWithUrlSchema),
+  count: z.number(),
+})
+
+export type FileMetadata = z.infer<typeof FileMetadataSchema>
+export type ComponentModelDocument = z.infer<
+  typeof ComponentModelDocumentSchema
+>
+export type ComponentFile = z.infer<typeof ComponentFileSchema>
+export type FileMetadataWithUrl = z.infer<typeof FileMetadataWithUrlSchema>
+export type ComponentFilesResponse = z.infer<
+  typeof ComponentFilesResponseSchema
+>
+export type ComponentModelDocumentsResponse = z.infer<
+  typeof ComponentModelDocumentsResponseSchema
+>
+
+// ==================== COMPONENT TYPES ====================
+
+// Query params for component types
+export const componentTypesQueryParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+// Response schema
+export const ComponentTypeSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+// Create schema
+export const CreateComponentTypeSchema = z.object({
+  description: z.string().trim().min(1, 'Description is required'),
+})
+
+// Update schema
+export const UpdateComponentTypeSchema = z.object({
+  description: z.string().trim().min(1, 'Description is required').optional(),
+})
+
+export type ComponentType = z.infer<typeof ComponentTypeSchema>
+export type CreateComponentType = z.infer<typeof CreateComponentTypeSchema>
+export type UpdateComponentType = z.infer<typeof UpdateComponentTypeSchema>
+
+// ==================== COMPONENT SUBTYPES ====================
+
+// Query params for component subtypes
+export const componentSubtypesQueryParamsSchema = z.object({
+  componentTypeId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+// Response schema
+export const ComponentSubtypeSchema = z.object({
+  id: z.string().uuid(),
+  componentTypeId: z.string().uuid(),
+  description: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  componentType: ComponentTypeSchema.optional(),
+})
+
+// Create schema
+export const CreateComponentSubtypeSchema = z.object({
+  componentTypeId: z.string().uuid(),
+  description: z.string().trim().min(1, 'Description is required'),
+})
+
+// Update schema
+export const UpdateComponentSubtypeSchema = z.object({
+  componentTypeId: z.string().uuid().optional(),
+  description: z.string().trim().min(1, 'Description is required').optional(),
+})
+
+export type ComponentSubtype = z.infer<typeof ComponentSubtypeSchema>
+export type CreateComponentSubtype = z.infer<
+  typeof CreateComponentSubtypeSchema
+>
+export type UpdateComponentSubtype = z.infer<
+  typeof UpdateComponentSubtypeSchema
+>
+
+// ==================== COMPONENT MODELS ====================
+
+// Query params for component models
+export const componentModelsQueryParamsSchema = z.object({
+  componentTypeId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
+  manufacturer: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+// Response schema
+export const ComponentModelSchema = z.object({
+  id: z.string().uuid(),
+  componentTypeId: z.string().uuid(),
+  subtypeId: z.string().uuid(),
+  currentPrice: z.number().min(0),
+  warrantyMonths: z.number().int().min(0),
+  manufacturer: z.string(),
+  technicalLifespan: z.number().min(0),
+  technicalSpecification: z.string().nullable(),
+  installationInstructions: z.string().nullable(),
+  economicLifespan: z.number().min(0),
+  dimensions: z.string().nullable(),
+  replacementIntervalMonths: z.number().int().min(0),
+  quantityType: QuantityTypeEnum,
+  coclassCode: z.string(),
+  documents: z.string().nullable(), // JSON array stored as string
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  componentType: ComponentTypeSchema.optional(),
+  subtype: ComponentSubtypeSchema.optional(),
+})
+
+// Create schema
+export const CreateComponentModelSchema = z.object({
+  componentTypeId: z.string().uuid(),
+  subtypeId: z.string().uuid(),
+  currentPrice: z.number().min(0),
+  warrantyMonths: z.number().int().min(0),
+  manufacturer: z.string().trim().min(1, 'Manufacturer is required'),
+  technicalLifespan: z.number().min(0),
+  technicalSpecification: z.string().trim().optional(),
+  installationInstructions: z.string().trim().optional(),
+  economicLifespan: z.number().min(0),
+  dimensions: z.string().trim().optional(),
+  replacementIntervalMonths: z.number().int().min(0),
+  quantityType: QuantityTypeEnum,
+  coclassCode: z.string().trim().min(1, 'CoClass code is required'),
+})
+
+// Update schema
+export const UpdateComponentModelSchema = z.object({
+  componentTypeId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
+  currentPrice: z.number().min(0).optional(),
+  warrantyMonths: z.number().int().min(0).optional(),
+  manufacturer: z.string().trim().min(1).optional(),
+  technicalLifespan: z.number().min(0).optional(),
+  technicalSpecification: z.string().trim().optional(),
+  installationInstructions: z.string().trim().optional(),
+  economicLifespan: z.number().min(0).optional(),
+  dimensions: z.string().trim().optional(),
+  replacementIntervalMonths: z.number().int().min(0).optional(),
+  quantityType: QuantityTypeEnum.optional(),
+  coclassCode: z.string().trim().min(1).optional(),
+})
+
+export type ComponentModel = z.infer<typeof ComponentModelSchema>
+export type CreateComponentModel = z.infer<typeof CreateComponentModelSchema>
+export type UpdateComponentModel = z.infer<typeof UpdateComponentModelSchema>
+
+// ==================== COMPONENTS ====================
+
+// Query params for components
+export const componentsNewQueryParamsSchema = z.object({
+  modelId: z.string().uuid().optional(),
+  status: ComponentStatusEnum.optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+// ComponentInstallation schema without component reference (to avoid circular reference)
+// This is used when ComponentInstallations are included in Component responses
+// For direct ComponentInstallation queries, use ComponentInstallationSchema below
+export const ComponentInstallationWithoutComponentSchema = z.object({
+  id: z.string().uuid(),
+  componentId: z.string().uuid(),
+  spaceId: xpandIdSchema.nullable(),
+  buildingPartId: xpandIdSchema.nullable(),
+  installationDate: z.date(),
+  deinstallationDate: z.date().nullable(),
+  orderNumber: z.string(),
+  cost: z.number().min(0),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+// Component instance response schema with installations included
+// The componentInstallations field uses the "WithoutComponent" version to break circular reference
+// This prevents infinite loops: Component -> Installation -> Component -> Installation -> ...
+export const ComponentNewSchema = z.object({
+  id: z.string().uuid(),
+  modelId: z.string().uuid(),
+  serialNumber: z.string(),
+  specifications: z.string().nullable(),
+  warrantyStartDate: z.date().nullable(),
+  warrantyMonths: z.number().int().min(0),
+  priceAtPurchase: z.number().min(0),
+  ncsCode: z.string().regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format'),
+  status: ComponentStatusEnum,
+  files: z.string().nullable(), // JSON array stored as string
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  model: ComponentModelSchema.optional(),
+  componentInstallations: z
+    .array(ComponentInstallationWithoutComponentSchema)
     .optional(),
 })
 

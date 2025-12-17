@@ -3,11 +3,9 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "openapi": {
-  };
-  "/components": {
+  openapi: {}
+  '/components': {
     /**
      * Gets a list of components for a maintenance unit
      * @description Retrieves all components associated with a specific maintenance unit code.
@@ -19,9 +17,9 @@ export interface paths {
       parameters: {
         query: {
           /** @description The unique code identifying the maintenance unit. */
-          maintenanceUnit: string;
-        };
-      };
+          maintenanceUnit: string
+        }
+      }
       responses: {
         /**
          * @description Successfully retrieved the components list. Returns an array of component objects
@@ -29,27 +27,27 @@ export interface paths {
          */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Component"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Component'][]
+            }
+          }
+        }
         /** @description Invalid maintenance unit code provided */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description No components found for the specified maintenance unit */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/components/by-room/{roomId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/components/by-room/{roomId}': {
     /**
      * Gets a list of components for a room
      * @description Retrieves all components associated with a specific room ID.
@@ -59,30 +57,316 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the room */
-          roomId: string;
-        };
-      };
+          roomId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the components list */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Component"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Component'][]
+            }
+          }
+        }
         /** @description Room not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/residences": {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-installations': {
+    /** Get all component installations */
+    get: {
+      parameters: {
+        query?: {
+          componentId?: string
+          spaceId?: string
+          buildingPartId?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description List of component installations */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation'][]
+              pagination?: {
+                page?: number
+                limit?: number
+                total?: number
+                totalPages?: number
+              }
+            }
+          }
+        }
+      }
+    }
+    /** Create a new component installation */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateComponentInstallationRequest']
+        }
+      }
+      responses: {
+        /** @description Component installation created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation']
+            }
+          }
+        }
+      }
+    }
+  }
+  '/component-installations/{id}': {
+    /** Get component installation by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component installation details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation']
+            }
+          }
+        }
+        /** @description Component installation not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Update a component installation */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateComponentInstallationRequest']
+        }
+      }
+      responses: {
+        /** @description Component installation updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstallation']
+            }
+          }
+        }
+      }
+    }
+    /** Delete a component installation */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Component installation deleted */
+        204: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-models/{id}/upload': {
+    /** Upload a document to a component model */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'multipart/form-data': {
+            /**
+             * Format: binary
+             * @description PDF document file (max 50MB)
+             */
+            file: string
+          }
+        }
+      }
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentModelDocument']
+            }
+          }
+        }
+        /** @description Invalid file type or size */
+        400: {
+          content: never
+        }
+        /** @description Upload failed */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-models/{id}/documents': {
+    /** Get all documents for a component model with presigned URLs */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description List of documents with download URLs */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentModelDocumentsResponse']
+            }
+          }
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
+        }
+        /** @description Failed to retrieve documents */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-models/{id}/documents/{fileId}': {
+    /** Delete a document from a component model */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+          fileId: string
+        }
+      }
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never
+        }
+      }
+    }
+  }
+  '/components/{id}/upload': {
+    /** Upload images to a component */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Optional image caption */
+          caption?: string
+        }
+        path: {
+          /** @description Component instance ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'multipart/form-data': {
+            /**
+             * Format: binary
+             * @description Image file (JPEG, PNG, or WebP, max 50MB)
+             */
+            file: string
+          }
+        }
+      }
+      responses: {
+        /** @description Image uploaded successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentFile']
+            }
+          }
+        }
+        /** @description Invalid file type or size */
+        400: {
+          content: never
+        }
+        /** @description Upload failed */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/components/{id}/files': {
+    /** Get all files for a component with presigned URLs */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description List of files with download URLs */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentFilesResponse']
+            }
+          }
+        }
+        /** @description Component not found */
+        404: {
+          content: never
+        }
+        /** @description Failed to retrieve files */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/components/{id}/files/{fileId}': {
+    /** Delete a file from a component */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+          fileId: string
+        }
+      }
+      responses: {
+        /** @description File deleted successfully */
+        204: {
+          content: never
+        }
+      }
+    }
+  }
+  openapi: {}
+  '/residences': {
     /**
      * Get residences by building code, optionally filtered by staircase code.
      * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
@@ -91,32 +375,32 @@ export interface paths {
       parameters: {
         query: {
           /** @description The building code of the building. */
-          buildingCode: string;
+          buildingCode: string
           /** @description The code of the staircase (optional). */
-          staircaseCode?: string;
-        };
-      };
+          staircaseCode?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the residences. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Residence"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Residence'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/residences/summary/by-building-code/{buildingCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/summary/by-building-code/{buildingCode}': {
     /**
      * Get residences by building code, optionally filtered by staircase code.
      * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
@@ -125,34 +409,34 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The code of the staircase (optional). */
-          staircaseCode?: string;
-        };
+          staircaseCode?: string
+        }
         path: {
           /** @description The building code of the building. */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the residences. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceSummary"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ResidenceSummary'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/residences/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/search': {
     /**
      * Search residences
      * @description Retrieves a list of all real estate residences by rental object id.
@@ -161,30 +445,30 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The search query. */
-          q?: string;
-        };
-      };
+          q?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved list of residences. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceSearchResult"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ResidenceSearchResult'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/residences/rental-id/{rentalId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/rental-id/{rentalId}': {
     /**
      * Get a residence by rental ID
      * @description Returns a residence with the specified rental ID
@@ -193,28 +477,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental ID of the residence */
-          rentalId: string;
-        };
-      };
+          rentalId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the residence */
         200: {
           content: {
-            "application/json": components["schemas"]["GetResidenceByRentalIdResponse"];
-          };
-        };
+            'application/json': components['schemas']['GetResidenceByRentalIdResponse']
+          }
+        }
         /** @description Residence not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/residences/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/{id}': {
     /**
      * Get a residence by ID
      * @description Returns a residence with the specified ID
@@ -223,34 +507,34 @@ export interface paths {
       parameters: {
         query?: {
           /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
-          includeActiveBlocksOnly?: boolean;
-        };
+          includeActiveBlocksOnly?: boolean
+        }
         path: {
           /** @description The ID of the residence */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the residence */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ResidenceDetails']
+            }
+          }
+        }
         /** @description Residence not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/buildings": {
+          content: never
+        }
+      }
+    }
+  }
+  '/buildings': {
     /**
      * Get all buildings for a specific property
      * @description Retrieves all buildings associated with a given property code.
@@ -261,30 +545,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The code of the property. */
-          propertyCode: string;
-        };
-      };
+          propertyCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the buildings. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Building"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Building'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/buildings/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/buildings/search': {
     /**
      * Search buildings
      * @description Retrieves all buildings associated with a given name.
@@ -295,30 +579,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The search query. */
-          q: string;
-        };
-      };
+          q: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the buildings. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Building"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Building'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/buildings/by-building-code/{buildingCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/buildings/by-building-code/{buildingCode}': {
     /**
      * Get detailed information about a specific building by building code
      * @description Retrieves comprehensive information about a building using its building code.
@@ -329,30 +613,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The building code of the building */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved building information */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Building"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Building']
+            }
+          }
+        }
         /** @description Building not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/buildings/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/buildings/{id}': {
     /**
      * Get detailed information about a specific building
      * @description Retrieves comprehensive information about a building using its unique building code.
@@ -363,30 +647,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The unique id of the building */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved building information */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Building"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Building']
+            }
+          }
+        }
         /** @description Building not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/properties": {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties': {
     /**
      * Get a list of all properties belonging to a company
      * @description Retrieves a list of all real estate properties belonging to a specific company.
@@ -397,32 +681,32 @@ export interface paths {
       parameters: {
         query: {
           /** @description The code of the company that owns the properties. */
-          companyCode: string;
+          companyCode: string
           /** @description Optional filter to get properties in a specific tract. */
-          tract?: string;
-        };
-      };
+          tract?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved list of properties. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Property"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Property'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/properties/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/search': {
     /**
      * Search properties
      * @description Retrieves a list of all real estate properties by name.
@@ -431,30 +715,30 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The search query. */
-          q?: string;
-        };
-      };
+          q?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved list of properties. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Property"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Property'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/properties/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/{id}': {
     /**
      * Get detailed information about a specific property
      * @description Retrieves comprehensive information about a real estate property using its unique identifier.
@@ -465,30 +749,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the property. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the property. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["PropertyDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['PropertyDetails']
+            }
+          }
+        }
         /** @description Property not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/parking-spaces/search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/parking-spaces/search': {
     /**
      * Search parking spaces
      * @description Searches for parking spaces by rental id.
@@ -497,30 +781,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The search query (rental id). */
-          q: string;
-        };
-      };
+          q: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved parking spaces matching the search query. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ParkingSpaceSearchResult"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ParkingSpaceSearchResult'][]
+            }
+          }
+        }
         /** @description Invalid query provided */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/parking-spaces/by-rental-id/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/parking-spaces/by-rental-id/{id}': {
     /**
      * Gets a list of parking space by rental id
      * @description Retrieves parking space from rental id.
@@ -529,34 +813,34 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental id. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the parking space. Returns parking space object. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ParkingSpace"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ParkingSpace']
+            }
+          }
+        }
         /** @description Invalid id provided */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description No parking spaces found for the specified id */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/staircases": {
+          content: never
+        }
+      }
+    }
+  }
+  '/staircases': {
     /**
      * Gets staircases belonging to a building by building code
      * @description Returns the staircases belonging to the building.
@@ -565,30 +849,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The building code of the building. */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the staircases. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Staircase"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Staircase'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/rooms": {
+          content: never
+        }
+      }
+    }
+  }
+  '/rooms': {
     /**
      * Get rooms by residence id.
      * @description Returns all rooms belonging to a residence.
@@ -597,30 +881,30 @@ export interface paths {
       parameters: {
         query: {
           /** @description The id of the residence. */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the rooms. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Room"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Room'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/rooms/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/rooms/{id}': {
     /**
      * Get a room by ID
      * @description Returns a room with the specified ID
@@ -629,28 +913,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the room */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the room */
         200: {
           content: {
-            "application/json": components["schemas"]["Room"];
-          };
-        };
+            'application/json': components['schemas']['Room']
+          }
+        }
         /** @description Room not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/companies": {
+          content: never
+        }
+      }
+    }
+  }
+  '/companies': {
     /**
      * Get a list of all companies
      * @description Retrieves a list of all companies in the system.
@@ -661,19 +945,19 @@ export interface paths {
         /** @description Successfully retrieved list of companies */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Company"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['Company'][]
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/companies/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/companies/{id}': {
     /**
      * Get detailed information about a specific company
      * @description Retrieves comprehensive information about a company using its unique identifier.
@@ -682,30 +966,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the company. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the company. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["CompanyDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['CompanyDetails']
+            }
+          }
+        }
         /** @description Company not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-rental-id/{id}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-rental-id/{id}': {
     /**
      * Get all maintenance units for a specific rental property id
      * @description Retrieves all maintenance units associated with a given rental property id.
@@ -714,30 +998,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the rental property for which to retrieve maintenance units. */
-          id: string;
-        };
-      };
+          id: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-building-code/{code}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-building-code/{code}': {
     /**
      * Get all maintenance units for a specific building code
      * @description Retrieves all maintenance units associated with a given building code.
@@ -746,30 +1030,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The building code for which to retrieve maintenance units. */
-          code: string;
-        };
-      };
+          code: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/maintenance-units/by-property-code/{code}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-property-code/{code}': {
     /**
      * Get all maintenance units for a specific property code
      * @description Retrieves all maintenance units associated with a given property code.
@@ -778,30 +1062,30 @@ export interface paths {
       parameters: {
         path: {
           /** @description The code of the property or which to retrieve maintenance units. */
-          code: string;
-        };
-      };
+          code: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the maintenance units. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["MaintenanceUnit"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/facilities/by-rental-id/{rentalId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-rental-id/{rentalId}': {
     /**
      * Get a facility by rental ID
      * @description Returns a facility with the specified rental ID
@@ -810,28 +1094,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The rental ID of the facility */
-          rentalId: string;
-        };
-      };
+          rentalId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the facility */
         200: {
           content: {
-            "application/json": components["schemas"]["GetFacilityByRentalIdResponse"];
-          };
-        };
+            'application/json': components['schemas']['GetFacilityByRentalIdResponse']
+          }
+        }
         /** @description Facility not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/facilities/by-property-code/{propertyCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-property-code/{propertyCode}': {
     /**
      * Get facilities by property code
      * @description Returns a list of facilities for the specified property code
@@ -840,28 +1124,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The property code of the property */
-          propertyCode: string;
-        };
-      };
+          propertyCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the facilities */
         200: {
           content: {
-            "application/json": components["schemas"]["GetFacilitiesByPropertyCodeResponse"];
-          };
-        };
+            'application/json': components['schemas']['GetFacilitiesByPropertyCodeResponse']
+          }
+        }
         /** @description Facilities not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/facilities/by-building-code/{buildingCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-building-code/{buildingCode}': {
     /**
      * Get facilities by building code
      * @description Returns a list of facilities for the specified building code
@@ -870,28 +1154,28 @@ export interface paths {
       parameters: {
         path: {
           /** @description The building code of the building */
-          buildingCode: string;
-        };
-      };
+          buildingCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the facilities */
         200: {
           content: {
-            "application/json": components["schemas"]["GetFacilitiesByBuildingCodeResponse"];
-          };
-        };
+            'application/json': components['schemas']['GetFacilitiesByBuildingCodeResponse']
+          }
+        }
         /** @description Facilities not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/health": {
+          content: never
+        }
+      }
+    }
+  }
+  '/health': {
     /**
      * Check system health status
      * @description Retrieves the health status of the system and its subsystems.
@@ -901,844 +1185,896 @@ export interface paths {
         /** @description Successful response with system health status */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /**
                * @description Name of the system.
                * @example core
                */
-              name?: string;
+              name?: string
               /**
                * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
                * @example active
                */
-              status?: string;
-              subsystems?: ({
-                  /** @description Name of the subsystem. */
-                  name?: string;
-                  /**
-                   * @description Status of the subsystem.
-                   * @enum {string}
-                   */
-                  status?: "active" | "impaired" | "failure" | "unknown";
-                  /** @description Additional details about the subsystem status. */
-                  details?: string;
-                })[];
-            };
-          };
-        };
-      };
-    };
-  };
+              status?: string
+              subsystems?: {
+                /** @description Name of the subsystem. */
+                name?: string
+                /**
+                 * @description Status of the subsystem.
+                 * @enum {string}
+                 */
+                status?: 'active' | 'impaired' | 'failure' | 'unknown'
+                /** @description Additional details about the subsystem status. */
+                details?: string
+              }[]
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
     Residence: {
-      id: string;
-      code: string;
-      name: string;
-      deleted: boolean;
+      id: string
+      code: string
+      name: string
+      deleted: boolean
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string;
+        fromDate: string
         /** Format: date-time */
-        toDate: string;
-      };
-    };
+        toDate: string
+      }
+    }
     ResidenceDetails: {
-      id: string;
-      code: string;
-      name: string | null;
-      location: string | null;
+      id: string
+      code: string
+      name: string | null
+      location: string | null
       accessibility: {
-        wheelchairAccessible: boolean;
-        residenceAdapted: boolean;
-        elevator: boolean;
-      };
+        wheelchairAccessible: boolean
+        residenceAdapted: boolean
+        elevator: boolean
+      }
       features: {
         balcony1?: {
-          location: string;
-          type: string;
-        };
+          location: string
+          type: string
+        }
         balcony2?: {
-          location: string;
-          type: string;
-        };
-        patioLocation: string | null;
-        hygieneFacility: string | null;
-        sauna: boolean;
-        extraToilet: boolean;
-        sharedKitchen: boolean;
-        petAllergyFree: boolean;
+          location: string
+          type: string
+        }
+        patioLocation: string | null
+        hygieneFacility: string | null
+        sauna: boolean
+        extraToilet: boolean
+        sharedKitchen: boolean
+        petAllergyFree: boolean
         /** @description Is the apartment checked for electric allergy intolerance? */
-        electricAllergyIntolerance: boolean;
-        smokeFree: boolean;
-        asbestos: boolean;
-      };
-      floor: string | null;
-      partNo?: number | null;
-      part?: string | null;
-      deleted: boolean;
+        electricAllergyIntolerance: boolean
+        smokeFree: boolean
+        asbestos: boolean
+      }
+      floor: string | null
+      partNo?: number | null
+      part?: string | null
+      deleted: boolean
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string;
+        fromDate: string
         /** Format: date-time */
-        toDate: string;
-      };
+        toDate: string
+      }
       residenceType: {
-        residenceTypeId: string;
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-        systemStandard: number;
-        checklistId: string | null;
-        componentTypeActionId: string | null;
-        statisticsGroupSCBId: string | null;
-        statisticsGroup2Id: string | null;
-        statisticsGroup3Id: string | null;
-        statisticsGroup4Id: string | null;
-        timestamp: string;
-      };
+        residenceTypeId: string
+        code: string
+        name: string | null
+        roomCount: number | null
+        kitchen: number
+        systemStandard: number
+        checklistId: string | null
+        componentTypeActionId: string | null
+        statisticsGroupSCBId: string | null
+        statisticsGroup2Id: string | null
+        statisticsGroup3Id: string | null
+        statisticsGroup4Id: string | null
+        timestamp: string
+      }
       propertyObject: {
         energy: {
-          energyClass: number;
+          energyClass: number
           /** Format: date-time */
-          energyRegistered?: string;
+          energyRegistered?: string
           /** Format: date-time */
-          energyReceived?: string;
-          energyIndex?: number;
-        };
-        rentalId: string | null;
-        rentalInformation: ({
+          energyReceived?: string
+          energyIndex?: number
+        }
+        rentalId: string | null
+        rentalInformation: {
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
-        rentalBlocks: ({
-            id: string;
-            blockReasonId: string;
-            blockReason: string;
-            /** Format: date-time */
-            fromDate: string;
-            /** Format: date-time */
-            toDate: string | null;
-            amount: number | null;
-          })[];
-      };
+            code: string
+            name: string | null
+          }
+        } | null
+        rentalBlocks: {
+          id: string
+          blockReasonId: string
+          blockReason: string
+          /** Format: date-time */
+          fromDate: string
+          /** Format: date-time */
+          toDate: string | null
+          amount: number | null
+        }[]
+      }
       property: {
-        name: string | null;
-        code: string | null;
-      };
+        name: string | null
+        code: string | null
+      }
       building: {
-        name: string | null;
-        code: string | null;
-      };
-      malarEnergiFacilityId: string | null;
-      size: number | null;
-    };
+        name: string | null
+        code: string | null
+      }
+      malarEnergiFacilityId: string | null
+      size: number | null
+    }
     ResidenceSearchResult: {
-      id: string;
-      code: string;
-      name: string | null;
-      deleted: boolean;
+      id: string
+      code: string
+      name: string | null
+      deleted: boolean
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string;
+        fromDate: string
         /** Format: date-time */
-        toDate: string;
-      };
-      rentalId: string | null;
+        toDate: string
+      }
+      rentalId: string | null
       property: {
-        code: string | null;
-        name: string | null;
-      };
+        code: string | null
+        name: string | null
+      }
       building: {
-        code: string | null;
-        name: string | null;
-      };
-    };
+        code: string | null
+        name: string | null
+      }
+    }
     Building: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       buildingType: {
-        id: string | null;
-        code: string | null;
-        name: string | null;
-      };
+        id: string | null
+        code: string | null
+        name: string | null
+      }
       construction: {
-        constructionYear: number | null;
-        renovationYear: number | null;
-        valueYear: number | null;
-      };
+        constructionYear: number | null
+        renovationYear: number | null
+        valueYear: number | null
+      }
       features: {
-        heating?: string | null;
-        fireRating?: string | null;
-      };
+        heating?: string | null
+        fireRating?: string | null
+      }
       insurance: {
-        class: string | null;
-        value: number | null;
-      };
-      quantityValues?: ({
-          id: string;
-          value: number;
-          name: string;
-          unitId: string | null;
-        })[];
-      deleted: boolean;
-      property?: ({
-        name: string | null;
-        code: string;
-        id: string;
-      }) | null;
-    };
+        class: string | null
+        value: number | null
+      }
+      quantityValues?: {
+        id: string
+        value: number
+        name: string
+        unitId: string | null
+      }[]
+      deleted: boolean
+      property?: {
+        name: string | null
+        code: string
+        id: string
+      } | null
+    }
     Component: {
-      id: string;
-      code: string;
-      name: string;
+      id: string
+      code: string
+      name: string
       details: {
-        manufacturer: string | null;
-        typeDesignation: string | null;
-      };
+        manufacturer: string | null
+        typeDesignation: string | null
+      }
       dates: {
         /** Format: date-time */
-        installation: string | null;
+        installation: string | null
         /** Format: date-time */
-        warrantyEnd: string | null;
-      };
+        warrantyEnd: string | null
+      }
       classification: {
         componentType: {
-          code: string;
-          name: string;
-        };
+          code: string
+          name: string
+        }
         category: {
-          code: string;
-          name: string;
-        };
-      };
+          code: string
+          name: string
+        }
+      }
       maintenanceUnits?: {
-          id: string;
-          code: string;
-          name: string;
-        }[];
-    };
+        id: string
+        code: string
+        name: string
+      }[]
+    }
     Property: {
-      id: string;
-      propertyObjectId: string;
-      marketAreaId: string | null;
-      districtId: string | null;
-      propertyDesignationId: string | null;
-      valueAreaId: string | null;
-      code: string;
-      designation: string;
+      id: string
+      propertyObjectId: string
+      marketAreaId: string | null
+      districtId: string | null
+      propertyDesignationId: string | null
+      valueAreaId: string | null
+      code: string
+      designation: string
       /** @description Kommun */
-      municipality: string;
-      tract: string;
-      block: string;
-      sector: string | null;
-      propertyIndexNumber: string | null;
-      congregation: string | null;
-      builtStatus: number;
-      separateAssessmentUnit: number;
-      consolidationNumber: string | null;
-      ownershipType: string;
-      registrationDate: string | null;
-      acquisitionDate: string | null;
-      isLeasehold: number;
-      leaseholdTerminationDate: string | null;
-      area: string | null;
-      purpose: string | null;
-      buildingType: string | null;
-      propertyTaxNumber: string | null;
-      mainPartAssessedValue: number;
-      includeInAssessedValue: number;
-      grading: number;
-      deleteMark: number;
+      municipality: string
+      tract: string
+      block: string
+      sector: string | null
+      propertyIndexNumber: string | null
+      congregation: string | null
+      builtStatus: number
+      separateAssessmentUnit: number
+      consolidationNumber: string | null
+      ownershipType: string
+      registrationDate: string | null
+      acquisitionDate: string | null
+      isLeasehold: number
+      leaseholdTerminationDate: string | null
+      area: string | null
+      purpose: string | null
+      buildingType: string | null
+      propertyTaxNumber: string | null
+      mainPartAssessedValue: number
+      includeInAssessedValue: number
+      grading: number
+      deleteMark: number
       /** Format: date-time */
-      fromDate: string;
+      fromDate: string
       /** Format: date-time */
-      toDate: string;
-      timestamp: string;
-    };
+      toDate: string
+      timestamp: string
+    }
     PropertyDetails: {
-      id: string;
-      propertyObjectId: string;
-      marketAreaId: string | null;
-      districtId: string | null;
-      propertyDesignationId: string | null;
-      valueAreaId: string | null;
-      code: string;
-      designation: string;
+      id: string
+      propertyObjectId: string
+      marketAreaId: string | null
+      districtId: string | null
+      propertyDesignationId: string | null
+      valueAreaId: string | null
+      code: string
+      designation: string
       /** @description Municipality=kommun */
-      municipality: string;
-      tract: string;
-      block: string;
-      sector: string | null;
-      propertyIndexNumber: string | null;
-      congregation: string | null;
-      builtStatus: number;
-      separateAssessmentUnit: number;
-      consolidationNumber: string | null;
-      ownershipType: string;
+      municipality: string
+      tract: string
+      block: string
+      sector: string | null
+      propertyIndexNumber: string | null
+      congregation: string | null
+      builtStatus: number
+      separateAssessmentUnit: number
+      consolidationNumber: string | null
+      ownershipType: string
       /** Format: date-time */
-      registrationDate: string | null;
-      acquisitionDate: string | null;
-      isLeasehold: number;
-      leaseholdTerminationDate: string | null;
-      area: string | null;
-      purpose: string | null;
-      buildingType: string | null;
-      propertyTaxNumber: string | null;
-      mainPartAssessedValue: number;
-      includeInAssessedValue: number;
-      grading: number;
-      deleteMark: number;
+      registrationDate: string | null
+      acquisitionDate: string | null
+      isLeasehold: number
+      leaseholdTerminationDate: string | null
+      area: string | null
+      purpose: string | null
+      buildingType: string | null
+      propertyTaxNumber: string | null
+      mainPartAssessedValue: number
+      includeInAssessedValue: number
+      grading: number
+      deleteMark: number
       /** Format: date-time */
-      fromDate: string;
+      fromDate: string
       /** Format: date-time */
-      toDate: string;
-      timestamp: string;
+      toDate: string
+      timestamp: string
       marketArea: {
-        id: string;
-        code: string;
-        name: string;
-      } | null;
+        id: string
+        code: string
+        name: string
+      } | null
       district: {
-        id: string;
-        code: string;
-        caption: string;
-      } | null;
+        id: string
+        code: string
+        caption: string
+      } | null
       propertyObject: {
-        id: string;
-        deleteMark: number;
-        timestamp: string;
-        objectTypeId: string;
-        barcode: string | null;
-        barcodeType: number;
-        condition: number;
-        conditionInspectionDate: string | null;
-        vatAdjustmentPrinciple: number;
-        energyClass: number;
-        energyRegistered: string | null;
-        energyReceived: string | null;
-        energyIndex: string | null;
-        heatingNature: number;
-      };
-      propertyValues: ({
-          value: number | null;
-          name: string;
-          unitId: string;
-        })[];
-    };
+        id: string
+        deleteMark: number
+        timestamp: string
+        objectTypeId: string
+        barcode: string | null
+        barcodeType: number
+        condition: number
+        conditionInspectionDate: string | null
+        vatAdjustmentPrinciple: number
+        energyClass: number
+        energyRegistered: string | null
+        energyReceived: string | null
+        energyIndex: string | null
+        heatingNature: number
+      }
+      propertyValues: {
+        value: number | null
+        name: string
+        unitId: string
+      }[]
+    }
     Staircase: {
-      id: string;
-      buildingCode: string;
-      code: string;
-      name: string | null;
+      id: string
+      buildingCode: string
+      code: string
+      name: string | null
       features: {
-        floorPlan: string | null;
-        accessibleByElevator: boolean;
-      };
+        floorPlan: string | null
+        accessibleByElevator: boolean
+      }
       dates: {
         /** Format: date-time */
-        from: string;
+        from: string
         /** Format: date-time */
-        to: string;
-      };
+        to: string
+      }
       property?: {
-        propertyId: string | null;
-        propertyName: string | null;
-        propertyCode: string | null;
-      };
+        propertyId: string | null
+        propertyName: string | null
+        propertyCode: string | null
+      }
       building?: {
-        buildingId: string | null;
-        buildingName: string | null;
-        buildingCode: string | null;
-      };
-      deleted: boolean;
-      timestamp: string;
-    };
+        buildingId: string | null
+        buildingName: string | null
+        buildingCode: string | null
+      }
+      deleted: boolean
+      timestamp: string
+    }
     Room: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       usage: {
-        shared: boolean;
-        allowPeriodicWorks: boolean;
-        spaceType: number;
-      };
+        shared: boolean
+        allowPeriodicWorks: boolean
+        spaceType: number
+      }
       features: {
-        hasToilet: boolean;
-        isHeated: boolean;
-        hasThermostatValve: boolean;
-        orientation: number;
-      };
+        hasToilet: boolean
+        isHeated: boolean
+        hasThermostatValve: boolean
+        orientation: number
+      }
       dates: {
         /** Format: date-time */
-        installation: string | null;
+        installation: string | null
         /** Format: date-time */
-        from: string;
+        from: string
         /** Format: date-time */
-        to: string;
+        to: string
         /** Format: date-time */
-        availableFrom: string | null;
+        availableFrom: string | null
         /** Format: date-time */
-        availableTo: string | null;
-      };
-      sortingOrder: number;
-      deleted: boolean;
-      timestamp: string;
-      roomType: ({
-        id: string;
-        code: string;
-        name: string | null;
-        use: number;
-        optionAllowed: number;
-        isSystemStandard: number;
-        allowSmallRoomsInValuation: number;
-        timestamp: string;
-      }) | null;
+        availableTo: string | null
+      }
+      sortingOrder: number
+      deleted: boolean
+      timestamp: string
+      roomType: {
+        id: string
+        code: string
+        name: string | null
+        use: number
+        optionAllowed: number
+        isSystemStandard: number
+        allowSmallRoomsInValuation: number
+        timestamp: string
+      } | null
       propertyObject?: {
         quantityValues: {
-            value: number;
-            quantityTypeId: string;
-          }[];
-      };
-    };
+          value: number
+          quantityTypeId: string
+        }[]
+      }
+    }
     Company: {
-      id: string;
-      propertyObjectId: string;
-      code: string;
-      name: string;
-      organizationNumber: string | null;
-    };
+      id: string
+      propertyObjectId: string
+      code: string
+      name: string
+      organizationNumber: string | null
+    }
     CompanyDetails: {
-      id: string;
-      propertyObjectId: string;
-      code: string;
-      name: string;
-      organizationNumber: string | null;
-      phone: string | null;
-      fax: string | null;
-      vatNumber?: string | null;
-      internalExternal: number;
-      fTax: number;
-      cooperativeHousingAssociation: number;
-      differentiatedAdditionalCapital: number;
-      rentAdministered: number;
-      blocked: number;
-      rentDaysPerMonth: number;
-      economicPlanApproved: number;
-      vatObligationPercent: number;
-      vatRegistered: number;
-      energyOptimization: number;
-      ownedCompany: number;
-      interestInvoice: number;
-      errorReportAdministration: number;
-      mediaBilling: number;
-      ownResponsibilityForInternalMaintenance: number;
-      subletPercentage: number;
-      subletFeeAmount: number;
-      disableQuantitiesBelowCompany: number;
-      timestamp: string;
-    };
+      id: string
+      propertyObjectId: string
+      code: string
+      name: string
+      organizationNumber: string | null
+      phone: string | null
+      fax: string | null
+      vatNumber?: string | null
+      internalExternal: number
+      fTax: number
+      cooperativeHousingAssociation: number
+      differentiatedAdditionalCapital: number
+      rentAdministered: number
+      blocked: number
+      rentDaysPerMonth: number
+      economicPlanApproved: number
+      vatObligationPercent: number
+      vatRegistered: number
+      energyOptimization: number
+      ownedCompany: number
+      interestInvoice: number
+      errorReportAdministration: number
+      mediaBilling: number
+      ownResponsibilityForInternalMaintenance: number
+      subletPercentage: number
+      subletFeeAmount: number
+      disableQuantitiesBelowCompany: number
+      timestamp: string
+    }
     MaintenanceUnit: {
-      id: string;
-      rentalPropertyId?: string;
-      code: string;
-      caption: string | null;
-      type: string | null;
-      estateCode: string | null;
-      estate: string | null;
-    };
+      id: string
+      rentalPropertyId?: string
+      code: string
+      caption: string | null
+      type: string | null
+      estateCode: string | null
+      estate: string | null
+    }
     ResidenceByRentalId: {
-      id: string;
-      code: string;
-      name: string | null;
+      id: string
+      code: string
+      name: string | null
       accessibility: {
-        wheelchairAccessible: boolean;
-        elevator: boolean;
-      };
+        wheelchairAccessible: boolean
+        elevator: boolean
+      }
       features: {
-        hygieneFacility: string | null;
-      };
-      entrance: string | null;
-      floor: string | null;
-      deleted: boolean;
+        hygieneFacility: string | null
+      }
+      entrance: string | null
+      floor: string | null
+      deleted: boolean
       type: {
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
+        code: string
+        name: string | null
+        roomCount: number | null
+        kitchen: number
+      }
+      rentalInformation: {
+        apartmentNumber: string | null
+        rentalId: string | null
         type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
+          code: string
+          name: string | null
+        }
+      } | null
       property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
       building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      staircase: ({
-        id: string;
-        code: string;
-        name: string | null;
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      staircase: {
+        id: string
+        code: string
+        name: string | null
         features: {
-          floorPlan: string | null;
-          accessibleByElevator: boolean;
-        };
+          floorPlan: string | null
+          accessibleByElevator: boolean
+        }
         dates: {
           /** Format: date-time */
-          from: string;
+          from: string
           /** Format: date-time */
-          to: string;
-        };
+          to: string
+        }
         property?: {
-          propertyId: string | null;
-          propertyName: string | null;
-          propertyCode: string | null;
-        };
+          propertyId: string | null
+          propertyName: string | null
+          propertyCode: string | null
+        }
         building?: {
-          buildingId: string | null;
-          buildingName: string | null;
-          buildingCode: string | null;
-        };
-        deleted: boolean;
-        timestamp: string;
-      }) | null;
-      areaSize: number | null;
-    };
+          buildingId: string | null
+          buildingName: string | null
+          buildingCode: string | null
+        }
+        deleted: boolean
+        timestamp: string
+      } | null
+      areaSize: number | null
+    }
     ResidenceSummary: {
-      id: string;
-      code: string;
-      name: string | null;
-      deleted: boolean;
-      rentalId: string;
-      buildingCode: string;
-      buildingName: string;
-      staircaseCode: string;
-      staircaseName: string;
-      elevator: number | null;
-      floor: string;
-      hygieneFacility: string | null;
-      wheelchairAccessible: number;
+      id: string
+      code: string
+      name: string | null
+      deleted: boolean
+      rentalId: string
+      buildingCode: string
+      buildingName: string
+      staircaseCode: string
+      staircaseName: string
+      elevator: number | null
+      floor: string
+      hygieneFacility: string | null
+      wheelchairAccessible: number
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string | null;
+        fromDate: string | null
         /** Format: date-time */
-        toDate: string | null;
-      };
+        toDate: string | null
+      }
       residenceType: {
-        code: string;
-        name: string;
-        roomCount: number;
-        kitchen: number;
-      };
-      quantityValues: ({
-          value: number;
-          quantityTypeId: string;
-          quantityType: {
-            name: string;
-            unitId: string | null;
-          };
-        })[];
-    };
+        code: string
+        name: string
+        roomCount: number
+        kitchen: number
+      }
+      quantityValues: {
+        value: number
+        quantityTypeId: string
+        quantityType: {
+          name: string
+          unitId: string | null
+        }
+      }[]
+    }
     GetResidenceByRentalIdResponse: {
       content: {
-        id: string;
-        code: string;
-        name: string | null;
+        id: string
+        code: string
+        name: string | null
         accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-        };
+          wheelchairAccessible: boolean
+          elevator: boolean
+        }
         features: {
-          hygieneFacility: string | null;
-        };
-        entrance: string | null;
-        floor: string | null;
-        deleted: boolean;
+          hygieneFacility: string | null
+        }
+        entrance: string | null
+        floor: string | null
+        deleted: boolean
         type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
+            code: string
+            name: string | null
+          }
+        } | null
         property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
+          id: string | null
+          name: string | null
+          code: string | null
+        }
         building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        staircase: ({
-          id: string;
-          code: string;
-          name: string | null;
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        staircase: {
+          id: string
+          code: string
+          name: string | null
           features: {
-            floorPlan: string | null;
-            accessibleByElevator: boolean;
-          };
+            floorPlan: string | null
+            accessibleByElevator: boolean
+          }
           dates: {
             /** Format: date-time */
-            from: string;
+            from: string
             /** Format: date-time */
-            to: string;
-          };
+            to: string
+          }
           property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
+            propertyId: string | null
+            propertyName: string | null
+            propertyCode: string | null
+          }
           building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
-          };
-          deleted: boolean;
-          timestamp: string;
-        }) | null;
-        areaSize: number | null;
-      };
+            buildingId: string | null
+            buildingName: string | null
+            buildingCode: string | null
+          }
+          deleted: boolean
+          timestamp: string
+        } | null
+        areaSize: number | null
+      }
       _links: {
         self: {
-          href: string;
-        };
+          href: string
+        }
         link: {
-          href: string;
-          templated: boolean;
-        };
-      };
-    };
+          href: string
+          templated: boolean
+        }
+      }
+    }
     ParkingSpace: {
-      rentalId: string;
-      companyCode: string;
-      companyName: string;
-      managementUnitCode: string;
-      managementUnitName: string;
-      propertyCode: string;
-      propertyName: string;
-      buildingCode: string | null;
-      buildingName: string | null;
+      rentalId: string
+      companyCode: string
+      companyName: string
+      managementUnitCode: string
+      managementUnitName: string
+      propertyCode: string
+      propertyName: string
+      buildingCode: string | null
+      buildingName: string | null
       parkingSpace: {
-        propertyObjectId: string;
-        code: string;
-        name: string;
-        parkingNumber: string;
+        propertyObjectId: string
+        code: string
+        name: string
+        parkingNumber: string
         parkingSpaceType: {
-          code: string;
-          name: string;
-        };
-      };
-      address: ({
-        streetAddress: string | null;
-        streetAddress2: string | null;
-        postalCode: string | null;
-        city: string | null;
-      }) | null;
-    };
+          code: string
+          name: string
+        }
+      }
+      address: {
+        streetAddress: string | null
+        streetAddress2: string | null
+        postalCode: string | null
+        city: string | null
+      } | null
+    }
     ParkingSpaceSearchResult: {
-      id: string;
-      rentalId: string;
-      code: string;
-      name: string | null;
+      id: string
+      rentalId: string
+      code: string
+      name: string | null
       property: {
-        code: string | null;
-        name: string | null;
-      };
+        code: string | null
+        name: string | null
+      }
       building: {
-        code: string | null;
-        name: string | null;
-      };
-    };
+        code: string | null
+        name: string | null
+      }
+    }
     FacilityDetails: {
-      id: string;
-      code: string;
-      name: string | null;
-      entrance: string | null;
-      deleted: boolean;
+      id: string
+      code: string
+      name: string | null
+      entrance: string | null
+      deleted: boolean
       type: {
-        code: string;
-        name: string | null;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
+        code: string
+        name: string | null
+      }
+      rentalInformation: {
+        apartmentNumber: string | null
+        rentalId: string | null
         type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
+          code: string
+          name: string | null
+        }
+      } | null
       property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
       building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      areaSize: number | null;
-    };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      areaSize: number | null
+    }
     GetFacilityByRentalIdResponse: {
       content: {
-        id: string;
-        code: string;
-        name: string | null;
-        entrance: string | null;
-        deleted: boolean;
+        id: string
+        code: string
+        name: string | null
+        entrance: string | null
+        deleted: boolean
         type: {
-          code: string;
-          name: string | null;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
+          code: string
+          name: string | null
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
+            code: string
+            name: string | null
+          }
+        } | null
         property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
+          id: string | null
+          name: string | null
+          code: string | null
+        }
         building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        areaSize: number | null;
-      };
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        areaSize: number | null
+      }
       _links: {
         self: {
-          href: string;
-        };
+          href: string
+        }
         link: {
-          href: string;
-          templated: boolean;
-        };
-      };
-    };
+          href: string
+          templated: boolean
+        }
+      }
+    }
     GetFacilitiesByPropertyCodeResponse: {
-      content: ({
-          id: string;
-          code: string;
-          name: string | null;
-          entrance: string | null;
-          deleted: boolean;
+      content: {
+        id: string
+        code: string
+        name: string | null
+        entrance: string | null
+        deleted: boolean
+        type: {
+          code: string
+          name: string | null
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-          rentalInformation: ({
-            apartmentNumber: string | null;
-            rentalId: string | null;
-            type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          property: {
-            id: string | null;
-            name: string | null;
-            code: string | null;
-          };
-          building: {
-            id: string | null;
-            name: string | null;
-            code: string | null;
-          };
-          areaSize: number | null;
-        })[];
+            code: string
+            name: string | null
+          }
+        } | null
+        property: {
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        building: {
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        areaSize: number | null
+      }[]
       _links: {
         self: {
-          href: string;
-        };
+          href: string
+        }
         link: {
-          href: string;
-          templated: boolean;
-        };
-      };
-    };
+          href: string
+          templated: boolean
+        }
+      }
+    }
     GetFacilitiesByBuildingCodeResponse: {
-      content: ({
-          id: string;
-          code: string;
-          name: string | null;
-          entrance: string | null;
-          deleted: boolean;
+      content: {
+        id: string
+        code: string
+        name: string | null
+        entrance: string | null
+        deleted: boolean
+        type: {
+          code: string
+          name: string | null
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-          rentalInformation: ({
-            apartmentNumber: string | null;
-            rentalId: string | null;
-            type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          property: {
-            id: string | null;
-            name: string | null;
-            code: string | null;
-          };
-          building: {
-            id: string | null;
-            name: string | null;
-            code: string | null;
-          };
-          areaSize: number | null;
-        })[];
+            code: string
+            name: string | null
+          }
+        } | null
+        property: {
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        building: {
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        areaSize: number | null
+      }[]
       _links: {
         self: {
-          href: string;
-        };
+          href: string
+        }
         link: {
-          href: string;
-          templated: boolean;
-        };
-      };
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+          href: string
+          templated: boolean
+        }
+      }
+    }
+    ComponentFile: {
+      fileId: string
+      originalName: string
+      size: number
+      mimeType: string
+      /** Format: date-time */
+      uploadedAt: string
+    }
+    ComponentModelDocument: {
+      fileId: string
+      originalName: string
+      size: number
+      mimeType: string
+      /** Format: date-time */
+      uploadedAt: string
+    }
+    FileMetadataWithUrl: {
+      fileId: string
+      originalName: string
+      size: number
+      mimeType: string
+      /** Format: date-time */
+      uploadedAt: string
+      /** @description Presigned URL for file access (valid for 24 hours) */
+      url: string
+    }
+    ComponentFilesResponse: {
+      files: {
+        fileId: string
+        originalName: string
+        size: number
+        mimeType: string
+        /** Format: date-time */
+        uploadedAt: string
+        /** @description Presigned URL for file access (valid for 24 hours) */
+        url: string
+      }[]
+      count: number
+    }
+    ComponentModelDocumentsResponse: {
+      documents: {
+        fileId: string
+        originalName: string
+        size: number
+        mimeType: string
+        /** Format: date-time */
+        uploadedAt: string
+        /** @description Presigned URL for file access (valid for 24 hours) */
+        url: string
+      }[]
+      count: number
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
 
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 
-export type external = Record<string, never>;
+export type external = Record<string, never>
 
-export type operations = Record<string, never>;
+export type operations = Record<string, never>
