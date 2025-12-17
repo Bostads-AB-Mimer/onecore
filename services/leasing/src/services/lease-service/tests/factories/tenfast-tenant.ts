@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { TenfastTenant } from '../../../../common/adapters/tenfast/schemas'
+import { TenfastTenant } from '../../adapters/tenfast/schemas'
 
 export const TenfastTenantFactory = Factory.define<TenfastTenant>(
   ({ sequence }) => ({

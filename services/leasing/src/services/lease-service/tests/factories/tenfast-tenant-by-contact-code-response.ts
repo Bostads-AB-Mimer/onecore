@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { TenfastTenantByContactCodeResponse } from '../../../../common/adapters/tenfast/schemas'
+import { TenfastTenantByContactCodeResponse } from '../../adapters/tenfast/schemas'
 
 export const TenfastTenantByContactCodeResponseFactory =
   Factory.define<TenfastTenantByContactCodeResponse>(({ sequence }) => ({
