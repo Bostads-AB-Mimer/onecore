@@ -931,29 +931,7 @@ const ComponentLibraryView = () => {
       )
     }
 
-    if (viewState.level === 'subtypes') {
-      return (
-        <Button onClick={handleCreateSubtype}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ny undertyp
-        </Button>
-      )
-    }
-
-    if (viewState.level === 'models') {
-      return (
-        <Button onClick={handleCreateModel}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ny modell
-        </Button>
-      )
-    }
-
-    // No button for instances level - handled by TableToolbar
-    // if (viewState.level === 'instances') {
-    //   return null
-    // }
-
+    // Subtypes, models, and instances buttons are in TableToolbar
     return null
   }
 
@@ -1026,8 +1004,16 @@ const ComponentLibraryView = () => {
             isOpen={instanceDialogState.isOpen}
             onClose={handleCloseInstanceDialog}
             entityType="instance"
-            entity={instanceDialogState.mode === 'edit' ? instanceDialogState.instance : undefined}
-            defaultValues={instanceDialogState.mode === 'create' ? instanceDefaults : undefined}
+            entity={
+              instanceDialogState.mode === 'edit'
+                ? instanceDialogState.instance
+                : undefined
+            }
+            defaultValues={
+              instanceDialogState.mode === 'create'
+                ? instanceDefaults
+                : undefined
+            }
             parentId={viewState.modelId}
             mode={instanceDialogState.mode}
           />
