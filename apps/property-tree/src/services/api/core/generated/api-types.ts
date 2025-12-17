@@ -350,6 +350,63 @@ export interface paths {
       }
     }
   }
+  '/contacts/{contactCode}/comments': {
+    /**
+     * Get comments for a contact
+     * @description Retrieves all comments/notes for a contact from Xpand
+     */
+    get: {
+      parameters: {
+        path: {
+          /**
+           * @description The unique code identifying the contact.
+           * @example P086890
+           */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved comments */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                contactKey?: string
+                contactCode?: string
+                commentKey?: string
+                id?: number
+                commentType?: string | null
+                /** @description Array of individual notes parsed from comment text */
+                notes?: {
+                  /**
+                   * Format: date
+                   * @description Date in YYYY-MM-DD format
+                   */
+                  date?: string | null
+                  /** @description Time in HH:MM format */
+                  time?: string | null
+                  /** @description Author initials (6 letters) or "Notering utan signatur" */
+                  author?: string
+                  /** @description Note content (plain text) */
+                  text?: string
+                }[]
+                priority?: number | null
+                kind?: number | null
+              }[]
+            }
+          }
+        }
+        /** @description Contact not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/offers/{offerId}/applicants/{contactCode}': {
     /**
      * Get a specific offer for an applicant
