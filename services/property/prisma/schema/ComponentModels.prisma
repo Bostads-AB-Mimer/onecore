@@ -13,6 +13,7 @@ model ComponentModels {
   replacementIntervalMonths Int      @map("replacement_interval_months")
   quantityType              String   @map("quantity_type") @db.NVarChar(20)
   coclassCode               String   @map("coclass_code") @db.NVarChar(50)
+  documents                 String?  @db.NVarChar(Max) // JSON array: ["fileId1", "fileId2"]
   createdAt                 DateTime @default(now()) @map("created_at") @db.DateTime
   updatedAt                 DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
 

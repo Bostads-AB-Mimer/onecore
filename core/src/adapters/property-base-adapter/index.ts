@@ -1,4 +1,4 @@
-import { logger } from '@onecore/utilities'
+import { logger, loggedAxios as axios } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 
 import { AdapterResult } from '../types'
@@ -1297,8 +1297,6 @@ export async function deleteComponentInstallation(
     return { ok: false, err: 'unknown' }
   }
 }
-<<<<<<< HEAD
-=======
 
 // ==================== COMPONENTS BY ROOM ====================
 
@@ -1329,4 +1327,160 @@ export async function getComponentsByRoomId(
     return { ok: false, err: 'unknown' }
   }
 }
->>>>>>> a628481c3 (Smol fix)
+
+// ==================== FILE OPERATION HELPERS ====================
+
+/**
+ * Generic file upload using Node.js FormData
+ */
+async function uploadFileWithFormData<T>(
+  endpoint: string,
+  fileBuffer: Buffer,
+  fileName: string,
+  mimeType: string,
+  queryParams?: Record<string, string>
+): Promise<AdapterResult<T, 'unknown' | 'bad_request' | 'forbidden'>> {
+  try {
+    const FormData = (await import('form-data')).default
+    const formData = new FormData()
+    formData.append('file', fileBuffer, {
+      filename: fileName,
+      contentType: mimeType,
+    })
+
+    const url = new URL(`${config.propertyBaseService.url}${endpoint}`)
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([k, v]) =>
+        url.searchParams.set(k, v)
+      )
+    }
+
+    const response = await axios.post(url.toString(), formData, {
+      headers: formData.getHeaders(),
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    })
+
+    return { ok: true, data: response.data.content }
+  } catch (err: any) {
+    // Extract HTTP status for better error handling
+    if (err.response?.status === 400) {
+      logger.warn({ err, endpoint }, 'File upload - bad request')
+      return { ok: false, err: 'bad_request' }
+    }
+    if (err.response?.status === 403) {
+      logger.warn({ err, endpoint }, 'File upload - forbidden')
+      return { ok: false, err: 'forbidden' }
+    }
+    logger.error({ err, endpoint }, 'File upload - unknown error')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Generic file list fetch
+ */
+async function fetchFileList<T>(
+  endpoint: string,
+  dataPath: string // 'files' or 'documents'
+): Promise<AdapterResult<T[], 'unknown' | 'not_found'>> {
+  try {
+    const url = `${config.propertyBaseService.url}${endpoint}`
+    const response = await axios.get(url)
+
+    return { ok: true, data: response.data.content[dataPath] }
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+    logger.error({ err, endpoint }, 'Fetch file list failed')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Generic file delete
+ */
+async function deleteFileHelper(
+  endpoint: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  try {
+    const url = `${config.propertyBaseService.url}${endpoint}`
+    await axios.delete(url)
+
+    return { ok: true, data: undefined }
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+    logger.error({ err, endpoint }, 'Delete file failed')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENT FILE UPLOADS ====================
+
+// Use generated type from OpenAPI schema
+type FileMetadataWithUrl = components['schemas']['FileMetadataWithUrl']
+
+export async function uploadComponentFile(
+  componentId: string,
+  fileBuffer: Buffer,
+  fileName: string,
+  mimeType: string,
+  caption?: string
+): Promise<
+  AdapterResult<FileMetadataWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
+> {
+  return uploadFileWithFormData(
+    `/components/${componentId}/upload`,
+    fileBuffer,
+    fileName,
+    mimeType,
+    caption ? { caption } : undefined
+  )
+}
+
+export async function getComponentFiles(
+  componentId: string
+): Promise<AdapterResult<FileMetadataWithUrl[], 'unknown' | 'not_found'>> {
+  return fetchFileList(`/components/${componentId}/files`, 'files')
+}
+
+export async function deleteComponentFile(
+  componentId: string,
+  fileId: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  return deleteFileHelper(`/components/${componentId}/files/${fileId}`)
+}
+
+// ==================== COMPONENT MODEL DOCUMENTS ====================
+
+export async function uploadComponentModelDocument(
+  modelId: string,
+  fileBuffer: Buffer,
+  fileName: string,
+  mimeType: string
+): Promise<
+  AdapterResult<FileMetadataWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
+> {
+  return uploadFileWithFormData(
+    `/component-models/${modelId}/upload`,
+    fileBuffer,
+    fileName,
+    mimeType
+  )
+}
+
+export async function getComponentModelDocuments(
+  modelId: string
+): Promise<AdapterResult<FileMetadataWithUrl[], 'unknown' | 'not_found'>> {
+  return fetchFileList(`/component-models/${modelId}/documents`, 'documents')
+}
+
+export async function deleteComponentModelDocument(
+  modelId: string,
+  fileId: string
+): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+  return deleteFileHelper(`/component-models/${modelId}/documents/${fileId}`)
+}
