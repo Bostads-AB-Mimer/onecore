@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+// Xpand ID validation - variable length IDs (max 15 chars) from legacy system
+const xpandIdSchema = z.string().max(15)
+
 export const BuildingSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -241,16 +244,6 @@ export const ResidenceDetailsSchema = z.object({
         }),
       })
       .nullable(),
-    rentalBlocks: z.array(
-      z.object({
-        id: z.string(),
-        blockReasonId: z.string(),
-        blockReason: z.string(),
-        fromDate: z.coerce.date(),
-        toDate: z.coerce.date().nullable(),
-        amount: z.number().nullable(),
-      })
-    ),
   }),
   property: z.object({
     name: z.string().nullable(),
@@ -262,36 +255,6 @@ export const ResidenceDetailsSchema = z.object({
   }),
   malarEnergiFacilityId: z.string().nullable(),
   size: z.number().nullable(),
-})
-
-export const StaircaseSchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
-  features: z.object({
-    floorPlan: z.string().nullable(),
-    accessibleByElevator: z.boolean(),
-  }),
-  dates: z.object({
-    from: z.string().datetime(),
-    to: z.string().datetime(),
-  }),
-  property: z
-    .object({
-      propertyId: z.string().nullable(),
-      propertyName: z.string().nullable(),
-      propertyCode: z.string().nullable(),
-    })
-    .optional(),
-  building: z
-    .object({
-      buildingId: z.string().nullable(),
-      buildingName: z.string().nullable(),
-      buildingCode: z.string().nullable(),
-    })
-    .optional(),
-  deleted: z.boolean(),
-  timestamp: z.string().datetime(),
 })
 
 export const ResidenceByRentalIdSchema = z.object({
@@ -334,8 +297,24 @@ export const ResidenceByRentalIdSchema = z.object({
     name: z.string().nullable(),
     code: z.string().nullable(),
   }),
-  staircase: StaircaseSchema.nullable(),
   areaSize: z.number().nullable(),
+})
+
+export const StaircaseSchema = z.object({
+  id: z.string(),
+  buildingCode: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  features: z.object({
+    floorPlan: z.string().nullable(),
+    accessibleByElevator: z.boolean(),
+  }),
+  dates: z.object({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+  }),
+  deleted: z.boolean(),
+  timestamp: z.string().datetime(),
 })
 
 export const RoomTypeSchema = z.object({
@@ -509,14 +488,6 @@ export const ResidenceSummaryQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
 })
 
-export const GetResidenceDetailsQueryParamsSchema = z.object({
-  includeActiveBlocksOnly: z
-    .string()
-    .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
-})
-
 export const ResidenceSummarySchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -587,99 +558,106 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
-// ==================== FILE METADATA SCHEMAS ====================
+export const SpaceTypeEnum = z.enum(['OBJECT'])
 
-export const FileMetadataSchema = z.object({
-  fileId: z.string(),
-  originalName: z.string(),
-  size: z.number(),
-  mimeType: z.string(),
-  uploadedAt: z.string(),
-})
-
-export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
-  url: z
-    .string()
-    .describe('Presigned URL for file access (valid for 24 hours)'),
-})
-
-export type FileMetadata = z.infer<typeof FileMetadataSchema>
-export type FileMetadataWithUrl = z.infer<typeof FileMetadataWithUrlSchema>
-
-export const ComponentTypeSchema = z.object({
-  id: z.string(),
+// Component Category Schema (Level 1)
+export const ComponentCategorySchema = z.object({
+  id: z.string().uuid(),
+  categoryName: z.string(),
   description: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
 
-export const ComponentSubtypeSchema = z.object({
-  id: z.string(),
-  componentTypeId: z.string(),
+// Component Type Schema (Level 2)
+export const ComponentTypeSchema = z.object({
+  id: z.string().uuid(),
+  typeName: z.string(),
+  categoryId: z.string().uuid(),
   description: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  category: ComponentCategorySchema.optional(),
+})
+
+// Component Subtype Schema (Level 3)
+export const ComponentSubtypeSchema = z.object({
+  id: z.string().uuid(),
+  subTypeName: z.string(),
+  typeId: z.string().uuid(),
+  xpandCode: z.string().optional(),
+  depreciationPrice: z.number().min(0),
+  technicalLifespan: z.number().min(0),
+  economicLifespan: z.number().min(0),
+  replacementIntervalMonths: z.number().int().min(0),
+  quantityType: QuantityTypeEnum,
   createdAt: z.string(),
   updatedAt: z.string(),
   componentType: ComponentTypeSchema.optional(),
 })
 
+// Component Model Schema (Level 4)
 export const ComponentModelSchema = z.object({
-  id: z.string(),
-  componentTypeId: z.string(),
-  subtypeId: z.string(),
-  currentPrice: z.number(),
-  warrantyMonths: z.number(),
+  id: z.string().uuid(),
+  modelName: z.string(),
+  componentSubtypeId: z.string().uuid(),
+  currentPrice: z.number().min(0),
+  currentInstallPrice: z.number().min(0),
+  warrantyMonths: z.number().int().min(0),
   manufacturer: z.string(),
-  technicalLifespan: z.number(),
   technicalSpecification: z.string().nullable(),
   installationInstructions: z.string().nullable(),
-  economicLifespan: z.number(),
   dimensions: z.string().nullable(),
-  replacementIntervalMonths: z.number(),
-  quantityType: QuantityTypeEnum,
-  coclassCode: z.string(),
+  coclassCode: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  componentType: ComponentTypeSchema.optional(),
   subtype: ComponentSubtypeSchema.optional(),
 })
 
 export const ComponentInstallationWithoutComponentSchema = z.object({
-  id: z.string(),
-  componentId: z.string(),
-  spaceId: xpandIdSchema.nullable(),
-  buildingPartId: xpandIdSchema.nullable(),
+  id: z.string().uuid(),
+  componentId: z.string().uuid(),
+  spaceId: z.string().nullable(),
+  spaceType: SpaceTypeEnum,
   installationDate: z.string(),
   deinstallationDate: z.string().nullable(),
-  orderNumber: z.string(),
-  cost: z.number(),
+  orderNumber: z.string().optional(),
+  cost: z.number().min(0),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
 
+// Component instance schema with installations included (Level 5)
+// The componentInstallations field uses the "WithoutComponent" version to break circular reference
 export const ComponentNewSchema = z.object({
-  id: z.string(),
-  modelId: z.string(),
+  id: z.string().uuid(),
+  modelId: z.string().uuid(),
   serialNumber: z.string(),
-  specifications: z.string().nullable(),
   warrantyStartDate: z.string().nullable(),
-  warrantyMonths: z.number(),
-  priceAtPurchase: z.number(),
+  warrantyMonths: z.number().int().min(0),
+  priceAtPurchase: z.number().min(0),
+  depreciationPriceAtPurchase: z.number().min(0),
   ncsCode: z.string(),
   status: ComponentStatusEnum,
+  quantity: z.number().min(0),
+  economicLifespan: z.number().min(0),
   createdAt: z.string(),
   updatedAt: z.string(),
   model: ComponentModelSchema.optional(),
+  componentInstallations: z
+    .array(ComponentInstallationWithoutComponentSchema)
+    .optional(),
 })
 
 export const ComponentInstallationSchema = z.object({
-  id: z.string(),
-  componentId: z.string(),
+  id: z.string().uuid(),
+  componentId: z.string().uuid(),
   spaceId: z.string().nullable(),
-  buildingPartId: z.string().nullable(),
+  spaceType: SpaceTypeEnum,
   installationDate: z.string(),
   deinstallationDate: z.string().nullable(),
-  orderNumber: z.string(),
-  cost: z.number(),
+  orderNumber: z.string().optional(),
+  cost: z.number().min(0),
   createdAt: z.string(),
   updatedAt: z.string(),
   component: ComponentNewSchema.optional(),
@@ -698,20 +676,25 @@ export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(
     }),
   })
 
+export const ComponentCategoriesQueryParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 export const ComponentTypesQueryParamsSchema = z.object({
+  categoryId: z.string().uuid().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
 export const ComponentSubtypesQueryParamsSchema = z.object({
-  componentTypeId: z.string().uuid().optional(),
+  typeId: z.string().uuid().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
 export const ComponentModelsQueryParamsSchema = z.object({
-  componentTypeId: z.string().uuid().optional(),
-  subtypeId: z.string().uuid().optional(),
+  componentSubtypeId: z.string().uuid().optional(),
   manufacturer: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -726,112 +709,147 @@ export const ComponentsNewQueryParamsSchema = z.object({
 
 export const ComponentInstallationsQueryParamsSchema = z.object({
   componentId: z.string().uuid().optional(),
-  spaceId: z.string().uuid().optional(),
-  buildingPartId: z.string().uuid().optional(),
+  spaceId: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+export const CreateComponentCategorySchema = z.object({
+  categoryName: z.string().trim().min(1, 'Category name is required'),
+  description: z.string().trim().min(1, 'Description is required'),
+})
+
+export const UpdateComponentCategorySchema = z.object({
+  categoryName: z.string().trim().min(1).optional(),
+  description: z.string().trim().min(1).optional(),
+})
+
 export const CreateComponentTypeSchema = z.object({
-  description: z.string().min(1),
+  typeName: z.string().trim().min(1, 'Type name is required'),
+  categoryId: z.string().uuid(),
+  description: z.string().trim().min(1, 'Description is required'),
 })
 
 export const UpdateComponentTypeSchema = z.object({
-  description: z.string().min(1).optional(),
+  typeName: z.string().trim().min(1).optional(),
+  categoryId: z.string().uuid().optional(),
+  description: z.string().trim().min(1).optional(),
 })
 
 export const CreateComponentSubtypeSchema = z.object({
-  componentTypeId: z.string().uuid(),
-  description: z.string().min(1),
+  subTypeName: z.string().trim().min(1, 'Subtype name is required'),
+  typeId: z.string().uuid(),
+  xpandCode: z.string().trim().optional(),
+  depreciationPrice: z.number().min(0),
+  technicalLifespan: z.number().min(0),
+  economicLifespan: z.number().min(0),
+  replacementIntervalMonths: z.number().int().min(0),
+  quantityType: QuantityTypeEnum,
 })
 
 export const UpdateComponentSubtypeSchema = z.object({
-  componentTypeId: z.string().uuid().optional(),
-  description: z.string().min(1).optional(),
+  subTypeName: z.string().trim().min(1).optional(),
+  typeId: z.string().uuid().optional(),
+  xpandCode: z.string().trim().min(1).optional(),
+  depreciationPrice: z.number().min(0).optional(),
+  technicalLifespan: z.number().min(0).optional(),
+  economicLifespan: z.number().min(0).optional(),
+  replacementIntervalMonths: z.number().int().min(0).optional(),
+  quantityType: QuantityTypeEnum.optional(),
 })
 
 export const CreateComponentModelSchema = z.object({
-  componentTypeId: z.string().uuid(),
-  subtypeId: z.string().uuid(),
+  modelName: z.string().trim().min(1, 'Model name is required'),
+  componentSubtypeId: z.string().uuid(),
   currentPrice: z.number().min(0),
+  currentInstallPrice: z.number().min(0),
   warrantyMonths: z.number().int().min(0),
-  manufacturer: z.string().min(1),
-  technicalLifespan: z.number().min(0),
-  technicalSpecification: z.string().optional(),
-  installationInstructions: z.string().optional(),
-  economicLifespan: z.number().min(0),
-  dimensions: z.string().optional(),
-  replacementIntervalMonths: z.number().int().min(0),
-  quantityType: QuantityTypeEnum,
-  coclassCode: z.string().min(1),
+  manufacturer: z.string().trim().min(1, 'Manufacturer is required'),
+  technicalSpecification: z.string().trim().optional(),
+  installationInstructions: z.string().trim().optional(),
+  dimensions: z.string().trim().optional(),
+  coclassCode: z.string().trim().optional(),
 })
 
 export const UpdateComponentModelSchema = z.object({
-  componentTypeId: z.string().uuid().optional(),
-  subtypeId: z.string().uuid().optional(),
+  modelName: z.string().trim().min(1).optional(),
+  componentSubtypeId: z.string().uuid().optional(),
   currentPrice: z.number().min(0).optional(),
+  currentInstallPrice: z.number().min(0).optional(),
   warrantyMonths: z.number().int().min(0).optional(),
-  manufacturer: z.string().min(1).optional(),
-  technicalLifespan: z.number().min(0).optional(),
-  technicalSpecification: z.string().optional(),
-  installationInstructions: z.string().optional(),
-  economicLifespan: z.number().min(0).optional(),
-  dimensions: z.string().optional(),
-  replacementIntervalMonths: z.number().int().min(0).optional(),
-  quantityType: QuantityTypeEnum.optional(),
-  coclassCode: z.string().min(1).optional(),
+  manufacturer: z.string().trim().min(1).optional(),
+  technicalSpecification: z.string().trim().optional(),
+  installationInstructions: z.string().trim().optional(),
+  dimensions: z.string().trim().optional(),
+  coclassCode: z.string().trim().optional(),
 })
 
 export const CreateComponentNewSchema = z.object({
   modelId: z.string().uuid(),
-  serialNumber: z.string().min(1),
-  specifications: z.string().optional(),
+  serialNumber: z.string().trim().min(1, 'Serial number is required'),
   warrantyStartDate: z.coerce.date().optional(),
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
-  ncsCode: z.string().regex(/^\d{3}(\.\d{3})?$/),
+  depreciationPriceAtPurchase: z.number().min(0),
+  ncsCode: z
+    .string()
+    .trim()
+    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
+    .optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
+  quantity: z.number().min(0).default(1),
+  economicLifespan: z.number().min(0),
 })
 
 export const UpdateComponentNewSchema = z.object({
   modelId: z.string().uuid().optional(),
-  serialNumber: z.string().min(1).optional(),
-  specifications: z.string().optional(),
+  serialNumber: z.string().trim().min(1).optional(),
   warrantyStartDate: z.coerce.date().optional(),
   warrantyMonths: z.number().int().min(0).optional(),
   priceAtPurchase: z.number().min(0).optional(),
+  depreciationPriceAtPurchase: z.number().min(0).optional(),
   ncsCode: z
     .string()
-    .regex(/^\d{3}(\.\d{3})?$/)
+    .trim()
+    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
     .optional(),
   status: ComponentStatusEnum.optional(),
+  quantity: z.number().min(0).optional(),
+  economicLifespan: z.number().min(0).optional(),
 })
 
 export const CreateComponentInstallationSchema = z.object({
   componentId: z.string().uuid(),
-  spaceId: z.string().uuid().optional(),
-  buildingPartId: z.string().uuid().optional(),
-  installationDate: z.string(),
-  deinstallationDate: z.string().optional(),
-  orderNumber: z.string().min(1),
+  spaceId: z.string().optional(),
+  spaceType: SpaceTypeEnum,
+  installationDate: z.coerce.date(),
+  deinstallationDate: z.coerce.date().optional(),
+  orderNumber: z.string().trim().optional(),
   cost: z.number().min(0),
 })
 
 export const UpdateComponentInstallationSchema = z.object({
   componentId: z.string().uuid().optional(),
-  spaceId: z.string().uuid().optional(),
-  buildingPartId: z.string().uuid().optional(),
-  installationDate: z.string().optional(),
-  deinstallationDate: z.string().optional(),
-  orderNumber: z.string().min(1).optional(),
+  spaceId: z.string().optional(),
+  spaceType: SpaceTypeEnum.optional(),
+  installationDate: z.coerce.date().optional(),
+  deinstallationDate: z.coerce.date().optional(),
+  orderNumber: z.string().trim().optional(),
   cost: z.number().min(0).optional(),
 })
 
+export type ComponentCategory = z.infer<typeof ComponentCategorySchema>
 export type ComponentType = z.infer<typeof ComponentTypeSchema>
 export type ComponentSubtype = z.infer<typeof ComponentSubtypeSchema>
 export type ComponentModel = z.infer<typeof ComponentModelSchema>
 export type ComponentNew = z.infer<typeof ComponentNewSchema>
 export type ComponentInstallation = z.infer<typeof ComponentInstallationSchema>
+export type CreateComponentCategory = z.infer<
+  typeof CreateComponentCategorySchema
+>
+export type UpdateComponentCategory = z.infer<
+  typeof UpdateComponentCategorySchema
+>
 export type CreateComponentType = z.infer<typeof CreateComponentTypeSchema>
 export type UpdateComponentType = z.infer<typeof UpdateComponentTypeSchema>
 export type CreateComponentSubtype = z.infer<
