@@ -2,6 +2,8 @@ import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import { getBulkFileMetadata } from './minio-adapter'
 import type {
+  CreateComponentCategory,
+  UpdateComponentCategory,
   CreateComponentType,
   UpdateComponentType,
   CreateComponentSubtype,
@@ -16,178 +18,95 @@ import type {
   ComponentFile,
 } from '../types/component'
 
-// ==================== LEGACY COMPONENT QUERIES ====================
-// These functions use the old Component model (prisma.component) for backwards compatibility
+// ==================== COMPONENT CATEGORIES ====================
 
-export const getComponentByMaintenanceUnitCode = async (
-  maintenanceUnitCode: string
-) => {
-  const response = await prisma.component.findMany({
-    where: {
-      propertyStructures: {
-        some: {
-          maintenanceUnitByCode: {
-            code: maintenanceUnitCode,
-          },
-        },
-      },
-    },
-    orderBy: {
-      installationDate: 'desc',
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      manufacturer: true,
-      typeDesignation: true,
-      installationDate: true,
-      warrantyEndDate: true,
-      componentType: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      componentCategory: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      propertyStructures: {
-        select: {
-          maintenanceUnitByCode: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-            },
-          },
-        },
-      },
-    },
-  })
-
-  return response
-    .map((component) => ({
-      id: component.id,
-      code: component.code,
-      name: component.name,
-      details: {
-        manufacturer: component.manufacturer,
-        typeDesignation: component.typeDesignation,
-      },
-      dates: {
-        installation: component.installationDate,
-        warrantyEnd: component.warrantyEndDate,
-      },
-      classification: {
-        componentType: {
-          code: component.componentType?.code ?? '',
-          name: component.componentType?.name ?? '',
-        },
-        category: {
-          code: component.componentCategory?.code ?? '',
-          name: component.componentCategory?.name ?? '',
-        },
-      },
-      maintenanceUnits: component.propertyStructures.map((ps) => ({
-        id: ps.maintenanceUnitByCode?.id ?? '',
-        code: ps.maintenanceUnitByCode?.code ?? '',
-        name: ps.maintenanceUnitByCode?.name ?? '',
-      })),
-    }))
-    .map(trimStrings)
-}
-
-export const getComponentsByRoomIdLegacy = async (roomId: string) => {
-  // First get the room's propertyObjectId
-  const room = await prisma.room.findUnique({
-    where: { id: roomId },
-    select: { propertyObjectId: true },
-  })
-
-  if (!room) {
-    return null
-  }
-
-  const response = await prisma.component.findMany({
-    where: {
-      propertyStructures: {
-        some: {
-          roomId: room.propertyObjectId,
-        },
-      },
-    },
-    orderBy: {
-      installationDate: 'desc',
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      manufacturer: true,
-      typeDesignation: true,
-      installationDate: true,
-      warrantyEndDate: true,
-      componentType: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      componentCategory: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-    },
-  })
-
-  return response
-    .map((component) => ({
-      id: component.id,
-      code: component.code,
-      name: component.name ?? '',
-      details: {
-        manufacturer: component.manufacturer,
-        typeDesignation: component.typeDesignation,
-      },
-      dates: {
-        installation: component.installationDate,
-        warrantyEnd: component.warrantyEndDate,
-      },
-      classification: {
-        componentType: {
-          code: component.componentType?.code ?? '',
-          name: component.componentType?.name ?? '',
-        },
-        category: {
-          code: component.componentCategory?.code ?? '',
-          name: component.componentCategory?.name ?? '',
-        },
-      },
-    }))
-    .map(trimStrings)
-}
-
-// ==================== COMPONENT TYPES ====================
-
-export const getComponentTypes = async (
+export const getComponentCategories = async (
   page: number = 1,
   limit: number = 20
 ) => {
   const skip = (page - 1) * limit
 
-  const [types, total] = await Promise.all([
-    prisma.componentTypes.findMany({
+  const [categories, total] = await Promise.all([
+    prisma.componentCategories.findMany({
       skip,
       take: limit,
-      orderBy: { description: 'asc' },
+      orderBy: { categoryName: 'asc' },
     }),
-    prisma.componentTypes.count(),
+    prisma.componentCategories.count(),
+  ])
+
+  return {
+    categories: categories.map(trimStrings),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  }
+}
+
+export const getComponentCategoryById = async (id: string) => {
+  const category = await prisma.componentCategories.findUnique({
+    where: { id },
+    include: {
+      componentTypes: true,
+    },
+  })
+
+  return category ? trimStrings(category) : null
+}
+
+export const createComponentCategory = async (
+  data: CreateComponentCategory
+) => {
+  const category = await prisma.componentCategories.create({
+    data,
+  })
+
+  return trimStrings(category)
+}
+
+export const updateComponentCategory = async (
+  id: string,
+  data: UpdateComponentCategory
+) => {
+  const category = await prisma.componentCategories.update({
+    where: { id },
+    data,
+  })
+
+  return trimStrings(category)
+}
+
+export const deleteComponentCategory = async (id: string) => {
+  await prisma.componentCategories.delete({
+    where: { id },
+  })
+}
+
+// ==================== COMPONENT TYPES ====================
+
+export const getComponentTypes = async (
+  categoryId?: string,
+  page: number = 1,
+  limit: number = 20
+) => {
+  const skip = (page - 1) * limit
+
+  const where = categoryId ? { categoryId } : {}
+
+  const [types, total] = await Promise.all([
+    prisma.componentTypes.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { typeName: 'asc' },
+      include: {
+        category: true,
+      },
+    }),
+    prisma.componentTypes.count({ where }),
   ])
 
   return {
@@ -205,8 +124,8 @@ export const getComponentTypeById = async (id: string) => {
   const type = await prisma.componentTypes.findUnique({
     where: { id },
     include: {
+      category: true,
       componentSubtypes: true,
-      componentModels: true,
     },
   })
 
@@ -242,20 +161,20 @@ export const deleteComponentType = async (id: string) => {
 // ==================== COMPONENT SUBTYPES ====================
 
 export const getComponentSubtypes = async (
-  componentTypeId?: string,
+  typeId?: string,
   page: number = 1,
   limit: number = 20
 ) => {
   const skip = (page - 1) * limit
 
-  const where = componentTypeId ? { componentTypeId } : {}
+  const where = typeId ? { typeId } : {}
 
   const [subtypes, total] = await Promise.all([
     prisma.componentSubtypes.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { description: 'asc' },
+      orderBy: { subTypeName: 'asc' },
       include: {
         componentType: true,
       },
@@ -316,8 +235,7 @@ export const deleteComponentSubtype = async (id: string) => {
 
 export const getComponentModels = async (
   filters: {
-    componentTypeId?: string
-    subtypeId?: string
+    componentSubtypeId?: string
     manufacturer?: string
   },
   page: number = 1,
@@ -326,8 +244,8 @@ export const getComponentModels = async (
   const skip = (page - 1) * limit
 
   const where: any = {}
-  if (filters.componentTypeId) where.componentTypeId = filters.componentTypeId
-  if (filters.subtypeId) where.subtypeId = filters.subtypeId
+  if (filters.componentSubtypeId)
+    where.componentSubtypeId = filters.componentSubtypeId
   if (filters.manufacturer) {
     where.manufacturer = { contains: filters.manufacturer }
   }
@@ -337,9 +255,8 @@ export const getComponentModels = async (
       where,
       skip,
       take: limit,
-      orderBy: { manufacturer: 'asc' },
+      orderBy: { modelName: 'asc' },
       include: {
-        componentType: true,
         subtype: true,
       },
     }),
@@ -361,7 +278,6 @@ export const getComponentModelById = async (id: string) => {
   const model = await prisma.componentModels.findUnique({
     where: { id },
     include: {
-      componentType: true,
       subtype: true,
       components: true,
     },
@@ -421,7 +337,6 @@ export const getComponents = async (
       include: {
         model: {
           include: {
-            componentType: true,
             subtype: true,
           },
         },
@@ -447,7 +362,6 @@ export const getComponentById = async (id: string) => {
     include: {
       model: {
         include: {
-          componentType: true,
           subtype: true,
         },
       },
@@ -487,7 +401,6 @@ export const getComponentInstallations = async (
   filters: {
     componentId?: string
     spaceId?: string
-    buildingPartId?: string
   },
   page: number = 1,
   limit: number = 20
@@ -497,7 +410,6 @@ export const getComponentInstallations = async (
   const where: any = {}
   if (filters.componentId) where.componentId = filters.componentId
   if (filters.spaceId) where.spaceId = filters.spaceId
-  if (filters.buildingPartId) where.buildingPartId = filters.buildingPartId
 
   const [installations, total] = await Promise.all([
     prisma.componentInstallations.findMany({
@@ -510,7 +422,6 @@ export const getComponentInstallations = async (
           include: {
             model: {
               include: {
-                componentType: true,
                 subtype: true,
               },
             },
@@ -540,7 +451,6 @@ export const getComponentInstallationById = async (id: string) => {
         include: {
           model: {
             include: {
-              componentType: true,
               subtype: true,
             },
           },
@@ -595,7 +505,6 @@ export const getComponentsByRoomId = async (roomId: string) => {
     include: {
       model: {
         include: {
-          componentType: true,
           subtype: true,
         },
       },
