@@ -20,6 +20,9 @@ export {
   ContentBlockFactory as contentBlock,
 } from './listing-text-content'
 export { TenfastLeaseTemplateFactory as tenfastTemplate } from './tenfast-template'
-export { TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory as tenfastRentalObject } from './tenfast-rental-object'
-export { TenfastTenantFactory as tenfastTenant } from './tenfast-tenant'
+export { TenfastLeaseFactory as tenfastLease } from './tenfast'
+export { TenfastTenantFactory as tenfastTenant } from './tenfast'
+export { TenfastRentalObjectFactory as tenfastRentalObject } from './tenfast'
+export { TenfastInvoiceRowFactory as tenfastInvoiceRow } from './tenfast'
+export { TenfastRentalObjectByRentalObjectCodeResponseFactory as tenfastRentalObjectResponse } from './tenfast'
 export { TenfastTenantByContactCodeResponseFactory as tenfastTenantByContactCodeResponse } from './tenfast-tenant-by-contact-code-response'
