@@ -426,6 +426,92 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /companies/{id}:
+   *   get:
+   *     summary: Get detailed information about a specific company
+   *     tags:
+   *       - Property base Service
+   *     description: |
+   *       Retrieves comprehensive information about a company using its unique identifier.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the company.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved company information
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/CompanyDetails'
+   *       '404':
+   *         description: Company not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Company not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/companies/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    try {
+      const result = await propertyBaseAdapter.getCompanyById(id)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Company not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.CompanyDetails,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences:
    *   get:
    *     summary: Get residences by building code and (optional) staircase code

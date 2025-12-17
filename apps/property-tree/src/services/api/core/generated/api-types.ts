@@ -2554,6 +2554,48 @@ export interface paths {
       };
     };
   };
+  "/companies/{id}": {
+    /**
+     * Get detailed information about a specific company
+     * @description Retrieves comprehensive information about a company using its unique identifier.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the company. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved company information */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CompanyDetails"];
+            };
+          };
+        };
+        /** @description Company not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Company not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/residences": {
     /**
      * Get residences by building code and (optional) staircase code

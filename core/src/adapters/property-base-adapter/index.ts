@@ -171,6 +171,34 @@ export async function getCompanies(): Promise<
   }
 }
 
+type GetCompanyByIdResponse = components['schemas']['CompanyDetails']
+
+export async function getCompanyById(
+  id: string
+): Promise<AdapterResult<GetCompanyByIdResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/companies/{id}', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data.content,
+      }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, '@onecore/property-adapter.getCompanyById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetPropertiesResponse = components['schemas']['Property'][]
 
 export async function getProperties(
