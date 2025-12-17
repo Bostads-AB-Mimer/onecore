@@ -1,22 +1,23 @@
 model Components {
-  id                 String   @id @default(uuid()) @db.UniqueIdentifier
-  modelId            String   @map("model_id") @db.UniqueIdentifier
-  serialNumber       String   @map("serial_number") @db.NVarChar(Max)
-  specifications     String?  @db.NVarChar(Max)
-  warrantyStartDate  DateTime? @map("warranty_start_date") @db.Date
-  warrantyMonths     Int      @map("warranty_months")
-  priceAtPurchase    Float    @map("price_at_purchase") @db.Money
-  ncsCode            String   @map("ncs_code") @db.NVarChar(10)
-  status             String   @default("ACTIVE") @db.NVarChar(20)
-  files              String?  @db.NVarChar(Max) // JSON array: ["fileId1", "fileId2"]
-  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  id                          String    @id @default(uuid()) @db.UniqueIdentifier
+  modelId                     String    @map("model_id") @db.UniqueIdentifier
+  serialNumber                String    @map("serial_number") @db.NVarChar(Max)
+  warrantyStartDate           DateTime? @map("warranty_start_date") @db.Date
+  warrantyMonths              Int       @map("warranty_months")
+  priceAtPurchase             Float     @map("price_at_purchase") @db.Money
+  depreciationPriceAtPurchase Float     @map("depreciation_price_at_purchase") @db.Money
+  ncsCode                     String?   @map("ncs_code") @db.NVarChar(10)
+  status                      String    @default("ACTIVE") @db.NVarChar(20)
+  quantity                    Float     @default(1)
+  economicLifespan            Float     @map("economic_lifespan")
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.DateTime
+  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
   // Relations
-  model                  ComponentModels           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_components_model")
+  model                  ComponentModels          @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   componentInstallations ComponentInstallations[]
 
-  @@index([modelId], map: "idx_components_model")
-  @@index([status], map: "idx_components_status")
+  @@index([modelId])
+  @@index([status])
   @@map("components")
 }
