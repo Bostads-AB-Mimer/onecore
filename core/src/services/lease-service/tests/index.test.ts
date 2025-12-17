@@ -129,6 +129,136 @@ describe('lease-service', () => {
     })
   })
 
+  describe('POST /leases/by-lease-id/:leaseId/preliminary-termination', () => {
+    const validRequestBody = {
+      contactCode: 'P12345',
+      lastDebitDate: '2025-12-31T00:00:00.000Z',
+      desiredMoveDate: '2025-12-31T00:00:00.000Z',
+    }
+
+    it('should return 404 if tenant is not found', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
+        .mockResolvedValue({
+          ok: false,
+          err: 'tenant-not-found',
+        })
+
+      const res = await request(app.callback())
+        .post(
+          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
+        )
+        .send(validRequestBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.message).toBe('Tenant not found')
+    })
+
+    it('should return 404 if lease is not found', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
+        .mockResolvedValue({
+          ok: false,
+          err: 'lease-not-found',
+        })
+
+      const res = await request(app.callback())
+        .post(
+          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
+        )
+        .send(validRequestBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.message).toBe('Lease not found')
+    })
+
+    it('should return 500 if termination fails', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
+        .mockResolvedValue({
+          ok: false,
+          err: 'termination-failed',
+        })
+
+      const res = await request(app.callback())
+        .post(
+          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
+        )
+        .send(validRequestBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.message).toBe('Failed to preliminary terminate lease')
+    })
+
+    it('should return 500 for unknown errors', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
+        .mockResolvedValue({
+          ok: false,
+          err: 'unknown',
+        })
+
+      const res = await request(app.callback())
+        .post(
+          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
+        )
+        .send(validRequestBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.message).toBe('Failed to preliminary terminate lease')
+    })
+
+    it('should return 200 and success message when termination succeeds', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            content: { message: 'Signerings begäran skickad' },
+            message: 'Preliminary termination initiated successfully',
+          },
+        })
+
+      const res = await request(app.callback())
+        .post(
+          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
+        )
+        .send(validRequestBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        content: { message: 'Signerings begäran skickad' },
+        message: 'Preliminary termination initiated successfully',
+      })
+      expect(res.body.message).toBe('Preliminary termination request received')
+    })
+
+    it('should handle leaseId with special characters', async () => {
+      const preliminaryTerminateSpy = jest
+        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            content: { message: 'Signerings begäran skickad' },
+            message: 'Preliminary termination initiated successfully',
+          },
+        })
+
+      await request(app.callback())
+        .post(
+          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
+        )
+        .send(validRequestBody)
+
+      expect(preliminaryTerminateSpy).toHaveBeenCalledWith(
+        '216-704-00-0022/02',
+        'P12345',
+        new Date('2025-12-31T00:00:00.000Z'),
+        new Date('2025-12-31T00:00:00.000Z')
+      )
+    })
+  })
+
   describe('GET /contacts/by-pnr/:pnr', () => {
     it('responds with a contact', async () => {
       const contact = factory.contact.build()
