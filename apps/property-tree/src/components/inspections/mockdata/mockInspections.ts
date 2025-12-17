@@ -1,4 +1,7 @@
-import type { Inspection } from '@/components/residence/inspection/types'
+import type {
+  Inspection,
+  ResidenceInfo,
+} from '@/components/residence/inspection/types'
 
 // Mock data for temporary use until we have real data
 

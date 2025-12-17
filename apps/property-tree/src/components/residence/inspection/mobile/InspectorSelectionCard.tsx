@@ -108,12 +108,14 @@ export function InspectorSelectionCard({
               <div>
                 <p className="text-muted-foreground">Inflyttningsdatum</p>
                 <p className="font-medium">
-                  {tenant.moveInDate || '2023-01-15'}
+                  {/* {tenant.moveInDate || '2023-01-15'} Field does not exist on tenant. Need to get leases if this is mean to be displayed in final design. */}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Utflyttningsdatum</p>
-                <p className="font-medium">{tenant.moveOutDate || '-'}</p>
+                <p className="font-medium">
+                  {/* {tenant.moveOutDate || '-'}  Field does not exist on tenant. Need to get leases if this is mean to be displayed in final design. */}
+                </p>
               </div>
             </div>
 
