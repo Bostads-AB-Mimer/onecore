@@ -1,5 +1,16 @@
 import { useState } from 'react'
-import { Upload, Check, Loader2, FileText, File, Table, Image, Download, Trash2, Eye } from 'lucide-react'
+import {
+  Upload,
+  Check,
+  Loader2,
+  FileText,
+  File,
+  Table,
+  Image,
+  Download,
+  Trash2,
+  Eye,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -24,14 +35,35 @@ export function ComponentModelDocuments({
 }: ComponentModelDocumentsProps) {
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadDragActive, setUploadDragActive] = useState(false)
-  const [uploadValidationError, setUploadValidationError] = useState<string | null>(null)
+  const [uploadValidationError, setUploadValidationError] = useState<
+    string | null
+  >(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [previewDoc, setPreviewDoc] = useState<typeof documents[0] | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<(typeof documents)[0] | null>(
+    null
+  )
 
-  const { documents, isLoading, error, upload, isUploading, uploadError, deleteDocument, isDeleting } =
-    useComponentModelDocuments(modelId)
+  const {
+    documents,
+    isLoading,
+    error,
+    upload,
+    isUploading,
+    uploadError,
+    deleteDocument,
+    isDeleting,
+  } = useComponentModelDocuments(modelId)
 
-  const dangerousExtensions = ['.exe', '.dll', '.bat', '.sh', '.app', '.msi', '.cmd', '.scr']
+  const dangerousExtensions = [
+    '.exe',
+    '.dll',
+    '.bat',
+    '.sh',
+    '.app',
+    '.msi',
+    '.cmd',
+    '.scr',
+  ]
 
   const validateAndSetUploadFile = (file: File) => {
     setUploadValidationError(null)
@@ -41,7 +73,9 @@ export function ComponentModelDocuments({
     const isPdfFile = extension === '.pdf' || file.type === 'application/pdf'
 
     if (!isPdfFile) {
-      setUploadValidationError('Endast PDF-filer är tillåtna. Konvertera Word- eller Excel-dokument till PDF innan uppladdning.')
+      setUploadValidationError(
+        'Endast PDF-filer är tillåtna. Konvertera Word- eller Excel-dokument till PDF innan uppladdning.'
+      )
       return
     }
 
@@ -92,7 +126,9 @@ export function ComponentModelDocuments({
     validateAndSetUploadFile(files[0])
   }
 
-  const handleUploadFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadFileInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
       validateAndSetUploadFile(selectedFile)
@@ -158,7 +194,7 @@ export function ComponentModelDocuments({
   }
 
   // Helper to determine if file is a PDF (only PDFs are previewable)
-  const isPdf = (doc: typeof documents[0]): boolean => {
+  const isPdf = (doc: (typeof documents)[0]): boolean => {
     if (!doc) return false
     const mimeType = doc.mimeType.toLowerCase()
     const fileName = doc.originalName.toLowerCase()
@@ -174,7 +210,9 @@ export function ComponentModelDocuments({
             <DialogTitle>Dokumentation</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-12">
-            <div className="animate-pulse text-muted-foreground">Laddar dokument...</div>
+            <div className="animate-pulse text-muted-foreground">
+              Laddar dokument...
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -190,7 +228,9 @@ export function ComponentModelDocuments({
             <DialogTitle>Dokumentation</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-12">
-            <div className="text-red-600">Kunde inte ladda dokument. Försök igen.</div>
+            <div className="text-red-600">
+              Kunde inte ladda dokument. Försök igen.
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -216,10 +256,14 @@ export function ComponentModelDocuments({
               className={cn(
                 'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
                 uploadDragActive && 'border-primary bg-primary/5',
-                !uploadDragActive && !uploadFile && 'border-gray-300 hover:border-gray-400',
+                !uploadDragActive &&
+                  !uploadFile &&
+                  'border-gray-300 hover:border-gray-400',
                 uploadFile && 'bg-green-50 border-green-300'
               )}
-              onClick={() => document.getElementById('empty-file-input')?.click()}
+              onClick={() =>
+                document.getElementById('empty-file-input')?.click()
+              }
             >
               <input
                 id="empty-file-input"
@@ -239,7 +283,9 @@ export function ComponentModelDocuments({
               ) : (
                 <div>
                   <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                  <p className="font-medium">Dra fil hit eller klicka för att bläddra</p>
+                  <p className="font-medium">
+                    Dra fil hit eller klicka för att bläddra
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Endast PDF-filer • Max 50MB
                   </p>
@@ -262,7 +308,10 @@ export function ComponentModelDocuments({
             <Button variant="outline" onClick={onClose} disabled={isUploading}>
               Avbryt
             </Button>
-            <Button onClick={handleUploadSubmit} disabled={isUploading || !uploadFile}>
+            <Button
+              onClick={handleUploadSubmit}
+              disabled={isUploading || !uploadFile}
+            >
               {isUploading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -281,184 +330,194 @@ export function ComponentModelDocuments({
   // Document list view
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Dokumentation ({documents.length})</DialogTitle>
-        </DialogHeader>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Dokumentation ({documents.length})</DialogTitle>
+          </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4">
-          {/* Upload zone */}
-          <div
-            onDrop={handleUploadDrop}
-            onDragOver={handleUploadDragOver}
-            onDragEnter={handleUploadDragEnter}
-            onDragLeave={handleUploadDragLeave}
-            className={cn(
-              'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors',
-              uploadDragActive && 'border-primary bg-primary/5',
-              !uploadDragActive && !uploadFile && 'border-gray-300 hover:border-gray-400',
-              uploadFile && 'bg-green-50 border-green-300'
-            )}
-            onClick={() => document.getElementById('list-file-input')?.click()}
-          >
-            <input
-              id="list-file-input"
-              type="file"
-              className="hidden"
-              onChange={handleUploadFileInputChange}
-            />
+          <div className="flex-1 overflow-y-auto space-y-4">
+            {/* Upload zone */}
+            <div
+              onDrop={handleUploadDrop}
+              onDragOver={handleUploadDragOver}
+              onDragEnter={handleUploadDragEnter}
+              onDragLeave={handleUploadDragLeave}
+              className={cn(
+                'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors',
+                uploadDragActive && 'border-primary bg-primary/5',
+                !uploadDragActive &&
+                  !uploadFile &&
+                  'border-gray-300 hover:border-gray-400',
+                uploadFile && 'bg-green-50 border-green-300'
+              )}
+              onClick={() =>
+                document.getElementById('list-file-input')?.click()
+              }
+            >
+              <input
+                id="list-file-input"
+                type="file"
+                className="hidden"
+                onChange={handleUploadFileInputChange}
+              />
 
-            {uploadFile ? (
-              <div className="flex items-center justify-center gap-4">
-                <Check className="h-6 w-6 text-green-600" />
-                <div className="flex-1 text-left">
-                  <p className="font-medium text-sm">{uploadFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(uploadFile.size)}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleUploadSubmit()
-                  }}
-                  disabled={isUploading}
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Laddar upp...
-                    </>
-                  ) : (
-                    'Ladda upp'
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Upload className="h-4 w-4" />
-                <span>Dra fil hit eller klicka för att ladda upp</span>
-              </div>
-            )}
-          </div>
-
-          {uploadValidationError && (
-            <p className="text-sm text-red-600">{uploadValidationError}</p>
-          )}
-
-          {uploadError && (
-            <p className="text-sm text-red-600">
-              Uppladdning misslyckades. Försök igen.
-            </p>
-          )}
-
-          {/* Document list */}
-          <div className="space-y-2">
-            {documents.map((doc) => {
-              const FileIcon = getFileIcon(doc.mimeType)
-              const canPreview = isPdf(doc)
-              return (
-                <div
-                  key={doc.fileId}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border",
-                    canPreview && "cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-shadow"
-                  )}
-                  onClick={() => canPreview && setPreviewDoc(doc)}
-                >
-                  <FileIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{doc.originalName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatFileSize(doc.size)} • {formatDate(doc.uploadedAt)}
+              {uploadFile ? (
+                <div className="flex items-center justify-center gap-4">
+                  <Check className="h-6 w-6 text-green-600" />
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-sm">{uploadFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(uploadFile.size)}
                     </p>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    {canPreview && (
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleUploadSubmit()
+                    }}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Laddar upp...
+                      </>
+                    ) : (
+                      'Ladda upp'
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Upload className="h-4 w-4" />
+                  <span>Dra fil hit eller klicka för att ladda upp</span>
+                </div>
+              )}
+            </div>
+
+            {uploadValidationError && (
+              <p className="text-sm text-red-600">{uploadValidationError}</p>
+            )}
+
+            {uploadError && (
+              <p className="text-sm text-red-600">
+                Uppladdning misslyckades. Försök igen.
+              </p>
+            )}
+
+            {/* Document list */}
+            <div className="space-y-2">
+              {documents.map((doc) => {
+                const FileIcon = getFileIcon(doc.mimeType)
+                const canPreview = isPdf(doc)
+                return (
+                  <div
+                    key={doc.fileId}
+                    className={cn(
+                      'flex items-center gap-3 p-3 rounded-lg border',
+                      canPreview &&
+                        'cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-shadow'
+                    )}
+                    onClick={() => canPreview && setPreviewDoc(doc)}
+                  >
+                    <FileIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{doc.originalName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatFileSize(doc.size)} •{' '}
+                        {formatDate(doc.uploadedAt)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      {canPreview && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPreviewDoc(doc)
+                          }}
+                          title="Förhandsgranska"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setPreviewDoc(doc)
+                          window.open(doc.url, '_blank')
                         }}
-                        title="Förhandsgranska"
+                        title="Ladda ner"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Download className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        window.open(doc.url, '_blank')
-                      }}
-                      title="Ladda ner"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={deleteConfirm === doc.fileId ? 'destructive' : 'outline'}
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(doc.fileId)
-                      }}
-                      disabled={isDeleting}
-                      title="Ta bort"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {deleteConfirm === doc.fileId && <span className="ml-1 text-xs">Bekräfta?</span>}
-                    </Button>
+                      <Button
+                        variant={
+                          deleteConfirm === doc.fileId
+                            ? 'destructive'
+                            : 'outline'
+                        }
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(doc.fileId)
+                        }}
+                        disabled={isDeleting}
+                        title="Ta bort"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deleteConfirm === doc.fileId && (
+                          <span className="ml-1 text-xs">Bekräfta?</span>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Stäng
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* Document Preview Modal */}
-    {previewDoc && (
-      <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{previewDoc.originalName}</DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-hidden">
-            <iframe
-              src={previewDoc.url}
-              className="w-full h-full border-0"
-              title={`Preview of ${previewDoc.originalName}`}
-            />
+                )
+              })}
+            </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => window.open(previewDoc.url, '_blank')}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Ladda ner
-            </Button>
-            <Button onClick={() => setPreviewDoc(null)}>
+            <Button variant="outline" onClick={onClose}>
               Stäng
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    )}
-  </>
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
+          <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>{previewDoc.originalName}</DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={previewDoc.url}
+                className="w-full h-full border-0"
+                title={`Preview of ${previewDoc.originalName}`}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => window.open(previewDoc.url, '_blank')}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Ladda ner
+              </Button>
+              <Button onClick={() => setPreviewDoc(null)}>Stäng</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   )
 }
