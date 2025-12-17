@@ -110,10 +110,10 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
 describe(tenfastAdapter.getRentalObject, () => {
   it('should return rental object when response is valid and status is 200', async () => {
     // Arrange
-    const mockRentalObject = factory.tenfastRentalObject.build()
+    const mockRentalObjectResponse = factory.tenfastRentalObjectResponse.build()
     const mockResponse = {
       status: 200,
-      data: mockRentalObject,
+      data: mockRentalObjectResponse,
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -123,16 +123,16 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObjectResponse.records[0],
     })
   })
 
   it('should return rental object when response is valid and status is 201', async () => {
     // Arrange
-    const mockRentalObject = factory.tenfastRentalObject.build()
+    const mockRentalObjectResponse = factory.tenfastRentalObjectResponse.build()
     const mockResponse = {
       status: 201,
-      data: mockRentalObject,
+      data: mockRentalObjectResponse,
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -142,7 +142,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObjectResponse.records[0],
     })
   })
 
@@ -482,7 +482,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
 
     // Mock tenfastApi.request to return a successful lease response
@@ -525,7 +525,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
       .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue({ ok: true, data: mockRentalObject.records[0] })
+      .mockResolvedValue({ ok: true, data: mockRentalObject })
 
     let leaseRequestData: any
     ;(request as jest.Mock).mockImplementation((data) => {
@@ -564,7 +564,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
       .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue({ ok: true, data: mockRentalObject.records[0] })
+      .mockResolvedValue({ ok: true, data: mockRentalObject })
 
     let leaseRequestData: any
     ;(request as jest.Mock).mockImplementation((data) => {
@@ -605,7 +605,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
 
     const mockLeaseResponse = {
@@ -743,11 +743,11 @@ describe(tenfastAdapter.createLease, () => {
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
-    mockRentalObject.records[0].hyror = [] // Remove rent articles to simulate missing rent article
+    mockRentalObject.hyror = [] // Remove rent articles to simulate missing rent article
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
 
     const contact = factory.contact.build()
@@ -786,7 +786,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
 
     const mockLeaseResponse = {
@@ -830,7 +830,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
 
     const mockLeaseResponse = {
@@ -874,7 +874,7 @@ describe(tenfastAdapter.createLease, () => {
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
-      data: mockRentalObject.records[0],
+      data: mockRentalObject,
     })
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 

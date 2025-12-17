@@ -3,7 +3,6 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import {
-  Lease,
   ConsumerReport,
   ReplyToOfferErrorCodes,
   GetActiveOfferByListingIdErrorCodes,
@@ -19,7 +18,6 @@ import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-t
 import * as factory from '../../../../test/factories'
 import { ProcessStatus } from '../../../common/types'
 import { schemas } from '../schemas'
-import { Lease as LeaseSchema } from '../schemas/lease'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -29,7 +27,6 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('lease-service', () => {
-  const leaseMock: Lease = factory.lease.build()
   const consumerReportMock: ConsumerReport = {
     pnr: '4512121122',
     template: 'TEST_TEMPLATE',
@@ -47,199 +44,6 @@ describe('lease-service', () => {
     zip: '72266',
     city: 'Västerås',
   }
-
-  describe('GET /leases/by-rental-property-id/:rentalPropertyId', () => {
-    it('responds with 400 for invalid query parameters', async () => {
-      const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeUpcomingLeases=invalid'
-      )
-
-      expect(res.status).toBe(400)
-      expect(res.body).toMatchObject({
-        reason: 'Invalid query parameters',
-        error: expect.any(Object),
-      })
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
-        .mockRejectedValue(new Error('Adapter error'))
-
-      const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123'
-      )
-
-      expect(res.status).toBe(500)
-    })
-
-    it('responds with a list of leases for valid query parameters', async () => {
-      const getLeasesForPropertyIdSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
-        .mockResolvedValue(factory.lease.buildList(1))
-
-      const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeUpcomingLeases=true&includeTerminatedLeases=false&includeContacts=true'
-      )
-
-      expect(res.status).toBe(200)
-      expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith(
-        '123',
-        expect.objectContaining({
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: false,
-          includeContacts: true,
-        })
-      )
-
-      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
-    })
-  })
-
-  describe('GET /leases/by-pnr/:pnr', () => {
-    it('responds with a list of leases', async () => {
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
-        .mockResolvedValue([leaseMock])
-
-      const res = await request(app.callback()).get(
-        '/leases/by-pnr/101010-1010'
-      )
-      expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalled()
-      expect(res.body.content).toBeInstanceOf(Array)
-      expect(JSON.stringify(res.body.content[0])).toEqual(
-        JSON.stringify(leaseMock)
-      )
-    })
-  })
-
-  describe('GET /leases/:id', () => {
-    it('responds with lease', async () => {
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLease')
-        .mockResolvedValue(leaseMock)
-
-      const res = await request(app.callback()).get('/leases/1337')
-      expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.content)).toEqual(
-        JSON.stringify(leaseMock)
-      )
-    })
-  })
-
-  describe('POST /leases/by-lease-id/:leaseId/preliminary-termination', () => {
-    const validRequestBody = {
-      contactCode: 'P12345',
-      lastDebitDate: '2025-12-31T00:00:00.000Z',
-      desiredMoveDate: '2025-12-31T00:00:00.000Z',
-    }
-
-    it('should return 404 if lease is not found', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
-        .mockResolvedValue({
-          ok: false,
-          err: 'lease-not-found',
-        })
-
-      const res = await request(app.callback())
-        .post(
-          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
-        )
-        .send(validRequestBody)
-
-      expect(res.status).toBe(404)
-      expect(res.body.message).toBe('Lease not found')
-    })
-
-    it('should return 500 if termination fails', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
-        .mockResolvedValue({
-          ok: false,
-          err: 'termination-failed',
-        })
-
-      const res = await request(app.callback())
-        .post(
-          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
-        )
-        .send(validRequestBody)
-
-      expect(res.status).toBe(500)
-      expect(res.body.message).toBe('Failed to preliminary terminate lease')
-    })
-
-    it('should return 500 for unknown errors', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
-        .mockResolvedValue({
-          ok: false,
-          err: 'unknown',
-        })
-
-      const res = await request(app.callback())
-        .post(
-          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
-        )
-        .send(validRequestBody)
-
-      expect(res.status).toBe(500)
-      expect(res.body.message).toBe('Failed to preliminary terminate lease')
-    })
-
-    it('should return 200 and success message when termination succeeds', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
-        .mockResolvedValue({
-          ok: true,
-          data: {
-            content: { message: 'Signerings begäran skickad' },
-            message: 'Preliminary termination initiated successfully',
-          },
-        })
-
-      const res = await request(app.callback())
-        .post(
-          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
-        )
-        .send(validRequestBody)
-
-      expect(res.status).toBe(200)
-      expect(res.body.content).toEqual({
-        content: { message: 'Signerings begäran skickad' },
-        message: 'Preliminary termination initiated successfully',
-      })
-      expect(res.body.message).toBe('Preliminary termination request received')
-    })
-
-    it('should handle leaseId with special characters', async () => {
-      const preliminaryTerminateSpy = jest
-        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
-        .mockResolvedValue({
-          ok: true,
-          data: {
-            content: { message: 'Signerings begäran skickad' },
-            message: 'Preliminary termination initiated successfully',
-          },
-        })
-
-      await request(app.callback())
-        .post(
-          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
-        )
-        .send(validRequestBody)
-
-      expect(preliminaryTerminateSpy).toHaveBeenCalledWith(
-        '216-704-00-0022/02',
-        'P12345',
-        new Date('2025-12-31T00:00:00.000Z'),
-        new Date('2025-12-31T00:00:00.000Z')
-      )
-    })
-  })
 
   describe('GET /contacts/by-pnr/:pnr', () => {
     it('responds with a contact', async () => {
@@ -325,7 +129,7 @@ describe('lease-service', () => {
     it('responds with successful processStatus', async () => {
       jest.spyOn(replyToOffer, 'acceptOffer').mockResolvedValue({
         processStatus: ProcessStatus.successful,
-        httpStatus: 202,
+        httpStatus: 200,
         data: null,
       })
 

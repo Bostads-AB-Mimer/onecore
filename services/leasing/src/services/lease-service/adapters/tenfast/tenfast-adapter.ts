@@ -1,4 +1,8 @@
 import { logger } from '@onecore/utilities'
+import { Contact } from '@onecore/types'
+import { isAxiosError } from 'axios'
+import { ZodError } from 'zod'
+
 import {
   TenfastTenantByContactCodeResponseSchema,
   TenfastTenant,
@@ -8,14 +12,18 @@ import {
   TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
   PreliminaryTerminationResponse,
-} from '../../../../common/adapters/tenfast/schemas'
+  TenfastLease,
+  TenfastLeaseSchema,
+} from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
-import { Contact } from '@onecore/types'
 import * as tenfastApi from './tenfast-api'
+import { filterByStatus, GetLeasesFilters } from './filters'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
+
+type SchemaError = { tag: 'schema-error'; error: ZodError }
 
 export const createLease = async (
   contact: Contact,
@@ -229,12 +237,12 @@ export const getTenantByContactCode = async (
 
     const parsedTenantResponse =
       TenfastTenantByContactCodeResponseSchema.safeParse(tenantResponse.data)
-    if (!parsedTenantResponse.success)
+    if (!parsedTenantResponse.success) {
       return handleTenfastError(
         parsedTenantResponse.error,
         'could-not-parse-tenant-response'
       )
-
+    }
     return {
       ok: true,
       data: parsedTenantResponse.data.records[0] ?? null,
@@ -470,5 +478,133 @@ export const preliminaryTerminateLease = async (
     return { ok: false, err: error.err }
   } catch (err) {
     return handleTenfastError(err, 'termination-failed')
+  }
+}
+const defaultFilters: GetLeasesFilters = {
+  status: ['current', 'upcoming', 'about-to-end', 'ended'],
+}
+
+export async function getLeasesByTenantId(
+  tenantId: string,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal?populate=hyresobjekt,hyresgaster`,
+    })
+
+    // Not sure we want to fail completely here if parsing fails
+    const leases = TenfastLeaseSchema.array().safeParse(res.data)
+
+    if (!leases.success) {
+      logger.error(
+        { error: JSON.stringify(leases.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
+    }
+
+    return {
+      ok: true,
+      data: filterByStatus(leases.data, filters.status),
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByTenantId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getLeasesByRentalPropertyId(
+  rentalPropertyId: string,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt`,
+    })
+
+    // Not sure we want to fail completely here if parsing fails
+    const leases = TenfastLeaseSchema.array().safeParse(res.data)
+
+    if (!leases.success) {
+      logger.error(
+        { error: JSON.stringify(leases.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
+    }
+
+    return {
+      ok: true,
+      data: filterByStatus(leases.data, filters.status),
+    }
+  } catch (err) {
+    logger.error(
+      mapHttpError(err),
+      'tenfast-adapter.getLeasesByRentalPropertyId'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getLeaseByLeaseId(
+  leaseId: string
+): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${leaseId}?populate=hyresobjekt`,
+    })
+
+    if (res.status !== 200) {
+      if (res.status === 404) {
+        return { ok: false, err: 'not-found' }
+      }
+
+      return { ok: false, err: 'unknown' }
+    }
+
+    // Not sure we want to fail completely here if parsing fails
+    const lease = TenfastLeaseSchema.safeParse(res.data)
+
+    if (!lease.success) {
+      logger.error(
+        { error: JSON.stringify(lease.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: lease.error } }
+    }
+
+    return {
+      ok: true,
+      data: lease.data,
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByLeaseId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// TODO: maybe move to utilities and rework
+function mapHttpError(err: unknown): { err: string } {
+  if (isAxiosError(err)) {
+    return {
+      err: JSON.stringify(
+        {
+          statusCode: err.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+        },
+        null,
+        2
+      ),
+    }
+  } else {
+    return { err: JSON.stringify(err, null, 2) }
   }
 }
