@@ -14,7 +14,7 @@ import { ComponentImageGallery } from './ComponentImageGallery'
 import { ComponentModelDocuments } from '../component-library/dialogs/ComponentModelDocuments'
 
 interface ComponentCardProps {
-  component: Component
+  component: ComponentInstance
 }
 
 export const ComponentCard = ({ component }: ComponentCardProps) => {
