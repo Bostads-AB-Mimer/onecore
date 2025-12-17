@@ -13,6 +13,7 @@ import {
   Users,
   FileText,
   Map,
+  Lock,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
@@ -113,8 +114,8 @@ export const ResidenceView = () => {
                 value="rental-blocks"
                 className="flex items-center gap-1.5"
               >
-                <MessageSquare className="h-4 w-4" />
-                Spärrar
+                <Lock className="h-4 w-4" />
+                <span className="hidden sm:inline">Spärrar</span>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">

@@ -19,7 +19,7 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
     return (
       <TabLayout title="Spärrar" showCard={true}>
         <div className="py-4">
-          <div>Loading...</div>
+          <div>Laddar...</div>
         </div>
       </TabLayout>
     )
@@ -45,6 +45,13 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
 
     const date = new Date(isoDateString)
     return date.toLocaleDateString('sv-SE')
+  }
+
+  const isExpired = (toDate: string | null | undefined) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const isExpired = toDate && new Date(toDate) < today
+    return isExpired
   }
 
   return (
@@ -78,10 +85,7 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
               key: 'status',
               label: 'Status',
               render: (rb: components['schemas']['RentalBlock']) => {
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                const isExpired = rb.toDate && new Date(rb.toDate) < today
-                return isExpired ? (
+                return isExpired(rb.toDate) ? (
                   <Badge variant="destructive">Inaktiv</Badge>
                 ) : (
                   <Badge variant="success">Aktiv</Badge>
@@ -92,14 +96,22 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
           keyExtractor={(rb) => rb.id}
           mobileCardRenderer={(rb: components['schemas']['RentalBlock']) => (
             <div className="space-y-2 w-full">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-auto justify-between items-start">
                 <div>
-                  <div className="font-medium">{rb.blockReasonId}</div>
-                  <div className="text-sm">{rb.blockReason}</div>
                   <div className="text-sm">
-                    {rb.fromDate} - {rb.toDate ?? '-'}
+                    {formatISODate(rb.fromDate)} - {formatISODate(rb.toDate)}
                   </div>
+                  <div className="font-medium">{rb.blockReason}</div>
                 </div>
+                {isExpired(rb.toDate) ? (
+                  <Badge className="mt-1" variant="destructive">
+                    Inaktiv
+                  </Badge>
+                ) : (
+                  <Badge className="mt-1" variant="success">
+                    Aktiv
+                  </Badge>
+                )}
               </div>
             </div>
           )}
