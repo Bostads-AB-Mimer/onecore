@@ -41,9 +41,20 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser())
+const koaBodyMiddleware = bodyParser({
+  multipart: false,
+  urlencoded: true,
+})
 
-// Log the start and completion of all incoming requests
+app.use(async (ctx, next) => {
+  const contentType = ctx.request.headers['content-type'] || ''
+  if (contentType.includes('multipart/form-data')) {
+    return await next()
+  }
+
+  return await koaBodyMiddleware(ctx, next)
+})
+
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 

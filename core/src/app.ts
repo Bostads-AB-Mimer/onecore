@@ -38,7 +38,14 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser({ multipart: true }))
+app.use(
+  bodyParser({
+    multipart: true,
+    formidable: {
+      encoding: 'utf-8',
+    },
+  })
+)
 
 // Log the start and completion of all incoming requests
 app.use(loggerMiddlewares.pre)

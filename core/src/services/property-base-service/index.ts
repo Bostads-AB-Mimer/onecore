@@ -3923,4 +3923,465 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  // ==================== COMPONENT FILE UPLOAD ROUTES ====================
+
+  /**
+   * @swagger
+   * /api/components/{id}/upload:
+   *   post:
+   *     summary: Upload a file to a component
+   *     tags:
+   *       - Components New
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component ID
+   *       - in: query
+   *         name: caption
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Optional caption for the file
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *       400:
+   *         description: Bad request
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/components/:id/upload', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const caption = z.string().optional().safeParse(ctx.query.caption)
+
+    try {
+      const file = ctx.request.files?.file
+
+      if (!file || Array.isArray(file)) {
+        ctx.status = 400
+        ctx.body = { error: 'Single file required', ...metadata }
+        return
+      }
+
+      // Read file buffer (koa-body stores files on disk)
+      const fs = await import('fs')
+      const fileBuffer = await fs.promises.readFile(file.filepath)
+
+      const result = await propertyBaseAdapter.uploadComponentFile(
+        id.data,
+        fileBuffer,
+        file.originalFilename || 'unknown',
+        file.mimetype || 'application/octet-stream',
+        caption.success ? caption.data : undefined
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Upload failed', ...metadata }
+        return
+      }
+
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Failed to upload component file')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /api/components/{id}/files:
+   *   get:
+   *     summary: Get all files for a component
+   *     tags:
+   *       - Components New
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component ID
+   *     responses:
+   *       200:
+   *         description: List of files with presigned URLs
+   *       404:
+   *         description: Component not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/components/:id/files', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentFiles(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = { content: { files: result.data }, ...metadata }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Failed to get component files')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /api/components/{id}/files/{fileId}:
+   *   delete:
+   *     summary: Delete a file from a component
+   *     tags:
+   *       - Components New
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component ID
+   *       - in: path
+   *         name: fileId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: File ID
+   *     responses:
+   *       204:
+   *         description: File deleted successfully
+   *       404:
+   *         description: Component or file not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/components/:id/files/:fileId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const fileId = z.string().safeParse(ctx.params.fileId)
+    if (!fileId.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid file ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentFile(
+        id.data,
+        fileId.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component or file not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
+    } catch (error) {
+      logger.error({ error, metadata }, 'Failed to delete component file')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT MODEL DOCUMENT UPLOAD ROUTES ====================
+
+  /**
+   * @swagger
+   * /api/component-models/{id}/upload:
+   *   post:
+   *     summary: Upload a document to a component model
+   *     tags:
+   *       - Component Models
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component model ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: Document uploaded successfully
+   *       400:
+   *         description: Bad request
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/component-models/:id/upload', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const file = ctx.request.files?.file
+
+      if (!file || Array.isArray(file)) {
+        ctx.status = 400
+        ctx.body = { error: 'Single file required', ...metadata }
+        return
+      }
+
+      // Read file buffer (koa-body stores files on disk)
+      const fs = await import('fs')
+      const fileBuffer = await fs.promises.readFile(file.filepath)
+
+      // Normalize Swedish characters to ASCII equivalents
+      // This avoids encoding issues entirely by removing non-ASCII characters
+      const normalizeFilename = (filename: string): string => {
+        return filename
+          .replace(/Ö/g, 'O')
+          .replace(/Ä/g, 'A')
+          .replace(/Å/g, 'A')
+          .replace(/ö/g, 'o')
+          .replace(/ä/g, 'a')
+          .replace(/å/g, 'a')
+      }
+
+      const originalFilename = file.originalFilename || 'unknown'
+      const normalizedFilename = normalizeFilename(originalFilename)
+
+      const result = await propertyBaseAdapter.uploadComponentModelDocument(
+        id.data,
+        fileBuffer,
+        normalizedFilename,
+        file.mimetype || 'application/octet-stream'
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Upload failed', ...metadata }
+        return
+      }
+
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error) {
+      logger.error(
+        { error, metadata },
+        'Failed to upload component model document'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /api/component-models/{id}/documents:
+   *   get:
+   *     summary: Get all documents for a component model
+   *     tags:
+   *       - Component Models
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component model ID
+   *     responses:
+   *       200:
+   *         description: List of documents with presigned URLs
+   *       404:
+   *         description: Component model not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-models/:id/documents', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentModelDocuments(
+        id.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = { content: { documents: result.data }, ...metadata }
+    } catch (error) {
+      logger.error(
+        { error, metadata },
+        'Failed to get component model documents'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /api/component-models/{id}/documents/{fileId}:
+   *   delete:
+   *     summary: Delete a document from a component model
+   *     tags:
+   *       - Component Models
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component model ID
+   *       - in: path
+   *         name: fileId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: File ID
+   *     responses:
+   *       204:
+   *         description: Document deleted successfully
+   *       404:
+   *         description: Component model or document not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/component-models/:id/documents/:fileId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const fileId = z.string().safeParse(ctx.params.fileId)
+    if (!fileId.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid file ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentModelDocument(
+        id.data,
+        fileId.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model or document not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
+    } catch (error) {
+      logger.error(
+        { error, metadata },
+        'Failed to delete component model document'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 }

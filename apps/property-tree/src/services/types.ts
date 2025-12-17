@@ -59,6 +59,9 @@ export type ResidenceSearchResult =
 export type ResidenceSummary = components['schemas']['ResidenceSummary']
 export type Room = components['schemas']['Room']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
+export type FileMetadataWithUrl = components['schemas']['FileMetadataWithUrl']
+export type ComponentImage = FileMetadataWithUrl
+export type ComponentModelDocument = FileMetadataWithUrl
 
 // Custom types that aren't in the API
 export interface Issue {
