@@ -58,7 +58,6 @@ export type ResidenceSearchResult =
   components['schemas']['ResidenceSearchResult']
 export type ResidenceSummary = components['schemas']['ResidenceSummary']
 export type Room = components['schemas']['Room']
-export type Component = components['schemas']['Component']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
 
 // Custom types that aren't in the API

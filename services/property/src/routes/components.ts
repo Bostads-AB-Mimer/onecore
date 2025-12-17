@@ -154,7 +154,19 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/components/by-room/:roomId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const roomId = ctx.params.roomId
+
+    // Validate roomId is at most 15 characters
+    const roomIdValidation = z.string().max(15).safeParse(ctx.params.roomId)
+    if (!roomIdValidation.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Room ID must be at most 15 characters (Xpand format)',
+        ...metadata,
+      }
+      return
+    }
+
+    const roomId = roomIdValidation.data
 
     try {
       const components = await getComponentsByRoomId(roomId)

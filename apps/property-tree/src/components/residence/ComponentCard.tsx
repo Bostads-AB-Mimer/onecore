@@ -206,11 +206,27 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                     {component.model?.manufacturer || '-'}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Serienummer:</span>
-                  <span className="font-medium">
-                    {component.serialNumber || '-'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {component.serialNumber || '-'}
+                    </span>
+                    {component.serialNumber && (
+                      <button
+                        onClick={() =>
+                          copyToClipboard(component.serialNumber, 'serial')
+                        }
+                        className="p-1 hover:bg-accent rounded"
+                        title="Kopiera serienummer"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedField === 'serial' && (
+                          <span className="text-xs text-green-600 ml-1">✓</span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {component.model?.coclassCode && (
@@ -392,11 +408,28 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
             <AccordionContent>
               <div className="space-y-2 text-sm">
                 {component.model?.dimensions && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Mått:</span>
-                    <span className="font-medium">
-                      {component.model.dimensions}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {component.model.dimensions}
+                      </span>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            component.model!.dimensions!,
+                            'dimensions'
+                          )
+                        }
+                        className="p-1 hover:bg-accent rounded"
+                        title="Kopiera mått"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedField === 'dimensions' && (
+                          <span className="text-xs text-green-600 ml-1">✓</span>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
 
