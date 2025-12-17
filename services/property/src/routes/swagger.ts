@@ -185,16 +185,6 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.ComponentFilesResponseSchema, {
-    name: 'ComponentFilesResponse',
-    target: 'openApi3',
-    $refStrategy: 'none',
-  }).definitions,
-  ...zodToJsonSchema(types.ComponentModelDocumentsResponseSchema, {
-    name: 'ComponentModelDocumentsResponse',
-    target: 'openApi3',
-    $refStrategy: 'none',
-  }).definitions,
 }
 
 swaggerSpec.definition.components = {

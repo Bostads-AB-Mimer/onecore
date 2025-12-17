@@ -584,6 +584,23 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
+// ==================== FILE METADATA SCHEMAS ====================
+
+export const FileMetadataSchema = z.object({
+  fileId: z.string(),
+  originalName: z.string(),
+  size: z.number(),
+  mimeType: z.string(),
+  uploadedAt: z.string(),
+})
+
+export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
+  url: z.string().describe('Presigned URL for file access (valid for 24 hours)'),
+})
+
+export type FileMetadata = z.infer<typeof FileMetadataSchema>
+export type FileMetadataWithUrl = z.infer<typeof FileMetadataWithUrlSchema>
+
 export const ComponentTypeSchema = z.object({
   id: z.string(),
   description: z.string(),
