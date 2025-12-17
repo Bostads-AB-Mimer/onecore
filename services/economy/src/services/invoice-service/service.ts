@@ -28,19 +28,25 @@ import {
   LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
-  Invoice,
+  Invoice as InvoiceData,
 } from '../../common/types'
 import {
   createCustomerLedgerRow,
+  getInvoiceByInvoiceNumber,
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
 } from './adapters/xledger-adapter'
-import { Contact } from '@onecore/types'
+import { Contact, Invoice, InvoiceRow } from '@onecore/types'
 import { logger } from '@onecore/utilities'
+import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
+import {
+  getInvoiceArticle,
+  getInvoiceByOcr,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 
 const createRoundOffRow = async (
-  invoice: Invoice,
+  invoice: InvoiceData,
   counterPartCustomers: CounterPartCustomers
 ): Promise<InvoiceDataRow> => {
   const fromDateString = invoice.fromdate as string
@@ -134,7 +140,7 @@ export const processInvoiceRows = async (
     }
   }
 
-  const invoiceTable: Record<string, Invoice> = {}
+  const invoiceTable: Record<string, InvoiceData> = {}
   invoices.forEach((invoice) => {
     invoiceTable[(invoice.invoice as string).trimEnd()] = invoice
   })
@@ -785,4 +791,56 @@ const verifyAccountTotals = (
   }
 
   return true
+}
+
+export const getInvoiceDetails = async (
+  invoiceNumber: string
+): Promise<Invoice | null> => {
+  const result = await getInvoiceByInvoiceNumber(invoiceNumber)
+  if (!result) {
+    return null
+  }
+
+  const tenfastInvoiceResult = await getInvoiceByOcr(result.invoiceId)
+
+  if (!tenfastInvoiceResult.ok) {
+    throw tenfastInvoiceResult.err
+  }
+
+  if (tenfastInvoiceResult.data) {
+    const articleIds = tenfastInvoiceResult.data.invoiceRows.reduce<string[]>(
+      (acc, ir) => {
+        if (ir.rentArticle) {
+          acc.push(ir.rentArticle)
+        }
+        return acc
+      },
+      []
+    )
+
+    const articleResults = await Promise.all(
+      articleIds.map((id) => getInvoiceArticle(id))
+    )
+    const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
+      if (ar.ok) {
+        acc.push(ar.data)
+      }
+      return acc
+    }, [])
+
+    result.invoiceRows = tenfastInvoiceResult.data.invoiceRows.map(
+      (ir): InvoiceRow => {
+        const article = articles.find((a) => {
+          return a._id === ir.rentArticle
+        })
+
+        return {
+          ...ir,
+          invoiceRowText: article?.label ?? null,
+        }
+      }
+    )
+  }
+
+  return result
 }

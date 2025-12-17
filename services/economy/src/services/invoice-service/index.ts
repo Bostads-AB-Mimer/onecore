@@ -7,7 +7,6 @@ import {
 import { economy } from '@onecore/types'
 
 import {
-  getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
@@ -16,6 +15,7 @@ import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
+import { getInvoiceDetails } from './service'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -94,12 +94,10 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // TODO: This route doesn't take xpand into account
-  // Also doesn't get invoice rows
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
+      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
       if (!result) {
         ctx.status = 404
         return
