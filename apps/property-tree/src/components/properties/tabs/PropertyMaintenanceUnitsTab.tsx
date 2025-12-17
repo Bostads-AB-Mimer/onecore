@@ -1,15 +1,16 @@
 import { TabLayout } from '@/components/ui/TabLayout'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Button } from '@/components/ui/Button'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/Accordion'
-import { Wrench, FilePlus } from 'lucide-react'
+import { Wrench, ChevronRight, FilePlus } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import type { PropertyDetail } from '@/types/api'
 import { useMaintenanceUnits } from '@/components/hooks/useMaintenanceUnits'
+import { Link } from 'react-router-dom'
 
 interface PropertyMaintenanceUnitsTabProps {
   propertyDetail: PropertyDetail
@@ -145,34 +146,37 @@ export const PropertyMaintenanceUnitsTab = ({
                   {unitCount > 0 ? (
                     <div className="space-y-2">
                       {units.map((unit) => (
-                        <div
+                        <Link
                           key={unit.id}
-                          className="p-3 bg-background rounded-lg border border-slate-200"
+                          to={`/maintenance-units/${unit.code}`}
+                          className="block p-3 bg-background rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex-1">
                               <h4 className="font-medium text-sm mb-2">
                                 {unit.caption}
                               </h4>
-                              <div className="text-xs text-muted-foreground space-y-1">
-                                <p>
-                                  <span className="font-medium">Kod:</span>{' '}
-                                  {unit.code}
-                                </p>
-                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium">Kod:</span>{' '}
+                                {unit.code}
+                              </p>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled
-                              className="opacity-50 cursor-not-allowed shrink-0"
-                              title="Funktionalitet kommer snart"
-                            >
-                              <FilePlus className="h-4 w-4 mr-2" />
-                              Skapa ärende
-                            </Button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                className="opacity-50 cursor-not-allowed"
+                                title="Funktionalitet kommer snart"
+                                onClick={(e) => e.preventDefault()}
+                              >
+                                <FilePlus className="h-4 w-4 mr-2" />
+                                Skapa ärende
+                              </Button>
+                              <ChevronRight className="h-5 w-5 text-slate-400" />
+                            </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (
