@@ -13,6 +13,7 @@ import SearchView from './components/views/SearchView'
 import PropertyView from './components/views/v2/PropertyView'
 import BuildingView from './components/views/v2/BuildingView'
 import ComponentView from './components/views/v2/ComponentView'
+import ComponentLibraryView from './components/views/v2/ComponentLibraryView'
 import TenantView from './components/views/v2/TenantView'
 import { StaircaseView } from './components/views/StaircaseView'
 import ResidenceView from './components/views/v2/ResidenceView'
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="properties" element={<SearchView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
               <Route path="buildings/:buildingId" element={<BuildingView />} />
+              <Route path="components" element={<ComponentLibraryView />} />
               <Route
                 path="components/:componentId"
                 element={<ComponentView />}
