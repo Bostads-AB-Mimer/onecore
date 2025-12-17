@@ -10,6 +10,7 @@ model Components {
   status                      String    @default("ACTIVE") @db.NVarChar(20)
   quantity                    Float     @default(1)
   economicLifespan            Float     @map("economic_lifespan")
+  files                       String?   @map("files") @db.NVarChar(Max)
   createdAt                   DateTime  @default(now()) @map("created_at") @db.DateTime
   updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
