@@ -5,7 +5,7 @@ import { PropertyDocumentsTab } from './tabs/PropertyDocumentsTab'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 //import { PropertyMapTab } from './tabs/PropertyMapTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
-import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 //import { PropertyAccessTab } from './tabs/PropertyAccessTab'
 import { PropertyDetailTabsMobile } from './PropertyDetailTabsMobile'
@@ -110,7 +110,10 @@ export const PropertyDetailTabs = ({
 
       {features.showPropertyMaintenance && (
         <TabsContent value="maintenance">
-          <PropertyMaintenanceUnitsTab propertyDetail={propertyDetail} />
+          <MaintenanceUnitsTab
+            contextType="property"
+            identifier={propertyDetail.code}
+          />
         </TabsContent>
       )}
 
