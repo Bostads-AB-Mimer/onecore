@@ -7,12 +7,7 @@ import { AxiosError } from 'axios'
 import {
   ConsumerReport,
   Contact,
-  Lease,
   WaitingListType,
-  Applicant,
-  ApplicantStatus,
-  ApplicantWithListing,
-  DetailedApplicant,
   Tenant,
   leasing,
 } from '@onecore/types'
@@ -20,8 +15,6 @@ import { z } from 'zod'
 
 import { AdapterResult } from './../types'
 import config from '../../common/config'
-import { getListingByListingId } from './listings'
-import { getParkingSpaceByCode } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -29,112 +22,6 @@ axios.defaults.validateStatus = function (status) {
 }
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
-
-interface GetLeasesOptions {
-  includeUpcomingLeases: boolean
-  includeTerminatedLeases: boolean
-  includeContacts: boolean
-  includeRentInfo?: boolean // defaults to true
-}
-
-type IdentityCheckContact = z.infer<
-  typeof leasing.v1.IdentityCheckContactSchema
->
-
-const getLease = async (
-  leaseId: string,
-  includeContacts: string | string[] | undefined
-): Promise<Lease> => {
-  const leaseResponse = await axios(
-    tenantsLeasesServiceUrl +
-      '/leases/' +
-      encodeURIComponent(leaseId) +
-      (includeContacts ? '?includeContacts=true' : '')
-  )
-
-  return leaseResponse.data.content
-}
-
-const getLeasesForPnr = async (
-  nationalRegistrationNumber: string,
-  options: GetLeasesOptions
-): Promise<Lease[]> => {
-  const queryParams = new URLSearchParams({
-    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
-    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
-    includeContacts: options.includeContacts.toString(),
-  })
-
-  const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/for/nationalRegistrationNumber/${nationalRegistrationNumber}?${queryParams.toString()}`
-  )
-
-  return leasesResponse.data.content
-}
-
-const getLeasesForContactCode = async (
-  contactCode: string,
-  options: GetLeasesOptions
-): Promise<Lease[]> => {
-  const queryParams = new URLSearchParams({
-    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
-    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
-    includeContacts: options.includeContacts.toString(),
-  })
-
-  const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/for/contactCode/${contactCode}?${queryParams.toString()}`
-  )
-
-  return leasesResponse.data.content
-}
-
-const getLeasesForPropertyId = async (
-  propertyId: string,
-  options: GetLeasesOptions
-): Promise<Lease[]> => {
-  const queryParams = new URLSearchParams({
-    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
-    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
-    includeContacts: options.includeContacts.toString(),
-    includeRentInfo: (options.includeRentInfo !== false).toString(),
-  })
-  const leasesResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
-  )
-  return leasesResponse.data.content
-}
-
-// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
-> => {
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/building-managers`
-  )
-  return response.data.content
-}
-
-const searchLeases = async (
-  queryParams: Record<string, string | string[] | undefined>
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const params = new URLSearchParams()
-
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value === undefined) return
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v))
-    } else {
-      params.append(key, value)
-    }
-  })
-
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
-  )
-
-  return response.data
-}
 
 const getContactForPnr = async (
   nationalRegistrationNumber: string
@@ -319,46 +206,6 @@ const getContactByPhoneNumber = async (
   }
 }
 
-const createLease = async (
-  objectId: string,
-  contactId: string,
-  fromDate: string,
-  companyCode: string,
-  includeVAT: boolean
-): Promise<AdapterResult<string, 'create-lease-failed' | 'unknown'>> => {
-  const axiosOptions = {
-    method: 'POST',
-    data: {
-      parkingSpaceId: objectId,
-      contactCode: contactId,
-      fromDate,
-      companyCode,
-      includeVAT,
-    },
-  }
-
-  const result = await axios(tenantsLeasesServiceUrl + '/leases', axiosOptions)
-
-  if (result.status == 200) {
-    return { ok: true, data: result.data.content }
-  } else if (
-    result.status == 404 &&
-    result.data.error === 'Lease cannot be created on this rental object'
-  ) {
-    logger.error(
-      { objectId, contactId, fromDate },
-      'Lease could not be created for rental object'
-    )
-    return { ok: false, err: 'create-lease-failed' }
-  } else {
-    logger.error(
-      { error: result.data.error },
-      'Unknown error when creating lease'
-    )
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 const getCreditInformation = async (
   nationalRegistrationNumber: string
 ): Promise<ConsumerReport> => {
@@ -412,294 +259,6 @@ const resetWaitingList = async (
       'Error resetting waiting list for applicant ' + contactCode
     )
     return { ok: false, err: 'unknown' }
-  }
-}
-
-const getApplicantsByContactCode = async (
-  contactCode: string
-): Promise<any[] | undefined> => {
-  try {
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/`
-    )
-    return response.data.content
-  } catch (error) {
-    logger.error(error, 'Error fetching applicants by contact code:')
-    return undefined
-  }
-}
-
-const getApplicantsAndListingByContactCode = async (
-  contactCode: string
-): Promise<any[] | undefined> => {
-  try {
-    const applicantsResponse = (await getApplicantsByContactCode(
-      contactCode
-    )) as Applicant[]
-
-    if (!applicantsResponse || applicantsResponse.length === 0) {
-      return []
-    }
-
-    // Fetch all listings in parallel
-    const listingsPromises = applicantsResponse.map((applicant) =>
-      getListingByListingId(applicant.listingId)
-    )
-    const listingsResults = await Promise.all(listingsPromises)
-
-    // Create a map of listingId -> listing for easy lookup
-    const listingsMap = new Map()
-    listingsResults.forEach((listing, index) => {
-      if (listing) {
-        listingsMap.set(applicantsResponse[index].listingId, listing)
-      }
-    })
-
-    // Collect all rental object codes from listings
-    const rentalObjectCodes = Array.from(listingsMap.values())
-      .map((listing) => listing.rentalObjectCode)
-      .filter(Boolean)
-
-    // Fetch all parking spaces in parallel
-    const parkingSpacesPromises = rentalObjectCodes.map((code) =>
-      getParkingSpaceByCode(code)
-    )
-    const parkingSpacesResults = await Promise.all(parkingSpacesPromises)
-
-    // Create a map of rentalObjectCode -> parking space
-    const parkingSpacesMap = new Map()
-    parkingSpacesResults.forEach((result, index) => {
-      if (result.ok && result.data) {
-        parkingSpacesMap.set(rentalObjectCodes[index], result.data)
-      } else {
-        logger.info(
-          { rentalObjectCode: rentalObjectCodes[index] },
-          'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
-        )
-      }
-    })
-
-    // Build the final result with applicants, listings, and rental objects
-    const applicantsAndListings: ApplicantWithListing[] = []
-    for (const applicant of applicantsResponse) {
-      const listing = listingsMap.get(applicant.listingId)
-      if (listing) {
-        const rentalObject = parkingSpacesMap.get(listing.rentalObjectCode)
-        const listingWithRentalObject = rentalObject
-          ? { ...listing, rentalObject }
-          : listing
-
-        applicantsAndListings.push({
-          applicant,
-          listing: listingWithRentalObject,
-        })
-      }
-    }
-
-    return applicantsAndListings
-  } catch (error) {
-    logger.error(
-      error,
-      'Error fetching applicants and listings by contact code:'
-    )
-    return undefined
-  }
-}
-
-const getApplicantByContactCodeAndListingId = async (
-  contactCode: string,
-  listingId: string
-): Promise<any | undefined> => {
-  try {
-    return await axios.get(
-      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${listingId}`
-    )
-  } catch (error) {
-    logger.error(
-      error,
-      'Error fetching applicant by contact code and rental object code'
-    )
-    return undefined
-  }
-}
-
-const getDetailedApplicantsByListingId = async (
-  listingId: number
-): Promise<AdapterResult<DetailedApplicant[], 'unknown' | 'not-found'>> => {
-  try {
-    const response = await axios(
-      `${tenantsLeasesServiceUrl}/listing/${listingId}/applicants/details`
-    )
-
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(error, 'Error fetching detailed applicant data by listing id')
-
-    if (!(error instanceof AxiosError)) {
-      return { ok: false, err: 'unknown' }
-    }
-
-    if (error.response?.status === 404) {
-      return { ok: false, err: 'not-found' }
-    } else {
-      return { ok: false, err: 'unknown' }
-    }
-  }
-}
-
-const setApplicantStatusActive = async (
-  applicantId: string,
-  contactCode: string,
-  applicationType?: 'Replace' | 'Additional'
-): Promise<any> => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      {
-        status: ApplicantStatus.Active,
-        contactCode: contactCode,
-        applicationType,
-      }
-    )
-    return response.data
-  } catch (error) {
-    logger.error(
-      error,
-      `Error setting applicantStatus active on user with contactcode ${contactCode}`
-    )
-    throw new Error(`Failed to update status for applicant ${applicantId}`)
-  }
-}
-
-const withdrawApplicantByManager = async (
-  applicantId: string
-): Promise<any> => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      { status: ApplicantStatus.WithdrawnByManager }
-    )
-    return response.data
-  } catch (error) {
-    logger.error(error, 'Error patching applicant status:')
-    throw new Error(`Failed to update status for applicant ${applicantId}`)
-  }
-}
-
-const withdrawApplicantByUser = async (
-  applicantId: string,
-  contactCode: string
-): Promise<any> => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      { status: ApplicantStatus.WithdrawnByUser, contactCode: contactCode }
-    )
-    return response.data
-  } catch (error) {
-    logger.error(error, 'Error withdrawing applicant by user:')
-    return undefined
-  }
-}
-
-const updateApplicantStatus = async (params: {
-  contactCode: string
-  applicantId: number
-  status: ApplicantStatus
-}) => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${params.applicantId}/status`,
-      params
-    )
-    return response.data
-  } catch (err) {
-    logger.error(err, 'Error updating applicant status')
-    throw err
-  }
-}
-
-const validateResidentialAreaRentalRules = async (
-  contactCode: string,
-  districtCode: string
-): Promise<
-  AdapterResult<
-    { reason: string; applicationType: 'Replace' | 'Additional' },
-    {
-      tag: 'no-housing-contract-in-the-area' | 'not-found' | 'unknown'
-      data: unknown
-    }
-  >
-> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/applicants/validateResidentialAreaRentalRules/${contactCode}/${districtCode}`
-    )
-    if (res.status === 403) {
-      return {
-        ok: false,
-        err: { tag: 'no-housing-contract-in-the-area', data: res.data },
-      }
-    }
-
-    if (res.status === 404) {
-      return {
-        ok: false,
-        err: { tag: 'not-found', data: res.data },
-      }
-    }
-
-    if (res.status !== 200) {
-      return { ok: false, err: { tag: 'unknown', data: res.data } }
-    }
-
-    return { ok: true, data: res.data }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.validateResidentialAreaRentalRules')
-    return { ok: false, err: { tag: 'unknown', data: err } }
-  }
-}
-
-const validatePropertyRentalRules = async (
-  contactCode: string,
-  rentalObjectCode: string
-): Promise<
-  AdapterResult<
-    { reason: string; applicationType: 'Replace' | 'Additional' },
-    {
-      tag:
-        | 'not-tenant-in-the-property'
-        | 'not-a-parking-space'
-        | 'not-found'
-        | 'unknown'
-      data: unknown
-    }
-  >
-> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/applicants/validatePropertyRentalRules/${contactCode}/${rentalObjectCode}`
-    )
-
-    if (res.status === 404) {
-      return { ok: false, err: { tag: 'not-found', data: res.data } }
-    }
-
-    if (res.status === 400) {
-      return { ok: false, err: { tag: 'not-a-parking-space', data: res.data } }
-    }
-
-    if (res.status === 403) {
-      return {
-        ok: false,
-        err: { tag: 'not-tenant-in-the-property', data: res.data },
-      }
-    }
-
-    return { ok: true, data: res.data }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.validatePropertyRentalRules')
-    return { ok: false, err: { tag: 'unknown', data: err } }
   }
 }
 
@@ -832,10 +391,6 @@ const preliminaryTerminateLease = async (
 
 export {
   addApplicantToWaitingList,
-  createLease,
-  getApplicantByContactCodeAndListingId,
-  getApplicantsAndListingByContactCode,
-  getApplicantsByContactCode,
   getApplicationProfileByContactCode,
   getContactByContactCode,
   getContactByPhoneNumber,
@@ -844,25 +399,32 @@ export {
   getContactsDataBySearchQuery,
   getContactsForIdentityCheck,
   getCreditInformation,
-  getLease,
-  getLeasesForPnr,
-  getLeasesForContactCode,
-  getLeasesForPropertyId,
-  searchLeases,
-  getBuildingManagers,
-  getDetailedApplicantsByListingId,
   getTenantByContactCode,
   preliminaryTerminateLease,
   resetWaitingList,
-  setApplicantStatusActive,
   createContactComment,
   createOrUpdateApplicationProfileByContactCode,
+}
+
+export {
+  getDetailedApplicantsByListingId,
+  setApplicantStatusActive,
+  withdrawApplicantByManager,
+  withdrawApplicantByUser,
   updateApplicantStatus,
   validatePropertyRentalRules,
   validateResidentialAreaRentalRules,
-  withdrawApplicantByManager,
-  withdrawApplicantByUser,
-}
+  getApplicantByContactCodeAndListingId,
+  getApplicantsByContactCode,
+  getApplicantsAndListingByContactCode,
+} from './applicants'
+
+export {
+  createLease,
+  getLease,
+  getLeasesByContactCode,
+  getLeasesByRentalObjectCode,
+} from './leases'
 
 export {
   applyForListing,

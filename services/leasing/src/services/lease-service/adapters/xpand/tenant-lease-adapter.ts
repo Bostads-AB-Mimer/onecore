@@ -1,5 +1,5 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
-import transformFromXPandDb from './../../helpers/transformFromXPandDb'
+import transformFromXPandDb from './../../helpers/xpand-db'
 
 import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { Context } from 'koa'
@@ -123,65 +123,6 @@ const transformFromDbContact = (
   return contact
 }
 
-const getLease = async (
-  leaseId: string,
-  includeContacts: string | string[] | undefined
-): Promise<Lease | undefined> => {
-  logger.info({ leaseId }, 'Getting lease Xpand DB')
-  const rows = await getLeaseById(leaseId)
-  if (rows.length > 0) {
-    logger.info({ leaseId }, 'Getting lease Xpand DB complete')
-    if (includeContacts) {
-      const tenants = await getContactsByLeaseId(leaseId)
-      return transformFromXPandDb.toLease(rows[0], [], tenants)
-    } else {
-      return transformFromXPandDb.toLease(rows[0], [], [])
-    }
-  }
-
-  logger.info({ leaseId }, 'Getting lease Xpand DB complete - no lease found')
-  return undefined
-}
-
-const getLeasesForNationalRegistrationNumber = async (
-  nationalRegistrationNumber: string,
-  options: GetLeasesOptions
-) => {
-  logger.info('Getting leases for national registration number from Xpand DB')
-  const contact = await xpandDb
-    .from('cmctc')
-    .select('cmctc.keycmctc as contactKey')
-    .limit(1)
-    .where({
-      persorgnr: nationalRegistrationNumber,
-    })
-    .limit(1)
-
-  if (contact != undefined && contact.length > 0) {
-    let leases = await getLeasesByContactKey(contact[0].contactKey)
-
-    logger.info(
-      'Getting leases for national registration number from Xpand DB complete'
-    )
-
-    leases = filterLeasesByOptions(leases, options)
-
-    if (options.includeContacts) {
-      for (const lease of leases) {
-        const tenants = await getContactsByLeaseId(lease.leaseId)
-        lease.tenants = tenants
-      }
-    }
-
-    return leases
-  }
-
-  logger.info(
-    'Getting leases for national registration number from Xpand DB complete - no leases found'
-  )
-  return undefined
-}
-
 const getLeasesForContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
@@ -229,7 +170,9 @@ const getLeasesForContactCode = async (
     return { ok: false, err }
   }
 }
-
+// Leaving this while rebasing for reference.
+// There was changes here after i removed this function in my branch while moving to TenFAST.
+// FIgure our what the purpose of these changes are
 const getLeasesForPropertyId = async (
   propertyId: string,
   options: GetLeasesOptions
@@ -806,23 +749,6 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
-// const isLeaseActive = (lease: Lease | PartialLease): boolean => {
-//   const { leaseStartDate } = lease
-//   const currentDate = new Date()
-
-//   return leaseStartDate < currentDate
-// }
-
-// const isLeaseActiveOrUpcoming = (lease: Lease | PartialLease): boolean => {
-//   const { lastDebitDate, terminationDate } = lease
-//   const currentDate = new Date()
-
-//   return (
-//     (!lastDebitDate || currentDate <= lastDebitDate) &&
-//     (!terminationDate || currentDate < terminationDate)
-//   )
-// }
-
 const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
@@ -880,10 +806,7 @@ const formatDate = (date: Date) => {
 }
 
 export {
-  getLease,
   getLeasesForContactCode,
-  getLeasesForNationalRegistrationNumber,
-  getLeasesForPropertyId,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactByPhoneNumber,
@@ -897,4 +820,6 @@ export {
   searchContactsPaginated,
   getContactsForIdentityCheck,
   transformFromDbContact,
+  getContactsByLeaseId,
+  getLeasesForPropertyId,
 }

@@ -1,4 +1,4 @@
-import transformFromXPandDb from '../../helpers/transformFromXPandDb'
+import transformFromXPandDb from '../../helpers/xpand-db'
 import { LeaseStatus } from '@onecore/types'
 
 describe(transformFromXPandDb.toLease, () => {

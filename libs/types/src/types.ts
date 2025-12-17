@@ -68,10 +68,7 @@ interface Lease {
   tenantContactIds: string[] | undefined
   tenants: Contact[] | undefined
   rentalPropertyId: string
-  rentalProperty: RentalProperty | undefined
   type: string
-  rentInfo: RentInfo | undefined
-  address: Address | undefined
   noticeGivenBy: string | undefined
   noticeDate: Date | undefined
   noticeTimeTenant: string | undefined
