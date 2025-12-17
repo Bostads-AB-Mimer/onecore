@@ -896,3 +896,292 @@ describe(tenfastAdapter.createLease, () => {
     })
   })
 })
+
+describe(tenfastAdapter.preliminaryTerminateLease, () => {
+  const leaseId = '216-704-00-0022/02'
+  const contactCode = 'P12345'
+  const lastDebitDate = new Date('2025-12-31')
+  const desiredMoveDate = new Date('2025-12-31')
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('should successfully terminate lease when all requests succeed', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 200,
+      data: {
+        _id: '693aa758ba075dbac223a1ff',
+        externalId: leaseId,
+      },
+    }
+
+    const mockTerminationResponse = {
+      status: 200,
+      data: { message: 'Signerings begäran skickad' },
+    }
+
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce(mockLeaseResponse) // Get lease by externalId
+      .mockResolvedValueOnce(mockTerminationResponse) // Terminate lease
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: true,
+      data: { message: 'Signerings begäran skickad' },
+    })
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(request).toHaveBeenNthCalledWith(1, {
+      method: 'get',
+      url: expect.stringContaining(
+        `/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}`
+      ),
+    })
+    expect(request).toHaveBeenNthCalledWith(2, {
+      method: 'patch',
+      url: expect.stringContaining(
+        '/v1/hyresvard/avtal/693aa758ba075dbac223a1ff/send-simplesign-termination'
+      ),
+      data: {
+        endDate: '2025-12-31',
+        cancelledByType: 'hyresgast',
+        reason: 'Tenant requested termination',
+        preferredMoveOutDate: '2025-12-31',
+      },
+    })
+  })
+
+  it('should return "lease-not-found" when lease lookup returns 404', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 404,
+      data: { error: 'Not found' },
+    }
+
+    ;(request as jest.Mock).mockResolvedValueOnce(mockLeaseResponse)
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'lease-not-found',
+    })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return "termination-failed" when lease lookup fails with non-404 error', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 500,
+      data: { error: 'Internal server error' },
+    }
+
+    ;(request as jest.Mock).mockResolvedValueOnce(mockLeaseResponse)
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'termination-failed',
+    })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return "termination-failed" when termination request returns 400', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 200,
+      data: { _id: '693aa758ba075dbac223a1ff' },
+    }
+
+    const mockTerminationResponse = {
+      status: 400,
+      data: { error: 'Invalid request data' },
+    }
+
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce(mockLeaseResponse)
+      .mockResolvedValueOnce(mockTerminationResponse)
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'termination-failed',
+    })
+  })
+
+  it('should return "lease-not-found" when termination request returns 404', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 200,
+      data: { _id: '693aa758ba075dbac223a1ff' },
+    }
+
+    const mockTerminationResponse = {
+      status: 404,
+      data: { error: 'Lease not found' },
+    }
+
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce(mockLeaseResponse)
+      .mockResolvedValueOnce(mockTerminationResponse)
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'lease-not-found',
+    })
+  })
+
+  it('should return "termination-failed" when termination request returns 500', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 200,
+      data: { _id: '693aa758ba075dbac223a1ff' },
+    }
+
+    const mockTerminationResponse = {
+      status: 500,
+      data: { error: 'Server error' },
+    }
+
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce(mockLeaseResponse)
+      .mockResolvedValueOnce(mockTerminationResponse)
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'termination-failed',
+    })
+  })
+
+  it('should return "unknown" when termination request returns unexpected status code', async () => {
+    // Arrange
+    const mockLeaseResponse = {
+      status: 200,
+      data: { _id: '693aa758ba075dbac223a1ff' },
+    }
+
+    const mockTerminationResponse = {
+      status: 418, // I'm a teapot
+      data: { error: 'Unexpected error' },
+    }
+
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce(mockLeaseResponse)
+      .mockResolvedValueOnce(mockTerminationResponse)
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'unknown',
+    })
+  })
+
+  it('should return "termination-failed" when request throws an exception', async () => {
+    // Arrange
+    ;(request as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+    // Act
+    const result = await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'termination-failed',
+    })
+  })
+
+  it('should properly URL encode leaseId with special characters', async () => {
+    // Arrange
+    const leaseIdWithSlash = '216-704-00-0022/02'
+    const mockLeaseResponse = {
+      status: 200,
+      data: { _id: '693aa758ba075dbac223a1ff' },
+    }
+
+    const mockTerminationResponse = {
+      status: 200,
+      data: { message: 'Success' },
+    }
+
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce(mockLeaseResponse)
+      .mockResolvedValueOnce(mockTerminationResponse)
+
+    // Act
+    await tenfastAdapter.preliminaryTerminateLease(
+      leaseIdWithSlash,
+      contactCode,
+      lastDebitDate,
+      desiredMoveDate
+    )
+
+    // Assert
+    expect(request).toHaveBeenNthCalledWith(1, {
+      method: 'get',
+      url: expect.stringContaining('216-704-00-0022%2F02'),
+    })
+  })
+})
