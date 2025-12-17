@@ -21,7 +21,7 @@ import { z } from 'zod'
 import { AdapterResult } from './../types'
 import config from '../../common/config'
 import { getListingByListingId } from './listings'
-import { getParkingSpaceByCode, getParkingSpaces } from './rental-objects'
+import { getParkingSpaceByCode } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -817,9 +817,10 @@ const preliminaryTerminateLease = async (
       if (status === 404) {
         return {
           ok: false,
-          err: errorType === 'tenant-not-found' || errorType === 'lease-not-found'
-            ? errorType
-            : 'lease-not-found',
+          err:
+            errorType === 'tenant-not-found' || errorType === 'lease-not-found'
+              ? errorType
+              : 'lease-not-found',
         }
       }
 
