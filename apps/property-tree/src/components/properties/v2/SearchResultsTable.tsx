@@ -14,9 +14,7 @@ export type SearchResult =
   | {
       type: 'residence'
       id: string
-      code: string
       name: string | null
-      deleted: boolean
       rentalId: string | null
     }
   | { type: 'building'; id: string; code: string; name: string | null }
@@ -105,7 +103,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'building':
         return result.name || result.code
       case 'residence':
-        return result.name || result.code
+        return result.name || result.rentalId || '-'
       case 'parking-space':
         return result.name || result.code
       case 'facility':
@@ -165,23 +163,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         {
           key: 'status',
           label: 'Status',
-          render: (result) => (
-            <>
-              {result.type === 'residence' && (
-                <Badge
-                  variant="outline"
-                  className={
-                    result.deleted
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-green-100 text-green-800'
-                  }
-                >
-                  {result.deleted ? 'Borttagen' : 'Aktiv'}
-                </Badge>
-              )}
-              {result.type !== 'residence' && '-'}
-            </>
-          ),
+          render: () => '-',
           hideOnMobile: true,
         },
         {
@@ -210,18 +192,6 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
               {getTypeDisplay(result.type)}
             </Badge>
           </div>
-          {result.type === 'residence' && (
-            <Badge
-              variant="outline"
-              className={
-                result.deleted
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-green-100 text-green-800'
-              }
-            >
-              {result.deleted ? 'Borttagen' : 'Aktiv'}
-            </Badge>
-          )}
           <div className="flex justify-end">
             <Button asChild variant="link" size="sm">
               <Link to={getPath(result)}>Visa detaljer</Link>

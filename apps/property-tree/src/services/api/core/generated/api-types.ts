@@ -2756,6 +2756,38 @@ export interface paths {
       };
     };
   };
+  "/residences/search": {
+    /**
+     * Search residences
+     * @description Searches for residences by rental object id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental object id). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved residences matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ResidenceSearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/{residenceId}": {
     /**
      * Get residence data by residenceId
@@ -3178,6 +3210,70 @@ export interface paths {
       };
     };
   };
+  "/facilities/search": {
+    /**
+     * Search facilities
+     * @description Searches for facilities by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved facilities matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FacilitySearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/parking-spaces/search": {
+    /**
+     * Search parking spaces
+     * @description Searches for parking spaces by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved parking spaces matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ParkingSpaceSearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -3408,6 +3504,64 @@ export interface components {
       code: string;
       name: string;
       organizationNumber: string | null;
+    };
+    CompanyDetails: {
+      id: string;
+      propertyObjectId: string;
+      code: string;
+      name: string;
+      organizationNumber: string | null;
+      phone: string | null;
+      fax: string | null;
+      vatNumber?: string | null;
+      internalExternal: number;
+      fTax: number;
+      cooperativeHousingAssociation: number;
+      differentiatedAdditionalCapital: number;
+      rentAdministered: number;
+      blocked: number;
+      rentDaysPerMonth: number;
+      economicPlanApproved: number;
+      vatObligationPercent: number;
+      vatRegistered: number;
+      energyOptimization: number;
+      ownedCompany: number;
+      interestInvoice: number;
+      errorReportAdministration: number;
+      mediaBilling: number;
+      ownResponsibilityForInternalMaintenance: number;
+      subletPercentage: number;
+      subletFeeAmount: number;
+      disableQuantitiesBelowCompany: number;
+      timestamp: string;
+    };
+    Component: {
+      id: string;
+      code: string;
+      name: string;
+      details: {
+        manufacturer: string | null;
+        typeDesignation: string | null;
+      };
+      dates: {
+        installation: string | null;
+        warrantyEnd: string | null;
+      };
+      classification: {
+        componentType: {
+          code: string;
+          name: string;
+        };
+        category: {
+          code: string;
+          name: string;
+        };
+      };
+      maintenanceUnits: {
+          id: string;
+          code: string;
+          name: string;
+        }[];
     };
     Property: {
       id: string;
@@ -3791,37 +3945,19 @@ export interface components {
       };
       areaSize: number | null;
     };
-    SearchQueryParams: {
-      /** @description The search query string used to find properties, buildings and residences */
-      q: string;
-    };
-    PropertySearchResult: {
-      /** @description Unique identifier for the search result */
+    FacilitySearchResult: {
       id: string;
-      /**
-       * @description Indicates this is a property result
-       * @enum {string}
-       */
-      type: "property";
-      /** @description Name or designation of the property */
-      name: string;
-    };
-    BuildingSearchResult: {
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a building result
-       * @enum {string}
-       */
-      type: "building";
-      /** @description Name of the building */
+      rentalId: string;
+      code: string;
       name: string | null;
-      property?: ({
-        /** @description Property associated with the building */
+      property: {
+        code: string | null;
         name: string | null;
-        id: string;
-        code: string;
-      }) | null;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
+      };
     };
     ResidenceSearchResult: {
       /** @description Unique identifier for the search result */
@@ -3870,6 +4006,38 @@ export interface components {
         /** @description Name of building associated with the parking space */
         name: string | null;
       };
+    };
+    SearchQueryParams: {
+      /** @description The search query string used to find properties, buildings and residences */
+      q: string;
+    };
+    PropertySearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a property result
+       * @enum {string}
+       */
+      type: "property";
+      /** @description Name or designation of the property */
+      name: string;
+    };
+    BuildingSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a building result
+       * @enum {string}
+       */
+      type: "building";
+      /** @description Name of the building */
+      name: string | null;
+      property?: ({
+        /** @description Property associated with the building */
+        name: string | null;
+        id: string;
+        code: string;
+      }) | null;
     };
     /** @description A search result that can be either a property, building, residence or parking space */
     SearchResult: {

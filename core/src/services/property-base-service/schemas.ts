@@ -46,6 +46,37 @@ export const CompanySchema = z.object({
   organizationNumber: z.string().nullable(),
 })
 
+export const CompanyDetailsSchema = z.object({
+  id: z.string(),
+  propertyObjectId: z.string(),
+  code: z.string(),
+  name: z.string(),
+  organizationNumber: z.string().nullable(),
+  phone: z.string().nullable(),
+  fax: z.string().nullable(),
+  vatNumber: z.string().nullable().optional(),
+  internalExternal: z.number(),
+  fTax: z.number(),
+  cooperativeHousingAssociation: z.number(),
+  differentiatedAdditionalCapital: z.number(),
+  rentAdministered: z.number(),
+  blocked: z.number(),
+  rentDaysPerMonth: z.number(),
+  economicPlanApproved: z.number(),
+  vatObligationPercent: z.number(),
+  vatRegistered: z.number(),
+  energyOptimization: z.number(),
+  ownedCompany: z.number(),
+  interestInvoice: z.number(),
+  errorReportAdministration: z.number(),
+  mediaBilling: z.number(),
+  ownResponsibilityForInternalMaintenance: z.number(),
+  subletPercentage: z.number(),
+  subletFeeAmount: z.number(),
+  disableQuantitiesBelowCompany: z.number(),
+  timestamp: z.string(),
+})
+
 export const PropertySchema = z.object({
   id: z.string(),
   propertyObjectId: z.string(),
@@ -536,3 +567,91 @@ export type Room = z.infer<typeof RoomSchema>
 export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
 export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>
 export type FacilityDetails = z.infer<typeof FacilityDetailsSchema>
+
+export const FacilitySearchResultSchema = z.object({
+  id: z.string(),
+  rentalId: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
+export type FacilitySearchResult = z.infer<typeof FacilitySearchResultSchema>
+
+export const ResidenceSearchResultSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  deleted: z.boolean(),
+  rentalId: z.string().nullable(),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
+export type ResidenceSearchResult = z.infer<typeof ResidenceSearchResultSchema>
+
+export const ParkingSpaceSearchResultSchema = z.object({
+  id: z.string(),
+  rentalId: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
+export type ParkingSpaceSearchResult = z.infer<
+  typeof ParkingSpaceSearchResultSchema
+>
+
+export const ComponentSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  details: z.object({
+    manufacturer: z.string().nullable(),
+    typeDesignation: z.string().nullable(),
+  }),
+  dates: z.object({
+    installation: z.string().nullable(),
+    warrantyEnd: z.string().nullable(),
+  }),
+  classification: z.object({
+    componentType: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+    category: z.object({
+      code: z.string(),
+      name: z.string(),
+    }),
+  }),
+  maintenanceUnits: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string(),
+      name: z.string(),
+    })
+  ),
+})
+
+export type Component = z.infer<typeof ComponentSchema>
+export type CompanyDetails = z.infer<typeof CompanyDetailsSchema>

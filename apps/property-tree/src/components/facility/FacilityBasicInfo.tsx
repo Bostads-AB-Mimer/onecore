@@ -11,13 +11,15 @@ import { Loader2 } from 'lucide-react'
 interface FacilityBasicInfoProps {
   facility: components['schemas']['FacilityDetails']
   rent?: number
-  isLoadingRent?: boolean
+  isRented?: boolean
+  isLoadingLease?: boolean
 }
 
 export const FacilityBasicInfo = ({
   facility,
   rent,
-  isLoadingRent,
+  isRented,
+  isLoadingLease,
 }: FacilityBasicInfoProps) => {
   const isMobile = useIsMobile()
 
@@ -60,12 +62,12 @@ export const FacilityBasicInfo = ({
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="font-medium">
-                {isLoadingRent ? (
+                {isLoadingLease ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Laddar...
                   </span>
-                ) : rent ? (
+                ) : isRented ? (
                   'Uthyrd'
                 ) : (
                   'Vakant'
@@ -81,7 +83,7 @@ export const FacilityBasicInfo = ({
             <div>
               <p className="text-sm text-muted-foreground">Månadshyra</p>
               <p className="font-medium">
-                {isLoadingRent ? (
+                {isLoadingLease ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Laddar...

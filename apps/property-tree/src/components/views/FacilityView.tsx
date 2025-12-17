@@ -66,7 +66,8 @@ export function FacilityView() {
         <FacilityBasicInfo
           facility={facility}
           rent={currentRent}
-          isLoadingRent={leasesQuery.isLoading}
+          isRented={!!currentLease}
+          isLoadingLease={leasesQuery.isLoading}
         />
       </div>
 

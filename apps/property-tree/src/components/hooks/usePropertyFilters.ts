@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { GET } from '@/services/api/baseApi'
+import { GET } from '@/services/api/core/base-api'
 import type { Property, ResidenceSearchResult } from '@/services/types'
 import type { SearchResult } from '@/components/properties/v2/SearchResultsTable'
 
@@ -81,9 +81,7 @@ export const usePropertyFilters = () => {
         (residence: ResidenceSearchResult) => ({
           type: 'residence' as const,
           id: residence.id,
-          code: residence.code,
           name: residence.name,
-          deleted: residence.deleted,
           rentalId: residence.rentalId,
         })
       )
