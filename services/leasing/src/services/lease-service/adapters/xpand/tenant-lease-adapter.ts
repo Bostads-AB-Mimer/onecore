@@ -327,40 +327,10 @@ const getContactsForLeaseIds = async (
     return new Map()
   }
 
-  const contactRows = await xpandDb
-    .from('cmctc')
-    .select(
-      'cmctc.cmctckod as contactCode',
-      'cmctc.fnamn as firstName',
-      'cmctc.enamn as lastName',
-      'cmctc.cmctcben as fullName',
-      'cmctc.persorgnr as nationalRegistrationNumber',
-      'cmctc.birthdate as birthDate',
-      'cmadr.adress1 as street',
-      'cmadr.adress3 as postalCode',
-      'cmadr.adress4 as city',
-      'cmeml.cmemlben as emailAddress',
-      'cmctc.keycmobj as keycmobj',
-      'cmctc.keycmctc as contactKey',
-      'bkkty.bkktyben as queueName',
-      'bkqte.quetime as queueTime',
-      'cmctc.lagsokt as protectedIdentity',
-      'cmctc.utslag as specialAttention'
-    )
-    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
-    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
-    .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
-    .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
-    .whereIn('cmctc.keycmctc', contactKeys)
-    .where(function () {
-      this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
-    })
-    .where(function () {
-      this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
-    })
-    .orderByRaw(
-      'CASE WHEN cmadr.fdate IS NULL THEN 1 ELSE 0 END, cmadr.fdate ASC'
-    )
+  const contactRows = await getContactQuery().whereIn(
+    'cmctc.keycmctc',
+    contactKeys
+  )
 
   const keycmobjs = [...new Set(contactRows.map((r) => r.keycmobj as string))]
   const phoneRows = await xpandDb
