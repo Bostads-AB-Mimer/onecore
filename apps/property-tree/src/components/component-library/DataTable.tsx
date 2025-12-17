@@ -1,12 +1,5 @@
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/v2/Table'
+import { ResponsiveTable } from '@/components/shared/v2/ResponsiveTable'
 import { Button } from '@/components/ui/v2/Button'
 import {
   DropdownMenu,
@@ -59,90 +52,134 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
-  if (data.length === 0) {
-    return (
-      <div className="text-center py-16 space-y-4">
-        <p className="text-muted-foreground">{emptyMessage}</p>
+  // Add actions column to the columns array for desktop view
+  const columnsWithActions = [
+    ...columns,
+    {
+      key: 'actions',
+      label: '',
+      render: (item: T) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(item)
+              }}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Redigera
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(item)
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Ta bort
+            </DropdownMenuItem>
+            {actions.map((action, index) => (
+              <DropdownMenuItem
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  action.onClick(item)
+                }}
+              >
+                {action.icon}
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      className: 'w-[50px]',
+    },
+  ]
+
+  // Custom mobile card renderer with action buttons
+  const mobileCardRenderer = (item: T) => (
+    <div
+      className="space-y-3"
+      onClick={onRowClick ? () => onRowClick(item) : undefined}
+    >
+      {/* Column data */}
+      <div className="space-y-2">
+        {columns.map((column) => (
+          <div key={column.key} className="flex justify-between items-start gap-2">
+            <span className="text-xs text-muted-foreground font-medium shrink-0">
+              {column.label}:
+            </span>
+            <span className="text-sm text-right break-words">
+              {column.render(item)}
+            </span>
+          </div>
+        ))}
       </div>
-    )
-  }
+
+      {/* Action buttons for mobile */}
+      <div className="flex flex-wrap gap-2 pt-2 border-t">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(item)
+          }}
+          className="flex-1 min-w-[100px]"
+        >
+          <Edit className="h-4 w-4 mr-1" />
+          Redigera
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(item)
+          }}
+          className="flex-1 min-w-[100px]"
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Ta bort
+        </Button>
+        {actions.map((action, index) => (
+          <Button
+            key={index}
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              action.onClick(item)
+            }}
+            className="flex-1 min-w-[100px]"
+          >
+            {action.icon}
+            {action.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((col) => (
-              <TableHead key={col.key} style={{ width: col.width }}>
-                {col.label}
-              </TableHead>
-            ))}
-            <TableHead className="w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((item) => (
-            <TableRow
-              key={item.id}
-              className={
-                onRowClick
-                  ? 'hover:bg-muted/50 cursor-pointer'
-                  : 'hover:bg-muted/50'
-              }
-              onClick={() => onRowClick?.(item)}
-            >
-              {columns.map((col) => (
-                <TableCell key={col.key}>{col.render(item)}</TableCell>
-              ))}
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEdit(item)
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Redigera
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(item)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Ta bort
-                    </DropdownMenuItem>
-                    {actions.map((action, index) => (
-                      <DropdownMenuItem
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          action.onClick(item)
-                        }}
-                      >
-                        {action.icon}
-                        {action.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <ResponsiveTable
+      data={data}
+      columns={columnsWithActions}
+      keyExtractor={(item) => item.id}
+      emptyMessage={emptyMessage}
+      mobileCardRenderer={mobileCardRenderer}
+      onRowClick={onRowClick}
+    />
   )
 }
