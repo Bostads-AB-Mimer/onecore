@@ -17,7 +17,7 @@ import { z } from 'zod'
 import { AdapterResult } from './../types'
 import config from '../../common/config'
 import { getListingByListingId } from './listings'
-import { getParkingSpaceByCode, getParkingSpaces } from './rental-objects'
+import { getParkingSpaceByCode } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -650,6 +650,63 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
+const preliminaryTerminateLease = async (
+  leaseId: string,
+  contactCode: string,
+  lastDebitDate: Date,
+  desiredMoveDate: Date
+): Promise<
+  AdapterResult<
+    any,
+    'tenant-not-found' | 'lease-not-found' | 'termination-failed' | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
+      {
+        contactCode,
+        lastDebitDate: lastDebitDate.toISOString(),
+        desiredMoveDate: desiredMoveDate.toISOString(),
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(
+      { status: response.status, data: response.data },
+      'Failed to preliminary terminate lease'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response) {
+      const errorType = err.response.data?.error
+      const status = err.response.status
+
+      if (status === 404) {
+        return {
+          ok: false,
+          err:
+            errorType === 'tenant-not-found' || errorType === 'lease-not-found'
+              ? errorType
+              : 'lease-not-found',
+        }
+      }
+
+      logger.error(
+        { status, error: errorType, leaseId },
+        'Error preliminary terminating lease'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+
+    logger.error(err, `Error preliminary terminating lease: ${leaseId}`)
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
@@ -668,6 +725,7 @@ export {
   getLeasesForPropertyId,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
+  preliminaryTerminateLease,
   resetWaitingList,
   setApplicantStatusActive,
   createOrUpdateApplicationProfileByContactCode,
