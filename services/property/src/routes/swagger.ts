@@ -94,6 +94,10 @@ const schemas = {
     name: 'GetFacilitiesByBuildingCodeResponse',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.RentalBlockSchema, {
+    name: 'RentalBlock',
+    target: 'openApi3',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

@@ -41,4 +41,18 @@ export const residenceService = {
 
     return data.content
   },
+
+  async getRentalBlocksByRentalId(
+    rentalId: string,
+    includeActiveBlocksOnly = false
+  ): Promise<components['schemas']['RentalBlock'][]> {
+    const { data, error } = await GET(
+      '/residences/rental-blocks/by-rental-id/{rentalId}',
+      {
+        params: { path: { rentalId }, query: { includeActiveBlocksOnly } },
+      }
+    )
+    if (error) throw error
+    return data.content || []
+  },
 }

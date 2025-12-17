@@ -850,4 +850,83 @@ describe('@onecore/property-adapter', () => {
       if (!result.ok) expect(result.err).toBe('unknown')
     })
   })
+
+  describe('getRentalBlocksByRentalId', () => {
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getRentalBlocksByRentalId('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns not-found if rental ID is not found', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
+          () => new HttpResponse(null, { status: 404 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getRentalBlocksByRentalId('1234')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('not-found')
+    })
+
+    it('returns rental blocks', async () => {
+      const rentalBlocksMock = factory.rentalBlock.buildList(3)
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
+          () =>
+            HttpResponse.json(
+              {
+                content: rentalBlocksMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getRentalBlocksByRentalId('1234')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: rentalBlocksMock,
+      })
+    })
+
+    it('returns rental blocks with includeActiveBlocksOnly option', async () => {
+      const rentalBlocksMock = factory.rentalBlock.buildList(2)
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
+          () =>
+            HttpResponse.json(
+              {
+                content: rentalBlocksMock,
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await propertyBaseAdapter.getRentalBlocksByRentalId(
+        '1234',
+        { includeActiveBlocksOnly: true }
+      )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: rentalBlocksMock,
+      })
+    })
+  })
 })

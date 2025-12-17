@@ -10,6 +10,7 @@ import {
   searchResidences,
   getResidenceByRentalId,
   getResidenceSummariesByBuildingCodeAndStaircaseCode,
+  getRentalBlocksByRentalId,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -18,6 +19,7 @@ import {
   ResidenceSearchResult,
   GetResidenceByRentalIdResponse,
   ResidenceSummarySchema,
+  RentalBlock,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -410,6 +412,88 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /residences/rental-id/{rentalId}/rental-blocks:
+   *   get:
+   *     summary: Get rental blocks by rental ID
+   *     description: Returns all rental blocks for the specified rental ID
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental ID
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlock'
+   *       404:
+   *         description: Rental ID not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-id/:rentalId/rental-blocks',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalId = ctx.params.rentalId
+      const includeActiveBlocksOnly =
+        ctx.query.includeActiveBlocksOnly === 'true'
+
+      try {
+        const rentalBlocks = await getRentalBlocksByRentalId(rentalId, {
+          includeActiveBlocksOnly,
+        })
+
+        if (rentalBlocks === null) {
+          ctx.status = 404
+          ctx.body = { reason: 'Rental ID not found', ...metadata }
+          return
+        }
+
+        const mappedRentalBlocks: RentalBlock[] = rentalBlocks.map((rb) => ({
+          id: rb.id,
+          blockReasonId: rb.blockReasonId,
+          blockReason: rb.blockReason.caption,
+          fromDate: rb.fromDate,
+          toDate: rb.toDate,
+          amount: rb.amount,
+        }))
+
+        ctx.status = 200
+        ctx.body = {
+          content: mappedRentalBlocks,
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(err, 'Error fetching rental blocks by rental ID')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger
