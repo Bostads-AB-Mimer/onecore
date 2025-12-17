@@ -19,6 +19,7 @@ model PropertyObject {
   //parkingSpace ParkingSpace? //@relation("PropertyObjectToParkingSpace")
   propertyStructures PropertyStructure[] //@relation("PropertyObjectToPropertyStructure", @map("fkbabufkeycmobj"))
   component          Component[]         @relation("ComponentToPropertyObject")
+  componentInstallations ComponentInstallations[]
   building           Building? //@relation("PropertyObjectToBuilding")
   administrativeUnit AdministrativeUnit? //@relation("PropertyObjectToAdministrativeUnit")
   propertyArea       PropertyArea[] //@relation("PropertyObjectToPropertyArea")
