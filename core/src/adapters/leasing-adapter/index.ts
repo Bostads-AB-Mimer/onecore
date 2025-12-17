@@ -928,9 +928,10 @@ const preliminaryTerminateLease = async (
       if (status === 404) {
         return {
           ok: false,
-          err: errorType === 'tenant-not-found' || errorType === 'lease-not-found'
-            ? errorType
-            : 'lease-not-found',
+          err:
+            errorType === 'tenant-not-found' || errorType === 'lease-not-found'
+              ? errorType
+              : 'lease-not-found',
         }
       }
 
