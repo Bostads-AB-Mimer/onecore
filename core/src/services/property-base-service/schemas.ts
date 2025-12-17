@@ -598,7 +598,9 @@ export const FileMetadataSchema = z.object({
 })
 
 export const FileMetadataWithUrlSchema = FileMetadataSchema.extend({
-  url: z.string().describe('Presigned URL for file access (valid for 24 hours)'),
+  url: z
+    .string()
+    .describe('Presigned URL for file access (valid for 24 hours)'),
 })
 
 export type FileMetadata = z.infer<typeof FileMetadataSchema>
@@ -639,6 +641,19 @@ export const ComponentModelSchema = z.object({
   updatedAt: z.string(),
   componentType: ComponentTypeSchema.optional(),
   subtype: ComponentSubtypeSchema.optional(),
+})
+
+export const ComponentInstallationWithoutComponentSchema = z.object({
+  id: z.string(),
+  componentId: z.string(),
+  spaceId: xpandIdSchema.nullable(),
+  buildingPartId: xpandIdSchema.nullable(),
+  installationDate: z.string(),
+  deinstallationDate: z.string().nullable(),
+  orderNumber: z.string(),
+  cost: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 })
 
 export const ComponentNewSchema = z.object({
