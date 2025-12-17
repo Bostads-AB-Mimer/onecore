@@ -175,10 +175,7 @@ export interface paths {
         };
       };
       responses: {
-        /**
-         * @description Successfully retrieved the components list. Returns an array of component objects
-         * containing details like ID, code, name, manufacturer, installation date, etc.
-         */
+        /** @description Component type details */
         200: {
           content: {
             "application/json": {
@@ -564,9 +561,9 @@ export interface paths {
   };
   "/components/by-room/{roomId}": {
     /**
-     * Gets a list of components for a room
-     * @description Retrieves all components associated with a specific room ID.
-     * Components are returned ordered by installation date (newest first).
+     * Get components installed in a specific room
+     * @description Retrieves all components currently installed in the specified room.
+     * Only returns components that are currently installed (no deinstallation date).
      */
     get: {
       parameters: {
@@ -576,7 +573,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Successfully retrieved the components list */
+        /** @description List of components in the room */
         200: {
           content: {
             "application/json": {
@@ -986,8 +983,8 @@ export interface paths {
       parameters: {
         query?: {
           /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
-          includeActiveBlocksOnly?: boolean
-        }
+          includeActiveBlocksOnly?: boolean;
+        };
         path: {
           /** @description The ID of the residence */
           id: string;
@@ -1242,6 +1239,38 @@ export interface paths {
         };
         /** @description Property not found */
         404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/parking-spaces/search": {
+    /**
+     * Search parking spaces
+     * @description Searches for parking spaces by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved parking spaces matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ParkingSpaceSearchResult"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
           content: never;
         };
         /** @description Internal server error */
@@ -1532,7 +1561,7 @@ export interface paths {
       };
     };
   };
-  "/facilities/rental-id/{rentalId}": {
+  "/facilities/by-rental-id/{rentalId}": {
     /**
      * Get a facility by rental ID
      * @description Returns a facility with the specified rental ID
@@ -1552,6 +1581,66 @@ export interface paths {
           };
         };
         /** @description Facility not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/facilities/by-property-code/{propertyCode}": {
+    /**
+     * Get facilities by property code
+     * @description Returns a list of facilities for the specified property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property code of the property */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facilities */
+        200: {
+          content: {
+            "application/json": components["schemas"]["GetFacilitiesByPropertyCodeResponse"];
+          };
+        };
+        /** @description Facilities not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/facilities/by-building-code/{buildingCode}": {
+    /**
+     * Get facilities by building code
+     * @description Returns a list of facilities for the specified building code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The building code of the building */
+          buildingCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the facilities */
+        200: {
+          content: {
+            "application/json": components["schemas"]["GetFacilitiesByBuildingCodeResponse"];
+          };
+        };
+        /** @description Facilities not found */
         404: {
           content: never;
         };
@@ -1689,6 +1778,16 @@ export interface components {
             name: string | null;
           };
         }) | null;
+        rentalBlocks: ({
+            id: string;
+            blockReasonId: string;
+            blockReason: string;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string | null;
+            amount: number | null;
+          })[];
       };
       property: {
         name: string | null;
@@ -1880,6 +1979,16 @@ export interface components {
         /** Format: date-time */
         to: string;
       };
+      property?: {
+        propertyId: string | null;
+        propertyName: string | null;
+        propertyCode: string | null;
+      };
+      building?: {
+        buildingId: string | null;
+        buildingName: string | null;
+        buildingCode: string | null;
+      };
       deleted: boolean;
       timestamp: string;
     };
@@ -2014,6 +2123,34 @@ export interface components {
         name: string | null;
         code: string | null;
       };
+      staircase: ({
+        id: string;
+        buildingCode: string;
+        code: string;
+        name: string | null;
+        features: {
+          floorPlan: string | null;
+          accessibleByElevator: boolean;
+        };
+        dates: {
+          /** Format: date-time */
+          from: string;
+          /** Format: date-time */
+          to: string;
+        };
+        property?: {
+          propertyId: string | null;
+          propertyName: string | null;
+          propertyCode: string | null;
+        };
+        building?: {
+          buildingId: string | null;
+          buildingName: string | null;
+          buildingCode: string | null;
+        };
+        deleted: boolean;
+        timestamp: string;
+      }) | null;
       areaSize: number | null;
     };
     ResidenceSummary: {
@@ -2090,6 +2227,34 @@ export interface components {
           name: string | null;
           code: string | null;
         };
+        staircase: ({
+          id: string;
+          buildingCode: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          property?: {
+            propertyId: string | null;
+            propertyName: string | null;
+            propertyCode: string | null;
+          };
+          building?: {
+            buildingId: string | null;
+            buildingName: string | null;
+            buildingCode: string | null;
+          };
+          deleted: boolean;
+          timestamp: string;
+        }) | null;
         areaSize: number | null;
       };
       _links: {
@@ -2128,6 +2293,20 @@ export interface components {
         postalCode: string | null;
         city: string | null;
       }) | null;
+    };
+    ParkingSpaceSearchResult: {
+      id: string;
+      rentalId: string;
+      code: string;
+      name: string | null;
+      property: {
+        code: string | null;
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
+      };
     };
     FacilityDetails: {
       id: string;
@@ -2190,6 +2369,88 @@ export interface components {
         };
         areaSize: number | null;
       };
+      _links: {
+        self: {
+          href: string;
+        };
+        link: {
+          href: string;
+          templated: boolean;
+        };
+      };
+    };
+    GetFacilitiesByPropertyCodeResponse: {
+      content: ({
+          id: string;
+          code: string;
+          name: string | null;
+          entrance: string | null;
+          deleted: boolean;
+          type: {
+            code: string;
+            name: string | null;
+          };
+          rentalInformation: ({
+            apartmentNumber: string | null;
+            rentalId: string | null;
+            type: {
+              code: string;
+              name: string | null;
+            };
+          }) | null;
+          property: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          building: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          areaSize: number | null;
+        })[];
+      _links: {
+        self: {
+          href: string;
+        };
+        link: {
+          href: string;
+          templated: boolean;
+        };
+      };
+    };
+    GetFacilitiesByBuildingCodeResponse: {
+      content: ({
+          id: string;
+          code: string;
+          name: string | null;
+          entrance: string | null;
+          deleted: boolean;
+          type: {
+            code: string;
+            name: string | null;
+          };
+          rentalInformation: ({
+            apartmentNumber: string | null;
+            rentalId: string | null;
+            type: {
+              code: string;
+              name: string | null;
+            };
+          }) | null;
+          property: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          building: {
+            id: string | null;
+            name: string | null;
+            code: string | null;
+          };
+          areaSize: number | null;
+        })[];
       _links: {
         self: {
           href: string;
