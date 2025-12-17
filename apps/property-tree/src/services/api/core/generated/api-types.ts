@@ -2604,6 +2604,39 @@ export interface paths {
       };
     };
   };
+  "/buildings/by-property-code/{propertyCode}": {
+    /**
+     * Get buildings by property code
+     * @description Retrieves buildings by property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property to fetch buildings for */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved buildings */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/companies": {
     /**
      * Get all companies
@@ -2840,6 +2873,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
         path: {
           /** @description Id for the residence to fetch */
           residenceId: string;
@@ -2981,58 +3018,6 @@ export interface paths {
         /** @description Internal server error. */
         500: {
           content: never;
-        };
-      };
-    };
-  };
-  "/components/by-room/{roomId}": {
-    /**
-     * Get components by room ID
-     * @description Retrieves all components associated with a specific room ID.
-     * Components are returned ordered by installation date (newest first).
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the room (variable length, max 15 characters, Xpand legacy format) */
-          roomId: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved the components list */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstance"][];
-            };
-          };
-        };
-        /** @description Invalid room ID format */
-        400: {
-          content: {
-            "application/json": {
-              /** @example Room ID must be at most 15 characters (Xpand format) */
-              error?: string;
-            };
-          };
-        };
-        /** @description Room not found */
-        404: {
-          content: {
-            "application/json": {
-              /** @example Room not found */
-              error?: string;
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": {
-              /** @example Internal server error */
-              error?: string;
-            };
-          };
         };
       };
     };
@@ -3207,854 +3192,64 @@ export interface paths {
       };
     };
   };
-  "/component-categories": {
-    /** Get all component categories */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component categories */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"][];
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component category */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-categories/{id}": {
-    /** Get component category by ID */
+  "/facilities/by-property-code/{propertyCode}": {
+    /**
+     * Get facilities by property code.
+     * @description Returns all facilities belonging to a property.
+     */
     get: {
       parameters: {
         path: {
-          id: string;
+          /** @description The code of the property for which to retrieve facilities. */
+          propertyCode: string;
         };
       };
       responses: {
-        /** @description Component category details */
+        /** @description Successfully retrieved the facilities. */
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
+              content?: Record<string, never>[];
             };
           };
         };
-        /** @description Component category not found */
+        /** @description Facilities not found. */
         404: {
           content: never;
         };
-      };
-    };
-    /** Update a component category */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-    /** Delete a component category */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category deleted */
-        204: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-types": {
-    /** Get all component types */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter types by category ID */
-          categoryId?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component types */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"][];
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component type */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentTypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component type created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-types/{id}": {
-    /** Get component type by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component type details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"];
-            };
-          };
-        };
-        /** @description Component type not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a component type */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentTypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component type updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"];
-            };
-          };
-        };
-      };
-    };
-    /** Delete a component type */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component type deleted */
-        204: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-subtypes": {
-    /** Get all component subtypes */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter subtypes by type ID */
-          typeId?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component subtypes */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component subtype */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component subtype created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-subtypes/{id}": {
-    /** Get component subtype by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component subtype details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-        /** @description Component subtype not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a component subtype */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentSubtypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component subtype updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-        /** @description Component subtype not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Delete a component subtype */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component subtype deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component subtype not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-models": {
-    /** Get all component models */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter models by component type ID */
-          componentTypeId?: string;
-          /** @description Filter models by subtype ID */
-          subtypeId?: string;
-          /** @description Filter models by manufacturer name */
-          manufacturer?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component models */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component model */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentModelRequest"];
-        };
-      };
-      responses: {
-        /** @description Component model created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/api/documents/component-models/{id}": {
-    /** Get all documents for a component model */
-    get: {
-      parameters: {
-        path: {
-          /** @description Component model ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Array of documents with presigned URLs */
-        200: {
-          content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
-          };
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
+        /** @description Internal server error. */
         500: {
           content: never;
         };
       };
     };
   };
-  "/component-models/{id}": {
-    /** Get component model by ID */
+  "/facilities/by-building-code/{buildingCode}": {
+    /**
+     * Get facilities by building code.
+     * @description Returns all facilities belonging to a building.
+     */
     get: {
       parameters: {
         path: {
-          id: string;
+          /** @description The code of the building for which to retrieve facilities. */
+          buildingCode: string;
         };
       };
       responses: {
-        /** @description Component model details */
+        /** @description Successfully retrieved the facilities. */
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentModel"];
+              content?: Record<string, never>[];
             };
           };
         };
-        /** @description Component model not found */
+        /** @description Facilities not found. */
         404: {
           content: never;
         };
-      };
-    };
-    /** Update a component model */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentModelRequest"];
-        };
-      };
-      responses: {
-        /** @description Component model updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"];
-            };
-          };
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Delete a component model */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component model deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/components": {
-    /** Get all component instances */
-    get: {
-      parameters: {
-        query?: {
-          modelId?: string;
-          status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component instances */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstance"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component instance */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentRequest"];
-        };
-      };
-      responses: {
-        /** @description Component instance created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstance"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/components/{id}": {
-    /** Get component instance by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component instance details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstance"];
-            };
-          };
-        };
-        /** @description Component instance not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a component instance */
-    put: {
-      parameters: {
-        path: {
-          /** @description Component instance ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentRequest"];
-        };
-      };
-      responses: {
-        /** @description Component instance updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstance"];
-            };
-          };
-        };
-        /** @description Component instance not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Delete a component instance */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component instance deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component instance not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-installations": {
-    /** Get all component installations */
-    get: {
-      parameters: {
-        query?: {
-          componentId?: string;
-          spaceId?: string;
-          buildingPartId?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component installations */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component installation */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentInstallationRequest"];
-        };
-      };
-      responses: {
-        /** @description Component installation created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-installations/{id}": {
-    /** Get component installation by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component installation details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"];
-            };
-          };
-        };
-        /** @description Component installation not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a component installation */
-    put: {
-      parameters: {
-        path: {
-          /** @description Component installation ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentInstallationRequest"];
-        };
-      };
-      responses: {
-        /** @description Component installation updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"];
-            };
-          };
-        };
-        /** @description Component installation not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Delete a component installation */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component installation deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component installation not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/components/{id}/upload": {
-    /** Upload a file to a component */
-    post: {
-      parameters: {
-        query?: {
-          /** @description Optional caption for the file */
-          caption?: string;
-        };
-        path: {
-          /** @description Component ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Bad request */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/documents/component-instances/{id}": {
-    /** Get all documents for a component instance */
-    get: {
-      parameters: {
-        path: {
-          /** @description Component instance ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Array of documents with presigned URLs */
-        200: {
-          content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
-          };
-        };
-        /** @description Component not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/documents/{id}": {
-    /** Delete a document by ID */
-    delete: {
-      parameters: {
-        path: {
-          /** @description Document ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Document deleted successfully */
-        204: {
-          content: never;
-        };
-        /** @description Document not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/component-models/{id}/upload": {
-    /** Upload a document to a component model */
-    post: {
-      parameters: {
-        path: {
-          /** @description Component model ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Document uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Bad request */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/documents/upload": {
-    /** Upload a document for a component instance or model */
-    post: {
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-            /** Format: uuid */
-            componentInstanceId?: string;
-            /** Format: uuid */
-            componentModelId?: string;
-            caption?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Document uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Bad request */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
+        /** @description Internal server error. */
         500: {
           content: never;
         };
@@ -4463,7 +3658,6 @@ export interface components {
     };
     Staircase: {
       id: string;
-      buildingCode: string;
       code: string;
       name: string | null;
       features: {
@@ -4475,6 +3669,16 @@ export interface components {
         from: string;
         /** Format: date-time */
         to: string;
+      };
+      property?: {
+        propertyId: string | null;
+        propertyName: string | null;
+        propertyCode: string | null;
+      };
+      building?: {
+        buildingId: string | null;
+        buildingName: string | null;
+        buildingCode: string | null;
       };
       deleted: boolean;
       /** Format: date-time */

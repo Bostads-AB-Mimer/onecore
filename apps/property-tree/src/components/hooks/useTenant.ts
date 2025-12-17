@@ -11,7 +11,7 @@ export function useTenant(contactCode: string | undefined) {
       try {
         // Try to get tenant data first (requires active/upcoming contracts)
         return await tenantService.getByContactCode(contactCode!)
-      } catch (error) {
+      } catch {
         // Fallback: Get contact data instead (works even without contracts)
         const contact = await tenantService.getContactByContactCode(
           contactCode!

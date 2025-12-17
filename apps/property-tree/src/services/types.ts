@@ -65,6 +65,7 @@ export type ComponentCategory = components['schemas']['ComponentCategory']
 export type ComponentType = components['schemas']['ComponentType']
 export type ComponentSubtype = components['schemas']['ComponentSubtype']
 export type ComponentModel = components['schemas']['ComponentModel']
+export type ComponentInstance = components['schemas']['ComponentInstance']
 
 // Component Library request types
 export type CreateComponentCategory =

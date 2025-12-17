@@ -82,7 +82,7 @@ export function useHierarchicalSelection() {
           if (properties?.some((p: any) => p.id === selectedProperty.id)) {
             return company
           }
-        } catch (error) {
+        } catch {
           // Continue to next company if this one fails
           continue
         }

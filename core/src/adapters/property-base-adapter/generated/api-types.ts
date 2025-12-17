@@ -1966,7 +1966,6 @@ export interface components {
     };
     Staircase: {
       id: string;
-      buildingCode: string;
       code: string;
       name: string | null;
       features: {
@@ -2125,7 +2124,6 @@ export interface components {
       };
       staircase: ({
         id: string;
-        buildingCode: string;
         code: string;
         name: string | null;
         features: {
@@ -2229,7 +2227,6 @@ export interface components {
         };
         staircase: ({
           id: string;
-          buildingCode: string;
           code: string;
           name: string | null;
           features: {

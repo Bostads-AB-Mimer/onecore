@@ -40,6 +40,56 @@ export const routes = (router: KoaRouter) => {
     schemas.ResidenceByRentalIdSchema
   )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
+  registerSchema('Component', schemas.ComponentSchema)
+  registerSchema('ComponentCategory', schemas.ComponentCategorySchema)
+  registerSchema('ComponentType', schemas.ComponentTypeSchema)
+  registerSchema('ComponentSubtype', schemas.ComponentSubtypeSchema)
+  registerSchema('ComponentModel', schemas.ComponentModelSchema)
+  registerSchema('ComponentInstance', schemas.ComponentNewSchema)
+  registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema)
+  registerSchema(
+    'CreateComponentCategoryRequest',
+    schemas.CreateComponentCategorySchema
+  )
+  registerSchema(
+    'UpdateComponentCategoryRequest',
+    schemas.UpdateComponentCategorySchema
+  )
+  registerSchema(
+    'CreateComponentTypeRequest',
+    schemas.CreateComponentTypeSchema
+  )
+  registerSchema(
+    'UpdateComponentTypeRequest',
+    schemas.UpdateComponentTypeSchema
+  )
+  registerSchema(
+    'CreateComponentSubtypeRequest',
+    schemas.CreateComponentSubtypeSchema
+  )
+  registerSchema(
+    'UpdateComponentSubtypeRequest',
+    schemas.UpdateComponentSubtypeSchema
+  )
+  registerSchema(
+    'CreateComponentModelRequest',
+    schemas.CreateComponentModelSchema
+  )
+  registerSchema(
+    'UpdateComponentModelRequest',
+    schemas.UpdateComponentModelSchema
+  )
+  registerSchema('CreateComponentRequest', schemas.CreateComponentNewSchema)
+  registerSchema('UpdateComponentRequest', schemas.UpdateComponentNewSchema)
+  registerSchema(
+    'CreateComponentInstallationRequest',
+    schemas.CreateComponentInstallationSchema
+  )
+  registerSchema(
+    'UpdateComponentInstallationRequest',
+    schemas.UpdateComponentInstallationSchema
+  )
+  registerSchema('DocumentWithUrl', schemas.DocumentWithUrlSchema)
 
   /**
    * @swagger
