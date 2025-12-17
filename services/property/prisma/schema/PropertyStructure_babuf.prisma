@@ -64,14 +64,14 @@ model PropertyStructure {
   toDate                   DateTime @map("tdate") @db.DateTime
   timestamp                String   @map("timestamp") @db.Char(10)
 
-  parkingSpace    ParkingSpace?    @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufobjbps")
+  parkingSpace    ParkingSpace?    @relation(fields: [parkingSpaceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   propertyObject  PropertyObject   @relation(fields: [propertyObjectId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkbabufkeycmobj")
   maintenanceUnit MaintenanceUnit? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
   staircase       Staircase?       @relation(fields: [staircaseId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
 
   // Ny relation baserad på maintenanceUnitCode
   maintenanceUnitByCode MaintenanceUnit? @relation("MaintenanceUnitCodeRelation", fields: [maintenanceUnitCode], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])  
+  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [propertyObjectId])  
 
   // Indexes
   @@index([leaseObjectId], map: "fkbabufobjaob")
