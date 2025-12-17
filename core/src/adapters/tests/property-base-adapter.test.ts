@@ -855,7 +855,7 @@ describe('@onecore/property-adapter', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/rental-blocks/by-rental-id/1234`,
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
           () => new HttpResponse(null, { status: 500 })
         )
       )
@@ -869,7 +869,7 @@ describe('@onecore/property-adapter', () => {
     it('returns not-found if rental ID is not found', async () => {
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/rental-blocks/by-rental-id/1234`,
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
           () => new HttpResponse(null, { status: 404 })
         )
       )
@@ -884,7 +884,7 @@ describe('@onecore/property-adapter', () => {
       const rentalBlocksMock = factory.rentalBlock.buildList(3)
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/rental-blocks/by-rental-id/1234`,
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
           () =>
             HttpResponse.json(
               {
@@ -907,7 +907,7 @@ describe('@onecore/property-adapter', () => {
       const rentalBlocksMock = factory.rentalBlock.buildList(2)
       mockServer.use(
         http.get(
-          `${config.propertyBaseService.url}/residences/rental-blocks/by-rental-id/1234`,
+          `${config.propertyBaseService.url}/residences/rental-id/1234/rental-blocks`,
           () =>
             HttpResponse.json(
               {

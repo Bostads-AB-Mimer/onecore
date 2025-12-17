@@ -648,7 +648,7 @@ export async function getRentalBlocksByRentalId(
       {
         params: {
           path: { rentalId },
-          query: { includeActiveBlocksOnly: includeActiveBlocksOnly },
+          query: { includeActiveBlocksOnly },
         },
       }
     )
