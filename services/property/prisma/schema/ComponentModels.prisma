@@ -10,13 +10,13 @@ model ComponentModels {
   installationInstructions String?  @map("installation_instructions") @db.NVarChar(Max)
   dimensions               String?  @db.NVarChar(255)
   coclassCode              String?  @map("coclass_code") @db.NVarChar(50)
-  documents                String?  @map("documents") @db.NVarChar(Max)
   createdAt                DateTime @default(now()) @map("created_at") @db.DateTime
   updatedAt                DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
 
   // Relations
   subtype    ComponentSubtypes @relation(fields: [componentSubtypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   components Components[]
+  documents  Documents[]
 
   @@index([componentSubtypeId])
   @@map("component_models")

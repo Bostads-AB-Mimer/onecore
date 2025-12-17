@@ -426,8 +426,7 @@ export function ComponentModelDocuments({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{doc.originalName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatFileSize(doc.size)} •{' '}
-                        {formatDate(doc.uploadedAt)}
+                        {formatFileSize(doc.size)} • {formatDate(doc.createdAt)}
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">

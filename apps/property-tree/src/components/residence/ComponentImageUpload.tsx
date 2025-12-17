@@ -7,8 +7,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/v2/Dialog'
-import { Input } from '@/components/ui/Input'
-import { Label } from '@/components/ui/v2/Label'
 import { Button } from '@/components/ui/v2/Button'
 import { cn } from '@/lib/utils'
 import { useComponentImages } from '@/components/hooks/useComponentImages'
@@ -25,7 +23,6 @@ export function ComponentImageUpload({
   onClose,
 }: ComponentImageUploadProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [caption, setCaption] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -100,12 +97,11 @@ export function ComponentImageUpload({
     }
 
     upload(
-      { file, caption: caption || undefined },
+      { file },
       {
         onSuccess: () => {
           // Reset form and close modal
           setFile(null)
-          setCaption('')
           setValidationError(null)
           onClose()
         },
@@ -125,7 +121,6 @@ export function ComponentImageUpload({
     if (!open && !isUploading) {
       // Reset form when closing
       setFile(null)
-      setCaption('')
       setValidationError(null)
       onClose()
     }
@@ -185,21 +180,6 @@ export function ComponentImageUpload({
           {validationError && (
             <p className="text-sm text-red-600">{validationError}</p>
           )}
-
-          {/* Caption input */}
-          <div>
-            <Label htmlFor="caption">Bildtext (valfritt)</Label>
-            <Input
-              id="caption"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Lägg till en beskrivning..."
-              maxLength={200}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {caption.length}/200
-            </p>
-          </div>
 
           {uploadError && (
             <p className="text-sm text-red-600">

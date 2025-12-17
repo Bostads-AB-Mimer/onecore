@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
@@ -11,6 +12,9 @@ import {
   AccordionTrigger,
 } from '../ui/Accordion'
 import { ComponentCard } from './ComponentCard'
+import { Button } from '../ui/v2/Button'
+import { Plus } from 'lucide-react'
+import { ManageRoomComponentsDialog } from './ManageRoomComponentsDialog'
 
 interface RoomInfoProps {
   residenceId: string
@@ -18,9 +22,12 @@ interface RoomInfoProps {
 
 interface RoomComponentsProps {
   roomId: string
+  roomName?: string
 }
 
-const RoomComponents = ({ roomId }: RoomComponentsProps) => {
+const RoomComponents = ({ roomId, roomName }: RoomComponentsProps) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+
   const componentsQuery = useQuery({
     queryKey: ['components', roomId],
     queryFn: () => componentService.getByRoomId(roomId),
@@ -44,39 +51,48 @@ const RoomComponents = ({ roomId }: RoomComponentsProps) => {
     )
   }
 
-  if (componentsQuery.data.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-muted-foreground text-sm">
-          Ingen komponentinformation tillgänglig
-        </p>
-      </div>
-    )
-  }
+  const hasComponents = componentsQuery.data.length > 0
 
-  const sortedComponents = [...componentsQuery.data].sort((a, b) => {
-    const categoryOrder = (code: string) => {
-      if (code === 'VIT') return 0
-      if (code === 'Lägenhet') return 1
-      return 2
-    }
-    return (
-      categoryOrder(a.classification.category.code) -
-      categoryOrder(b.classification.category.code)
-    )
-  })
+  const sortedComponents = hasComponents ? componentsQuery.data : []
 
   return (
-    <div className="pt-4 border-t">
-      <p className="text-sm font-medium text-muted-foreground mb-3">
-        Komponenter
-      </p>
-      <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-        {sortedComponents.map((component) => (
-          <ComponentCard key={component.id} component={component} />
-        ))}
+    <>
+      <div className="pt-4 border-t">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-medium text-muted-foreground">
+            Komponenter
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Lägg till/Ta bort komponent
+          </Button>
+        </div>
+        {hasComponents ? (
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+            {sortedComponents.map((component) => (
+              <ComponentCard key={component.id} component={component} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground text-sm">
+              Inga komponenter installerade ännu
+            </p>
+          </div>
+        )}
       </div>
-    </div>
+
+      <ManageRoomComponentsDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        roomId={roomId}
+        roomName={roomName}
+      />
+    </>
   )
 }
 
@@ -271,7 +287,10 @@ export const RoomInfo = (props: RoomInfoProps) => {
                     </div>
                   </div>
 
-                  <RoomComponents roomId={room.id} />
+                  <RoomComponents
+                    roomId={room.id}
+                    roomName={room.name || room.roomType?.name || room.code}
+                  />
                 </AccordionContent>
               </AccordionItem>
             )

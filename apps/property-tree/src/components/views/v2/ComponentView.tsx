@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
-import ComponentHeader from '@/components/component/ComponentHeader'
-import ComponentBasicInfo from '@/components/component/ComponentBasicInfo'
-import ComponentDetailTabs from '@/components/component/ComponentDetailTabs'
+import ComponentHeader from '@/components/component-detail/ComponentHeader'
+import ComponentBasicInfo from '@/components/component-detail/ComponentBasicInfo'
+import ComponentDetailTabs from '@/components/component-detail/ComponentDetailTabs'
 
 export default function ComponentView() {
   const { componentId } = useParams<{ componentId: string }>()
