@@ -31,8 +31,8 @@ export const ComponentCategorySchema = z.object({
   id: z.string().uuid(),
   categoryName: z.string(),
   description: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 })
 
 // Create schema
@@ -71,8 +71,8 @@ export const ComponentTypeSchema = z.object({
   typeName: z.string(),
   categoryId: z.string().uuid(),
   description: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   category: ComponentCategorySchema.optional(),
 })
 
@@ -114,8 +114,8 @@ export const ComponentSubtypeSchema = z.object({
   economicLifespan: z.number().min(0),
   replacementIntervalMonths: z.number().int().min(0),
   quantityType: QuantityTypeEnum,
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   componentType: ComponentTypeSchema.optional(),
 })
 
@@ -155,7 +155,8 @@ export type UpdateComponentSubtype = z.infer<
 
 // Query params for component models
 export const componentModelsQueryParamsSchema = z.object({
-  componentSubtypeId: z.string().uuid().optional(),
+  componentTypeId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
   manufacturer: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -174,8 +175,8 @@ export const ComponentModelSchema = z.object({
   installationInstructions: z.string().nullable(),
   dimensions: z.string().nullable(),
   coclassCode: z.string().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   subtype: ComponentSubtypeSchema.optional(),
 })
 
@@ -227,14 +228,14 @@ export const componentsNewQueryParamsSchema = z.object({
 export const ComponentInstallationWithoutComponentSchema = z.object({
   id: z.string().uuid(),
   componentId: z.string().uuid(),
-  spaceId: z.string().uuid().nullable(),
+  spaceId: z.string().nullable(),
   spaceType: SpaceTypeEnum,
-  installationDate: z.date(),
-  deinstallationDate: z.date().nullable(),
+  installationDate: z.string(),
+  deinstallationDate: z.string().nullable(),
   orderNumber: z.string().optional(),
   cost: z.number().min(0),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 })
 
 // Component instance response schema with installations included
@@ -244,7 +245,7 @@ export const ComponentNewSchema = z.object({
   id: z.string().uuid(),
   modelId: z.string().uuid(),
   serialNumber: z.string(),
-  warrantyStartDate: z.date().nullable(),
+  warrantyStartDate: z.string().nullable(),
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
   depreciationPriceAtPurchase: z.number().min(0),
@@ -255,8 +256,8 @@ export const ComponentNewSchema = z.object({
   status: ComponentStatusEnum,
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   model: ComponentModelSchema.optional(),
   componentInstallations: z
     .array(ComponentInstallationWithoutComponentSchema)
@@ -319,14 +320,14 @@ export const componentInstallationsQueryParamsSchema = z.object({
 export const ComponentInstallationSchema = z.object({
   id: z.string().uuid(),
   componentId: z.string().uuid(),
-  spaceId: z.string().uuid().nullable(),
+  spaceId: z.string().nullable(),
   spaceType: SpaceTypeEnum,
-  installationDate: z.date(),
-  deinstallationDate: z.date().nullable(),
+  installationDate: z.string(),
+  deinstallationDate: z.string().nullable(),
   orderNumber: z.string().optional(),
   cost: z.number().min(0),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
   component: ComponentNewSchema.optional(),
 })
 
