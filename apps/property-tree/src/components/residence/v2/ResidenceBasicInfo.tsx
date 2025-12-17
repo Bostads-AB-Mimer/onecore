@@ -59,6 +59,9 @@ const getCurrentRentalBlock = (
 
   const firstRentalBlock = rentalBlocks[0]
 
+  // Ignore pest control blocks for this purpose, we already have requiresPestControl
+  if (firstRentalBlock.blockReason === 'SKADEDJUR') return null
+
   return `${firstRentalBlock.blockReason}`
 }
 
