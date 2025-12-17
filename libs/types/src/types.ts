@@ -102,7 +102,7 @@ interface RentalProperty {
 }
 
 interface Address {
-  street: string
+  street?: string
   number: string
   postalCode: string
   city: string
