@@ -40,7 +40,7 @@ const requiresPestControl = (
 ): boolean => {
   // Where do we find pest control info?
 
-  const hasPestIssues = residence?.propertyObject?.rentalBlocks.find(
+  const hasPestIssues = residence?.propertyObject?.rentalBlocks?.find(
     (b) => b.blockReason === 'SKADEDJUR'
   )
 

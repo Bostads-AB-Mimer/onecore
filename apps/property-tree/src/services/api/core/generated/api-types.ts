@@ -2604,39 +2604,6 @@ export interface paths {
       };
     };
   };
-  "/buildings/by-property-code/{propertyCode}": {
-    /**
-     * Get buildings by property code
-     * @description Retrieves buildings by property code
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the property to fetch buildings for */
-          propertyCode: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved buildings */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Building"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": {
-              /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
   "/companies": {
     /**
      * Get all companies
@@ -2873,10 +2840,6 @@ export interface paths {
      */
     get: {
       parameters: {
-        query?: {
-          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
-          includeActiveBlocksOnly?: boolean;
-        };
         path: {
           /** @description Id for the residence to fetch */
           residenceId: string;
@@ -3031,7 +2994,7 @@ export interface paths {
     get: {
       parameters: {
         path: {
-          /** @description The ID of the room */
+          /** @description The ID of the room (variable length, max 15 characters, Xpand legacy format) */
           roomId: string;
         };
       };
@@ -3040,7 +3003,16 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["Component"][];
+              content?: components["schemas"]["ComponentInstance"][];
+            };
+          };
+        };
+        /** @description Invalid room ID format */
+        400: {
+          content: {
+            "application/json": {
+              /** @example Room ID must be at most 15 characters (Xpand format) */
+              error?: string;
             };
           };
         };
@@ -3230,6 +3202,106 @@ export interface paths {
         };
         /** @description Internal server error. */
         500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-categories": {
+    /** Get all component categories */
+    get: {
+      parameters: {
+        query?: {
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component categories */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"][];
+            };
+          };
+        };
+      };
+    };
+    /** Create a new component category */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentCategoryRequest"];
+        };
+      };
+      responses: {
+        /** @description Component category created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/component-categories/{id}": {
+    /** Get component category by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component category details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"];
+            };
+          };
+        };
+        /** @description Component category not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /** Update a component category */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentCategoryRequest"];
+        };
+      };
+      responses: {
+        /** @description Component category updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"];
+            };
+          };
+        };
+      };
+    };
+    /** Delete a component category */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component category deleted */
+        204: {
           content: never;
         };
       };
@@ -3600,7 +3672,7 @@ export interface paths {
       };
     };
   };
-  "/components-new": {
+  "/components": {
     /** Get all component instances */
     get: {
       parameters: {
@@ -3647,7 +3719,7 @@ export interface paths {
       };
     };
   };
-  "/components-new/{id}": {
+  "/components/{id}": {
     /** Get component instance by ID */
     get: {
       parameters: {
@@ -5018,6 +5090,17 @@ export interface components {
       deinstallationDate?: string;
       orderNumber?: string;
       cost?: number;
+    };
+    DocumentWithUrl: {
+      id: string;
+      fileId: string;
+      originalName: string;
+      mimeType: string;
+      size: number;
+      createdAt: string;
+      url: string;
+      uploadedAt?: string;
+      caption?: string;
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
