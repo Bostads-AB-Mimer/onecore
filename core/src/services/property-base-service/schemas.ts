@@ -666,7 +666,7 @@ export const ComponentNewSchema = z.object({
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
   depreciationPriceAtPurchase: z.number().min(0),
-  ncsCode: z.string(),
+  ncsCode: z.string().optional(),
   status: ComponentStatusEnum,
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
@@ -723,7 +723,8 @@ export const ComponentSubtypesQueryParamsSchema = z.object({
 })
 
 export const ComponentModelsQueryParamsSchema = z.object({
-  componentSubtypeId: z.string().uuid().optional(),
+  componentTypeId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
   manufacturer: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
