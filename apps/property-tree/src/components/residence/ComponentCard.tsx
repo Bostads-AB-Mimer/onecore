@@ -11,7 +11,7 @@ import { Copy, Ticket, Images, FileText } from 'lucide-react'
 import type { ComponentInstance } from '@/services/types'
 import { useState } from 'react'
 import { ComponentImageGallery } from './ComponentImageGallery'
-import { ComponentModelDocuments } from '../component-models/ComponentModelDocuments'
+import { ComponentModelDocuments } from '../component-library/dialogs/ComponentModelDocuments'
 
 interface ComponentCardProps {
   component: Component
@@ -95,7 +95,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
   // Helper: Calculate lifespan progress
   const calculateLifespanProgress = () => {
     const age = calculateAge(installation?.installationDate)
-    const technicalLife = component.model?.technicalLifespan
+    const technicalLife = component.model?.subtype?.technicalLifespan
 
     if (age === null || !technicalLife) return null
 
@@ -134,8 +134,8 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h3 className="text-base font-semibold">
-                  {component.model?.componentType?.description || '-'} •{' '}
-                  {component.model?.subtype?.description || '-'}
+                  {component.model?.subtype?.componentType?.description || '-'}{' '}
+                  • {component.model?.subtype?.subTypeName || '-'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {component.model?.manufacturer || '-'}{' '}
@@ -221,8 +221,9 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Typ:</span>
                     <span className="font-medium">
-                      {component.model?.componentType?.description || '-'} ›{' '}
-                      {component.model?.subtype?.description || '-'}
+                      {component.model?.subtype?.componentType?.description ||
+                        '-'}{' '}
+                      › {component.model?.subtype?.subTypeName || '-'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -268,7 +269,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                         <button
                           onClick={() =>
                             copyToClipboard(
-                              component.model!.coclassCode,
+                              component.model!.coclassCode || '',
                               'coclass'
                             )
                           }
@@ -293,7 +294,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                         <span className="font-medium">{component.ncsCode}</span>
                         <button
                           onClick={() =>
-                            copyToClipboard(component.ncsCode, 'ncs')
+                            copyToClipboard(component.ncsCode || '', 'ncs')
                           }
                           className="p-1 hover:bg-accent rounded"
                           title="Kopiera NCS-kod"
@@ -346,8 +347,8 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Livslängd</p>
                       <p className="text-lg font-semibold">
-                        {component.model?.technicalLifespan
-                          ? `${component.model.technicalLifespan} år`
+                        {component.model?.subtype?.technicalLifespan
+                          ? `${component.model.subtype.technicalLifespan} år`
                           : '-'}
                       </p>
                       <p className="text-xs text-muted-foreground">(teknisk)</p>
@@ -419,14 +420,15 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                       </div>
                     )}
 
-                    {component.model?.economicLifespan !== null &&
-                      component.model?.economicLifespan !== undefined && (
+                    {component.model?.subtype?.economicLifespan !== null &&
+                      component.model?.subtype?.economicLifespan !==
+                        undefined && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">
                             Ekonomisk livslängd:
                           </span>
                           <span className="font-medium">
-                            {component.model.economicLifespan} år
+                            {component.model.subtype.economicLifespan} år
                           </span>
                         </div>
                       )}
@@ -452,7 +454,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                         <button
                           onClick={() =>
                             copyToClipboard(
-                              component.model!.dimensions!,
+                              component.model!.dimensions || '',
                               'dimensions'
                             )
                           }
@@ -470,13 +472,13 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                     </div>
                   )}
 
-                  {component.specifications && (
+                  {component.model?.technicalSpecification && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
                         Specifikationer:
                       </span>
                       <span className="font-medium">
-                        {component.specifications}
+                        {component.model.technicalSpecification}
                       </span>
                     </div>
                   )}
@@ -507,7 +509,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                   )}
 
                   {!component.model?.dimensions &&
-                    !component.specifications &&
+                    !component.model?.technicalSpecification &&
                     !component.model?.installationInstructions &&
                     !component.model?.id && (
                       <p className="text-muted-foreground text-center py-2">

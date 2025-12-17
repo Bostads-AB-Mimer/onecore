@@ -89,8 +89,6 @@ export const routes = (router: KoaRouter) => {
     'UpdateComponentInstallationRequest',
     schemas.UpdateComponentInstallationSchema
   )
-  registerSchema('Component', schemas.ComponentSchema)
-  registerSchema('FileMetadataWithUrl', schemas.FileMetadataWithUrlSchema)
 
   /**
    * @swagger
@@ -1785,148 +1783,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  /**
-   * @swagger
-   * /facilities/by-property-code/{propertyCode}:
-   *   get:
-   *     summary: Get facilities by property code.
-   *     description: Returns all facilities belonging to a property.
-   *     tags:
-   *       - Property base Service
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: propertyCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The code of the property for which to retrieve facilities.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the facilities.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *       404:
-   *         description: Facilities not found.
-   *       500:
-   *         description: Internal server error.
-   */
-  router.get('(.*)/facilities/by-property-code/:propertyCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { propertyCode } = ctx.params
-
-    logger.info(metadata, `GET /facilities/by-property-code/${propertyCode}`)
-
-    try {
-      const result =
-        await propertyBaseAdapter.getFacilitiesByPropertyCode(propertyCode)
-
-      if (!result.ok) {
-        if (result.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'Facilities not found', ...metadata }
-          return
-        }
-
-        logger.error(
-          { err: result.err, metadata },
-          'Error getting facilities from property-base'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      ctx.body = {
-        content: result.data satisfies Array<schemas.FacilityDetails>,
-        ...metadata,
-      }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Internal server error')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /facilities/by-building-code/{buildingCode}:
-   *   get:
-   *     summary: Get facilities by building code.
-   *     description: Returns all facilities belonging to a building.
-   *     tags:
-   *       - Property base Service
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: buildingCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The code of the building for which to retrieve facilities.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the facilities.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *       404:
-   *         description: Facilities not found.
-   *       500:
-   *         description: Internal server error.
-   */
-  router.get('(.*)/facilities/by-building-code/:buildingCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { buildingCode } = ctx.params
-
-    logger.info(metadata, `GET /facilities/by-building-code/${buildingCode}`)
-
-    try {
-      const result =
-        await propertyBaseAdapter.getFacilitiesByBuildingCode(buildingCode)
-
-      if (!result.ok) {
-        if (result.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'Facilities not found', ...metadata }
-          return
-        }
-
-        logger.error(
-          { err: result.err, metadata },
-          'Error getting facilities from property-base'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      ctx.body = {
-        content: result.data satisfies Array<schemas.FacilityDetails>,
-        ...metadata,
-      }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Internal server error')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
   // ==================== COMPONENT TYPES ====================
 
   /**
@@ -1937,6 +1793,13 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Property base Service
    *     parameters:
+   *       - in: query
+   *         name: categoryId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Filter types by category ID
    *       - in: query
    *         name: page
    *         schema:
@@ -1973,6 +1836,7 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const result = await propertyBaseAdapter.getComponentTypes(
+        params.data.categoryId,
         params.data.page,
         params.data.limit
       )
@@ -2254,10 +2118,12 @@ export const routes = (router: KoaRouter) => {
    *       - Property base Service
    *     parameters:
    *       - in: query
-   *         name: componentTypeId
+   *         name: typeId
+   *         required: false
    *         schema:
    *           type: string
    *           format: uuid
+   *         description: Filter subtypes by type ID
    *       - in: query
    *         name: page
    *         schema:
@@ -2307,9 +2173,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const result = await propertyBaseAdapter.getComponentSubtypes(
-        params.data.componentTypeId,
+        params.data.typeId,
         params.data.page,
-        params.data.limit
+        params.data.limit,
+        params.data.subtypeName
       )
 
       if (!result.ok) {
@@ -2598,18 +2465,24 @@ export const routes = (router: KoaRouter) => {
    *     parameters:
    *       - in: query
    *         name: componentTypeId
+   *         required: false
    *         schema:
    *           type: string
    *           format: uuid
+   *         description: Filter models by component type ID
    *       - in: query
    *         name: subtypeId
+   *         required: false
    *         schema:
    *           type: string
    *           format: uuid
+   *         description: Filter models by subtype ID
    *       - in: query
    *         name: manufacturer
+   *         required: false
    *         schema:
    *           type: string
+   *         description: Filter models by manufacturer name
    *       - in: query
    *         name: page
    *         schema:
@@ -2661,7 +2534,8 @@ export const routes = (router: KoaRouter) => {
         params.data.subtypeId,
         params.data.manufacturer,
         params.data.page,
-        params.data.limit
+        params.data.limit,
+        params.data.modelName
       )
 
       if (!result.ok) {
@@ -2676,6 +2550,75 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /api/documents/component-models/{id}:
+   *   get:
+   *     summary: Get all documents for a component model
+   *     tags:
+   *       - Documents
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Component model ID
+   *     responses:
+   *       200:
+   *         description: Array of documents with presigned URLs
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/DocumentWithUrl'
+   *       404:
+   *         description: Component model not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/documents/component-models/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentModelDocuments(
+        id.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component model not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = result.data
+    } catch (error) {
+      logger.error(
+        { error, metadata },
+        'Failed to get component model documents'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -3003,7 +2946,8 @@ export const routes = (router: KoaRouter) => {
         params.data.modelId,
         params.data.status,
         params.data.page,
-        params.data.limit
+        params.data.limit,
+        params.data.serialNumber
       )
 
       if (!result.ok) {
@@ -3484,8 +3428,8 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await propertyBaseAdapter.createComponentInstallation({
         ...body.data,
-        installationDate: body.data.installationDate,
-        deinstallationDate: body.data.deinstallationDate,
+        installationDate: body.data.installationDate.toISOString(),
+        deinstallationDate: body.data.deinstallationDate?.toISOString(),
       })
 
       if (!result.ok) {
@@ -3564,8 +3508,8 @@ export const routes = (router: KoaRouter) => {
         id.data,
         {
           ...body.data,
-          installationDate: body.data.installationDate,
-          deinstallationDate: body.data.deinstallationDate,
+          installationDate: body.data.installationDate?.toISOString(),
+          deinstallationDate: body.data.deinstallationDate?.toISOString(),
         }
       )
 
@@ -3740,11 +3684,11 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/components/{id}/files:
+   * /api/documents/component-instances/{id}:
    *   get:
-   *     summary: Get all files for a component
+   *     summary: Get all documents for a component instance
    *     tags:
-   *       - Components New
+   *       - Documents
    *     parameters:
    *       - in: path
    *         name: id
@@ -3752,22 +3696,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *           format: uuid
-   *         description: Component ID
+   *         description: Component instance ID
    *     responses:
    *       200:
-   *         description: List of files with presigned URLs
+   *         description: Array of documents with presigned URLs
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: object
-   *                   properties:
-   *                     files:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/FileMetadataWithUrl'
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/DocumentWithUrl'
    *       404:
    *         description: Component not found
    *       500:
@@ -3775,7 +3713,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components/:id/files', async (ctx) => {
+  router.get('(.*)/documents/component-instances/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -3800,7 +3738,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.body = { content: { files: result.data }, ...metadata }
+      ctx.body = result.data
     } catch (error) {
       logger.error({ error, metadata }, 'Failed to get component files')
       ctx.status = 500
@@ -3810,11 +3748,11 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/components/{id}/files/{fileId}:
+   * /api/documents/{id}:
    *   delete:
-   *     summary: Delete a file from a component
+   *     summary: Delete a document by ID
    *     tags:
-   *       - Components New
+   *       - Documents
    *     parameters:
    *       - in: path
    *         name: id
@@ -3822,52 +3760,36 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *           format: uuid
-   *         description: Component ID
-   *       - in: path
-   *         name: fileId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: File ID
+   *         description: Document ID
    *     responses:
    *       204:
-   *         description: File deleted successfully
+   *         description: Document deleted successfully
    *       404:
-   *         description: Component or file not found
+   *         description: Document not found
    *       500:
    *         description: Internal server error
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/components/:id/files/:fileId', async (ctx) => {
+  router.delete('(.*)/documents/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
       ctx.status = 400
-      ctx.body = { error: 'Invalid ID format', ...metadata }
-      return
-    }
-
-    const fileId = z.string().safeParse(ctx.params.fileId)
-    if (!fileId.success) {
-      ctx.status = 400
-      ctx.body = { error: 'Invalid file ID format', ...metadata }
+      ctx.body = { error: 'Invalid document ID format', ...metadata }
       return
     }
 
     try {
-      const result = await propertyBaseAdapter.deleteComponentFile(
-        id.data,
-        fileId.data
-      )
+      const result = await propertyBaseAdapter.deleteComponentFile(id.data)
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
         ctx.body = {
           error:
             result.err === 'not_found'
-              ? 'Component or file not found'
+              ? 'Document not found'
               : 'Internal server error',
           ...metadata,
         }
@@ -3876,7 +3798,7 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 204
     } catch (error) {
-      logger.error({ error, metadata }, 'Failed to delete component file')
+      logger.error({ error, metadata }, 'Failed to delete document')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -3983,151 +3905,103 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/component-models/{id}/documents:
-   *   get:
-   *     summary: Get all documents for a component model
+   * /api/documents/upload:
+   *   post:
+   *     summary: Upload a document for a component instance or model
    *     tags:
-   *       - Component Models
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Component model ID
+   *       - Documents
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *               componentInstanceId:
+   *                 type: string
+   *                 format: uuid
+   *               componentModelId:
+   *                 type: string
+   *                 format: uuid
+   *               caption:
+   *                 type: string
    *     responses:
    *       200:
-   *         description: List of documents with presigned URLs
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: object
-   *                   properties:
-   *                     documents:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/FileMetadataWithUrl'
-   *       404:
-   *         description: Component model not found
+   *         description: Document uploaded successfully
+   *       400:
+   *         description: Bad request
    *       500:
    *         description: Internal server error
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-models/:id/documents', async (ctx) => {
+  router.post('(.*)/documents/upload', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const id = z.string().uuid().safeParse(ctx.params.id)
-    if (!id.success) {
-      ctx.status = 400
-      ctx.body = { error: 'Invalid ID format', ...metadata }
-      return
-    }
-
     try {
-      const result = await propertyBaseAdapter.getComponentModelDocuments(
-        id.data
-      )
+      const file = ctx.request.files?.file
+
+      if (!file || Array.isArray(file)) {
+        ctx.status = 400
+        ctx.body = { error: 'Single file required', ...metadata }
+        return
+      }
+
+      const body = ctx.request.body as {
+        componentInstanceId?: string
+        componentModelId?: string
+        caption?: string
+      }
+
+      if (!body.componentInstanceId && !body.componentModelId) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Either componentInstanceId or componentModelId required',
+          ...metadata,
+        }
+        return
+      }
+
+      // Read file buffer (koa-body stores files on disk)
+      const fs = await import('fs')
+      const fileBuffer = await fs.promises.readFile(file.filepath)
+
+      let result
+      if (body.componentInstanceId) {
+        result = await propertyBaseAdapter.uploadComponentFile(
+          body.componentInstanceId,
+          fileBuffer,
+          file.originalFilename || 'unknown',
+          file.mimetype || 'application/octet-stream',
+          body.caption
+        )
+      } else {
+        result = await propertyBaseAdapter.uploadComponentModelDocument(
+          body.componentModelId!,
+          fileBuffer,
+          file.originalFilename || 'unknown',
+          file.mimetype || 'application/octet-stream'
+        )
+      }
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.status = result.err === 'bad_request' ? 400 : 500
         ctx.body = {
           error:
-            result.err === 'not_found'
-              ? 'Component model not found'
+            result.err === 'bad_request'
+              ? 'Invalid upload request'
               : 'Internal server error',
           ...metadata,
         }
         return
       }
 
-      ctx.body = { content: { documents: result.data }, ...metadata }
+      ctx.body = result.data
     } catch (error) {
-      logger.error(
-        { error, metadata },
-        'Failed to get component model documents'
-      )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /api/component-models/{id}/documents/{fileId}:
-   *   delete:
-   *     summary: Delete a document from a component model
-   *     tags:
-   *       - Component Models
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: Component model ID
-   *       - in: path
-   *         name: fileId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: File ID
-   *     responses:
-   *       204:
-   *         description: Document deleted successfully
-   *       404:
-   *         description: Component model or document not found
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.delete('(.*)/component-models/:id/documents/:fileId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const id = z.string().uuid().safeParse(ctx.params.id)
-    if (!id.success) {
-      ctx.status = 400
-      ctx.body = { error: 'Invalid ID format', ...metadata }
-      return
-    }
-
-    const fileId = z.string().safeParse(ctx.params.fileId)
-    if (!fileId.success) {
-      ctx.status = 400
-      ctx.body = { error: 'Invalid file ID format', ...metadata }
-      return
-    }
-
-    try {
-      const result = await propertyBaseAdapter.deleteComponentModelDocument(
-        id.data,
-        fileId.data
-      )
-
-      if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component model or document not found'
-              : 'Internal server error',
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.status = 204
-    } catch (error) {
-      logger.error(
-        { error, metadata },
-        'Failed to delete component model document'
-      )
+      logger.error({ error, metadata }, 'Failed to upload document')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
