@@ -473,6 +473,14 @@ export const GetResidencesQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
 })
 
+export const GetResidenceDetailsQueryParamsSchema = z.object({
+  includeActiveBlocksOnly: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+})
+
 export const GetPropertiesQueryParamsSchema = z.object({
   companyCode: z.string(),
   tract: z.string().optional(),

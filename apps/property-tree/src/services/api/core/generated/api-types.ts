@@ -1174,6 +1174,8 @@ export interface paths {
           rentalRule?: string;
           /** @description A contact code to filter out listings that are not valid to rent for the contact. */
           validToRentForContactCode?: string;
+          /** @description A Rental Object Code to filter the listings. */
+          rentalObjectCode?: string;
         };
       };
       responses: {
@@ -1253,24 +1255,6 @@ export interface paths {
               error?: string;
             };
           };
-        };
-      };
-    };
-  };
-  "/listings/sync-internal-from-xpand": {
-    /**
-     * Sync internal parking spaces from xpand to onecores database
-     * @description null
-     */
-    post: {
-      responses: {
-        /** @description Request ok. */
-        200: {
-          content: never;
-        };
-        /** @description Internal server error. Failed to sync internal parking spaces. */
-        500: {
-          content: never;
         };
       };
     };
@@ -1363,6 +1347,55 @@ export interface paths {
           };
         };
         /** @description Internal server error. Failed to retrieve listings with applicants. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/listings/batch": {
+    /**
+     * Create multiple listings
+     * @description Create multiple listings in a single request.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            listings: ({
+                rentalObjectCode: string;
+                /** Format: date-time */
+                publishedFrom: string;
+                /** Format: date-time */
+                publishedTo: string;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE" | "CLOSED" | "ASSIGNED" | "EXPIRED" | "NO_APPLICANTS";
+                /** @enum {string} */
+                rentalRule: "SCORED" | "NON_SCORED";
+                /** @enum {string} */
+                listingCategory: "PARKING_SPACE" | "APARTMENT" | "STORAGE";
+              })[];
+          };
+        };
+      };
+      responses: {
+        /** @description All listings created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Partial success. Some listings created, some failed. */
+        207: {
+          content: never;
+        };
+        /** @description Bad request. Invalid input data. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. Failed to create listings. */
         500: {
           content: never;
         };
@@ -2571,6 +2604,39 @@ export interface paths {
       };
     };
   };
+  "/buildings/by-property-code/{propertyCode}": {
+    /**
+     * Get buildings by property code
+     * @description Retrieves buildings by property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property to fetch buildings for */
+          propertyCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved buildings */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Building"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/companies": {
     /**
      * Get all companies
@@ -2807,6 +2873,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
         path: {
           /** @description Id for the residence to fetch */
           residenceId: string;
@@ -2961,7 +3031,7 @@ export interface paths {
     get: {
       parameters: {
         path: {
-          /** @description The ID of the room (variable length, max 15 characters, Xpand legacy format) */
+          /** @description The ID of the room */
           roomId: string;
         };
       };
@@ -2970,16 +3040,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentInstance"][];
-            };
-          };
-        };
-        /** @description Invalid room ID format */
-        400: {
-          content: {
-            "application/json": {
-              /** @example Room ID must be at most 15 characters (Xpand format) */
-              error?: string;
+              content?: components["schemas"]["Component"][];
             };
           };
         };
@@ -3169,106 +3230,6 @@ export interface paths {
         };
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-categories": {
-    /** Get all component categories */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component categories */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"][];
-            };
-          };
-        };
-      };
-    };
-    /** Create a new component category */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-categories/{id}": {
-    /** Get component category by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-        /** @description Component category not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /** Update a component category */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-    /** Delete a component category */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category deleted */
-        204: {
           content: never;
         };
       };
@@ -3639,7 +3600,7 @@ export interface paths {
       };
     };
   };
-  "/components": {
+  "/components-new": {
     /** Get all component instances */
     get: {
       parameters: {
@@ -3686,7 +3647,7 @@ export interface paths {
       };
     };
   };
-  "/components/{id}": {
+  "/components-new/{id}": {
     /** Get component instance by ID */
     get: {
       parameters: {
@@ -4031,7 +3992,7 @@ export interface paths {
   "/search": {
     /**
      * Omni-search for different entities
-     * @description Search for properties, buildings, and residences.
+     * @description Search for properties, buildings, residences, and parking spaces.
      */
     get: {
       parameters: {
@@ -5058,17 +5019,6 @@ export interface components {
       orderNumber?: string;
       cost?: number;
     };
-    DocumentWithUrl: {
-      id: string;
-      fileId: string;
-      originalName: string;
-      mimeType: string;
-      size: number;
-      createdAt: string;
-      url: string;
-      uploadedAt?: string;
-      caption?: string;
-    };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
       q: string;
@@ -5124,7 +5074,32 @@ export interface components {
         name: string | null;
       };
     };
-    /** @description A search result that can be either a property, building or residence */
+    ParkingSpaceSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a parking space result
+       * @enum {string}
+       */
+      type: "parking-space";
+      /** @description Name of the parking space */
+      name: string | null;
+      /** @description Rental ID of the parking space */
+      rentalId: string;
+      /** @description Code of the parking space */
+      code: string;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the parking space */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the parking space */
+        name: string | null;
+      };
+    };
+    /** @description A search result that can be either a property, building, residence or parking space */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -5171,6 +5146,30 @@ export interface components {
       building: {
         code: string | null;
         /** @description Name of building associated with the residence */
+        name: string | null;
+      };
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a parking space result
+       * @enum {string}
+       */
+      type: "parking-space";
+      /** @description Name of the parking space */
+      name: string | null;
+      /** @description Rental ID of the parking space */
+      rentalId: string;
+      /** @description Code of the parking space */
+      code: string;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the parking space */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the parking space */
         name: string | null;
       };
     });

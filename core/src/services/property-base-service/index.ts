@@ -89,6 +89,7 @@ export const routes = (router: KoaRouter) => {
     'UpdateComponentInstallationRequest',
     schemas.UpdateComponentInstallationSchema
   )
+  registerSchema('DocumentWithUrl', schemas.DocumentWithUrlSchema)
 
   /**
    * @swagger
@@ -328,71 +329,6 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies schemas.Building,
-        ...metadata,
-      }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Internal server error')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /buildings/by-property-code/{propertyCode}:
-   *   get:
-   *     summary: Get buildings by property code
-   *     tags:
-   *       - Property base Service
-   *     description: Retrieves buildings by property code
-   *     parameters:
-   *       - in: path
-   *         name: propertyCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The code of the property to fetch buildings for
-   *     responses:
-   *       '200':
-   *         description: Successfully retrieved buildings
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/Building'
-   *       '500':
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/buildings/by-property-code/:propertyCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { propertyCode } = ctx.params
-
-    try {
-      const result =
-        await propertyBaseAdapter.getBuildingsByPropertyCode(propertyCode)
-      if (!result.ok) {
-        logger.error({ err: result.err, metadata }, 'Internal server error')
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      ctx.body = {
-        content: result.data satisfies schemas.Building[],
         ...metadata,
       }
     } catch (error) {
@@ -893,13 +829,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Id for the residence to fetch
-   *       - in: query
-   *         name: includeActiveBlocksOnly
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved residence.
@@ -936,23 +865,10 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:residenceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { residenceId } = ctx.params
-    const queryParams = schemas.GetResidenceDetailsQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { error: queryParams.error.errors, ...metadata }
-      return
-    }
-
-    const { includeActiveBlocksOnly } = queryParams.data
 
     try {
-      const getResidence = await propertyBaseAdapter.getResidenceDetails(
-        residenceId,
-        { includeActiveBlocksOnly }
-      )
+      const getResidence =
+        await propertyBaseAdapter.getResidenceDetails(residenceId)
 
       if (!getResidence.ok) {
         if (getResidence.err === 'not-found') {
@@ -1258,7 +1174,8 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the room
+   *           maxLength: 15
+   *         description: The ID of the room (variable length, max 15 characters, Xpand legacy format)
    *     responses:
    *       '200':
    *         description: Successfully retrieved the components list
@@ -1270,7 +1187,17 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/Component'
+   *                     $ref: '#/components/schemas/ComponentInstance'
+   *       '400':
+   *         description: Invalid room ID format
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Room ID must be at most 15 characters (Xpand format)
    *       '404':
    *         description: Room not found
    *         content:
@@ -1296,7 +1223,18 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/components/by-room/:roomId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { roomId } = ctx.params
+    const roomIdValidation = z.string().max(15).safeParse(ctx.params.roomId)
+
+    if (!roomIdValidation.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Room ID must be at most 15 characters (Xpand format)',
+        ...metadata,
+      }
+      return
+    }
+
+    const roomId = roomIdValidation.data
 
     try {
       const result = await propertyBaseAdapter.getComponentsByRoomId(roomId)
@@ -1315,7 +1253,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component[],
+        content: result.data,
         ...metadata,
       }
     } catch (error) {
@@ -1776,6 +1714,330 @@ export const routes = (router: KoaRouter) => {
         content: result.data satisfies Array<schemas.MaintenanceUnit>,
         ...metadata,
       }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT CATEGORIES ====================
+
+  /**
+   * @swagger
+   * /component-categories:
+   *   get:
+   *     summary: Get all component categories
+   *     tags:
+   *       - Component Categories
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 50
+   *     responses:
+   *       200:
+   *         description: List of component categories
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentCategory'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-categories', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentCategoriesQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentCategories(
+        params.data.page,
+        params.data.limit
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentCategory[],
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-categories/{id}:
+   *   get:
+   *     summary: Get component category by ID
+   *     tags:
+   *       - Component Categories
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Component category details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentCategory'
+   *       404:
+   *         description: Component category not found
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-categories/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentCategoryById(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component category not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentCategory,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-categories:
+   *   post:
+   *     summary: Create a new component category
+   *     tags:
+   *       - Component Categories
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentCategoryRequest'
+   *     responses:
+   *       201:
+   *         description: Component category created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentCategory'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/component-categories', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.CreateComponentCategorySchema.safeParse(
+      ctx.request.body
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentCategory(
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentCategory,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-categories/{id}:
+   *   put:
+   *     summary: Update a component category
+   *     tags:
+   *       - Component Categories
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateComponentCategoryRequest'
+   *     responses:
+   *       200:
+   *         description: Component category updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentCategory'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/component-categories/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    const body = schemas.UpdateComponentCategorySchema.safeParse(
+      ctx.request.body
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentCategory(
+        id.data,
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component category not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.ComponentCategory,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-categories/{id}:
+   *   delete:
+   *     summary: Delete a component category
+   *     tags:
+   *       - Component Categories
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       204:
+   *         description: Component category deleted
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete('(.*)/component-categories/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const id = z.string().uuid().safeParse(ctx.params.id)
+    if (!id.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid ID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.deleteComponentCategory(id.data)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component category not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 204
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
@@ -2881,7 +3143,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new:
+   * /components:
    *   get:
    *     summary: Get all component instances
    *     tags:
@@ -2932,7 +3194,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components-new', async (ctx) => {
+  router.get('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentsNewQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -2969,7 +3231,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   get:
    *     summary: Get component instance by ID
    *     tags:
@@ -2996,7 +3258,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components-new/:id', async (ctx) => {
+  router.get('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -3033,7 +3295,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new:
+   * /components:
    *   post:
    *     summary: Create a new component instance
    *     tags:
@@ -3057,7 +3319,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/components-new', async (ctx) => {
+  router.post('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentNewSchema.safeParse(ctx.request.body)
     if (!body.success) {
@@ -3091,7 +3353,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   put:
    *     summary: Update a component instance
    *     tags:
@@ -3125,7 +3387,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/components-new/:id', async (ctx) => {
+  router.put('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -3172,7 +3434,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   delete:
    *     summary: Delete a component instance
    *     tags:
@@ -3192,7 +3454,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/components-new/:id', async (ctx) => {
+  router.delete('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
