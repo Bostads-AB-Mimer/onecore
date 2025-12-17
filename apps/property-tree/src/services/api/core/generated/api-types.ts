@@ -2920,6 +2920,58 @@ export interface paths {
       }
     }
   }
+  '/components/by-room/{roomId}': {
+    /**
+     * Get components by room ID
+     * @description Retrieves all components associated with a specific room ID.
+     * Components are returned ordered by installation date (newest first).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the room (variable length, max 15 characters, Xpand legacy format) */
+          roomId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the components list */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentInstance'][]
+            }
+          }
+        }
+        /** @description Invalid room ID format */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Room ID must be at most 15 characters (Xpand format) */
+              error?: string
+            }
+          }
+        }
+        /** @description Room not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Room not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/parking-spaces/by-rental-id/{rentalId}': {
     /**
      * Get parking space data by rentalId
@@ -3762,42 +3814,340 @@ export interface components {
         code: string | null
       }
       building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      areaSize: number | null;
-    };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      areaSize: number | null
+    }
     Component: {
-      id: string;
-      code: string;
-      name: string;
+      id: string
+      code: string
+      name: string
       details: {
-        manufacturer: string | null;
-        typeDesignation: string | null;
-      };
+        manufacturer: string | null
+        typeDesignation: string | null
+      }
       dates: {
         /** Format: date-time */
-        installation: string | null;
+        installation: string | null
         /** Format: date-time */
-        warrantyEnd: string | null;
-      };
+        warrantyEnd: string | null
+      }
       classification: {
         componentType: {
-          code: string;
-          name: string;
-        };
+          code: string
+          name: string
+        }
         category: {
-          code: string;
-          name: string;
-        };
-      };
+          code: string
+          name: string
+        }
+      }
       maintenanceUnits?: {
-          id: string;
-          code: string;
-          name: string;
-        }[];
-    };
+        id: string
+        code: string
+        name: string
+      }[]
+    }
+    ComponentType: {
+      id: string
+      description: string
+      createdAt: string
+      updatedAt: string
+    }
+    ComponentSubtype: {
+      id: string
+      componentTypeId: string
+      description: string
+      createdAt: string
+      updatedAt: string
+      componentType?: {
+        id: string
+        description: string
+        createdAt: string
+        updatedAt: string
+      }
+    }
+    ComponentModel: {
+      id: string
+      componentTypeId: string
+      subtypeId: string
+      currentPrice: number
+      warrantyMonths: number
+      manufacturer: string
+      technicalLifespan: number
+      technicalSpecification: string | null
+      installationInstructions: string | null
+      economicLifespan: number
+      dimensions: string | null
+      replacementIntervalMonths: number
+      /** @enum {string} */
+      quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+      coclassCode: string
+      createdAt: string
+      updatedAt: string
+      componentType?: {
+        id: string
+        description: string
+        createdAt: string
+        updatedAt: string
+      }
+      subtype?: {
+        id: string
+        componentTypeId: string
+        description: string
+        createdAt: string
+        updatedAt: string
+        componentType?: {
+          id: string
+          description: string
+          createdAt: string
+          updatedAt: string
+        }
+      }
+    }
+    ComponentInstance: {
+      id: string
+      modelId: string
+      serialNumber: string
+      specifications: string | null
+      warrantyStartDate: string | null
+      warrantyMonths: number
+      priceAtPurchase: number
+      ncsCode: string
+      /** @enum {string} */
+      status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+      createdAt: string
+      updatedAt: string
+      model?: {
+        id: string
+        componentTypeId: string
+        subtypeId: string
+        currentPrice: number
+        warrantyMonths: number
+        manufacturer: string
+        technicalLifespan: number
+        technicalSpecification: string | null
+        installationInstructions: string | null
+        economicLifespan: number
+        dimensions: string | null
+        replacementIntervalMonths: number
+        /** @enum {string} */
+        quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+        coclassCode: string
+        createdAt: string
+        updatedAt: string
+        componentType?: {
+          id: string
+          description: string
+          createdAt: string
+          updatedAt: string
+        }
+        subtype?: {
+          id: string
+          componentTypeId: string
+          description: string
+          createdAt: string
+          updatedAt: string
+          componentType?: {
+            id: string
+            description: string
+            createdAt: string
+            updatedAt: string
+          }
+        }
+      }
+      componentInstallations?: {
+        id: string
+        componentId: string
+        spaceId: string | null
+        buildingPartId: string | null
+        installationDate: string
+        deinstallationDate: string | null
+        orderNumber: string
+        cost: number
+        createdAt: string
+        updatedAt: string
+      }[]
+    }
+    ComponentInstallation: {
+      id: string
+      componentId: string
+      spaceId: string | null
+      buildingPartId: string | null
+      installationDate: string
+      deinstallationDate: string | null
+      orderNumber: string
+      cost: number
+      createdAt: string
+      updatedAt: string
+      component?: {
+        id: string
+        modelId: string
+        serialNumber: string
+        specifications: string | null
+        warrantyStartDate: string | null
+        warrantyMonths: number
+        priceAtPurchase: number
+        ncsCode: string
+        /** @enum {string} */
+        status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+        createdAt: string
+        updatedAt: string
+        model?: {
+          id: string
+          componentTypeId: string
+          subtypeId: string
+          currentPrice: number
+          warrantyMonths: number
+          manufacturer: string
+          technicalLifespan: number
+          technicalSpecification: string | null
+          installationInstructions: string | null
+          economicLifespan: number
+          dimensions: string | null
+          replacementIntervalMonths: number
+          /** @enum {string} */
+          quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+          coclassCode: string
+          createdAt: string
+          updatedAt: string
+          componentType?: {
+            id: string
+            description: string
+            createdAt: string
+            updatedAt: string
+          }
+          subtype?: {
+            id: string
+            componentTypeId: string
+            description: string
+            createdAt: string
+            updatedAt: string
+            componentType?: {
+              id: string
+              description: string
+              createdAt: string
+              updatedAt: string
+            }
+          }
+        }
+        componentInstallations?: {
+          id: string
+          componentId: string
+          spaceId: string | null
+          buildingPartId: string | null
+          installationDate: string
+          deinstallationDate: string | null
+          orderNumber: string
+          cost: number
+          createdAt: string
+          updatedAt: string
+        }[]
+      }
+    }
+    CreateComponentTypeRequest: {
+      description: string
+    }
+    UpdateComponentTypeRequest: {
+      description?: string
+    }
+    CreateComponentSubtypeRequest: {
+      /** Format: uuid */
+      componentTypeId: string
+      description: string
+    }
+    UpdateComponentSubtypeRequest: {
+      /** Format: uuid */
+      componentTypeId?: string
+      description?: string
+    }
+    CreateComponentModelRequest: {
+      /** Format: uuid */
+      componentTypeId: string
+      /** Format: uuid */
+      subtypeId: string
+      currentPrice: number
+      warrantyMonths: number
+      manufacturer: string
+      technicalLifespan: number
+      technicalSpecification?: string
+      installationInstructions?: string
+      economicLifespan: number
+      dimensions?: string
+      replacementIntervalMonths: number
+      /** @enum {string} */
+      quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+      coclassCode: string
+    }
+    UpdateComponentModelRequest: {
+      /** Format: uuid */
+      componentTypeId?: string
+      /** Format: uuid */
+      subtypeId?: string
+      currentPrice?: number
+      warrantyMonths?: number
+      manufacturer?: string
+      technicalLifespan?: number
+      technicalSpecification?: string
+      installationInstructions?: string
+      economicLifespan?: number
+      dimensions?: string
+      replacementIntervalMonths?: number
+      /** @enum {string} */
+      quantityType?: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+      coclassCode?: string
+    }
+    CreateComponentRequest: {
+      /** Format: uuid */
+      modelId: string
+      serialNumber: string
+      specifications?: string
+      /** Format: date-time */
+      warrantyStartDate?: string
+      warrantyMonths: number
+      priceAtPurchase: number
+      ncsCode: string
+      /**
+       * @default ACTIVE
+       * @enum {string}
+       */
+      status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+    }
+    UpdateComponentRequest: {
+      /** Format: uuid */
+      modelId?: string
+      serialNumber?: string
+      specifications?: string
+      /** Format: date-time */
+      warrantyStartDate?: string
+      warrantyMonths?: number
+      priceAtPurchase?: number
+      ncsCode?: string
+      /** @enum {string} */
+      status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+    }
+    CreateComponentInstallationRequest: {
+      /** Format: uuid */
+      componentId: string
+      spaceId?: string
+      buildingPartId?: string
+      installationDate: string
+      deinstallationDate?: string
+      orderNumber: string
+      cost: number
+    }
+    UpdateComponentInstallationRequest: {
+      /** Format: uuid */
+      componentId?: string
+      spaceId?: string
+      buildingPartId?: string
+      installationDate?: string
+      deinstallationDate?: string
+      orderNumber?: string
+      cost?: number
+    }
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
       q: string
