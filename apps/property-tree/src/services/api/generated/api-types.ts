@@ -243,7 +243,10 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ComponentModelDocumentsResponse']
+              content?: {
+                documents?: components['schemas']['FileMetadataWithUrl'][]
+                count?: number
+              }
             }
           }
         }
@@ -333,7 +336,10 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ComponentFilesResponse']
+              content?: {
+                files?: components['schemas']['FileMetadataWithUrl'][]
+                count?: number
+              }
             }
           }
         }
