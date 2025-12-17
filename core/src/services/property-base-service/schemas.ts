@@ -551,6 +551,23 @@ export const ResidenceSummarySchema = z.object({
   ),
 })
 
+export const RentalBlockSchema = z.object({
+  id: z.string(),
+  blockReasonId: z.string(),
+  blockReason: z.string(),
+  fromDate: z.coerce.date(),
+  toDate: z.coerce.date().nullable(),
+  amount: z.number().nullable(),
+})
+
+export const GetRentalBlocksByRentalIdQueryParamsSchema = z.object({
+  includeActiveBlocksOnly: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+})
+
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
@@ -567,6 +584,7 @@ export type Room = z.infer<typeof RoomSchema>
 export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
 export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>
 export type FacilityDetails = z.infer<typeof FacilityDetailsSchema>
+export type RentalBlock = z.infer<typeof RentalBlockSchema>
 
 export const FacilitySearchResultSchema = z.object({
   id: z.string(),

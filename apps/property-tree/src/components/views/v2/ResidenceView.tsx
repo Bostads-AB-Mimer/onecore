@@ -24,6 +24,7 @@ import {
 import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
+import RentalBlocksTab from '@/components/residence/RentalBlocksTab'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -108,6 +109,13 @@ export const ResidenceView = () => {
                 <MessageSquare className="h-4 w-4" />
                 <span className="hidden sm:inline">Ärenden</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="rental-blocks"
+                className="flex items-center gap-1.5"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Spärrar
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">
               <Card>
@@ -155,6 +163,11 @@ export const ResidenceView = () => {
                   id={residence?.propertyObject.rentalId}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="rental-blocks">
+              <RentalBlocksTab
+                rentalId={residence.propertyObject.rentalId ?? ''}
+              />
             </TabsContent>
           </Tabs>
         </div>

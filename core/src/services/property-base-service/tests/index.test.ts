@@ -20,6 +20,7 @@ import {
   ResidenceByRentalIdSchema,
   FacilityDetailsSchema,
   ResidenceSummarySchema,
+  RentalBlockSchema,
 } from '../schemas'
 import { LeaseStatus } from '@onecore/types'
 
@@ -712,6 +713,82 @@ describe('@onecore/property-service', () => {
         '202-002',
         undefined
       )
+    })
+  })
+
+  describe('GET /property/residences/rental-blocks/by-rental-id/:rentalId', () => {
+    it('returns 200 and a list of rental blocks', async () => {
+      const rentalBlocksMock = factory.rentalBlock.buildList(3)
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: rentalBlocksMock })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: false,
+      })
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(rentalBlocksMock)
+      )
+      expect(() =>
+        z.array(RentalBlockSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 200 and filtered rental blocks when includeActiveBlocksOnly is true', async () => {
+      const rentalBlocksMock = factory.rentalBlock.buildList(2)
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: rentalBlocksMock })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234?includeActiveBlocksOnly=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: true,
+      })
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(rentalBlocksMock)
+      )
+      expect(() =>
+        z.array(RentalBlockSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 404 if rental ID is not found', async () => {
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: false,
+      })
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: false,
+      })
     })
   })
 })

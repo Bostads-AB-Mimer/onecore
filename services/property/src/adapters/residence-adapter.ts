@@ -449,3 +449,60 @@ export const searchResidences = async (
     throw err
   }
 }
+
+export const getRentalBlocksByRentalId = async (
+  rentalId: string,
+  options?: { includeActiveBlocksOnly?: boolean }
+) => {
+  try {
+    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+
+    // First find the propertyObjectId from the rentalId
+    const propertyStructure = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+      },
+      select: {
+        propertyObjectId: true,
+      },
+    })
+
+    if (!propertyStructure) {
+      return null
+    }
+
+    // Get rental blocks for this property object
+    const rentalBlocks = await prisma.rentalBlock.findMany({
+      where: {
+        propertyObjectId: propertyStructure.propertyObjectId,
+        ...(includeActiveBlocksOnly && {
+          fromDate: {
+            lte: new Date(),
+          },
+          OR: [
+            {
+              toDate: {
+                gte: new Date(),
+              },
+            },
+            {
+              toDate: null as any,
+            },
+          ],
+        }),
+      },
+      include: {
+        blockReason: true,
+      },
+      orderBy: {
+        fromDate: 'desc',
+      },
+    })
+
+    return trimStrings(rentalBlocks)
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getRentalBlocksByRentalId')
+    throw err
+  }
+}
