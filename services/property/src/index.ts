@@ -17,5 +17,5 @@ initializeBucket()
   })
   .catch((error) => {
     logger.error('Failed to initialize MinIO bucket:', error)
-    process.exit(1)
+    throw new Error('Failed to initialize MinIO bucket')
   })
