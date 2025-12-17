@@ -20,17 +20,17 @@ export const TypeCard = ({
     <Card className="w-full hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 cursor-pointer" onClick={onNavigate}>
-            <h3 className="text-base font-semibold hover:text-primary transition-colors">
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={onNavigate}>
+            <h3 className="text-base font-semibold hover:text-primary transition-colors break-words">
               {type.typeName}
             </h3>
             {type.description && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1 break-words">
                 {type.description}
               </p>
             )}
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 shrink-0">
             <Button
               variant="ghost"
               size="sm"
