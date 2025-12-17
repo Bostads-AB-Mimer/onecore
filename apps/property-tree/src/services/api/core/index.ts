@@ -1,4 +1,5 @@
 export * from './buildingService'
+export * from './commentService'
 export * from './companyService'
 export * from './componentService'
 export * from './lease-service'
