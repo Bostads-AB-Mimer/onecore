@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/v2/Button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
-import { Badge } from '@/components/ui/v2/Badge'
+import { Card, CardContent } from '@/components/ui/v2/Card'
+import { Badge } from '@/components/ui/v3/Badge'
 import { ScrollArea } from '@/components/ui/ScrollArea'
-import { ChevronLeft, ChevronRight, CheckCircle2, User } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 import type { Room } from '@/services/types'
-import type { InspectionRoom as InspectionRoomType } from '@/components/residence/inspection/types'
+import type {
+  InspectionRoom as InspectionRoomType,
+  InspectionSubmitData,
+  TenantSnapshot,
+  Inspection,
+} from '@/components/residence/inspection/types'
 import { useInspectionForm } from '@/components/hooks/useInspectionForm'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 import { RoomInspectionMobile } from './RoomInspectionMobile'
@@ -20,10 +20,13 @@ interface MobileInspectionFormProps {
   rooms: Room[]
   onSave: (
     inspectorName: string,
-    rooms: Record<string, InspectionRoomType>
+    rooms: Record<string, InspectionRoomType>,
+    status: 'draft' | 'completed',
+    additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
   tenant?: any
+  existingInspection?: Inspection
 }
 
 export function MobileInspectionForm({
@@ -31,11 +34,13 @@ export function MobileInspectionForm({
   onSave,
   onCancel,
   tenant,
+  existingInspection,
 }: MobileInspectionFormProps) {
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0)
-  const [showInspectorSelection, setShowInspectorSelection] = useState(true)
+  // If we have existing inspection data, skip inspector selection
+  const [showInspectorSelection, setShowInspectorSelection] =
+    useState(!existingInspection)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-
   const {
     inspectorName,
     setInspectorName,
@@ -47,12 +52,28 @@ export function MobileInspectionForm({
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
-  } = useInspectionForm(rooms)
+    handleComponentPhotoAdd,
+    handleComponentPhotoRemove,
+  } = useInspectionForm(rooms, existingInspection)
 
   const currentRoom = rooms[currentRoomIndex]
   const completedRooms = rooms.filter(
     (room) => inspectionData[room.id]?.isHandled
   ).length
+
+  // Create tenant snapshot for saving
+  const createTenantSnapshot = (): TenantSnapshot | undefined => {
+    if (!tenant) return undefined
+    return {
+      name:
+        `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() ||
+        tenant.name ||
+        '',
+      personalNumber: tenant.personalNumber || '',
+      phone: tenant.phone,
+      email: tenant.email,
+    }
+  }
 
   const handleNext = () => {
     if (currentRoomIndex < rooms.length - 1) {
@@ -67,7 +88,21 @@ export function MobileInspectionForm({
   }
 
   const handleSubmit = () => {
-    onSave(inspectorName, inspectionData)
+    if (canComplete) {
+      onSave(inspectorName, inspectionData, 'completed', {
+        needsMasterKey,
+        tenant: createTenantSnapshot(),
+      })
+    }
+  }
+
+  const handleSaveDraft = () => {
+    if (inspectorName.trim()) {
+      onSave(inspectorName, inspectionData, 'draft', {
+        needsMasterKey,
+        tenant: createTenantSnapshot(),
+      })
+    }
   }
 
   const canComplete =
@@ -128,76 +163,72 @@ export function MobileInspectionForm({
 
   return (
     <div className="h-full bg-background flex flex-col">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-background border-b">
-        <InspectionProgressIndicator
-          current={completedRooms}
-          total={rooms.length}
-          currentRoomName={currentRoom.name}
-        />
+      {/* Sticky Header with Room Navigation */}
+      <div className="sticky top-0 z-10 bg-background shadow-sm">
+        <div className="border-b">
+          <InspectionProgressIndicator
+            current={completedRooms}
+            total={rooms.length}
+            currentRoomName={currentRoom.name}
+          />
 
-        <div className="flex items-center justify-between px-4 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowInspectorSelection(true)}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Tillbaka
-          </Button>
+          <div className="flex items-center justify-between px-4 py-[7px]">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowInspectorSelection(true)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Tillbaka
+            </Button>
 
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {inspectorName}
-            </span>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {inspectorName}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Room Navigation Cards */}
-      <div className="px-6 py-4">
-        <div
-          className="flex gap-3 overflow-x-auto pb-3 px-1 scrollbar-hide"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {rooms.map((room, index) => {
-            const isCompleted = inspectionData[room.id]?.isHandled
-            const isCurrent = index === currentRoomIndex
-
-            return (
-              <Card
-                key={room.id}
-                className={`min-w-[140px] cursor-pointer transition-all ${
-                  isCurrent
-                    ? 'ring-2 ring-inset ring-primary bg-primary/5'
-                    : 'hover:bg-muted/50'
-                }`}
-                onClick={() => setCurrentRoomIndex(index)}
-              >
-                <CardContent className="p-4 text-center space-y-2">
-                  <div className="flex items-center justify-center gap-2">
-                    {isCompleted && (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    )}
-                    <span className="text-sm font-medium leading-tight">
+        {/* Room Navigation Cards */}
+        <div className="px-4 py-2">
+          <div
+            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {rooms.map((room, index) => {
+              const isCompleted = inspectionData[room.id]?.isHandled
+              const isCurrent = index === currentRoomIndex
+              return (
+                <Card
+                  key={room.id}
+                  className={`min-w-[140px] cursor-pointer transition-all ${
+                    isCurrent
+                      ? 'ring-2 ring-inset ring-primary bg-primary/5'
+                      : 'hover:ring-1 hover:ring-border'
+                  }`}
+                  onClick={() => setCurrentRoomIndex(index)}
+                >
+                  <CardContent className="p-4 text-center space-y-2">
+                    <div className="text-sm font-medium leading-tight">
                       {room.name}
-                    </span>
-                  </div>
-                  <Badge
-                    variant={isCompleted ? 'default' : 'outline'}
-                    className={`text-xs px-3 py-1 ${
-                      isCompleted
-                        ? 'bg-green-100 text-green-800 border-green-200'
-                        : 'bg-orange-50 text-orange-700 border-orange-200'
-                    }`}
-                  >
-                    {isCompleted ? '✓ Klar' : 'Väntar'}
-                  </Badge>
-                </CardContent>
-              </Card>
-            )
-          })}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs px-3 py-1 ${
+                        isCompleted
+                          ? 'bg-green-100 text-green-800 border-green-200'
+                          : 'bg-orange-50 text-orange-700 border-orange-200'
+                      }`}
+                    >
+                      {isCompleted ? '✓ Klar' : 'Väntar'}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -217,6 +248,12 @@ export function MobileInspectionForm({
               onComponentNoteUpdate={(field, note) =>
                 handleComponentNoteUpdate(currentRoom.id, field, note)
               }
+              onComponentPhotoAdd={(field, photoDataUrl) =>
+                handleComponentPhotoAdd(currentRoom.id, field, photoDataUrl)
+              }
+              onComponentPhotoRemove={(field, index) =>
+                handleComponentPhotoRemove(currentRoom.id, field, index)
+              }
             />
           </div>
         </ScrollArea>
@@ -224,31 +261,41 @@ export function MobileInspectionForm({
 
       {/* Bottom Navigation */}
       <div className="sticky bottom-0 bg-background border-t p-4">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentRoomIndex === 0}
-            className="flex-1"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Föregående
-          </Button>
-
-          {currentRoomIndex === rooms.length - 1 ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
             <Button
-              onClick={handleSubmit}
-              disabled={!canComplete}
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentRoomIndex === 0}
               className="flex-1"
             >
-              Slutför besiktning
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Föregående
             </Button>
-          ) : (
-            <Button onClick={handleNext} className="flex-1">
-              Nästa
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
+
+            {currentRoomIndex === rooms.length - 1 ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={!canComplete}
+                className="flex-1"
+              >
+                Slutför
+              </Button>
+            ) : (
+              <Button onClick={handleNext} className="flex-1">
+                Nästa
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="secondary"
+            onClick={handleSaveDraft}
+            disabled={!inspectorName.trim()}
+            className="w-full"
+          >
+            Spara utkast
+          </Button>
         </div>
       </div>
     </div>

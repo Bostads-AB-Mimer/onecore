@@ -134,6 +134,7 @@ export function ResidenceView() {
                 inspections={inspections}
                 onInspectionCreated={handleInspectionCreated}
                 tenant={tenant}
+                residence={residence}
               />
             </TabLayout>
           </TabsContent>

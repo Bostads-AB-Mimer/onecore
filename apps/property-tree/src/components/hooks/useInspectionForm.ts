@@ -1,28 +1,48 @@
 import { useState, useCallback } from 'react'
-import type { InspectionRoom } from '@/components/residence/inspection/types'
+import type {
+  InspectionRoom,
+  Inspection,
+} from '@/components/residence/inspection/types'
 import type { Room } from '@/services/types'
 import { initializeInspectionData } from '@/components/residence/inspection/form/initialData'
 
-export function useInspectionForm(rooms: Room[]) {
-  const [inspectorName, setInspectorName] = useState('')
+export function useInspectionForm(
+  rooms: Room[],
+  existingInspection?: Inspection
+) {
+  const [inspectorName, setInspectorName] = useState(
+    existingInspection?.inspectedBy || ''
+  )
   const [inspectionTime, setInspectionTime] = useState(() => {
+    if (existingInspection?.date) {
+      // Try to extract time from existing inspection
+      return '10:00' // Default time if not available
+    }
     const now = new Date()
     const hours = now.getHours().toString().padStart(2, '0')
     const minutes = now.getMinutes().toString().padStart(2, '0')
     return `${hours}:${minutes}`
   })
-  const [needsMasterKey, setNeedsMasterKey] = useState(false)
+  const [needsMasterKey, setNeedsMasterKey] = useState(
+    existingInspection?.needsMasterKey || false
+  )
   const [apartmentInfo, setApartmentInfo] = useState<{
     address: string
     hasMainKey: boolean
   }>({
-    address: 'Odenplan 5, lägenhet 1001',
-    hasMainKey: true,
+    address:
+      existingInspection?.residence?.address || 'Odenplan 5, lägenhet 1001',
+    hasMainKey: existingInspection?.needsMasterKey || true,
   })
   const [expandedRoomIds, setExpandedRoomIds] = useState<string[]>([])
   const [inspectionData, setInspectionData] = useState<
     Record<string, InspectionRoom>
-  >(() => initializeInspectionData(rooms))
+  >(() =>
+    existingInspection?.rooms &&
+    Object.keys(existingInspection.rooms).length > 0
+      ? existingInspection.rooms
+      : initializeInspectionData(rooms)
+  )
 
   const handleCancel = () => {
     setInspectorName('')
@@ -108,6 +128,48 @@ export function useInspectionForm(rooms: Room[]) {
     }))
   }
 
+  const handleComponentPhotoAdd = useCallback(
+    (
+      roomId: string,
+      field: keyof InspectionRoom['componentPhotos'],
+      photoDataUrl: string
+    ) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          componentPhotos: {
+            ...prev[roomId].componentPhotos,
+            [field]: [...prev[roomId].componentPhotos[field], photoDataUrl],
+          },
+        },
+      }))
+    },
+    []
+  )
+
+  const handleComponentPhotoRemove = useCallback(
+    (
+      roomId: string,
+      field: keyof InspectionRoom['componentPhotos'],
+      photoIndex: number
+    ) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          componentPhotos: {
+            ...prev[roomId].componentPhotos,
+            [field]: prev[roomId].componentPhotos[field].filter(
+              (_, i) => i !== photoIndex
+            ),
+          },
+        },
+      }))
+    },
+    []
+  )
+
   return {
     inspectorName,
     setInspectorName,
@@ -124,5 +186,7 @@ export function useInspectionForm(rooms: Room[]) {
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
+    handleComponentPhotoAdd,
+    handleComponentPhotoRemove,
   }
 }
