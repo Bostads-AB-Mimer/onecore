@@ -3463,7 +3463,7 @@ export interface components {
         size: number;
         type: string;
         address?: {
-          street: string;
+          street?: string;
           number: string;
           postalCode: string;
           city: string;
@@ -3493,12 +3493,7 @@ export interface components {
           rentEndDate?: string;
         };
       };
-      address?: {
-        street: string;
-        number: string;
-        postalCode: string;
-        city: string;
-      };
+      address?: definitions["Lease"]["rentalProperty"]["address"];
       noticeGivenBy?: string;
       /** Format: date-time */
       noticeDate?: string;
@@ -3527,12 +3522,7 @@ export interface components {
           nationalRegistrationNumber: string;
           /** Format: date-time */
           birthDate: string;
-          address?: {
-            street: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
+          address?: definitions["Lease"]["rentalProperty"]["address"];
           phoneNumbers?: {
               phoneNumber: string;
               type: string;
