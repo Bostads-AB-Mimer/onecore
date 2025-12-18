@@ -378,7 +378,7 @@ export const preliminaryTerminateLease = async (
 ): Promise<
   AdapterResult<
     PreliminaryTerminationResponse,
-    'tenant-not-found' | 'lease-not-found' | 'termination-failed' | 'unknown'
+    'lease-not-found' | 'termination-failed' | 'unknown'
   >
 > => {
   try {
