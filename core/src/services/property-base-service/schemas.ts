@@ -406,6 +406,7 @@ export const RoomSchema = z.object({
   deleted: z.boolean(),
   timestamp: z.string(),
   roomType: RoomTypeSchema.nullable(),
+  area: z.number().optional(),
 })
 
 export const ParkingSpaceSchema = z.object({
