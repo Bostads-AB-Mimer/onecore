@@ -1,50 +1,36 @@
 import { Button } from '@/components/ui/v2/Button'
-import { TenantInformationCard } from '@/components/tenants/TenantInformationCard'
 import { RoomInspectionMobile } from '../mobile/RoomInspectionMobile'
+import { InspectorSelectionCard } from '../mobile/InspectorSelectionCard'
 import { useInspectionForm } from '@/components/hooks/useInspectionForm'
 import type { Room } from '@/services/types'
-import type { InspectionRoom as InspectionRoomType } from '@/components/residence/inspection/types'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
-import { Label } from '@/components/ui/Label'
-import { Avatar, AvatarFallback } from '@/components/ui/Avatar'
-import { Clock, CheckCircle2 } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
+import type {
+  InspectionRoom as InspectionRoomType,
+  InspectionSubmitData,
+  TenantSnapshot,
+  Inspection,
+} from '@/components/residence/inspection/types'
+import { CheckCircle2 } from 'lucide-react'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/Accordion'
-import { Badge } from '@/components/ui/v2/Badge'
+import { Badge } from '@/components/ui/v3/Badge'
 import { useEffect } from 'react'
 
 interface DesktopInspectionFormProps {
   rooms: Room[]
   onSave: (
     inspectorName: string,
-    rooms: Record<string, InspectionRoomType>
+    rooms: Record<string, InspectionRoomType>,
+    status: 'draft' | 'completed',
+    additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
   tenant?: any
+  existingInspection?: Inspection
 }
-
-const inspectors = [
-  'Anna Andersson',
-  'Erik Eriksson',
-  'Maria Nilsson',
-  'Johan Johansson',
-]
 
 const currentUser = 'Anna Andersson'
 
@@ -53,6 +39,7 @@ export function DesktopInspectionForm({
   onSave,
   onCancel,
   tenant,
+  existingInspection,
 }: DesktopInspectionFormProps) {
   const {
     inspectorName,
@@ -65,14 +52,15 @@ export function DesktopInspectionForm({
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
-  } = useInspectionForm(rooms)
+    handleComponentPhotoAdd,
+    handleComponentPhotoRemove,
+  } = useInspectionForm(rooms, existingInspection)
 
-  // Set default inspector if not already set
   useEffect(() => {
-    if (!inspectorName && currentUser) {
+    if (!inspectorName && currentUser && !existingInspection) {
       setInspectorName(currentUser)
     }
-  }, [inspectorName, setInspectorName])
+  }, [inspectorName, setInspectorName, existingInspection])
 
   const completedRooms = Object.values(inspectionData).filter(
     (room) => room.isHandled
@@ -80,113 +68,50 @@ export function DesktopInspectionForm({
 
   const canComplete = inspectorName && completedRooms === rooms.length
 
+  const createTenantSnapshot = (): TenantSnapshot | undefined => {
+    if (!tenant) return undefined
+    return {
+      name:
+        `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() ||
+        tenant.name ||
+        '',
+      personalNumber: tenant.personalNumber || '',
+      phone: tenant.phone,
+      email: tenant.email,
+    }
+  }
+
   const handleSubmit = () => {
     if (canComplete) {
-      onSave(inspectorName, inspectionData)
+      onSave(inspectorName, inspectionData, 'completed', {
+        needsMasterKey,
+        tenant: createTenantSnapshot(),
+      })
+    }
+  }
+
+  const handleSaveDraft = () => {
+    if (inspectorName.trim()) {
+      onSave(inspectorName, inspectionData, 'draft', {
+        needsMasterKey,
+        tenant: createTenantSnapshot(),
+      })
     }
   }
 
   return (
     <div className="space-y-6 min-w-0">
-      {/* Inspector selection + Tenant info */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Inspector Selection Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Info om besiktning</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>Besiktigare</Label>
-              <Select value={inspectorName} onValueChange={setInspectorName}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Välj vem som utför besiktningen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {inspectors.map((inspector) => (
-                    <SelectItem key={inspector} value={inspector}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs">
-                            {inspector
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        {inspector}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label
-                htmlFor="inspection-time"
-                className="flex items-center gap-2"
-              >
-                <Clock className="h-4 w-4" />
-                Klockslag för besiktning
-              </Label>
-              <div className="flex gap-2">
-                <Select
-                  value={inspectionTime.split(':')[0] || '09'}
-                  onValueChange={(hour) => {
-                    const currentMinute = inspectionTime.split(':')[1] || '00'
-                    setInspectionTime(`${hour}:${currentMinute}`)
-                  }}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Timme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 24 }, (_, i) =>
-                      i.toString().padStart(2, '0')
-                    ).map((hour) => (
-                      <SelectItem key={hour} value={hour}>
-                        {hour}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="flex items-center px-2 text-muted-foreground">
-                  :
-                </span>
-                <Select
-                  value={inspectionTime.split(':')[1] || '00'}
-                  onValueChange={(minute) => {
-                    const currentHour = inspectionTime.split(':')[0] || '09'
-                    setInspectionTime(`${currentHour}:${minute}`)
-                  }}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Minut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) =>
-                      (i * 5).toString().padStart(2, '0')
-                    ).map((minute) => (
-                      <SelectItem key={minute} value={minute}>
-                        {minute}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Huvudnyckel</span>
-              <span className="text-sm text-muted-foreground">Nej</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tenant info */}
-        {tenant && <TenantInformationCard tenant={tenant} />}
-      </div>
+      {/* Reuse the same card component with horizontal layout for desktop */}
+      <InspectorSelectionCard
+        inspectorName={inspectorName}
+        setInspectorName={setInspectorName}
+        inspectionTime={inspectionTime}
+        setInspectionTime={setInspectionTime}
+        needsMasterKey={needsMasterKey}
+        setNeedsMasterKey={setNeedsMasterKey}
+        tenant={tenant}
+        layout="horizontal"
+      />
 
       {/* Progress counter */}
       <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
@@ -238,6 +163,12 @@ export function DesktopInspectionForm({
                     onComponentNoteUpdate={(field, note) =>
                       handleComponentNoteUpdate(room.id, field, note)
                     }
+                    onComponentPhotoAdd={(field, photoDataUrl) =>
+                      handleComponentPhotoAdd(room.id, field, photoDataUrl)
+                    }
+                    onComponentPhotoRemove={(field, index) =>
+                      handleComponentPhotoRemove(room.id, field, index)
+                    }
                   />
                 </AccordionContent>
               </AccordionItem>
@@ -251,8 +182,15 @@ export function DesktopInspectionForm({
         <Button variant="outline" onClick={onCancel}>
           Avbryt
         </Button>
+        <Button
+          variant="secondary"
+          onClick={handleSaveDraft}
+          disabled={!inspectorName.trim()}
+        >
+          Spara utkast
+        </Button>
         <Button onClick={handleSubmit} disabled={!canComplete}>
-          Spara besiktning
+          Slutför besiktning
         </Button>
       </div>
     </div>

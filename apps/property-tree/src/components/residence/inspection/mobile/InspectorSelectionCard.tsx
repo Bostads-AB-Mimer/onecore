@@ -13,13 +13,13 @@ import {
 } from '@/components/ui/Select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/v2/Button'
-import { Badge } from '@/components/ui/v2/Badge'
-import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/v3/Badge'
 import { Label } from '@/components/ui/Label'
-import { Checkbox } from '@/components/ui/Checkbox'
 import { User, MapPin, ExternalLink, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import { cn } from '@/lib/utils'
+import { Tenant } from '@/services/types'
 
 interface InspectorSelectionCardProps {
   inspectorName: string
@@ -28,7 +28,8 @@ interface InspectorSelectionCardProps {
   setInspectionTime: (time: string) => void
   needsMasterKey: boolean
   setNeedsMasterKey: (needs: boolean) => void
-  tenant?: any
+  tenant?: Tenant
+  layout?: 'vertical' | 'horizontal'
 }
 
 const inspectors = [
@@ -49,6 +50,7 @@ export function InspectorSelectionCard({
   needsMasterKey,
   setNeedsMasterKey,
   tenant,
+  layout = 'vertical',
 }: InspectorSelectionCardProps) {
   const navigate = useNavigate()
 
@@ -60,13 +62,19 @@ export function InspectorSelectionCard({
   }, [inspectorName, setInspectorName])
 
   const handleOpenTenantProfile = () => {
-    if (tenant?.id) {
-      navigate(`/tenants/${tenant.id}`)
+    if (tenant?.contactCode) {
+      navigate(`/tenants/${tenant.contactCode}`)
     }
   }
 
+  const isHorizontal = layout === 'horizontal'
+
   return (
-    <div className="space-y-4">
+    <div
+      className={cn(
+        isHorizontal ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-4'
+      )}
+    >
       {/* Tenant Info Card */}
       {tenant && (
         <Card>
@@ -86,18 +94,13 @@ export function InspectorSelectionCard({
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={tenant.avatar} />
+                {/* <AvatarImage src={tenant.avatar} /> TODO: does this even exist? */}
                 <AvatarFallback>
                   <User className="h-6 w-6" />
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <p className="font-medium text-base">
-                  {tenant.name ||
-                    [tenant.firstName, tenant.lastName]
-                      .filter(Boolean)
-                      .join(' ')}
-                </p>
+                <p className="font-medium text-base">{tenant.fullName}</p>
               </div>
             </div>
 
@@ -105,12 +108,14 @@ export function InspectorSelectionCard({
               <div>
                 <p className="text-muted-foreground">Inflyttningsdatum</p>
                 <p className="font-medium">
-                  {tenant.moveInDate || '2023-01-15'}
+                  {/* {tenant.moveInDate || '2023-01-15'} Field does not exist on tenant. Need to get leases if this is mean to be displayed in final design. */}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Utflyttningsdatum</p>
-                <p className="font-medium">{tenant.moveOutDate || '-'}</p>
+                <p className="font-medium">
+                  {/* {tenant.moveOutDate || '-'}  Field does not exist on tenant. Need to get leases if this is mean to be displayed in final design. */}
+                </p>
               </div>
             </div>
 
@@ -135,88 +140,72 @@ export function InspectorSelectionCard({
         <CardHeader>
           <CardTitle className="text-base">Info om besiktning</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <Select value={inspectorName} onValueChange={setInspectorName}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Välj vem som utför besiktningen" />
-            </SelectTrigger>
-            <SelectContent>
-              {inspectors.map((inspector) => (
-                <SelectItem key={inspector} value={inspector}>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {inspector
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    {inspector}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="space-y-3">
-            <Label
-              htmlFor="inspection-time"
-              className="flex items-center gap-2"
-            >
-              <Clock className="h-4 w-4" />
-              Klockslag för besiktning
-            </Label>
-            <div className="flex gap-2">
-              <Select
-                value={inspectionTime.split(':')[0] || '09'}
-                onValueChange={(hour) => {
-                  const currentMinute = inspectionTime.split(':')[1] || '00'
-                  setInspectionTime(`${hour}:${currentMinute}`)
-                }}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Timme" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 24 }, (_, i) =>
-                    i.toString().padStart(2, '0')
-                  ).map((hour) => (
-                    <SelectItem key={hour} value={hour}>
-                      {hour}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="flex items-center px-2 text-muted-foreground">
-                :
-              </span>
-              <Select
-                value={inspectionTime.split(':')[1] || '00'}
-                onValueChange={(minute) => {
-                  const currentHour = inspectionTime.split(':')[0] || '09'
-                  setInspectionTime(`${currentHour}:${minute}`)
-                }}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Minut" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) =>
-                    (i * 5).toString().padStart(2, '0')
-                  ).map((minute) => (
-                    <SelectItem key={minute} value={minute}>
-                      {minute}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Besiktigare</Label>
+            <Select value={inspectorName} onValueChange={setInspectorName}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Välj besiktigare">
+                  {inspectorName && (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {inspectorName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{inspectorName}</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {inspectors.map((inspector) => (
+                  <SelectItem key={inspector} value={inspector}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {inspector
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      {inspector}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Huvudnyckel</span>
-            <span className="text-sm text-muted-foreground">Nej</span>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              Klockslag
+            </Label>
+            <Select
+              value={inspectionTime || '09:00'}
+              onValueChange={setInspectionTime}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Välj tid" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 24 }, (_, hour) =>
+                  ['00', '15', '30', '45'].map((minute) => {
+                    const time = `${hour.toString().padStart(2, '0')}:${minute}`
+                    return (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    )
+                  })
+                ).flat()}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

@@ -8,9 +8,9 @@ import {
 } from '@/components/ui/Popover'
 import { Input } from '@/components/ui/Input'
 import { Calendar as CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { type ExtendedInspection } from './mockdata/mockInspections'
-
 interface DateCellProps {
   inspection: ExtendedInspection
   readOnly?: boolean
@@ -42,10 +42,7 @@ export function DateCell({
     return (
       <span className="text-sm whitespace-nowrap">
         {inspection.scheduledDate
-          ? new Date(inspection.scheduledDate)
-              .toISOString()
-              .slice(0, 16)
-              .replace('T', ' ')
+          ? format(inspection.scheduledDate, 'dd-MM-yyyy HH:mm')
           : 'Ej planerat'}
       </span>
     )
@@ -87,10 +84,7 @@ export function DateCell({
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           <span className="truncate">
             {inspection.scheduledDate
-              ? new Date(inspection.scheduledDate)
-                  .toISOString()
-                  .slice(0, 16)
-                  .replace('T', ' ')
+              ? format(inspection.scheduledDate, 'dd-MM-yyyy HH:mm')
               : 'Välj datum och tid'}
           </span>
         </Button>

@@ -6,7 +6,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/v2/Tabs'
-import { Plus, ClipboardList } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { InspectionFormDialog } from '@/components/residence/inspection/InspectionFormDialog'
 import { InspectionReadOnly } from '@/components/residence/inspection/InspectionReadOnly'
@@ -21,15 +21,55 @@ import {
 import { roomService } from '@/services/api/core'
 import { Grid } from '@/components/ui/Grid'
 
+import type { Room, ResidenceDetails } from '@/services/types'
+import { Badge } from '@/components/ui/v3/Badge'
+import { format } from 'date-fns'
 import type {
-  InspectionRoom,
   Inspection,
+  InspectionRoom as InspectionRoomType,
+  InspectionSubmitData,
+  ResidenceInfo,
+  TenantSnapshot,
 } from '@/components/residence/inspection/types'
+import { useToast } from '@/components/hooks/useToast'
+
 interface InspectionsListProps {
   residenceId: string
   inspections: Inspection[]
   onInspectionCreated: () => void
   tenant?: any
+  residence?: ResidenceDetails
+}
+
+// Generera besiktningsnummer
+// TODO: is this something the frontend should do? This is copied from Lovable.
+const generateInspectionNumber = (): string => {
+  const year = new Date().getFullYear()
+  const randomNum = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, '0')
+  return `B-${year}-${randomNum}`
+}
+
+// Skapa ResidenceInfo från Residence
+const createResidenceInfo = (residence?: ResidenceDetails): ResidenceInfo => {
+  if (!residence) {
+    return {
+      id: '',
+      objectNumber: '',
+      address: 'Okänd adress',
+      apartmentType: null,
+      size: null,
+    }
+  }
+  return {
+    id: residence.id,
+    objectNumber: residence.code,
+    address: residence.name ?? '',
+    apartmentType:
+      residence.propertyObject.rentalInformation?.type.code ?? null,
+    size: residence.size,
+  }
 }
 
 export function InspectionsList({
@@ -37,11 +77,13 @@ export function InspectionsList({
   inspections,
   onInspectionCreated,
   tenant,
+  residence,
 }: InspectionsListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedInspection, setSelectedInspection] =
     useState<Inspection | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const { toast } = useToast()
 
   const roomsQuery = useQuery({
     queryKey: ['rooms', residenceId],
@@ -80,13 +122,60 @@ export function InspectionsList({
     setIsViewDialogOpen(true)
   }
 
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE')
+  const handleSubmit = (
+    inspectorName: string,
+    roomsData: Record<string, InspectionRoomType>,
+    status: 'draft' | 'completed',
+    additionalData: InspectionSubmitData
+  ) => {
+    const newInspection: Inspection = {
+      id: `inspection-${Date.now()}`,
+      inspectionNumber: generateInspectionNumber(),
+      date: new Date().toISOString(),
+      inspectedBy: inspectorName,
+      rooms: roomsData,
+      status: status,
+      isCompleted: status === 'completed',
+
+      // Auto-hämtad residence-info
+      residence: createResidenceInfo(residence),
+
+      // Data från formuläret
+      needsMasterKey: additionalData.needsMasterKey,
+      tenant: additionalData.tenant,
+    }
+
+    // Spara till localStorage
+    const existingInspections = JSON.parse(
+      localStorage.getItem('inspections') || '[]'
+    )
+    localStorage.setItem(
+      'inspections',
+      JSON.stringify([...existingInspections, newInspection])
+    )
+
+    const toastTitle =
+      status === 'draft' ? 'Utkast sparat' : 'Besiktning sparad'
+    const toastDescription =
+      status === 'draft'
+        ? `Utkastet av ${inspectorName} har sparats. Du kan återuppta besiktningen senare.`
+        : `Besiktningen genomförd av ${inspectorName} har sparats.`
+
+    toast({
+      title: toastTitle,
+      description: toastDescription,
+    })
+
+    onInspectionCreated()
+    setIsDialogOpen(false)
+  }
 
   const renderInspectionsTable = (inspectionsData: Inspection[]) => (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            <TableHead>Nr</TableHead>
             <TableHead>Datum</TableHead>
             <TableHead>Besiktningsman</TableHead>
             <TableHead>Status</TableHead>
@@ -97,15 +186,30 @@ export function InspectionsList({
         <TableBody>
           {inspectionsData.map((inspection) => (
             <TableRow key={inspection.id} className="group">
-              <TableCell>
-                {dateFormatter.format(new Date(inspection.date))}
+              <TableCell className="font-mono text-sm">
+                {inspection.inspectionNumber || '-'}
               </TableCell>
-              <TableCell>{inspection.inspectedBy}</TableCell>
               <TableCell>
-                {inspection.isCompleted ||
+                {format(new Date(inspection.date), 'yyyy-MM-dd')}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1">
+                  <span>{inspection.inspectedBy}</span>
+                  {inspection.status === 'draft' && (
+                    <Badge variant="secondary" className="w-fit">
+                      Utkast
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                {inspection.status === 'completed' ||
+                inspection.isCompleted ||
                 Object.values(inspection.rooms).every((room) => room.isHandled)
                   ? 'Slutförd'
-                  : 'Pågående'}
+                  : inspection.status === 'draft'
+                    ? 'Utkast'
+                    : 'Pågående'}
               </TableCell>
               <TableCell>{Object.keys(inspection.rooms).length}</TableCell>
               <TableCell className="text-right">
@@ -140,7 +244,7 @@ export function InspectionsList({
             size="sm"
             onClick={() => {
               localStorage.removeItem('inspections')
-              onInspectionCreated() // This will refresh the inspections list
+              onInspectionCreated()
             }}
             className="text-xs"
           >
@@ -180,21 +284,7 @@ export function InspectionsList({
         <InspectionFormDialog
           isOpen={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
-          onSubmit={(
-            inspectorName: string,
-            roomsData: Record<string, InspectionRoom>
-          ) => {
-            const newInspection: Inspection = {
-              id: `inspection-${Date.now()}`,
-              date: new Date().toISOString(),
-              inspectedBy: inspectorName,
-              rooms: roomsData,
-              isCompleted: false,
-            }
-
-            onInspectionCreated()
-            setIsDialogOpen(false)
-          }}
+          onSubmit={handleSubmit}
           rooms={rooms}
           tenant={tenant}
         />
