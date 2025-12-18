@@ -1,10 +1,10 @@
 model Documents {
   id                  String   @id @default(uuid()) @db.UniqueIdentifier
-  componentModelId    String?  @map("component_model_id") @db.UniqueIdentifier
-  componentInstanceId String?  @map("component_instance_id") @db.UniqueIdentifier
-  fileId              String   @map("file_id") @db.NVarChar(255)
-  createdAt           DateTime @default(now()) @map("created_at") @db.DateTime
-  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  componentModelId    String?  @db.UniqueIdentifier
+  componentInstanceId String?  @db.UniqueIdentifier
+  fileId              String   @db.NVarChar(255)
+  createdAt           DateTime @default(now()) @db.DateTime
+  updatedAt           DateTime @default(now()) @updatedAt @db.DateTime
 
   // Relations
   componentModel    ComponentModels? @relation(fields: [componentModelId], references: [id], onDelete: Cascade, onUpdate: NoAction)
