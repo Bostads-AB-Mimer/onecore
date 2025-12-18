@@ -17,7 +17,7 @@ describe('inspection-service', () => {
   describe('GET /inspections/xpand', () => {
     it('responds with an array of inspections', async () => {
       const getInspectionsSpy = jest
-        .spyOn(xpandAdapter, 'getInspectionsFromXpand')
+        .spyOn(xpandAdapter, 'getInspections')
         .mockResolvedValueOnce({
           ok: true,
           data: [
@@ -39,7 +39,7 @@ describe('inspection-service', () => {
 
     it('handles adapter errors', async () => {
       const getInspectionsSpy = jest
-        .spyOn(xpandAdapter, 'getInspectionsFromXpand')
+        .spyOn(xpandAdapter, 'getInspections')
         .mockResolvedValueOnce({ ok: false, err: 'schema-error' })
 
       const res = await request(app.callback()).get('/inspections/xpand')
@@ -53,7 +53,7 @@ describe('inspection-service', () => {
 
     it('handles unhandled errors', async () => {
       const getInspectionsSpy = jest
-        .spyOn(xpandAdapter, 'getInspectionsFromXpand')
+        .spyOn(xpandAdapter, 'getInspections')
         .mockImplementation(() => {
           throw new Error('Database connection failed')
         })

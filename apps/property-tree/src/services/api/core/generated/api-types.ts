@@ -3175,7 +3175,10 @@ export interface paths {
     };
   };
   "/inspections/xpand": {
-    /** Retrieve inspections from Xpand */
+    /**
+     * Retrieve inspections from Xpand
+     * @description Retrieves inspections from Xpand with pagination support.
+     */
     get: {
       parameters: {
         query?: {
@@ -3188,13 +3191,75 @@ export interface paths {
         };
       };
       responses: {
-        /** @description A list of inspections from Xpand */
+        /** @description Successfully retrieved inspections. */
         200: {
           content: {
             "application/json": {
               content?: {
                 inspections?: components["schemas"]["XpandInspection"][];
               };
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: {
+            "application/json": {
+              /** @example Invalid query parameters */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve inspections. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/xpand/residence/{residenceId}": {
+    /**
+     * Retrieve inspections by residence ID from Xpand
+     * @description Retrieves inspections associated with a specific residence ID from Xpand.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the residence to retrieve inspections for. */
+          residenceId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved inspections for the specified residence ID. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                inspections?: components["schemas"]["XpandInspection"][];
+              };
+            };
+          };
+        };
+        /** @description No inspections found for the specified residence ID. */
+        404: {
+          content: {
+            "application/json": {
+              /** @example not-found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve inspections. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
             };
           };
         };

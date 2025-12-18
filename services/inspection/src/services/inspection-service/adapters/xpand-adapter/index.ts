@@ -3,7 +3,7 @@ import { logger } from '@onecore/utilities'
 import Config from '../../../../common/config'
 import { AdapterResult } from '../../types'
 import { XpandInspection, XpandInspectionSchema } from '../../schemas'
-import { trimStrings } from './utils'
+import { trimStrings, mapInspectionStatus } from './utils'
 
 export interface XpandDbInspection {
   id: string
@@ -16,13 +16,6 @@ export interface XpandDbInspection {
   leaseId: string
 }
 
-const STATUS_MAP: Record<number, string> = {
-  0: 'Registrerad',
-  1: 'Genomförd',
-  3: 'Besiktningsresultat skickat',
-  6: 'Makulerad',
-} as const
-
 export const db = knex({
   client: 'mssql',
   connection: Config.xpandDatabase,
@@ -34,7 +27,7 @@ export const db = knex({
   },
 })
 
-export async function getInspectionsFromXpand({
+export async function getInspections({
   skip = 0,
   limit = 100,
   sortAscending,
@@ -43,7 +36,7 @@ export async function getInspectionsFromXpand({
 > {
   logger.info(`Getting inspections from Xpand`)
 
-  const inspections = await db<XpandDbInspection>('lbbes')
+  const rawInspections = await db<XpandDbInspection>('lbbes')
     .select(
       'lbbes.caption AS id',
       'lbbes.status AS status',
@@ -64,16 +57,51 @@ export async function getInspectionsFromXpand({
     .limit(limit)
     .then<XpandDbInspection[]>(trimStrings)
 
-  const inspectionsWithMappedStatus = inspections.map((inspection: any) => ({
-    ...inspection,
-    status:
-      STATUS_MAP[inspection.status as number] ??
-      `Unknown (${inspection.status})`,
-  }))
+  const inspections = mapInspectionStatus(rawInspections)
 
-  const parsed = XpandInspectionSchema.array().safeParse(
-    inspectionsWithMappedStatus
-  )
+  const parsed = XpandInspectionSchema.array().safeParse(inspections)
+  if (!parsed.success) {
+    logger.error(
+      { error: parsed.error.format() },
+      'Failed to parse inspections from Xpand DB'
+    )
+    return { ok: false, err: 'schema-error' }
+  }
+
+  return {
+    ok: true,
+    data: parsed.data,
+  }
+}
+
+export async function getInspectionsByResidenceId(
+  residenceId: string
+): Promise<AdapterResult<XpandInspection[], 'schema-error' | 'unknown'>> {
+  logger.info(`Getting inspections from Xpand for residenceId: ${residenceId}`)
+
+  const rawInspections = await db<XpandDbInspection>('lbbes')
+    .select(
+      'lbbes.caption AS id',
+      'lbbes.status AS status',
+      'lbbes.besdat AS date',
+      'cmctc.cmctcben AS inspector',
+      'lbbka.caption AS type',
+      'babuf.caption AS address',
+      'babuf.lghcode AS apartmentCode',
+      'hyobj.hyobjben AS leaseId'
+    )
+    .innerJoin('babuf', 'lbbes.keycmobj', 'babuf.keycmobj')
+    .innerJoin('cmctc', 'lbbes.keycmctc', 'cmctc.keycmctc')
+    .innerJoin('hyobj', 'lbbes.keyhyobj', 'hyobj.keyhyobj')
+    .innerJoin('lbbka', 'lbbes.KEYLBBKA', 'lbbka.KEYLBBKA')
+    .whereNot('lbbes.status', 6)
+    .andWhere('babuf.hyresid', residenceId)
+    .orderBy('lbbes.besdat', 'desc')
+    .then<XpandDbInspection[]>(trimStrings)
+
+  const inspections = mapInspectionStatus(rawInspections)
+
+  const parsed = XpandInspectionSchema.array().safeParse(inspections)
   if (!parsed.success) {
     logger.error(
       { error: parsed.error.format() },

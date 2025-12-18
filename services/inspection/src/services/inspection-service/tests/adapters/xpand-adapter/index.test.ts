@@ -29,13 +29,17 @@ jest.mock('@onecore/utilities', () => ({
   },
 }))
 
-jest.mock('../../../adapters/xpand-adapter/utils', () => ({
-  trimStrings: jest.fn(<T>(data: T) => data),
-}))
+jest.mock('../../../adapters/xpand-adapter/utils', () => {
+  const actual = jest.requireActual('../../../adapters/xpand-adapter/utils')
+  return {
+    ...actual,
+    trimStrings: jest.fn(<T>(data: T) => data),
+  }
+})
 
 import * as xpandAdapter from '../../../adapters/xpand-adapter'
 
-describe(xpandAdapter.getInspectionsFromXpand, () => {
+describe(xpandAdapter.getInspections, () => {
   beforeEach(() => {
     mockThen.mockClear()
   })
@@ -50,7 +54,7 @@ describe(xpandAdapter.getInspectionsFromXpand, () => {
       ])
     )
 
-    const result = await xpandAdapter.getInspectionsFromXpand()
+    const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -67,7 +71,7 @@ describe(xpandAdapter.getInspectionsFromXpand, () => {
       callback([XpandDbInspectionFactory.build({ id: 'INS005', status: 99 })])
     )
 
-    const result = await xpandAdapter.getInspectionsFromXpand()
+    const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -78,7 +82,7 @@ describe(xpandAdapter.getInspectionsFromXpand, () => {
   it('should return empty array for empty database result', async () => {
     mockThen.mockImplementationOnce((callback) => callback([]))
 
-    const result = await xpandAdapter.getInspectionsFromXpand()
+    const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -93,7 +97,7 @@ describe(xpandAdapter.getInspectionsFromXpand, () => {
       ])
     )
 
-    const result = await xpandAdapter.getInspectionsFromXpand()
+    const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
