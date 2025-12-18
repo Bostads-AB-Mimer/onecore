@@ -559,16 +559,6 @@ export const routes = (router: KoaRouter) => {
         )
 
         if (!result.ok) {
-          if (result.err === 'tenant-not-found') {
-            ctx.status = 404
-            ctx.body = {
-              error: result.err,
-              message: 'Tenant not found',
-              ...metadata,
-            }
-            return
-          }
-
           if (result.err === 'lease-not-found') {
             ctx.status = 404
             ctx.body = {
