@@ -1,17 +1,17 @@
 model ComponentModels {
   id                       String   @id @default(uuid()) @db.UniqueIdentifier
-  modelName                String   @map("model_name") @db.NVarChar(255)
-  componentSubtypeId       String   @map("component_subtype_id") @db.UniqueIdentifier
-  currentPrice             Float    @map("current_price") @db.Money
-  currentInstallPrice      Float    @map("current_install_price") @db.Money
-  warrantyMonths           Int      @map("warranty_months")
+  modelName                String   @db.NVarChar(255)
+  componentSubtypeId       String   @db.UniqueIdentifier
+  currentPrice             Float    @db.Money
+  currentInstallPrice      Float    @db.Money
+  warrantyMonths           Int
   manufacturer             String   @db.NVarChar(255)
-  technicalSpecification   String?  @map("technical_specification") @db.NVarChar(Max)
-  installationInstructions String?  @map("installation_instructions") @db.NVarChar(Max)
+  technicalSpecification   String?  @db.NVarChar(Max)
+  installationInstructions String?  @db.NVarChar(Max)
   dimensions               String?  @db.NVarChar(255)
-  coclassCode              String?  @map("coclass_code") @db.NVarChar(50)
-  createdAt                DateTime @default(now()) @map("created_at") @db.DateTime
-  updatedAt                DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  coclassCode              String?  @db.NVarChar(50)
+  createdAt                DateTime @default(now()) @db.DateTime
+  updatedAt                DateTime @default(now()) @updatedAt @db.DateTime
 
   // Relations
   subtype    ComponentSubtypes @relation(fields: [componentSubtypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
