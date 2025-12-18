@@ -785,10 +785,7 @@ const preliminaryTerminateLease = async (
   lastDebitDate: Date,
   desiredMoveDate: Date
 ): Promise<
-  AdapterResult<
-    any,
-    'tenant-not-found' | 'lease-not-found' | 'termination-failed' | 'unknown'
-  >
+  AdapterResult<any, 'lease-not-found' | 'termination-failed' | 'unknown'>
 > => {
   try {
     const response = await axios.post(
@@ -817,10 +814,7 @@ const preliminaryTerminateLease = async (
       if (status === 404) {
         return {
           ok: false,
-          err:
-            errorType === 'tenant-not-found' || errorType === 'lease-not-found'
-              ? errorType
-              : 'lease-not-found',
+          err: 'lease-not-found',
         }
       }
 

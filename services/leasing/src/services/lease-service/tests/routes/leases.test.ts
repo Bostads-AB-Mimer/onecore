@@ -95,25 +95,6 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
     })
   })
 
-  it('should return 404 if tenant is not found', async () => {
-    jest
-      .spyOn(tenfastAdapter, 'preliminaryTerminateLease')
-      .mockResolvedValueOnce({
-        ok: false,
-        err: 'tenant-not-found',
-      })
-
-    const res = await request(app.callback())
-      .post('/leases/216-704-00-0022%2F02/preliminary-termination')
-      .send(validRequestBody)
-
-    expect(res.status).toBe(404)
-    expect(res.body).toMatchObject({
-      error: 'tenant-not-found',
-      message: 'Tenant not found',
-    })
-  })
-
   it('should return 404 if lease is not found', async () => {
     jest
       .spyOn(tenfastAdapter, 'preliminaryTerminateLease')
