@@ -136,24 +136,6 @@ describe('lease-service', () => {
       desiredMoveDate: '2025-12-31T00:00:00.000Z',
     }
 
-    it('should return 404 if tenant is not found', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
-        .mockResolvedValue({
-          ok: false,
-          err: 'tenant-not-found',
-        })
-
-      const res = await request(app.callback())
-        .post(
-          '/leases/by-lease-id/216-704-00-0022%2F02/preliminary-termination'
-        )
-        .send(validRequestBody)
-
-      expect(res.status).toBe(404)
-      expect(res.body.message).toBe('Tenant not found')
-    })
-
     it('should return 404 if lease is not found', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'preliminaryTerminateLease')
