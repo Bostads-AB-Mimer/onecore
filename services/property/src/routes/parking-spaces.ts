@@ -21,7 +21,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search parking spaces
    *     description: |
-   *       Searches for parking spaces by rental id.
+   *       Searches for parking spaces by rental ID or parking space name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
    *     tags:
    *       - Parking Spaces
    *     parameters:
@@ -30,7 +30,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query (rental id).
+   *         description: The search query. Matches against rental ID or parking space name.
    *     responses:
    *       200:
    *         description: |
@@ -63,7 +63,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const parkingSpaces = await parkingSpacesAdapter.searchParkingSpaces(q)
+      // Search for parking spaces by rental id and parking space name
+      const parkingSpaces = await parkingSpacesAdapter.searchParkingSpaces(q, [
+        'rentalId',
+        'parkingSpaceName',
+      ])
 
       ctx.status = 200
       ctx.body = {

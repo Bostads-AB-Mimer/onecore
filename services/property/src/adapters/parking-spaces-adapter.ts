@@ -1,44 +1,49 @@
+import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 
-export async function searchParkingSpaces(q: string) {
+export async function searchParkingSpaces(q: string, searchFields: string[]) {
   /**
    * Searches for parking spaces by rental id
    */
-  const parkingSpaces = await prisma.propertyStructure.findMany({
-    select: {
-      rentalId: true,
-      companyCode: true,
-      companyName: true,
-      propertyCode: true,
-      propertyName: true,
-      buildingCode: true,
-      buildingName: true,
-      parkingSpace: {
-        select: {
-          propertyObjectId: true,
-          code: true,
-          name: true,
-          parkingNumber: true,
-          parkingSpaceType: {
-            select: {
-              code: true,
-              name: true,
+  const parkingSpaces = await prisma.propertyStructure
+    .findMany({
+      select: {
+        rentalId: true,
+        companyCode: true,
+        companyName: true,
+        propertyCode: true,
+        propertyName: true,
+        buildingCode: true,
+        buildingName: true,
+        parkingSpace: {
+          select: {
+            propertyObjectId: true,
+            code: true,
+            name: true,
+            parkingNumber: true,
+            parkingSpaceType: {
+              select: {
+                code: true,
+                name: true,
+              },
             },
           },
         },
       },
-    },
-    where: {
-      companyCode: '001',
-      parkingSpace: {
-        isNot: null,
+      where: {
+        companyCode: '001',
+        parkingSpace: {
+          isNot: null,
+        },
+        OR: searchFields.map((field) => ({
+          [field]: {
+            contains: q,
+          },
+        })),
       },
-      rentalId: {
-        contains: q,
-      },
-    },
-    take: 10,
-  })
+      take: 10,
+    })
+    .then(trimStrings)
 
   return parkingSpaces
     .filter((p) => p.parkingSpace !== null && p.rentalId !== null)
