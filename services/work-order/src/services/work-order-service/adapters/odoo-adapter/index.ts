@@ -223,6 +223,41 @@ export const getWorkOrdersByBuildingId = async (
   }
 }
 
+export const getWorkOrdersByMaintenanceUnitCode = async (
+  maintenanceUnitCode: string
+): Promise<WorkOrder[]> => {
+  try {
+    await odoo.connect()
+
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
+      'maintenance.request',
+      ['maintenance_unit_code', '=', maintenanceUnitCode],
+      WORK_ORDER_FIELDS
+    )
+
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
+      'mail.message',
+      MESSAGE_DOMAIN(odooWorkOrders.map((workOrder) => workOrder.id)),
+      MESSAGE_FIELDS
+    )
+
+    const messagesById = groupBy(odooWorkOrderMessages, 'res_id')
+
+    const workOrders = odooWorkOrders.map((workOrder) => ({
+      ...transformWorkOrder(workOrder),
+      Messages: transformMessages(
+        messagesById[workOrder.id]
+      ) satisfies WorkOrderMessage[],
+      Url: WorkOrderUrl(workOrder.id),
+    }))
+
+    return workOrders
+  } catch (error) {
+    console.error('Error fetching work orders:', error)
+    throw error
+  }
+}
+
 export const createWorkOrder = async (
   rentalPropertyInfo: RentalProperty,
   tenant: Tenant,

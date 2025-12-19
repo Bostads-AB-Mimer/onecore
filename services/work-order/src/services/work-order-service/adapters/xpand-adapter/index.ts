@@ -252,6 +252,61 @@ export async function getWorkOrdersByBuildingId(
   return { ok: true, data: parsed.data }
 }
 
+export async function getWorkOrdersByMaintenanceUnitCode(
+  maintenanceUnitCode: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<XpandWorkOrder[], 'schema-error' | 'unknown'>> {
+  logger.info(
+    `Getting work orders for maintenanceUnitCode: ${maintenanceUnitCode}`
+  )
+
+  const workOrders = await db<XpandDbWorkOrder>('aoupp')
+    .select(
+      'aoupp.code',
+      'aoupp.caption AS caption',
+      'cmctc.cmctckod AS contactCode',
+      'aotlt.caption AS masterKey',
+      'aoupp.status AS status',
+      'resource.cmctcben AS resource',
+      'cmrgr.caption AS resourceGroup',
+      'aoupp.time AS createdAt',
+      'aoupp.timeforf AS expiresAt',
+      'aoupp.lastchged AS lastChanged',
+      'aopri.code AS priority',
+      'babuf.hyresid AS residenceId'
+    )
+    .innerJoin('bauhe', 'bauhe.keycmobj', 'aoupp.keycmobj')
+    .innerJoin('babuf', 'babuf.keycmobj', 'aoupp.keycmobj')
+    .innerJoin('aotlt', 'aotlt.keyaotlt', 'aoupp.keyaotlt')
+    .leftJoin('cmctc', 'cmctc.keycmctc', 'aoupp.keycmctc')
+    .leftJoin('cmctc as resource', 'resource.keycmctc', 'aoupp.keycmctc2')
+    .leftJoin('cmrgr', 'cmrgr.keycmrgr', 'aoupp.keycmrgr')
+    .leftJoin('aopri', 'aopri.keyaopri', 'aoupp.keyaopri')
+    .where('bauhe.code', maintenanceUnitCode)
+    .orderBy('aoupp.time', sortAscending ? 'asc' : 'desc')
+    .offset(skip)
+    .limit(limit)
+    .then<XpandDbWorkOrder[]>(trimStrings)
+
+  const transformedWorkOrders = workOrders.map(transformXpandDbWorkOrder)
+
+  const parsed = XpandWorkOrderSchema.array().safeParse(transformedWorkOrders)
+  if (!parsed.success) {
+    logger.error(
+      { error: parsed.error.format() },
+      'Failed to parse work orders from Xpand DB'
+    )
+
+    return { ok: false, err: 'schema-error' }
+  }
+
+  return { ok: true, data: parsed.data }
+}
+
 export async function getWorkOrderDetails(
   workOrderCode: string
 ): Promise<
