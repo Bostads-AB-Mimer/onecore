@@ -2718,7 +2718,7 @@ export interface components {
       id: string
       /** Format: uuid */
       modelId: string
-      serialNumber: string
+      serialNumber: string | null
       specifications?: string | null
       additionalInformation?: string | null
       warrantyStartDate: string | null
@@ -2797,23 +2797,6 @@ export interface components {
         cost: number
         createdAt: string
         updatedAt: string
-        propertyObject?: {
-          id: string
-          propertyStructures?: {
-            roomId?: string | null
-            roomCode?: string | null
-            roomName?: string | null
-            residenceId?: string | null
-            residenceCode?: string | null
-            residenceName?: string | null
-            rentalId?: string | null
-            buildingCode?: string | null
-            buildingName?: string | null
-            residence?: {
-              id: string
-            } | null
-          }[]
-        } | null
       }[]
     }
     ComponentInstallation: {
@@ -2835,7 +2818,7 @@ export interface components {
         id: string
         /** Format: uuid */
         modelId: string
-        serialNumber: string
+        serialNumber: string | null
         specifications?: string | null
         additionalInformation?: string | null
         warrantyStartDate: string | null
@@ -2914,23 +2897,6 @@ export interface components {
           cost: number
           createdAt: string
           updatedAt: string
-          propertyObject?: {
-            id: string
-            propertyStructures?: {
-              roomId?: string | null
-              roomCode?: string | null
-              roomName?: string | null
-              residenceId?: string | null
-              residenceCode?: string | null
-              residenceName?: string | null
-              rentalId?: string | null
-              buildingCode?: string | null
-              buildingName?: string | null
-              residence?: {
-                id: string
-              } | null
-            }[]
-          } | null
         }[]
       }
     }

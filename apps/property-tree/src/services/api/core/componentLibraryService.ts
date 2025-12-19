@@ -70,10 +70,6 @@ export const componentLibraryService = {
 
   // ===== Type Operations =====
   async getTypes(categoryId?: string): Promise<ComponentType[]> {
-    console.log(
-      '[componentLibraryService] getTypes called with categoryId:',
-      categoryId
-    )
     const { data, error } = await GET('/component-types', {
       params: categoryId
         ? {
@@ -81,11 +77,6 @@ export const componentLibraryService = {
           }
         : undefined,
     })
-    console.log(
-      '[componentLibraryService] API response:',
-      data?.content?.length,
-      'types'
-    )
     if (error) throw error
     return (data?.content || []) as ComponentType[]
   },
