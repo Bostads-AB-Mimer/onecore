@@ -4882,7 +4882,7 @@ export interface components {
       id: string;
       /** Format: uuid */
       modelId: string;
-      serialNumber: string;
+      serialNumber: string | null;
       specifications?: string | null;
       additionalInformation?: string | null;
       warrantyStartDate: string | null;
@@ -4982,7 +4982,7 @@ export interface components {
         id: string;
         /** Format: uuid */
         modelId: string;
-        serialNumber: string;
+        serialNumber: string | null;
         specifications?: string | null;
         additionalInformation?: string | null;
         warrantyStartDate: string | null;

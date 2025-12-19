@@ -10,7 +10,7 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
-export const SpaceTypeEnum = z.enum(['OBJECT'])
+export const SpaceTypeEnum = z.enum(['OBJECT', 'PropertyObject'])
 
 // ==================== COMPONENTS (INSTANCES) ====================
 
@@ -54,7 +54,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
 export const ComponentNewSchema = z.object({
   id: z.string().uuid(),
   modelId: z.string().uuid(),
-  serialNumber: z.string(),
+  serialNumber: z.string().nullable(),
   specifications: z.string().nullable().optional(),
   additionalInformation: z.string().nullable().optional(),
   warrantyStartDate: z

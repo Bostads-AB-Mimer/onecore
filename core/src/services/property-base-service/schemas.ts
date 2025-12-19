@@ -653,7 +653,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
 export const ComponentNewSchema = z.object({
   id: z.string().uuid(),
   modelId: z.string().uuid(),
-  serialNumber: z.string(),
+  serialNumber: z.string().nullable(),
   specifications: z.string().nullable().optional(),
   additionalInformation: z.string().nullable().optional(),
   warrantyStartDate: z.string().nullable(),
