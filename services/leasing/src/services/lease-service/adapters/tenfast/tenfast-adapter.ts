@@ -403,17 +403,6 @@ export const preliminaryTerminateLease = async (
 
     const tenfastLeaseId = leaseResponse.data._id
 
-    logger.info(
-      {
-        leaseId,
-        tenfastLeaseId,
-        contactCode,
-        lastDebitDate: lastDebitDate.toISOString(),
-        desiredMoveDate: desiredMoveDate.toISOString(),
-      },
-      'Preliminary lease termination request to tenfast'
-    )
-
     // Format dates to YYYY-MM-DD format as required by tenfast API
     const endDate = lastDebitDate.toISOString().split('T')[0]
 
@@ -443,10 +432,6 @@ export const preliminaryTerminateLease = async (
 
     // Handle success
     if (terminationResponse.status === 200) {
-      logger.info(
-        { leaseId, contactCode },
-        'Preliminary lease termination successful'
-      )
       return { ok: true, data: { message: 'Signerings begäran skickad' } }
     }
 
