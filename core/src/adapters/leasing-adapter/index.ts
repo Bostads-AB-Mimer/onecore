@@ -171,8 +171,12 @@ const getTenantByContactCode = async (
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.getTenantByContactCode')
 
-    if (err instanceof AxiosError)
+    if (err instanceof AxiosError) {
+      if (err.response?.data?.type === 'contact-leases-not-found') {
+        return { ok: false, err: 'contact-not-tenant' }
+      }
       return { ok: false, err: err.response?.data?.type }
+    }
     return { ok: false, err: 'unknown' }
   }
 }
