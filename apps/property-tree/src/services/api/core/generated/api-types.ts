@@ -1944,6 +1944,42 @@ export interface paths {
       }
     }
   }
+  '/work-orders/by-maintenance-unit-code/{maintenanceUnitCode}': {
+    /**
+     * Get work orders by maintenance unit code
+     * @description Retrieves work orders based on the provided maintenance unit code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The maintenance unit code used to fetch work orders. */
+          maintenanceUnitCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                totalCount?: number
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/work-orders/xpand/by-contact-code/{contactCode}': {
     /**
      * Get work orders by contact code from xpand
@@ -2070,6 +2106,50 @@ export interface paths {
         path: {
           /** @description The building id used to fetch work orders. */
           buildingId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                totalCount?: number
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/work-orders/xpand/by-maintenance-unit-code/{maintenanceUnitCode}': {
+    /**
+     * Get work orders by maintenance unit code from xpand
+     * @description Retrieves work orders based on the provided maintenance unit code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The number of work orders to skip. */
+          skip?: number
+          /** @description The number of work orders to fetch. */
+          limit?: number
+          /** @description Whether to sort the work orders by ascending creation date. */
+          sortAscending?: boolean
+        }
+        path: {
+          /** @description The maintenance unit code used to fetch work orders. */
+          maintenanceUnitCode: string
         }
       }
       responses: {
@@ -3455,7 +3535,7 @@ export interface components {
         size: number
         type: string
         address?: {
-          street: string
+          street?: string
           number: string
           postalCode: string
           city: string
@@ -3485,12 +3565,7 @@ export interface components {
           rentEndDate?: string
         }
       }
-      address?: {
-        street: string
-        number: string
-        postalCode: string
-        city: string
-      }
+      address?: definitions['Lease']['rentalProperty']['address']
       noticeGivenBy?: string
       /** Format: date-time */
       noticeDate?: string
@@ -3519,12 +3594,7 @@ export interface components {
         nationalRegistrationNumber: string
         /** Format: date-time */
         birthDate: string
-        address?: {
-          street: string
-          number: string
-          postalCode: string
-          city: string
-        }
+        address?: definitions['Lease']['rentalProperty']['address']
         phoneNumbers?: {
           phoneNumber: string
           type: string
