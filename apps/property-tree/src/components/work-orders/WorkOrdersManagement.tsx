@@ -11,6 +11,7 @@ export enum ContextType {
   Building = 'building',
   Residence = 'residence',
   Tenant = 'tenant',
+  MaintenanceUnit = 'maintenanceUnit',
 }
 
 export interface WorkOrdersManagementProps {
