@@ -206,6 +206,8 @@ export interface paths {
           includeTerminatedLeases?: boolean
           /** @description Whether to include contact information in the response */
           includeContacts?: boolean
+          /** @description Whether to include rent information in the response */
+          includeRentInfo?: boolean
         }
         path: {
           /** @description Rental roperty id of the building/residence to fetch leases for. */
@@ -3032,6 +3034,34 @@ export interface paths {
         /** @description Invalid query parameters. */
         400: {
           content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rooms/by-facility-id/{facilityId}': {
+    /**
+     * Get rooms by facility id.
+     * @description Returns all rooms belonging to a facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The id of the facility. */
+          facilityId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Room'][]
+            }
+          }
         }
         /** @description Internal server error. */
         500: {
