@@ -1,7 +1,7 @@
 import { TenantQueueSystem } from './TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
+import { TenantLedger } from './TenantLedger'
 // import { TenantNotes } from './TenantNotes'
-// import { TenantLedger } from './TenantLedger'
 import {
   MobileAccordion as GenericMobileAccordion,
   MobileAccordionItem,
@@ -68,13 +68,7 @@ export function TenantMobileAccordion({
     {
       id: 'ledger',
       title: 'Fakturor & betalningar',
-      content: <div>Placeholder Fakturor & betalningar</div>,
-      // content: (
-      //   <TenantLedger
-      //     ledger={getMockLedgerForCustomer(customerNumber)}
-      //     invoices={getMockInvoicesForCustomer(customerNumber)}
-      //   />
-      // ),
+      content: <TenantLedger contactCode={contactCode} />,
     },
     /*
     {
