@@ -13,4 +13,16 @@ export const roomService = {
     if (error) throw error
     return data?.content || []
   },
+
+  async getByFacilityId(facilityId: string): Promise<Room[]> {
+    const { data, error } = await GET('/rooms/by-facility-id/{facilityId}', {
+      params: {
+        path: {
+          facilityId,
+        },
+      },
+    })
+    if (error) throw error
+    return data?.content || []
+  },
 }

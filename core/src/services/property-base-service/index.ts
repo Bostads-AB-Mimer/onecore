@@ -1471,6 +1471,63 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /rooms/by-facility-id/{facilityId}:
+   *   get:
+   *     summary: Get rooms by facility id.
+   *     description: Returns all rooms belonging to a facility.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: facilityId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The id of the facility.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rooms.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Room'
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/rooms/by-facility-id/:facilityId', async (ctx) => {
+    const { facilityId } = ctx.params
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await propertyBaseAdapter.getRoomsByFacilityId(facilityId)
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error getting rooms by facility id from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.Room>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /parking-spaces/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get parking space data by rentalId
