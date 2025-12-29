@@ -1,7 +1,11 @@
 import KoaRouter from '@koa/router'
 import { logger } from '@onecore/utilities'
+import { keys } from '@onecore/types'
 import * as daxService from '../dax-service'
 import createHttpError from 'http-errors'
+import { registerSchema } from '../../../utils/openapi'
+
+const { CardOwnerSchema, CardSchema } = keys.v1
 
 /**
  * @swagger
@@ -10,6 +14,8 @@ import createHttpError from 'http-errors'
  *     description: Endpoints for interacting with Amido DAX access control system
  */
 export const routes = (router: KoaRouter) => {
+  registerSchema('CardOwner', CardOwnerSchema)
+  registerSchema('Card', CardSchema)
   /**
    * @swagger
    * /dax/contracts:
@@ -93,18 +99,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 cardOwner:
-   *                   type: object
-   *                   properties:
-   *                     cardOwnerId:
-   *                       type: string
-   *                     firstname:
-   *                       type: string
-   *                     lastname:
-   *                       type: string
-   *                     email:
-   *                       type: string
-   *                     cards:
-   *                       type: array
+   *                   $ref: '#/components/schemas/CardOwner'
    *       400:
    *         description: Missing required parameters
    *       404:
@@ -141,15 +136,45 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /dax/card-owners:
    *   get:
-   *     summary: Get all card owners from DAX
-   *     description: Retrieve all card owners from the Amido DAX API
+   *     summary: Search card owners from DAX
+   *     description: Search for card owners in the DAX access control system
    *     tags: [DAX API]
    *     parameters:
    *       - in: query
-   *         name: name
+   *         name: nameFilter
    *         schema:
    *           type: string
    *         description: Filter by name (rental object ID / object code)
+   *       - in: query
+   *         name: expand
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields to expand (e.g., "cards")
+   *       - in: query
+   *         name: idfilter
+   *         schema:
+   *           type: string
+   *         description: Filter by ID
+   *       - in: query
+   *         name: attributeFilter
+   *         schema:
+   *           type: string
+   *         description: Filter by attribute
+   *       - in: query
+   *         name: selectedAttributes
+   *         schema:
+   *           type: string
+   *         description: Select specific attributes to return
+   *       - in: query
+   *         name: folderFilter
+   *         schema:
+   *           type: string
+   *         description: Filter by folder
+   *       - in: query
+   *         name: organisationFilter
+   *         schema:
+   *           type: string
+   *         description: Filter by organisation
    *       - in: query
    *         name: offset
    *         schema:
@@ -171,7 +196,7 @@ export const routes = (router: KoaRouter) => {
    *                 cardOwners:
    *                   type: array
    *                   items:
-   *                     type: object
+   *                     $ref: '#/components/schemas/CardOwner'
    *       500:
    *         description: Failed to fetch card owners
    */
@@ -229,14 +254,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 card:
-   *                   type: object
-   *                   properties:
-   *                     cardId:
-   *                       type: string
-   *                     name:
-   *                       type: string
-   *                     codes:
-   *                       type: array
+   *                   $ref: '#/components/schemas/Card'
    *       404:
    *         description: Card not found
    *       500:

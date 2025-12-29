@@ -56,13 +56,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              cardOwner?: {
-                cardOwnerId?: string;
-                firstname?: string;
-                lastname?: string;
-                email?: string;
-                cards?: unknown[];
-              };
+              cardOwner?: components["schemas"]["CardOwner"];
             };
           };
         };
@@ -83,14 +77,26 @@ export interface paths {
   };
   "/dax/card-owners": {
     /**
-     * Get all card owners from DAX
-     * @description Retrieve all card owners from the Amido DAX API
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system
      */
     get: {
       parameters: {
         query?: {
           /** @description Filter by name (rental object ID / object code) */
-          name?: string;
+          nameFilter?: string;
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+          /** @description Filter by ID */
+          idfilter?: string;
+          /** @description Filter by attribute */
+          attributeFilter?: string;
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string;
+          /** @description Filter by folder */
+          folderFilter?: string;
+          /** @description Filter by organisation */
+          organisationFilter?: string;
           /** @description Pagination offset */
           offset?: number;
           /** @description Maximum number of results */
@@ -102,7 +108,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              cardOwners?: Record<string, never>[];
+              cardOwners?: components["schemas"]["CardOwner"][];
             };
           };
         };
@@ -134,11 +140,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              card?: {
-                cardId?: string;
-                name?: string;
-                codes?: unknown[];
-              };
+              card?: components["schemas"]["Card"];
             };
           };
         };
@@ -2675,6 +2677,42 @@ export interface components {
       id: number;
       status: string;
       status_updated_at: string;
+    };
+    CardOwner: {
+      cardOwnerId: string;
+      cardOwnerType: string;
+      familyName: string;
+      specificName: string;
+      primaryOrganization: string | null;
+      cards: ({
+          cardId: string;
+          cardNumber: string;
+          cardType: string;
+          validFrom: string;
+          validTo: string | null;
+          state: string;
+          issuedAt: string;
+          revokedAt: string | null;
+        })[];
+      comment: string;
+      disabled: boolean;
+      startTime: string | null;
+      stopTime: string | null;
+      pinCode: string;
+      attributes?: unknown;
+      state: string;
+      archivedAt: string | null;
+      createTime: string;
+    };
+    Card: {
+      cardId: string;
+      cardNumber: string;
+      cardType: string;
+      validFrom: string;
+      validTo: string | null;
+      state: string;
+      issuedAt: string;
+      revokedAt: string | null;
     };
   };
   responses: never;

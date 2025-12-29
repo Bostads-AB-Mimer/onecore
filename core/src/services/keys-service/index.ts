@@ -5645,14 +5645,44 @@ export const routes = (router: KoaRouter) => {
    * /dax/card-owners:
    *   get:
    *     summary: Search card owners from DAX
-   *     description: Search for card owners in the DAX access control system, optionally filtered by name (rental object ID)
+   *     description: Search for card owners in the DAX access control system
    *     tags: [DAX API]
    *     parameters:
    *       - in: query
-   *         name: name
+   *         name: nameFilter
    *         schema:
    *           type: string
    *         description: Filter by name (rental object ID / object code)
+   *       - in: query
+   *         name: expand
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields to expand (e.g., "cards")
+   *       - in: query
+   *         name: idfilter
+   *         schema:
+   *           type: string
+   *         description: Filter by ID
+   *       - in: query
+   *         name: attributeFilter
+   *         schema:
+   *           type: string
+   *         description: Filter by attribute
+   *       - in: query
+   *         name: selectedAttributes
+   *         schema:
+   *           type: string
+   *         description: Select specific attributes to return
+   *       - in: query
+   *         name: folderFilter
+   *         schema:
+   *           type: string
+   *         description: Filter by folder
+   *       - in: query
+   *         name: organisationFilter
+   *         schema:
+   *           type: string
+   *         description: Filter by organisation
    *       - in: query
    *         name: offset
    *         schema:

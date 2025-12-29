@@ -5259,13 +5259,25 @@ export interface paths {
   "/dax/card-owners": {
     /**
      * Search card owners from DAX
-     * @description Search for card owners in the DAX access control system, optionally filtered by name (rental object ID)
+     * @description Search for card owners in the DAX access control system
      */
     get: {
       parameters: {
         query?: {
           /** @description Filter by name (rental object ID / object code) */
-          name?: string;
+          nameFilter?: string;
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+          /** @description Filter by ID */
+          idfilter?: string;
+          /** @description Filter by attribute */
+          attributeFilter?: string;
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string;
+          /** @description Filter by folder */
+          folderFilter?: string;
+          /** @description Filter by organisation */
+          organisationFilter?: string;
           /** @description Pagination offset */
           offset?: number;
           /** @description Maximum number of results */
@@ -5282,6 +5294,86 @@ export interface paths {
           };
         };
         /** @description Failed to fetch card owners */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/card-owners/{cardOwnerId}": {
+    /**
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string;
+        };
+      };
+      responses: {
+        /** @description Card owner retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwner?: components["schemas"]["CardOwner"];
+            };
+          };
+        };
+        /** @description Card owner not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Failed to fetch card owner */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/cards/{cardId}": {
+    /**
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              card?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Failed to fetch card */
         500: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
@@ -6303,6 +6395,53 @@ export interface components {
     SchemaDownloadUrlResponse: {
       url: string;
       expiresIn: number;
+    };
+    CardOwner: {
+      cardOwnerId: string;
+      cardOwnerType: string;
+      familyName: string;
+      specificName: string;
+      primaryOrganization: string | null;
+      cards: ({
+          cardId: string;
+          cardNumber: string;
+          cardType: string;
+          validFrom: string;
+          validTo: string | null;
+          state: string;
+          issuedAt: string;
+          revokedAt: string | null;
+        })[];
+      comment: string;
+      disabled: boolean;
+      startTime: string | null;
+      stopTime: string | null;
+      pinCode: string;
+      attributes?: unknown;
+      state: string;
+      archivedAt: string | null;
+      createTime: string;
+    };
+    Card: {
+      cardId: string;
+      cardNumber: string;
+      cardType: string;
+      validFrom: string;
+      validTo: string | null;
+      state: string;
+      issuedAt: string;
+      revokedAt: string | null;
+    };
+    QueryCardOwnersParams: {
+      nameFilter?: string;
+      expand?: string;
+      idfilter?: string;
+      attributeFilter?: string;
+      selectedAttributes?: string;
+      folderFilter?: string;
+      organisationFilter?: string;
+      offset?: number;
+      limit?: number;
     };
     PaginationMeta: {
       totalRecords: number;
