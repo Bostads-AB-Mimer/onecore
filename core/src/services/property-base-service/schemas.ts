@@ -587,7 +587,7 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
-export const SpaceTypeEnum = z.enum(['OBJECT'])
+export const SpaceTypeEnum = z.enum(['OBJECT', 'PropertyObject'])
 
 // Component Category Schema (Level 1)
 export const ComponentCategorySchema = z.object({
