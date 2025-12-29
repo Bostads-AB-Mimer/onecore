@@ -127,9 +127,20 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (err) {
         logger.error({ err }, 'components.analyze-image')
-        ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'AI analysis failed'
+
+        // Map specific errors to appropriate HTTP status codes
+        if (errorMessage === 'Invalid Berget AI API key') {
+          ctx.status = 401
+        } else if (errorMessage === 'Berget AI rate limit exceeded') {
+          ctx.status = 429
+        } else if (errorMessage === 'Berget AI request timeout') {
+          ctx.status = 504
+        } else {
+          ctx.status = 500
+        }
+
         ctx.body = { error: errorMessage, ...metadata }
       }
     }
