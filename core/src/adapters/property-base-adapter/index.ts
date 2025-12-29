@@ -1500,7 +1500,7 @@ export async function deleteComponentModelDocument(
 export async function analyzeComponentImage(
   data: components['schemas']['AnalyzeComponentImageRequest']
 ): Promise<
-  AdapterResult<components['schemas']['AIComponentAnalysis'], 'unknown'>
+  AdapterResult<components['schemas']['AIComponentAnalysis'], string>
 > {
   try {
     const response = await client().POST('/components/analyze-image', {
@@ -1515,9 +1515,15 @@ export async function analyzeComponentImage(
       }
     }
 
-    return { ok: false, err: 'unknown' }
+    // Extract error from response body if available
+    const errorMessage = (response.data as any)?.error ?? 'AI analysis failed'
+    return {
+      ok: false,
+      err: errorMessage,
+      statusCode: response.response.status,
+    }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.analyzeComponentImage')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'AI analysis failed' }
   }
 }
