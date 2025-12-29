@@ -5,6 +5,7 @@ describe('Rooms API', () => {
   let buildingCode: string
   let staircaseCode: string
   let residenceCode: string
+  let facilityId: string | undefined
 
   beforeAll(async () => {
     // Get codes needed for testing
@@ -19,6 +20,14 @@ describe('Rooms API', () => {
     const residence = residencesResponse.body.content[0]
     residenceCode = residence.code
     staircaseCode = '1' // Assuming staircase code 1 exists
+
+    // Get a facility ID for testing rooms by facility
+    const facilitiesResponse = await request(app.callback()).get(
+      `/facilities/by-building-code/${buildingCode}`
+    )
+    if (facilitiesResponse.body.content?.length > 0) {
+      facilityId = facilitiesResponse.body.content[0].id
+    }
   })
 
   it('should return rooms for a residence', async () => {
@@ -68,5 +77,31 @@ describe('Rooms API', () => {
       expect(room.code).toBeDefined()
       expect(room._links).toBeDefined()
     }
+  })
+
+  it('should return rooms for a facility', async () => {
+    if (!facilityId) {
+      console.log('Skipping test: no facility found for testing')
+      return
+    }
+
+    const response = await request(app.callback()).get(
+      `/rooms/by-facility-id/${facilityId}`
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.body.content).toBeDefined()
+    expect(Array.isArray(response.body.content)).toBe(true)
+  })
+
+  it('should return empty array for non-existent facility', async () => {
+    const response = await request(app.callback()).get(
+      '/rooms/by-facility-id/non-existent-id'
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.body.content).toBeDefined()
+    expect(Array.isArray(response.body.content)).toBe(true)
+    expect(response.body.content.length).toBe(0)
   })
 })

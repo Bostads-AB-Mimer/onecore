@@ -8,14 +8,19 @@ import { roomService } from '@/services/api/core'
 // import { getOrientationText } from './get-room-orientation'
 import { Grid } from '../ui/Grid'
 
-interface RoomInfoProps {
-  residenceId: string
-}
+type RoomInfoProps =
+  | { residenceId: string; facilityId?: never }
+  | { residenceId?: never; facilityId: string }
 
 export const RoomInfo = (props: RoomInfoProps) => {
+  const id = props.residenceId ?? props.facilityId
+  const queryFn = props.residenceId
+    ? () => roomService.getByResidenceId(props.residenceId)
+    : () => roomService.getByFacilityId(props.facilityId!)
+
   const roomsQuery = useQuery({
-    queryKey: ['rooms', props.residenceId],
-    queryFn: () => roomService.getByResidenceId(props.residenceId),
+    queryKey: ['rooms', id],
+    queryFn,
   })
 
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null)

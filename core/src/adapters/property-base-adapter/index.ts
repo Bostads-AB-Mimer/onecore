@@ -381,6 +381,28 @@ export async function getRooms(
   }
 }
 
+export async function getRoomsByFacilityId(
+  facilityId: string
+): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/rooms/by-facility-id/{facilityId}',
+      {
+        params: { path: { facilityId } },
+      }
+    )
+
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getRoomsByFacilityId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type SearchParkingSpacesResponse =
   components['schemas']['ParkingSpaceSearchResult'][]
 
