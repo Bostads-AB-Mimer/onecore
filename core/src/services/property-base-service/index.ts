@@ -4903,8 +4903,8 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.analyzeComponentImage(body.data)
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
         return
       }
 
