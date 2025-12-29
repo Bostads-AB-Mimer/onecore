@@ -298,7 +298,7 @@ export const ManageRoomComponentsDialog = ({
                       // Pre-fill form with instance data
                       setFormData((prev) => ({
                         ...prev,
-                        serialNumber: instance.serialNumber,
+                        serialNumber: instance.serialNumber ?? '',
                         priceAtPurchase: instance.priceAtPurchase,
                         status: instance.status,
                         quantity: instance.quantity,
