@@ -241,7 +241,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                       {component.serialNumber && (
                         <button
                           onClick={() =>
-                            copyToClipboard(component.serialNumber, 'serial')
+                            copyToClipboard(component.serialNumber ?? '', 'serial')
                           }
                           className="p-1 hover:bg-accent rounded"
                           title="Kopiera serienummer"
