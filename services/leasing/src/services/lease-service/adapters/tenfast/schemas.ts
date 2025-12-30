@@ -285,3 +285,7 @@ export const TenfastLeaseSchema = z.object({
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 
 // TODO: I'd like to scope all these under "tenfast" instead, i.e tenfast.Lease, tenfast.Tenant etc
+
+export interface PreliminaryTerminationResponse {
+  message: string
+}
