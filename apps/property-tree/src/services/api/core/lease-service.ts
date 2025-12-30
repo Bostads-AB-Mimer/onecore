@@ -1,20 +1,27 @@
+import { leasing } from '@onecore/types'
+import z from 'zod'
+
 import { GET } from './base-api'
 import type { components } from './generated/api-types'
 
 export type Lease = components['schemas']['Lease']
 
+type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
+
 async function getByRentalPropertyId(
-  rentalPropertyId: string,
-  params?: {
-    includeContacts?: boolean
-    includeUpcomingLeases?: boolean
-    includeTerminatedLeases?: boolean
-  }
+  rentalObjectCode: string,
+  params?: GetLeasesOptions
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(
-    '/leases/by-rental-property-id/{rentalPropertyId}',
+    '/leases/by-rental-object-code/{rentalObjectCode}',
     {
-      params: { path: { rentalPropertyId }, query: params },
+      params: {
+        path: { rentalObjectCode },
+        query: {
+          includeContacts: params?.includeContacts,
+          status: params?.status?.join(','),
+        },
+      },
     }
   )
 
@@ -26,10 +33,7 @@ async function getByRentalPropertyId(
 
 async function getByContactCode(contactCode: string): Promise<Array<Lease>> {
   const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
-    params: {
-      path: { contactCode },
-      query: { includeTerminatedLeases: 'true' },
-    },
+    params: { path: { contactCode } },
   })
 
   if (error) throw error

@@ -195,90 +195,6 @@ export interface paths {
   };
   "security": {
   };
-  "/leases/by-rental-property-id/{rentalPropertyId}": {
-    /**
-     * Get leases with related entities for a specific rental property id
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean;
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean;
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean;
-        };
-        path: {
-          /** @description Rental roperty id of the building/residence to fetch leases for. */
-          rentalPropertyId: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-            };
-          };
-        };
-        /** @description Invalid query parameters */
-        400: {
-          content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/leases/by-pnr/{pnr}": {
-    /**
-     * Get leases with related entities for a specific Personal Number (PNR)
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            "application/json": Record<string, never>[];
-          };
-        };
-      };
-    };
-  };
-  "/leases/by-contact-code/{contactCode}": {
-    /**
-     * Get leases with related entities for a specific contact code
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Contact code of the individual to fetch leases for. */
-          contactCode: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-            };
-          };
-        };
-      };
-    };
-  };
   "/consumer-reports/by-pnr/{pnr}": {
     /**
      * Get consumer report for a specific Personal Number (PNR)
@@ -539,30 +455,6 @@ export interface paths {
         200: {
           content: {
             "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/leases/{id}": {
-    /**
-     * Get lease by ID
-     * @description Retrieves lease details along with related entities based on the provided ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease to retrieve. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with the requested lease and related entities */
-        200: {
-          content: {
-            "application/json": {
-              data?: Record<string, never>;
-            };
           };
         };
       };
@@ -1044,6 +936,126 @@ export interface paths {
         /** @description Internal server error. Failed to retrieve application profile information. */
         500: {
           content: never;
+        };
+      };
+    };
+  };
+  "/leases/by-rental-object-code/{rentalObjectCode}": {
+    /**
+     * Get leases with related entities for a specific rental object code.
+     * @description Retrieves lease information along with related entities (such as tenants) for the specified rental object code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include related contacts in the response. */
+          includeContacts?: boolean;
+          /** @description Comma-separated list of statuses to include leases by. Valid values are "current", "upcoming", "about-to-end", and "ended". Default is all statuses. */
+          status?: string;
+        };
+        path: {
+          /** @description Rental roperty id of the building/residence to fetch leases for. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
+  "/leases/by-pnr/{pnr}": {
+    /**
+     * Get leases with related entities for a specific Personal Number (PNR)
+     * @description Retrieves lease information along with related entities (such as tenants) for the specified Personal Number (PNR).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include related contacts in the response. */
+          includeContacts?: boolean;
+          /** @description Comma-separated list of statuses to include leases by. Valid values are "current", "upcoming", "about-to-end", and "ended". Default is all statuses. */
+          status?: string;
+        };
+        path: {
+          /** @description Personal Number (PNR) of the individual to fetch leases for. */
+          pnr: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/leases/by-contact-code/{contactCode}": {
+    /**
+     * Get leases with related entities for a specific contact code
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include related contacts in the response. */
+          includeContacts?: boolean;
+          /** @description Comma-separated list of statuses to include leases by. Valid values are "current", "upcoming", "about-to-end", and "ended". Default is all statuses. */
+          status?: string;
+        };
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/leases/{id}": {
+    /**
+     * Get lease by ID
+     * @description Retrieves lease details along with related entities based on the provided ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with the requested lease and related entities */
+        200: {
+          content: {
+            "application/json": {
+              data?: Record<string, never>;
+            };
+          };
         };
       };
     };

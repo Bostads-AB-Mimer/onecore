@@ -1,10 +1,9 @@
 import KoaRouter from '@koa/router'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-
-import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
@@ -933,12 +932,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const leases = await leasingAdapter.getLeasesForPropertyId(
+      // TODO: Can this be right? Calculate "residence status" from leases on the residence? Feels wrong to me.
+      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
         getResidence.data.propertyObject.rentalId,
         {
           includeContacts: false,
-          includeTerminatedLeases: false,
-          includeUpcomingLeases: true,
+          status: ['current', 'upcoming'],
         }
       )
 
@@ -1470,14 +1469,15 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const leases = await leasingAdapter.getLeasesForContactCode(
+        const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.contactCode,
           {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: false,
+            status: ['current', 'upcoming'],
+            includeContacts: true,
           }
         )
+
+        // TODO: This (Promise.all) doesn't work as intended because getMaintenanceUnitsForRentalProperty is not going to throw an error bc of AdapterResult
         const promises = leases
           .filter(
             (lease) =>
