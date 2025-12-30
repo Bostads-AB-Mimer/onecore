@@ -1611,21 +1611,31 @@ export async function analyzeComponentImage(
       body: data as any,
     })
 
-    if (response.data?.content) {
+    // Cast to access error properties - openapi-fetch types don't include error responses
+    const res = response as {
+      data?: { content?: components['schemas']['AIComponentAnalysis'] }
+      error?: { error?: string }
+      response: { status: number }
+    }
+
+    // openapi-fetch returns errors in response.error, not as exceptions
+    if (res.error) {
+      const errorMessage = res.error?.error ?? 'AI analysis failed'
       return {
-        ok: true,
-        data: response.data
-          .content as components['schemas']['AIComponentAnalysis'],
+        ok: false,
+        err: errorMessage,
+        statusCode: res.response.status,
       }
     }
 
-    // Extract error from response body if available
-    const errorMessage = (response.data as any)?.error ?? 'AI analysis failed'
-    return {
-      ok: false,
-      err: errorMessage,
-      statusCode: response.response.status,
+    if (res.data?.content) {
+      return {
+        ok: true,
+        data: res.data.content,
+      }
     }
+
+    return { ok: false, err: 'AI analysis failed' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.analyzeComponentImage')
     return { ok: false, err: 'AI analysis failed' }
