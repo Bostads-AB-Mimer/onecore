@@ -12,6 +12,7 @@ import {
   KeyBundlesApi,
   SignaturesApi,
   DaxApi,
+  CardsApi,
 } from '../../adapters/keys-adapter'
 import { keys } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
@@ -32,6 +33,7 @@ const {
   SignatureSchema,
   CardOwnerSchema,
   CardSchema,
+  CardDetailsSchema,
   QueryCardOwnersParamsSchema,
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
@@ -140,6 +142,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('SchemaDownloadUrlResponse', SchemaDownloadUrlResponseSchema)
   registerSchema('CardOwner', CardOwnerSchema)
   registerSchema('Card', CardSchema)
+  registerSchema('CardDetails', CardDetailsSchema)
   registerSchema('QueryCardOwnersParams', QueryCardOwnersParamsSchema)
 
   // Register pagination schemas
@@ -1303,6 +1306,60 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { err: result.err, metadata },
         'Error fetching keys by rental object code'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /cards/by-rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get cards by rental object code
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: includeLoans
+   *         schema:
+   *           type: boolean
+   *     responses:
+   *       200:
+   *         description: Cards for the rental object
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/CardDetails'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/cards/by-rental-object/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const includeLoans = ctx.query.includeLoans === 'true'
+    const result = await CardsApi.getByRentalObjectCode(
+      ctx.params.rentalObjectCode,
+      { includeLoans }
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching cards by rental object code'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }

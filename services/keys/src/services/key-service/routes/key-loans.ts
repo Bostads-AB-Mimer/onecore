@@ -788,40 +788,52 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyLoanRequest = ctx.request.body
 
-        // Validate keys using service layer
-        const validationResult = await keyLoanService.validateKeyLoanCreation(
-          payload.keys,
-          db
-        )
+        // Validate that at least keys or keyCards is provided
+        if (!payload.keys && !payload.keyCards) {
+          ctx.status = 400
+          ctx.body = {
+            reason: 'At least one of keys or keyCards must be provided',
+            ...metadata,
+          }
+          return
+        }
 
-        if (!validationResult.ok) {
-          // Map service errors to HTTP responses
-          if (validationResult.err === 'active-loan-conflict') {
-            ctx.status = 409
+        // Validate keys if provided
+        if (payload.keys) {
+          const validationResult = await keyLoanService.validateKeyLoanCreation(
+            payload.keys,
+            db
+          )
+
+          if (!validationResult.ok) {
+            // Map service errors to HTTP responses
+            if (validationResult.err === 'active-loan-conflict') {
+              ctx.status = 409
+              ctx.body = {
+                reason:
+                  'Cannot create loan. One or more keys already have active loans.',
+                conflictingKeys: validationResult.details?.conflictingKeys,
+                ...metadata,
+              }
+              return
+            }
+
+            // All other errors are 400 Bad Request
+            const errorMessages = {
+              'invalid-keys-format':
+                'Invalid keys format. Must be a valid JSON array.',
+              'keys-not-array': 'Keys must be a JSON array',
+              'empty-keys-array': 'Keys array cannot be empty',
+            }
+
+            ctx.status = 400
             ctx.body = {
               reason:
-                'Cannot create loan. One or more keys already have active loans.',
-              conflictingKeys: validationResult.details?.conflictingKeys,
+                errorMessages[validationResult.err] || 'Invalid keys format',
               ...metadata,
             }
             return
           }
-
-          // All other errors are 400 Bad Request
-          const errorMessages = {
-            'invalid-keys-format':
-              'Invalid keys format. Must be a valid JSON array.',
-            'keys-not-array': 'Keys must be a JSON array',
-            'empty-keys-array': 'Keys array cannot be empty',
-          }
-
-          ctx.status = 400
-          ctx.body = {
-            reason:
-              errorMessages[validationResult.err] || 'Invalid keys format',
-            ...metadata,
-          }
-          return
         }
 
         const row = await keyLoansAdapter.createKeyLoan(payload, db)

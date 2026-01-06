@@ -1,6 +1,8 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
+import * as daxService from '../dax-service'
+import type { Card } from 'dax-client'
 
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
@@ -209,7 +211,7 @@ export function getKeyLoansSearchQuery(
 }
 
 /**
- * Get enriched key loans for a rental object with keys and optionally receipts in a single optimized query.
+ * Get enriched key loans for a rental object with keys, cards, and optionally receipts in a single optimized query.
  * This eliminates N+1 queries by fetching all data in one go.
  *
  * @param rentalObjectCode - The rental object code to filter by
@@ -218,7 +220,7 @@ export function getKeyLoansSearchQuery(
  * @param includeReceipts - Whether to include receipts (default: false)
  * @param returned - Optional filter: true = only returned loans, false = only active loans, undefined = all loans
  * @param dbConnection - Database connection (optional, defaults to db)
- * @returns Promise<KeyLoanWithDetails[]> - Key loans with enriched keys and optionally receipts data
+ * @returns Promise<KeyLoanWithDetails[]> - Key loans with enriched keys, cards, and optionally receipts data
  */
 export async function getKeyLoansByRentalObject(
   rentalObjectCode: string,
@@ -229,13 +231,19 @@ export async function getKeyLoansByRentalObject(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoanWithDetails[]> {
   // Step 1: Get all key loans for the rental object (filtered by contacts if provided)
+  // This includes loans with keys from this object OR cards from this object
   let loansQuery = dbConnection('key_loans as kl')
     .select('kl.*')
-    .whereExists(function () {
-      this.select(dbConnection.raw('1'))
-        .from('keys as k')
-        .whereRaw("kl.keys LIKE '%\"' + CAST(k.id AS NVARCHAR(36)) + '\"%'")
-        .where('k.rentalObjectCode', rentalObjectCode)
+    .where(function () {
+      // Loans with keys from this rental object
+      this.whereExists(function () {
+        this.select(dbConnection.raw('1'))
+          .from('keys as k')
+          .whereRaw("kl.keys LIKE '%\"' + CAST(k.id AS NVARCHAR(36)) + '\"%'")
+          .where('k.rentalObjectCode', rentalObjectCode)
+      })
+        // OR loans with cards from this rental object (we'll verify card ownership via DAX below)
+        .orWhereRaw("kl.keyCards IS NOT NULL AND kl.keyCards != '[]'")
     })
     .orderBy('kl.createdAt', 'desc')
 
@@ -293,7 +301,24 @@ export async function getKeyLoansByRentalObject(
 
   const keyMap = new Map(keys.map((k) => [k.id, k]))
 
-  // Step 3: Get receipts for these loans (max 2 per loan: LOAN and RETURN) - only if requested
+  // Step 3: Get all cards for this rental object from DAX
+  let allCards: Card[] = []
+  try {
+    const cardOwners = await daxService.searchCardOwners({
+      nameFilter: rentalObjectCode,
+      expand: 'cards',
+    })
+
+    // Extract all cards from card owners
+    allCards = cardOwners.flatMap((owner) => owner.cards || [])
+  } catch (error) {
+    // If DAX is unavailable, continue without cards (cards will be empty arrays)
+    console.error('Failed to fetch cards from DAX:', error)
+  }
+
+  const cardMap = new Map(allCards.map((c) => [c.cardId, c]))
+
+  // Step 4: Get receipts for these loans (max 2 per loan: LOAN and RETURN) - only if requested
   const receiptsByLoan = new Map<string, any[]>()
   if (includeReceipts) {
     const receiptsResult = await dbConnection.raw(
@@ -322,17 +347,24 @@ export async function getKeyLoansByRentalObject(
     })
   }
 
-  // Step 4: Combine everything
+  // Step 5: Combine everything
   return loans.map((loan) => {
     const keyIds: string[] = JSON.parse(loan.keys || '[]')
     const keysArray = keyIds
       .map((id) => keyMap.get(id))
       .filter((k): k is (typeof keys)[0] => k !== undefined)
+
+    const cardIds: string[] = JSON.parse(loan.keyCards || '[]')
+    const keyCardsArray = cardIds
+      .map((id) => cardMap.get(id))
+      .filter((c): c is Card => c !== undefined)
+
     const loanReceipts = receiptsByLoan.get(loan.id) || []
 
     return {
       ...loan,
       keysArray,
+      keyCardsArray,
       receipts: loanReceipts,
     }
   })

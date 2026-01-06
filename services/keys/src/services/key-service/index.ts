@@ -9,6 +9,7 @@ import { routes as keyEventRoutes } from './routes/key-events'
 import { routes as keyBundleRoutes } from './routes/key-bundles'
 import { routes as signatureRoutes } from './routes/signatures'
 import { routes as daxRoutes } from './routes/dax'
+import { routes as cardRoutes } from './routes/cards'
 
 export const routes = (router: KoaRouter) => {
   keyRoutes(router)
@@ -21,4 +22,5 @@ export const routes = (router: KoaRouter) => {
   keyBundleRoutes(router)
   signatureRoutes(router)
   daxRoutes(router)
+  cardRoutes(router)
 }

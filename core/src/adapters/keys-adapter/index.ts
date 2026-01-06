@@ -26,6 +26,7 @@ type KeyBundleDetailsResponse = keys.v1.KeyBundleDetailsResponse
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type CardOwner = keys.v1.CardOwner
 type Card = keys.v1.Card
+type CardDetails = keys.v1.CardDetails
 type QueryCardOwnersParams = keys.v1.QueryCardOwnersParams
 
 const BASE = Config.keysService.url
@@ -1085,5 +1086,28 @@ export const DaxApi = {
 
     const r = await getJSON<{ card: Card }>(url)
     return r.ok ? ok(r.data.card) : r
+  },
+}
+
+/**
+ * ---- CARDS -----------------------------------------------------------------
+ */
+export const CardsApi = {
+  getByRentalObjectCode: async (
+    rentalObjectCode: string,
+    options?: {
+      includeLoans?: boolean
+    }
+  ): Promise<AdapterResult<CardDetails[], CommonErr>> => {
+    const params = new URLSearchParams()
+    if (options?.includeLoans) params.append('includeLoans', 'true')
+
+    const queryString = params.toString()
+    const queryParams = queryString ? `?${queryString}` : ''
+
+    const r = await getJSON<{ content: CardDetails[] }>(
+      `${BASE}/cards/by-rental-object/${rentalObjectCode}${queryParams}`
+    )
+    return r.ok ? ok(r.data.content) : r
   },
 }
