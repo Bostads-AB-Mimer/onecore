@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Lease, KeyDetails } from '@/services/types'
+import type { Lease, KeyDetails, CardDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ToastAction } from '@/components/ui/toast'
 import { keyService } from '@/services/api/keyService'
+import { cardService } from '@/services/api/cardService'
 import { useToast } from '@/hooks/use-toast'
 import {
   handleLoanKeys,
@@ -22,6 +23,7 @@ import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { KeyLoanTransferDialog } from './dialogs/KeyLoanTransferDialog'
 import { ReturnKeysDialog } from './dialogs/ReturnKeysDialog'
 import { LeaseKeyTableList } from './LeaseKeyTableList'
+import { LeaseCardTableList } from './LeaseCardTableList'
 
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
@@ -44,9 +46,11 @@ export function LeaseKeyStatusList({
 }) {
   const { toast } = useToast()
   const [keys, setKeys] = useState<KeyDetails[]>([])
+  const [cards, setCards] = useState<CardDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  const [selectedCards, setSelectedCards] = useState<string[]>([])
 
   // Receipt dialog state
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
@@ -81,16 +85,19 @@ export function LeaseKeyStatusList({
     ;(async () => {
       setLoading(true)
       try {
-        const fetchedKeys = await keyService.getKeysByRentalObjectCode(
-          lease.rentalPropertyId,
-          {
+        const [fetchedKeys, fetchedCards] = await Promise.all([
+          keyService.getKeysByRentalObjectCode(lease.rentalPropertyId, {
             includeLoans: true,
             includeEvents: true,
             includeKeySystem: true,
-          }
-        )
+          }),
+          cardService.getCardsByRentalObjectCode(lease.rentalPropertyId, {
+            includeLoans: true,
+          }),
+        ])
         if (!cancelled) {
           setKeys(fetchedKeys)
+          setCards(fetchedCards)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -109,6 +116,32 @@ export function LeaseKeyStatusList({
     }
   }, [keysData])
 
+  // Fetch cards separately if keysData is provided but we don't have cards yet
+  useEffect(() => {
+    if (!keysData) return // Only fetch cards if parent is providing keys
+    if (cards.length > 0) return // Already have cards
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const fetchedCards = await cardService.getCardsByRentalObjectCode(
+          lease.rentalPropertyId,
+          {
+            includeLoans: true,
+          }
+        )
+        if (!cancelled) {
+          setCards(fetchedCards)
+        }
+      } catch (error) {
+        console.error('Failed to fetch cards:', error)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [lease.rentalPropertyId, keysData, cards.length])
+
   // Refresh when external trigger changes (e.g., after receipt upload)
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
@@ -124,15 +157,18 @@ export function LeaseKeyStatusList({
     }
 
     // Only fetch directly if component is standalone (no parent providing data)
-    const fetchedKeys = await keyService.getKeysByRentalObjectCode(
-      lease.rentalPropertyId,
-      {
+    const [fetchedKeys, fetchedCards] = await Promise.all([
+      keyService.getKeysByRentalObjectCode(lease.rentalPropertyId, {
         includeLoans: true,
         includeEvents: true,
         includeKeySystem: true,
-      }
-    )
+      }),
+      cardService.getCardsByRentalObjectCode(lease.rentalPropertyId, {
+        includeLoans: true,
+      }),
+    ])
     setKeys(fetchedKeys)
+    setCards(fetchedCards)
   }
 
   const handleKeyCreated = async () => {
@@ -378,6 +414,26 @@ export function LeaseKeyStatusList({
               )
             }}
           />
+
+          {/* Cards table */}
+          {cards.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2">Droppar</h3>
+              <LeaseCardTableList
+                cards={cards}
+                tenantContactCodes={tenantContactCodes}
+                selectable={true}
+                selectedCards={selectedCards}
+                onCardSelectionChange={(cardId, checked) => {
+                  setSelectedCards((prev) =>
+                    checked
+                      ? [...prev, cardId]
+                      : prev.filter((id) => id !== cardId)
+                  )
+                }}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
