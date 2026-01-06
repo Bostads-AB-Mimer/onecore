@@ -54,6 +54,7 @@ import {
   PaginatedResponseSchema,
   // DAX schemas
   CardSchema,
+  CardDetailsSchema,
   CardOwnerSchema,
   GetCardOwnerResponseSchema,
   GetCardOwnersResponseSchema,
@@ -163,6 +164,7 @@ export type PaginatedResponse<T> = {
 
 // DAX types (for Amido DAX access control integration)
 export type Card = z.infer<typeof CardSchema>
+export type CardDetails = z.infer<typeof CardDetailsSchema>
 export type CardOwner = z.infer<typeof CardOwnerSchema>
 export type GetCardOwnerResponse = z.infer<typeof GetCardOwnerResponseSchema>
 export type GetCardOwnersResponse = z.infer<typeof GetCardOwnersResponseSchema>

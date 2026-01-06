@@ -3387,6 +3387,29 @@ export interface paths {
       };
     };
   };
+  "/cards/by-rental-object/{rentalObjectCode}": {
+    /** Get cards by rental object code */
+    get: {
+      parameters: {
+        query?: {
+          includeLoans?: boolean;
+        };
+        path: {
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Cards for the rental object */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CardDetails"][];
+            };
+          };
+        };
+      };
+    };
+  };
   "/keys/{id}": {
     /** Get key by ID */
     get: {
@@ -5938,6 +5961,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       keys: string;
+      keyCards: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -5996,6 +6020,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       keys: string;
+      keyCards: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -6031,6 +6056,21 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
+        })[];
+      keyCardsArray: ({
+          cardId: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
         })[];
       receipts: ({
           /** Format: uuid */
@@ -6143,7 +6183,8 @@ export interface components {
       flexNumber: number;
     };
     CreateKeyLoanRequest: {
-      keys: string;
+      keys?: string;
+      keyCards?: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -6160,6 +6201,7 @@ export interface components {
     };
     UpdateKeyLoanRequest: {
       keys?: string;
+      keyCards?: string;
       /** @enum {string} */
       loanType?: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -6398,39 +6440,91 @@ export interface components {
     };
     CardOwner: {
       cardOwnerId: string;
-      cardOwnerType: string;
-      familyName: string;
-      specificName: string;
-      primaryOrganization: string | null;
-      cards: ({
+      cardOwnerType?: string | null;
+      familyName?: string | null;
+      specificName?: string | null;
+      primaryOrganization?: unknown;
+      cards?: (({
           cardId: string;
-          cardNumber: string;
-          cardType: string;
-          validFrom: string;
-          validTo: string | null;
-          state: string;
-          issuedAt: string;
-          revokedAt: string | null;
-        })[];
-      comment: string;
-      disabled: boolean;
-      startTime: string | null;
-      stopTime: string | null;
-      pinCode: string;
-      attributes?: unknown;
-      state: string;
-      archivedAt: string | null;
-      createTime: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
+        })[]) | null;
+      comment?: string | null;
+      folderId?: number | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      pinCode?: string | null;
+      attributes?: {
+        [key: string]: string;
+      } | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      createTime?: string;
     };
     Card: {
       cardId: string;
-      cardNumber: string;
-      cardType: string;
-      validFrom: string;
-      validTo: string | null;
-      state: string;
-      issuedAt: string;
-      revokedAt: string | null;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+    };
+    CardDetails: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+      loans?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          keyCards: string;
+          /** @enum {string} */
+          loanType: "TENANT" | "MAINTENANCE";
+          contact?: string;
+          contact2?: string;
+          contactPerson?: string | null;
+          description?: string | null;
+          /** Format: date-time */
+          returnedAt?: string | null;
+          /** Format: date-time */
+          availableToNextTenantFrom?: string | null;
+          /** Format: date-time */
+          pickedUpAt?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          createdBy?: string | null;
+          updatedBy?: string | null;
+        })[]) | null;
     };
     QueryCardOwnersParams: {
       nameFilter?: string;

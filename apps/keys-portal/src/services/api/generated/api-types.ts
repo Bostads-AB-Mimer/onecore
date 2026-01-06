@@ -5,6 +5,41 @@
 
 
 export interface paths {
+  "/cards/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get cards by rental object code
+     * @description Fetch all access control cards from DAX for a specific rental object.
+     * Cards can optionally be enriched with loan information.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include loan information for cards */
+          includeLoans?: boolean;
+        };
+        path: {
+          /** @description The rental object code to fetch cards for */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description An array of cards (with optional loan details) */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CardDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/dax/contracts": {
     /**
      * Get all contracts from DAX
@@ -2496,6 +2531,60 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    Card: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+    };
+    CardDetails: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+      loans?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          keyCards: string;
+          /** @enum {string} */
+          loanType: "TENANT" | "MAINTENANCE";
+          contact?: string;
+          contact2?: string;
+          contactPerson?: string | null;
+          description?: string | null;
+          /** Format: date-time */
+          returnedAt?: string | null;
+          /** Format: date-time */
+          availableToNextTenantFrom?: string | null;
+          /** Format: date-time */
+          pickedUpAt?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          createdBy?: string | null;
+          updatedBy?: string | null;
+        })[]) | null;
+    };
     CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
     UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
     BulkUpdateFlexRequest: {
@@ -2680,39 +2769,37 @@ export interface components {
     };
     CardOwner: {
       cardOwnerId: string;
-      cardOwnerType: string;
-      familyName: string;
-      specificName: string;
-      primaryOrganization: string | null;
-      cards: ({
+      cardOwnerType?: string | null;
+      familyName?: string | null;
+      specificName?: string | null;
+      primaryOrganization?: unknown;
+      cards?: (({
           cardId: string;
-          cardNumber: string;
-          cardType: string;
-          validFrom: string;
-          validTo: string | null;
-          state: string;
-          issuedAt: string;
-          revokedAt: string | null;
-        })[];
-      comment: string;
-      disabled: boolean;
-      startTime: string | null;
-      stopTime: string | null;
-      pinCode: string;
-      attributes?: unknown;
-      state: string;
-      archivedAt: string | null;
-      createTime: string;
-    };
-    Card: {
-      cardId: string;
-      cardNumber: string;
-      cardType: string;
-      validFrom: string;
-      validTo: string | null;
-      state: string;
-      issuedAt: string;
-      revokedAt: string | null;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
+        })[]) | null;
+      comment?: string | null;
+      folderId?: number | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      pinCode?: string | null;
+      attributes?: {
+        [key: string]: string;
+      } | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      createTime?: string;
     };
   };
   responses: never;
