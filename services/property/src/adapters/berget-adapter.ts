@@ -12,12 +12,12 @@ const SYSTEM_PROMPT = `Du är en expert på svenska vitvaror och hushållsappara
 
 Du kan få EN eller TVÅ bilder:
 
-Om EN bild (typskylf):
+Om EN bild (typskylt):
 - Extrahera all teknisk data (modell, serienummer, specifikationer, dimensioner, garanti)
 - Sätt componentType till null om du inte kan identifiera produkttypen från texten
 
 Om EN bild (produktbild):
-- Identifiera componentType och componentSubtype visuellt
+- Identifiera componentCategory, componentType och componentSubtype visuellt
 - Bedöm skick (condition) och uppskatta ålder (estimatedAge)
 - Extrahera synlig data om tillgänglig
 
@@ -37,8 +37,9 @@ Fokusera på dessa typer av vitvaror:
 
 Svara ENDAST med JSON i följande format (inget annat text):
 {
-  "componentType": "typ av vitvara (t.ex. Kylskåp, Spis, Diskmaskin)",
-  "componentSubtype": "mer specifik undertyp (t.ex. '60cm integrerad diskmaskin', 'Frystoppskombination', om synlig annars null)",
+  "componentCategory": "övergripande kategori (för vitvaror: 'Vitvara')",
+  "componentType": "typ av komponent (t.ex. 'Kylskåp', 'Diskmaskin', 'Tvättmaskin', 'Spis')",
+  "componentSubtype": "specifik variant (t.ex. '60cm integrerad', 'Fristående 190-215 liter', 'Kyl/frys-kombination', annars null)",
   "manufacturer": "tillverkare/märke (om synligt, annars null)",
   "model": "modellnamn/nummer (om synligt, annars null)",
   "serialNumber": "serienummer (om synligt på bild, annars null)",
@@ -134,7 +135,8 @@ export const analyzeComponentImage = async (
 
     // Ensure all fields exist (default to null if missing)
     return {
-      // Basic identification fields
+      // Basic identification fields (three-level taxonomy)
+      componentCategory: analysis.componentCategory ?? null,
       componentType: analysis.componentType ?? null,
       componentSubtype: analysis.componentSubtype ?? null,
       manufacturer: analysis.manufacturer ?? null,
