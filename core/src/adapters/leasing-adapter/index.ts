@@ -331,6 +331,8 @@ const getApplicantsAndListingByContactCode = async (
       .map((listing) => listing.rentalObjectCode)
       .filter(Boolean)
 
+    // TODO: Ändra så att vi gör en bulksökning mot leasing. Det finns ett anrop för att skicka med en lista av rental-object-codes och få tillbaka en lista av parkings-spaces
+
     // Fetch all parking spaces in parallel
     const parkingSpacesPromises = rentalObjectCodes.map((code) =>
       getParkingSpaceByCode(code)
@@ -708,7 +710,7 @@ export { getCommentThread, addComment, removeComment } from './comments'
 
 export {
   getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
   getParkingSpaceByCode,
   getParkingSpaces,
+  getRentalObjectRentByCode,
 } from './rental-objects'

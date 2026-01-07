@@ -10,8 +10,9 @@ import {
 } from '../../../../common/adapters/tenfast/schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
-import { Contact } from '@onecore/types'
+import { Contact, Rent, RentalObject, RentalObjectRent } from '@onecore/types'
 import * as tenfastApi from './tenfast-api'
+import currency from 'currency.js'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -132,6 +133,58 @@ export const getRentalObject = async (
     }
   } catch (err: any) {
     return handleTenfastError(err, 'could-not-find-rental-object')
+  }
+}
+
+export const getRentForRentalObject = async (
+  rentalObjectCode: string,
+  includeVAT: boolean
+): Promise<
+  AdapterResult<
+    RentalObjectRent,
+    | 'could-not-find-rental-object'
+    | 'could-not-parse-rental-object'
+    | 'get-rental-object-bad-request'
+  >
+> => {
+  const rentalObjectResult = await getRentalObject(rentalObjectCode)
+
+  if (!rentalObjectResult.ok) {
+    return {
+      ok: false,
+      err: rentalObjectResult.err,
+    }
+  }
+
+  if (!rentalObjectResult.data) {
+    return {
+      ok: false,
+      err: 'could-not-find-rental-object',
+    }
+  }
+
+  const rent: RentalObjectRent = {
+    amount: includeVAT
+      ? rentalObjectResult.data.hyra
+      : rentalObjectResult.data.hyraExcludingVat,
+    vat: includeVAT ? rentalObjectResult.data.hyraVat : 0,
+    rows: rentalObjectResult.data.hyror.map((hyra) => ({
+      description: hyra.label || '',
+      amount: includeVAT
+        ? currency(hyra.amount).add(hyra.vat).value
+        : hyra.amount,
+      vatPercentage: includeVAT ? hyra.vat : 0,
+      fromDate: hyra.from?.toString() || '', //TODO: verify date format
+      toDate: hyra.to?.toString() || '', //TODO: verify date format
+      code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
+    })),
+  }
+
+  return {
+    ok: true,
+    data: rent
+      ? rentalObjectResult.data.hyra
+      : rentalObjectResult.data.hyraExcludingVat,
   }
 }
 
