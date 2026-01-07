@@ -3,7 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 
 const useWorkOrders = (
   id: string,
-  contextType: 'property' | 'building' | 'residence' | 'tenant'
+  contextType:
+    | 'property'
+    | 'building'
+    | 'residence'
+    | 'tenant'
+    | 'maintenanceUnit'
 ) => {
   const getWorkOrdersFn = () => {
     switch (contextType) {
@@ -19,6 +24,9 @@ const useWorkOrders = (
       case 'tenant':
         // id = contact code
         return workOrderService.getWorkOrdersByContactCode(id)
+      case 'maintenanceUnit':
+        // id = maintenance unit code
+        return workOrderService.getWorkOrdersForMaintenanceUnit(id)
     }
   }
 
