@@ -22,10 +22,14 @@ export const InstancesTable = ({
   const navigate = useNavigate()
 
   const handleNavigateToResidence = (
-    residenceId: string | null | undefined
+    residenceId: string | null | undefined,
+    roomCode: string | null | undefined
   ) => {
     if (residenceId) {
-      navigate(`/residences/${residenceId}`)
+      const url = roomCode
+        ? `/residences/${residenceId}?room=${roomCode}`
+        : `/residences/${residenceId}`
+      navigate(url)
     }
   }
 
@@ -148,7 +152,9 @@ export const InstancesTable = ({
 
         return (
           <button
-            onClick={() => handleNavigateToResidence(residenceId)}
+            onClick={() =>
+              handleNavigateToResidence(residenceId, structure.roomCode)
+            }
             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
             title={tooltipText}
           >
