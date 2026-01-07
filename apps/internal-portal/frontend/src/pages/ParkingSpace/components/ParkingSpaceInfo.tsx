@@ -1,8 +1,10 @@
 import { Box, Typography } from '@mui/material'
+import OpenInNew from '@mui/icons-material/OpenInNew'
 import currency from 'currency.js'
 
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
 import { printVacantFrom } from '../../../common/formattingUtils'
+import { ListingStatus } from '@onecore/types'
 
 export const ParkingSpaceInfo = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
@@ -38,12 +40,26 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
           <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Bilplats</Typography>
             <Box>
-              <Typography fontWeight="bold">
+              <Typography fontWeight="bold" textAlign="right">
                 {parkingSpaceListing.rentalObject.address}
               </Typography>
-              <Typography fontWeight="bold" textAlign="right">
-                {parkingSpaceListing.rentalObjectCode}
-              </Typography>
+              <a
+                href={`https://onecore.mimer.nu/parking-spaces/${parkingSpaceListing.rentalObjectCode}`}
+                target="_blank"
+              >
+                <Box display="flex" alignItems="flex-right">
+                  <Typography fontWeight="bold" textAlign="right">
+                    {parkingSpaceListing.rentalObjectCode}
+                  </Typography>
+                  <OpenInNew
+                    sx={{
+                      fontSize: 18,
+                      marginLeft: '4px',
+                      marginTop: '6px',
+                    }}
+                  />
+                </Box>
+              </a>
             </Box>
           </Box>
           <Box height="50px" />
@@ -146,17 +162,20 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               </Box>
             </>
           )}
-          <Box display="flex" justifyContent="space-between" flex="1">
-            <Typography>Ledig från och med</Typography>
-            <Box>
-              <Typography fontWeight="bold">
-                {printVacantFrom(
-                  dateFormatter,
-                  parkingSpaceListing.rentalObject.vacantFrom
-                )}
-              </Typography>
-            </Box>
-          </Box>
+          {parkingSpaceListing.status == ListingStatus.Active ||
+            (parkingSpaceListing.status == ListingStatus.Expired && (
+              <Box display="flex" justifyContent="space-between" flex="1">
+                <Typography>Ledig från och med</Typography>
+                <Box>
+                  <Typography fontWeight="bold">
+                    {printVacantFrom(
+                      dateFormatter,
+                      parkingSpaceListing.rentalObject.vacantFrom
+                    )}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
           {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
             <>
               <Box height="50px" />
