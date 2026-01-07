@@ -4,10 +4,7 @@ import { ClipboardList, MessageSquare } from 'lucide-react'
 
 import { maintenanceUnitService } from '@/services/api/core'
 import { MaintenanceUnitBasicInfo } from '../maintenance-unit/MaintenanceUnitBasicInfo'
-import {
-  WorkOrdersManagement,
-  ContextType,
-} from '../work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 

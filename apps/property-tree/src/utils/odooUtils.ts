@@ -1,4 +1,4 @@
-import { ContextType } from '@/components/work-orders/WorkOrdersManagement'
+import { ContextType } from '@/types/ui'
 import { InternalWorkOrder } from '@/services/api/core'
 import { resolve } from '@/utils/env'
 

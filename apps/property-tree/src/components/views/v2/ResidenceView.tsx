@@ -19,15 +19,14 @@ import {
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
 import RentalBlocksTab from '@/components/residence/RentalBlocksTab'
 import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
+import { ContextType } from '@/types/ui'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -126,6 +125,13 @@ export const ResidenceView = () => {
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">Underhållsenheter</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="documents"
+                className="flex items-center gap-1.5"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Dokument</span>
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">
               <Card>
@@ -185,6 +191,9 @@ export const ResidenceView = () => {
                 identifier={residence.propertyObject.rentalId ?? undefined}
                 showFlatList
               />
+            </TabsContent>
+            <TabsContent value="documents">
+              <DocumentsTab contextType={ContextType.Residence} />
             </TabsContent>
           </Tabs>
         </div>
