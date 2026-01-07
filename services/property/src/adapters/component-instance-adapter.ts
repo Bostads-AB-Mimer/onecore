@@ -3,6 +3,29 @@ import { prisma } from './db'
 import { getFileMetadataFromMinio } from './minio-adapter'
 import type { CreateComponentNew, UpdateComponentNew } from '../types/component'
 
+// Reusable Prisma select for propertyObject with room/residence structure info
+const propertyObjectWithStructuresSelect = {
+  id: true,
+  propertyStructures: {
+    select: {
+      roomId: true,
+      roomCode: true,
+      roomName: true,
+      residenceId: true,
+      residenceCode: true,
+      residenceName: true,
+      rentalId: true,
+      buildingCode: true,
+      buildingName: true,
+      residence: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  },
+} as const
+
 // ==================== COMPONENTS (INSTANCES) ====================
 
 export const getComponents = async (
@@ -57,27 +80,7 @@ export const getComponents = async (
           },
           include: {
             propertyObject: {
-              select: {
-                id: true,
-                propertyStructures: {
-                  select: {
-                    roomId: true,
-                    roomCode: true,
-                    roomName: true,
-                    residenceId: true,
-                    residenceCode: true,
-                    residenceName: true,
-                    rentalId: true,
-                    buildingCode: true,
-                    buildingName: true,
-                    residence: {
-                      select: {
-                        id: true,
-                      },
-                    },
-                  },
-                },
-              },
+              select: propertyObjectWithStructuresSelect,
             },
           },
         },
@@ -109,27 +112,7 @@ export const getComponentById = async (id: string) => {
       componentInstallations: {
         include: {
           propertyObject: {
-            select: {
-              id: true,
-              propertyStructures: {
-                select: {
-                  roomId: true,
-                  roomCode: true,
-                  roomName: true,
-                  residenceId: true,
-                  residenceCode: true,
-                  residenceName: true,
-                  rentalId: true,
-                  buildingCode: true,
-                  buildingName: true,
-                  residence: {
-                    select: {
-                      id: true,
-                    },
-                  },
-                },
-              },
-            },
+            select: propertyObjectWithStructuresSelect,
           },
         },
       },
@@ -199,27 +182,7 @@ export const getComponentsByRoomId = async (roomId: string) => {
         },
         include: {
           propertyObject: {
-            select: {
-              id: true,
-              propertyStructures: {
-                select: {
-                  roomId: true,
-                  roomCode: true,
-                  roomName: true,
-                  residenceId: true,
-                  residenceCode: true,
-                  residenceName: true,
-                  rentalId: true,
-                  buildingCode: true,
-                  buildingName: true,
-                  residence: {
-                    select: {
-                      id: true,
-                    },
-                  },
-                },
-              },
-            },
+            select: propertyObjectWithStructuresSelect,
           },
         },
       },

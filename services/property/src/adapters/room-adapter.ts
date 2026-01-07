@@ -4,8 +4,6 @@ import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
 
-//todo: add types
-
 export async function getRooms(residenceId: string) {
   const residence = await prisma.residence
     .findFirst({
@@ -30,7 +28,7 @@ export async function getRooms(residenceId: string) {
     .then(trimStrings)
 
   if (!residence) {
-    throw 'foo'
+    throw new Error(`Residence not found: ${residenceId}`)
   }
 
   const propertyStructures = await prisma.propertyStructure.findMany({

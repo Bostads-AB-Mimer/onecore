@@ -123,11 +123,13 @@ export const RoomInfo = (props: RoomInfoProps) => {
       const matchingRoom = rooms.find((r) => r.code === roomCodeFromUrl)
       if (matchingRoom) {
         setOpenRoomId(matchingRoom.id)
-        // Scroll into view after accordion expands
-        setTimeout(() => {
-          const element = roomRefs.current.get(matchingRoom.id)
-          element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }, 100)
+        // Scroll into view after accordion expands (using requestAnimationFrame for better timing)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const element = roomRefs.current.get(matchingRoom.id)
+            element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          })
+        })
       }
     }
   }, [roomCodeFromUrl, rooms])
@@ -166,8 +168,6 @@ export const RoomInfo = (props: RoomInfoProps) => {
                   {rooms.filter((room) => room.features.isHeated).length}
                 </p>
               </div>
-              {/* Hiding for demo purposes */}
-              {/*
               <div>
                 <p className="text-sm text-muted-foreground">
                   Med termostatventil
@@ -179,13 +179,10 @@ export const RoomInfo = (props: RoomInfoProps) => {
                   }
                 </p>
               </div>
-              */}
             </div>
           </CardContent>
         </Card>
 
-        {/* Hiding for demo purposes */}
-        {/*
         <Card>
           <CardHeader>
             <CardTitle className="text-lg sm:text-xl">Orientering</CardTitle>
@@ -210,7 +207,6 @@ export const RoomInfo = (props: RoomInfoProps) => {
             </div>
           </CardContent>
         </Card>
-        */}
       </div>
 
       <div className="mt-6">
