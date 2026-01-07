@@ -22,6 +22,7 @@ interface ComponentInstallationDialogProps {
   isOpen: boolean
   onClose: () => void
   roomId: string
+  propertyObjectId: string
   roomName?: string
 }
 
@@ -29,6 +30,7 @@ export const ComponentInstallationDialog = ({
   isOpen,
   onClose,
   roomId,
+  propertyObjectId,
   roomName,
 }: ComponentInstallationDialogProps) => {
   const queryClient = useQueryClient()
@@ -39,7 +41,7 @@ export const ComponentInstallationDialog = ({
     ComponentModelWithHierarchy | undefined
   >()
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('')
-  const installMutation = useInstallComponent(roomId)
+  const installMutation = useInstallComponent(propertyObjectId, roomId)
 
   const [formData, setFormData] = useState({
     modelId: '',
@@ -152,7 +154,7 @@ export const ComponentInstallationDialog = ({
         // Then install
         await componentService.installExistingInstance(
           selectedInstanceId,
-          roomId,
+          propertyObjectId,
           {
             installationDate: formData.installationDate,
             installationCost: formData.installationCost,

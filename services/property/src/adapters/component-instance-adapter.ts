@@ -70,6 +70,11 @@ export const getComponents = async (
                     rentalId: true,
                     buildingCode: true,
                     buildingName: true,
+                    residence: {
+                      select: {
+                        id: true,
+                      },
+                    },
                   },
                 },
               },
@@ -117,6 +122,11 @@ export const getComponentById = async (id: string) => {
                   rentalId: true,
                   buildingCode: true,
                   buildingName: true,
+                  residence: {
+                    select: {
+                      id: true,
+                    },
+                  },
                 },
               },
             },
@@ -202,6 +212,11 @@ export const getComponentsByRoomId = async (roomId: string) => {
                   rentalId: true,
                   buildingCode: true,
                   buildingName: true,
+                  residence: {
+                    select: {
+                      id: true,
+                    },
+                  },
                 },
               },
             },
