@@ -2056,6 +2056,7 @@ export interface components {
     };
     Room: {
       id: string;
+      propertyObjectId: string;
       code: string;
       name: string | null;
       usage: {
@@ -2724,8 +2725,7 @@ export interface components {
           cost: number;
           createdAt: string;
           updatedAt: string;
-          propertyObject?: {
-            /** Format: uuid */
+          propertyObject?: ({
             id: string;
             propertyStructures?: ({
                 roomId?: string | null;
@@ -2737,8 +2737,11 @@ export interface components {
                 rentalId?: string | null;
                 buildingCode?: string | null;
                 buildingName?: string | null;
+                residence?: {
+                  id: string;
+                } | null;
               })[];
-          };
+          }) | null;
         })[];
     };
     ComponentInstallation: {
@@ -2839,8 +2842,7 @@ export interface components {
             cost: number;
             createdAt: string;
             updatedAt: string;
-            propertyObject?: {
-              /** Format: uuid */
+            propertyObject?: ({
               id: string;
               propertyStructures?: ({
                   roomId?: string | null;
@@ -2852,8 +2854,11 @@ export interface components {
                   rentalId?: string | null;
                   buildingCode?: string | null;
                   buildingName?: string | null;
+                  residence?: {
+                    id: string;
+                  } | null;
                 })[];
-            };
+            }) | null;
           })[];
       };
     };
@@ -2926,7 +2931,7 @@ export interface components {
     CreateComponentRequest: {
       /** Format: uuid */
       modelId: string;
-      serialNumber: string;
+      serialNumber?: string | null;
       specifications?: string;
       additionalInformation?: string;
       warrantyStartDate?: string;
@@ -2946,7 +2951,7 @@ export interface components {
     UpdateComponentRequest: {
       /** Format: uuid */
       modelId?: string;
-      serialNumber?: string;
+      serialNumber?: string | null;
       specifications?: string;
       additionalInformation?: string;
       warrantyStartDate?: string;

@@ -22,6 +22,7 @@ export const QuantityValueSchema = z.object({
 
 export const RoomSchema = z.object({
   id: z.string(),
+  propertyObjectId: z.string(),
   code: z.string(),
   name: z.string().nullable(),
   usage: z.object({
