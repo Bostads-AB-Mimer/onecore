@@ -26,7 +26,11 @@ interface RoomComponentsProps {
   roomName?: string
 }
 
-const RoomComponents = ({ roomId, propertyObjectId, roomName }: RoomComponentsProps) => {
+const RoomComponents = ({
+  roomId,
+  propertyObjectId,
+  roomName,
+}: RoomComponentsProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const componentsQuery = useQuery({
