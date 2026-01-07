@@ -40,13 +40,19 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Search Service
    *     summary: Omni-search for different entities
-   *     description: Search for properties, buildings, residences, and parking spaces.
+   *     description: |
+   *       Search for properties, buildings, residences, and parking spaces.
+   *       - Properties: Matches on property name
+   *       - Buildings: Matches on building name
+   *       - Residences: Matches on rental ID or residence name
+   *       - Parking Spaces: Matches on rental ID or parking space name
+   *       Returns up to 10 results per entity type (max 40 total results).
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         type: string
-   *         description: The search query string. Matches on property name, building name or residence rental object id
+   *         description: The search query string
    *     responses:
    *       200:
    *         description: A list of search results

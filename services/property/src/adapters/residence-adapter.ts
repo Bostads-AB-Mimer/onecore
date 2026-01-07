@@ -408,13 +408,20 @@ export const getResidenceSizeByRentalId = async (rentalId: string) => {
 }
 
 export const searchResidences = async (
-  q: string
+  q: string,
+  searchFields: string[]
 ): Promise<Array<ResidenceSearchResult>> => {
   try {
     const result = await prisma.residence.findMany({
       where: {
         propertyObject: {
-          propertyStructures: { every: { rentalId: { contains: q } } },
+          propertyStructures: {
+            every: {
+              OR: searchFields.map((field) => ({
+                [field]: { contains: q },
+              })),
+            },
+          },
         },
       },
       include: {
