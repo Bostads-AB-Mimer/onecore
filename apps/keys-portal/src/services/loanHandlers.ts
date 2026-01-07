@@ -179,8 +179,10 @@ export async function handleReturnKeys({
 
       if (totalMissing > 0) {
         const itemTypes = []
-        if (missingKeys.length > 0) itemTypes.push(`${missingKeys.length} nyckel/nycklar`)
-        if (missingCards.length > 0) itemTypes.push(`${missingCards.length} droppe/droppar`)
+        if (missingKeys.length > 0)
+          itemTypes.push(`${missingKeys.length} nyckel/nycklar`)
+        if (missingCards.length > 0)
+          itemTypes.push(`${missingCards.length} droppe/droppar`)
 
         return {
           success: false,

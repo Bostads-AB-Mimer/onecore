@@ -127,13 +127,16 @@ export function KeyActionButtons({
   const totalRentable = rentableKeys.length + rentableCards.length
   const totalReturnable = returnableKeys.length + returnableCards.length
   const totalAllAvailable = allAvailableKeys.length + allAvailableCards.length
-  const totalAllRentedByTenant = allRentedKeysByTenant.length + allRentedCardsByTenant.length
+  const totalAllRentedByTenant =
+    allRentedKeysByTenant.length + allRentedCardsByTenant.length
 
   // Helper to generate button label with item types
   const getItemLabel = (keyCount: number, cardCount: number): string => {
     const parts = []
-    if (keyCount > 0) parts.push(`${keyCount} nyckel${keyCount > 1 ? 'ar' : ''}`)
-    if (cardCount > 0) parts.push(`${cardCount} dropp${cardCount > 1 ? 'ar' : 'e'}`)
+    if (keyCount > 0)
+      parts.push(`${keyCount} nyckel${keyCount > 1 ? 'ar' : ''}`)
+    if (cardCount > 0)
+      parts.push(`${cardCount} dropp${cardCount > 1 ? 'ar' : 'e'}`)
     return parts.join(' + ')
   }
 
@@ -144,29 +147,35 @@ export function KeyActionButtons({
         {totalRentable > 0 && (
           <Button
             size="sm"
-            onClick={() => onRent(
-              rentableKeys.map((k) => k.id),
-              rentableCards.map((c) => c.cardId)
-            )}
+            onClick={() =>
+              onRent(
+                rentableKeys.map((k) => k.id),
+                rentableCards.map((c) => c.cardId)
+              )
+            }
             disabled={isProcessing}
             className="flex items-center gap-1"
           >
             <Plus className="h-3 w-3" />
-            Låna ut valda ({getItemLabel(rentableKeys.length, rentableCards.length)})
+            Låna ut valda (
+            {getItemLabel(rentableKeys.length, rentableCards.length)})
           </Button>
         )}
         {totalReturnable > 0 && (
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => onReturn(
-              returnableKeys.map((k) => k.id),
-              returnableCards.map((c) => c.cardId)
-            )}
+            onClick={() =>
+              onReturn(
+                returnableKeys.map((k) => k.id),
+                returnableCards.map((c) => c.cardId)
+              )
+            }
             disabled={isProcessing}
             className="flex items-center gap-1"
           >
-            Återlämna valda ({getItemLabel(returnableKeys.length, returnableCards.length)})
+            Återlämna valda (
+            {getItemLabel(returnableKeys.length, returnableCards.length)})
           </Button>
         )}
 
@@ -227,26 +236,36 @@ export function KeyActionButtons({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onRent(
-              allAvailableKeys.map((k) => k.id),
-              allAvailableCards.map((c) => c.cardId)
-            )}
+            onClick={() =>
+              onRent(
+                allAvailableKeys.map((k) => k.id),
+                allAvailableCards.map((c) => c.cardId)
+              )
+            }
             disabled={isProcessing}
           >
-            Låna ut alla tillgängliga ({getItemLabel(allAvailableKeys.length, allAvailableCards.length)})
+            Låna ut alla tillgängliga (
+            {getItemLabel(allAvailableKeys.length, allAvailableCards.length)})
           </Button>
         )}
         {totalAllRentedByTenant > 0 && (
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onReturn(
-              allRentedKeysByTenant.map((k) => k.id),
-              allRentedCardsByTenant.map((c) => c.cardId)
-            )}
+            onClick={() =>
+              onReturn(
+                allRentedKeysByTenant.map((k) => k.id),
+                allRentedCardsByTenant.map((c) => c.cardId)
+              )
+            }
             disabled={isProcessing}
           >
-            Återlämna alla ({getItemLabel(allRentedKeysByTenant.length, allRentedCardsByTenant.length)})
+            Återlämna alla (
+            {getItemLabel(
+              allRentedKeysByTenant.length,
+              allRentedCardsByTenant.length
+            )}
+            )
           </Button>
         )}
       </div>

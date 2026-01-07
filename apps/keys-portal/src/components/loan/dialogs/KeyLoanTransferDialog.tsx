@@ -269,7 +269,10 @@ export function KeyLoanTransferDialog({
             Nya droppar ({newCards.length})
           </div>
           {newCards.map((card) => (
-            <div key={card.cardId} className="p-2 border rounded bg-card text-xs">
+            <div
+              key={card.cardId}
+              className="p-2 border rounded bg-card text-xs"
+            >
               <div className="font-medium">{card.name || card.cardId}</div>
             </div>
           ))}

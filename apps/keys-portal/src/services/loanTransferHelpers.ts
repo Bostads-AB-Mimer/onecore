@@ -24,7 +24,8 @@ export async function findExistingActiveLoansForTransfer(
 ): Promise<ExistingLoanInfo[]> {
   try {
     // Get all cards for this rental object first
-    const allCards = await cardService.getCardsByRentalObjectCode(rentalObjectCode)
+    const allCards =
+      await cardService.getCardsByRentalObjectCode(rentalObjectCode)
 
     // Get all key loans (pass cards to avoid duplicate fetch)
     const { loaned } = await keyLoanService.listByLease(
@@ -81,7 +82,9 @@ export async function findExistingActiveLoansForTransfer(
         if (card) {
           cards.push(card)
         } else {
-          throw new Error(`Card ${cardId} not found for rental object ${rentalObjectCode}`)
+          throw new Error(
+            `Card ${cardId} not found for rental object ${rentalObjectCode}`
+          )
         }
       }
 

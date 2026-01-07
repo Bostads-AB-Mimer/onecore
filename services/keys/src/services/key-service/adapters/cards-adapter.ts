@@ -78,8 +78,13 @@ export async function getCardsDetails(
       expand: 'cards',
     })
 
-    // Extract all cards from card owners
-    allCards = cardOwners.flatMap((owner: any) => owner.cards || [])
+    // Extract all cards from card owners, preserving owner reference for Alliera links
+    allCards = cardOwners.flatMap((owner: any) =>
+      (owner.cards || []).map((card: Card) => ({
+        ...card,
+        owner: { cardOwnerId: owner.cardOwnerId },
+      }))
+    )
   } catch (error) {
     console.error('Failed to fetch cards from DAX:', error)
     return []

@@ -105,7 +105,9 @@ export function ReturnKeysDialog({
 
             // Remove all keys/cards from this loan from remaining sets
             const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
-            const loanCardIds: string[] = JSON.parse(activeLoan.keyCards || '[]')
+            const loanCardIds: string[] = JSON.parse(
+              activeLoan.keyCards || '[]'
+            )
             loanKeyIds.forEach((id) => remainingKeyIds.delete(id))
             loanCardIds.forEach((id) => remainingCardIds.delete(id))
           } else {
@@ -253,7 +255,9 @@ export function ReturnKeysDialog({
       {keysByLoan.length > 0 && (
         <>
           {totalCards > 0 && (
-            <div className="text-xs font-semibold text-muted-foreground">Nycklar</div>
+            <div className="text-xs font-semibold text-muted-foreground">
+              Nycklar
+            </div>
           )}
           {keysByLoan.map((loanInfo, index) => {
             const showLoanGrouping = keysByLoan.length > 1
@@ -262,7 +266,8 @@ export function ReturnKeysDialog({
               <div
                 key={loanInfo.loanId}
                 className={cn(
-                  showLoanGrouping && 'p-3 border rounded-lg bg-muted/30 space-y-2'
+                  showLoanGrouping &&
+                    'p-3 border rounded-lg bg-muted/30 space-y-2'
                 )}
               >
                 {showLoanGrouping && (
@@ -344,7 +349,9 @@ export function ReturnKeysDialog({
       {cardsByLoan.length > 0 && (
         <>
           {totalKeys > 0 && (
-            <div className="text-xs font-semibold text-muted-foreground mt-4">Droppar</div>
+            <div className="text-xs font-semibold text-muted-foreground mt-4">
+              Droppar
+            </div>
           )}
           {cardsByLoan.map((loanInfo) => (
             <div key={loanInfo.loanId} className="space-y-2">
@@ -367,7 +374,9 @@ export function ReturnKeysDialog({
                     className="mt-0.5"
                   />
                   <div className="flex-1">
-                    <div className="font-medium">{card.name || card.cardId}</div>
+                    <div className="font-medium">
+                      {card.name || card.cardId}
+                    </div>
                   </div>
                 </div>
               ))}

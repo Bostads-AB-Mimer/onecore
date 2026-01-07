@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
 
 type Props = {
   cards: CardDetails[]
@@ -27,29 +28,41 @@ export function MaintenanceCardsTable({ cards }: Props) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%]">Droppnamn</TableHead>
-            <TableHead className="w-[30%]">Hyresobjekt</TableHead>
+            <TableHead className="w-[70%]">Droppnamn</TableHead>
             <TableHead className="w-[30%]">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {cards.map((card) => (
-            <TableRow key={card.cardId}>
-              <TableCell className="font-medium w-[40%]">
-                {card.name || card.cardId}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground w-[30%]">
-                {card.rentalObjectCode || '—'}
-              </TableCell>
-              <TableCell className="w-[30%]">
-                {card.disabled ? (
-                  <Badge variant="destructive">Inaktiv</Badge>
-                ) : (
-                  <Badge variant="secondary">Aktiv</Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
+          {cards.map((card) => {
+            const ownerId = extractCardOwnerId(card.owner)
+            const ownerLink = ownerId ? getCardOwnerLink(ownerId) : null
+
+            return (
+              <TableRow key={card.cardId}>
+                <TableCell className="font-medium w-[70%]">
+                  {ownerLink ? (
+                    <a
+                      href={ownerLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {card.name || card.cardId}
+                    </a>
+                  ) : (
+                    card.name || card.cardId
+                  )}
+                </TableCell>
+                <TableCell className="w-[30%]">
+                  {card.disabled ? (
+                    <Badge variant="destructive">Inaktiv</Badge>
+                  ) : (
+                    <Badge variant="secondary">Aktiv</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

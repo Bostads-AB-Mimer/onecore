@@ -14,6 +14,7 @@ import { KeyLoan, CardDetails } from '@/services/types'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { getActiveLoan, getPreviousLoan } from '@/utils/loanHelpers'
+import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
 
 /**
  * Helper function to compute pickup availability status for a card
@@ -491,22 +492,35 @@ function CardRow({
             className={`font-medium w-[30%] ${!selectable && indent ? 'pl-8' : ''}`}
           >
             <div className="flex items-center gap-2">
-              {hasCodes && (
-                expanded ? (
+              {hasCodes &&
+                (expanded ? (
                   <ChevronDown className="h-4 w-4 flex-shrink-0" />
                 ) : (
                   <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                ))}
+              {(() => {
+                const ownerId = extractCardOwnerId(cardData.owner)
+                const ownerLink = ownerId ? getCardOwnerLink(ownerId) : null
+                const displayName = cardData.name || cardData.cardId
+
+                return ownerLink ? (
+                  <a
+                    href={ownerLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {displayName}
+                  </a>
+                ) : (
+                  <span className="font-medium text-sm">{displayName}</span>
                 )
-              )}
-              <span className="font-medium text-sm">
-                {cardData.name || cardData.cardId}
-              </span>
+              })()}
             </div>
           </TableCell>
         )}
-        {columns.status && (
-          <TableCell className="w-[25%]">-</TableCell>
-        )}
+        {columns.status && <TableCell className="w-[25%]">-</TableCell>}
         {columns.pickupAvailability && (
           <TableCell className="w-[25%]">
             {(() => {
@@ -538,7 +552,8 @@ function CardRow({
                     {code.format || '-'}
                   </span>
                   <span className="font-mono font-medium">
-                    {code.number || (typeof code === 'string' ? code : JSON.stringify(code))}
+                    {code.number ||
+                      (typeof code === 'string' ? code : JSON.stringify(code))}
                   </span>
                 </div>
               </TableCell>
