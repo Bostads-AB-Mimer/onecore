@@ -6,7 +6,7 @@ import { ComponentNewSchema, SpaceTypeEnum } from './component-instance'
 // Query params for component installations
 export const componentInstallationsQueryParamsSchema = z.object({
   componentId: z.string().uuid().optional(),
-  spaceId: z.string().uuid().optional(),
+  spaceId: z.string().optional(), // Char(15) keycmobj format, not UUID
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
