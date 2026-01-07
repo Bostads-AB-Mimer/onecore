@@ -493,16 +493,18 @@ export async function createInvoiceRow(params: {
   try {
     const res = await tenfastApi.request({
       method: 'patch',
-      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${params.leaseId}/rows`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(params.leaseId)}/rows?hyresvard=${tenfastCompanyId}`,
       data: {
+        // TODO: How to handle vatEnabled?
+        vatEnabled: true,
         rowsToAdd: [params.invoiceRow],
       },
     })
-    // Guessing status here
-    if (res.status === 200 || res.status === 201) {
+
+    if (res.status === 200) {
       return { ok: true, data: res.data }
     } else {
-      throw res
+      throw { status: res.status, data: res.data }
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.createInvoiceRow')
@@ -517,16 +519,16 @@ export async function deleteInvoiceRow(params: {
   try {
     const res = await tenfastApi.request({
       method: 'patch',
-      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${params.leaseId}/rows`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(params.leaseId)}/rows?hyresvard=${tenfastCompanyId}`,
       data: {
         rowsToDelete: [params.invoiceRowId],
       },
     })
 
-    if (res.status === 200 || res.status === 204) {
+    if (res.status === 200) {
       return { ok: true, data: null }
     } else {
-      throw res
+      throw { status: res.status, data: res.data }
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.deleteInvoiceRow')
