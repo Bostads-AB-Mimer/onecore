@@ -52,14 +52,18 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: object
    *                   properties:
+   *                     componentCategory:
+   *                       type: string
+   *                       nullable: true
+   *                       description: Broad category (e.g., Vitvara)
    *                     componentType:
    *                       type: string
    *                       nullable: true
-   *                       description: Main component category (e.g., Diskmaskin, Kylskåp)
+   *                       description: Component type (e.g., Kylskåp, Diskmaskin, Tvättmaskin)
    *                     componentSubtype:
    *                       type: string
    *                       nullable: true
-   *                       description: More specific subtype (e.g., 60cm integrerad diskmaskin)
+   *                       description: Specific variant (e.g., 60cm integrerad, Fristående 190-215 liter)
    *                     manufacturer:
    *                       type: string
    *                       nullable: true
