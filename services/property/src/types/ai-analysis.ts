@@ -19,9 +19,10 @@ export const AnalyzeComponentImageRequestSchema = z.object({
 // MVP: Core AI analysis fields focused on Swedish appliances (vitvaror)
 // All fields nullable except confidence (AI might not detect everything)
 export const AIComponentAnalysisSchema = z.object({
-  // Basic identification fields
-  componentType: z.string().nullable(),
-  componentSubtype: z.string().nullable(),
+  // Basic identification fields (three-level taxonomy)
+  componentCategory: z.string().nullable(), // Broad category: "Vitvara", "VVS", etc.
+  componentType: z.string().nullable(), // Appliance type: "Kylskåp", "Diskmaskin"
+  componentSubtype: z.string().nullable(), // Variant: "60cm integrerad", "Fristående 190L"
   manufacturer: z.string().nullable(),
   model: z.string().nullable(),
   serialNumber: z.string().nullable(),
