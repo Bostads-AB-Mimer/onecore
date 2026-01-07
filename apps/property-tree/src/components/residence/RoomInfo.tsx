@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useIsMobile } from '../hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useQuery } from '@tanstack/react-query'
@@ -103,6 +104,11 @@ const RoomComponents = ({
 }
 
 export const RoomInfo = (props: RoomInfoProps) => {
+  const [searchParams] = useSearchParams()
+  const roomCodeFromUrl = searchParams.get('room')
+  const [openRoomId, setOpenRoomId] = useState<string | undefined>(undefined)
+  const roomRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
   const roomsQuery = useQuery({
     queryKey: ['rooms', props.residenceId],
     queryFn: () => roomService.getByResidenceId(props.residenceId),
@@ -110,6 +116,22 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null)
   const isMobile = useIsMobile()
+  const rooms = roomsQuery.data || []
+
+  // Auto-open room accordion when navigating from component library
+  useEffect(() => {
+    if (roomCodeFromUrl && rooms.length > 0) {
+      const matchingRoom = rooms.find((r) => r.code === roomCodeFromUrl)
+      if (matchingRoom) {
+        setOpenRoomId(matchingRoom.id)
+        // Scroll into view after accordion expands
+        setTimeout(() => {
+          const element = roomRefs.current.get(matchingRoom.id)
+          element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
+      }
+    }
+  }, [roomCodeFromUrl, rooms])
 
   if (roomsQuery.isLoading) {
     return <LoadingSkeleton />
@@ -125,7 +147,6 @@ export const RoomInfo = (props: RoomInfoProps) => {
     )
   }
 
-  const rooms = roomsQuery.data
   return (
     <>
       <div
@@ -223,6 +244,43 @@ export const RoomInfo = (props: RoomInfoProps) => {
                       <ChevronUp className="h-5 w-5 text-muted-foreground" />
                     ) : (
                       <ChevronDown className="h-5 w-5 text-muted-foreground" />
+      <div className="mt-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">
+          Rumsinformation ({rooms.length})
+        </h2>
+        <Accordion
+          type="single"
+          collapsible
+          className="space-y-2"
+          value={openRoomId}
+          onValueChange={setOpenRoomId}
+        >
+          {rooms.map((room) => {
+            const roomArea = (room as any).propertyObject?.quantityValues?.find(
+              (qv: any) => qv.quantityTypeId === 'NTA'
+            )?.value
+
+            return (
+              <AccordionItem
+                key={room.id}
+                value={room.id}
+                ref={(el) => {
+                  if (el) roomRefs.current.set(room.id, el)
+                }}
+                className="border rounded-lg bg-card overflow-hidden"
+              >
+                <AccordionTrigger className="px-3 sm:px-4 hover:bg-accent/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 flex-1 text-left mr-2">
+                    <span className="font-medium">
+                      {room.name || room.roomType?.name || room.code}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {room.code}
+                    </span>
+                    {roomArea && (
+                      <span className="text-sm text-muted-foreground">
+                        ({roomArea} m²)
+                      </span>
                     )}
                   </div>
                 </button>
