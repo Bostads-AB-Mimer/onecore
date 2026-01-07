@@ -41,7 +41,6 @@ export async function searchParkingSpaces(q: string, searchFields: string[]) {
           },
         })),
       },
-      take: 10,
     })
     .then(trimStrings)
 

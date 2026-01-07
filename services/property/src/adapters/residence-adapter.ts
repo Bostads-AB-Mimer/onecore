@@ -448,7 +448,6 @@ export const searchResidences = async (
           },
         },
       },
-      take: 10,
     })
 
     return trimStrings(result)
