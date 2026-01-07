@@ -4,6 +4,7 @@ import { components } from '../../src/adapters/property-base-adapter/generated/a
 export const RoomFactory = Factory.define<components['schemas']['Room']>(
   ({ sequence }) => ({
     id: `_0J415BS4${sequence}`,
+    propertyObjectId: `_0J415COBJ${sequence}`,
     code: `010${sequence}`,
     name: 'Adressgatan 123',
     deleted: false,
