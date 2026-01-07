@@ -183,6 +183,7 @@ const searchBuildings = async (
             },
           },
         },
+        take: 10,
       })
       .then(trimStrings)
 

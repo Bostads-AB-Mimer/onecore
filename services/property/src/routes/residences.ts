@@ -230,7 +230,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search residences
    *     description: |
-   *       Retrieves a list of all real estate residences by rental object id.
+   *       Searches for residences by rental ID or name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
    *     tags:
    *       - Residences
    *     parameters:
@@ -238,7 +238,7 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: The search query.
+   *         description: The search query. Matches against rental ID or residence name.
    *     responses:
    *       200:
    *         description: Successfully retrieved list of residences.
@@ -268,7 +268,8 @@ export const routes = (router: KoaRouter) => {
       const { q } = ctx.request.parsedQuery
 
       try {
-        const residences = await searchResidences(q)
+        // Search for residences by rental id and name
+        const residences = await searchResidences(q, ['rentalId', 'name'])
 
         ctx.status = 200
         ctx.body = {
