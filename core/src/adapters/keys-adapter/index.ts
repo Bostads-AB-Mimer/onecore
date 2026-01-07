@@ -294,6 +294,15 @@ export const KeyLoansApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
+  getByCard: async (
+    cardId: string
+  ): Promise<AdapterResult<KeyLoan[], CommonErr>> => {
+    const r = await getJSON<{ content: KeyLoan[] }>(
+      `${BASE}/key-loans/by-card/${cardId}`
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
   getByRentalObject: async (
     rentalObjectCode: string,
     contact?: string,

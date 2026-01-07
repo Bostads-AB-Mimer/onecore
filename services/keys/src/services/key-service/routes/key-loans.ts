@@ -389,6 +389,59 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loans/by-card/{cardId}:
+   *   get:
+   *     summary: Get all loans for a specific card
+   *     description: Returns all loan records for the specified card ID, ordered by creation date DESC
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: cardId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The card ID to fetch loans for
+   *     responses:
+   *       200:
+   *         description: Array of loans for this card
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoan'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
+  router.get('/key-loans/by-card/:cardId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const { cardId } = ctx.params
+
+      const loans = await keyLoansAdapter.getKeyLoansByCardId(cardId, db)
+
+      ctx.status = 200
+      ctx.body = { content: loans satisfies KeyLoanResponse[], ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching loans by card')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /key-loans/by-rental-object/{rentalObjectCode}:
    *   get:
    *     summary: Get key loans with enriched keys and receipts

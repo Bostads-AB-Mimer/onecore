@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { Key } from '@/services/types'
+import type { Key, CardDetails } from '@/services/types'
 import {
   ReturnKeysDialogBase,
   type LoanGroup,
@@ -16,7 +16,9 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   keyIds: string[] // Key IDs selected for return
+  cardIds?: string[] // Card IDs selected for return
   allKeys: Key[] // All keys to look up key details
+  allCards?: CardDetails[] // All cards to look up card details
   onSuccess: () => void
 }
 
@@ -28,7 +30,9 @@ export function ReturnMaintenanceKeysDialog({
   open,
   onOpenChange,
   keyIds,
+  cardIds = [],
   allKeys,
+  allCards = [],
   onSuccess,
 }: Props) {
   const { toast } = useToast()
@@ -36,6 +40,7 @@ export function ReturnMaintenanceKeysDialog({
   const [loanGroups, setLoanGroups] = useState<LoanGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set())
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set())
   const [returnNote, setReturnNote] = useState('')
 
   // Fetch loan information for all keys being returned

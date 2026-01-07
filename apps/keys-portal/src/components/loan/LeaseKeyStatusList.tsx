@@ -59,6 +59,7 @@ export function LeaseKeyStatusList({
   // Transfer dialog state
   const [showTransferDialog, setShowTransferDialog] = useState(false)
   const [pendingLoanKeyIds, setPendingLoanKeyIds] = useState<string[]>([])
+  const [pendingLoanCardIds, setPendingLoanCardIds] = useState<string[]>([])
   const [existingLoansForTransfer, setExistingLoansForTransfer] = useState<
     ExistingLoanInfo[]
   >([])
@@ -66,6 +67,7 @@ export function LeaseKeyStatusList({
   // Return dialog state
   const [showReturnDialog, setShowReturnDialog] = useState(false)
   const [pendingReturnKeyIds, setPendingReturnKeyIds] = useState<string[]>([])
+  const [pendingReturnCardIds, setPendingReturnCardIds] = useState<string[]>([])
 
   // Add key state
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
@@ -178,7 +180,7 @@ export function LeaseKeyStatusList({
     onKeyCreated?.()
   }
 
-  const onRent = async (keyIds: string[]) => {
+  const onRent = async (keyIds: string[], cardIds: string[]) => {
     // Check if there are existing active loans for these contacts on this object
     const existingLoans = await findExistingActiveLoansForTransfer(
       tenantContactCodes,
@@ -188,6 +190,7 @@ export function LeaseKeyStatusList({
     if (existingLoans.length > 0) {
       // Show transfer dialog
       setPendingLoanKeyIds(keyIds)
+      setPendingLoanCardIds(cardIds)
       setExistingLoansForTransfer(existingLoans)
       setShowTransferDialog(true)
       return
@@ -197,6 +200,7 @@ export function LeaseKeyStatusList({
     setIsProcessing(true)
     const result = await handleLoanKeys({
       keyIds,
+      cardIds,
       contact: tenantContactCodes[0],
       contact2: tenantContactCodes[1],
     })
@@ -204,6 +208,7 @@ export function LeaseKeyStatusList({
     if (result.success) {
       await refreshStatuses()
       setSelectedKeys([])
+      setSelectedCards([])
 
       // Open receipt dialog if we have a receiptId
       if (result.receiptId) {
@@ -223,9 +228,10 @@ export function LeaseKeyStatusList({
     setIsProcessing(false)
   }
 
-  const onReturn = async (keyIds: string[]) => {
+  const onReturn = async (keyIds: string[], cardIds: string[]) => {
     // Show the return dialog
     setPendingReturnKeyIds(keyIds)
+    setPendingReturnCardIds(cardIds)
     setShowReturnDialog(true)
   }
 
@@ -374,7 +380,9 @@ export function LeaseKeyStatusList({
             )}
             <KeyActionButtons
               selectedKeys={selectedKeys}
+              selectedCards={selectedCards}
               keysWithStatus={visibleKeys}
+              cardsWithStatus={cards}
               leaseIsNotPast={leaseIsNotPast}
               isProcessing={isProcessing}
               onRent={onRent}
@@ -454,6 +462,7 @@ export function LeaseKeyStatusList({
         open={showTransferDialog}
         onOpenChange={setShowTransferDialog}
         newKeys={keys.filter((k) => pendingLoanKeyIds.includes(k.id))}
+        newCards={cards.filter((c) => pendingLoanCardIds.includes(c.cardId))}
         existingLoans={existingLoansForTransfer}
         contact={tenantContactCodes[0]}
         contact2={tenantContactCodes[1]}
@@ -461,6 +470,7 @@ export function LeaseKeyStatusList({
           // Refresh and show receipt
           await refreshStatuses()
           setSelectedKeys([])
+          setSelectedCards([])
 
           if (receiptId) {
             setReceiptId(receiptId)
@@ -475,12 +485,15 @@ export function LeaseKeyStatusList({
         open={showReturnDialog}
         onOpenChange={setShowReturnDialog}
         keyIds={pendingReturnKeyIds}
+        cardIds={pendingReturnCardIds}
         allKeys={keys}
+        allCards={cards}
         lease={lease}
         onSuccess={async () => {
           // Refresh statuses and clear selection
           await refreshStatuses()
           setSelectedKeys([])
+          setSelectedCards([])
           onKeysReturned?.()
         }}
       />

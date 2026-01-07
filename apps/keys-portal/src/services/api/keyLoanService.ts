@@ -66,6 +66,14 @@ export const keyLoanService = {
     return data?.content ?? []
   },
 
+  async getByCardId(cardId: string): Promise<KeyLoan[]> {
+    const { data, error } = await GET('/key-loans/by-card/{cardId}', {
+      params: { path: { cardId } },
+    })
+    if (error) throw error
+    return data?.content ?? []
+  },
+
   async create(payload: CreateKeyLoanRequest): Promise<KeyLoan> {
     const { data, error } = await POST('/key-loans', { body: payload })
     if (error) {
@@ -191,19 +199,21 @@ export const keyLoanService = {
 
   /**
    * Get all key loans associated with a lease by fetching loans for each key
-   * in the lease's rental object
-   * Optimized to avoid duplicate API calls for keys that belong to the same loan
+   * and card in the lease's rental object
+   * Optimized to avoid duplicate API calls for keys/cards that belong to the same loan
    * @param rentalObjectCode - The rental object code to fetch loans for
    * @param preloadedKeys - Optional pre-fetched keys to avoid duplicate fetches
+   * @param preloadedCards - Optional pre-fetched cards to avoid duplicate fetches
    * @deprecated Use getByRentalObject instead for better performance
    */
   async listByLease(
     rentalObjectCode: string,
-    preloadedKeys?: any[]
+    preloadedKeys?: any[],
+    preloadedCards?: any[]
   ): Promise<{ loaned: KeyLoan[]; returned: KeyLoan[] }> {
     // Use preloaded keys if available, otherwise fetch them
     let keys: any[]
-    if (preloadedKeys && preloadedKeys.length > 0) {
+    if (preloadedKeys !== undefined) {
       keys = preloadedKeys
     } else {
       // Import keyService dynamically to avoid circular dependency
@@ -211,10 +221,22 @@ export const keyLoanService = {
       keys = await keyService.getKeysByRentalObjectCode(rentalObjectCode)
     }
 
-    // Track which keys we've already fetched loans for
+    // Use preloaded cards if available, otherwise fetch them
+    let cards: any[]
+    if (preloadedCards !== undefined) {
+      cards = preloadedCards
+    } else {
+      // Import cardService dynamically to avoid circular dependency
+      const { cardService } = await import('./cardService')
+      cards = await cardService.getCardsByRentalObjectCode(rentalObjectCode)
+    }
+
+    // Track which keys and cards we've already fetched loans for
     const processedKeyIds = new Set<string>()
+    const processedCardIds = new Set<string>()
     const loanMap = new Map<string, KeyLoan>()
 
+    // Process keys first
     for (const key of keys) {
       // Skip if we've already processed this key
       if (processedKeyIds.has(key.id)) {
@@ -224,22 +246,74 @@ export const keyLoanService = {
       // Fetch loans for this key
       const loans = await this.getByKeyId(key.id)
 
-      // Add loans to the map and mark all keys in each loan as processed
+      // Add loans to the map and mark keys/cards as processed ONLY for active loans
+      // (We can skip redundant API calls only if we already found an active loan containing that key)
       loans.forEach((loan) => {
         loanMap.set(loan.id, loan)
 
-        // Mark all keys in this loan as processed to avoid redundant API calls
-        try {
-          const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
-          loanKeyIds.forEach((id) => processedKeyIds.add(id))
-        } catch {
-          // If parsing fails, just mark the current key
-          processedKeyIds.add(key.id)
+        // Only mark keys/cards as processed if this is an ACTIVE loan
+        // This prevents skipping keys that share historical (returned) loans
+        if (!loan.returnedAt) {
+          // Mark all keys in this active loan as processed to avoid redundant API calls
+          try {
+            const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
+            loanKeyIds.forEach((id) => processedKeyIds.add(id))
+          } catch {
+            // If parsing fails, just mark the current key
+            processedKeyIds.add(key.id)
+          }
+
+          // Mark all cards in this active loan as processed
+          try {
+            const loanCardIds: string[] = JSON.parse(loan.keyCards || '[]')
+            loanCardIds.forEach((id) => processedCardIds.add(id))
+          } catch {
+            // Ignore parse errors for cards
+          }
         }
       })
 
       // Also mark the current key as processed (in case it has no loans)
       processedKeyIds.add(key.id)
+    }
+
+    // Process cards to find card-only loans (loans without keys)
+    for (const card of cards) {
+      // Skip if we've already processed this card (from a key loan)
+      if (processedCardIds.has(card.cardId)) {
+        continue
+      }
+
+      // Fetch loans for this card
+      const loans = await this.getByCardId(card.cardId)
+
+      // Add loans to the map and mark keys/cards as processed ONLY for active loans
+      loans.forEach((loan) => {
+        loanMap.set(loan.id, loan)
+
+        // Only mark keys/cards as processed if this is an ACTIVE loan
+        if (!loan.returnedAt) {
+          // Mark all keys in this active loan as processed
+          try {
+            const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
+            loanKeyIds.forEach((id) => processedKeyIds.add(id))
+          } catch {
+            // Ignore parse errors
+          }
+
+          // Mark all cards in this active loan as processed
+          try {
+            const loanCardIds: string[] = JSON.parse(loan.keyCards || '[]')
+            loanCardIds.forEach((id) => processedCardIds.add(id))
+          } catch {
+            // If parsing fails, just mark the current card
+            processedCardIds.add(card.cardId)
+          }
+        }
+      })
+
+      // Also mark the current card as processed (in case it has no loans)
+      processedCardIds.add(card.cardId)
     }
 
     const allLoans = Array.from(loanMap.values())

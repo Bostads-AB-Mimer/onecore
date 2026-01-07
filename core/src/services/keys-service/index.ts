@@ -407,6 +407,56 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loans/by-card/{cardId}:
+   *   get:
+   *     summary: Get all loans for a specific card
+   *     description: Returns all loan records for the specified card ID, ordered by creation date DESC
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: cardId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The card ID to fetch loans for
+   *     responses:
+   *       200:
+   *         description: Array of loans for this card
+   *         content:
+   *           application\json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoan'
+   *       500:
+   *         $ref: '#/components/responses/InternalServerError'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/key-loans/by-card/:cardId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeyLoansApi.getByCard(ctx.params.cardId)
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, metadata },
+        'Error fetching loans by card ID'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /key-loans/by-rental-object/{rentalObjectCode}:
    *   get:
    *     summary: Get key loans by rental object code

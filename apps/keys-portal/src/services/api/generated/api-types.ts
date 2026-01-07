@@ -817,6 +817,39 @@ export interface paths {
       };
     };
   };
+  "/key-loans/by-card/{cardId}": {
+    /**
+     * Get all loans for a specific card
+     * @description Returns all loan records for the specified card ID, ordered by creation date DESC
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID to fetch loans for */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans for this card */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/key-loans/by-rental-object/{rentalObjectCode}": {
     /**
      * Get key loans with enriched keys and receipts

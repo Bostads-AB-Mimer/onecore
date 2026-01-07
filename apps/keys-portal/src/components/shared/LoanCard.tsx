@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import type { KeyLoanWithDetails, Lease } from '@/services/types'
 import { MaintenanceKeysTable } from '@/components/maintenance/MaintenanceKeysTable'
+import { MaintenanceCardsTable } from '@/components/maintenance/MaintenanceCardsTable'
 import { MaintenanceReceiptActions } from '@/components/maintenance/MaintenanceReceiptActions'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
@@ -39,6 +40,9 @@ export function LoanCard({
 
   // Get all key IDs for this loan
   const allKeyIds = loan.keysArray.map((k) => k.id)
+
+  // Get all card IDs for this loan
+  const allCardIds = (loan.keyCardsArray || []).map((c) => c.cardId)
 
   // Determine display names based on loan type
   const getContactInfo = () => {
@@ -67,7 +71,9 @@ export function LoanCard({
           open={returnDialogOpen}
           onOpenChange={setReturnDialogOpen}
           keyIds={allKeyIds}
+          cardIds={allCardIds}
           allKeys={loan.keysArray}
+          allCards={loan.keyCardsArray || []}
           onSuccess={() => {
             setReturnDialogOpen(false)
             onRefresh?.()
@@ -79,7 +85,9 @@ export function LoanCard({
             open={returnDialogOpen}
             onOpenChange={setReturnDialogOpen}
             keyIds={allKeyIds}
+            cardIds={allCardIds}
             allKeys={loan.keysArray}
+            allCards={loan.keyCardsArray || []}
             lease={lease}
             onSuccess={() => {
               setReturnDialogOpen(false)
@@ -245,6 +253,13 @@ export function LoanCard({
             keys={loan.keysArray}
             keySystemMap={keySystemMap}
           />
+          {/* Cards Table - only show if there are cards */}
+          {loan.keyCardsArray && loan.keyCardsArray.length > 0 && (
+            <>
+              <div className="border-t" />
+              <MaintenanceCardsTable cards={loan.keyCardsArray} />
+            </>
+          )}
         </CardContent>
       </Card>
     </>

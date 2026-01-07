@@ -39,6 +39,15 @@ export async function getKeyLoansByKeyId(
     .orderBy('createdAt', 'desc')
 }
 
+export async function getKeyLoansByCardId(
+  cardId: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<KeyLoan[]> {
+  return await dbConnection(TABLE)
+    .whereRaw('keyCards LIKE ?', [`%"${cardId}"%`])
+    .orderBy('createdAt', 'desc')
+}
+
 export async function createKeyLoan(
   keyLoanData: CreateKeyLoanRequest,
   dbConnection: Knex | Knex.Transaction = db
