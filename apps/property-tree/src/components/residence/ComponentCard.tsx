@@ -134,8 +134,11 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h3 className="text-base font-semibold">
-                  {component.model?.subtype?.componentType?.description || '-'}{' '}
-                  • {component.model?.subtype?.subTypeName || '-'}
+                  {component.model?.subtype?.componentType?.description}
+                  {component.model?.subtype?.componentType?.description &&
+                    component.model?.subtype?.subTypeName &&
+                    ' • '}
+                  {component.model?.subtype?.subTypeName || '-'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {component.model?.manufacturer || '-'}{' '}
