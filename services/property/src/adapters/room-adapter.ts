@@ -54,6 +54,7 @@ export async function getRooms(residenceId: string) {
       },
       select: {
         id: true,
+        propertyObjectId: true,
         code: true,
         name: true,
         sharedUse: true,
@@ -85,6 +86,7 @@ export const getRoomById = async (id: string) => {
       },
       select: {
         id: true,
+        propertyObjectId: true,
         code: true,
         name: true,
         sharedUse: true,

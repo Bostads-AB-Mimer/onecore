@@ -31,6 +31,7 @@ interface ManageRoomComponentsDialogProps {
   isOpen: boolean
   onClose: () => void
   roomId: string
+  propertyObjectId: string
   roomName?: string
 }
 
@@ -38,6 +39,7 @@ export const ManageRoomComponentsDialog = ({
   isOpen,
   onClose,
   roomId,
+  propertyObjectId,
   roomName,
 }: ManageRoomComponentsDialogProps) => {
   const queryClient = useQueryClient()
@@ -50,7 +52,7 @@ export const ManageRoomComponentsDialog = ({
     ComponentModelWithHierarchy | undefined
   >()
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('')
-  const installMutation = useInstallComponent(roomId)
+  const installMutation = useInstallComponent(propertyObjectId, roomId)
 
   // Deinstallation state
   const [deinstallDialogState, setDeinstallDialogState] = useState<{
@@ -179,7 +181,7 @@ export const ManageRoomComponentsDialog = ({
         // Then install
         await componentService.installExistingInstance(
           selectedInstanceId,
-          roomId,
+          propertyObjectId,
           {
             installationDate: formData.installationDate,
             installationCost: formData.installationCost,
