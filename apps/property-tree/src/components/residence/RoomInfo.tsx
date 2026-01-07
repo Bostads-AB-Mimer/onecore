@@ -22,15 +22,16 @@ interface RoomInfoProps {
 
 interface RoomComponentsProps {
   roomId: string
+  propertyObjectId: string
   roomName?: string
 }
 
-const RoomComponents = ({ roomId, roomName }: RoomComponentsProps) => {
+const RoomComponents = ({ roomId, propertyObjectId, roomName }: RoomComponentsProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const componentsQuery = useQuery({
-    queryKey: ['components', roomId],
-    queryFn: () => componentService.getByRoomId(roomId),
+    queryKey: ['components', propertyObjectId],
+    queryFn: () => componentService.getByRoomId(propertyObjectId),
   })
 
   if (componentsQuery.isLoading) {
@@ -90,6 +91,7 @@ const RoomComponents = ({ roomId, roomName }: RoomComponentsProps) => {
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         roomId={roomId}
+        propertyObjectId={propertyObjectId}
         roomName={roomName}
       />
     </>
@@ -289,6 +291,7 @@ export const RoomInfo = (props: RoomInfoProps) => {
 
                   <RoomComponents
                     roomId={room.id}
+                    propertyObjectId={(room as any).propertyObjectId}
                     roomName={room.name || room.roomType?.name || room.code}
                   />
                 </AccordionContent>
