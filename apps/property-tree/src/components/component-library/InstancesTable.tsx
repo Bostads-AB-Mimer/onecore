@@ -123,7 +123,8 @@ export const InstancesTable = ({
           return <span className="text-muted-foreground">Ej installerad</span>
         }
 
-        const structure = activeInstallation.propertyObject?.propertyStructures?.[0]
+        const structure =
+          activeInstallation.propertyObject?.propertyStructures?.[0]
 
         if (!structure) {
           return <span className="text-muted-foreground">-</span>

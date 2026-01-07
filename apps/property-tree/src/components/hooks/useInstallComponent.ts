@@ -10,13 +10,19 @@ type InstallComponentData = Parameters<
  * @param propertyObjectId - The PropertyObject ID to use as spaceId for the installation
  * @param roomId - Optional roomId for cache invalidation (if different from propertyObjectId)
  */
-export const useInstallComponent = (propertyObjectId: string, roomId?: string) => {
+export const useInstallComponent = (
+  propertyObjectId: string,
+  roomId?: string
+) => {
   const queryClient = useQueryClient()
   const cacheKey = roomId || propertyObjectId
 
   return useMutation({
     mutationFn: (data: InstallComponentData) => {
-      return componentService.createInstanceWithInstallation(propertyObjectId, data)
+      return componentService.createInstanceWithInstallation(
+        propertyObjectId,
+        data
+      )
     },
     onSuccess: () => {
       // Invalidate room components query to refetch
