@@ -103,16 +103,10 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
 
-  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
-  const monthlyRent = calculateMonthlyRentFromYearRentRows(
-    yearRentRows,
-    vacantFrom
-  )
-
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
-    monthlyRent: monthlyRent,
+    monthlyRent: 0, //will be added from tenfast instead
     propertyCaption: row.estatecaption,
     propertyCode: row.estatecode,
     residentialAreaCode: row.residentialareacode,

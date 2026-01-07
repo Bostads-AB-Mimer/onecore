@@ -85,6 +85,15 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  //TODO: Need to serve Mimer.nu with rent.
+
+  //TODO: This route is not used anywhere (yet?). Rename to /parking-spaces/by-code/{rentalObjectCode}??
+  //TODO: add /apartments/by-code/{rentalObjectCode} as well. Should it be named residences???
+  //TODO: add /storage-units/by-code/{rentalObjectCode} as well. Or another name?
+
+  //TODO: What routes are property-tree using? /rental-properties
+  //TODO: What routes are odoo using? /residences
+
   /**
    * @swagger
    * /rental-objects/by-code/{rentalObjectCode}:
@@ -153,11 +162,10 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/rental-objects/by-code/:rentalObjectCode', async (ctx) => {
+  router.get('/parking-spaces/by-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
-    const result =
-      await leasingAdapter.getParkingSpaceByRentalObjectCode(rentalObjectCode)
+    const result = await leasingAdapter.getParkingSpaceByCode(rentalObjectCode)
 
     if (!result.ok) {
       ctx.status = 500
@@ -167,5 +175,76 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   *   get:
+   *     summary: Get rent for a rental object
+   *     description: Fetches rent for a rental object by Rental Object Code.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code of the rent to fetch.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 rent:
+   *                   type: number
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *       '404':
+   *         description: Not found. The rent of the specified rental object was not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+    const result =
+      await leasingAdapter.getRentalObjectRentByCode(rentalObjectCode)
+
+    if (!result.ok && result.err === 'rent-not-found') {
+      ctx.status = 404
+      ctx.body = { error: 'Rent not found', ...metadata }
+      return
+    } else if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unexpected error when getting rent for ' + rentalObjectCode,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: { rent: result.data }, ...metadata }
   })
 }

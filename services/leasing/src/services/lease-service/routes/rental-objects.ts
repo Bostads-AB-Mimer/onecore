@@ -133,24 +133,29 @@ export const routes = (router: KoaRouter) => {
     const result = await getParkingSpace(rentalObjectCode)
 
     if (result.ok) {
-      //get rent from tenfast
-      const rentalObjectResult =
-        await tenfastAdapter.getRentalObject(rentalObjectCode)
+      //get rent
+      const rentResult = await tenfastAdapter.getMonthlyRentForRentalObject(
+        rentalObjectCode,
+        false
+      )
 
-      if (rentalObjectResult.ok) {
-        const rent = rentalObjectResult.data?.hyra
+      if (rentResult.ok) {
         ctx.status = 200
-        ctx.body = { content: { ...result.data, rent: rent }, ...metadata }
+        ctx.body = {
+          content: { ...result.data, monthlyRent: rentResult.data },
+          ...metadata,
+        }
         return
       }
 
       logger.error(
-        { err: rentalObjectResult.err, rentalObjectCode: rentalObjectCode },
+        { err: rentResult.err, rentalObjectCode: rentalObjectCode },
         `Could not get rent from Tenfast`
       )
 
+      //return result without rent
       ctx.status = 200
-      ctx.body = { content: { ...result.data }, ...metadata }
+      ctx.body = { content: { ...result.data, monthlyRent: 0 }, ...metadata }
       return
     }
 
@@ -222,5 +227,75 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: vacantParkingSpaces.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   *   get:
+   *     summary: Get a rental object rent by code
+   *     description: Fetches a rental object rent by Rental Object Code.
+   *     tags:
+   *       - RentalObject
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 rent:
+   *                   type: number
+   *       '500':
+   *         description: Internal server error. Failed to fetch vacant parking spaces.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *       '404':
+   *         description: Not found. The rent of the specified rental object was not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+
+    const result = await tenfastAdapter.getMonthlyRentForRentalObject(
+      rentalObjectCode,
+      false
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { rent: result.data, ...metadata }
+      return
+    }
+
+    if (result.err == 'could-not-find-rental-object') {
+      ctx.status = 404
+      ctx.body = {
+        error: `Rent not found for rental object code: ${rentalObjectCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = {
+      error: 'An error occurred while fetching rental object rent.',
+      ...metadata,
+    }
   })
 }
