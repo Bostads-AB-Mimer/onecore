@@ -136,7 +136,7 @@ export const InstancesTable = ({
 
         // Use residence.id from propertyStructure for navigation (Residence.id / keybalgh)
         // NOT structure.residenceId which is actually Residence.propertyObjectId (keycmobj)
-        const residenceId = (structure as any)?.residence?.id
+        const residenceId = structure.residence?.id
 
         const displayText = `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`
         const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
