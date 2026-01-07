@@ -17,7 +17,7 @@ export const componentService = {
 
   async createInstance(instanceData: {
     modelId: string
-    serialNumber: string
+    serialNumber?: string | null
     warrantyStartDate?: string
     warrantyMonths: number
     priceAtPurchase: number
@@ -94,7 +94,7 @@ export const componentService = {
     roomId: string,
     instanceData: {
       modelId: string
-      serialNumber: string
+      serialNumber?: string | null
       warrantyStartDate?: string
       warrantyMonths: number
       priceAtPurchase: number
@@ -106,6 +106,7 @@ export const componentService = {
       installationDate: string
       installationCost: number
       orderNumber?: string
+      spaceType?: 'OBJECT' | 'PropertyObject'
     }
   ): Promise<ComponentInstance> {
     // 1. Create component instance
@@ -135,7 +136,7 @@ export const componentService = {
       body: {
         componentId: createdInstance.id,
         spaceId: roomId,
-        spaceType: 'OBJECT',
+        spaceType: instanceData.spaceType ?? 'OBJECT',
         installationDate: instanceData.installationDate,
         cost: instanceData.installationCost,
         orderNumber: instanceData.orderNumber,
@@ -174,13 +175,14 @@ export const componentService = {
       installationDate: string
       installationCost: number
       orderNumber?: string
+      spaceType?: 'OBJECT' | 'PropertyObject'
     }
   ): Promise<void> {
     const { error } = await POST('/component-installations', {
       body: {
         componentId: instanceId,
         spaceId: roomId,
-        spaceType: 'OBJECT',
+        spaceType: installationData.spaceType ?? 'OBJECT',
         installationDate: installationData.installationDate,
         cost: installationData.installationCost,
         orderNumber: installationData.orderNumber,
@@ -195,7 +197,7 @@ export const componentService = {
     data: Partial<{
       warrantyMonths: number
       warrantyStartDate?: string
-      serialNumber: string
+      serialNumber?: string | null
       priceAtPurchase: number
       depreciationPriceAtPurchase: number
       economicLifespan: number
