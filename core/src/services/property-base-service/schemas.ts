@@ -635,6 +635,11 @@ export const ComponentModelSchema = z.object({
   subtype: ComponentSubtypeSchema.optional(),
 })
 
+// Residence schema for navigation (just the id we need for routing)
+export const ResidenceRefSchema = z.object({
+  id: z.string(),
+})
+
 export const PropertyStructureSchema = z.object({
   roomId: z.string().nullable().optional(),
   roomCode: z.string().nullable().optional(),
@@ -645,11 +650,13 @@ export const PropertyStructureSchema = z.object({
   rentalId: z.string().nullable().optional(),
   buildingCode: z.string().nullable().optional(),
   buildingName: z.string().nullable().optional(),
+  residence: ResidenceRefSchema.nullable().optional(),
 })
 
 // PropertyObject schema with property structures
+// Note: id is Char(15) keycmobj format, not UUID
 export const PropertyObjectSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   propertyStructures: z.array(PropertyStructureSchema).optional(),
 })
 
@@ -664,7 +671,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
   cost: z.number().min(0),
   createdAt: z.string(),
   updatedAt: z.string(),
-  propertyObject: PropertyObjectSchema.optional(),
+  propertyObject: PropertyObjectSchema.nullable().optional(),
 })
 
 // Component instance schema with installations included (Level 5)
@@ -832,7 +839,7 @@ export const UpdateComponentModelSchema = z.object({
 
 export const CreateComponentNewSchema = z.object({
   modelId: z.string().uuid(),
-  serialNumber: z.string().trim().min(1, 'Serial number is required'),
+  serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.coerce.date().optional(),
@@ -852,7 +859,7 @@ export const CreateComponentNewSchema = z.object({
 
 export const UpdateComponentNewSchema = z.object({
   modelId: z.string().uuid().optional(),
-  serialNumber: z.string().trim().min(1).optional(),
+  serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.coerce.date().optional(),

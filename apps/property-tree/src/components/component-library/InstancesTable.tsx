@@ -21,12 +21,11 @@ export const InstancesTable = ({
 }: InstancesTableProps) => {
   const navigate = useNavigate()
 
-  const handleNavigateToRoom = (
-    residenceId: string | null | undefined,
-    roomId: string | null | undefined
+  const handleNavigateToResidence = (
+    residenceId: string | null | undefined
   ) => {
-    if (residenceId && roomId) {
-      navigate(`/residences/${residenceId}/rooms/${roomId}`)
+    if (residenceId) {
+      navigate(`/residences/${residenceId}`)
     }
   }
 
@@ -130,14 +129,25 @@ export const InstancesTable = ({
           return <span className="text-muted-foreground">-</span>
         }
 
+        // Use residence.id from propertyStructure for navigation (Residence.id / keybalgh)
+        // NOT structure.residenceId which is actually Residence.propertyObjectId (keycmobj)
+        const residenceId = (structure as any)?.residence?.id
+
         const displayText = `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`
         const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
 
+        if (!residenceId) {
+          // Fallback: show location but not clickable if residence.id is missing
+          return (
+            <span className="text-muted-foreground" title={tooltipText}>
+              {displayText}
+            </span>
+          )
+        }
+
         return (
           <button
-            onClick={() =>
-              handleNavigateToRoom(structure.residenceId, structure.roomId)
-            }
+            onClick={() => handleNavigateToResidence(residenceId)}
             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
             title={tooltipText}
           >
