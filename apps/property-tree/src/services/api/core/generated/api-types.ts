@@ -4622,6 +4622,7 @@ export interface components {
     };
     Room: {
       id: string;
+      propertyObjectId: string;
       code: string;
       name: string | null;
       usage: {
