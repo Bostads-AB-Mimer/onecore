@@ -830,6 +830,13 @@ const ComponentLibraryView = () => {
           entity={typeDialog.state.entity}
           parentId={viewState.categoryId}
           mode={typeDialog.state.mode}
+          hierarchyData={
+            typeDialog.state.mode === 'edit' && typeDialog.state.entity
+              ? {
+                  categoryId: typeDialog.state.entity.categoryId,
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -841,6 +848,15 @@ const ComponentLibraryView = () => {
           entity={subtypeDialog.state.entity}
           parentId={viewState.typeId}
           mode={subtypeDialog.state.mode}
+          hierarchyData={
+            subtypeDialog.state.mode === 'edit' && subtypeDialog.state.entity
+              ? {
+                  categoryId:
+                    subtypeDialog.state.entity.componentType?.categoryId,
+                  typeId: subtypeDialog.state.entity.typeId,
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -852,6 +868,16 @@ const ComponentLibraryView = () => {
           entity={modelDialog.state.entity}
           parentId={viewState.subtypeId}
           mode={modelDialog.state.mode}
+          hierarchyData={
+            modelDialog.state.mode === 'edit' && modelDialog.state.entity
+              ? {
+                  categoryId:
+                    modelDialog.state.entity.subtype?.componentType?.categoryId,
+                  typeId: modelDialog.state.entity.subtype?.typeId,
+                  subtypeId: modelDialog.state.entity.componentSubtypeId,
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -865,6 +891,21 @@ const ComponentLibraryView = () => {
             defaultValues={instanceDialog.state.defaultValues}
             parentId={viewState.modelId}
             mode={instanceDialog.state.mode}
+            hierarchyData={
+              instanceDialog.state.mode === 'edit' &&
+              instanceDialog.state.entity
+                ? {
+                    categoryId:
+                      instanceDialog.state.entity.model?.subtype?.componentType
+                        ?.categoryId,
+                    typeId:
+                      instanceDialog.state.entity.model?.subtype?.typeId,
+                    subtypeId:
+                      instanceDialog.state.entity.model?.componentSubtypeId,
+                    modelId: instanceDialog.state.entity.modelId,
+                  }
+                : undefined
+            }
           />
 
           {instanceDetailsDialogState.instance && (

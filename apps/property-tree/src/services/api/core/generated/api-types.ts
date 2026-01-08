@@ -5138,7 +5138,7 @@ export interface components {
     };
     UpdateComponentCategoryRequest: {
       categoryName?: string;
-      description?: string;
+      description?: string | null;
     };
     CreateComponentTypeRequest: {
       typeName: string;
@@ -5150,7 +5150,7 @@ export interface components {
       typeName?: string;
       /** Format: uuid */
       categoryId?: string;
-      description?: string;
+      description?: string | null;
     };
     CreateComponentSubtypeRequest: {
       subTypeName: string;
@@ -5168,7 +5168,7 @@ export interface components {
       subTypeName?: string;
       /** Format: uuid */
       typeId?: string;
-      xpandCode?: string;
+      xpandCode?: string | null;
       depreciationPrice?: number;
       technicalLifespan?: number;
       economicLifespan?: number;
@@ -5197,10 +5197,10 @@ export interface components {
       currentInstallPrice?: number;
       warrantyMonths?: number;
       manufacturer?: string;
-      technicalSpecification?: string;
-      installationInstructions?: string;
-      dimensions?: string;
-      coclassCode?: string;
+      technicalSpecification?: string | null;
+      installationInstructions?: string | null;
+      dimensions?: string | null;
+      coclassCode?: string | null;
     };
     CreateComponentRequest: {
       /** Format: uuid */
@@ -5213,7 +5213,7 @@ export interface components {
       warrantyMonths: number;
       priceAtPurchase: number;
       depreciationPriceAtPurchase: number;
-      ncsCode?: string;
+      ncsCode: string;
       /**
        * @default ACTIVE
        * @enum {string}
@@ -5228,19 +5228,18 @@ export interface components {
       /** Format: uuid */
       modelId?: string;
       serialNumber?: string | null;
-      specifications?: string;
-      additionalInformation?: string;
+      specifications?: string | null;
+      additionalInformation?: string | null;
       /** Format: date-time */
-      warrantyStartDate?: string;
+      warrantyStartDate?: string | null;
       warrantyMonths?: number;
       priceAtPurchase?: number;
       depreciationPriceAtPurchase?: number;
-      ncsCode?: string;
+      ncsCode?: string | null;
       /** @enum {string} */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       quantity?: number;
       economicLifespan?: number;
-      files?: string;
     };
     CreateComponentInstallationRequest: {
       /** Format: uuid */

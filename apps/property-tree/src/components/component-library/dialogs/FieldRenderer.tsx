@@ -106,6 +106,12 @@ export function FieldRenderer({
       )
 
     case 'date':
+      // Convert ISO date string to yyyy-MM-dd format for HTML date input
+      const dateValue = value
+        ? value.includes('T')
+          ? value.split('T')[0]
+          : value
+        : ''
       return (
         <div>
           <Label htmlFor={field.name}>
@@ -114,7 +120,7 @@ export function FieldRenderer({
           <Input
             id={field.name}
             type="date"
-            value={value || ''}
+            value={dateValue}
             onChange={handleChange}
             placeholder={field.placeholder}
           />

@@ -9,6 +9,11 @@ import {
 import { Button } from '@/components/ui/v2/Button'
 import { entityDialogConfig } from '../entity-dialog-config'
 import { FieldRenderer } from './FieldRenderer'
+import {
+  ParentHierarchySelector,
+  parentIdFieldMap,
+  type HierarchyData,
+} from './ParentHierarchySelector'
 import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
 import type { EntityType } from '@/services/types'
 
@@ -20,6 +25,7 @@ interface GenericEntityDialogProps<T extends Record<string, any>> {
   parentId?: string
   mode: 'create' | 'edit'
   defaultValues?: Record<string, any>
+  hierarchyData?: HierarchyData
 }
 
 export function GenericEntityDialog<T extends Record<string, any>>({
@@ -30,10 +36,12 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   parentId,
   mode,
   defaultValues,
+  hierarchyData,
 }: GenericEntityDialogProps<T>) {
   const config = entityDialogConfig[entityType]
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
 
   const mutation = useComponentEntityMutation(
     entityType,
@@ -84,12 +92,18 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         const editData: Record<string, any> = {}
         config.fields.forEach((field) => {
           if (entity[field.name] !== undefined) {
-            editData[field.name] = entity[field.name]
+            let value = entity[field.name]
+            // Convert ISO date strings to yyyy-MM-dd format
+            if (field.type === 'date' && value && typeof value === 'string' && value.includes('T')) {
+              value = value.split('T')[0]
+            }
+            editData[field.name] = value
           }
         })
         setFormData(editData)
       }
       setErrors({})
+      setNewParentId(undefined) // Reset parent change when dialog opens
     }
   }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
 
@@ -121,6 +135,24 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     return Object.keys(newErrors).length === 0
   }
 
+  // Clean form data by converting empty strings to undefined for optional fields
+  // This prevents validation errors for fields with regex patterns (e.g., ncsCode)
+  const cleanFormData = (data: Record<string, any>): Record<string, any> => {
+    const cleaned: Record<string, any> = {}
+    for (const [key, value] of Object.entries(data)) {
+      // Convert empty strings to undefined for optional fields
+      if (value === '') {
+        const field = config.fields.find((f) => f.name === key)
+        if (field && !field.required) {
+          // Skip empty optional fields (don't include in payload)
+          continue
+        }
+      }
+      cleaned[key] = value
+    }
+    return cleaned
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -129,11 +161,28 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     }
 
     try {
+      // Clean form data before sending
+      const cleanedFormData = cleanFormData(formData)
+
       // For mutations, we need to pass parentId separately for cache invalidation
-      const mutationData =
-        mode === 'create'
-          ? { ...formData, parentId }
-          : { id: entity?.id, data: formData, parentId }
+      let mutationData
+      if (mode === 'create') {
+        mutationData = { ...cleanedFormData, parentId }
+      } else {
+        // Include the new parent ID in the update data if it was changed
+        const updateData = { ...cleanedFormData }
+        if (newParentId && entityType !== 'category') {
+          const parentIdField = parentIdFieldMap[entityType]
+          updateData[parentIdField] = newParentId
+        }
+        mutationData = {
+          id: entity?.id,
+          data: updateData,
+          parentId: newParentId || parentId,
+          // Pass old parent ID for cache invalidation when parent changes
+          oldParentId: newParentId && newParentId !== parentId ? parentId : undefined,
+        }
+      }
 
       await mutation.mutateAsync(mutationData as any)
       onClose()
@@ -155,6 +204,15 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Show hierarchy selector in edit mode for non-category entities */}
+          {mode === 'edit' && entityType !== 'category' && hierarchyData && (
+            <ParentHierarchySelector
+              entityType={entityType}
+              initialHierarchy={hierarchyData}
+              onParentChange={setNewParentId}
+            />
+          )}
+
           {config.fields.map((field) => (
             <FieldRenderer
               key={field.name}

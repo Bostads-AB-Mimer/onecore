@@ -2148,7 +2148,11 @@ export const routes = (router: KoaRouter) => {
     const data = schemas.UpdateComponentCategorySchema.parse(ctx.request.body)
 
     try {
-      const result = await propertyBaseAdapter.updateComponentCategory(id, data)
+      // Convert null values to undefined for adapter compatibility
+      const result = await propertyBaseAdapter.updateComponentCategory(id, {
+        ...data,
+        description: data.description ?? undefined,
+      })
 
       if (!result.ok) {
         if (result.err === 'not_found') {
@@ -2468,10 +2472,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentType(
-        id.data,
-        body.data
-      )
+      // Convert null values to undefined for adapter compatibility
+      const result = await propertyBaseAdapter.updateComponentType(id.data, {
+        ...body.data,
+        description: body.data.description ?? undefined,
+      })
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
@@ -2812,10 +2817,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentSubtype(
-        id.data,
-        body.data
-      )
+      // Convert null values to undefined for adapter compatibility
+      const result = await propertyBaseAdapter.updateComponentSubtype(id.data, {
+        ...body.data,
+        xpandCode: body.data.xpandCode ?? undefined,
+      })
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
@@ -3242,10 +3248,14 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.updateComponentModel(
-        id.data,
-        body.data
-      )
+      // Convert null values to undefined for adapter compatibility
+      const result = await propertyBaseAdapter.updateComponentModel(id.data, {
+        ...body.data,
+        technicalSpecification: body.data.technicalSpecification ?? undefined,
+        installationInstructions: body.data.installationInstructions ?? undefined,
+        dimensions: body.data.dimensions ?? undefined,
+        coclassCode: body.data.coclassCode ?? undefined,
+      })
 
       if (!result.ok) {
         ctx.status = result.err === 'not_found' ? 404 : 500
@@ -3589,9 +3599,13 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Convert null values to undefined for adapter compatibility
       const result = await propertyBaseAdapter.updateComponent(id.data, {
         ...body.data,
-        warrantyStartDate: body.data.warrantyStartDate?.toISOString(),
+        specifications: body.data.specifications ?? undefined,
+        additionalInformation: body.data.additionalInformation ?? undefined,
+        ncsCode: body.data.ncsCode ?? undefined,
+        warrantyStartDate: body.data.warrantyStartDate?.toISOString() ?? undefined,
       })
 
       if (!result.ok) {
