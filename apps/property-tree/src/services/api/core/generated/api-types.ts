@@ -3644,6 +3644,8 @@ export interface paths {
           subtypeId?: string
           /** @description Filter models by manufacturer name */
           manufacturer?: string
+          /** @description Search by model name or manufacturer (case-insensitive) */
+          modelName?: string
           page?: number
           limit?: number
         }
@@ -5289,6 +5291,7 @@ export interface components {
       additionalImage?: string
     }
     AIComponentAnalysis: {
+      componentCategory: string | null
       componentType: string | null
       componentSubtype: string | null
       manufacturer: string | null

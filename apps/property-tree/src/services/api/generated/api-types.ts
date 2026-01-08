@@ -1672,9 +1672,11 @@ export interface paths {
           content: {
             "application/json": {
               content?: {
-                /** @description Main component category (e.g., Diskmaskin, Kylskåp) */
+                /** @description Broad category (e.g., Vitvara) */
+                componentCategory?: string | null;
+                /** @description Component type (e.g., Kylskåp, Diskmaskin, Tvättmaskin) */
                 componentType?: string | null;
-                /** @description More specific subtype (e.g., 60cm integrerad diskmaskin) */
+                /** @description Specific variant (e.g., 60cm integrerad, Fristående 190-215 liter) */
                 componentSubtype?: string | null;
                 /** @description Brand/manufacturer name */
                 manufacturer?: string | null;
@@ -3012,6 +3014,7 @@ export interface components {
       additionalImage?: string;
     };
     AIComponentAnalysis: {
+      componentCategory: string | null;
       componentType: string | null;
       componentSubtype: string | null;
       manufacturer: string | null;
