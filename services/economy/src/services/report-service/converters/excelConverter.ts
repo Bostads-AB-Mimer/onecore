@@ -1,5 +1,5 @@
 import ExcelJs from 'exceljs'
-import { InvoicePaymentSummary, UnpaidInvoiceSummary } from '../types'
+import { InvoicePaymentSummary } from '../types'
 
 const DateFormat = 'yyyy-mm-dd'
 const ColumnWidth = 20
@@ -24,16 +24,6 @@ type PaymentRow = {
   vhk934Paid: number
   vhk936Total: number
   vhk936Paid: number
-}
-
-type UnpaidInvoiceRow = {
-  invoiceId: string
-  contactCode: string
-  invoiceDate: Date
-  expirationDate: Date | undefined
-  invoiceAmount: number
-  remainingAmount: number
-  hemforTotal: number
 }
 
 export const convertInvoicePaymentSummariesToXlsx = async (
@@ -91,44 +81,6 @@ export const convertInvoicePaymentSummariesToXlsx = async (
   return Buffer.from(buffer)
 }
 
-export const convertUnpaidInvoiceSummariesToXlsx = async (
-  summaries: UnpaidInvoiceSummary[]
-) => {
-  const workbook = new ExcelJs.Workbook()
-  const worksheet = workbook.addWorksheet('Obetalda hyresavier', {
-    properties: {
-      defaultColWidth: ColumnWidth,
-    },
-  })
-
-  worksheet.columns = [
-    { header: 'Fakturanummer', key: 'invoiceId' },
-    { header: 'Kund', key: 'contactCode' },
-    {
-      header: 'Fakturadatum',
-      key: 'invoiceDate',
-      style: { numFmt: DateFormat },
-      width: ColumnWidth,
-    },
-    {
-      header: 'Förfallodatum',
-      key: 'expirationDate',
-      style: { numFmt: DateFormat },
-      width: ColumnWidth,
-    },
-    { header: 'Totalbelopp', key: 'invoiceAmount' },
-    { header: 'Återstående belopp', key: 'remainingAmount' },
-    { header: 'Hemförsäkring totalbelopp', key: 'hemforTotal' },
-  ]
-
-  summaries.forEach((summary) => {
-    worksheet.addRow(transformUnpaidInvoiceSummary(summary))
-  })
-
-  const buffer = await workbook.xlsx.writeBuffer()
-  return Buffer.from(buffer)
-}
-
 const transformInvoicePaymentSummary = (
   summary: InvoicePaymentSummary
 ): PaymentRow => {
@@ -152,19 +104,5 @@ const transformInvoicePaymentSummary = (
     vhk934Paid: summary.vhk934Paid,
     vhk936Total: summary.vhk936Total,
     vhk936Paid: summary.vhk936Paid,
-  }
-}
-
-const transformUnpaidInvoiceSummary = (
-  summary: UnpaidInvoiceSummary
-): UnpaidInvoiceRow => {
-  return {
-    invoiceId: summary.invoiceId,
-    contactCode: summary.reference,
-    invoiceDate: summary.invoiceDate,
-    expirationDate: summary.expirationDate,
-    invoiceAmount: summary.amount,
-    remainingAmount: summary.remainingAmount,
-    hemforTotal: summary.hemforTotal,
   }
 }

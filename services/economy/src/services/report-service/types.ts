@@ -21,8 +21,3 @@ export type InvoicePaymentSummary = Invoice & {
   vhk936Total: number
   vhk936Paid: number
 }
-
-export type UnpaidInvoiceSummary = Invoice & {
-  remainingAmount: number
-  hemforTotal: number
-}
