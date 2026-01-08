@@ -1,4 +1,4 @@
-import { getInvoicePaymentSummaries } from '@src/services/report-service/service'
+import { getUnpaidInvoicePaymentSummaries } from '@src/services/report-service/service'
 import { InvoicePaymentEvent } from '@onecore/types'
 import { RentInvoiceRow } from '@src/services/common/types'
 import { InvoiceWithMatchId } from '@src/services/report-service/types'
@@ -133,7 +133,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue(paymentEvents)
       mockGetInvoiceRows.mockResolvedValue(invoiceRows)
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
@@ -167,7 +167,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue([])
       mockGetInvoiceRows.mockResolvedValue([])
 
-      await getInvoicePaymentSummaries(fromDate, toDate)
+      await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(mockGetAllInvoicePaymentEvents).toHaveBeenCalledWith([123])
       expect(mockGetInvoiceRows).toHaveBeenCalledWith(['5500001'])
@@ -196,7 +196,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue([])
       mockGetInvoiceRows.mockResolvedValue([])
 
-      await getInvoicePaymentSummaries(fromDate, toDate)
+      await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(mockGetInvoiceRows).toHaveBeenCalledWith(['5500003'])
     })
@@ -238,7 +238,7 @@ describe('Report Service', () => {
         }),
       ])
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result).toHaveLength(1)
       expect(result[0].amountPaid).toBe(2000)
@@ -274,7 +274,7 @@ describe('Report Service', () => {
         }),
       ])
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result).toHaveLength(1)
       expect(result[0].amountPaid).toBe(1000)
@@ -331,7 +331,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue(paymentEvents)
       mockGetInvoiceRows.mockResolvedValue(invoiceRows)
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result[0]).toEqual(
         expect.objectContaining({
@@ -378,7 +378,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue(paymentEvents)
       mockGetInvoiceRows.mockResolvedValue(invoiceRows)
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result).toHaveLength(2)
       expect(result[0]).toMatchObject({
@@ -422,7 +422,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue(paymentEvents)
       mockGetInvoiceRows.mockResolvedValue(invoiceRows)
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result[0].fractionPaid).toBe(1)
       expect(result[0].hemforPaid).toBe(5000)
@@ -455,7 +455,7 @@ describe('Report Service', () => {
       mockGetAllInvoicePaymentEvents.mockResolvedValue(paymentEvents)
       mockGetInvoiceRows.mockResolvedValue(invoiceRows)
 
-      const result = await getInvoicePaymentSummaries(fromDate, toDate)
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
       expect(result).toHaveLength(0)
     })

@@ -8,32 +8,28 @@ import { InvoicePaymentSummary } from './types'
 import { RentInvoiceRow } from '../common/types'
 import { logger } from '@onecore/utilities'
 
-export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
-  logger.info(
-    `Getting invoices from Xledger between ${from.toISOString()} and ${to.toISOString()}`
-  )
-  const xledgerInvoices = await getAllInvoicesWithMatchIds(from, to)
+export const getUnpaidInvoicePaymentSummaries = async (
+  from?: Date,
+  to?: Date
+) => {
+  logger.info('Getting unpaid invoices from Xledger')
+  const xledgerInvoices = await getAllInvoicesWithMatchIds({
+    from,
+    to,
+    remainingAmountGreaterThan: 0,
+  })
   logger.info(`Got ${xledgerInvoices.length} invoices`)
 
-  const fullyOrPartiallyPaidRentInvoices = xledgerInvoices.filter(
-    (i) =>
-      i.invoiceId.startsWith('55') && // Rent invoice numbers start with 55
-      i.paidAmount !== undefined &&
-      i.paidAmount > 0
+  const rentInvoices = xledgerInvoices.filter(
+    (i) => i.invoiceId.startsWith('55') // Rent invoice numbers start with 55
   )
-  logger.info(
-    `${fullyOrPartiallyPaidRentInvoices.length} fully or partially paid rent invoices`
-  )
+  logger.info(`${rentInvoices.length} unpaid rent invoices`)
 
   logger.info('Getting payment events and invoice rows')
 
   const [allInvoiceRows, allPaymentEvents] = await Promise.all([
-    fetchInvoiceRowsChunked(
-      fullyOrPartiallyPaidRentInvoices.map((i) => i.invoiceId)
-    ),
-    getAllInvoicePaymentEvents(
-      fullyOrPartiallyPaidRentInvoices.map((m) => m.matchId)
-    ),
+    fetchInvoiceRowsChunked(rentInvoices.map((i) => i.invoiceId)),
+    getAllInvoicePaymentEvents(rentInvoices.map((m) => m.matchId)),
   ])
 
   logger.info(`Got ${allInvoiceRows.length} invoice rows`)
@@ -46,21 +42,13 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
       r.code?.startsWith('VHK')
   )
 
-  const filteredPaymentEvents = allPaymentEvents
-    .filter((pe) => pe.amount < 0) // We only want payments, not credits
-    .map((pe) => {
-      return {
-        ...pe,
-        paymentDate: new Date(pe.paymentDate),
-      }
-    })
+  const filteredPaymentEvents = allPaymentEvents.filter((pe) => pe.amount < 0) // We only want payments, not credits
 
-  const paymentEventsByInvoiceId = fullyOrPartiallyPaidRentInvoices.reduce<
+  const paymentEventsByInvoiceId = rentInvoices.reduce<
     Record<string, InvoicePaymentEvent[]>
   >((acc, i) => {
     const paymentEventsForInvoice = filteredPaymentEvents.filter(
-      (e) =>
-        e.matchId === i.matchId && e.paymentDate >= from && e.paymentDate <= to
+      (e) => e.matchId === i.matchId
     )
 
     acc[i.invoiceId] = paymentEventsForInvoice
@@ -70,7 +58,7 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
 
   const invoicePaymentSummaries: InvoicePaymentSummary[] = []
 
-  fullyOrPartiallyPaidRentInvoices.forEach((i) => {
+  rentInvoices.forEach((i) => {
     const invoiceRowsForInvoice = filteredInvoiceRows.filter(
       (r) => r.invoiceNumber === i.invoiceId
     )
@@ -101,27 +89,28 @@ export const getInvoicePaymentSummaries = async (from: Date, to: Date) => {
     const vhk934Total = getVerksamhetskostnadTotal(vhkRows, 'VHK934')
     const vhk936Total = getVerksamhetskostnadTotal(vhkRows, 'VHK936')
 
-    paymentEventsByInvoiceId[i.invoiceId].forEach((pe) => {
-      const fractionPaid = Math.min(-pe.amount / i.amount, 1) // Max 1 in case an invoice is overpaid
+    const totalPaidAmount = paymentEventsByInvoiceId[i.invoiceId].reduce(
+      (acc, pe) => acc + pe.amount,
+      0
+    )
+    const fractionPaid = -totalPaidAmount / i.amount
 
-      invoicePaymentSummaries.push({
-        ...i,
-        paymentDate: pe.paymentDate,
-        amountPaid: -pe.amount,
-        fractionPaid,
-        hemforTotal,
-        hemforPaid: hemforTotal * fractionPaid,
-        hyrsatTotal,
-        hyrsatPaid: hyrsatTotal * fractionPaid,
-        vhk906Total,
-        vhk906Paid: vhk906Total * fractionPaid,
-        vhk933Total,
-        vhk933Paid: vhk933Total * fractionPaid,
-        vhk934Total,
-        vhk934Paid: vhk934Total * fractionPaid,
-        vhk936Total,
-        vhk936Paid: vhk936Total * fractionPaid,
-      })
+    invoicePaymentSummaries.push({
+      ...i,
+      amountPaid: -totalPaidAmount,
+      fractionPaid,
+      hemforTotal,
+      hemforDebt: hemforTotal - hemforTotal * fractionPaid,
+      hyrsatTotal,
+      hyrsatDebt: hyrsatTotal - hyrsatTotal * fractionPaid,
+      vhk906Total,
+      vhk906Debt: vhk906Total - vhk906Total * fractionPaid,
+      vhk933Total,
+      vhk933Debt: vhk933Total - vhk933Total * fractionPaid,
+      vhk934Total,
+      vhk934Debt: vhk934Total - vhk934Total * fractionPaid,
+      vhk936Total,
+      vhk936Debt: vhk936Total - vhk936Total * fractionPaid,
     })
   })
 
