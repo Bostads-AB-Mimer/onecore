@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { ExternalInspection } from '../../services/api/core/inspectionService'
 import {
   Card,
   CardContent,
@@ -45,19 +46,33 @@ import { DateCell } from '@/components/inspections/DateCell'
 import { useInspectionFilters } from '@/components/hooks/useInspectionFilters'
 import { useInspectionSorting } from '@/components/hooks/useInspectionSorting'
 // temp mock data TODO replace with real data when available
+import { inspectionService } from '@/services/api/core/inspectionService'
 import {
   getAllInspections,
   CURRENT_USER,
-  type ExtendedInspection,
 } from '@/components/inspections/mockdata/mockInspections'
+import { useQuery } from '@tanstack/react-query'
 
 export default function AllInspectionsPage() {
-  const [inspections, setInspections] =
-    useState<ExtendedInspection[]>(getAllInspections)
-  const [selectedInspection, setSelectedInspection] =
-    useState<ExtendedInspection | null>(null)
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  const inspectionsQuery = useQuery({
+    queryKey: ['inspections'],
+    queryFn: () => inspectionService.getAllInspections(),
+  })
 
-  // Use custom hooks
+  const [inspections, setInspections] = useState<ExternalInspection[]>([])
+
+  const [selectedInspection, setSelectedInspection] =
+    useState<ExternalInspection | null>(null)
+
+  // Update inspections when query data changes
+  useEffect(() => {
+    if (inspectionsQuery.data) {
+      setInspections(inspectionsQuery.data)
+    }
+  }, [inspectionsQuery.data])
+
+  // Use custom hooks BEFORE conditional returns
   const {
     selectedInspector,
     setSelectedInspector,
@@ -77,8 +92,8 @@ export default function AllInspectionsPage() {
     setOpenPriorityDropdown,
     uniqueInspectors,
     uniqueAddresses,
-    uniqueDistricts,
-    priorityOptions,
+    // uniqueDistricts,
+    // priorityOptions,
     filterInspections,
     clearFilters,
     hasActiveFilters,
@@ -87,14 +102,22 @@ export default function AllInspectionsPage() {
   const { sortField, sortDirection, handleSort, sortInspections } =
     useInspectionSorting()
 
-  const handleViewInspection = (inspection: ExtendedInspection) => {
+  if (inspectionsQuery.isLoading) {
+    return <div>Loading inspections...</div>
+  }
+
+  if (inspectionsQuery.error) {
+    return <div>Error loading inspections</div>
+  }
+
+  const handleViewInspection = (inspection: ExternalInspection) => {
     setSelectedInspection(inspection)
   }
 
   // Update inspection data
   const updateInspection = (
     id: string,
-    updates: Partial<ExtendedInspection>
+    updates: Partial<ExternalInspection>
   ) => {
     setInspections((prev) =>
       prev.map((inspection) =>
@@ -103,48 +126,49 @@ export default function AllInspectionsPage() {
     )
   }
 
-  const getStatusBadge = (inspection: ExtendedInspection) => {
-    if (inspection.isCompleted) {
-      return 'Slutförd'
-    }
-    return 'Pågående'
-  }
+  // const getStatusBadge = (inspection: ExternalInspection) => {
+  //   if (inspection.isCompleted) {
+  //     return 'Slutförd'
+  //   }
+  //   return 'Pågående'
+  // }
 
-  const getPriorityBadge = (priority: 'avflytt' | 'inflytt') => {
-    return priority === 'avflytt' ? 'Avflytt' : 'Inflytt'
-  }
+  // const getPriorityBadge = (priority: 'avflytt' | 'inflytt') => {
+  //   return priority === 'avflytt' ? 'Avflytt' : 'Inflytt'
+  // }
 
-  const getCompletedRoomsCount = (inspection: ExtendedInspection) => {
-    if (!inspection.rooms) return 0
-    return Object.values(inspection.rooms).filter((room) => room.isHandled)
-      .length
-  }
+  // const getCompletedRoomsCount = (inspection: ExternalInspection) => {
+  //   if (!inspection.rooms) return 0
+  //   return Object.values(inspection.rooms).filter((room) => room.isHandled)
+  //     .length
+  // }
 
-  const getTotalRoomsCount = (inspection: ExtendedInspection) => {
-    if (!inspection.rooms) return 0
-    return Object.keys(inspection.rooms).length
-  }
+  // const getTotalRoomsCount = (inspection: ExternalInspection) => {
+  //   if (!inspection.rooms) return 0
+  //   return Object.keys(inspection.rooms).length
+  // }
 
   // Filter inspections by category and apply filters
   const ongoingInspections = sortInspections(
     filterInspections(
-      inspections.filter((inspection) => !inspection.isCompleted)
+      inspections.filter((inspection) => inspection.status !== 'Genomförd')
     )
   )
   const myInspections = sortInspections(
     filterInspections(
       inspections.filter(
         (inspection) =>
-          inspection.inspectedBy === CURRENT_USER && !inspection.isCompleted
+          inspection.inspector === CURRENT_USER &&
+          inspection.status !== 'Genomförd'
       )
     )
   )
   const completedInspections = filterInspections(
-    inspections.filter((inspection) => inspection.isCompleted)
+    inspections.filter((inspection) => inspection.status === 'Genomförd')
   )
 
   const renderInspectionTable = (
-    data: ExtendedInspection[],
+    data: ExternalInspection[],
     title: string,
     isCompleted: boolean = false
   ) => {
@@ -153,7 +177,7 @@ export default function AllInspectionsPage() {
       {
         key: 'inspector',
         label: 'Tilldelad',
-        render: (inspection: ExtendedInspection) => (
+        render: (inspection: ExternalInspection) => (
           <InspectorCell
             inspection={inspection}
             readOnly={isCompleted}
@@ -162,42 +186,50 @@ export default function AllInspectionsPage() {
         ),
       },
       {
-        key: 'priority',
-        label: 'Prioritet',
+        key: 'type',
+        label: 'Typ',
         hideOnMobile: true,
-        render: (inspection: ExtendedInspection) => (
-          <div className="flex items-center gap-2">
-            <span>{getPriorityBadge(inspection.priority || 'inflytt')}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => handleSort('priority')}
-            >
-              {sortField === 'priority' &&
-                (sortDirection === 'asc' ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                ))}
-            </Button>
-          </div>
+        render: (inspection: ExternalInspection) => (
+          <span className="text-sm">{inspection.type || 'N/A'}</span>
         ),
       },
+      // {
+      //   key: 'priority',
+      //   label: 'Prioritet',
+      //   hideOnMobile: true,
+      //   render: (inspection: ExternalInspection) => (
+      //     <div className="flex items-center gap-2">
+      //       <span>{getPriorityBadge(inspection.priority || 'inflytt')}</span>
+      //       <Button
+      //         variant="ghost"
+      //         size="sm"
+      //         className="h-6 w-6 p-0"
+      //         onClick={() => handleSort('priority')}
+      //       >
+      //         {sortField === 'priority' &&
+      //           (sortDirection === 'asc' ? (
+      //             <ChevronUp className="h-3 w-3" />
+      //           ) : (
+      //             <ChevronDown className="h-3 w-3" />
+      //           ))}
+      //       </Button>
+      //     </div>
+      //   ),
+      // },
       {
-        key: 'contractId',
+        key: 'leaseId',
         label: 'Kontrakt ID',
         hideOnMobile: true,
-        render: (inspection: ExtendedInspection) => (
+        render: (inspection: ExternalInspection) => (
           <div className="flex items-center gap-2">
-            <span>{inspection.contractId || 'N/A'}</span>
+            <span>{inspection.leaseId || 'N/A'}</span>
             <Button
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0"
-              onClick={() => handleSort('contractId')}
+              onClick={() => handleSort('leaseId')}
             >
-              {sortField === 'contractId' &&
+              {sortField === 'leaseId' &&
                 (sortDirection === 'asc' ? (
                   <ChevronUp className="h-3 w-3" />
                 ) : (
@@ -210,35 +242,35 @@ export default function AllInspectionsPage() {
       {
         key: 'address',
         label: 'Adress',
-        render: (inspection: ExtendedInspection) => inspection.address || 'N/A',
+        render: (inspection: ExternalInspection) => inspection.address || 'N/A',
       },
+      // {
+      //   key: 'tenantPhone',
+      //   label: 'Telefonnummer',
+      //   hideOnMobile: true,
+      //   render: (inspection: ExternalInspection) =>
+      //     inspection.tenantPhone || 'N/A',
+      // },
+      // {
+      //   key: 'masterKey',
+      //   label: 'Huvudnyckel',
+      //   render: (inspection: ExternalInspection) =>
+      //     inspection.masterKey ? 'Ja' : 'Nej',
+      // },
+      // {
+      //   key: 'terminationDate',
+      //   label: 'Uppsägning',
+      //   hideOnMobile: true,
+      //   render: (inspection: ExternalInspection) => (
+      //     <span className="whitespace-nowrap">
+      //       {inspection.terminationDate || 'N/A'}
+      //     </span>
+      //   ),
+      // },
       {
-        key: 'tenantPhone',
-        label: 'Telefonnummer',
-        hideOnMobile: true,
-        render: (inspection: ExtendedInspection) =>
-          inspection.tenantPhone || 'N/A',
-      },
-      {
-        key: 'masterKey',
-        label: 'Huvudnyckel',
-        render: (inspection: ExtendedInspection) =>
-          inspection.masterKey ? 'Ja' : 'Nej',
-      },
-      {
-        key: 'terminationDate',
-        label: 'Uppsägning',
-        hideOnMobile: true,
-        render: (inspection: ExtendedInspection) => (
-          <span className="whitespace-nowrap">
-            {inspection.terminationDate || 'N/A'}
-          </span>
-        ),
-      },
-      {
-        key: 'scheduledDate',
+        key: 'date',
         label: isCompleted ? 'Utfört' : 'Planerat datum/tid',
-        render: (inspection: ExtendedInspection) => (
+        render: (inspection: ExternalInspection) => (
           <DateCell
             inspection={inspection}
             readOnly={isCompleted}
@@ -246,34 +278,42 @@ export default function AllInspectionsPage() {
           />
         ),
       },
+      // {
+      //   key: 'district',
+      //   label: 'Distrikt',
+      //   hideOnMobile: true,
+      //   render: (inspection: ExternalInspection) =>
+      //     inspection.district || 'N/A',
+      // },
       {
-        key: 'district',
-        label: 'Distrikt',
-        hideOnMobile: true,
-        render: (inspection: ExtendedInspection) =>
-          inspection.district || 'N/A',
-      },
-      {
-        key: 'inspectionNumber',
+        key: 'id',
         label: 'Besiktningsnummer',
         hideOnMobile: true,
-        render: (inspection: ExtendedInspection) =>
-          inspection.inspectionNumber || 'N/A',
+        render: (inspection: ExternalInspection) => inspection.id || 'N/A',
       },
       {
-        key: 'actions',
-        label: 'Åtgärder',
-        render: (inspection: ExtendedInspection) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleViewInspection(inspection)}
-          >
-            <Eye className="h-4 w-4 mr-1" />
-            Visa detaljer
-          </Button>
+        key: 'status',
+        label: 'Status',
+        render: (inspection: ExternalInspection) => (
+          <Badge variant={inspection.status === 'Genomförd' ? 'default' : 'secondary'}>
+            {inspection.status || 'Okänd'}
+          </Badge>
         ),
       },
+      // {
+      //   key: 'actions',
+      //   label: 'Åtgärder',
+      //   render: (inspection: ExternalInspection) => (
+      //     <Button
+      //       variant="ghost"
+      //       size="sm"
+      //       onClick={() => handleViewInspection(inspection)}
+      //     >
+      //       <Eye className="h-4 w-4 mr-1" />
+      //       Visa detaljer
+      //     </Button>
+      //   ),
+      // },
     ]
 
     return (
@@ -289,7 +329,7 @@ export default function AllInspectionsPage() {
             <ResponsiveTable
               data={data}
               columns={columns}
-              keyExtractor={(inspection: ExtendedInspection) => inspection.id}
+              keyExtractor={(inspection: ExternalInspection) => inspection.id}
               emptyMessage="Inga besiktningar registrerade ännu"
             />
           ) : (
@@ -421,7 +461,7 @@ export default function AllInspectionsPage() {
             </Popover>
 
             {/* District Filter */}
-            <Popover
+            {/* <Popover
               open={openDistrictDropdown}
               onOpenChange={setOpenDistrictDropdown}
             >
@@ -471,10 +511,10 @@ export default function AllInspectionsPage() {
                   </CommandList>
                 </Command>
               </PopoverContent>
-            </Popover>
+            </Popover> */}
 
             {/* Priority Filter */}
-            <Popover
+            {/* <Popover
               open={openPriorityDropdown}
               onOpenChange={setOpenPriorityDropdown}
             >
@@ -529,7 +569,7 @@ export default function AllInspectionsPage() {
                   </CommandList>
                 </Command>
               </PopoverContent>
-            </Popover>
+            </Popover> */}
 
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -574,7 +614,7 @@ export default function AllInspectionsPage() {
         </Tabs>
       </div>
 
-      <Dialog
+      {/* <Dialog
         open={selectedInspection !== null}
         onOpenChange={(open: boolean) => !open && setSelectedInspection(null)}
       >
@@ -586,7 +626,7 @@ export default function AllInspectionsPage() {
             />
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   )
 }

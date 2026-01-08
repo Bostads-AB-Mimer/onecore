@@ -17,15 +17,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/AlertDialog'
 import { Textarea } from '@/components/ui/Textarea'
-import {
-  AVAILABLE_INSPECTORS,
-  type ExtendedInspection,
-} from './mockdata/mockInspections'
+import { AVAILABLE_INSPECTORS } from './mockdata/mockInspections'
+import { ExternalInspection } from '@/services/api/core/inspectionService'
 
 interface InspectorCellProps {
-  inspection: ExtendedInspection
+  inspection: ExternalInspection
   readOnly?: boolean
-  onUpdate: (id: string, updates: Partial<ExtendedInspection>) => void
+  onUpdate: (id: string, updates: Partial<ExternalInspection>) => void
 }
 
 export function InspectorCell({
@@ -38,38 +36,41 @@ export function InspectorCell({
   const [changeReason, setChangeReason] = useState<string>('')
   const [changeComment, setChangeComment] = useState<string>('')
 
+  // Include current inspector in the list if it's not already there
+  const availableInspectors = inspection.inspector && !AVAILABLE_INSPECTORS.includes(inspection.inspector)
+    ? [...AVAILABLE_INSPECTORS, inspection.inspector].sort()
+    : AVAILABLE_INSPECTORS
+
   // Om readOnly, visa bara resursens namn
   if (readOnly) {
     return (
       <span className="text-sm">
-        {inspection.assignedInspector || 'Ej tilldelad'}
+        {inspection.inspector || 'Ej tilldelad'}
       </span>
     )
   }
 
   const handleValueChange = (value: string) => {
-    const newInspector = value === 'none' ? undefined : value
+    const newInspector = value === 'none' ? '' : value
 
     // Om besiktningen redan är tilldelad och man väljer en ny resurs
     if (
-      inspection.assignedInspector &&
-      inspection.assignedInspector !== newInspector
+      inspection.inspector &&
+      inspection.inspector !== newInspector
     ) {
       setPendingInspector(newInspector)
       setShowConfirmDialog(true)
     } else {
       // Direkt uppdatering om ingen är tilldelad eller om man tar bort tilldelningen
       onUpdate(inspection.id, {
-        assignedInspector: newInspector,
-        isAssigned: value !== 'none',
+        inspector: newInspector,
       })
     }
   }
 
   const handleConfirmChange = () => {
     onUpdate(inspection.id, {
-      assignedInspector: pendingInspector,
-      isAssigned: pendingInspector !== undefined,
+      inspector: pendingInspector,
     })
 
     // Rensa state
@@ -89,7 +90,7 @@ export function InspectorCell({
   return (
     <>
       <Select
-        value={inspection.assignedInspector || 'none'}
+        value={inspection.inspector || 'none'}
         onValueChange={handleValueChange}
       >
         <SelectTrigger className="w-40">
@@ -97,7 +98,7 @@ export function InspectorCell({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Ej tilldelad</SelectItem>
-          {AVAILABLE_INSPECTORS.map((inspector) => (
+          {availableInspectors.map((inspector) => (
             <SelectItem key={inspector} value={inspector}>
               {inspector}
             </SelectItem>
@@ -111,7 +112,7 @@ export function InspectorCell({
             <AlertDialogTitle>Bekräfta byte av resurs</AlertDialogTitle>
             <AlertDialogDescription>
               Du håller på att byta resurs från{' '}
-              <strong>{inspection.assignedInspector}</strong> till{' '}
+              <strong>{inspection.inspector}</strong> till{' '}
               <strong>{pendingInspector || 'Ej tilldelad'}</strong>. Vänligen
               ange anledning till bytet.
             </AlertDialogDescription>
