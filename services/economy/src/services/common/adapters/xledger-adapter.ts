@@ -443,7 +443,7 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
     type: event.type,
     invoiceId: event.invoiceNumber,
     matchId: event.matchId,
-    amount: event.amount,
+    amount: parseFloat(event.amount),
     paymentDate: event.transactionHeader.postedDate
       ? new Date(event.transactionHeader.postedDate)
       : new Date(event.paymentDate),
@@ -530,8 +530,8 @@ export const getAllInvoicesWithMatchIds = async ({
   after,
   remainingAmountGreaterThan,
 }: {
-  from: Date
-  to: Date
+  from?: Date
+  to?: Date
   after?: string
   remainingAmountGreaterThan?: number
 }): Promise<InvoiceWithMatchId[]> => {
@@ -559,8 +559,8 @@ export const getAllInvoicesWithMatchIds = async ({
     variables: {
       after: after ?? null,
       filter: {
-        invoiceDate_gte: dateToGraphQlDateString(from),
-        invoiceDate_lte: dateToGraphQlDateString(to),
+        invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+        invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
         headerTransactionSourceDbId_in: [
           TransactionSourceDbId.AR,
           TransactionSourceDbId.OS,

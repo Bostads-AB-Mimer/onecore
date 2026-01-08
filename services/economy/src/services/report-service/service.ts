@@ -42,14 +42,7 @@ export const getUnpaidInvoicePaymentSummaries = async (
       r.code?.startsWith('VHK')
   )
 
-  const filteredPaymentEvents = allPaymentEvents
-    .filter((pe) => pe.amount < 0) // We only want payments, not credits
-    .map((pe) => {
-      return {
-        ...pe,
-        paymentDate: new Date(pe.paymentDate),
-      }
-    })
+  const filteredPaymentEvents = allPaymentEvents.filter((pe) => pe.amount < 0) // We only want payments, not credits
 
   const paymentEventsByInvoiceId = rentInvoices.reduce<
     Record<string, InvoicePaymentEvent[]>
@@ -96,27 +89,28 @@ export const getUnpaidInvoicePaymentSummaries = async (
     const vhk934Total = getVerksamhetskostnadTotal(vhkRows, 'VHK934')
     const vhk936Total = getVerksamhetskostnadTotal(vhkRows, 'VHK936')
 
-    paymentEventsByInvoiceId[i.invoiceId].forEach((pe) => {
-      const fractionPaid = Math.min(-pe.amount / i.amount, 1) // Max 1 in case an invoice is overpaid
+    const totalPaidAmount = paymentEventsByInvoiceId[i.invoiceId].reduce(
+      (acc, pe) => acc + pe.amount,
+      0
+    )
+    const fractionPaid = -totalPaidAmount / i.amount
 
-      invoicePaymentSummaries.push({
-        ...i,
-        paymentDate: pe.paymentDate,
-        amountPaid: -pe.amount,
-        fractionPaid,
-        hemforTotal,
-        hemforPaid: hemforTotal * fractionPaid,
-        hyrsatTotal,
-        hyrsatPaid: hyrsatTotal * fractionPaid,
-        vhk906Total,
-        vhk906Paid: vhk906Total * fractionPaid,
-        vhk933Total,
-        vhk933Paid: vhk933Total * fractionPaid,
-        vhk934Total,
-        vhk934Paid: vhk934Total * fractionPaid,
-        vhk936Total,
-        vhk936Paid: vhk936Total * fractionPaid,
-      })
+    invoicePaymentSummaries.push({
+      ...i,
+      amountPaid: -totalPaidAmount,
+      fractionPaid,
+      hemforTotal,
+      hemforDebt: hemforTotal - hemforTotal * fractionPaid,
+      hyrsatTotal,
+      hyrsatDebt: hyrsatTotal - hyrsatTotal * fractionPaid,
+      vhk906Total,
+      vhk906Debt: vhk906Total - vhk906Total * fractionPaid,
+      vhk933Total,
+      vhk933Debt: vhk933Total - vhk933Total * fractionPaid,
+      vhk934Total,
+      vhk934Debt: vhk934Total - vhk934Total * fractionPaid,
+      vhk936Total,
+      vhk936Debt: vhk936Total - vhk936Total * fractionPaid,
     })
   })
 

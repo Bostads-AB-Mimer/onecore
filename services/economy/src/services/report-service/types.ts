@@ -5,19 +5,18 @@ export type InvoiceWithMatchId = Invoice & {
 }
 
 export type InvoicePaymentSummary = Invoice & {
-  paymentDate: Date
   amountPaid: number
   fractionPaid: number
   hemforTotal: number
-  hemforPaid: number
+  hemforDebt: number
   hyrsatTotal: number
-  hyrsatPaid: number
+  hyrsatDebt: number
   vhk906Total: number
-  vhk906Paid: number
+  vhk906Debt: number
   vhk933Total: number
-  vhk933Paid: number
+  vhk933Debt: number
   vhk934Total: number
-  vhk934Paid: number
+  vhk934Debt: number
   vhk936Total: number
-  vhk936Paid: number
+  vhk936Debt: number
 }
