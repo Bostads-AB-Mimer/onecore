@@ -336,8 +336,14 @@ const getContactsDataBySearchQuery = async (
     const rows = await xpandDb
       .from('cmctc')
       .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
-      .where('cmctc.cmctckod', 'like', `%${q}%`)
-      .orWhere('cmctc.persorgnr', 'like', `%${q}%`)
+      .where('cmctc.deletemark', '=', '0')
+      .where(function () {
+        this.where('cmctc.cmctckod', 'like', `%${q}%`).orWhere(
+          'cmctc.persorgnr',
+          'like',
+          `%${q}%`
+        )
+      })
       .limit(5)
 
     return {
@@ -475,6 +481,7 @@ const getContactQuery = () => {
       .where(function () {
         this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
       })
+      .where('cmctc.deletemark', '=', '0')
       // Sort addresses so that those with a non-null fdate come first (ordered by fdate ascending), and addresses with fdate = null come last.
       // This is to prioritize addresses with a defined start date.
       .orderByRaw(
