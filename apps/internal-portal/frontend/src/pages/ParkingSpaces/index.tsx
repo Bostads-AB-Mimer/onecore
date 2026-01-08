@@ -118,7 +118,7 @@ const ParkingSpaces = () => {
           </TabPanel>
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
-              columns={getColumns(dateFormatter, numberFormatter).concat(
+              columns={getColumns(dateFormatter, numberFormatter, false).concat(
                 getActionColumns()
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
