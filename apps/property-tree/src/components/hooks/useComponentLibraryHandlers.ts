@@ -43,9 +43,7 @@ export type ViewState =
 interface UseComponentLibraryHandlersParams {
   // State
   viewState: ViewState
-  setViewState: (state: ViewState) => void
-  setModelSearch: (search: string) => void
-  setInstanceSearch: (search: string) => void
+  navigateTo: (state: ViewState) => void
   setInstanceDetailsDialogState: (state: {
     isOpen: boolean
     instance?: ComponentInstance
@@ -114,9 +112,7 @@ export const useComponentLibraryHandlers = (
 ): ComponentLibraryHandlers => {
   const {
     viewState,
-    setViewState,
-    setModelSearch,
-    setInstanceSearch,
+    navigateTo,
     setInstanceDetailsDialogState,
     categoryDialog,
     typeDialog,
@@ -153,7 +149,7 @@ export const useComponentLibraryHandlers = (
   }
 
   const handleNavigateToTypes = (category: ComponentCategory) => {
-    setViewState({
+    navigateTo({
       level: 'types',
       categoryId: category.id,
       categoryName: category.categoryName,
@@ -189,7 +185,7 @@ export const useComponentLibraryHandlers = (
   const handleNavigateToSubtypes = (type: ComponentType) => {
     if (viewState.level !== 'types') return
 
-    setViewState({
+    navigateTo({
       level: 'subtypes',
       typeId: type.id,
       typeName: type.typeName,
@@ -226,8 +222,7 @@ export const useComponentLibraryHandlers = (
   const handleNavigateToModels = (subtype: ComponentSubtype) => {
     if (viewState.level !== 'subtypes') return
 
-    setModelSearch('') // Reset search when navigating
-    setViewState({
+    navigateTo({
       level: 'models',
       subtypeId: subtype.id,
       subtypeName: subtype.subTypeName,
@@ -277,8 +272,7 @@ export const useComponentLibraryHandlers = (
   const handleNavigateToInstances = (model: ComponentModel) => {
     if (viewState.level !== 'models') return
 
-    setInstanceSearch('') // Reset search when navigating
-    setViewState({
+    navigateTo({
       level: 'instances',
       modelId: model.id,
       modelName: model.modelName,
