@@ -559,10 +559,10 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
             className="w-full mt-4"
             variant="outline"
             disabled
-            title="Kommer snart: Öppna felanmälan"
+            title="Kommer snart: Skapa serviceanmälan"
           >
             <Ticket className="h-4 w-4 mr-2" />
-            Öppna Felanmälan
+            Skapa Serviceanmälan
           </Button>
         </CardContent>
       </Card>

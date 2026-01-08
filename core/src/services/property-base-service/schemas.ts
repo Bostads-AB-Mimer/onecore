@@ -954,6 +954,7 @@ export const AnalyzeComponentImageRequestSchema = z.object({
 })
 
 export const AIComponentAnalysisSchema = z.object({
+  componentCategory: z.string().nullable(),
   componentType: z.string().nullable(),
   componentSubtype: z.string().nullable(),
   manufacturer: z.string().nullable(),

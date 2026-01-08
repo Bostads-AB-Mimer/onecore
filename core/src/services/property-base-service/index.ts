@@ -2925,6 +2925,12 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Filter models by manufacturer name
    *       - in: query
+   *         name: modelName
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Search by model name or manufacturer (case-insensitive)
+   *       - in: query
    *         name: page
    *         schema:
    *           type: integer
