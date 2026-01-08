@@ -27,14 +27,8 @@ export function DateCell({
 
   const [timeValue, setTimeValue] = useState(() => {
     if (inspectionDate) {
-      const hours = inspectionDate
-        .getHours()
-        .toString()
-        .padStart(2, '0')
-      const minutes = inspectionDate
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')
+      const hours = inspectionDate.getHours().toString().padStart(2, '0')
+      const minutes = inspectionDate.getMinutes().toString().padStart(2, '0')
       return `${hours}:${minutes}`
     }
     return '09:00'

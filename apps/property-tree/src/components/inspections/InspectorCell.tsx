@@ -37,16 +37,15 @@ export function InspectorCell({
   const [changeComment, setChangeComment] = useState<string>('')
 
   // Include current inspector in the list if it's not already there
-  const availableInspectors = inspection.inspector && !AVAILABLE_INSPECTORS.includes(inspection.inspector)
-    ? [...AVAILABLE_INSPECTORS, inspection.inspector].sort()
-    : AVAILABLE_INSPECTORS
+  const availableInspectors =
+    inspection.inspector && !AVAILABLE_INSPECTORS.includes(inspection.inspector)
+      ? [...AVAILABLE_INSPECTORS, inspection.inspector].sort()
+      : AVAILABLE_INSPECTORS
 
   // Om readOnly, visa bara resursens namn
   if (readOnly) {
     return (
-      <span className="text-sm">
-        {inspection.inspector || 'Ej tilldelad'}
-      </span>
+      <span className="text-sm">{inspection.inspector || 'Ej tilldelad'}</span>
     )
   }
 
@@ -54,10 +53,7 @@ export function InspectorCell({
     const newInspector = value === 'none' ? '' : value
 
     // Om besiktningen redan är tilldelad och man väljer en ny resurs
-    if (
-      inspection.inspector &&
-      inspection.inspector !== newInspector
-    ) {
+    if (inspection.inspector && inspection.inspector !== newInspector) {
       setPendingInspector(newInspector)
       setShowConfirmDialog(true)
     } else {

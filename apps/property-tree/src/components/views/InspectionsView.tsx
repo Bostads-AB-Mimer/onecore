@@ -295,7 +295,11 @@ export default function AllInspectionsPage() {
         key: 'status',
         label: 'Status',
         render: (inspection: ExternalInspection) => (
-          <Badge variant={inspection.status === 'Genomförd' ? 'default' : 'secondary'}>
+          <Badge
+            variant={
+              inspection.status === 'Genomförd' ? 'default' : 'secondary'
+            }
+          >
             {inspection.status || 'Okänd'}
           </Badge>
         ),
