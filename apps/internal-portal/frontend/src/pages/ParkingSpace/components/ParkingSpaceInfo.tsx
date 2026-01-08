@@ -162,20 +162,20 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               </Box>
             </>
           )}
-          {parkingSpaceListing.status == ListingStatus.Active ||
-            (parkingSpaceListing.status == ListingStatus.Expired && (
-              <Box display="flex" justifyContent="space-between" flex="1">
-                <Typography>Ledig från och med</Typography>
-                <Box>
-                  <Typography fontWeight="bold">
-                    {printVacantFrom(
-                      dateFormatter,
-                      parkingSpaceListing.rentalObject.vacantFrom
-                    )}
-                  </Typography>
-                </Box>
+          {(parkingSpaceListing.status == ListingStatus.Active ||
+            parkingSpaceListing.status == ListingStatus.Expired) && (
+            <Box display="flex" justifyContent="space-between" flex="1">
+              <Typography>Ledig från och med</Typography>
+              <Box>
+                <Typography fontWeight="bold">
+                  {printVacantFrom(
+                    dateFormatter,
+                    parkingSpaceListing.rentalObject.vacantFrom
+                  )}
+                </Typography>
               </Box>
-            ))}
+            </Box>
+          )}
           {parkingSpaceListing.rentalRule === 'NON_SCORED' && (
             <>
               <Box height="50px" />
