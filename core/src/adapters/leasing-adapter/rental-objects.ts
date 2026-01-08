@@ -83,7 +83,7 @@ const getRentalObjectRentByCode = async (
       )
       return { ok: false, err: 'rent-not-found' }
     }
-    return { ok: true, data: response.data.rent }
+    return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,

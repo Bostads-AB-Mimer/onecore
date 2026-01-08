@@ -328,7 +328,7 @@ interface RentalObject {
   rentalObjectCode: string
   address: string
   monthlyRent: number //TODO: remove this one
-  rent: Rent //use this one for rent instead
+  rent?: Rent //use this one for rent instead
   districtCaption?: string
   districtCode?: string
   propertyCaption?: string
@@ -356,8 +356,8 @@ interface RentRow {
   description: string
   amount: number
   vatPercentage: number
-  fromDate: Date
-  toDate: Date
+  fromDate?: Date
+  toDate?: Date
 }
 
 interface MaintenanceUnitInfo {

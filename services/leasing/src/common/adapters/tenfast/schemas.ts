@@ -2,9 +2,9 @@ import { z } from 'zod'
 
 export const TenfastInvoiceRowSchema = z.object({
   amount: z.number(),
-  vat: z.number(), //moms, procentsats
-  from: z.string().nullable().optional(),
-  to: z.string().nullable().optional(),
+  vat: z.number(), //moms, percentage in decimal form 0.25 = 25%
+  from: z.string().optional(),
+  to: z.string().optional(),
   article: z.string().nullable(),
   label: z.string().nullable(),
   _id: z.string(),

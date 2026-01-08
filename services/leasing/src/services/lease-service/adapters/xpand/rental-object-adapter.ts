@@ -106,7 +106,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
-    monthlyRent: 0, //will be added from tenfast instead
+    monthlyRent: 0, //TODO: Remove, will be removed from model soon
     propertyCaption: row.estatecaption,
     propertyCode: row.estatecode,
     residentialAreaCode: row.residentialareacode,

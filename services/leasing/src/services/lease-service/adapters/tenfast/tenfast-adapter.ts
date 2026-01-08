@@ -174,17 +174,15 @@ export const getRentForRentalObject = async (
         ? currency(hyra.amount).add(hyra.vat).value
         : hyra.amount,
       vatPercentage: includeVAT ? hyra.vat : 0,
-      fromDate: hyra.from?.toString() || '', //TODO: verify date format
-      toDate: hyra.to?.toString() || '', //TODO: verify date format
+      fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
+      toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
       code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
     })),
   }
 
   return {
     ok: true,
-    data: rent
-      ? rentalObjectResult.data.hyra
-      : rentalObjectResult.data.hyraExcludingVat,
+    data: rent,
   }
 }
 
