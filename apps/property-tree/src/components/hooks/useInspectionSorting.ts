@@ -1,13 +1,11 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/v2/Button'
-import { ChevronUp, ChevronDown } from 'lucide-react'
-import type { ExtendedInspection } from '@/components/inspections/mockdata/mockInspections'
+import type { ExternalInspection } from '@/services/api/core/inspectionService'
 
-export type SortField = 'priority' | 'contractId' | 'terminationDate'
+export type SortField = 'leaseId' | 'address' | 'date'
 export type SortDirection = 'asc' | 'desc'
 
 export function useInspectionSorting() {
-  const [sortField, setSortField] = useState<SortField>('terminationDate')
+  const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const handleSort = (field: SortField) => {
@@ -19,23 +17,23 @@ export function useInspectionSorting() {
     }
   }
 
-  const sortInspections = (inspections: ExtendedInspection[]) => {
+  const sortInspections = (inspections: ExternalInspection[]) => {
     return [...inspections].sort((a, b) => {
       let aValue: string | number
       let bValue: string | number
 
       switch (sortField) {
-        case 'priority':
-          aValue = a.priority === 'avflytt' ? 0 : 1
-          bValue = b.priority === 'avflytt' ? 0 : 1
+        case 'leaseId':
+          aValue = a.leaseId || ''
+          bValue = b.leaseId || ''
           break
-        case 'contractId':
-          aValue = a.contractId || ''
-          bValue = b.contractId || ''
+        case 'address':
+          aValue = a.address || ''
+          bValue = b.address || ''
           break
-        case 'terminationDate':
-          aValue = new Date(a.terminationDate || '').getTime()
-          bValue = new Date(b.terminationDate || '').getTime()
+        case 'date':
+          aValue = a.date ? new Date(a.date).getTime() : 0
+          bValue = b.date ? new Date(b.date).getTime() : 0
           break
         default:
           return 0

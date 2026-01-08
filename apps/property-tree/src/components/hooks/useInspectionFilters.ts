@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
-import type { ExtendedInspection } from '@/components/inspections/mockdata/mockInspections'
+// import type { ExtendedInspection } from '@/components/inspections/mockdata/mockInspections'
+import { ExternalInspection } from '../../services/api/core/inspectionService'
 
-export function useInspectionFilters(inspections: ExtendedInspection[]) {
+export function useInspectionFilters(inspections: ExternalInspection[]) {
   const [selectedInspector, setSelectedInspector] = useState<string>('')
   const [selectedAddress, setSelectedAddress] = useState<string>('')
   const [selectedDistrict, setSelectedDistrict] = useState<string>('')
@@ -15,8 +16,7 @@ export function useInspectionFilters(inspections: ExtendedInspection[]) {
   const uniqueInspectors = useMemo(() => {
     const inspectors = new Set<string>()
     inspections.forEach((i) => {
-      if (i.inspectedBy) inspectors.add(i.inspectedBy)
-      if (i.assignedInspector) inspectors.add(i.assignedInspector)
+      if (i.inspector) inspectors.add(i.inspector)
     })
     return Array.from(inspectors).sort()
   }, [inspections])
@@ -28,37 +28,33 @@ export function useInspectionFilters(inspections: ExtendedInspection[]) {
     return Array.from(addresses).sort()
   }, [inspections])
 
-  const uniqueDistricts = useMemo(() => {
-    const districts = new Set(
-      inspections.map((i) => i.district || '').filter(Boolean)
-    )
-    return Array.from(districts).sort()
-  }, [inspections])
+  // const uniqueDistricts = useMemo(() => {
+  //   const districts = new Set(
+  //     inspections.map((i) => i.district || '').filter(Boolean)
+  //   )
+  //   return Array.from(districts).sort()
+  // }, [inspections])
 
-  const priorityOptions = [
-    { value: 'avflytt', label: 'Avflytt' },
-    { value: 'inflytt', label: 'Inflytt' },
-  ]
+  // const priorityOptions = [
+  //   { value: 'avflytt', label: 'Avflytt' },
+  //   { value: 'inflytt', label: 'Inflytt' },
+  // ]
 
-  const filterInspections = (inspectionsList: ExtendedInspection[]) => {
+  const filterInspections = (inspectionsList: ExternalInspection[]) => {
     let filtered = [...inspectionsList]
 
     if (selectedInspector) {
-      filtered = filtered.filter(
-        (i) =>
-          i.inspectedBy === selectedInspector ||
-          i.assignedInspector === selectedInspector
-      )
+      filtered = filtered.filter((i) => i.inspector === selectedInspector)
     }
     if (selectedAddress) {
       filtered = filtered.filter((i) => i.address === selectedAddress)
     }
-    if (selectedDistrict) {
-      filtered = filtered.filter((i) => i.district === selectedDistrict)
-    }
-    if (selectedPriority) {
-      filtered = filtered.filter((i) => i.priority === selectedPriority)
-    }
+    // if (selectedDistrict) {
+    //   filtered = filtered.filter((i) => i.district === selectedDistrict)
+    // }
+    // if (selectedPriority) {
+    //   filtered = filtered.filter((i) => i.priority === selectedPriority)
+    // }
 
     return filtered
   }
@@ -66,8 +62,8 @@ export function useInspectionFilters(inspections: ExtendedInspection[]) {
   const clearFilters = () => {
     setSelectedInspector('')
     setSelectedAddress('')
-    setSelectedDistrict('')
-    setSelectedPriority('')
+    // setSelectedDistrict('')
+    // setSelectedPriority('')
   }
 
   const hasActiveFilters =
@@ -92,8 +88,8 @@ export function useInspectionFilters(inspections: ExtendedInspection[]) {
     setOpenPriorityDropdown,
     uniqueInspectors,
     uniqueAddresses,
-    uniqueDistricts,
-    priorityOptions,
+    // uniqueDistricts,
+    // priorityOptions,
     filterInspections,
     clearFilters,
     hasActiveFilters,

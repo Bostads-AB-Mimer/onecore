@@ -10,11 +10,12 @@ import { Input } from '@/components/ui/Input'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { type ExtendedInspection } from './mockdata/mockInspections'
+import { ExternalInspection } from '@/services/api/core/inspectionService'
+
 interface DateCellProps {
-  inspection: ExtendedInspection
+  inspection: ExternalInspection
   readOnly?: boolean
-  onUpdate: (id: string, updates: Partial<ExtendedInspection>) => void
+  onUpdate: (id: string, updates: Partial<ExternalInspection>) => void
 }
 
 export function DateCell({
@@ -22,16 +23,12 @@ export function DateCell({
   readOnly = false,
   onUpdate,
 }: DateCellProps) {
+  const inspectionDate = inspection.date ? new Date(inspection.date) : null
+
   const [timeValue, setTimeValue] = useState(() => {
-    if (inspection.scheduledDate) {
-      const hours = inspection.scheduledDate
-        .getHours()
-        .toString()
-        .padStart(2, '0')
-      const minutes = inspection.scheduledDate
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')
+    if (inspectionDate) {
+      const hours = inspectionDate.getHours().toString().padStart(2, '0')
+      const minutes = inspectionDate.getMinutes().toString().padStart(2, '0')
       return `${hours}:${minutes}`
     }
     return '09:00'
@@ -41,8 +38,8 @@ export function DateCell({
   if (readOnly) {
     return (
       <span className="text-sm whitespace-nowrap">
-        {inspection.scheduledDate
-          ? format(inspection.scheduledDate, 'dd-MM-yyyy HH:mm')
+        {inspectionDate
+          ? format(inspectionDate, 'dd-MM-yyyy HH:mm')
           : 'Ej planerat'}
       </span>
     )
@@ -53,7 +50,7 @@ export function DateCell({
       const [hours, minutes] = timeValue.split(':').map(Number)
       const newDate = new Date(date)
       newDate.setHours(hours, minutes, 0, 0)
-      onUpdate(inspection.id, { scheduledDate: newDate })
+      onUpdate(inspection.id, { date: newDate.toISOString() })
     }
   }
 
@@ -61,12 +58,12 @@ export function DateCell({
     const newTime = e.target.value
     setTimeValue(newTime)
 
-    if (inspection.scheduledDate && /^\d{2}:\d{2}$/.test(newTime)) {
+    if (inspectionDate && /^\d{2}:\d{2}$/.test(newTime)) {
       const [hours, minutes] = newTime.split(':').map(Number)
       if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        const newDate = new Date(inspection.scheduledDate)
+        const newDate = new Date(inspectionDate)
         newDate.setHours(hours, minutes, 0, 0)
-        onUpdate(inspection.id, { scheduledDate: newDate })
+        onUpdate(inspection.id, { date: newDate.toISOString() })
       }
     }
   }
@@ -78,13 +75,13 @@ export function DateCell({
           variant="outline"
           className={cn(
             'w-52 justify-start text-left font-normal',
-            !inspection.scheduledDate && 'text-muted-foreground'
+            !inspectionDate && 'text-muted-foreground'
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           <span className="truncate">
-            {inspection.scheduledDate
-              ? format(inspection.scheduledDate, 'dd-MM-yyyy HH:mm')
+            {inspectionDate
+              ? format(inspectionDate, 'dd-MM-yyyy HH:mm')
               : 'Välj datum och tid'}
           </span>
         </Button>
@@ -92,7 +89,7 @@ export function DateCell({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
-          selected={inspection.scheduledDate}
+          selected={inspectionDate || undefined}
           onSelect={handleDateSelect}
           initialFocus
           className="p-3 pointer-events-auto"
