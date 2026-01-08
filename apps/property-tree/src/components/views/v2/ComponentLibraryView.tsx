@@ -590,7 +590,7 @@ const ComponentLibraryView = () => {
               Ett fel uppstod
             </h2>
             <p className="text-muted-foreground">
-              Kunde inte ladda instanser. Försök igen senare.
+              Kunde inte ladda komponenter. Försök igen senare.
             </p>
           </div>
         )

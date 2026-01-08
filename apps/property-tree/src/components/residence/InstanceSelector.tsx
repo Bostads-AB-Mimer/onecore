@@ -45,7 +45,7 @@ export const InstanceSelector = ({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="instance-search">Välj instans</Label>
+      <Label htmlFor="instance-search">Välj komponent</Label>
 
       <div className="relative">
         <Input
@@ -65,7 +65,7 @@ export const InstanceSelector = ({
 
       {isError && (
         <p className="text-sm text-destructive">
-          Kunde inte ladda instanser. Försök igen.
+          Kunde inte ladda komponenter. Försök igen.
         </p>
       )}
 
@@ -77,7 +77,7 @@ export const InstanceSelector = ({
           </div>
         ) : instances.length === 0 && !isLoading ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            Inga instanser hittades för "{debouncedSearch}"
+            Inga komponenter hittades för "{debouncedSearch}"
           </div>
         ) : (
           <div className="divide-y">
@@ -108,7 +108,7 @@ export const InstanceSelector = ({
 
       {selectedInstance && (
         <div className="mt-2 p-3 bg-accent rounded-md">
-          <p className="text-sm font-medium">Vald instans:</p>
+          <p className="text-sm font-medium">Vald komponent:</p>
           <p className="text-sm text-muted-foreground">
             {selectedInstance.serialNumber}
           </p>
