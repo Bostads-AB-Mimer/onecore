@@ -16,6 +16,14 @@
     "imageName": "onecore-economy"
   },
   {
+    "name": "file-storage",
+    "label": "ONECore File Storage Service",
+    "package": "@onecore/file-storage",
+    "path": "services/file-storage",
+    "docker": true,
+    "imageName": "onecore-file-storage"
+  },
+  {
     "name": "leasing",
     "label": "ONECore Leasing Service",
     "package": "@onecore/leasing",
