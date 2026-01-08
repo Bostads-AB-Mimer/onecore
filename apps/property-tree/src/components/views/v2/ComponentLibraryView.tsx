@@ -1,9 +1,9 @@
 import { useState, Fragment, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { Plus, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { useComponentEntity } from '@/components/hooks/useComponentEntity'
 import { useDebounce } from '@/components/hooks/useDebounce'
+import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import {
   useComponentLibraryHandlers,
   type ViewState,
@@ -188,7 +188,7 @@ function createParamsFromViewState(
 }
 
 const ComponentLibraryView = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const { searchParams, setSearchParams, updateUrlParams } = useUrlPagination()
 
   // Derive viewState from URL params
   const viewState = useMemo(
@@ -221,13 +221,12 @@ const ComponentLibraryView = () => {
       const newSearch = debouncedSearch.trim()
 
       if (currentSearch !== newSearch) {
-        const newParams = createParamsFromViewState(viewState, newSearch)
-        setSearchParams(newParams, { replace: true })
+        updateUrlParams({ search: newSearch || undefined }, { replace: true })
       }
     }
-  }, [debouncedSearch, viewState, searchParams, setSearchParams])
+  }, [debouncedSearch, viewState, searchParams, updateUrlParams])
 
-  // Navigation helper that updates URL
+  // Navigation helper that updates URL (replaces all params for level changes)
   const navigateTo = (newState: ViewState) => {
     const params = createParamsFromViewState(newState)
     setSearchParams(params)
@@ -499,9 +498,7 @@ const ComponentLibraryView = () => {
             onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter undertyp..."
           />
-          {!subtypesLoading &&
-          subtypes?.length === 0 &&
-          hasActiveSearch ? (
+          {!subtypesLoading && subtypes?.length === 0 && hasActiveSearch ? (
             <div className="text-center py-16 space-y-4">
               <h2 className="text-xl font-medium text-muted-foreground">
                 Inga undertyper matchar sökningen
@@ -638,9 +635,7 @@ const ComponentLibraryView = () => {
             onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter serienummer..."
           />
-          {!instancesLoading &&
-          instances?.length === 0 &&
-          hasActiveSearch ? (
+          {!instancesLoading && instances?.length === 0 && hasActiveSearch ? (
             <div className="text-center py-16 space-y-4">
               <h2 className="text-xl font-medium text-muted-foreground">
                 Inga komponenter matchar sökningen
