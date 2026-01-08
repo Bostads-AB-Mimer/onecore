@@ -1,4 +1,5 @@
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { useComponentEntity } from '@/components/hooks/useComponentEntity'
@@ -58,8 +59,180 @@ function useDialogState<T>() {
   }
 }
 
+// Helper function to derive ViewState from URL search params
+function deriveViewStateFromParams(searchParams: URLSearchParams): ViewState {
+  const level = searchParams.get('level') || 'categories'
+
+  if (level === 'types') {
+    const categoryId = searchParams.get('categoryId')
+    const categoryName = searchParams.get('categoryName')
+    if (categoryId && categoryName) {
+      return { level: 'types', categoryId, categoryName }
+    }
+  }
+
+  if (level === 'subtypes') {
+    const categoryId = searchParams.get('categoryId')
+    const categoryName = searchParams.get('categoryName')
+    const typeId = searchParams.get('typeId')
+    const typeName = searchParams.get('typeName')
+    if (categoryId && categoryName && typeId && typeName) {
+      return { level: 'subtypes', categoryId, categoryName, typeId, typeName }
+    }
+  }
+
+  if (level === 'models') {
+    const categoryId = searchParams.get('categoryId')
+    const categoryName = searchParams.get('categoryName')
+    const typeId = searchParams.get('typeId')
+    const typeName = searchParams.get('typeName')
+    const subtypeId = searchParams.get('subtypeId')
+    const subtypeName = searchParams.get('subtypeName')
+    if (
+      categoryId &&
+      categoryName &&
+      typeId &&
+      typeName &&
+      subtypeId &&
+      subtypeName
+    ) {
+      return {
+        level: 'models',
+        categoryId,
+        categoryName,
+        typeId,
+        typeName,
+        subtypeId,
+        subtypeName,
+      }
+    }
+  }
+
+  if (level === 'instances') {
+    const categoryId = searchParams.get('categoryId')
+    const categoryName = searchParams.get('categoryName')
+    const typeId = searchParams.get('typeId')
+    const typeName = searchParams.get('typeName')
+    const subtypeId = searchParams.get('subtypeId')
+    const subtypeName = searchParams.get('subtypeName')
+    const modelId = searchParams.get('modelId')
+    const modelName = searchParams.get('modelName')
+    if (
+      categoryId &&
+      categoryName &&
+      typeId &&
+      typeName &&
+      subtypeId &&
+      subtypeName &&
+      modelId &&
+      modelName
+    ) {
+      return {
+        level: 'instances',
+        categoryId,
+        categoryName,
+        typeId,
+        typeName,
+        subtypeId,
+        subtypeName,
+        modelId,
+        modelName,
+      }
+    }
+  }
+
+  // Default to categories
+  return { level: 'categories' }
+}
+
+// Helper function to create URL params from ViewState
+function createParamsFromViewState(
+  state: ViewState,
+  search?: string
+): URLSearchParams {
+  const params = new URLSearchParams()
+
+  if (state.level === 'categories') {
+    // No params needed for categories
+    return params
+  }
+
+  params.set('level', state.level)
+  params.set('categoryId', state.categoryId)
+  params.set('categoryName', state.categoryName)
+
+  if (
+    state.level === 'subtypes' ||
+    state.level === 'models' ||
+    state.level === 'instances'
+  ) {
+    params.set('typeId', state.typeId)
+    params.set('typeName', state.typeName)
+  }
+
+  if (state.level === 'models' || state.level === 'instances') {
+    params.set('subtypeId', state.subtypeId)
+    params.set('subtypeName', state.subtypeName)
+  }
+
+  if (state.level === 'instances') {
+    params.set('modelId', state.modelId)
+    params.set('modelName', state.modelName)
+  }
+
+  if (search && search.trim()) {
+    params.set('search', search.trim())
+  }
+
+  return params
+}
+
 const ComponentLibraryView = () => {
-  const [viewState, setViewState] = useState<ViewState>({ level: 'categories' })
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Derive viewState from URL params
+  const viewState = useMemo(
+    () => deriveViewStateFromParams(searchParams),
+    [searchParams]
+  )
+
+  // Local search input state for immediate feedback
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get('search') || ''
+  )
+
+  // Sync search input when URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || ''
+    setSearchInput(urlSearch)
+  }, [searchParams])
+
+  // Debounced search for API calls
+  const debouncedSearch = useDebounce(searchInput, 300)
+
+  // Update URL when debounced search changes (only for levels that support search)
+  useEffect(() => {
+    if (
+      viewState.level === 'subtypes' ||
+      viewState.level === 'models' ||
+      viewState.level === 'instances'
+    ) {
+      const currentSearch = searchParams.get('search') || ''
+      const newSearch = debouncedSearch.trim()
+
+      if (currentSearch !== newSearch) {
+        const newParams = createParamsFromViewState(viewState, newSearch)
+        setSearchParams(newParams, { replace: true })
+      }
+    }
+  }, [debouncedSearch, viewState, searchParams, setSearchParams])
+
+  // Navigation helper that updates URL
+  const navigateTo = (newState: ViewState) => {
+    const params = createParamsFromViewState(newState)
+    setSearchParams(params)
+    setSearchInput('') // Reset search when navigating
+  }
 
   // Dialog states using helper
   const categoryDialog = useDialogState<ComponentCategory>()
@@ -73,14 +246,6 @@ const ComponentLibraryView = () => {
   }>({
     isOpen: false,
   })
-
-  // Search state
-  const [subtypeSearch, setSubtypeSearch] = useState('')
-  const [modelSearch, setModelSearch] = useState('')
-  const [instanceSearch, setInstanceSearch] = useState('')
-  const debouncedSubtypeSearch = useDebounce(subtypeSearch, 300)
-  const debouncedModelSearch = useDebounce(modelSearch, 300)
-  const debouncedInstanceSearch = useDebounce(instanceSearch, 300)
 
   const {
     data: categories,
@@ -108,8 +273,8 @@ const ComponentLibraryView = () => {
       : '',
     {
       search:
-        debouncedSubtypeSearch.trim().length >= 2
-          ? debouncedSubtypeSearch
+        viewState.level === 'subtypes' && debouncedSearch.trim().length >= 2
+          ? debouncedSearch
           : undefined,
     }
   )
@@ -123,8 +288,8 @@ const ComponentLibraryView = () => {
     viewState.level === 'models' ? viewState.subtypeId : '',
     {
       search:
-        debouncedModelSearch.trim().length >= 2
-          ? debouncedModelSearch
+        viewState.level === 'models' && debouncedSearch.trim().length >= 2
+          ? debouncedSearch
           : undefined,
     }
   )
@@ -138,8 +303,8 @@ const ComponentLibraryView = () => {
     viewState.level === 'instances' ? viewState.modelId : '',
     {
       search:
-        debouncedInstanceSearch.trim().length >= 2
-          ? debouncedInstanceSearch
+        viewState.level === 'instances' && debouncedSearch.trim().length >= 2
+          ? debouncedSearch
           : undefined,
     }
   )
@@ -170,9 +335,7 @@ const ComponentLibraryView = () => {
     handleCloseInstanceDetailsDialog,
   } = useComponentLibraryHandlers({
     viewState,
-    setViewState,
-    setModelSearch,
-    setInstanceSearch,
+    navigateTo,
     setInstanceDetailsDialogState,
     categoryDialog,
     typeDialog,
@@ -325,8 +488,8 @@ const ComponentLibraryView = () => {
             addNewLabel="Ny undertyp"
             itemCount={subtypes?.length}
             levelName="undertyper"
-            searchValue={subtypeSearch}
-            onSearchChange={setSubtypeSearch}
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter undertyp..."
           />
           <SubtypesTable
@@ -373,8 +536,8 @@ const ComponentLibraryView = () => {
             addNewLabel="Ny modell"
             itemCount={models?.length}
             levelName="modeller"
-            searchValue={modelSearch}
-            onSearchChange={setModelSearch}
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter modell eller tillverkare..."
           />
           <ModelsTable
@@ -426,8 +589,8 @@ const ComponentLibraryView = () => {
             addNewLabel="Ny komponent"
             itemCount={instances?.length}
             levelName="komponenter"
-            searchValue={instanceSearch}
-            onSearchChange={setInstanceSearch}
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter serienummer..."
           />
           <InstancesTable
@@ -455,7 +618,7 @@ const ComponentLibraryView = () => {
       label: 'Kategorier',
       onClick:
         viewState.level !== 'categories'
-          ? () => setViewState({ level: 'categories' })
+          ? () => navigateTo({ level: 'categories' })
           : undefined,
     })
 
@@ -467,7 +630,7 @@ const ComponentLibraryView = () => {
       onClick:
         viewState.level !== 'types'
           ? () =>
-              setViewState({
+              navigateTo({
                 level: 'types',
                 categoryId: viewState.categoryId,
                 categoryName: viewState.categoryName,
@@ -483,7 +646,7 @@ const ComponentLibraryView = () => {
       onClick:
         viewState.level !== 'subtypes'
           ? () =>
-              setViewState({
+              navigateTo({
                 level: 'subtypes',
                 typeId: viewState.typeId,
                 typeName: viewState.typeName,
@@ -501,7 +664,7 @@ const ComponentLibraryView = () => {
       onClick:
         viewState.level !== 'models'
           ? () =>
-              setViewState({
+              navigateTo({
                 level: 'models',
                 subtypeId: viewState.subtypeId,
                 subtypeName: viewState.subtypeName,
