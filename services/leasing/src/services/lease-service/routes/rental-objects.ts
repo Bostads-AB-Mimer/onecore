@@ -134,7 +134,7 @@ export const routes = (router: KoaRouter) => {
 
     if (result.ok) {
       //get rent
-      const rentResult = await tenfastAdapter.getMonthlyRentForRentalObject(
+      const rentResult = await tenfastAdapter.getRentForRentalObject(
         rentalObjectCode,
         false
       )
@@ -142,7 +142,7 @@ export const routes = (router: KoaRouter) => {
       if (rentResult.ok) {
         ctx.status = 200
         ctx.body = {
-          content: { ...result.data, monthlyRent: rentResult.data },
+          content: { ...result.data, rent: rentResult.data },
           ...metadata,
         }
         return
@@ -155,7 +155,7 @@ export const routes = (router: KoaRouter) => {
 
       //return result without rent
       ctx.status = 200
-      ctx.body = { content: { ...result.data, monthlyRent: 0 }, ...metadata }
+      ctx.body = { content: result.data, ...metadata }
       return
     }
 
@@ -272,14 +272,14 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
 
-    const result = await tenfastAdapter.getMonthlyRentForRentalObject(
+    const result = await tenfastAdapter.getRentForRentalObject(
       rentalObjectCode,
       false
     )
 
     if (result.ok) {
       ctx.status = 200
-      ctx.body = { rent: result.data, ...metadata }
+      ctx.body = { content: result.data, ...metadata }
       return
     }
 

@@ -85,15 +85,6 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
-  //TODO: Need to serve Mimer.nu with rent.
-
-  //TODO: This route is not used anywhere (yet?). Rename to /parking-spaces/by-code/{rentalObjectCode}??
-  //TODO: add /apartments/by-code/{rentalObjectCode} as well. Should it be named residences???
-  //TODO: add /storage-units/by-code/{rentalObjectCode} as well. Or another name?
-
-  //TODO: What routes are property-tree using? /rental-properties
-  //TODO: What routes are odoo using? /residences
-
   /**
    * @swagger
    * /rental-objects/by-code/{rentalObjectCode}:
@@ -245,6 +236,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: { rent: result.data }, ...metadata }
+    ctx.body = { content: result.data, ...metadata }
   })
 }
+
+//TODO: Add route to get rent for a list of rental objects
