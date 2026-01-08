@@ -470,7 +470,14 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (!subtypesLoading && (!subtypes || subtypes.length === 0)) {
+      const hasActiveSearch = searchInput.trim().length > 0
+
+      // Empty state: no subtypes exist AND no active search
+      if (
+        !subtypesLoading &&
+        (!subtypes || subtypes.length === 0) &&
+        !hasActiveSearch
+      ) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga undertyper ännu</h2>
@@ -492,13 +499,26 @@ const ComponentLibraryView = () => {
             onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter undertyp..."
           />
-          <SubtypesTable
-            subtypes={subtypes || []}
-            isLoading={subtypesLoading}
-            onEdit={handleEditSubtype}
-            onDelete={handleDeleteSubtype}
-            onNavigate={handleNavigateToModels}
-          />
+          {!subtypesLoading &&
+          subtypes?.length === 0 &&
+          hasActiveSearch ? (
+            <div className="text-center py-16 space-y-4">
+              <h2 className="text-xl font-medium text-muted-foreground">
+                Inga undertyper matchar sökningen
+              </h2>
+              <p className="text-muted-foreground">
+                Försök med en annan sökterm
+              </p>
+            </div>
+          ) : (
+            <SubtypesTable
+              subtypes={subtypes || []}
+              isLoading={subtypesLoading}
+              onEdit={handleEditSubtype}
+              onDelete={handleDeleteSubtype}
+              onNavigate={handleNavigateToModels}
+            />
+          )}
         </>
       )
     }
@@ -518,7 +538,14 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (!modelsLoading && (!models || models.length === 0)) {
+      const hasActiveSearch = searchInput.trim().length > 0
+
+      // Empty state: no models exist AND no active search
+      if (
+        !modelsLoading &&
+        (!models || models.length === 0) &&
+        !hasActiveSearch
+      ) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga modeller ännu</h2>
@@ -540,14 +567,25 @@ const ComponentLibraryView = () => {
             onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter modell eller tillverkare..."
           />
-          <ModelsTable
-            models={models || []}
-            isLoading={modelsLoading}
-            onEdit={handleEditModel}
-            onDelete={handleDeleteModel}
-            onNavigate={handleNavigateToInstances}
-            onCreateInstance={handleCreateInstance}
-          />
+          {!modelsLoading && models?.length === 0 && hasActiveSearch ? (
+            <div className="text-center py-16 space-y-4">
+              <h2 className="text-xl font-medium text-muted-foreground">
+                Inga modeller matchar sökningen
+              </h2>
+              <p className="text-muted-foreground">
+                Försök med en annan sökterm
+              </p>
+            </div>
+          ) : (
+            <ModelsTable
+              models={models || []}
+              isLoading={modelsLoading}
+              onEdit={handleEditModel}
+              onDelete={handleDeleteModel}
+              onNavigate={handleNavigateToInstances}
+              onCreateInstance={handleCreateInstance}
+            />
+          )}
         </>
       )
     }
@@ -567,7 +605,14 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (!instancesLoading && (!instances || instances.length === 0)) {
+      const hasActiveSearch = searchInput.trim().length > 0
+
+      // Empty state: no instances exist AND no active search
+      if (
+        !instancesLoading &&
+        (!instances || instances.length === 0) &&
+        !hasActiveSearch
+      ) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga komponenter ännu</h2>
@@ -593,13 +638,26 @@ const ComponentLibraryView = () => {
             onSearchChange={setSearchInput}
             searchPlaceholder="Sök efter serienummer..."
           />
-          <InstancesTable
-            instances={instances || []}
-            isLoading={instancesLoading}
-            onEdit={handleEditInstance}
-            onDelete={handleDeleteInstance}
-            onViewHistory={handleViewHistory}
-          />
+          {!instancesLoading &&
+          instances?.length === 0 &&
+          hasActiveSearch ? (
+            <div className="text-center py-16 space-y-4">
+              <h2 className="text-xl font-medium text-muted-foreground">
+                Inga komponenter matchar sökningen
+              </h2>
+              <p className="text-muted-foreground">
+                Försök med en annan sökterm
+              </p>
+            </div>
+          ) : (
+            <InstancesTable
+              instances={instances || []}
+              isLoading={instancesLoading}
+              onEdit={handleEditInstance}
+              onDelete={handleDeleteInstance}
+              onViewHistory={handleViewHistory}
+            />
+          )}
         </>
       )
     }
