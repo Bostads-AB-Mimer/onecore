@@ -1,4 +1,4 @@
-import { logger } from '@onecore/utilities'
+import { logger, loggedAxios as axios } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 
 import { AdapterResult } from '../types'
@@ -1534,13 +1534,19 @@ export async function uploadComponentFile(
       formData.append('caption', caption)
     }
 
-    const response = await client().POST('/documents/upload' as any, {
-      body: formData as any,
-      headers: formData.getHeaders() as any,
-    })
+    // Use axios for multipart uploads (same pattern as keys-adapter)
+    const response = await axios.post<DocumentWithUrl>(
+      `${config.propertyBaseService.url}/documents/upload`,
+      formData as any,
+      {
+        headers: formData.getHeaders(),
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      }
+    )
 
     if (response.data) {
-      return { ok: true, data: response.data as DocumentWithUrl }
+      return { ok: true, data: response.data }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1631,13 +1637,19 @@ export async function uploadComponentModelDocument(
     })
     formData.append('componentModelId', modelId)
 
-    const response = await client().POST('/documents/upload' as any, {
-      body: formData as any,
-      headers: formData.getHeaders() as any,
-    })
+    // Use axios for multipart uploads (same pattern as keys-adapter)
+    const response = await axios.post<DocumentWithUrl>(
+      `${config.propertyBaseService.url}/documents/upload`,
+      formData as any,
+      {
+        headers: formData.getHeaders(),
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      }
+    )
 
     if (response.data) {
-      return { ok: true, data: response.data as DocumentWithUrl }
+      return { ok: true, data: response.data }
     }
 
     return { ok: false, err: 'unknown' }

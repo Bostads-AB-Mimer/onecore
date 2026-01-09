@@ -456,20 +456,20 @@ export function ComponentModelDocuments({
                       </Button>
                       <Button
                         variant={
-                          deleteConfirm === doc.fileId
+                          deleteConfirm === doc.id
                             ? 'destructive'
                             : 'outline'
                         }
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDelete(doc.fileId)
+                          handleDelete(doc.id)
                         }}
                         disabled={isDeleting}
                         title="Ta bort"
                       >
                         <Trash2 className="h-4 w-4" />
-                        {deleteConfirm === doc.fileId && (
+                        {deleteConfirm === doc.id && (
                           <span className="ml-1 text-xs">Bekräfta?</span>
                         )}
                       </Button>
