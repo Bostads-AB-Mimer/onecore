@@ -213,9 +213,9 @@ export function ComponentImageGallery({
   const handleDelete = () => {
     if (!currentImage) return
 
-    if (deleteConfirm === currentImage.fileId) {
+    if (deleteConfirm === currentImage.id) {
       // Actually delete
-      deleteImage(currentImage.fileId, {
+      deleteImage(currentImage.id, {
         onSuccess: () => {
           setDeleteConfirm(null)
           // If we deleted the last image in the list, go back one
@@ -226,7 +226,7 @@ export function ComponentImageGallery({
       })
     } else {
       // Show confirmation
-      setDeleteConfirm(currentImage.fileId)
+      setDeleteConfirm(currentImage.id)
       // Auto-cancel confirmation after 3 seconds
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
@@ -438,7 +438,7 @@ export function ComponentImageGallery({
               <div className="flex gap-2">
                 <Button
                   variant={
-                    deleteConfirm === currentImage.fileId
+                    deleteConfirm === currentImage.id
                       ? 'destructive'
                       : 'outline'
                   }
@@ -447,7 +447,7 @@ export function ComponentImageGallery({
                   disabled={isDeleting}
                 >
                   <Trash2 className="h-4 w-4" />
-                  {deleteConfirm === currentImage.fileId ? 'Bekräfta?' : ''}
+                  {deleteConfirm === currentImage.id ? 'Bekräfta?' : ''}
                 </Button>
               </div>
             </div>
