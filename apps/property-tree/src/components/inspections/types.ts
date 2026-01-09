@@ -2,6 +2,8 @@
 // not be the natural home for these definitions - currently mirrors
 // the Lovable code
 
+import { components } from '@/services/api/core/generated/api-types'
+
 export interface InspectionRoom {
   roomId: string
   conditions: {
@@ -64,25 +66,33 @@ export interface ResidenceInfo {
   size: number | null
 }
 
-export interface Inspection {
+// Internal inspection (created locally with full room details)
+export interface InternalInspection {
+  _tag: 'internal'
   id: string
   inspectionNumber: string
   date: string
   inspectedBy: string
   rooms: Record<string, InspectionRoom>
   status: InspectionStatus
-
-  // Auto-hämtad residence-info
-  residence: ResidenceInfo
-
-  // Snapshot av hyresgäst vid besiktningstillfället
-  tenant?: TenantSnapshot
-
-  // Från formuläret
   needsMasterKey: boolean
-
   isCompleted?: boolean // Deprecated, use status instead
+
+  // Optional fields that can be added to both types
+  residence?: ResidenceInfo
+  tenant?: TenantSnapshot
 }
+
+// External inspection from Xpand API
+export type ExternalInspection = {
+  _tag: 'external'
+  // Optional fields that can be added to both types
+  residence?: ResidenceInfo
+  tenant?: TenantSnapshot
+} & components['schemas']['XpandInspection']
+
+// Union type: an inspection is either internal or external
+export type Inspection = InternalInspection | ExternalInspection
 
 // Data som skickas från formulär till sparfunktion
 export interface InspectionSubmitData {

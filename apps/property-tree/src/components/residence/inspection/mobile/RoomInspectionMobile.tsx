@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import type { Room } from '@/services/types'
-import type { InspectionRoom } from '@/components/residence/inspection/types'
+import type { InspectionRoom } from '@/components/inspections/types'
 import { ComponentInspectionCard } from '@/components/residence/inspection/ComponentInspectionCard'
 import { ComponentDetailSheet } from '@/components/residence/inspection/ComponentDetailSheet'
 

@@ -1,14 +1,14 @@
 import { useState, useCallback } from 'react'
 import type {
   InspectionRoom,
-  Inspection,
-} from '@/components/residence/inspection/types'
+  InternalInspection,
+} from '@/components/inspections/types'
 import type { Room } from '@/services/types'
 import { initializeInspectionData } from '@/components/residence/inspection/form/initialData'
 
 export function useInspectionForm(
   rooms: Room[],
-  existingInspection?: Inspection
+  existingInspection?: InternalInspection
 ) {
   const [inspectorName, setInspectorName] = useState(
     existingInspection?.inspectedBy || ''

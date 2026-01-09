@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { Grid } from '@/components/ui/Grid'
-import { residenceService } from '@/services/api/core'
+import { residenceService, inspectionService } from '@/services/api/core'
 import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { ResidenceBasicInfo } from '@/components/residence/ResidenceBasicInfo'
 import {
@@ -22,8 +22,6 @@ import { components } from '@/services/api/core/generated/api-types'
 type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
 import { useToast } from '@/components/hooks/useToast'
 
-import type { Inspection } from '@/components/residence/inspection/types'
-
 export function ResidenceView() {
   const { residenceId } = useParams()
 
@@ -33,12 +31,20 @@ export function ResidenceView() {
     enabled: !!residenceId,
   })
 
-  const isLoading = residenceQuery.isLoading
-  const error = residenceQuery.error
   const residence = residenceQuery.data
 
-  // Mock/placeholder data for InspectionsList
-  const inspections: Inspection[] = []
+  const inspectionsQuery = useQuery({
+    queryKey: ['inspections', residence?.propertyObject.rentalId],
+    queryFn: () =>
+      inspectionService.getInspectionsForResidence(
+        residence!.propertyObject.rentalId!
+      ),
+    enabled: !!residence?.propertyObject.rentalId,
+  })
+
+  const isLoading = residenceQuery.isLoading || inspectionsQuery.isLoading
+  const error = residenceQuery.error || inspectionsQuery.error
+  const inspections = inspectionsQuery.data ?? []
   const tenant: Tenant | null = null
 
   const { toast } = useToast()

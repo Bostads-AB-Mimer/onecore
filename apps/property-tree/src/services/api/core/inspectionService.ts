@@ -25,4 +25,21 @@ export const inspectionService = {
       ...v,
     }))
   },
+
+  async getInspectionsForResidence(residenceId: string): Promise<Inspection[]> {
+    const externalInspections = await GET(
+      '/inspections/xpand/residence/{residenceId}',
+      {
+        params: { path: { residenceId } },
+      }
+    )
+    if (externalInspections.error) throw externalInspections.error
+    if (!externalInspections.data.content)
+      throw new Error('No data returned from API')
+
+    return (externalInspections.data.content.inspections ?? []).map((v) => ({
+      _tag: 'external' as const,
+      ...v,
+    }))
+  },
 }

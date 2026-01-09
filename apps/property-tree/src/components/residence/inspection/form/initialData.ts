@@ -1,4 +1,4 @@
-import type { InspectionRoom } from '../types'
+import type { InspectionRoom } from '@/components/inspections/types'
 
 export const initialRoomData: InspectionRoom = {
   roomId: '',

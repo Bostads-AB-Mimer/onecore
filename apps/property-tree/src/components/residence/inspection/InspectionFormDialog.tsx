@@ -18,8 +18,8 @@ import type { Room } from '@/services/types'
 import type {
   InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
-  Inspection,
-} from '@/components/residence/inspection/types'
+  InternalInspection,
+} from '@/components/inspections/types'
 
 interface InspectionFormDialogProps {
   isOpen: boolean
@@ -33,11 +33,11 @@ interface InspectionFormDialogProps {
   rooms: Room[]
   buttonSize?: string
   tenant?: any
-  existingInspection?: Inspection
+  existingInspection?: InternalInspection
 }
 
 // Check if inspection has actual saved data
-const hasExistingData = (inspection?: Inspection): boolean => {
+const hasExistingData = (inspection?: InternalInspection): boolean => {
   if (!inspection?.rooms) return false
   return (
     Object.keys(inspection.rooms).length > 0 &&
