@@ -10,7 +10,7 @@ export const ComponentStatusEnum = z.enum([
   'DECOMMISSIONED',
 ])
 
-export const SpaceTypeEnum = z.enum(['OBJECT'])
+export const SpaceTypeEnum = z.enum(['OBJECT', 'PropertyObject'])
 
 // ==================== COMPONENTS (INSTANCES) ====================
 
