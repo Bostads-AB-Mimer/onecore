@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { MoreHorizontal, Edit, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import {
@@ -162,9 +162,8 @@ export function DataTable<T extends { id: string }>({
               const expandedContentNode = canExpand ? expandableContent!(item) : null
 
               return (
-                <>
+                <Fragment key={item.id}>
                   <tr
-                    key={item.id}
                     className={cn(
                       'border-b hover:bg-muted/50 transition-colors',
                       onRowClick && 'cursor-pointer'
