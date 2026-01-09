@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { LoadingState } from '@/components/residence/LoadingState'
 import { ErrorState } from '@/components/residence/ErrorState'
 import { useIsMobile } from '@/components/hooks/useMobile'
@@ -21,9 +22,13 @@ import {
   ContextType,
   WorkOrdersManagement,
 } from '@/components/work-orders/WorkOrdersManagement'
-import { Lease } from '@/services/api/core'
+import { Lease, inspectionService } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
+import { InspectionsList } from '@/components/residence/inspection/InspectionsList'
+import { useToast } from '@/components/hooks/useToast'
+import { components } from '@/services/api/core/generated/api-types'
+type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -37,6 +42,26 @@ export const ResidenceView = () => {
     leasesIsLoading,
     leasesError,
   } = useResidenceDetail(residenceId!)
+
+  const inspectionsQuery = useQuery({
+    queryKey: ['inspections', residence?.propertyObject.rentalId],
+    queryFn: () =>
+      inspectionService.getInspectionsForResidence(
+        residence!.propertyObject.rentalId!
+      ),
+    enabled: !!residence?.propertyObject.rentalId,
+  })
+
+  const inspections = inspectionsQuery.data ?? []
+  const tenant: Tenant | null = null
+
+  const { toast } = useToast()
+  const handleInspectionCreated = () => {
+    console.log('Besiktning skapad')
+    toast({
+      description: `Besiktningen har skapats`,
+    })
+  }
 
   const isMobile = useIsMobile()
 
@@ -83,7 +108,6 @@ export const ResidenceView = () => {
                 <span className="hidden sm:inline">Bofaktablad</span>
               </TabsTrigger>
               <TabsTrigger
-                disabled
                 value="inspections"
                 className="flex items-center gap-1.5"
               >
@@ -124,9 +148,13 @@ export const ResidenceView = () => {
             <TabsContent value="inspections">
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-center text-sm text-muted-foreground">
-                    Besiktningar kommer snart att finnas tillgängliga här.
-                  </div>
+                  <InspectionsList
+                    residenceId={residence.id}
+                    inspections={inspections}
+                    onInspectionCreated={handleInspectionCreated}
+                    tenant={tenant}
+                    residence={residence}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

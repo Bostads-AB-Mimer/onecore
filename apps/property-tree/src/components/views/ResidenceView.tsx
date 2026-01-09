@@ -1,77 +1,43 @@
-import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { Info, ClipboardList, Users, MessageSquare } from 'lucide-react'
 
 import { Grid } from '@/components/ui/Grid'
-import { residenceService, inspectionService } from '@/services/api/core'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
-import { ResidenceBasicInfo } from '@/components/residence/ResidenceBasicInfo'
+import { ResidenceBasicInfo } from '../residence/ResidenceBasicInfo'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
+import { Card, CardContent } from '../ui/v2/Card'
+import { RoomInfo } from '../residence/RoomInfo'
+import { TenantInformation } from '../residence/TenantInformation'
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
-import { Card, CardContent } from '@/components/ui/v2/Card'
-import { RoomInfo } from '@/components/residence/RoomInfo'
-import { TenantInformation } from '@/components/residence/TenantInformation'
-import { TabLayout } from '@/components/ui/TabLayout'
-import { InspectionsList } from '@/components/residence/inspection/InspectionsList'
-import { components } from '@/services/api/core/generated/api-types'
-type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
-import { useToast } from '@/components/hooks/useToast'
+  ContextType,
+  WorkOrdersManagement,
+} from '../work-orders/WorkOrdersManagement'
+import { useResidenceDetail } from '../hooks/useResidenceDetail'
 
 export function ResidenceView() {
   const { residenceId } = useParams()
 
-  const residenceQuery = useQuery({
-    queryKey: ['residence', residenceId],
-    queryFn: () => residenceService.getById(residenceId!),
-    enabled: !!residenceId,
-  })
+  const {
+    residence,
+    residenceIsLoading,
+    residenceError,
+    building,
+    buildingIsLoading,
+    buildingError,
+    leases,
+    leasesIsLoading,
+    leasesError,
+  } = useResidenceDetail(residenceId!)
 
-  const residence = residenceQuery.data
+  const currentRent =
+    leases && leases.length > 0
+      ? leases[0]?.rentInfo?.currentRent?.currentRent
+      : null
 
-  const inspectionsQuery = useQuery({
-    queryKey: ['inspections', residence?.propertyObject.rentalId],
-    queryFn: () =>
-      inspectionService.getInspectionsForResidence(
-        residence!.propertyObject.rentalId!
-      ),
-    enabled: !!residence?.propertyObject.rentalId,
-  })
-
-  const isLoading = residenceQuery.isLoading || inspectionsQuery.isLoading
-  const error = residenceQuery.error || inspectionsQuery.error
-  const inspections = inspectionsQuery.data ?? []
-  const tenant: Tenant | null = null
-
-  const { toast } = useToast()
-  const handleInspectionCreated = () => {
-    // setInspections(loadInspections()) // Relevant once we have real data
-    console.log('Besiktning skapad')
-    toast({
-      description: `Besiktningen har skapats`,
-    })
-  }
-
-  // Debug: Log residence data when it changes
-  useEffect(() => {
-    if (residence) {
-      console.log('🏠 ResidenceView - Residence data loaded:', residence)
-      console.log(
-        '🏠 ResidenceView - Residence JSON:',
-        JSON.stringify(residence, null, 2)
-      )
-    }
-  }, [residence])
-
-  if (isLoading) {
+  if (residenceIsLoading) {
     return <LoadingSkeleton />
   }
 
-  if (error || !residence) {
+  if (residenceError || !residence) {
     return (
       <div className="py-4 text-center">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -84,7 +50,11 @@ export function ResidenceView() {
   return (
     <div className="py-4 animate-in grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-3 space-y-6">
-        <ResidenceBasicInfo residence={residence} />
+        <ResidenceBasicInfo
+          residence={residence}
+          building={building}
+          rent={currentRent}
+        />
       </div>
 
       <div className="lg:col-span-3 space-y-6">
@@ -95,6 +65,7 @@ export function ResidenceView() {
               Rumsinformation
             </TabsTrigger>
             <TabsTrigger
+              disabled
               value="inspections"
               className="flex items-center gap-1.5"
             >
@@ -120,30 +91,21 @@ export function ResidenceView() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="inspections">
-            <TabLayout title="Besiktningar" count={0} showCard={true}>
-              <InspectionsList
-                residenceId={residence.id}
-                inspections={inspections}
-                onInspectionCreated={handleInspectionCreated}
-                tenant={tenant}
-                residence={residence}
-              />
-            </TabLayout>
-          </TabsContent>
           <TabsContent value="tenant">
             <Card>
               <CardContent className="p-4">
                 <TenantInformation
-                  rentalPropertyId={residence.propertyObject.rentalId!}
+                  isLoading={leasesIsLoading}
+                  error={leasesError}
+                  lease={leases[0]}
                 />
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="workorders">
-            {residence.propertyObject.rentalId && (
+            {residence?.propertyObject.rentalId && (
               <WorkOrdersManagement
-                contextType="residence"
+                contextType={ContextType.Residence}
                 id={residence.propertyObject.rentalId}
               />
             )}
@@ -187,5 +149,3 @@ function LoadingSkeleton() {
     </div>
   )
 }
-
-export default ResidenceView
