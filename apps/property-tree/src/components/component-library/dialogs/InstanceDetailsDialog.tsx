@@ -43,9 +43,15 @@ export const InstanceDetailsDialog = ({
 }: InstanceDetailsDialogProps) => {
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadDragActive, setUploadDragActive] = useState(false)
-  const [uploadValidationError, setUploadValidationError] = useState<string | null>(null)
+  const [uploadValidationError, setUploadValidationError] = useState<
+    string | null
+  >(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [previewDoc, setPreviewDoc] = useState<{ url: string; originalName: string; mimeType: string } | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<{
+    url: string
+    originalName: string
+    mimeType: string
+  } | null>(null)
 
   const {
     images: documents,
@@ -58,7 +64,16 @@ export const InstanceDetailsDialog = ({
     isDeleting,
   } = useComponentImages(instance.id)
 
-  const dangerousExtensions = ['.exe', '.dll', '.bat', '.sh', '.app', '.msi', '.cmd', '.scr']
+  const dangerousExtensions = [
+    '.exe',
+    '.dll',
+    '.bat',
+    '.sh',
+    '.app',
+    '.msi',
+    '.cmd',
+    '.scr',
+  ]
 
   const validateAndSetUploadFile = (file: File) => {
     setUploadValidationError(null)
@@ -109,7 +124,9 @@ export const InstanceDetailsDialog = ({
     validateAndSetUploadFile(files[0])
   }
 
-  const handleUploadFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadFileInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
       validateAndSetUploadFile(selectedFile)
@@ -161,8 +178,11 @@ export const InstanceDetailsDialog = ({
   }
 
   const canPreview = (mimeType: string, fileName: string): boolean => {
-    return mimeType.includes('pdf') || fileName.toLowerCase().endsWith('.pdf') ||
-           mimeType.startsWith('image/')
+    return (
+      mimeType.includes('pdf') ||
+      fileName.toLowerCase().endsWith('.pdf') ||
+      mimeType.startsWith('image/')
+    )
   }
 
   const getStatusVariant = (
@@ -369,7 +389,8 @@ export const InstanceDetailsDialog = ({
           {/* Documents Section */}
           <div>
             <h3 className="font-semibold mb-3">
-              Dokument {documents && documents.length > 0 && `(${documents.length})`}
+              Dokument{' '}
+              {documents && documents.length > 0 && `(${documents.length})`}
             </h3>
 
             {docsLoading ? (
@@ -391,10 +412,14 @@ export const InstanceDetailsDialog = ({
                   className={cn(
                     'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors',
                     uploadDragActive && 'border-primary bg-primary/5',
-                    !uploadDragActive && !uploadFile && 'border-gray-300 hover:border-gray-400',
+                    !uploadDragActive &&
+                      !uploadFile &&
+                      'border-gray-300 hover:border-gray-400',
                     uploadFile && 'bg-green-50 border-green-300'
                   )}
-                  onClick={() => document.getElementById('instance-file-input')?.click()}
+                  onClick={() =>
+                    document.getElementById('instance-file-input')?.click()
+                  }
                 >
                   <input
                     id="instance-file-input"
@@ -439,7 +464,9 @@ export const InstanceDetailsDialog = ({
                 </div>
 
                 {uploadValidationError && (
-                  <p className="text-sm text-red-600">{uploadValidationError}</p>
+                  <p className="text-sm text-red-600">
+                    {uploadValidationError}
+                  </p>
                 )}
 
                 {uploadError && (
@@ -453,21 +480,28 @@ export const InstanceDetailsDialog = ({
                   <div className="space-y-2">
                     {documents.map((doc) => {
                       const FileIcon = getFileIcon(doc.mimeType)
-                      const showPreview = canPreview(doc.mimeType, doc.originalName)
+                      const showPreview = canPreview(
+                        doc.mimeType,
+                        doc.originalName
+                      )
                       return (
                         <div
                           key={doc.fileId}
                           className={cn(
                             'flex items-center gap-3 p-3 rounded-lg border',
-                            showPreview && 'cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-shadow'
+                            showPreview &&
+                              'cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-shadow'
                           )}
                           onClick={() => showPreview && setPreviewDoc(doc)}
                         >
                           <FileIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{doc.originalName}</p>
+                            <p className="font-medium truncate">
+                              {doc.originalName}
+                            </p>
                             <p className="text-sm text-muted-foreground">
-                              {formatFileSize(doc.size)} • {formatDate(doc.createdAt)}
+                              {formatFileSize(doc.size)} •{' '}
+                              {formatDate(doc.createdAt)}
                             </p>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
@@ -496,7 +530,11 @@ export const InstanceDetailsDialog = ({
                               <Download className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant={deleteConfirm === doc.fileId ? 'destructive' : 'outline'}
+                              variant={
+                                deleteConfirm === doc.fileId
+                                  ? 'destructive'
+                                  : 'outline'
+                              }
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
