@@ -25,6 +25,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models:
    *   get:
    *     summary: Get all component models
+   *     description: Specific manufacturer products with pricing, warranty, specifications, and dimensions. Filter by subtypeId, manufacturer, or modelName.
    *     tags: [Component Models]
    *     parameters:
    *       - in: query
@@ -178,6 +179,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models/{id}:
    *   get:
    *     summary: Get component model by ID
+   *     description: Returns full model details including specs and current pricing.
    *     tags: [Component Models]
    *     parameters:
    *       - in: path
@@ -228,6 +230,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models:
    *   post:
    *     summary: Create a new component model
+   *     description: Creates a manufacturer product entry. Requires subtypeId.
    *     tags: [Component Models]
    *     requestBody:
    *       required: true
@@ -275,6 +278,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models/{id}:
    *   put:
    *     summary: Update a component model
+   *     description: Updates model pricing, specs, or warranty info.
    *     tags: [Component Models]
    *     parameters:
    *       - in: path
@@ -331,6 +335,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models/{id}:
    *   delete:
    *     summary: Delete a component model
+   *     description: Removes a model. Will fail if model has associated components.
    *     tags: [Component Models]
    *     parameters:
    *       - in: path

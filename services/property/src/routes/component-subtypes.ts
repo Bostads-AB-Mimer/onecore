@@ -24,6 +24,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes:
    *   get:
    *     summary: Get all component subtypes
+   *     description: Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
    *     tags: [Component Subtypes]
    *     parameters:
    *       - in: query
@@ -101,6 +102,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes/{id}:
    *   get:
    *     summary: Get component subtype by ID
+   *     description: Returns subtype with full lifecycle and cost planning data.
    *     tags: [Component Subtypes]
    *     parameters:
    *       - in: path
@@ -151,6 +153,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes:
    *   post:
    *     summary: Create a new component subtype
+   *     description: Creates a subtype with lifecycle parameters. Requires typeId.
    *     tags: [Component Subtypes]
    *     requestBody:
    *       required: true
@@ -199,6 +202,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes/{id}:
    *   put:
    *     summary: Update a component subtype
+   *     description: Updates subtype specifications or lifecycle data.
    *     tags: [Component Subtypes]
    *     parameters:
    *       - in: path
@@ -255,6 +259,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes/{id}:
    *   delete:
    *     summary: Delete a component subtype
+   *     description: Removes a subtype. Will fail if subtype has associated models.
    *     tags: [Component Subtypes]
    *     parameters:
    *       - in: path
