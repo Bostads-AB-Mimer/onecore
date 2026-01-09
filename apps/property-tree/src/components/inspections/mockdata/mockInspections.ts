@@ -1,13 +1,13 @@
 import type {
-  Inspection,
+  InternalInspection,
   ResidenceInfo,
-} from '@/components/residence/inspection/types'
+} from '@/components/inspections/types'
 
 // Mock data for temporary use until we have real data
 
 // Extended inspection type for the overview page
 // TODO should live elsewhere
-export interface ExtendedInspection extends Inspection {
+export interface ExtendedInspection extends InternalInspection {
   contractId?: string
   address?: string
   terminationDate?: string
@@ -109,6 +109,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
   const mockInspections: ExtendedInspection[] = [
     // === COMPLETED (2 st) ===
     {
+      _tag: 'internal',
       id: 'inspection-completed-1',
       inspectionNumber: 'BES-2024-001',
       date: '2024-09-15',
@@ -149,6 +150,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
       masterKey: false,
     },
     {
+      _tag: 'internal',
       id: 'inspection-completed-2',
       inspectionNumber: 'BES-2024-002',
       date: '2024-09-18',
@@ -182,6 +184,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
 
     // === IN PROGRESS (2 st) - har påbörjad rumsdata ===
     {
+      _tag: 'internal',
       id: 'inspection-inprogress-1',
       inspectionNumber: 'BES-2024-003',
       date: '2024-09-20',
@@ -214,6 +217,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
       masterKey: true,
     },
     {
+      _tag: 'internal',
       id: 'inspection-inprogress-2',
       inspectionNumber: 'BES-2024-004',
       date: '2024-09-30',
@@ -242,6 +246,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
 
     // === DRAFT (2 st) - sparad men inte färdig ===
     {
+      _tag: 'internal',
       id: 'inspection-draft-1',
       inspectionNumber: 'BES-2024-005',
       date: '2024-09-25',
@@ -276,6 +281,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
       masterKey: true,
     },
     {
+      _tag: 'internal',
       id: 'inspection-draft-2',
       inspectionNumber: 'BES-2024-006',
       date: '2024-10-01',
@@ -304,6 +310,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
 
     // === EJ PÅBÖRJAD (4 st) - inga rum, ingen rumsdata ===
     {
+      _tag: 'internal',
       id: 'inspection-notstarted-1',
       inspectionNumber: 'BES-2024-007',
       date: '2024-09-22',
@@ -325,6 +332,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
       masterKey: false,
     },
     {
+      _tag: 'internal',
       id: 'inspection-notstarted-2',
       inspectionNumber: 'BES-2024-008',
       date: '2024-09-28',
@@ -346,6 +354,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
       masterKey: true,
     },
     {
+      _tag: 'internal',
       id: 'inspection-notstarted-3',
       inspectionNumber: 'BES-2024-009',
       date: '2024-09-26',
@@ -367,6 +376,7 @@ export const getAllInspections = (): ExtendedInspection[] => {
       masterKey: false,
     },
     {
+      _tag: 'internal',
       id: 'inspection-notstarted-4',
       inspectionNumber: 'BES-2024-010',
       date: '2024-10-02',

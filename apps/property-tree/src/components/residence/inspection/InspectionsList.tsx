@@ -10,27 +10,18 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { InspectionFormDialog } from '@/components/residence/inspection/InspectionFormDialog'
 import { InspectionReadOnly } from '@/components/residence/inspection/InspectionReadOnly'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/v2/Table'
+import { InspectionTable } from '@/components/inspections/InspectionTable'
 import { roomService } from '@/services/api/core'
 import { Grid } from '@/components/ui/Grid'
 
 import type { Room, ResidenceDetails } from '@/services/types'
-import { Badge } from '@/components/ui/v3/Badge'
-import { format } from 'date-fns'
 import type {
   Inspection,
   InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
   ResidenceInfo,
   TenantSnapshot,
-} from '@/components/residence/inspection/types'
+} from '@/components/inspections/types'
 import { useToast } from '@/components/hooks/useToast'
 
 interface InspectionsListProps {
@@ -106,11 +97,30 @@ export function InspectionsList({
 
   const rooms = roomsQuery.data ?? []
 
-  const activeInspection = inspections.find(
-    (inspection) =>
-      !inspection.isCompleted &&
-      Object.keys(inspection.rooms).length > 0 &&
-      !Object.values(inspection.rooms).every((room) => room.isHandled)
+  // Helper to check if inspection is internal (has rooms)
+  const isInternalInspection = (
+    inspection: Inspection
+  ): inspection is Inspection & { _tag: 'internal' } => {
+    return inspection._tag === 'internal'
+  }
+
+  // Helper to check if inspection is active/ongoing
+  const isActiveInspection = (inspection: Inspection): boolean => {
+    if (isInternalInspection(inspection)) {
+      // Internal: check if not completed and has incomplete rooms
+      return (
+        !inspection.isCompleted &&
+        Object.keys(inspection.rooms).length > 0 &&
+        !Object.values(inspection.rooms).every((room) => room.isHandled)
+      )
+    } else {
+      // External: check if status is not completed
+      return inspection.status !== 'Genomförd'
+    }
+  }
+
+  const activeInspection = inspections.find((inspection) =>
+    isActiveInspection(inspection)
   )
 
   const completedInspections = inspections.filter(
@@ -129,6 +139,7 @@ export function InspectionsList({
     additionalData: InspectionSubmitData
   ) => {
     const newInspection: Inspection = {
+      _tag: 'internal',
       id: `inspection-${Date.now()}`,
       inspectionNumber: generateInspectionNumber(),
       date: new Date().toISOString(),
@@ -170,63 +181,16 @@ export function InspectionsList({
     setIsDialogOpen(false)
   }
 
-  const renderInspectionsTable = (inspectionsData: Inspection[]) => (
-    <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>Nr</TableHead>
-            <TableHead>Datum</TableHead>
-            <TableHead>Besiktningsman</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Antal rum</TableHead>
-            <TableHead className="text-right">Åtgärder</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {inspectionsData.map((inspection) => (
-            <TableRow key={inspection.id} className="group">
-              <TableCell className="font-mono text-sm">
-                {inspection.inspectionNumber || '-'}
-              </TableCell>
-              <TableCell>
-                {format(new Date(inspection.date), 'yyyy-MM-dd')}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
-                  <span>{inspection.inspectedBy}</span>
-                  {inspection.status === 'draft' && (
-                    <Badge variant="secondary" className="w-fit">
-                      Utkast
-                    </Badge>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {inspection.status === 'completed' ||
-                inspection.isCompleted ||
-                Object.values(inspection.rooms).every((room) => room.isHandled)
-                  ? 'Slutförd'
-                  : inspection.status === 'draft'
-                    ? 'Utkast'
-                    : 'Pågående'}
-              </TableCell>
-              <TableCell>{Object.keys(inspection.rooms).length}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleOpenInspection(inspection)}
-                >
-                  Visa detaljer
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
+  const renderInspectionsTable = (inspectionsData: Inspection[]) => {
+    return (
+      <InspectionTable
+        inspections={inspectionsData}
+        onInspectionClick={handleOpenInspection}
+        showAddress={false}
+        showRoomCount={true}
+      />
+    )
+  }
 
   return (
     <div className="w-full space-y-4">
@@ -290,7 +254,7 @@ export function InspectionsList({
         />
       )}
 
-      {selectedInspection && (
+      {selectedInspection && isInternalInspection(selectedInspection) && (
         <InspectionReadOnly
           inspection={selectedInspection}
           isOpen={isViewDialogOpen}

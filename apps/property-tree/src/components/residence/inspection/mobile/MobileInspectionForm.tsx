@@ -9,8 +9,8 @@ import type {
   InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
   TenantSnapshot,
-  Inspection,
-} from '@/components/residence/inspection/types'
+  InternalInspection,
+} from '@/components/inspections/types'
 import { useInspectionForm } from '@/components/hooks/useInspectionForm'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 import { RoomInspectionMobile } from './RoomInspectionMobile'
@@ -26,7 +26,7 @@ interface MobileInspectionFormProps {
   ) => void
   onCancel: () => void
   tenant?: any
-  existingInspection?: Inspection
+  existingInspection?: InternalInspection
 }
 
 export function MobileInspectionForm({

@@ -7,8 +7,8 @@ import type {
   InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
   TenantSnapshot,
-  Inspection,
-} from '@/components/residence/inspection/types'
+  InternalInspection,
+} from '@/components/inspections/types'
 import { CheckCircle2 } from 'lucide-react'
 import {
   Accordion,
@@ -29,7 +29,7 @@ interface DesktopInspectionFormProps {
   ) => void
   onCancel: () => void
   tenant?: any
-  existingInspection?: Inspection
+  existingInspection?: InternalInspection
 }
 
 const currentUser = 'Anna Andersson'

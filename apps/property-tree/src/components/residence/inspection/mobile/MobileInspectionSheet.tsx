@@ -4,8 +4,8 @@ import type { Room } from '@/services/types'
 import type {
   InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
-  Inspection,
-} from '@/components/residence/inspection/types'
+  InternalInspection,
+} from '@/components/inspections/types'
 
 interface MobileInspectionSheetProps {
   isOpen: boolean
@@ -18,7 +18,7 @@ interface MobileInspectionSheetProps {
   ) => void
   rooms: Room[]
   tenant?: any
-  existingInspection?: Inspection
+  existingInspection?: InternalInspection
 }
 
 export function MobileInspectionSheet({
