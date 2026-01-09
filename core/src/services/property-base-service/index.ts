@@ -1488,7 +1488,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component[],
+        content: result.data satisfies schemas.ComponentNew[],
         ...metadata,
       }
     } catch (error) {
