@@ -1,6 +1,7 @@
 export * from './buildingService'
 export * from './commentService'
 export * from './companyService'
+export * from './componentService'
 export * from './facilityService'
 export * from './lease-service'
 export * from './maintenanceUnitService'
