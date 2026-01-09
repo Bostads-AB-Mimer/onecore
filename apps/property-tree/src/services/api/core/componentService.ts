@@ -2,7 +2,7 @@ import { ComponentInstance, DocumentWithUrl } from '../../types'
 import { GET, POST, PUT, DELETE } from './base-api'
 
 export const componentService = {
-  async getByRoomId(roomId: string): Promise<Component[]> {
+  async getByRoomId(roomId: string): Promise<ComponentInstance[]> {
     const { data, error } = await GET('/components/by-room/{roomId}', {
       params: {
         path: {
