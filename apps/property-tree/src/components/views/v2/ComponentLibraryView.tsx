@@ -8,8 +8,8 @@ import {
   useComponentLibraryHandlers,
   type ViewState,
 } from '@/components/hooks/useComponentLibraryHandlers'
-import { CategoryCard } from '@/components/component-library/CategoryCard'
-import { TypeCard } from '@/components/component-library/TypeCard'
+import { CategoriesTable } from '@/components/component-library/CategoriesTable'
+import { TypesTable } from '@/components/component-library/TypesTable'
 import { SubtypesTable } from '@/components/component-library/SubtypesTable'
 import { ModelsTable } from '@/components/component-library/ModelsTable'
 import { InstancesTable } from '@/components/component-library/InstancesTable'
@@ -346,16 +346,6 @@ const ComponentLibraryView = () => {
   const renderContent = () => {
     // Categories view
     if (viewState.level === 'categories') {
-      if (categoriesLoading) {
-        return (
-          <div className="animate-pulse space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-secondary rounded-lg"></div>
-            ))}
-          </div>
-        )
-      }
-
       if (categoriesError) {
         return (
           <div className="text-center py-10 space-y-4">
@@ -369,7 +359,7 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (!categories || categories.length === 0) {
+      if (!categoriesLoading && (!categories || categories.length === 0)) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga kategorier ännu</h2>
@@ -385,32 +375,26 @@ const ComponentLibraryView = () => {
       }
 
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              onEdit={() => handleEditCategory(category)}
-              onDelete={() => handleDeleteCategory(category)}
-              onNavigate={() => handleNavigateToTypes(category)}
-            />
-          ))}
-        </div>
+        <>
+          <TableToolbar
+            onAddNew={handleCreateCategory}
+            addNewLabel="Ny kategori"
+            itemCount={categories?.length}
+            levelName="kategorier"
+          />
+          <CategoriesTable
+            categories={categories || []}
+            isLoading={categoriesLoading}
+            onEdit={handleEditCategory}
+            onDelete={handleDeleteCategory}
+            onNavigate={handleNavigateToTypes}
+          />
+        </>
       )
     }
 
     // Types view
     if (viewState.level === 'types') {
-      if (typesLoading) {
-        return (
-          <div className="animate-pulse space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-secondary rounded-lg"></div>
-            ))}
-          </div>
-        )
-      }
-
       if (typesError) {
         return (
           <div className="text-center py-10 space-y-4">
@@ -424,7 +408,7 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (!types || types.length === 0) {
+      if (!typesLoading && (!types || types.length === 0)) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga typer ännu</h2>
@@ -440,17 +424,21 @@ const ComponentLibraryView = () => {
       }
 
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {types.map((type) => (
-            <TypeCard
-              key={type.id}
-              type={type}
-              onEdit={() => handleEditType(type)}
-              onDelete={() => handleDeleteType(type)}
-              onNavigate={() => handleNavigateToSubtypes(type)}
-            />
-          ))}
-        </div>
+        <>
+          <TableToolbar
+            onAddNew={handleCreateType}
+            addNewLabel="Ny typ"
+            itemCount={types?.length}
+            levelName="typer"
+          />
+          <TypesTable
+            types={types || []}
+            isLoading={typesLoading}
+            onEdit={handleEditType}
+            onDelete={handleDeleteType}
+            onNavigate={handleNavigateToSubtypes}
+          />
+        </>
       )
     }
 
@@ -596,7 +584,7 @@ const ComponentLibraryView = () => {
               Ett fel uppstod
             </h2>
             <p className="text-muted-foreground">
-              Kunde inte ladda instanser. Försök igen senare.
+              Kunde inte ladda komponenter. Försök igen senare.
             </p>
           </div>
         )
@@ -766,29 +754,7 @@ const ComponentLibraryView = () => {
   }
 
   const renderNewButton = () => {
-    if (
-      viewState.level === 'categories' &&
-      categories &&
-      categories.length > 0
-    ) {
-      return (
-        <Button onClick={handleCreateCategory}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ny kategori
-        </Button>
-      )
-    }
-
-    if (viewState.level === 'types') {
-      return (
-        <Button onClick={handleCreateType}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ny typ
-        </Button>
-      )
-    }
-
-    // Subtypes, models, and instances buttons are in TableToolbar
+    // All levels now have their buttons in TableToolbar
     return null
   }
 
@@ -830,6 +796,13 @@ const ComponentLibraryView = () => {
           entity={typeDialog.state.entity}
           parentId={viewState.categoryId}
           mode={typeDialog.state.mode}
+          hierarchyData={
+            typeDialog.state.mode === 'edit' && typeDialog.state.entity
+              ? {
+                  categoryId: typeDialog.state.entity.categoryId,
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -841,6 +814,15 @@ const ComponentLibraryView = () => {
           entity={subtypeDialog.state.entity}
           parentId={viewState.typeId}
           mode={subtypeDialog.state.mode}
+          hierarchyData={
+            subtypeDialog.state.mode === 'edit' && subtypeDialog.state.entity
+              ? {
+                  categoryId:
+                    subtypeDialog.state.entity.componentType?.categoryId,
+                  typeId: subtypeDialog.state.entity.typeId,
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -852,6 +834,16 @@ const ComponentLibraryView = () => {
           entity={modelDialog.state.entity}
           parentId={viewState.subtypeId}
           mode={modelDialog.state.mode}
+          hierarchyData={
+            modelDialog.state.mode === 'edit' && modelDialog.state.entity
+              ? {
+                  categoryId:
+                    modelDialog.state.entity.subtype?.componentType?.categoryId,
+                  typeId: modelDialog.state.entity.subtype?.typeId,
+                  subtypeId: modelDialog.state.entity.componentSubtypeId,
+                }
+              : undefined
+          }
         />
       ) : null}
 
@@ -865,6 +857,20 @@ const ComponentLibraryView = () => {
             defaultValues={instanceDialog.state.defaultValues}
             parentId={viewState.modelId}
             mode={instanceDialog.state.mode}
+            hierarchyData={
+              instanceDialog.state.mode === 'edit' &&
+              instanceDialog.state.entity
+                ? {
+                    categoryId:
+                      instanceDialog.state.entity.model?.subtype?.componentType
+                        ?.categoryId,
+                    typeId: instanceDialog.state.entity.model?.subtype?.typeId,
+                    subtypeId:
+                      instanceDialog.state.entity.model?.componentSubtypeId,
+                    modelId: instanceDialog.state.entity.modelId,
+                  }
+                : undefined
+            }
           />
 
           {instanceDetailsDialogState.instance && (

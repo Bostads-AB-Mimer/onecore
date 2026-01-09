@@ -244,8 +244,10 @@ export const InstancesTable = ({
 
   // Expandable content for additional information
   const expandableContent = (instance: ComponentInstance) => {
-    const hasAdditionalInfo = instance.additionalInformation && instance.additionalInformation.trim()
-    const hasSpecifications = instance.specifications && instance.specifications.trim()
+    const hasAdditionalInfo =
+      instance.additionalInformation && instance.additionalInformation.trim()
+    const hasSpecifications =
+      instance.specifications && instance.specifications.trim()
 
     if (!hasAdditionalInfo && !hasSpecifications) {
       return null
@@ -263,7 +265,9 @@ export const InstancesTable = ({
         )}
         {hasAdditionalInfo && (
           <div>
-            <h4 className="text-sm font-medium mb-1">Ytterligare information</h4>
+            <h4 className="text-sm font-medium mb-1">
+              Ytterligare information
+            </h4>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
               {instance.additionalInformation}
             </p>
