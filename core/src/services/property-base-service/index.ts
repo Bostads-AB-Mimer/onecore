@@ -1423,7 +1423,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Property base Service
    *     description: |
-   *       Retrieves all components associated with a specific room ID.
+   *       Retrieves all component instances associated with a specific room ID.
    *       Components are returned ordered by installation date (newest first).
    *     parameters:
    *       - in: path
@@ -1443,7 +1443,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/Component'
+   *                     $ref: '#/components/schemas/ComponentInstance'
    *       '404':
    *         description: Room not found
    *         content:
@@ -3730,7 +3730,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new:
+   * /components:
    *   get:
    *     summary: Get all component instances
    *     tags:
@@ -3781,7 +3781,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components-new', async (ctx) => {
+  router.get('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentsNewQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -3818,7 +3818,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   get:
    *     summary: Get component instance by ID
    *     tags:
@@ -3845,7 +3845,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components-new/:id', async (ctx) => {
+  router.get('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -3882,7 +3882,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new:
+   * /components:
    *   post:
    *     summary: Create a new component instance
    *     tags:
@@ -3906,7 +3906,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/components-new', async (ctx) => {
+  router.post('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentNewSchema.safeParse(ctx.request.body)
     if (!body.success) {
@@ -3940,7 +3940,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   put:
    *     summary: Update a component instance
    *     tags:
@@ -3974,7 +3974,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/components-new/:id', async (ctx) => {
+  router.put('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -4021,7 +4021,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /components-new/{id}:
+   * /components/{id}:
    *   delete:
    *     summary: Delete a component instance
    *     tags:
@@ -4041,7 +4041,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/components-new/:id', async (ctx) => {
+  router.delete('(.*)/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {

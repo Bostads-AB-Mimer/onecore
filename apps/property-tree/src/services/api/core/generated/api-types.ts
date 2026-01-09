@@ -3099,7 +3099,7 @@ export interface paths {
   "/components/by-room/{roomId}": {
     /**
      * Get components by room ID
-     * @description Retrieves all components associated with a specific room ID.
+     * @description Retrieves all component instances associated with a specific room ID.
      * Components are returned ordered by installation date (newest first).
      */
     get: {
@@ -3114,7 +3114,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["Component"][];
+              content?: components["schemas"]["ComponentInstance"][];
             };
           };
         };
@@ -3934,7 +3934,7 @@ export interface paths {
       };
     };
   };
-  "/components-new": {
+  "/components": {
     /** Get all component instances */
     get: {
       parameters: {
@@ -3981,7 +3981,7 @@ export interface paths {
       };
     };
   };
-  "/components-new/{id}": {
+  "/components/{id}": {
     /** Get component instance by ID */
     get: {
       parameters: {
