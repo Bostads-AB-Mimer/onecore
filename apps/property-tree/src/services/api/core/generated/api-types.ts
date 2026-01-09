@@ -3033,7 +3033,7 @@ export interface paths {
   '/components/by-room/{roomId}': {
     /**
      * Get components by room ID
-     * @description Retrieves all component instances associated with a specific room ID.
+     * @description Retrieves all components associated with a specific room ID.
      * Components are returned ordered by installation date (newest first).
      */
     get: {
@@ -3048,7 +3048,7 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ComponentInstance'][]
+              content?: components['schemas']['Component'][]
             }
           }
         }
@@ -3335,7 +3335,7 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Component category created successfully */
+        /** @description Component category created */
         201: {
           content: {
             'application/json': {
@@ -3382,17 +3382,13 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Component category updated successfully */
+        /** @description Component category updated */
         200: {
           content: {
             'application/json': {
               content?: components['schemas']['ComponentCategory']
             }
           }
-        }
-        /** @description Component category not found */
-        404: {
-          content: never
         }
       }
     }
@@ -3404,12 +3400,8 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Component category deleted successfully */
+        /** @description Component category deleted */
         204: {
-          content: never
-        }
-        /** @description Component category not found */
-        404: {
           content: never
         }
       }
@@ -3780,7 +3772,7 @@ export interface paths {
       }
     }
   }
-  '/components': {
+  '/components-new': {
     /** Get all component instances */
     get: {
       parameters: {
@@ -3827,7 +3819,7 @@ export interface paths {
       }
     }
   }
-  '/components/{id}': {
+  '/components-new/{id}': {
     /** Get component instance by ID */
     get: {
       parameters: {
@@ -4255,7 +4247,7 @@ export interface components {
         size: number
         type: string
         address?: {
-          street: string
+          street?: string
           number: string
           postalCode: string
           city: string
@@ -4286,7 +4278,7 @@ export interface components {
         }
       }
       address?: {
-        street: string
+        street?: string
         number: string
         postalCode: string
         city: string
@@ -4320,7 +4312,7 @@ export interface components {
         /** Format: date-time */
         birthDate: string
         address?: {
-          street: string
+          street?: string
           number: string
           postalCode: string
           city: string
@@ -4553,6 +4545,16 @@ export interface components {
             name: string | null
           }
         } | null
+        rentalBlocks: {
+          id: string
+          blockReasonId: string
+          blockReason: string
+          /** Format: date-time */
+          fromDate: string
+          /** Format: date-time */
+          toDate: string | null
+          amount: number | null
+        }[]
       }
       property: {
         name: string | null
@@ -4743,6 +4745,34 @@ export interface components {
         name: string | null
         code: string | null
       }
+      staircase: {
+        id: string
+        code: string
+        name: string | null
+        features: {
+          floorPlan: string | null
+          accessibleByElevator: boolean
+        }
+        dates: {
+          /** Format: date-time */
+          from: string
+          /** Format: date-time */
+          to: string
+        }
+        property?: {
+          propertyId: string | null
+          propertyName: string | null
+          propertyCode: string | null
+        }
+        building?: {
+          buildingId: string | null
+          buildingName: string | null
+          buildingCode: string | null
+        }
+        deleted: boolean
+        /** Format: date-time */
+        timestamp: string
+      } | null
       areaSize: number | null
     }
     FacilityDetails: {
@@ -4784,9 +4814,7 @@ export interface components {
         typeDesignation: string | null
       }
       dates: {
-        /** Format: date-time */
         installation: string | null
-        /** Format: date-time */
         warrantyEnd: string | null
       }
       classification: {
@@ -4799,7 +4827,7 @@ export interface components {
           name: string
         }
       }
-      maintenanceUnits?: {
+      maintenanceUnits: {
         id: string
         code: string
         name: string
@@ -4921,7 +4949,7 @@ export interface components {
       id: string
       /** Format: uuid */
       modelId: string
-      serialNumber: string | null
+      serialNumber: string
       specifications?: string | null
       additionalInformation?: string | null
       warrantyStartDate: string | null
@@ -5038,7 +5066,7 @@ export interface components {
         id: string
         /** Format: uuid */
         modelId: string
-        serialNumber: string | null
+        serialNumber: string
         specifications?: string | null
         additionalInformation?: string | null
         warrantyStartDate: string | null
