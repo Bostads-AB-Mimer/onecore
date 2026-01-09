@@ -970,7 +970,6 @@ export type AnalyzeComponentImageRequest = z.infer<
 >
 export type AIComponentAnalysis = z.infer<typeof AIComponentAnalysisSchema>
 
-
 export const FacilitySearchResultSchema = z.object({
   id: z.string(),
   rentalId: z.string(),
