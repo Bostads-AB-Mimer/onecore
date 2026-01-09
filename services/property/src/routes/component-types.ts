@@ -28,6 +28,7 @@ export const routes = (router: KoaRouter) => {
    * /component-types:
    *   get:
    *     summary: Get all component types
+   *     description: Specific kinds of components within a category (e.g., Diskmaskin, Värmepump, Takbeläggning). Filter by categoryId to get types for a specific category.
    *     tags: [Component Types]
    *     parameters:
    *       - in: query
@@ -100,6 +101,7 @@ export const routes = (router: KoaRouter) => {
    * /component-types/{id}:
    *   get:
    *     summary: Get component type by ID
+   *     description: Returns a single type with its category relationship.
    *     tags: [Component Types]
    *     parameters:
    *       - in: path
@@ -149,6 +151,7 @@ export const routes = (router: KoaRouter) => {
    * /component-types:
    *   post:
    *     summary: Create a new component type
+   *     description: Creates a new type within a category. Requires categoryId.
    *     tags: [Component Types]
    *     requestBody:
    *       required: true
@@ -196,6 +199,7 @@ export const routes = (router: KoaRouter) => {
    * /component-types/{id}:
    *   put:
    *     summary: Update a component type
+   *     description: Updates type name or category assignment.
    *     tags: [Component Types]
    *     parameters:
    *       - in: path
@@ -251,6 +255,7 @@ export const routes = (router: KoaRouter) => {
    * /component-types/{id}:
    *   delete:
    *     summary: Delete a component type
+   *     description: Removes a type. Will fail if type has associated subtypes.
    *     tags: [Component Types]
    *     parameters:
    *       - in: path
