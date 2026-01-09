@@ -775,7 +775,7 @@ export const CreateComponentCategorySchema = z.object({
 
 export const UpdateComponentCategorySchema = z.object({
   categoryName: z.string().trim().min(1).optional(),
-  description: z.string().trim().min(1).nullable().optional(),
+  description: z.string().trim().min(1).optional(),
 })
 
 export const CreateComponentTypeSchema = z.object({
@@ -787,7 +787,7 @@ export const CreateComponentTypeSchema = z.object({
 export const UpdateComponentTypeSchema = z.object({
   typeName: z.string().trim().min(1).optional(),
   categoryId: z.string().uuid().optional(),
-  description: z.string().trim().min(1).nullable().optional(),
+  description: z.string().trim().min(1).optional(),
 })
 
 export const CreateComponentSubtypeSchema = z.object({
@@ -804,7 +804,7 @@ export const CreateComponentSubtypeSchema = z.object({
 export const UpdateComponentSubtypeSchema = z.object({
   subTypeName: z.string().trim().min(1).optional(),
   typeId: z.string().uuid().optional(),
-  xpandCode: z.string().trim().min(1).nullable().optional(),
+  xpandCode: z.string().trim().min(1).optional(),
   depreciationPrice: z.number().min(0).optional(),
   technicalLifespan: z.number().min(0).optional(),
   economicLifespan: z.number().min(0).optional(),
@@ -832,10 +832,10 @@ export const UpdateComponentModelSchema = z.object({
   currentInstallPrice: z.number().min(0).optional(),
   warrantyMonths: z.number().int().min(0).optional(),
   manufacturer: z.string().trim().min(1).optional(),
-  technicalSpecification: z.string().trim().nullable().optional(),
-  installationInstructions: z.string().trim().nullable().optional(),
-  dimensions: z.string().trim().nullable().optional(),
-  coclassCode: z.string().trim().nullable().optional(),
+  technicalSpecification: z.string().trim().optional(),
+  installationInstructions: z.string().trim().optional(),
+  dimensions: z.string().trim().optional(),
+  coclassCode: z.string().trim().optional(),
 })
 
 export const CreateComponentNewSchema = z.object({
@@ -865,10 +865,10 @@ export const CreateComponentNewSchema = z.object({
 
 export const UpdateComponentNewSchema = z.object({
   modelId: z.string().uuid().optional(),
-  serialNumber: z.string().trim().nullable().optional(),
-  specifications: z.string().trim().nullable().optional(),
-  additionalInformation: z.string().trim().nullable().optional(),
-  warrantyStartDate: z.coerce.date().nullable().optional(),
+  serialNumber: z.string().trim().optional(),
+  specifications: z.string().trim().optional(),
+  additionalInformation: z.string().trim().optional(),
+  warrantyStartDate: z.coerce.date().optional(),
   warrantyMonths: z.number().int().min(0).optional(),
   priceAtPurchase: z.number().min(0).optional(),
   depreciationPriceAtPurchase: z.number().min(0).optional(),
@@ -882,7 +882,6 @@ export const UpdateComponentNewSchema = z.object({
         .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
         .optional()
     )
-    .nullable()
     .optional(),
   status: ComponentStatusEnum.optional(),
   quantity: z.number().min(0).optional(),

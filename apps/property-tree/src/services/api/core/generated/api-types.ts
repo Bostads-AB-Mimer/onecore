@@ -5138,7 +5138,7 @@ export interface components {
     };
     UpdateComponentCategoryRequest: {
       categoryName?: string;
-      description?: string | null;
+      description?: string;
     };
     CreateComponentTypeRequest: {
       typeName: string;
@@ -5150,7 +5150,7 @@ export interface components {
       typeName?: string;
       /** Format: uuid */
       categoryId?: string;
-      description?: string | null;
+      description?: string;
     };
     CreateComponentSubtypeRequest: {
       subTypeName: string;
@@ -5168,7 +5168,7 @@ export interface components {
       subTypeName?: string;
       /** Format: uuid */
       typeId?: string;
-      xpandCode?: string | null;
+      xpandCode?: string;
       depreciationPrice?: number;
       technicalLifespan?: number;
       economicLifespan?: number;
@@ -5197,10 +5197,10 @@ export interface components {
       currentInstallPrice?: number;
       warrantyMonths?: number;
       manufacturer?: string;
-      technicalSpecification?: string | null;
-      installationInstructions?: string | null;
-      dimensions?: string | null;
-      coclassCode?: string | null;
+      technicalSpecification?: string;
+      installationInstructions?: string;
+      dimensions?: string;
+      coclassCode?: string;
     };
     CreateComponentRequest: {
       /** Format: uuid */
@@ -5227,15 +5227,15 @@ export interface components {
     UpdateComponentRequest: {
       /** Format: uuid */
       modelId?: string;
-      serialNumber?: string | null;
-      specifications?: string | null;
-      additionalInformation?: string | null;
+      serialNumber?: string;
+      specifications?: string;
+      additionalInformation?: string;
       /** Format: date-time */
-      warrantyStartDate?: string | null;
+      warrantyStartDate?: string;
       warrantyMonths?: number;
       priceAtPurchase?: number;
       depreciationPriceAtPurchase?: number;
-      ncsCode?: string | null;
+      ncsCode?: string;
       /** @enum {string} */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       quantity?: number;

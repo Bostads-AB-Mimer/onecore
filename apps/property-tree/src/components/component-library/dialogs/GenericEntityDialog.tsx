@@ -135,16 +135,15 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     return Object.keys(newErrors).length === 0
   }
 
-  // Clean form data by converting empty strings to undefined for optional fields
-  // This prevents validation errors for fields with regex patterns (e.g., ncsCode)
+  // Clean form data by removing null and empty string values for optional fields
+  // This prevents validation errors and ensures we only send meaningful data
   const cleanFormData = (data: Record<string, any>): Record<string, any> => {
     const cleaned: Record<string, any> = {}
     for (const [key, value] of Object.entries(data)) {
-      // Convert empty strings to undefined for optional fields
-      if (value === '') {
+      // Skip null and empty string values for optional fields
+      if (value === null || value === '') {
         const field = config.fields.find((f) => f.name === key)
         if (field && !field.required) {
-          // Skip empty optional fields (don't include in payload)
           continue
         }
       }
