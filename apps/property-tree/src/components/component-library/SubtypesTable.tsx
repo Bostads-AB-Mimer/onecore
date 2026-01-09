@@ -41,6 +41,21 @@ export const SubtypesTable = ({
       render: (item) => `${item.economicLifespan} år`,
     },
     {
+      key: 'depreciationPrice',
+      label: 'Avskrivningspris',
+      render: (item) =>
+        item.depreciationPrice.toLocaleString('sv-SE', {
+          style: 'currency',
+          currency: 'SEK',
+          maximumFractionDigits: 0,
+        }),
+    },
+    {
+      key: 'replacementIntervalMonths',
+      label: 'Utbytesintervall',
+      render: (item) => `${item.replacementIntervalMonths} mån`,
+    },
+    {
       key: 'quantityType',
       label: 'Kvantitetstyp',
       render: (item) => (

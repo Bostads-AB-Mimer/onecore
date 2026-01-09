@@ -21,6 +21,13 @@ export const InstancesTable = ({
 }: InstancesTableProps) => {
   const navigate = useNavigate()
 
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('sv-SE', {
+      style: 'currency',
+      currency: 'SEK',
+      maximumFractionDigits: 0,
+    })
+
   const handleNavigateToResidence = (
     residenceId: string | null | undefined,
     roomCode: string | null | undefined
@@ -133,7 +140,12 @@ export const InstancesTable = ({
     {
       key: 'priceAtPurchase',
       label: 'Inköpspris',
-      render: (item) => `${item.priceAtPurchase} kr`,
+      render: (item) => formatCurrency(item.priceAtPurchase),
+    },
+    {
+      key: 'warrantyMonths',
+      label: 'Garantitid',
+      render: (item) => `${item.warrantyMonths} mån`,
     },
     {
       key: 'warrantyStartDate',
@@ -144,6 +156,18 @@ export const InstancesTable = ({
             ? new Date(item.warrantyStartDate).toLocaleDateString('sv-SE')
             : '-'}
         </span>
+      ),
+    },
+    {
+      key: 'economicLifespan',
+      label: 'Ekon. livslängd',
+      render: (item) => `${item.economicLifespan} år`,
+    },
+    {
+      key: 'ncsCode',
+      label: 'NCS-kod',
+      render: (item) => (
+        <span className="text-muted-foreground">{item.ncsCode || '-'}</span>
       ),
     },
     {
@@ -218,6 +242,37 @@ export const InstancesTable = ({
     },
   ]
 
+  // Expandable content for additional information
+  const expandableContent = (instance: ComponentInstance) => {
+    const hasAdditionalInfo = instance.additionalInformation && instance.additionalInformation.trim()
+    const hasSpecifications = instance.specifications && instance.specifications.trim()
+
+    if (!hasAdditionalInfo && !hasSpecifications) {
+      return null
+    }
+
+    return (
+      <div className="space-y-4">
+        {hasSpecifications && (
+          <div>
+            <h4 className="text-sm font-medium mb-1">Specifikationer</h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {instance.specifications}
+            </p>
+          </div>
+        )}
+        {hasAdditionalInfo && (
+          <div>
+            <h4 className="text-sm font-medium mb-1">Ytterligare information</h4>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {instance.additionalInformation}
+            </p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <DataTable
       data={instances}
@@ -227,6 +282,7 @@ export const InstancesTable = ({
       onDelete={onDelete}
       actions={actions}
       emptyMessage="Inga komponenter ännu"
+      expandableContent={expandableContent}
     />
   )
 }
