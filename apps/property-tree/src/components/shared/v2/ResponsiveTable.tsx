@@ -65,9 +65,7 @@ export function ResponsiveTable<T>({
         <table className="w-full">
           <thead className="border-b">
             <tr>
-              {expandableContent && (
-                <th className="w-[40px] py-3 px-2"></th>
-              )}
+              {expandableContent && <th className="w-[40px] py-3 px-2"></th>}
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -86,7 +84,9 @@ export function ResponsiveTable<T>({
               const itemKey = keyExtractor(item)
               const isExpanded = expandedRows.has(itemKey)
               const canExpand = hasExpandableContent(item)
-              const expandedContentNode = canExpand ? expandableContent!(item) : null
+              const expandedContentNode = canExpand
+                ? expandableContent!(item)
+                : null
 
               return (
                 <Fragment key={itemKey}>
@@ -150,7 +150,9 @@ export function ResponsiveTable<T>({
           const itemKey = keyExtractor(item)
           const isExpanded = expandedRows.has(itemKey)
           const canExpand = hasExpandableContent(item)
-          const expandedContentNode = canExpand ? expandableContent!(item) : null
+          const expandedContentNode = canExpand
+            ? expandableContent!(item)
+            : null
 
           return (
             <div

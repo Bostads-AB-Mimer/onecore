@@ -84,7 +84,17 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         const editData: Record<string, any> = {}
         config.fields.forEach((field) => {
           if (entity[field.name] !== undefined) {
-            editData[field.name] = entity[field.name]
+            let value = entity[field.name]
+            // Convert ISO date strings to yyyy-MM-dd format
+            if (
+              field.type === 'date' &&
+              value &&
+              typeof value === 'string' &&
+              value.includes('T')
+            ) {
+              value = value.split('T')[0]
+            }
+            editData[field.name] = value
           }
         })
         setFormData(editData)
@@ -130,10 +140,25 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
     try {
       // For mutations, we need to pass parentId separately for cache invalidation
-      const mutationData =
-        mode === 'create'
-          ? { ...formData, parentId }
-          : { id: entity?.id, data: formData, parentId }
+      let mutationData
+      if (mode === 'create') {
+        mutationData = { ...cleanedFormData, parentId }
+      } else {
+        // Include the new parent ID in the update data if it was changed
+        const updateData = { ...cleanedFormData }
+        if (newParentId && entityType !== 'category') {
+          const parentIdField = parentIdFieldMap[entityType]
+          updateData[parentIdField] = newParentId
+        }
+        mutationData = {
+          id: entity?.id,
+          data: updateData,
+          parentId: newParentId || parentId,
+          // Pass old parent ID for cache invalidation when parent changes
+          oldParentId:
+            newParentId && newParentId !== parentId ? parentId : undefined,
+        }
+      }
 
       await mutation.mutateAsync(mutationData as any)
       onClose()
