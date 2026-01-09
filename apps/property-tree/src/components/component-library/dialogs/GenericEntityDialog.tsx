@@ -19,6 +19,7 @@ interface GenericEntityDialogProps<T extends Record<string, any>> {
   entity?: T
   parentId?: string
   mode: 'create' | 'edit'
+  defaultValues?: Record<string, any>
 }
 
 export function GenericEntityDialog<T extends Record<string, any>>({
@@ -28,6 +29,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   entity,
   parentId,
   mode,
+  defaultValues,
 }: GenericEntityDialogProps<T>) {
   const config = entityDialogConfig[entityType]
   const [formData, setFormData] = useState<Record<string, any>>({})
@@ -50,6 +52,11 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             defaults[field.name] = field.defaultValue
           }
         })
+
+        // Merge in any passed defaultValues (from parent entity)
+        if (defaultValues) {
+          Object.assign(defaults, defaultValues)
+        }
 
         // Add parent ID based on entity type
         if (parentId) {
@@ -84,7 +91,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       }
       setErrors({})
     }
-  }, [isOpen, mode, entity, parentId, entityType, config.fields])
+  }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
