@@ -23,7 +23,7 @@ export const routes = (router: KoaRouter) => {
    * /components/analyze-image:
    *   post:
    *     summary: Analyze component image(s) using AI
-   *     description: MVP - Analyzes one or two images of Swedish appliances (vitvaror) using AI to extract component information. Can accept a typeplate/label image, product photo, or both for improved accuracy.
+   *     description: Upload photos to identify component type, model, or condition using AI image analysis. Can accept a typeplate/label image, product photo, or both for improved accuracy.
    *     tags:
    *       - AI Analysis
    *     requestBody:

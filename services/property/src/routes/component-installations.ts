@@ -22,6 +22,7 @@ export const routes = (router: KoaRouter) => {
    * /component-installations:
    *   get:
    *     summary: Get all component installations
+   *     description: Placement records linking components to property locations (spaceId). A component can be moved between locations over time. Filter by componentId, spaceId, or buildingPartId.
    *     tags: [Component Installations]
    *     parameters:
    *       - in: query
@@ -108,6 +109,7 @@ export const routes = (router: KoaRouter) => {
    * /component-installations/{id}:
    *   get:
    *     summary: Get component installation by ID
+   *     description: Returns installation record with dates, location, order number, and cost.
    *     tags: [Component Installations]
    *     parameters:
    *       - in: path
@@ -161,6 +163,7 @@ export const routes = (router: KoaRouter) => {
    * /component-installations:
    *   post:
    *     summary: Create a new component installation
+   *     description: Records a component being installed at a location. Requires componentId and spaceId.
    *     tags: [Component Installations]
    *     requestBody:
    *       required: true
@@ -211,6 +214,7 @@ export const routes = (router: KoaRouter) => {
    * /component-installations/{id}:
    *   put:
    *     summary: Update a component installation
+   *     description: Updates installation details or records deinstallation date.
    *     tags: [Component Installations]
    *     parameters:
    *       - in: path
@@ -267,6 +271,7 @@ export const routes = (router: KoaRouter) => {
    * /component-installations/{id}:
    *   delete:
    *     summary: Delete a component installation
+   *     description: Removes an installation record.
    *     tags: [Component Installations]
    *     parameters:
    *       - in: path

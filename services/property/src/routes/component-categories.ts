@@ -28,6 +28,7 @@ export const routes = (router: KoaRouter) => {
    * /component-categories:
    *   get:
    *     summary: Get all component categories
+   *     description: Top-level groupings for building components (e.g., Ventilation, VVS, Vitvaror, Tak). Use categoryId to filter component types.
    *     tags: [Component Categories]
    *     parameters:
    *       - in: query
@@ -93,6 +94,7 @@ export const routes = (router: KoaRouter) => {
    * /component-categories/{id}:
    *   get:
    *     summary: Get component category by ID
+   *     description: Returns a single category with its name and metadata.
    *     tags: [Component Categories]
    *     parameters:
    *       - in: path
@@ -142,6 +144,7 @@ export const routes = (router: KoaRouter) => {
    * /component-categories:
    *   post:
    *     summary: Create a new component category
+   *     description: Creates a new top-level category for organizing component types.
    *     tags: [Component Categories]
    *     requestBody:
    *       required: true
@@ -189,6 +192,7 @@ export const routes = (router: KoaRouter) => {
    * /component-categories/{id}:
    *   put:
    *     summary: Update a component category
+   *     description: Updates category name or metadata.
    *     tags: [Component Categories]
    *     parameters:
    *       - in: path
@@ -246,6 +250,7 @@ export const routes = (router: KoaRouter) => {
    * /component-categories/{id}:
    *   delete:
    *     summary: Delete a component category
+   *     description: Removes a category. Will fail if category has associated types.
    *     tags: [Component Categories]
    *     parameters:
    *       - in: path

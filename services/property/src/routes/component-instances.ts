@@ -31,6 +31,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all component instances
+   *     description: Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: query
@@ -115,6 +116,7 @@ export const routes = (router: KoaRouter) => {
    * /components/{id}:
    *   get:
    *     summary: Get component instance by ID
+   *     description: Returns full component details including purchase info, warranty dates, and current status.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: path
@@ -165,6 +167,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   post:
    *     summary: Create a new component instance
+   *     description: Registers a new physical unit. Requires modelId and serialNumber.
    *     tags: [Component Instances]
    *     requestBody:
    *       required: true
@@ -215,6 +218,7 @@ export const routes = (router: KoaRouter) => {
    * /components/{id}:
    *   put:
    *     summary: Update a component instance
+   *     description: Updates component status, warranty dates, or other attributes.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: path
@@ -271,6 +275,7 @@ export const routes = (router: KoaRouter) => {
    * /components/{id}:
    *   delete:
    *     summary: Delete a component instance
+   *     description: Removes a component record. Automatically deletes associated installation records.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: path
@@ -305,7 +310,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get components installed in a specific room
    *     description: |
-   *       Retrieves all components currently installed in the specified room.
+   *       Returns all components currently installed in a specific space via their installation records.
    *       Only returns components that are currently installed (no deinstallation date).
    *     tags: [Component Instances]
    *     parameters:
