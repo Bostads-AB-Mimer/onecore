@@ -23,7 +23,7 @@ const schemas = {
     name: 'Building',
     target: 'openApi3',
   }).definitions,
-  ...zodToJsonSchema(types.ComponentSchema, {
+  ...zodToJsonSchema(types.ComponentNewSchema, {
     name: 'Component',
     target: 'openApi3',
   }).definitions,
