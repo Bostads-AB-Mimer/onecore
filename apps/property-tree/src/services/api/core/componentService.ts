@@ -30,7 +30,7 @@ export const componentService = {
     const { data, error } = await POST('/components', {
       body: {
         modelId: instanceData.modelId,
-        serialNumber: instanceData.serialNumber,
+        serialNumber: instanceData.serialNumber ?? undefined,
         warrantyStartDate: instanceData.warrantyStartDate,
         warrantyMonths: instanceData.warrantyMonths,
         priceAtPurchase: instanceData.priceAtPurchase,
@@ -38,7 +38,7 @@ export const componentService = {
         economicLifespan: instanceData.economicLifespan,
         status: instanceData.status || 'ACTIVE',
         quantity: instanceData.quantity || 1,
-        ncsCode: instanceData.ncsCode,
+        ncsCode: instanceData.ncsCode || '',
       },
     })
 
@@ -113,7 +113,7 @@ export const componentService = {
     const { data: instance, error: instanceError } = await POST('/components', {
       body: {
         modelId: instanceData.modelId,
-        serialNumber: instanceData.serialNumber,
+        serialNumber: instanceData.serialNumber ?? undefined,
         warrantyStartDate: instanceData.warrantyStartDate,
         warrantyMonths: instanceData.warrantyMonths,
         priceAtPurchase: instanceData.priceAtPurchase,
@@ -121,7 +121,7 @@ export const componentService = {
         economicLifespan: instanceData.economicLifespan,
         status: instanceData.status || 'ACTIVE',
         quantity: instanceData.quantity || 1,
-        ncsCode: instanceData.ncsCode,
+        ncsCode: instanceData.ncsCode || '',
       },
     })
 
@@ -208,7 +208,10 @@ export const componentService = {
   ): Promise<ComponentInstance> {
     const { data: response, error } = await PUT('/components/{id}', {
       params: { path: { id: instanceId } },
-      body: data,
+      body: {
+        ...data,
+        serialNumber: data.serialNumber ?? undefined,
+      },
     })
 
     if (error) throw error

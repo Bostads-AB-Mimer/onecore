@@ -26,9 +26,7 @@ export const TypesTable = ({
       key: 'description',
       label: 'Beskrivning',
       render: (item) => (
-        <span className="text-muted-foreground">
-          {item.description || '-'}
-        </span>
+        <span className="text-muted-foreground">{item.description || '-'}</span>
       ),
     },
   ]

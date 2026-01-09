@@ -106,8 +106,10 @@ export const ModelsTable = ({
 
   // Expandable content for technical specification and installation instructions
   const expandableContent = (model: ComponentModel) => {
-    const hasTechSpec = model.technicalSpecification && model.technicalSpecification.trim()
-    const hasInstallInstructions = model.installationInstructions && model.installationInstructions.trim()
+    const hasTechSpec =
+      model.technicalSpecification && model.technicalSpecification.trim()
+    const hasInstallInstructions =
+      model.installationInstructions && model.installationInstructions.trim()
 
     if (!hasTechSpec && !hasInstallInstructions) {
       return null
@@ -125,7 +127,9 @@ export const ModelsTable = ({
         )}
         {hasInstallInstructions && (
           <div>
-            <h4 className="text-sm font-medium mb-1">Installationsinstruktioner</h4>
+            <h4 className="text-sm font-medium mb-1">
+              Installationsinstruktioner
+            </h4>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
               {model.installationInstructions}
             </p>

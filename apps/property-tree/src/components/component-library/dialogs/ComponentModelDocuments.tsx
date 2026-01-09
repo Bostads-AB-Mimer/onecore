@@ -456,9 +456,7 @@ export function ComponentModelDocuments({
                       </Button>
                       <Button
                         variant={
-                          deleteConfirm === doc.id
-                            ? 'destructive'
-                            : 'outline'
+                          deleteConfirm === doc.id ? 'destructive' : 'outline'
                         }
                         size="sm"
                         onClick={(e) => {

@@ -94,7 +94,12 @@ export function GenericEntityDialog<T extends Record<string, any>>({
           if (entity[field.name] !== undefined) {
             let value = entity[field.name]
             // Convert ISO date strings to yyyy-MM-dd format
-            if (field.type === 'date' && value && typeof value === 'string' && value.includes('T')) {
+            if (
+              field.type === 'date' &&
+              value &&
+              typeof value === 'string' &&
+              value.includes('T')
+            ) {
               value = value.split('T')[0]
             }
             editData[field.name] = value
@@ -179,7 +184,8 @@ export function GenericEntityDialog<T extends Record<string, any>>({
           data: updateData,
           parentId: newParentId || parentId,
           // Pass old parent ID for cache invalidation when parent changes
-          oldParentId: newParentId && newParentId !== parentId ? parentId : undefined,
+          oldParentId:
+            newParentId && newParentId !== parentId ? parentId : undefined,
         }
       }
 

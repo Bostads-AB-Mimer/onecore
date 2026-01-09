@@ -359,10 +359,7 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (
-        !categoriesLoading &&
-        (!categories || categories.length === 0)
-      ) {
+      if (!categoriesLoading && (!categories || categories.length === 0)) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga kategorier ännu</h2>
@@ -411,10 +408,7 @@ const ComponentLibraryView = () => {
         )
       }
 
-      if (
-        !typesLoading &&
-        (!types || types.length === 0)
-      ) {
+      if (!typesLoading && (!types || types.length === 0)) {
         return (
           <div className="text-center py-16 space-y-4">
             <h2 className="text-2xl font-bold">Inga typer ännu</h2>
@@ -870,8 +864,7 @@ const ComponentLibraryView = () => {
                     categoryId:
                       instanceDialog.state.entity.model?.subtype?.componentType
                         ?.categoryId,
-                    typeId:
-                      instanceDialog.state.entity.model?.subtype?.typeId,
+                    typeId: instanceDialog.state.entity.model?.subtype?.typeId,
                     subtypeId:
                       instanceDialog.state.entity.model?.componentSubtypeId,
                     modelId: instanceDialog.state.entity.modelId,
