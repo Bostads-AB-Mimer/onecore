@@ -4,15 +4,12 @@ import { Input } from '@/components/ui/Input'
 import { useQuery } from '@tanstack/react-query'
 import { componentService } from '@/services/api/core/componentService'
 import { useDebounce } from '@/components/hooks/useDebounce'
-import type { ComponentInstance } from '@/services/types'
+import type { Component } from '@/services/types'
 
 interface InstanceSelectorProps {
   modelId: string
   value: string // Selected instance ID
-  onChange: (
-    instanceId: string,
-    instance: ComponentInstance | undefined
-  ) => void
+  onChange: (instanceId: string, instance: Component | undefined) => void
   error?: string
 }
 

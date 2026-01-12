@@ -43,7 +43,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Building', schemas.BuildingSchema)
   registerSchema('Company', schemas.CompanySchema)
   registerSchema('CompanyDetails', schemas.CompanyDetailsSchema)
-  registerSchema('Component', schemas.ComponentSchema)
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
@@ -68,7 +67,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ComponentType', schemas.ComponentTypeSchema)
   registerSchema('ComponentSubtype', schemas.ComponentSubtypeSchema)
   registerSchema('ComponentModel', schemas.ComponentModelSchema)
-  registerSchema('ComponentInstance', schemas.ComponentNewSchema)
   registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema)
   registerSchema(
     'CreateComponentCategoryRequest',
@@ -102,8 +100,8 @@ export const routes = (router: KoaRouter) => {
     'UpdateComponentModelRequest',
     schemas.UpdateComponentModelSchema
   )
-  registerSchema('CreateComponentRequest', schemas.CreateComponentNewSchema)
-  registerSchema('UpdateComponentRequest', schemas.UpdateComponentNewSchema)
+  registerSchema('CreateComponentRequest', schemas.CreateComponentSchema)
+  registerSchema('UpdateComponentRequest', schemas.UpdateComponentSchema)
   registerSchema(
     'CreateComponentInstallationRequest',
     schemas.CreateComponentInstallationSchema
@@ -1458,7 +1456,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/ComponentInstance'
+   *                     $ref: '#/components/schemas/Component'
    *       '404':
    *         description: Room not found
    *         content:
@@ -1503,7 +1501,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentNew[],
+        content: result.data satisfies schemas.Component[],
         ...metadata,
       }
     } catch (error) {
@@ -2988,7 +2986,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes:
    *   get:
    *     summary: Get all component subtypes
-   *     description: Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
+   *     description: "Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName."
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -3813,7 +3811,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/ComponentInstance'
+   *                     $ref: '#/components/schemas/Component'
    *                 pagination:
    *                   type: object
    *                   properties:
@@ -3830,7 +3828,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.ComponentsNewQueryParamsSchema.safeParse(ctx.query)
+    const params = schemas.ComponentsQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
       ctx.status = 400
       ctx.body = { error: params.error.errors, ...metadata }
@@ -3853,7 +3851,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentNew[],
+        content: result.data satisfies schemas.Component[],
         ...metadata,
       }
     } catch (error) {
@@ -3887,7 +3885,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentInstance'
+   *                   $ref: '#/components/schemas/Component'
    *       404:
    *         description: Component not found
    *     security:
@@ -3918,7 +3916,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentNew,
+        content: result.data satisfies schemas.Component,
         ...metadata,
       }
     } catch (error) {
@@ -3951,13 +3949,13 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentInstance'
+   *                   $ref: '#/components/schemas/Component'
    *     security:
    *       - bearerAuth: []
    */
   router.post('(.*)/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const body = schemas.CreateComponentNewSchema.safeParse(ctx.request.body)
+    const body = schemas.CreateComponentSchema.safeParse(ctx.request.body)
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -3977,7 +3975,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentNew,
+        content: result.data satisfies schemas.Component,
         ...metadata,
       }
     } catch (error) {
@@ -4018,7 +4016,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentInstance'
+   *                   $ref: '#/components/schemas/Component'
    *       404:
    *         description: Component not found
    *     security:
@@ -4033,7 +4031,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const body = schemas.UpdateComponentNewSchema.safeParse(ctx.request.body)
+    const body = schemas.UpdateComponentSchema.safeParse(ctx.request.body)
     if (!body.success) {
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
@@ -4059,7 +4057,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentNew,
+        content: result.data satisfies schemas.Component,
         ...metadata,
       }
     } catch (error) {

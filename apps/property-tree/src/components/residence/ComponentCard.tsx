@@ -8,13 +8,13 @@ import {
   AccordionTrigger,
 } from '../ui/Accordion'
 import { Copy, Ticket, Images, FileText } from 'lucide-react'
-import type { ComponentInstance } from '@/services/types'
+import type { Component } from '@/services/types'
 import { useState } from 'react'
 import { ComponentImageGallery } from './ComponentImageGallery'
 import { ComponentModelDocuments } from '../component-library/dialogs/ComponentModelDocuments'
 
 interface ComponentCardProps {
-  component: ComponentInstance
+  component: Component
 }
 
 export const ComponentCard = ({ component }: ComponentCardProps) => {

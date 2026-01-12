@@ -1,6 +1,6 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
-import type { CreateComponentNew, UpdateComponentNew } from '../types/component'
+import type { CreateComponent, UpdateComponent } from '../types/component'
 
 // Reusable Prisma select for propertyObject with room/residence structure info
 const propertyObjectWithStructuresSelect = {
@@ -121,7 +121,7 @@ export const getComponentById = async (id: string) => {
   return component ? trimStrings(component) : null
 }
 
-export const createComponent = async (data: CreateComponentNew) => {
+export const createComponent = async (data: CreateComponent) => {
   const component = await prisma.components.create({
     data,
   })
@@ -129,7 +129,7 @@ export const createComponent = async (data: CreateComponentNew) => {
   return trimStrings(component)
 }
 
-export const updateComponent = async (id: string, data: UpdateComponentNew) => {
+export const updateComponent = async (id: string, data: UpdateComponent) => {
   const component = await prisma.components.update({
     where: { id },
     data,
@@ -196,16 +196,14 @@ export const getComponentsByRoomId = async (roomId: string) => {
 
 // ==================== COMPONENT FILES ====================
 
-export const getComponentInstanceWithDocuments = async (
-  componentId: string
-) => {
+export const getComponentWithDocuments = async (componentId: string) => {
   return prisma.components.findUnique({
     where: { id: componentId },
     include: { documents: true },
   })
 }
 
-export const getComponentInstanceFiles = async (componentId: string) => {
+export const getComponentFiles = async (componentId: string) => {
   return prisma.documents.findMany({
     where: { componentInstanceId: componentId },
     orderBy: { createdAt: 'desc' },

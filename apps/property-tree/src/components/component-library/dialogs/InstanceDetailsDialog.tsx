@@ -28,12 +28,12 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useComponentImages } from '@/components/hooks/useComponentImages'
-import type { ComponentInstance } from '@/services/types'
+import type { Component } from '@/services/types'
 
 interface InstanceDetailsDialogProps {
   isOpen: boolean
   onClose: () => void
-  instance: ComponentInstance
+  instance: Component
 }
 
 export const InstanceDetailsDialog = ({

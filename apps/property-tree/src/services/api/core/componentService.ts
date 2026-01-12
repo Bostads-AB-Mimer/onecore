@@ -1,8 +1,8 @@
-import { ComponentInstance, DocumentWithUrl } from '../../types'
+import { Component, DocumentWithUrl } from '../../types'
 import { GET, POST, PUT, DELETE } from './base-api'
 
 export const componentService = {
-  async getByRoomId(roomId: string): Promise<ComponentInstance[]> {
+  async getByRoomId(roomId: string): Promise<Component[]> {
     const { data, error } = await GET('/components/by-room/{roomId}', {
       params: {
         path: {
@@ -12,7 +12,7 @@ export const componentService = {
     })
     if (error) throw error
     // Type assertion needed - API response schema differs from database schema
-    return (data?.content || []) as ComponentInstance[]
+    return (data?.content || []) as Component[]
   },
 
   async createInstance(instanceData: {
@@ -27,7 +27,7 @@ export const componentService = {
     condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
     quantity?: number
     ncsCode?: string
-  }): Promise<ComponentInstance> {
+  }): Promise<Component> {
     const { data, error } = await POST('/components', {
       body: {
         modelId: instanceData.modelId,
@@ -47,10 +47,10 @@ export const componentService = {
     if (error) throw error
     if (!data?.content) throw new Error('Failed to create component instance')
 
-    return data.content as ComponentInstance
+    return data.content as Component
   },
 
-  async getInstancesByModel(modelId: string): Promise<ComponentInstance[]> {
+  async getInstancesByModel(modelId: string): Promise<Component[]> {
     const { data, error } = await GET('/components', {
       params: {
         query: {
@@ -60,13 +60,13 @@ export const componentService = {
       },
     })
     if (error) throw error
-    return (data?.content || []) as ComponentInstance[]
+    return (data?.content || []) as Component[]
   },
 
   async getUninstalledInstances(
     modelId?: string,
     serialNumber?: string
-  ): Promise<ComponentInstance[]> {
+  ): Promise<Component[]> {
     const queryParams: any = {
       limit: 100, // Max allowed by backend schema
     }
@@ -81,7 +81,7 @@ export const componentService = {
     })
     if (error) throw error
 
-    const instances = (data?.content || []) as ComponentInstance[]
+    const instances = (data?.content || []) as Component[]
 
     // Filter to only uninstalled instances (no active installations)
     return instances.filter((instance) => {
@@ -111,7 +111,7 @@ export const componentService = {
       orderNumber?: string
       spaceType?: 'OBJECT' | 'PropertyObject'
     }
-  ): Promise<ComponentInstance> {
+  ): Promise<Component> {
     // 1. Create component instance
     const { data: instance, error: instanceError } = await POST('/components', {
       body: {
@@ -133,7 +133,7 @@ export const componentService = {
     if (!instance?.content)
       throw new Error('Failed to create component instance')
 
-    const createdInstance = instance.content as ComponentInstance
+    const createdInstance = instance.content as Component
 
     // 2. Create installation record
     const { error: installError } = await POST('/component-installations', {
@@ -210,7 +210,7 @@ export const componentService = {
       quantity: number
       ncsCode?: string
     }>
-  ): Promise<ComponentInstance> {
+  ): Promise<Component> {
     const { data: response, error } = await PUT('/components/{id}', {
       params: { path: { id: instanceId } },
       body: {
@@ -223,7 +223,7 @@ export const componentService = {
     if (!response?.content)
       throw new Error('Failed to update component instance')
 
-    return response.content as ComponentInstance
+    return response.content as Component
   },
 
   // Component Instance Image Operations

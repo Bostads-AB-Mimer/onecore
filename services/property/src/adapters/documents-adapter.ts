@@ -32,9 +32,7 @@ export const getDocumentsByComponentModel = async (
   })
 }
 
-export const getDocumentsByComponentInstance = async (
-  componentInstanceId: string
-) => {
+export const getDocumentsByComponent = async (componentInstanceId: string) => {
   return prisma.documents.findMany({
     where: { componentInstanceId },
     orderBy: { createdAt: 'desc' },

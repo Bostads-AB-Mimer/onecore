@@ -1220,7 +1220,7 @@ export async function deleteComponentModel(
 
 // ==================== COMPONENTS ====================
 
-type GetComponentsResponse = components['schemas']['ComponentInstance'][]
+type GetComponentsResponse = components['schemas']['Component'][]
 
 export async function getComponents(
   modelId?: string,
@@ -1245,7 +1245,7 @@ export async function getComponents(
   }
 }
 
-type GetComponentResponse = components['schemas']['ComponentInstance']
+type GetComponentResponse = components['schemas']['Component']
 
 export async function getComponentById(
   id: string
@@ -1481,8 +1481,7 @@ export async function deleteComponentInstallation(
 
 // ==================== COMPONENTS BY ROOM ====================
 
-type GetComponentsByRoomIdResponse =
-  components['schemas']['ComponentInstance'][]
+type GetComponentsByRoomIdResponse = components['schemas']['Component'][]
 
 export async function getComponentsByRoomId(
   roomId: string

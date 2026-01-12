@@ -4,7 +4,7 @@ import type {
   ComponentType,
   ComponentSubtype,
   ComponentModel,
-  ComponentInstance,
+  Component,
 } from '@/services/types'
 
 // ViewState type definition
@@ -46,7 +46,7 @@ interface UseComponentLibraryHandlersParams {
   navigateTo: (state: ViewState) => void
   setInstanceDetailsDialogState: (state: {
     isOpen: boolean
-    instance?: ComponentInstance
+    instance?: Component
   }) => void
 
   // Dialog controls from inline useDialogState helper
@@ -68,7 +68,7 @@ interface UseComponentLibraryHandlersParams {
   }
   instanceDialog: {
     openCreate: (defaultValues?: Record<string, any>) => void
-    openEdit: (entity: ComponentInstance) => void
+    openEdit: (entity: Component) => void
   }
 }
 
@@ -101,9 +101,9 @@ interface ComponentLibraryHandlers {
 
   // Instance handlers
   handleCreateInstanceFromTable: () => void
-  handleEditInstance: (instance: ComponentInstance) => void
-  handleDeleteInstance: (instance: ComponentInstance) => Promise<void>
-  handleViewHistory: (instance: ComponentInstance) => void
+  handleEditInstance: (instance: Component) => void
+  handleDeleteInstance: (instance: Component) => Promise<void>
+  handleViewHistory: (instance: Component) => void
   handleCloseInstanceDetailsDialog: () => void
 }
 
@@ -291,10 +291,10 @@ export const useComponentLibraryHandlers = (
     instanceDialog.openCreate() // Clear any pre-filled values
   }
 
-  const handleEditInstance = (instance: ComponentInstance) =>
+  const handleEditInstance = (instance: Component) =>
     instanceDialog.openEdit(instance)
 
-  const handleDeleteInstance = async (instance: ComponentInstance) => {
+  const handleDeleteInstance = async (instance: Component) => {
     if (viewState.level !== 'instances') return
 
     if (
@@ -314,7 +314,7 @@ export const useComponentLibraryHandlers = (
     }
   }
 
-  const handleViewHistory = (instance: ComponentInstance) => {
+  const handleViewHistory = (instance: Component) => {
     setInstanceDetailsDialogState({
       isOpen: true,
       instance,

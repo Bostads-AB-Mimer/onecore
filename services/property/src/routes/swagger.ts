@@ -120,8 +120,8 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.ComponentNewSchema, {
-    name: 'ComponentInstance',
+  ...zodToJsonSchema(types.ComponentSchema, {
+    name: 'Component',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
@@ -160,12 +160,12 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.CreateComponentNewSchema, {
+  ...zodToJsonSchema(types.CreateComponentSchema, {
     name: 'CreateComponentRequest',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.UpdateComponentNewSchema, {
+  ...zodToJsonSchema(types.UpdateComponentSchema, {
     name: 'UpdateComponentRequest',
     target: 'openApi3',
     $refStrategy: 'none',

@@ -528,7 +528,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentInstance"][];
+              content?: components["schemas"]["Component"][];
               pagination?: {
                 page?: number;
                 limit?: number;
@@ -555,7 +555,7 @@ export interface paths {
         201: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentInstance"];
+              content?: components["schemas"]["Component"];
             };
           };
         };
@@ -578,7 +578,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentInstance"];
+              content?: components["schemas"]["Component"];
             };
           };
         };
@@ -608,7 +608,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentInstance"];
+              content?: components["schemas"]["Component"];
             };
           };
         };
@@ -650,7 +650,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["ComponentInstance"][];
+              content?: components["schemas"]["Component"][];
             };
           };
         };
@@ -2803,7 +2803,7 @@ export interface components {
         };
       };
     };
-    ComponentInstance: {
+    Component: {
       /** Format: uuid */
       id: string;
       /** Format: uuid */
