@@ -15,20 +15,18 @@ import {
 import { ComponentCard } from './ComponentCard'
 import { Button } from '../ui/v2/Button'
 import { Plus } from 'lucide-react'
-import { ManageRoomComponentsDialog } from './ManageRoomComponentsDialog'
+import { ManageComponentsDialog } from './ManageRoomComponentsDialog'
 
 interface RoomInfoProps {
   residenceId: string
 }
 
 interface RoomComponentsProps {
-  roomId: string
   propertyObjectId: string
   roomName?: string
 }
 
 const RoomComponents = ({
-  roomId,
   propertyObjectId,
   roomName,
 }: RoomComponentsProps) => {
@@ -92,12 +90,11 @@ const RoomComponents = ({
         )}
       </div>
 
-      <ManageRoomComponentsDialog
+      <ManageComponentsDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        roomId={roomId}
-        propertyObjectId={propertyObjectId}
-        roomName={roomName}
+        spaceId={propertyObjectId}
+        spaceName={`Rum: ${roomName}`}
       />
     </>
   )
@@ -306,7 +303,6 @@ export const RoomInfo = (props: RoomInfoProps) => {
                 </div>
 
                 <RoomComponents
-                  roomId={room.id}
                   propertyObjectId={(room as any).propertyObjectId}
                   roomName={room.name || room.roomType?.name || room.code}
                 />

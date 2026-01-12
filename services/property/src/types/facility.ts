@@ -4,6 +4,7 @@ import { createGenericResponseSchema } from './response'
 
 export const FacilityDetailsSchema = z.object({
   id: z.string(),
+  propertyObjectId: z.string(),
   code: z.string(),
   name: z.string().nullable(),
   entrance: z.string().nullable(),

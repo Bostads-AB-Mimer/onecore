@@ -19,21 +19,19 @@ import type { ComponentInstance } from '@/services/types'
 import { useQuery } from '@tanstack/react-query'
 import { componentService } from '@/services/api/core/componentService'
 
-interface ManageRoomComponentsDialogProps {
+interface ManageComponentsDialogProps {
   isOpen: boolean
   onClose: () => void
-  roomId: string
-  propertyObjectId: string
-  roomName?: string
+  spaceId: string
+  spaceName?: string
 }
 
-export const ManageRoomComponentsDialog = ({
+export const ManageComponentsDialog = ({
   isOpen,
   onClose,
-  roomId,
-  propertyObjectId,
-  roomName,
-}: ManageRoomComponentsDialogProps) => {
+  spaceId,
+  spaceName,
+}: ManageComponentsDialogProps) => {
   const [deinstallDialogState, setDeinstallDialogState] = useState<{
     isOpen: boolean
     component?: ComponentInstance
@@ -41,9 +39,9 @@ export const ManageRoomComponentsDialog = ({
     isOpen: false,
   })
 
-  const { data: roomComponents = [] } = useQuery({
-    queryKey: ['components', propertyObjectId],
-    queryFn: () => componentService.getByRoomId(propertyObjectId),
+  const { data: spaceComponents = [] } = useQuery({
+    queryKey: ['components', spaceId],
+    queryFn: () => componentService.getByRoomId(spaceId),
     enabled: isOpen,
   })
 
@@ -67,8 +65,8 @@ export const ManageRoomComponentsDialog = ({
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Hantera komponenter</DialogTitle>
-            {roomName && (
-              <p className="text-sm text-muted-foreground">Rum: {roomName}</p>
+            {spaceName && (
+              <p className="text-sm text-muted-foreground">{spaceName}</p>
             )}
           </DialogHeader>
 
@@ -86,8 +84,7 @@ export const ManageRoomComponentsDialog = ({
             <TabsContent value="installera">
               {isOpen && (
                 <ComponentInstallationForm
-                  propertyObjectId={propertyObjectId}
-                  roomId={roomId}
+                  propertyObjectId={spaceId}
                   onSuccess={onClose}
                   onCancel={onClose}
                 />
@@ -98,18 +95,18 @@ export const ManageRoomComponentsDialog = ({
             <TabsContent value="avinstallera">
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Välj en komponent att avinstallera från rummet
+                  Välj en komponent att avinstallera
                 </p>
 
-                {roomComponents.length === 0 ? (
+                {spaceComponents.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">
-                      Inga komponenter installerade i detta rum
+                      Inga komponenter installerade
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {roomComponents.map((component) => {
+                    {spaceComponents.map((component) => {
                       const activeInstallation =
                         component.componentInstallations?.find(
                           (inst) => !inst.deinstallationDate
@@ -164,7 +161,7 @@ export const ManageRoomComponentsDialog = ({
           isOpen={deinstallDialogState.isOpen}
           onClose={handleCloseDeinstallDialog}
           component={deinstallDialogState.component}
-          roomId={roomId}
+          spaceId={spaceId}
         />
       )}
     </>

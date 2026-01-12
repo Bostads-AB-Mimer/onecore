@@ -17,19 +17,19 @@ interface DeinstallationDialogProps {
   isOpen: boolean
   onClose: () => void
   component: ComponentInstance
-  roomId: string
+  spaceId: string
 }
 
 export const DeinstallationDialog = ({
   isOpen,
   onClose,
   component,
-  roomId,
+  spaceId,
 }: DeinstallationDialogProps) => {
   const [deinstallationDate, setDeinstallationDate] = useState(
     new Date().toISOString().split('T')[0]
   )
-  const deinstallMutation = useDeinstallComponent(roomId)
+  const deinstallMutation = useDeinstallComponent(spaceId)
 
   const handleDeinstall = async () => {
     // Find the installation ID from the component's installations
