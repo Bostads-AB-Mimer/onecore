@@ -471,6 +471,10 @@ const ComponentLibraryView = () => {
             <p className="text-muted-foreground">
               Skapa din första undertyp för att komma igång
             </p>
+            <Button onClick={handleCreateSubtype} className="mt-4">
+              <Plus className="h-4 w-4 mr-2" />
+              Skapa undertyp
+            </Button>
           </div>
         )
       }
@@ -537,6 +541,10 @@ const ComponentLibraryView = () => {
             <p className="text-muted-foreground">
               Skapa din första modell för att komma igång
             </p>
+            <Button onClick={handleCreateModel} className="mt-4">
+              <Plus className="h-4 w-4 mr-2" />
+              Skapa modell
+            </Button>
           </div>
         )
       }
