@@ -17,7 +17,7 @@ import { ProcessStatus } from '../../common/types'
  * tags:
  *   - name: Property base Service
  *     description: Operations related to property base
- *   - name: Components
+ *   - name: Property-base/Components
  *     description: |
  *       Component management for property building parts and installations.
  *
@@ -1436,7 +1436,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get components by room ID
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     description: |
    *       Returns all components currently installed in a specific space via their installation records.
    *       Components are returned ordered by installation date (newest first).
@@ -2332,7 +2332,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all component categories
    *     description: Top-level groupings for building components (e.g., Ventilation, VVS, Vitvaror, Tak). Use categoryId to filter component types.
    *     tags:
-   *       - Component Categories
+   *       - Property-base/Components
    *     parameters:
    *       - in: query
    *         name: page
@@ -2400,7 +2400,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get component category by ID
    *     description: Returns a single category with its name and metadata.
    *     tags:
-   *       - Component Categories
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -2465,7 +2465,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create a new component category
    *     description: Creates a new top-level category for organizing component types.
    *     tags:
-   *       - Component Categories
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -2525,7 +2525,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a component category
    *     description: Updates category name or metadata.
    *     tags:
-   *       - Component Categories
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -2606,7 +2606,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a component category
    *     description: Removes a category. Will fail if category has associated types.
    *     tags:
-   *       - Component Categories
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -2661,7 +2661,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all component types
    *     description: Specific kinds of components within a category (e.g., Diskmaskin, Värmepump, Takbeläggning). Filter by categoryId to get types for a specific category.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: query
    *         name: categoryId
@@ -2735,7 +2735,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get component type by ID
    *     description: Returns a single type with its category relationship.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -2800,7 +2800,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create a new component type
    *     description: Creates a new type within a category. Requires categoryId.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -2856,7 +2856,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a component type
    *     description: Updates type name or category assignment.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -2935,7 +2935,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a component type
    *     description: Removes a type. Will fail if type has associated subtypes.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -2990,7 +2990,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all component subtypes
    *     description: Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: query
    *         name: typeId
@@ -3084,7 +3084,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get component subtype by ID
    *     description: Returns subtype with full lifecycle and cost planning data.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3149,7 +3149,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create a new component subtype
    *     description: Creates a subtype with lifecycle parameters. Requires typeId.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -3207,7 +3207,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a component subtype
    *     description: Updates subtype specifications or lifecycle data.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3290,7 +3290,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a component subtype
    *     description: Removes a subtype. Will fail if subtype has associated models.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3347,7 +3347,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all component models
    *     description: Specific manufacturer products with pricing, warranty, specifications, and dimensions. Filter by subtypeId, manufacturer, or modelName.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: query
    *         name: componentTypeId
@@ -3447,7 +3447,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get all documents for a component model
    *     tags:
-   *       - Documents
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3517,7 +3517,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get component model by ID
    *     description: Returns full model details including specs and current pricing.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3582,7 +3582,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create a new component model
    *     description: Creates a manufacturer product entry. Requires subtypeId.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -3638,7 +3638,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a component model
    *     description: Updates model pricing, specs, or warranty info.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3719,7 +3719,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a component model
    *     description: Removes a model. Will fail if model has associated components.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3776,7 +3776,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all components
    *     description: Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: query
    *         name: modelId
@@ -3870,7 +3870,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get component by ID
    *     description: Returns full component details including purchase info, warranty dates, and current status.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -3935,7 +3935,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create a new component
    *     description: Registers a new physical unit. Requires modelId and serialNumber.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -3994,7 +3994,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a component
    *     description: Updates component status, warranty dates, or other attributes.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4076,7 +4076,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a component
    *     description: Removes a component record. Automatically deletes associated installation records.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4133,7 +4133,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all component installations
    *     description: Placement records linking components to property locations (spaceId). A component can be moved between locations over time. Filter by componentId, spaceId, or buildingPartId.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: query
    *         name: componentId
@@ -4230,7 +4230,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get component installation by ID
    *     description: Returns installation record with dates, location, order number, and cost.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4297,7 +4297,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create a new component installation
    *     description: Records a component being installed at a location. Requires componentId and spaceId.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -4359,7 +4359,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update a component installation
    *     description: Updates installation details or records deinstallation date.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4447,7 +4447,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a component installation
    *     description: Removes an installation record.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4506,7 +4506,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Upload a file to a component
    *     description: Attach photos or documents to a specific component (e.g., installation photos, receipts).
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4594,7 +4594,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get all documents for a component
    *     tags:
-   *       - Documents
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4658,7 +4658,7 @@ export const routes = (router: KoaRouter) => {
    *   delete:
    *     summary: Delete a document by ID
    *     tags:
-   *       - Documents
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4719,7 +4719,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Upload a document to a component model
    *     description: Attach product documentation, manuals, or spec sheets to a model for reference.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     parameters:
    *       - in: path
    *         name: id
@@ -4816,7 +4816,7 @@ export const routes = (router: KoaRouter) => {
    *   post:
    *     summary: Upload a document for a component or model
    *     tags:
-   *       - Documents
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -4921,7 +4921,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Analyze component image(s) using AI
    *     description: Upload photos to identify component type, model, or condition using AI image analysis. Can accept a typeplate/label image, product photo, or both for improved accuracy.
    *     tags:
-   *       - Components
+   *       - Property-base/Components
    *     requestBody:
    *       required: true
    *       content:
@@ -4985,7 +4985,7 @@ export const routes = (router: KoaRouter) => {
    *   post:
    *     summary: Add a component with model, instance, and installation
    *     tags:
-   *       - Property base Service
+   *       - Property-base/Components
    *     description: |
    *       Unified process to add a component. This handles:
    *       1. Finding or creating a component model (by exact modelName match)
