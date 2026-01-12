@@ -11,6 +11,7 @@ import {
 import {
   getComponentModels,
   getComponentModelById,
+  findModelByExactName,
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
@@ -120,6 +121,57 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /component-models/by-name/{modelName}:
+   *   get:
+   *     summary: Find component model by exact name
+   *     tags: [Component Models]
+   *     description: Finds a component model by exact model name match. Used by the add-component process to check if a model already exists.
+   *     parameters:
+   *       - in: path
+   *         name: modelName
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The exact model name to search for
+   *     responses:
+   *       200:
+   *         description: Component model found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentModel'
+   *       404:
+   *         description: Component model not found
+   */
+  router.get('(.*)/component-models/by-name/:modelName', async (ctx) => {
+    const modelName = z.string().min(1).parse(ctx.params.modelName)
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const model = await findModelByExactName(modelName)
+
+      if (!model) {
+        ctx.status = 404
+        ctx.body = { error: 'Component model not found', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: ComponentModelSchema.parse(model),
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
 
   /**
    * @swagger

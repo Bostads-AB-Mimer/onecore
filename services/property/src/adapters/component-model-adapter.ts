@@ -79,6 +79,33 @@ export const getComponentModelById = async (id: string) => {
   return model ? trimStrings(model) : null
 }
 
+/**
+ * Find a component model by exact model name match (case-insensitive).
+ * Used by the add-component process to check if a model already exists.
+ */
+export const findModelByExactName = async (modelName: string) => {
+  const model = await prisma.componentModels.findFirst({
+    where: {
+      modelName: {
+        equals: modelName,
+      },
+    },
+    include: {
+      subtype: {
+        include: {
+          componentType: {
+            include: {
+              category: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  return model ? trimStrings(model) : null
+}
+
 export const createComponentModel = async (data: CreateComponentModel) => {
   const model = await prisma.componentModels.create({
     data,

@@ -12,6 +12,7 @@ model Components {
   quantity                    Float
   ncsCode                     String?   @db.NVarChar(10)
   status                      String    @default("ACTIVE") @db.NVarChar(20)
+  condition                   String?   @db.NVarChar(20)
   createdAt                   DateTime  @default(now()) @db.DateTime
   updatedAt                   DateTime  @default(now()) @updatedAt @db.DateTime
 
