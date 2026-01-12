@@ -789,21 +789,18 @@ export interface paths {
       };
     };
   };
-  "/documents/upload": {
+  "/documents": {
     /**
-     * Upload a document
-     * @description Uploads a document (PDF or image) and attaches it to either a component model or component instance.
-     * Maximum file size is 50MB. Supported formats: PDF, JPEG, PNG, WebP.
+     * Create a document record
+     * @description Creates a document metadata record linking a file (already uploaded to file-storage service)
+     * to either a component model or component instance.
      */
     post: {
       requestBody: {
         content: {
-          "multipart/form-data": {
-            /**
-             * Format: binary
-             * @description The file to upload (PDF, JPEG, PNG, or WebP)
-             */
-            file: string;
+          "application/json": {
+            /** @description The file ID from the file-storage service */
+            fileId: string;
             /**
              * Format: uuid
              * @description The ID of the component model to attach the document to (required if componentInstanceId not provided)
@@ -818,16 +815,13 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Document uploaded successfully */
+        /** @description Document record created successfully */
         200: {
           content: {
             "application/json": components["schemas"]["Document"];
           };
         };
-        /**
-         * @description Bad request - either no file provided, neither componentModelId nor componentInstanceId provided,
-         * file size exceeds limit, or unsupported file type
-         */
+        /** @description Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided */
         400: {
           content: never;
         };
@@ -841,8 +835,8 @@ export interface paths {
   "/documents/component-models/{id}": {
     /**
      * Get documents for a component model
-     * @description Retrieves all documents attached to a specific component model, including presigned URLs
-     * for accessing the files. URLs are valid for 24 hours.
+     * @description Retrieves all document metadata attached to a specific component model.
+     * Use the fileId to fetch file content/URLs from the file-storage service.
      */
     get: {
       parameters: {
@@ -855,7 +849,7 @@ export interface paths {
         /** @description Successfully retrieved documents */
         200: {
           content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
+            "application/json": components["schemas"]["Document"][];
           };
         };
         /** @description Component model not found */
@@ -872,8 +866,8 @@ export interface paths {
   "/documents/component-instances/{id}": {
     /**
      * Get documents for a component instance
-     * @description Retrieves all documents attached to a specific component instance, including presigned URLs
-     * for accessing the files. URLs are valid for 24 hours.
+     * @description Retrieves all document metadata attached to a specific component instance.
+     * Use the fileId to fetch file content/URLs from the file-storage service.
      */
     get: {
       parameters: {
@@ -886,7 +880,7 @@ export interface paths {
         /** @description Successfully retrieved documents */
         200: {
           content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
+            "application/json": components["schemas"]["Document"][];
           };
         };
         /** @description Component instance not found */
@@ -902,8 +896,9 @@ export interface paths {
   };
   "/documents/{id}": {
     /**
-     * Delete a document
-     * @description Deletes a document and its associated file from storage. This action cannot be undone.
+     * Delete a document record
+     * @description Deletes a document metadata record. Note: The actual file should be deleted
+     * separately via the file-storage service.
      */
     delete: {
       parameters: {
@@ -913,7 +908,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Document deleted successfully (no content) */
+        /** @description Document record deleted successfully (no content) */
         204: {
           content: never;
         };
