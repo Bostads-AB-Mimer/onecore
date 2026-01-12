@@ -24,6 +24,7 @@ export const componentService = {
     depreciationPriceAtPurchase: number
     economicLifespan: number
     status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+    condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
     quantity?: number
     ncsCode?: string
   }): Promise<ComponentInstance> {
@@ -37,6 +38,7 @@ export const componentService = {
         depreciationPriceAtPurchase: instanceData.depreciationPriceAtPurchase,
         economicLifespan: instanceData.economicLifespan,
         status: instanceData.status || 'ACTIVE',
+        condition: instanceData.condition,
         quantity: instanceData.quantity || 1,
         ncsCode: instanceData.ncsCode,
       },
@@ -101,6 +103,7 @@ export const componentService = {
       depreciationPriceAtPurchase: number
       economicLifespan: number
       status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+      condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       quantity?: number
       ncsCode?: string
       installationDate: string
@@ -120,6 +123,7 @@ export const componentService = {
         depreciationPriceAtPurchase: instanceData.depreciationPriceAtPurchase,
         economicLifespan: instanceData.economicLifespan,
         status: instanceData.status || 'ACTIVE',
+        condition: instanceData.condition,
         quantity: instanceData.quantity || 1,
         ncsCode: instanceData.ncsCode,
       },
@@ -202,6 +206,7 @@ export const componentService = {
       depreciationPriceAtPurchase: number
       economicLifespan: number
       status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+      condition: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       quantity: number
       ncsCode?: string
     }>

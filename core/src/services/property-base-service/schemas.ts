@@ -590,6 +590,14 @@ export const ComponentStatusEnum = z.enum([
 
 export const SpaceTypeEnum = z.enum(['OBJECT', 'PropertyObject'])
 
+export const ComponentConditionEnum = z.enum([
+  'NEW',
+  'GOOD',
+  'FAIR',
+  'POOR',
+  'DAMAGED',
+])
+
 // Component Category Schema (Level 1)
 export const ComponentCategorySchema = z.object({
   id: z.string().uuid(),
@@ -697,6 +705,7 @@ export const ComponentNewSchema = z.object({
   depreciationPriceAtPurchase: z.number().min(0),
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
+  condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
   createdAt: z.string(),
@@ -855,12 +864,9 @@ export const CreateComponentNewSchema = z.object({
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
   depreciationPriceAtPurchase: z.number().min(0),
-  ncsCode: z
-    .string()
-    .trim()
-    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
-    .optional(),
+  ncsCode: z.string().trim().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
+  condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).default(1),
   economicLifespan: z.number().min(0),
   files: z.string().trim().optional(),
@@ -875,12 +881,9 @@ export const UpdateComponentNewSchema = z.object({
   warrantyMonths: z.number().int().min(0).optional(),
   priceAtPurchase: z.number().min(0).optional(),
   depreciationPriceAtPurchase: z.number().min(0).optional(),
-  ncsCode: z
-    .string()
-    .trim()
-    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
-    .optional(),
+  ncsCode: z.string().trim().optional(),
   status: ComponentStatusEnum.optional(),
+  condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).optional(),
   economicLifespan: z.number().min(0).optional(),
   files: z.string().trim().optional(),
@@ -966,6 +969,7 @@ export type AnalyzeComponentImageRequest = z.infer<
   typeof AnalyzeComponentImageRequestSchema
 >
 export type AIComponentAnalysis = z.infer<typeof AIComponentAnalysisSchema>
+
 
 export const FacilitySearchResultSchema = z.object({
   id: z.string(),
@@ -1069,3 +1073,63 @@ export const DocumentWithUrlSchema = z.object({
 })
 
 export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
+
+// ==================== ADD COMPONENT PROCESS ====================
+
+export const AddComponentRequestSchema = z.object({
+  // Model info (find or create)
+  modelName: z.string().trim().min(1, 'Model name is required'),
+  componentSubtypeId: z.string().uuid(),
+
+  // Model fields - REQUIRED if model doesn't exist, ignored if model exists
+  manufacturer: z.string().trim().optional(),
+  currentPrice: z.number().min(0).optional(),
+  currentInstallPrice: z.number().min(0).optional(),
+  modelWarrantyMonths: z.number().int().min(0).optional(),
+  technicalSpecification: z.string().trim().optional(),
+  dimensions: z.string().trim().optional(),
+  coclassCode: z.string().trim().optional(),
+
+  // Component instance info
+  serialNumber: z.string().trim().min(1, 'Serial number is required'),
+  specifications: z.string().trim().optional(),
+  additionalInformation: z.string().trim().optional(),
+  warrantyStartDate: z.string().optional(),
+  componentWarrantyMonths: z.number().int().min(0),
+  priceAtPurchase: z.number().min(0),
+  depreciationPriceAtPurchase: z.number().min(0),
+  economicLifespan: z.number().min(0),
+  quantity: z.number().min(0).optional().default(1),
+  ncsCode: z.string().trim().optional(),
+  status: ComponentStatusEnum.optional().default('ACTIVE'),
+  condition: ComponentConditionEnum.nullable().optional(),
+
+  // Installation info
+  spaceId: z.string().min(1, 'Space ID is required'),
+  spaceType: SpaceTypeEnum,
+  installationDate: z.string(),
+  orderNumber: z.string().trim().optional(),
+  installationCost: z.number().min(0),
+})
+
+export const AddComponentResponseSchema = z.object({
+  modelCreated: z.boolean(),
+  model: z.object({
+    id: z.string().uuid(),
+    modelName: z.string(),
+    manufacturer: z.string(),
+  }),
+  component: z.object({
+    id: z.string().uuid(),
+    serialNumber: z.string(),
+    status: z.string(),
+  }),
+  installation: z.object({
+    id: z.string().uuid(),
+    spaceId: z.string(),
+    installationDate: z.string(),
+  }),
+})
+
+export type AddComponentRequest = z.infer<typeof AddComponentRequestSchema>
+export type AddComponentResponse = z.infer<typeof AddComponentResponseSchema>

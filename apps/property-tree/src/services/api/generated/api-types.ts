@@ -388,6 +388,34 @@ export interface paths {
       };
     };
   };
+  "/component-models/by-name/{modelName}": {
+    /**
+     * Find component model by exact name
+     * @description Finds a component model by exact model name match. Used by the add-component process to check if a model already exists.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The exact model name to search for */
+          modelName: string;
+        };
+      };
+      responses: {
+        /** @description Component model found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"];
+            };
+          };
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
   "/component-models/{id}": {
     /** Get component model by ID */
     get: {
@@ -2730,6 +2758,8 @@ export interface components {
       ncsCode?: string | null;
       /** @enum {string} */
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      /** @enum {string|null} */
+      condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -2847,6 +2877,8 @@ export interface components {
         ncsCode?: string | null;
         /** @enum {string} */
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+        /** @enum {string|null} */
+        condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;
@@ -3018,6 +3050,8 @@ export interface components {
        * @enum {string}
        */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      /** @enum {string|null} */
+      condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       /** @default 1 */
       quantity?: number;
       economicLifespan: number;
@@ -3035,6 +3069,8 @@ export interface components {
       ncsCode?: string | null;
       /** @enum {string} */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      /** @enum {string|null} */
+      condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       quantity?: number;
       economicLifespan?: number;
     };

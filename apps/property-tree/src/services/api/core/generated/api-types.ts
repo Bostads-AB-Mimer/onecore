@@ -4354,6 +4354,114 @@ export interface paths {
       };
     };
   };
+  "/processes/add-component": {
+    /**
+     * Add a component with model, instance, and installation
+     * @description Unified process to add a component. This handles:
+     * 1. Finding or creating a component model (by exact modelName match)
+     * 2. Creating a component instance
+     * 3. Creating a component installation
+     *
+     * If the model doesn't exist, it will be created. In this case, the model fields
+     * (manufacturer, currentPrice, currentInstallPrice, modelWarrantyMonths) are required.
+     *
+     * Categories, types, and subtypes must be created manually beforehand.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Model name (used to find existing model or create new one) */
+            modelName: string;
+            /**
+             * Format: uuid
+             * @description Subtype ID (must exist)
+             */
+            componentSubtypeId: string;
+            /** @description Required if model doesn't exist */
+            manufacturer?: string;
+            /** @description Required if model doesn't exist */
+            currentPrice?: number;
+            /** @description Required if model doesn't exist */
+            currentInstallPrice?: number;
+            /** @description Required if model doesn't exist */
+            modelWarrantyMonths?: number;
+            technicalSpecification?: string;
+            dimensions?: string;
+            coclassCode?: string;
+            serialNumber: string;
+            specifications?: string;
+            additionalInformation?: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 DateTime format (e.g., 2026-01-01T00:00:00.000Z)
+             */
+            warrantyStartDate?: string;
+            componentWarrantyMonths: number;
+            priceAtPurchase: number;
+            depreciationPriceAtPurchase: number;
+            economicLifespan: number;
+            /** @default 1 */
+            quantity?: number;
+            /** @description NCS color code */
+            ncsCode?: string;
+            /**
+             * @default ACTIVE
+             * @enum {string}
+             */
+            status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+            /**
+             * @description Physical condition of the component (optional)
+             * @enum {string|null}
+             */
+            condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+            /** @description Where to install the component */
+            spaceId: string;
+            /** @enum {string} */
+            spaceType: "OBJECT" | "PropertyObject";
+            installationDate: string;
+            orderNumber?: string;
+            installationCost: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Component added successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                modelCreated?: boolean;
+                model?: {
+                  id?: string;
+                  modelName?: string;
+                  manufacturer?: string;
+                };
+                component?: {
+                  id?: string;
+                  serialNumber?: string;
+                  status?: string;
+                };
+                installation?: {
+                  id?: string;
+                  spaceId?: string;
+                  installationDate?: string;
+                };
+              };
+            };
+          };
+        };
+        /** @description Validation error or missing required model fields */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -5213,6 +5321,8 @@ export interface components {
       ncsCode?: string | null;
       /** @enum {string} */
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      /** @enum {string|null} */
+      condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -5330,6 +5440,8 @@ export interface components {
         ncsCode?: string | null;
         /** @enum {string} */
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+        /** @enum {string|null} */
+        condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;
@@ -5506,6 +5618,8 @@ export interface components {
        * @enum {string}
        */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      /** @enum {string|null} */
+      condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       /** @default 1 */
       quantity?: number;
       economicLifespan: number;
@@ -5525,6 +5639,8 @@ export interface components {
       ncsCode?: string;
       /** @enum {string} */
       status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      /** @enum {string|null} */
+      condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       quantity?: number;
       economicLifespan?: number;
       files?: string;

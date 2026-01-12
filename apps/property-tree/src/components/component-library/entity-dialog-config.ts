@@ -215,6 +215,20 @@ export const entityDialogConfig: Record<
         ],
       },
       {
+        name: 'condition',
+        label: 'Skick',
+        type: 'select',
+        required: false,
+        options: [
+          { value: '', label: 'Ej angivet' },
+          { value: 'NEW', label: 'Nyskick' },
+          { value: 'GOOD', label: 'Gott skick' },
+          { value: 'FAIR', label: 'Godtagbart skick' },
+          { value: 'POOR', label: 'Dåligt skick' },
+          { value: 'DAMAGED', label: 'Skadat' },
+        ],
+      },
+      {
         name: 'quantity',
         label: 'Antal',
         type: 'number',
