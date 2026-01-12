@@ -6,7 +6,7 @@ interface DeinstallComponentData {
   deinstallationDate: string
 }
 
-export const useDeinstallComponent = (roomId: string) => {
+export const useDeinstallComponent = (spaceId: string) => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -17,8 +17,8 @@ export const useDeinstallComponent = (roomId: string) => {
       )
     },
     onSuccess: () => {
-      // Invalidate room components query to refetch
-      queryClient.invalidateQueries({ queryKey: ['components', roomId] })
+      // Invalidate space components query to refetch
+      queryClient.invalidateQueries({ queryKey: ['components', spaceId] })
       // Invalidate uninstalled instances queries so deinstalled instances show up in dropdowns
       queryClient.invalidateQueries({ queryKey: ['instances', 'uninstalled'] })
       queryClient.invalidateQueries({ queryKey: ['instances'] })

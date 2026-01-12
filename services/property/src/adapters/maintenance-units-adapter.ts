@@ -29,6 +29,7 @@ export const getMaintenanceUnitsByBuildingCode = async (
   const maintenanceUnits = await prisma.maintenanceUnit.findMany({
     select: {
       id: true,
+      propertyObjectId: true,
       code: true,
       name: true,
       maintenanceUnitType: {
@@ -49,6 +50,7 @@ export const getMaintenanceUnitsByBuildingCode = async (
   return trimStrings(maintenanceUnits).map((item) => {
     return {
       id: item.id,
+      propertyObjectId: item.propertyObjectId,
       code: item.code,
       caption: item.name,
       type: item.maintenanceUnitType?.name ?? null,
@@ -109,6 +111,7 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
   ).map((item) => {
     return {
       id: item?.maintenanceUnit?.id,
+      propertyObjectId: item?.maintenanceUnit?.propertyObjectId,
       rentalPropertyId: rentalPropertyInfoTrimmed.rentalId,
       code: item.maintenanceUnit?.code,
       caption: item?.maintenanceUnit?.name,
@@ -134,6 +137,7 @@ export const getMaintenanceUnitsByPropertyCode = async (
     },
     select: {
       id: true,
+      propertyObjectId: true,
       code: true,
       name: true,
       maintenanceUnitType: {
@@ -153,6 +157,7 @@ export const getMaintenanceUnitsByPropertyCode = async (
   return trimStrings(maintenanceUnits).map((item) => {
     return {
       id: item.id,
+      propertyObjectId: item.propertyObjectId,
       code: item.code,
       caption: item.name,
       type: item.maintenanceUnitType?.name ?? null,
@@ -171,6 +176,7 @@ export const getMaintenanceUnitByCode = async (
     },
     select: {
       id: true,
+      propertyObjectId: true,
       code: true,
       name: true,
       maintenanceUnitType: {
@@ -194,6 +200,7 @@ export const getMaintenanceUnitByCode = async (
   const trimmed = trimStrings(maintenanceUnit)
   return {
     id: trimmed.id,
+    propertyObjectId: trimmed.propertyObjectId,
     code: trimmed.code,
     caption: trimmed.name,
     type: trimmed.maintenanceUnitType?.name ?? null,

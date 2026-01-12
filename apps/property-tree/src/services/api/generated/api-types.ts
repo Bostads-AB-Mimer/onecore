@@ -2289,6 +2289,7 @@ export interface components {
     };
     MaintenanceUnit: {
       id: string;
+      propertyObjectId: string;
       rentalPropertyId?: string;
       code: string;
       caption: string | null;
@@ -2519,6 +2520,7 @@ export interface components {
     };
     FacilityDetails: {
       id: string;
+      propertyObjectId: string;
       code: string;
       name: string | null;
       entrance: string | null;
@@ -2564,6 +2566,7 @@ export interface components {
     GetFacilityByRentalIdResponse: {
       content: {
         id: string;
+        propertyObjectId: string;
         code: string;
         name: string | null;
         entrance: string | null;
@@ -2605,6 +2608,7 @@ export interface components {
     GetFacilitiesByPropertyCodeResponse: {
       content: ({
           id: string;
+          propertyObjectId: string;
           code: string;
           name: string | null;
           entrance: string | null;
@@ -2646,6 +2650,7 @@ export interface components {
     GetFacilitiesByBuildingCodeResponse: {
       content: ({
           id: string;
+          propertyObjectId: string;
           code: string;
           name: string | null;
           entrance: string | null;

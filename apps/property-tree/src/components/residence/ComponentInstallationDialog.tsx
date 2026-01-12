@@ -9,32 +9,29 @@ import { ComponentInstallationForm } from './ComponentInstallationForm'
 interface ComponentInstallationDialogProps {
   isOpen: boolean
   onClose: () => void
-  roomId: string
   propertyObjectId: string
-  roomName?: string
+  spaceName?: string
 }
 
 export const ComponentInstallationDialog = ({
   isOpen,
   onClose,
-  roomId,
   propertyObjectId,
-  roomName,
+  spaceName,
 }: ComponentInstallationDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Installera komponent</DialogTitle>
-          {roomName && (
-            <p className="text-sm text-muted-foreground">Rum: {roomName}</p>
+          {spaceName && (
+            <p className="text-sm text-muted-foreground">{spaceName}</p>
           )}
         </DialogHeader>
 
         {isOpen && (
           <ComponentInstallationForm
             propertyObjectId={propertyObjectId}
-            roomId={roomId}
             onSuccess={onClose}
             onCancel={onClose}
           />
