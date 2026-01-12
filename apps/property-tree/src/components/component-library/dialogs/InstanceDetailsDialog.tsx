@@ -58,6 +58,44 @@ export const InstanceDetailsDialog = ({
     }
   }
 
+  const getConditionLabel = (
+    condition: string | null | undefined
+  ): string => {
+    switch (condition) {
+      case 'NEW':
+        return 'Nyskick'
+      case 'GOOD':
+        return 'Gott skick'
+      case 'FAIR':
+        return 'Godtagbart skick'
+      case 'POOR':
+        return 'Dåligt skick'
+      case 'DAMAGED':
+        return 'Skadat'
+      default:
+        return '-'
+    }
+  }
+
+  const getConditionVariant = (
+    condition: string | null | undefined
+  ): 'default' | 'secondary' | 'outline' | 'destructive' => {
+    switch (condition) {
+      case 'NEW':
+        return 'default'
+      case 'GOOD':
+        return 'default'
+      case 'FAIR':
+        return 'secondary'
+      case 'POOR':
+        return 'outline'
+      case 'DAMAGED':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
   const formatDate = (dateString: string | null | undefined): string => {
     if (!dateString) return '-'
     return new Date(dateString).toLocaleDateString('sv-SE')
@@ -83,6 +121,14 @@ export const InstanceDetailsDialog = ({
                 <dd>
                   <Badge variant={getStatusVariant(instance.status)}>
                     {getStatusLabel(instance.status)}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Skick</dt>
+                <dd>
+                  <Badge variant={getConditionVariant(instance.condition)}>
+                    {getConditionLabel(instance.condition)}
                   </Badge>
                 </dd>
               </div>

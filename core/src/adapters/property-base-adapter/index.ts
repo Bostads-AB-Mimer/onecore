@@ -1120,6 +1120,36 @@ export async function getComponentModelById(
   }
 }
 
+/**
+ * Find a component model by exact model name match.
+ * Used by the add-component process to check if a model already exists.
+ */
+export async function findModelByExactName(
+  modelName: string
+): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
+  try {
+    const response = await client().GET(
+      '/component-models/by-name/{modelName}' as any,
+      {
+        params: { path: { modelName } },
+      }
+    )
+
+    if ((response.data as any)?.content) {
+      return { ok: true, data: (response.data as any).content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.findModelByExactName')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function createComponentModel(
   data: components['schemas']['CreateComponentModelRequest']
 ): Promise<AdapterResult<GetComponentModelResponse, 'unknown'>> {
@@ -1251,9 +1281,23 @@ export async function createComponent(
       return { ok: true, data: (response.data as any).content }
     }
 
+    // Log error details from microservice response
+    logger.error(
+      {
+        status: response.response?.status,
+        error: (response.data as any)?.error,
+        stack: (response.data as any)?.stack,
+        requestData: data,
+      },
+      'property-base-adapter.createComponent failed'
+    )
+
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.createComponent')
+    logger.error(
+      { err, requestData: data },
+      'property-base-adapter.createComponent exception'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

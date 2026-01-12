@@ -97,6 +97,7 @@ export type CreateComponentInstance = {
   depreciationPriceAtPurchase: number
   ncsCode?: string | null
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+  condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
   quantity: number
   economicLifespan: number
 }

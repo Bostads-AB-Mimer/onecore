@@ -42,8 +42,8 @@ export const ManageRoomComponentsDialog = ({
   })
 
   const { data: roomComponents = [] } = useQuery({
-    queryKey: ['components', roomId],
-    queryFn: () => componentService.getByRoomId(roomId),
+    queryKey: ['components', propertyObjectId],
+    queryFn: () => componentService.getByRoomId(propertyObjectId),
     enabled: isOpen,
   })
 

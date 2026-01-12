@@ -65,6 +65,44 @@ export const InstancesTable = ({
     }
   }
 
+  const getConditionLabel = (
+    condition: string | null | undefined
+  ): string => {
+    switch (condition) {
+      case 'NEW':
+        return 'Nyskick'
+      case 'GOOD':
+        return 'Gott skick'
+      case 'FAIR':
+        return 'Godtagbart skick'
+      case 'POOR':
+        return 'Dåligt skick'
+      case 'DAMAGED':
+        return 'Skadat'
+      default:
+        return '-'
+    }
+  }
+
+  const getConditionVariant = (
+    condition: string | null | undefined
+  ): 'default' | 'secondary' | 'outline' | 'destructive' => {
+    switch (condition) {
+      case 'NEW':
+        return 'default'
+      case 'GOOD':
+        return 'default'
+      case 'FAIR':
+        return 'secondary'
+      case 'POOR':
+        return 'outline'
+      case 'DAMAGED':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
   const columns: Column<ComponentInstance>[] = [
     {
       key: 'serialNumber',
@@ -77,6 +115,15 @@ export const InstancesTable = ({
       render: (item) => (
         <Badge variant={getStatusVariant(item.status)}>
           {getStatusLabel(item.status)}
+        </Badge>
+      ),
+    },
+    {
+      key: 'condition',
+      label: 'Skick',
+      render: (item) => (
+        <Badge variant={getConditionVariant(item.condition)}>
+          {getConditionLabel(item.condition)}
         </Badge>
       ),
     },
