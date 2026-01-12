@@ -58,9 +58,7 @@ export const InstanceDetailsDialog = ({
     }
   }
 
-  const getConditionLabel = (
-    condition: string | null | undefined
-  ): string => {
+  const getConditionLabel = (condition: string | null | undefined): string => {
     switch (condition) {
       case 'NEW':
         return 'Nyskick'
