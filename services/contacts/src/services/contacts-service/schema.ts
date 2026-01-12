@@ -40,3 +40,17 @@ export const ContactSchema = z.object({
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
 })
+
+export const OneCOREHateOASResponseBody = z.object({
+  _links: z.any(),
+})
+
+export const GetContactResponseBody = OneCOREHateOASResponseBody.extend({
+  content: ContactSchema,
+})
+
+export const GetContactsResponseBody = OneCOREHateOASResponseBody.extend({
+  content: z.object({
+    contacts: z.array(ContactSchema),
+  }),
+})
