@@ -5,7 +5,6 @@ export type InvoiceWithMatchId = Invoice & {
 }
 
 export type InvoicePaymentSummary = Invoice & {
-  amountPaid: number
   fractionPaid: number
   hemforTotal: number
   hemforDebt: number

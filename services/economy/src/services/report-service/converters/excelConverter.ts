@@ -10,7 +10,6 @@ type PaymentRow = {
   expirationDate: Date | undefined
   invoiceAmount: number
   remainingAmount: number
-  amountPaid: number
   fractionPaid: number
   hemforTotal: number
   hemforDebt: number
@@ -56,7 +55,6 @@ export const convertInvoicePaymentSummariesToXlsx = async (
       key: 'remainingAmount',
       width: ColumnWidth,
     },
-    { header: 'Betalt belopp', key: 'amountPaid' },
     { header: 'Andel betald', key: 'fractionPaid' },
     { header: 'Hemförsäkring totalbelopp', key: 'hemforTotal' },
     { header: 'Hemförsäkring skuld', key: 'hemforDebt' },
@@ -88,8 +86,9 @@ const transformInvoicePaymentSummary = (
     invoiceDate: summary.invoiceDate,
     expirationDate: summary.expirationDate,
     invoiceAmount: summary.amount,
-    remainingAmount: summary.amount - summary.amountPaid,
-    amountPaid: summary.amountPaid,
+    remainingAmount: summary.paidAmount
+      ? summary.amount - summary.paidAmount
+      : 0,
     fractionPaid: summary.fractionPaid,
     hemforTotal: summary.hemforTotal,
     hemforDebt: summary.hemforDebt,

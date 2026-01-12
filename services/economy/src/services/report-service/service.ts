@@ -1,8 +1,5 @@
-import { InvoicePaymentEvent } from '@onecore/types'
-import {
-  getAllInvoicePaymentEvents,
-  getAllInvoicesWithMatchIds,
-} from '../common/adapters/xledger-adapter'
+import assert from 'node:assert'
+import { getAllInvoicesWithMatchIds } from '../common/adapters/xledger-adapter'
 import { getInvoiceRows } from '../common/adapters/xpand-db-adapter'
 import { InvoicePaymentSummary } from './types'
 import { RentInvoiceRow } from '../common/types'
@@ -25,15 +22,13 @@ export const getUnpaidInvoicePaymentSummaries = async (
   )
   logger.info(`${rentInvoices.length} unpaid rent invoices`)
 
-  logger.info('Getting payment events and invoice rows')
+  logger.info('Getting invoice rows')
 
-  const [allInvoiceRows, allPaymentEvents] = await Promise.all([
-    fetchInvoiceRowsChunked(rentInvoices.map((i) => i.invoiceId)),
-    getAllInvoicePaymentEvents(rentInvoices.map((m) => m.matchId)),
-  ])
+  const allInvoiceRows = await fetchInvoiceRowsChunked(
+    rentInvoices.map((i) => i.invoiceId)
+  )
 
   logger.info(`Got ${allInvoiceRows.length} invoice rows`)
-  logger.info(`Got ${allPaymentEvents.length} payment events`)
 
   const filteredInvoiceRows = allInvoiceRows.filter(
     (r) =>
@@ -42,23 +37,14 @@ export const getUnpaidInvoicePaymentSummaries = async (
       r.code?.startsWith('VHK')
   )
 
-  const filteredPaymentEvents = allPaymentEvents.filter((pe) => pe.amount < 0) // We only want payments, not credits
-
-  const paymentEventsByInvoiceId = rentInvoices.reduce<
-    Record<string, InvoicePaymentEvent[]>
-  >((acc, i) => {
-    const paymentEventsForInvoice = filteredPaymentEvents.filter(
-      (e) => e.matchId === i.matchId
-    )
-
-    acc[i.invoiceId] = paymentEventsForInvoice
-
-    return acc
-  }, {})
-
   const invoicePaymentSummaries: InvoicePaymentSummary[] = []
 
   rentInvoices.forEach((i) => {
+    assert(
+      i.paidAmount !== undefined,
+      `Invoice ${i.invoiceId} is missing paidAmount`
+    )
+
     const invoiceRowsForInvoice = filteredInvoiceRows.filter(
       (r) => r.invoiceNumber === i.invoiceId
     )
@@ -89,15 +75,10 @@ export const getUnpaidInvoicePaymentSummaries = async (
     const vhk934Total = getVerksamhetskostnadTotal(vhkRows, 'VHK934')
     const vhk936Total = getVerksamhetskostnadTotal(vhkRows, 'VHK936')
 
-    const totalPaidAmount = paymentEventsByInvoiceId[i.invoiceId].reduce(
-      (acc, pe) => acc + pe.amount,
-      0
-    )
-    const fractionPaid = -totalPaidAmount / i.amount
+    const fractionPaid = i.paidAmount / i.amount
 
     invoicePaymentSummaries.push({
       ...i,
-      amountPaid: -totalPaidAmount,
       fractionPaid,
       hemforTotal,
       hemforDebt: hemforTotal - hemforTotal * fractionPaid,
