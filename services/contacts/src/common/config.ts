@@ -13,6 +13,12 @@ export interface Config {
     port: number
     database: string
   }
+  health: {
+    xpandDatabase: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+  }
 }
 
 const config = configPackage({
@@ -23,6 +29,12 @@ const config = configPackage({
     xpandDatabase: {
       systemName: 'xpand database',
     },
+    health: {
+      xpandDatabase: {
+        systemName: 'xpand database',
+        minimumMinutesBetweenRequests: 1,
+      },
+    },
   },
 })
 
@@ -30,4 +42,5 @@ export default {
   port: config.get('port'),
   applicationName: config.get('applicationName'),
   xpandDatabase: config.get('xpandDatabase'),
+  health: config.get('health'),
 } satisfies Config
