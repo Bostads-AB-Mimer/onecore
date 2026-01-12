@@ -1,5 +1,4 @@
 import { History } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/v2/Badge'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
 import type { ComponentInstance } from '@/services/types'
@@ -19,8 +18,6 @@ export const InstancesTable = ({
   onDelete,
   onViewHistory,
 }: InstancesTableProps) => {
-  const navigate = useNavigate()
-
   const formatCurrency = (value: number) =>
     value.toLocaleString('sv-SE', {
       style: 'currency',
@@ -36,7 +33,7 @@ export const InstancesTable = ({
       const url = roomCode
         ? `/residences/${residenceId}?room=${roomCode}`
         : `/residences/${residenceId}`
-      navigate(url)
+      window.open(url, '_blank')
     }
   }
 
