@@ -1,9 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, MessageSquare } from 'lucide-react'
+import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 
 import { maintenanceUnitService } from '@/services/api/core'
 import { MaintenanceUnitBasicInfo } from '../maintenance-unit/MaintenanceUnitBasicInfo'
+import { MaintenanceUnitComponents } from '../maintenance-unit/MaintenanceUnitComponents'
 import {
   WorkOrdersManagement,
   ContextType,
@@ -49,8 +50,21 @@ export function MaintenanceUnitView() {
       </div>
 
       <ObjectPageTabs
-        defaultTab="inspections"
+        defaultTab="components"
         tabs={[
+          {
+            value: 'components',
+            label: 'Komponenter',
+            icon: Wrench,
+            content: (
+              <MaintenanceUnitComponents
+                propertyObjectId={maintenanceUnit.propertyObjectId}
+                maintenanceUnitName={
+                  maintenanceUnit.caption || maintenanceUnit.code
+                }
+              />
+            ),
+          },
           {
             value: 'inspections',
             label: 'Besiktningar',

@@ -1,9 +1,16 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
+import {
+  ClipboardList,
+  Users,
+  MessageSquare,
+  FileText,
+  Wrench,
+} from 'lucide-react'
 
 import { facilityService, leaseService } from '@/services/api/core'
 import { FacilityBasicInfo } from '../facility/FacilityBasicInfo'
+import { FacilityComponents } from '../facility/FacilityComponents'
 import { CurrentTenant } from '../rental-object/CurrentTenant'
 import {
   WorkOrdersManagement,
@@ -72,8 +79,19 @@ export function FacilityView() {
       </div>
 
       <ObjectPageTabs
-        defaultTab="tenant"
+        defaultTab="components"
         tabs={[
+          {
+            value: 'components',
+            label: 'Komponenter',
+            icon: Wrench,
+            content: (
+              <FacilityComponents
+                propertyObjectId={facility.propertyObjectId}
+                facilityName={facility.name || facility.code}
+              />
+            ),
+          },
           {
             value: 'tenant',
             label: 'Hyresgäst',

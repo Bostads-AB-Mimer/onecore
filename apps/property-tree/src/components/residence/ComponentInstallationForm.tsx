@@ -47,14 +47,12 @@ const getInitialFormData = (): InstallationFormData => ({
 
 interface ComponentInstallationFormProps {
   propertyObjectId: string
-  roomId: string
   onSuccess: () => void
   onCancel: () => void
 }
 
 export const ComponentInstallationForm = ({
   propertyObjectId,
-  roomId,
   onSuccess,
   onCancel,
 }: ComponentInstallationFormProps) => {
@@ -66,7 +64,7 @@ export const ComponentInstallationForm = ({
     ComponentModelWithHierarchy | undefined
   >()
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('')
-  const installMutation = useInstallComponent(propertyObjectId, roomId)
+  const installMutation = useInstallComponent(propertyObjectId)
 
   const [formData, setFormData] =
     useState<InstallationFormData>(getInitialFormData())

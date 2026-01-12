@@ -442,6 +442,7 @@ export const ParkingSpaceSchema = z.object({
 
 export const MaintenanceUnitSchema = z.object({
   id: z.string(),
+  propertyObjectId: z.string(),
   rentalPropertyId: z.string().optional(),
   code: z.string(),
   caption: z.string().nullable(),
@@ -452,6 +453,7 @@ export const MaintenanceUnitSchema = z.object({
 
 export const FacilityDetailsSchema = z.object({
   id: z.string(),
+  propertyObjectId: z.string(),
   code: z.string(),
   name: z.string().nullable(),
   entrance: z.string().nullable(),
