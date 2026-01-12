@@ -148,7 +148,9 @@ export const ComponentInstallationForm = ({
           }
         )
 
-        queryClient.invalidateQueries({ queryKey: ['components', propertyObjectId] })
+        queryClient.invalidateQueries({
+          queryKey: ['components', propertyObjectId],
+        })
         queryClient.invalidateQueries({
           queryKey: ['instances', 'uninstalled'],
         })
