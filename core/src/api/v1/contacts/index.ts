@@ -18,10 +18,6 @@ export const routes = (router: OkapiRouter) => {
           description: 'Wildcard search string',
           schema: z.optional(z.array(z.string())),
         },
-        test: {
-          description: 'Wildcard search string',
-          schema: z.optional(z.enum(['tomte', 'korv', 'hästfest'])),
-        },
         page: {
           description: 'Page number for paginated results',
           schema: z.optional(z.number()),
@@ -57,7 +53,10 @@ export const routes = (router: OkapiRouter) => {
           ...metadata,
         }
       } else {
-        ctx.status = response.statusCode ?? 500
+        ctx.status =
+          response.statusCode == 404 || response.statusCode === 500
+            ? response.statusCode
+            : 500
       }
     }
   )

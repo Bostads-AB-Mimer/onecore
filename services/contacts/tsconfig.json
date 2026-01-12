@@ -4,9 +4,14 @@
     "noEmit": true,
     "composite": true,
     "rootDirs": ["./src", "./test"],
+    "types": [
+      "jest",
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
       "@src/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["scripts/"]
 }

@@ -24,7 +24,7 @@ export const xpandDbClient = () => {
         },
       })
     },
-    check: async (knex: knex.Knex) => {
+    healthcheck: async (knex: knex.Knex) => {
       return true
     },
     teardown: async () => {},
