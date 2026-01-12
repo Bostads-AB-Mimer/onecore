@@ -142,21 +142,12 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       // For mutations, we need to pass parentId separately for cache invalidation
       let mutationData
       if (mode === 'create') {
-        mutationData = { ...cleanedFormData, parentId }
+        mutationData = { ...formData, parentId }
       } else {
-        // Include the new parent ID in the update data if it was changed
-        const updateData = { ...cleanedFormData }
-        if (newParentId && entityType !== 'category') {
-          const parentIdField = parentIdFieldMap[entityType]
-          updateData[parentIdField] = newParentId
-        }
         mutationData = {
           id: entity?.id,
-          data: updateData,
-          parentId: newParentId || parentId,
-          // Pass old parent ID for cache invalidation when parent changes
-          oldParentId:
-            newParentId && newParentId !== parentId ? parentId : undefined,
+          data: formData,
+          parentId,
         }
       }
 
