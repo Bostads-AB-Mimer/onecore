@@ -3701,61 +3701,6 @@ export interface paths {
       };
     };
   };
-  "/component-subtypes": {
-    /**
-     * Get all component subtypes
-     * @description Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter subtypes by type ID */
-          typeId?: string;
-          /** @description Search subtypes by name (case-insensitive) */
-          subtypeName?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component subtypes */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component subtype
-     * @description Creates a subtype with lifecycle parameters. Requires typeId.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component subtype created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-      };
-    };
-  };
   "/component-subtypes/{id}": {
     /**
      * Get component subtype by ID
@@ -3830,6 +3775,29 @@ export interface paths {
         /** @description Component subtype not found */
         404: {
           content: never;
+        };
+      };
+    };
+  };
+  "/component-subtypes": {
+    /**
+     * Create a new component subtype
+     * @description Creates a subtype with lifecycle parameters. Requires typeId.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
+        };
+      };
+      responses: {
+        /** @description Component subtype created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"];
+            };
+          };
         };
       };
     };

@@ -1,6 +1,5 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
-import { getFileMetadataFromMinio } from './minio-adapter'
 import type { CreateComponentNew, UpdateComponentNew } from '../types/component'
 
 // Reusable Prisma select for propertyObject with room/residence structure info
@@ -207,22 +206,8 @@ export const getComponentInstanceWithDocuments = async (
 }
 
 export const getComponentInstanceFiles = async (componentId: string) => {
-  const documents = await prisma.documents.findMany({
+  return prisma.documents.findMany({
     where: { componentInstanceId: componentId },
     orderBy: { createdAt: 'desc' },
   })
-
-  return Promise.all(
-    documents.map(async (doc) => {
-      const metadata = await getFileMetadataFromMinio(doc.fileId)
-      return {
-        id: doc.id,
-        fileId: doc.fileId,
-        originalName: metadata.originalName,
-        size: metadata.size,
-        mimeType: metadata.mimeType,
-        uploadedAt: doc.createdAt.toISOString(),
-      }
-    })
-  )
 }
