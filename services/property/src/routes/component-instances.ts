@@ -3,10 +3,10 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
-  componentsNewQueryParamsSchema,
-  ComponentNewSchema,
-  CreateComponentNewSchema,
-  UpdateComponentNewSchema,
+  componentsQueryParamsSchema,
+  ComponentSchema,
+  CreateComponentSchema,
+  UpdateComponentSchema,
 } from '../types/component'
 import {
   getComponents,
@@ -69,7 +69,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/ComponentInstance'
+   *                     $ref: '#/components/schemas/Component'
    *                 pagination:
    *                   type: object
    *                   properties:
@@ -84,7 +84,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get(
     '(.*)/components',
-    parseRequest({ query: componentsNewQueryParamsSchema }),
+    parseRequest({ query: componentsQueryParamsSchema }),
     async (ctx) => {
       const { modelId, status, serialNumber, page, limit } =
         ctx.request.parsedQuery
@@ -98,7 +98,7 @@ export const routes = (router: KoaRouter) => {
         )
 
         ctx.body = {
-          content: ComponentNewSchema.array().parse(result.components),
+          content: ComponentSchema.array().parse(result.components),
           pagination: result.pagination,
           ...metadata,
         }
@@ -134,7 +134,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentInstance'
+   *                   $ref: '#/components/schemas/Component'
    *       404:
    *         description: Component not found
    */
@@ -152,7 +152,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: ComponentNewSchema.parse(component),
+        content: ComponentSchema.parse(component),
         ...metadata,
       }
     } catch (err) {
@@ -184,11 +184,11 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentInstance'
+   *                   $ref: '#/components/schemas/Component'
    */
   router.post(
     '(.*)/components',
-    parseRequest({ body: CreateComponentNewSchema }),
+    parseRequest({ body: CreateComponentSchema }),
     async (ctx) => {
       const data = ctx.request.parsedBody
       const metadata = generateRouteMetadata(ctx)
@@ -198,7 +198,7 @@ export const routes = (router: KoaRouter) => {
 
         ctx.status = 201
         ctx.body = {
-          content: ComponentNewSchema.parse(component),
+          content: ComponentSchema.parse(component),
           ...metadata,
         }
       } catch (err) {
@@ -242,12 +242,12 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ComponentInstance'
+   *                   $ref: '#/components/schemas/Component'
    */
   router.put(
     '(.*)/components/:id',
     parseRequest({
-      body: UpdateComponentNewSchema,
+      body: UpdateComponentSchema,
     }),
     async (ctx) => {
       const id = z.string().uuid().parse(ctx.params.id)
@@ -258,7 +258,7 @@ export const routes = (router: KoaRouter) => {
         const component = await updateComponent(id, data)
 
         ctx.body = {
-          content: ComponentNewSchema.parse(component),
+          content: ComponentSchema.parse(component),
           ...metadata,
         }
       } catch (err) {
@@ -332,7 +332,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/ComponentInstance'
+   *                     $ref: '#/components/schemas/Component'
    *       400:
    *         description: Invalid room ID format
    *       500:
@@ -357,7 +357,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const components = await getComponentsByRoomId(roomId)
       ctx.body = {
-        content: ComponentNewSchema.array().parse(components),
+        content: ComponentSchema.array().parse(components),
         ...metadata,
       }
     } catch (err) {

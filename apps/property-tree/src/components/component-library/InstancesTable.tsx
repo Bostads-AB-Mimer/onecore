@@ -1,14 +1,14 @@
 import { History } from 'lucide-react'
 import { Badge } from '@/components/ui/v2/Badge'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
-import type { ComponentInstance } from '@/services/types'
+import type { Component } from '@/services/types'
 
 interface InstancesTableProps {
-  instances: ComponentInstance[]
+  instances: Component[]
   isLoading: boolean
-  onEdit: (instance: ComponentInstance) => void
-  onDelete: (instance: ComponentInstance) => void
-  onViewHistory: (instance: ComponentInstance) => void
+  onEdit: (instance: Component) => void
+  onDelete: (instance: Component) => void
+  onViewHistory: (instance: Component) => void
 }
 
 export const InstancesTable = ({
@@ -105,7 +105,7 @@ export const InstancesTable = ({
     }
   }
 
-  const columns: Column<ComponentInstance>[] = [
+  const columns: Column<Component>[] = [
     {
       key: 'serialNumber',
       label: 'Serienummer',
@@ -231,7 +231,7 @@ export const InstancesTable = ({
     },
   ]
 
-  const actions: DataTableAction<ComponentInstance>[] = [
+  const actions: DataTableAction<Component>[] = [
     {
       label: 'Visa historik',
       onClick: onViewHistory,
@@ -240,7 +240,7 @@ export const InstancesTable = ({
   ]
 
   // Expandable content for additional information
-  const expandableContent = (instance: ComponentInstance) => {
+  const expandableContent = (instance: Component) => {
     const hasAdditionalInfo =
       instance.additionalInformation && instance.additionalInformation.trim()
     const hasSpecifications =

@@ -4,7 +4,7 @@ import type {
   ComponentType,
   ComponentSubtype,
   ComponentModel,
-  ComponentInstance,
+  Component,
   CreateComponentCategory,
   UpdateComponentCategory,
   CreateComponentType,
@@ -13,8 +13,8 @@ import type {
   UpdateComponentSubtype,
   CreateComponentModel,
   UpdateComponentModel,
-  CreateComponentInstance,
-  UpdateComponentInstance,
+  CreateComponent,
+  UpdateComponent,
 } from '@/services/types'
 
 export const componentLibraryService = {
@@ -270,7 +270,7 @@ export const componentLibraryService = {
   async getInstances(
     modelId?: string,
     params?: { page?: number; limit?: number; status?: string; search?: string }
-  ): Promise<ComponentInstance[]> {
+  ): Promise<Component[]> {
     const queryParams: any = {
       limit: params?.limit || 100,
     }
@@ -287,33 +287,31 @@ export const componentLibraryService = {
       },
     })
     if (error) throw error
-    return (data?.content || []) as ComponentInstance[]
+    return (data?.content || []) as Component[]
   },
 
-  async getInstanceById(id: string): Promise<ComponentInstance> {
+  async getInstanceById(id: string): Promise<Component> {
     const { data, error } = await GET('/components/{id}', {
       params: {
         path: { id },
       },
     })
     if (error) throw error
-    return data?.content as ComponentInstance
+    return data?.content as Component
   },
 
-  async createInstance(
-    instanceData: CreateComponentInstance
-  ): Promise<ComponentInstance> {
+  async createInstance(instanceData: CreateComponent): Promise<Component> {
     const { data, error } = await POST('/components', {
       body: instanceData as any,
     })
     if (error) throw error
-    return data?.content as ComponentInstance
+    return data?.content as Component
   },
 
   async updateInstance(
     id: string,
-    instanceData: UpdateComponentInstance
-  ): Promise<ComponentInstance> {
+    instanceData: UpdateComponent
+  ): Promise<Component> {
     const { data, error } = await PUT('/components/{id}', {
       params: {
         path: { id },
@@ -321,7 +319,7 @@ export const componentLibraryService = {
       body: instanceData as any,
     })
     if (error) throw error
-    return data?.content as ComponentInstance
+    return data?.content as Component
   },
 
   async deleteInstance(id: string): Promise<void> {
@@ -340,7 +338,7 @@ export type {
   ComponentType,
   ComponentSubtype,
   ComponentModel,
-  ComponentInstance,
+  Component,
   CreateComponentCategory,
   UpdateComponentCategory,
   CreateComponentType,
@@ -349,6 +347,6 @@ export type {
   UpdateComponentSubtype,
   CreateComponentModel,
   UpdateComponentModel,
-  CreateComponentInstance,
-  UpdateComponentInstance,
+  CreateComponent,
+  UpdateComponent,
 }

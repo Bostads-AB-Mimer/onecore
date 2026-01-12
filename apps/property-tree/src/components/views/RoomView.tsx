@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 
-import { Room, ComponentInstance, Issue } from '../../services/types'
+import { Room, Component, Issue } from '../../services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 import { Card } from '@/components/ui/Card'
 import { Grid } from '@/components/ui/Grid'
@@ -117,7 +117,7 @@ function LoadingSkeleton() {
 export function RoomView() {
   const { roomId, apartmentId } = useParams()
   const [room, setRoom] = React.useState<Room | null>(null)
-  const [components, setComponents] = React.useState<ComponentInstance[]>([])
+  const [components, setComponents] = React.useState<Component[]>([])
   const [issues, setIssues] = React.useState<Issue[]>([])
   const [loading, setLoading] = React.useState(true)
 
@@ -170,7 +170,7 @@ export function RoomView() {
     console.log('Editing component:', id, data)
   }
 
-  const handleViewComponent = (component: ComponentInstance) => {
+  const handleViewComponent = (component: Component) => {
     // Implementation for viewing a component
     console.log('Viewing component:', component)
   }

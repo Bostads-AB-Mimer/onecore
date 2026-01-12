@@ -59,7 +59,7 @@ export type ResidenceSearchResult =
 export type ResidenceSummary = components['schemas']['ResidenceSummary']
 export type Room = components['schemas']['Room']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
-export type ComponentInstance = components['schemas']['ComponentInstance']
+export type Component = components['schemas']['Component']
 
 // Component Library entity types
 export type ComponentCategory = components['schemas']['ComponentCategory']
@@ -85,8 +85,8 @@ export type CreateComponentModel =
 export type UpdateComponentModel =
   components['schemas']['UpdateComponentModelRequest']
 
-// Component Instance request types
-export type CreateComponentInstance = {
+// Component request types
+export type CreateComponent = {
   modelId: string
   serialNumber: string
   specifications?: string | null
@@ -102,7 +102,7 @@ export type CreateComponentInstance = {
   economicLifespan: number
 }
 
-export type UpdateComponentInstance = Partial<CreateComponentInstance>
+export type UpdateComponent = Partial<CreateComponent>
 
 // Component entity conditional helper types for generic hooks
 export type EntityType = 'category' | 'type' | 'subtype' | 'model' | 'instance'
@@ -117,7 +117,7 @@ export type EntityData<T extends EntityType> = T extends 'category'
       : T extends 'model'
         ? ComponentModel
         : T extends 'instance'
-          ? ComponentInstance
+          ? Component
           : never
 
 export type CreateData<T extends EntityType> = T extends 'category'
@@ -129,7 +129,7 @@ export type CreateData<T extends EntityType> = T extends 'category'
       : T extends 'model'
         ? CreateComponentModel
         : T extends 'instance'
-          ? CreateComponentInstance
+          ? CreateComponent
           : never
 
 export type UpdateData<T extends EntityType> = T extends 'category'
@@ -141,7 +141,7 @@ export type UpdateData<T extends EntityType> = T extends 'category'
       : T extends 'model'
         ? UpdateComponentModel
         : T extends 'instance'
-          ? UpdateComponentInstance
+          ? UpdateComponent
           : never
 
 export type UpdateMutationVariables<T extends EntityType> = {
