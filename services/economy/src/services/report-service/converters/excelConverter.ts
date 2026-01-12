@@ -88,7 +88,7 @@ const transformInvoicePaymentSummary = (
     invoiceAmount: summary.amount,
     remainingAmount: summary.paidAmount
       ? summary.amount - summary.paidAmount
-      : 0,
+      : summary.amount,
     fractionPaid: summary.fractionPaid,
     hemforTotal: summary.hemforTotal,
     hemforDebt: summary.hemforDebt,
