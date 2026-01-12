@@ -695,7 +695,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
 
 // Component instance schema with installations included (Level 5)
 // The componentInstallations field uses the "WithoutComponent" version to break circular reference
-export const ComponentNewSchema = z.object({
+export const ComponentSchema = z.object({
   id: z.string().uuid(),
   modelId: z.string().uuid(),
   serialNumber: z.string().nullable(),
@@ -729,7 +729,7 @@ export const ComponentInstallationSchema = z.object({
   cost: z.number().min(0),
   createdAt: z.string(),
   updatedAt: z.string(),
-  component: ComponentNewSchema.optional(),
+  component: ComponentSchema.optional(),
 })
 
 export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(
@@ -772,7 +772,7 @@ export const ComponentModelsQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
-export const ComponentsNewQueryParamsSchema = z.object({
+export const ComponentsQueryParamsSchema = z.object({
   modelId: z.string().uuid().optional(),
   status: ComponentStatusEnum.optional(),
   serialNumber: z.string().optional(), // Search parameter
@@ -857,7 +857,7 @@ export const UpdateComponentModelSchema = z.object({
   coclassCode: z.string().trim().optional(),
 })
 
-export const CreateComponentNewSchema = z.object({
+export const CreateComponentSchema = z.object({
   modelId: z.string().uuid(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
@@ -874,7 +874,7 @@ export const CreateComponentNewSchema = z.object({
   files: z.string().trim().optional(),
 })
 
-export const UpdateComponentNewSchema = z.object({
+export const UpdateComponentSchema = z.object({
   modelId: z.string().uuid().optional(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
@@ -915,7 +915,7 @@ export type ComponentCategory = z.infer<typeof ComponentCategorySchema>
 export type ComponentType = z.infer<typeof ComponentTypeSchema>
 export type ComponentSubtype = z.infer<typeof ComponentSubtypeSchema>
 export type ComponentModel = z.infer<typeof ComponentModelSchema>
-export type ComponentNew = z.infer<typeof ComponentNewSchema>
+export type Component = z.infer<typeof ComponentSchema>
 export type ComponentInstallation = z.infer<typeof ComponentInstallationSchema>
 export type CreateComponentCategory = z.infer<
   typeof CreateComponentCategorySchema
@@ -933,8 +933,8 @@ export type UpdateComponentSubtype = z.infer<
 >
 export type CreateComponentModel = z.infer<typeof CreateComponentModelSchema>
 export type UpdateComponentModel = z.infer<typeof UpdateComponentModelSchema>
-export type CreateComponentNew = z.infer<typeof CreateComponentNewSchema>
-export type UpdateComponentNew = z.infer<typeof UpdateComponentNewSchema>
+export type CreateComponent = z.infer<typeof CreateComponentSchema>
+export type UpdateComponent = z.infer<typeof UpdateComponentSchema>
 export type CreateComponentInstallation = z.infer<
   typeof CreateComponentInstallationSchema
 >
@@ -1026,38 +1026,6 @@ export type ParkingSpaceSearchResult = z.infer<
   typeof ParkingSpaceSearchResultSchema
 >
 
-export const ComponentSchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string(),
-  details: z.object({
-    manufacturer: z.string().nullable(),
-    typeDesignation: z.string().nullable(),
-  }),
-  dates: z.object({
-    installation: z.string().nullable(),
-    warrantyEnd: z.string().nullable(),
-  }),
-  classification: z.object({
-    componentType: z.object({
-      code: z.string(),
-      name: z.string(),
-    }),
-    category: z.object({
-      code: z.string(),
-      name: z.string(),
-    }),
-  }),
-  maintenanceUnits: z.array(
-    z.object({
-      id: z.string(),
-      code: z.string(),
-      name: z.string(),
-    })
-  ),
-})
-
-export type Component = z.infer<typeof ComponentSchema>
 export type CompanyDetails = z.infer<typeof CompanyDetailsSchema>
 
 // Document schema for file uploads/downloads

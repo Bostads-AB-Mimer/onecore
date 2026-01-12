@@ -1,17 +1,17 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Settings, Building, Package, Wrench, ArrowRight } from 'lucide-react'
-import { ComponentInstance } from '../../services/types'
+import { Component } from '../../services/types'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ComponentModal } from './ComponentModal'
 
 interface ComponentListProps {
-  components: ComponentInstance[]
+  components: Component[]
   rooms: string[]
   onAddComponent: (data: any) => Promise<void>
   onEditComponent: (id: string, data: any) => Promise<void>
-  onViewComponent: (component: ComponentInstance) => void
+  onViewComponent: (component: Component) => void
 }
 
 const typeIcons = {
@@ -27,13 +27,13 @@ const statusColors = {
   broken: 'text-red-500',
 } as const
 
-// TODO: These functions access properties that don't exist in ComponentInstance
+// TODO: These functions access properties that don't exist in Component
 // This is legacy/dummy code that needs refactoring
 const getComponentType = (
-  component: ComponentInstance
+  component: Component
 ): 'appliance' | 'fixture' | 'furniture' | 'other' => 'other' // component.classification.componentType.code
 const getComponentStatus = (
-  component: ComponentInstance
+  component: Component
 ): 'operational' | 'needs-service' | 'broken' => 'operational' // component.details.typeDesignation || 'operational'
 
 export function ComponentList({
@@ -45,14 +45,14 @@ export function ComponentList({
 }: ComponentListProps) {
   const [showAddModal, setShowAddModal] = React.useState(false)
   const [editingComponent, setEditingComponent] =
-    React.useState<ComponentInstance | null>(null)
+    React.useState<Component | null>(null)
 
-  const handleAddSubmit = async (data: ComponentInstance) => {
+  const handleAddSubmit = async (data: Component) => {
     await onAddComponent(data)
     setShowAddModal(false)
   }
 
-  const handleEditSubmit = async (data: ComponentInstance) => {
+  const handleEditSubmit = async (data: Component) => {
     if (editingComponent) {
       await onEditComponent(editingComponent.id, data)
       setEditingComponent(null)

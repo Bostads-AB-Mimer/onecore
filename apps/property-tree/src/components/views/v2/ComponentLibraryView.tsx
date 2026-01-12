@@ -21,7 +21,7 @@ import type {
   ComponentType,
   ComponentSubtype,
   ComponentModel,
-  ComponentInstance,
+  Component,
 } from '@/services/types'
 
 // Helper function to create dialog state management
@@ -238,10 +238,10 @@ const ComponentLibraryView = () => {
   const typeDialog = useDialogState<ComponentType>()
   const subtypeDialog = useDialogState<ComponentSubtype>()
   const modelDialog = useDialogState<ComponentModel>()
-  const instanceDialog = useDialogState<ComponentInstance>()
+  const instanceDialog = useDialogState<Component>()
   const [instanceDetailsDialogState, setInstanceDetailsDialogState] = useState<{
     isOpen: boolean
-    instance?: ComponentInstance
+    instance?: Component
   }>({
     isOpen: false,
   })

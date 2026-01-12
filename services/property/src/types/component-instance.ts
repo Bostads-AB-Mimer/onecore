@@ -23,7 +23,7 @@ export const ComponentConditionEnum = z.enum([
 // ==================== COMPONENTS (INSTANCES) ====================
 
 // Query params for components
-export const componentsNewQueryParamsSchema = z.object({
+export const componentsQueryParamsSchema = z.object({
   modelId: z.string().uuid().optional(),
   status: ComponentStatusEnum.optional(),
   serialNumber: z.string().optional(), // Trimming handled in adapter
@@ -86,7 +86,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
 // Component instance response schema with installations included
 // The componentInstallations field uses the "WithoutComponent" version to break circular reference
 // This prevents infinite loops: Component -> Installation -> Component -> Installation -> ...
-export const ComponentNewSchema = z.object({
+export const ComponentSchema = z.object({
   id: z.string().uuid(),
   modelId: z.string().uuid(),
   serialNumber: z.string().nullable(),
@@ -117,7 +117,7 @@ export const ComponentNewSchema = z.object({
 })
 
 // Create schema
-export const CreateComponentNewSchema = z.object({
+export const CreateComponentSchema = z.object({
   modelId: z.string().uuid(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
@@ -137,7 +137,7 @@ export const CreateComponentNewSchema = z.object({
 })
 
 // Update schema
-export const UpdateComponentNewSchema = z.object({
+export const UpdateComponentSchema = z.object({
   modelId: z.string().uuid().optional(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
@@ -156,9 +156,9 @@ export const UpdateComponentNewSchema = z.object({
   economicLifespan: z.number().min(0).optional(),
 })
 
-export type ComponentNew = z.infer<typeof ComponentNewSchema>
-export type CreateComponentNew = z.infer<typeof CreateComponentNewSchema>
-export type UpdateComponentNew = z.infer<typeof UpdateComponentNewSchema>
+export type Component = z.infer<typeof ComponentSchema>
+export type CreateComponent = z.infer<typeof CreateComponentSchema>
+export type UpdateComponent = z.infer<typeof UpdateComponentSchema>
 
 // ==================== FILE SCHEMAS ====================
 

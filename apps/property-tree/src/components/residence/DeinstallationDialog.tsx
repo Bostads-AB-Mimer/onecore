@@ -11,12 +11,12 @@ import { Label } from '@/components/ui/v2/Label'
 import { Input } from '@/components/ui/Input'
 import { AlertCircle } from 'lucide-react'
 import { useDeinstallComponent } from '@/components/hooks/useDeinstallComponent'
-import type { ComponentInstance } from '@/services/types'
+import type { Component } from '@/services/types'
 
 interface DeinstallationDialogProps {
   isOpen: boolean
   onClose: () => void
-  component: ComponentInstance
+  component: Component
   spaceId: string
 }
 

@@ -15,7 +15,7 @@ import {
 import { Trash2 } from 'lucide-react'
 import { DeinstallationDialog } from './DeinstallationDialog'
 import { ComponentInstallationForm } from './ComponentInstallationForm'
-import type { ComponentInstance } from '@/services/types'
+import type { Component } from '@/services/types'
 import { useQuery } from '@tanstack/react-query'
 import { componentService } from '@/services/api/core/componentService'
 
@@ -34,7 +34,7 @@ export const ManageComponentsDialog = ({
 }: ManageComponentsDialogProps) => {
   const [deinstallDialogState, setDeinstallDialogState] = useState<{
     isOpen: boolean
-    component?: ComponentInstance
+    component?: Component
   }>({
     isOpen: false,
   })
@@ -45,7 +45,7 @@ export const ManageComponentsDialog = ({
     enabled: isOpen,
   })
 
-  const handleDeinstallClick = (component: ComponentInstance) => {
+  const handleDeinstallClick = (component: Component) => {
     setDeinstallDialogState({
       isOpen: true,
       component,

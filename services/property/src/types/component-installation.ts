@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ComponentNewSchema, SpaceTypeEnum } from './component-instance'
+import { ComponentSchema, SpaceTypeEnum } from './component-instance'
 
 // ==================== COMPONENT INSTALLATIONS ====================
 
@@ -13,7 +13,7 @@ export const componentInstallationsQueryParamsSchema = z.object({
 
 // Full ComponentInstallation schema with component reference
 // Used for direct ComponentInstallation queries where the full component details are needed
-// Can include the component field because it references ComponentNewSchema (not circular at this level)
+// Can include the component field because it references ComponentSchema (not circular at this level)
 export const ComponentInstallationSchema = z.object({
   id: z.string().uuid(),
   componentId: z.string().uuid(),
@@ -34,7 +34,7 @@ export const ComponentInstallationSchema = z.object({
   updatedAt: z
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
-  component: ComponentNewSchema.optional(),
+  component: ComponentSchema.optional(),
 })
 
 // Create schema
