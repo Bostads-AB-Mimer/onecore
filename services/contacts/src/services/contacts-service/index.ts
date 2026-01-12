@@ -23,6 +23,10 @@ export const routes = (
           description: 'Wildcard search string',
           schema: z.optional(z.array(z.string())),
         },
+        type: {
+          description: 'Filter on contact type',
+          schema: z.optional(z.enum(['any', 'individual', 'organisation'])),
+        },
         page: {
           description: 'Page number for paginated results',
           schema: z.optional(z.number()),
@@ -41,11 +45,12 @@ export const routes = (
       const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
 
       const wildcard = ctx.query.q
-      const page = Number(ctx.query.page) ?? 0
-      const pageSize = Number(ctx.query.pageSize) ?? 10
+      const page = Number(ctx.query.page) || 0
+      const pageSize = Number(ctx.query.pageSize) || 10
 
       const result = await contactsRepository.list({
         filter: {
+          type: ctx.query.type ?? 'any',
           wildcard: wildcard,
         },
         page,
@@ -112,6 +117,8 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
+      console.log(ctx.params)
+
       const result = await contactsRepository.getByPhoneNumber(
         ctx.params?.phoneNumber as string
       )
@@ -124,7 +131,7 @@ export const routes = (
       } else {
         ctx.body = {
           ...metadata,
-          content: { contacts: [result] },
+          content: { contacts: result },
         }
       }
     }
@@ -146,10 +153,43 @@ export const routes = (
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
-
+      console.log(ctx.params)
       const result = await contactsRepository.getByNationalIdNumber(
         ctx.params.nid
       )
+
+      if (!result) {
+        ctx.status = 404
+        ctx.body = {
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          ...metadata,
+          content: result,
+        }
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/by-contact-code/:code',
+    {
+      summary: 'Get a single contact by their National ID (personnummer)',
+      tags: ['Contacts'],
+      params: {
+        code: z.string(),
+      },
+      response: {
+        200: GetContactResponseBody,
+        404: OneCOREHateOASResponseBody,
+      },
+    },
+    async (ctx) => {
+      console.log(ctx.params)
+      const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
+
+      const result = await contactsRepository.getByContactCode(ctx.params.code)
 
       if (!result) {
         ctx.status = 404
