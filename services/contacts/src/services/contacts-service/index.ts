@@ -2,21 +2,11 @@ import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
-import { ContactSchema } from './schema'
-
-const OneCOREHateOASResponseBody = z.object({
-  _links: z.any(),
-})
-
-const GetContactResponseBody = OneCOREHateOASResponseBody.extend({
-  content: ContactSchema,
-})
-
-const GetContactsResponseBody = OneCOREHateOASResponseBody.extend({
-  content: z.object({
-    contacts: z.array(ContactSchema),
-  }),
-})
+import {
+  GetContactResponseBody,
+  GetContactsResponseBody,
+  OneCOREHateOASResponseBody,
+} from './schema'
 
 export const routes = (
   router: OkapiRouter,
@@ -145,6 +135,7 @@ export const routes = (
     {
       summary: 'Get a single contact by their National ID (personnummer)',
       tags: ['Contacts'],
+      body: z.null(),
       params: {
         nid: z.string(),
       },
