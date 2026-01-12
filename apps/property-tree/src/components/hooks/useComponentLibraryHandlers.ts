@@ -253,7 +253,7 @@ export const useComponentLibraryHandlers = (
       } catch (error) {
         console.error('Error deleting model:', error)
         alert(
-          'Det gick inte att ta bort modellen. Den kan ha kopplade instanser.'
+          'Det gick inte att ta bort modellen. Den kan ha kopplade komponenter.'
         )
       }
     }
@@ -299,7 +299,7 @@ export const useComponentLibraryHandlers = (
 
     if (
       window.confirm(
-        `Är du säker på att du vill ta bort instansen "${instance.serialNumber}"?`
+        `Är du säker på att du vill ta bort komponenten "${instance.serialNumber}"?`
       )
     ) {
       try {
@@ -309,7 +309,7 @@ export const useComponentLibraryHandlers = (
         })
       } catch (error) {
         console.error('Error deleting instance:', error)
-        alert('Det gick inte att ta bort instansen.')
+        alert('Det gick inte att ta bort komponenten.')
       }
     }
   }

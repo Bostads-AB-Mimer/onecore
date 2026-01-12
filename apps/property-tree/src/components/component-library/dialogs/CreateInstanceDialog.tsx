@@ -107,7 +107,7 @@ export const CreateInstanceDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Skapa instans</DialogTitle>
+          <DialogTitle>Skapa komponent</DialogTitle>
           <p className="text-sm text-muted-foreground">
             Modell: {model.manufacturer} {model.modelName}
           </p>
@@ -319,13 +319,13 @@ export const CreateInstanceDialog = ({
               Avbryt
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Skapar...' : 'Skapa instans'}
+              {createMutation.isPending ? 'Skapar...' : 'Skapa komponent'}
             </Button>
           </DialogFooter>
 
           {createMutation.isError && (
             <p className="text-sm text-destructive text-center">
-              Ett fel uppstod vid skapande av instans. Försök igen.
+              Ett fel uppstod vid skapande av komponent. Försök igen.
             </p>
           )}
         </form>
