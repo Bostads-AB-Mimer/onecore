@@ -4,7 +4,7 @@ import { sendEmail } from '../common/adapters/infobip-adapter'
 import { getUnpaidInvoicePaymentSummaries } from '../services/report-service/service'
 import { convertInvoicePaymentSummariesToXlsx } from '../services/report-service/converters/excelConverter'
 
-export const handleInvoicePaymentSummaries = async () => {
+export const handleUnpaidInvoicePaymentSummaries = async () => {
   const now = new Date()
 
   const notification: string[] = [
@@ -44,5 +44,5 @@ export const handleInvoicePaymentSummaries = async () => {
 }
 
 if (require.main === module) {
-  handleInvoicePaymentSummaries()
+  handleUnpaidInvoicePaymentSummaries()
 }
