@@ -1,8 +1,19 @@
 import z from 'zod'
 
+export const PhoneNumberType = z.enum([
+  'work',
+  'home',
+  'mobile',
+  'direct-line',
+  'fax',
+  'pager',
+  'unspecified',
+])
+
 export const PhoneNumberSchema = z.object({
   phoneNumber: z.string(),
-  type: z.string(),
+  type: PhoneNumberType,
+  comment: z.string().optional(),
   isMain: z.boolean(),
 })
 

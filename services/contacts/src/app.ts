@@ -4,8 +4,9 @@ import { koaBody } from 'koa-body'
 import cors from '@koa/cors'
 import { koaSwagger } from 'koa2-swagger-ui'
 
-import api from './api'
+import makeApi from './api'
 import { errorHandler, logger, loggerMiddlewares } from '@onecore/utilities'
+import { makeAppContext } from './context'
 
 const app = new Koa()
 
@@ -22,6 +23,9 @@ app.on('timeout', (err) => {
 
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
+
+const appContext = makeAppContext()
+const api = makeApi(appContext)
 
 app.use(errorHandler())
 app.use(api.routes())
