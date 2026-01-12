@@ -22,16 +22,17 @@ export const sharedColumnProps = {
 
 export const getColumns = (
   dateFormatter: Intl.DateTimeFormat,
-  numberFormatter: Intl.NumberFormat
+  numberFormatter: Intl.NumberFormat,
+  activeListings: boolean = true
 ): Array<GridColDef<ListingWithOffer>> => {
-  return [
+  const columns = [
     {
       field: 'address',
       headerName: 'Bilplats',
       ...sharedColumnProps,
       flex: 1.25,
-      valueGetter: (params) => params.row.rentalObject?.address ?? 0,
-      renderCell: (v) => (
+      valueGetter: (params: any) => params.row.rentalObject?.address ?? 0,
+      renderCell: (v: any) => (
         <span>
           <span style={{ display: 'block' }}>{v.row.rentalObject.address}</span>
           {v.row.rentalObjectCode}
@@ -42,27 +43,29 @@ export const getColumns = (
       field: 'districtCaption',
       headerName: 'Distrikt',
       ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.districtCaption ?? '',
+      valueGetter: (params: any) =>
+        params.row.rentalObject?.districtCaption ?? '',
       flex: 0.6,
     },
     {
       field: 'residentialAreaCaption',
       headerName: 'Område',
       ...sharedColumnProps,
-      valueGetter: (params) =>
+      valueGetter: (params: any) =>
         params.row.rentalObject?.residentialAreaCaption ?? '',
     },
     {
       field: 'objectTypeCaption',
       headerName: 'Bilplatstyp',
       ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.objectTypeCaption ?? '',
+      valueGetter: (params: any) =>
+        params.row.rentalObject?.objectTypeCaption ?? '',
     },
     {
       field: 'rentalRule',
       headerName: 'Uthyrningsmetod',
       ...sharedColumnProps,
-      valueGetter: (params) => {
+      valueGetter: (params: any) => {
         if (params.row.rentalRule === 'NON_SCORED') return 'Poängfri'
         if (params.row.rentalRule === 'SCORED') return 'Intern'
         return ''
@@ -73,8 +76,8 @@ export const getColumns = (
       field: 'monthlyRent',
       headerName: 'Hyra',
       ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
-      renderCell: (v) => {
+      valueGetter: (params: any) => params.row.rentalObject?.monthlyRent ?? 0,
+      renderCell: (v: any) => {
         const rent = v.row.rentalObject?.monthlyRent ?? 0
         const showInclVat = v.row.rentalRule === 'NON_SCORED'
         return (
@@ -96,25 +99,30 @@ export const getColumns = (
       headerName: 'Sökande',
       ...sharedColumnProps,
       flex: 0.5,
-      valueGetter: (v) => (v.row.rentalRule == 'SCORED' ? v.value.length : '-'),
+      valueGetter: (v: any) =>
+        v.row.rentalRule == 'SCORED' ? v.value.length : '-',
     },
     {
       field: 'publishedTo',
       headerName: 'Publicerad T.O.M',
       ...sharedColumnProps,
-      valueFormatter: (v) =>
+      valueFormatter: (v: any) =>
         v.value ? dateFormatter.format(new Date(v.value)) : '-',
       flex: 0.6,
     },
-    {
+  ]
+
+  if (activeListings) {
+    columns.push({
       field: 'vacantFrom',
       headerName: 'Ledig FR.O.M',
       ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.vacantFrom ?? '',
-      valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
+      valueGetter: (params: any) => params.row.rentalObject?.vacantFrom ?? '',
+      valueFormatter: (v: any) => printVacantFrom(dateFormatter, v.value),
       flex: 0.6,
-    },
-  ]
+    })
+  }
+  return columns
 }
 
 export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
@@ -184,7 +192,7 @@ export const getSearchColumns = (
   dateFormatter: Intl.DateTimeFormat,
   numberFormatter: Intl.NumberFormat
 ): Array<GridColDef<ListingWithOffer>> => {
-  const columns = getColumns(dateFormatter, numberFormatter)
+  const columns = getColumns(dateFormatter, numberFormatter, false)
   const statusColumn: GridColDef<ListingWithOffer> = {
     field: 'status',
     headerName: 'Status',
