@@ -62,7 +62,6 @@ export function RoomInspectionMobile({
       <CardContent className="p-4">
         <div className="mb-4 pb-3 border-b border-border">
           <h3 className="font-semibold text-lg">{room.name}</h3>
-          <p className="text-sm text-muted-foreground">{room.area} m²</p>
         </div>
 
         <div>

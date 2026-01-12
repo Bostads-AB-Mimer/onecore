@@ -138,9 +138,6 @@ export function DesktopInspectionForm({
                   <div className="flex items-center justify-between w-full pr-4">
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{room.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {room.area}
-                      </span>
                     </div>
                     {isCompleted && (
                       <Badge variant="default" className="gap-1">
