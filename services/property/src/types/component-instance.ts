@@ -12,6 +12,14 @@ export const ComponentStatusEnum = z.enum([
 
 export const SpaceTypeEnum = z.enum(['OBJECT', 'PropertyObject'])
 
+export const ComponentConditionEnum = z.enum([
+  'NEW',
+  'GOOD',
+  'FAIR',
+  'POOR',
+  'DAMAGED',
+])
+
 // ==================== COMPONENTS (INSTANCES) ====================
 
 // Query params for components
@@ -91,12 +99,9 @@ export const ComponentNewSchema = z.object({
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
   depreciationPriceAtPurchase: z.number().min(0),
-  ncsCode: z
-    .string()
-    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
-    .nullable()
-    .optional(),
+  ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
+  condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
   createdAt: z
@@ -124,13 +129,9 @@ export const CreateComponentNewSchema = z.object({
   warrantyMonths: z.number().int().min(0),
   priceAtPurchase: z.number().min(0),
   depreciationPriceAtPurchase: z.number().min(0),
-  ncsCode: z
-    .string()
-    .trim()
-    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
-    .nullable()
-    .optional(),
+  ncsCode: z.string().trim().nullable().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
+  condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).default(1),
   economicLifespan: z.number().min(0),
 })
@@ -148,13 +149,9 @@ export const UpdateComponentNewSchema = z.object({
   warrantyMonths: z.number().int().min(0).optional(),
   priceAtPurchase: z.number().min(0).optional(),
   depreciationPriceAtPurchase: z.number().min(0).optional(),
-  ncsCode: z
-    .string()
-    .trim()
-    .regex(/^\d{3}(\.\d{3})?$/, 'Invalid NCS code format')
-    .nullable()
-    .optional(),
+  ncsCode: z.string().trim().nullable().optional(),
   status: ComponentStatusEnum.optional(),
+  condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).optional(),
   economicLifespan: z.number().min(0).optional(),
 })
