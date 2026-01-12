@@ -3,6 +3,7 @@ import createClient from 'openapi-fetch'
 
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
+import * as fileStorageAdapter from '../file-storage-adapter'
 
 import config from '../../common/config'
 
@@ -1518,43 +1519,68 @@ export async function uploadComponentFile(
   fileBuffer: Buffer,
   fileName: string,
   mimeType: string,
-  caption?: string
+  _caption?: string
 ): Promise<
   AdapterResult<DocumentWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
 > {
   try {
-    const FormData = (await import('form-data')).default
-    const formData = new FormData()
-    formData.append('file', fileBuffer, {
-      filename: fileName,
-      contentType: mimeType,
-    })
-    formData.append('componentInstanceId', componentId)
-    if (caption) {
-      formData.append('caption', caption)
+    // Step 1: Upload file to file-storage service
+    const timestamp = Date.now()
+    const extension = fileName.split('.').pop() || ''
+    const storageFileName = `component-instance-${componentId}-${timestamp}.${extension}`
+
+    const uploadResult = await fileStorageAdapter.uploadFile(
+      storageFileName,
+      fileBuffer,
+      mimeType
+    )
+
+    if (!uploadResult.ok) {
+      return {
+        ok: false,
+        err: uploadResult.err === 'bad_request' ? 'bad_request' : 'unknown',
+      }
     }
 
-    // Use axios for multipart uploads (same pattern as keys-adapter)
-    const response = await axios.post<DocumentWithUrl>(
-      `${config.propertyBaseService.url}/documents/upload`,
-      formData as any,
+    const fileId = uploadResult.data.fileName
+
+    // Step 2: Create document metadata in property service
+    const documentResponse = await axios.post(
+      `${config.propertyBaseService.url}/documents`,
       {
-        headers: formData.getHeaders(),
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
+        fileId,
+        componentInstanceId: componentId,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
       }
     )
 
-    if (response.data) {
-      return { ok: true, data: response.data }
+    if (!documentResponse.data) {
+      return { ok: false, err: 'unknown' }
     }
 
-    return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    if (err.response?.status === 400) {
+    // Step 3: Get presigned URL for the file
+    const urlResult = await fileStorageAdapter.getFileUrl(fileId, 86400)
+
+    // Return combined result
+    const result: DocumentWithUrl = {
+      id: documentResponse.data.id,
+      fileId: documentResponse.data.fileId,
+      originalName: fileName,
+      mimeType: mimeType,
+      size: fileBuffer.length,
+      createdAt: documentResponse.data.createdAt,
+      url: urlResult.ok ? urlResult.data.url : '',
+    }
+
+    return { ok: true, data: result }
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 400) {
       return { ok: false, err: 'bad_request' }
     }
-    if (err.response?.status === 403) {
+    if (axiosErr.response?.status === 403) {
       return { ok: false, err: 'forbidden' }
     }
     logger.error(
@@ -1569,6 +1595,7 @@ export async function getComponentFiles(
   componentId: string
 ): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
   try {
+    // Get document metadata from property service
     const response = await client().GET(
       '/documents/component-instances/{id}' as any,
       {
@@ -1578,13 +1605,58 @@ export async function getComponentFiles(
       }
     )
 
-    if (response.data) {
-      return { ok: true, data: response.data as DocumentWithUrl[] }
+    if (!response.data) {
+      return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'not_found' }
-  } catch (err: any) {
-    if (err.response?.status === 404) {
+    const documents = response.data as Array<{
+      id: string
+      fileId: string
+      createdAt: string
+    }>
+
+    // Fetch presigned URLs and metadata for each document from file-storage
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (doc) => {
+        try {
+          const [urlResult, metadataResult] = await Promise.all([
+            fileStorageAdapter.getFileUrl(doc.fileId, 86400),
+            fileStorageAdapter.getFileMetadata(doc.fileId),
+          ])
+
+          return {
+            id: doc.id,
+            fileId: doc.fileId,
+            originalName:
+              (metadataResult.ok &&
+                metadataResult.data?.metaData?.['x-amz-meta-original-name']) ||
+              doc.fileId,
+            mimeType:
+              (metadataResult.ok &&
+                metadataResult.data?.metaData?.['content-type']) ||
+              'application/octet-stream',
+            size: (metadataResult.ok && metadataResult.data?.size) || 0,
+            createdAt: doc.createdAt,
+            url: urlResult.ok ? urlResult.data.url : '',
+          } as DocumentWithUrl
+        } catch {
+          return {
+            id: doc.id,
+            fileId: doc.fileId,
+            originalName: doc.fileId,
+            mimeType: 'application/octet-stream',
+            size: 0,
+            createdAt: doc.createdAt,
+            url: '',
+          } as DocumentWithUrl
+        }
+      })
+    )
+
+    return { ok: true, data: documentsWithUrls }
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
     logger.error(
@@ -1596,18 +1668,26 @@ export async function getComponentFiles(
 }
 
 export async function deleteComponentFile(
-  documentId: string
+  documentId: string,
+  fileId?: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
   try {
+    // Delete document metadata from property service
     await client().DELETE('/documents/{id}' as any, {
       params: {
         path: { id: documentId } as any,
       },
     })
 
+    // Also delete file from file-storage if fileId provided
+    if (fileId) {
+      await fileStorageAdapter.deleteFile(fileId)
+    }
+
     return { ok: true, data: undefined }
-  } catch (err: any) {
-    if (err.response?.status === 404) {
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
     logger.error(
@@ -1629,35 +1709,63 @@ export async function uploadComponentModelDocument(
   AdapterResult<DocumentWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
 > {
   try {
-    const FormData = (await import('form-data')).default
-    const formData = new FormData()
-    formData.append('file', fileBuffer, {
-      filename: fileName,
-      contentType: mimeType,
-    })
-    formData.append('componentModelId', modelId)
+    // Step 1: Upload file to file-storage service
+    const timestamp = Date.now()
+    const extension = fileName.split('.').pop() || ''
+    const storageFileName = `component-model-${modelId}-${timestamp}.${extension}`
 
-    // Use axios for multipart uploads (same pattern as keys-adapter)
-    const response = await axios.post<DocumentWithUrl>(
-      `${config.propertyBaseService.url}/documents/upload`,
-      formData as any,
+    const uploadResult = await fileStorageAdapter.uploadFile(
+      storageFileName,
+      fileBuffer,
+      mimeType
+    )
+
+    if (!uploadResult.ok) {
+      return {
+        ok: false,
+        err: uploadResult.err === 'bad_request' ? 'bad_request' : 'unknown',
+      }
+    }
+
+    const fileId = uploadResult.data.fileName
+
+    // Step 2: Create document metadata in property service
+    const documentResponse = await axios.post(
+      `${config.propertyBaseService.url}/documents`,
       {
-        headers: formData.getHeaders(),
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
+        fileId,
+        componentModelId: modelId,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
       }
     )
 
-    if (response.data) {
-      return { ok: true, data: response.data }
+    if (!documentResponse.data) {
+      return { ok: false, err: 'unknown' }
     }
 
-    return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    if (err.response?.status === 400) {
+    // Step 3: Get presigned URL for the file
+    const urlResult = await fileStorageAdapter.getFileUrl(fileId, 86400)
+
+    // Return combined result
+    const result: DocumentWithUrl = {
+      id: documentResponse.data.id,
+      fileId: documentResponse.data.fileId,
+      originalName: fileName,
+      mimeType: mimeType,
+      size: fileBuffer.length,
+      createdAt: documentResponse.data.createdAt,
+      url: urlResult.ok ? urlResult.data.url : '',
+    }
+
+    return { ok: true, data: result }
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 400) {
       return { ok: false, err: 'bad_request' }
     }
-    if (err.response?.status === 403) {
+    if (axiosErr.response?.status === 403) {
       return { ok: false, err: 'forbidden' }
     }
     logger.error(
@@ -1672,6 +1780,7 @@ export async function getComponentModelDocuments(
   modelId: string
 ): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
   try {
+    // Get document metadata from property service
     const response = await client().GET(
       '/documents/component-models/{id}' as any,
       {
@@ -1681,13 +1790,58 @@ export async function getComponentModelDocuments(
       }
     )
 
-    if (response.data) {
-      return { ok: true, data: response.data as DocumentWithUrl[] }
+    if (!response.data) {
+      return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'not_found' }
-  } catch (err: any) {
-    if (err.response?.status === 404) {
+    const documents = response.data as Array<{
+      id: string
+      fileId: string
+      createdAt: string
+    }>
+
+    // Fetch presigned URLs and metadata for each document from file-storage
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (doc) => {
+        try {
+          const [urlResult, metadataResult] = await Promise.all([
+            fileStorageAdapter.getFileUrl(doc.fileId, 86400),
+            fileStorageAdapter.getFileMetadata(doc.fileId),
+          ])
+
+          return {
+            id: doc.id,
+            fileId: doc.fileId,
+            originalName:
+              (metadataResult.ok &&
+                metadataResult.data?.metaData?.['x-amz-meta-original-name']) ||
+              doc.fileId,
+            mimeType:
+              (metadataResult.ok &&
+                metadataResult.data?.metaData?.['content-type']) ||
+              'application/octet-stream',
+            size: (metadataResult.ok && metadataResult.data?.size) || 0,
+            createdAt: doc.createdAt,
+            url: urlResult.ok ? urlResult.data.url : '',
+          } as DocumentWithUrl
+        } catch {
+          return {
+            id: doc.id,
+            fileId: doc.fileId,
+            originalName: doc.fileId,
+            mimeType: 'application/octet-stream',
+            size: 0,
+            createdAt: doc.createdAt,
+            url: '',
+          } as DocumentWithUrl
+        }
+      })
+    )
+
+    return { ok: true, data: documentsWithUrls }
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
     logger.error(
@@ -1699,18 +1853,26 @@ export async function getComponentModelDocuments(
 }
 
 export async function deleteComponentModelDocument(
-  documentId: string
+  documentId: string,
+  fileId?: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
   try {
+    // Delete document metadata from property service
     await client().DELETE('/documents/{id}' as any, {
       params: {
         path: { id: documentId } as any,
       },
     })
 
+    // Also delete file from file-storage if fileId provided
+    if (fileId) {
+      await fileStorageAdapter.deleteFile(fileId)
+    }
+
     return { ok: true, data: undefined }
-  } catch (err: any) {
-    if (err.response?.status === 404) {
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 404) {
       return { ok: false, err: 'not_found' }
     }
     logger.error(

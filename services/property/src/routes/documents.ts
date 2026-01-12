@@ -1,43 +1,36 @@
 import KoaRouter from '@koa/router'
-import {
-  createDocument,
-  deleteDocument,
-  getDocumentsWithMetadata,
-} from '../adapters/documents-adapter'
-import { uploadFile, getFileUrl } from '../adapters/minio-adapter'
-import { createMulterUpload, generateFileName } from '../utils/file-upload'
+import { createDocument, deleteDocument } from '../adapters/documents-adapter'
 import { prisma } from '../adapters/db'
 
 /**
  * @swagger
  * tags:
  *   - name: Documents
- *     description: Operations for managing documents attached to component models and instances
+ *     description: Operations for managing document metadata attached to component models and instances. File storage is handled separately via the file-storage service.
  */
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /documents/upload:
+   * /documents:
    *   post:
-   *     summary: Upload a document
+   *     summary: Create a document record
    *     description: |
-   *       Uploads a document (PDF or image) and attaches it to either a component model or component instance.
-   *       Maximum file size is 50MB. Supported formats: PDF, JPEG, PNG, WebP.
+   *       Creates a document metadata record linking a file (already uploaded to file-storage service)
+   *       to either a component model or component instance.
    *     tags:
    *       - Documents
    *     requestBody:
    *       required: true
    *       content:
-   *         multipart/form-data:
+   *         application/json:
    *           schema:
    *             type: object
    *             required:
-   *               - file
+   *               - fileId
    *             properties:
-   *               file:
+   *               fileId:
    *                 type: string
-   *                 format: binary
-   *                 description: The file to upload (PDF, JPEG, PNG, or WebP)
+   *                 description: The file ID from the file-storage service
    *               componentModelId:
    *                 type: string
    *                 format: uuid
@@ -48,70 +41,46 @@ export const routes = (router: KoaRouter) => {
    *                 description: The ID of the component instance to attach the document to (required if componentModelId not provided)
    *     responses:
    *       200:
-   *         description: Document uploaded successfully
+   *         description: Document record created successfully
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/Document'
    *       400:
    *         description: |
-   *           Bad request - either no file provided, neither componentModelId nor componentInstanceId provided,
-   *           file size exceeds limit, or unsupported file type
+   *           Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided
    *       500:
    *         description: Internal server error
    */
-  router.post('(.*)/documents/upload', async (ctx) => {
-    const upload = createMulterUpload({
-      maxSizeBytes: 50 * 1024 * 1024,
-      allowedMimeTypes: [
-        'application/pdf',
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-      ],
+  router.post('(.*)/documents', async (ctx) => {
+    const { fileId, componentModelId, componentInstanceId } = ctx.request
+      .body as {
+      fileId?: string
+      componentModelId?: string
+      componentInstanceId?: string
+    }
+
+    if (!fileId) {
+      ctx.status = 400
+      ctx.body = { error: 'fileId is required' }
+      return
+    }
+
+    if (!componentModelId && !componentInstanceId) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Either componentModelId or componentInstanceId required',
+      }
+      return
+    }
+
+    const document = await createDocument({
+      componentModelId,
+      componentInstanceId,
+      fileId,
     })
 
-    await upload.single('file')(ctx, async () => {
-      const file = ctx.file
-      if (!file) {
-        ctx.status = 400
-        ctx.body = { error: 'No file provided' }
-        return
-      }
-
-      const { componentModelId, componentInstanceId } = ctx.request.body as {
-        componentModelId?: string
-        componentInstanceId?: string
-      }
-
-      if (!componentModelId && !componentInstanceId) {
-        ctx.status = 400
-        ctx.body = {
-          error: 'Either componentModelId or componentInstanceId required',
-        }
-        return
-      }
-
-      const entityType = componentModelId
-        ? 'component-model'
-        : 'component-instance'
-      const entityId = componentModelId || componentInstanceId!
-      const fileName = generateFileName({
-        entityType,
-        entityId,
-        originalName: file.originalname,
-      })
-
-      await uploadFile(fileName, file.buffer, file.mimetype, file.originalname)
-
-      const document = await createDocument({
-        componentModelId,
-        componentInstanceId,
-        fileId: fileName,
-      })
-
-      ctx.body = document
-    })
+    ctx.body = document
   })
 
   /**
@@ -120,8 +89,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get documents for a component model
    *     description: |
-   *       Retrieves all documents attached to a specific component model, including presigned URLs
-   *       for accessing the files. URLs are valid for 24 hours.
+   *       Retrieves all document metadata attached to a specific component model.
+   *       Use the fileId to fetch file content/URLs from the file-storage service.
    *     tags:
    *       - Documents
    *     parameters:
@@ -140,7 +109,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: array
    *               items:
-   *                 $ref: '#/components/schemas/DocumentWithUrl'
+   *                 $ref: '#/components/schemas/Document'
    *       404:
    *         description: Component model not found
    *       500:
@@ -154,16 +123,7 @@ export const routes = (router: KoaRouter) => {
       })
       .then((model) => model?.documents || [])
 
-    const withMetadata = await getDocumentsWithMetadata(documents)
-
-    const withUrls = await Promise.all(
-      withMetadata.map(async (doc) => ({
-        ...doc,
-        url: await getFileUrl(doc.fileId, 86400),
-      }))
-    )
-
-    ctx.body = withUrls
+    ctx.body = documents
   })
 
   /**
@@ -172,8 +132,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get documents for a component instance
    *     description: |
-   *       Retrieves all documents attached to a specific component instance, including presigned URLs
-   *       for accessing the files. URLs are valid for 24 hours.
+   *       Retrieves all document metadata attached to a specific component instance.
+   *       Use the fileId to fetch file content/URLs from the file-storage service.
    *     tags:
    *       - Documents
    *     parameters:
@@ -192,7 +152,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: array
    *               items:
-   *                 $ref: '#/components/schemas/DocumentWithUrl'
+   *                 $ref: '#/components/schemas/Document'
    *       404:
    *         description: Component instance not found
    *       500:
@@ -206,25 +166,17 @@ export const routes = (router: KoaRouter) => {
       })
       .then((comp) => comp?.documents || [])
 
-    const withMetadata = await getDocumentsWithMetadata(documents)
-
-    const withUrls = await Promise.all(
-      withMetadata.map(async (doc) => ({
-        ...doc,
-        url: await getFileUrl(doc.fileId, 86400),
-      }))
-    )
-
-    ctx.body = withUrls
+    ctx.body = documents
   })
 
   /**
    * @swagger
    * /documents/{id}:
    *   delete:
-   *     summary: Delete a document
+   *     summary: Delete a document record
    *     description: |
-   *       Deletes a document and its associated file from storage. This action cannot be undone.
+   *       Deletes a document metadata record. Note: The actual file should be deleted
+   *       separately via the file-storage service.
    *     tags:
    *       - Documents
    *     parameters:
@@ -237,7 +189,7 @@ export const routes = (router: KoaRouter) => {
    *         description: The document ID to delete
    *     responses:
    *       204:
-   *         description: Document deleted successfully (no content)
+   *         description: Document record deleted successfully (no content)
    *       404:
    *         description: Document not found
    *       500:

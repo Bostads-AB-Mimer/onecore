@@ -1,5 +1,4 @@
 import { prisma } from './db'
-import { deleteFile, getFileMetadataFromMinio } from './minio-adapter'
 
 export const createDocument = async (data: {
   componentModelId?: string
@@ -48,24 +47,6 @@ export const deleteDocument = async (id: string) => {
     throw new Error('Document not found')
   }
 
-  await deleteFile(document.fileId)
+  // Note: File deletion from storage should be handled by the frontend via file-storage service
   await prisma.documents.delete({ where: { id } })
-}
-
-export const getDocumentsWithMetadata = async (
-  documents: Array<{ id: string; fileId: string; createdAt: Date }>
-) => {
-  return Promise.all(
-    documents.map(async (doc) => {
-      const metadata = await getFileMetadataFromMinio(doc.fileId)
-      return {
-        id: doc.id,
-        fileId: doc.fileId,
-        originalName: metadata.originalName,
-        mimeType: metadata.mimeType,
-        size: metadata.size,
-        createdAt: doc.createdAt,
-      }
-    })
-  )
 }
