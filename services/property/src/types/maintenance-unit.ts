@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const MaintenanceUnitSchema = z.object({
   id: z.string(),
+  propertyObjectId: z.string(),
   rentalPropertyId: z.string().optional(),
   code: z.string(),
   caption: z.string().nullable(),
