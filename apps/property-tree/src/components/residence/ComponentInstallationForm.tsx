@@ -20,6 +20,7 @@ export interface InstallationFormData {
   depreciationPriceAtPurchase: number
   economicLifespan: number
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+  condition: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
   quantity: number
   ncsCode: string
   installationDate: string
@@ -36,6 +37,7 @@ const getInitialFormData = (): InstallationFormData => ({
   depreciationPriceAtPurchase: 0,
   economicLifespan: 0,
   status: 'ACTIVE',
+  condition: null,
   quantity: 1,
   ncsCode: '',
   installationDate: new Date().toISOString().split('T')[0],
@@ -119,6 +121,7 @@ export const ComponentInstallationForm = ({
           depreciationPriceAtPurchase: formData.depreciationPriceAtPurchase,
           economicLifespan: formData.economicLifespan,
           status: formData.status,
+          condition: formData.condition,
           quantity: formData.quantity,
           ncsCode: formData.ncsCode || undefined,
           installationDate: formData.installationDate,
@@ -145,7 +148,7 @@ export const ComponentInstallationForm = ({
           }
         )
 
-        queryClient.invalidateQueries({ queryKey: ['components', roomId] })
+        queryClient.invalidateQueries({ queryKey: ['components', propertyObjectId] })
         queryClient.invalidateQueries({
           queryKey: ['instances', 'uninstalled'],
         })
@@ -416,6 +419,25 @@ export const ComponentInstallationForm = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="condition">Skick</Label>
+              <select
+                id="condition"
+                value={formData.condition || ''}
+                onChange={(e) =>
+                  handleChange('condition', e.target.value || null)
+                }
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Ej angivet</option>
+                <option value="NEW">Nyskick</option>
+                <option value="GOOD">Gott skick</option>
+                <option value="FAIR">Godtagbart skick</option>
+                <option value="POOR">Dåligt skick</option>
+                <option value="DAMAGED">Skadat</option>
+              </select>
+            </div>
+
             <div>
               <Label htmlFor="quantity">Antal</Label>
               <Input

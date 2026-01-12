@@ -8,6 +8,8 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
+import { addComponent } from '../../processes/components'
+import { ProcessStatus } from '../../common/types'
 
 /**
  * @swagger
@@ -4914,6 +4916,195 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== PROCESSES ====================
+
+  /**
+   * @swagger
+   * /processes/add-component:
+   *   post:
+   *     summary: Add a component with model, instance, and installation
+   *     tags:
+   *       - Property base Service
+   *     description: |
+   *       Unified process to add a component. This handles:
+   *       1. Finding or creating a component model (by exact modelName match)
+   *       2. Creating a component instance
+   *       3. Creating a component installation
+   *
+   *       If the model doesn't exist, it will be created. In this case, the model fields
+   *       (manufacturer, currentPrice, currentInstallPrice, modelWarrantyMonths) are required.
+   *
+   *       Categories, types, and subtypes must be created manually beforehand.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - modelName
+   *               - componentSubtypeId
+   *               - serialNumber
+   *               - componentWarrantyMonths
+   *               - priceAtPurchase
+   *               - depreciationPriceAtPurchase
+   *               - economicLifespan
+   *               - spaceId
+   *               - spaceType
+   *               - installationDate
+   *               - installationCost
+   *             properties:
+   *               modelName:
+   *                 type: string
+   *                 description: Model name (used to find existing model or create new one)
+   *               componentSubtypeId:
+   *                 type: string
+   *                 format: uuid
+   *                 description: Subtype ID (must exist)
+   *               manufacturer:
+   *                 type: string
+   *                 description: Required if model doesn't exist
+   *               currentPrice:
+   *                 type: number
+   *                 description: Required if model doesn't exist
+   *               currentInstallPrice:
+   *                 type: number
+   *                 description: Required if model doesn't exist
+   *               modelWarrantyMonths:
+   *                 type: integer
+   *                 description: Required if model doesn't exist
+   *               technicalSpecification:
+   *                 type: string
+   *               dimensions:
+   *                 type: string
+   *               coclassCode:
+   *                 type: string
+   *               serialNumber:
+   *                 type: string
+   *               specifications:
+   *                 type: string
+   *               additionalInformation:
+   *                 type: string
+   *               warrantyStartDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO-8601 DateTime format (e.g., 2026-01-01T00:00:00.000Z)
+   *               componentWarrantyMonths:
+   *                 type: integer
+   *               priceAtPurchase:
+   *                 type: number
+   *               depreciationPriceAtPurchase:
+   *                 type: number
+   *               economicLifespan:
+   *                 type: number
+   *               quantity:
+   *                 type: number
+   *                 default: 1
+   *               ncsCode:
+   *                 type: string
+   *                 description: NCS color code
+   *               status:
+   *                 type: string
+   *                 enum: [ACTIVE, INACTIVE, MAINTENANCE, DECOMMISSIONED]
+   *                 default: ACTIVE
+   *               condition:
+   *                 type: string
+   *                 enum: [NEW, GOOD, FAIR, POOR, DAMAGED]
+   *                 nullable: true
+   *                 description: Physical condition of the component (optional)
+   *               spaceId:
+   *                 type: string
+   *                 description: Where to install the component
+   *               spaceType:
+   *                 type: string
+   *                 enum: [OBJECT, PropertyObject]
+   *               installationDate:
+   *                 type: string
+   *               orderNumber:
+   *                 type: string
+   *               installationCost:
+   *                 type: number
+   *     responses:
+   *       201:
+   *         description: Component added successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     modelCreated:
+   *                       type: boolean
+   *                     model:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         modelName:
+   *                           type: string
+   *                         manufacturer:
+   *                           type: string
+   *                     component:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         serialNumber:
+   *                           type: string
+   *                         status:
+   *                           type: string
+   *                     installation:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                         spaceId:
+   *                           type: string
+   *                         installationDate:
+   *                           type: string
+   *       400:
+   *         description: Validation error or missing required model fields
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/processes/add-component', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = schemas.AddComponentRequestSchema.safeParse(ctx.request.body)
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await addComponent(body.data)
+
+      ctx.status = result.httpStatus
+      if (result.processStatus === ProcessStatus.successful) {
+        ctx.body = {
+          content: result.data,
+          ...result.response,
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          error: result.error,
+          ...result.response,
+          ...metadata,
+        }
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Add component process error')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
