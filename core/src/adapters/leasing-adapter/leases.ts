@@ -104,7 +104,7 @@ export const createLease = async (
 
 type CreateInvoiceRowRequestPayload = {
   amount: number
-  article: string | null
+  article: string
   label: string | null
   from?: string
   to?: string

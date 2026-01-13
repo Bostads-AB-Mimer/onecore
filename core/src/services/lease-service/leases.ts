@@ -300,10 +300,10 @@ export const routes = (router: KoaRouter) => {
 
   const CreateInvoiceRowRequestSchema = z.object({
     amount: z.number(),
-    article: z.string().nullable(),
+    article: z.string(),
     label: z.string().nullable(),
-    from: z.string().optional(),
-    to: z.string().optional(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
   })
 
   /**
@@ -331,21 +331,18 @@ export const routes = (router: KoaRouter) => {
    *                 type: number
    *               article:
    *                 type: string
-   *                 nullable: true
    *               label:
    *                 type: string
    *                 nullable: true
    *               from:
    *                 type: string
-   *                 nullable: true
-   *                 description: Optional start date in YYYY-MM format.
+   *                 description: Optional start date.
    *               to:
    *                 type: string
-   *                 nullable: true
-   *                 description: Optional end date in YYYY-MM format.
+   *                 description: Optional end date.
    *             required:
    *               - amount
-   *               - vat
+   *               - article
    *     responses:
    *       201:
    *         description: Successfully created invoice row.
