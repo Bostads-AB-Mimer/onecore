@@ -302,4 +302,51 @@ describe('leases routes', () => {
       expect(res.body.content).toBeNull()
     })
   })
+
+  describe('GET /articles', () => {
+    it('returns articles', async () => {
+      const articles = [
+        {
+          includeInContract: false,
+          _id: 'article-1',
+          title: 'Hyra bostad, konto 3011',
+          label: 'Hyra bostad, konto 3011',
+          defaultLabel: 'Hyra bostad, konto 3011',
+          code: 'HYRAB1',
+          accountNr: '3011',
+          vat: 0.25,
+          description: 'Test description',
+          category: 'article-category',
+          adjustmentType: 'none' as const,
+          archivedAt: null,
+          createdAt: new Date('2025-04-01T06:43:01.728Z'),
+          updatedAt: new Date('2025-04-02T06:43:01.728Z'),
+          hyresvard: 'hyresvard-1',
+          type: 'HYRAB1',
+        },
+      ]
+
+      jest.spyOn(tenantLeaseAdapter, 'getArticles').mockResolvedValue({
+        ok: true,
+        data: articles,
+      })
+
+      const res = await request(app.callback()).get('/articles')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(articles)
+    })
+
+    it('returns 500 on error', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getArticles').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get('/articles')
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
+    })
+  })
 })

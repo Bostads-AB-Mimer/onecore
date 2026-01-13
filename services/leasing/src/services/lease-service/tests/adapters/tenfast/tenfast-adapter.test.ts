@@ -6,6 +6,7 @@ import assert from 'node:assert'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
+import { toYearMonthString } from '../../../adapters/tenfast/schemas'
 
 describe(tenfastAdapter.getLeaseTemplate, () => {
   it('should return template when response is valid and status is 200', async () => {
@@ -15,7 +16,7 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
       status: 200,
       data: mockTemplate,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
@@ -43,7 +44,7 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
       status: 400,
       data: { error: 'Bad request' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
@@ -61,7 +62,7 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
       status: 500,
       data: { error: 'Internal server error' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
@@ -81,7 +82,7 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
       status: 200,
       data: invalidData,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
@@ -95,7 +96,7 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
 
   it('should return error "unknown" when tenfastApiRequest throws an exception', async () => {
     // Arrange
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+    ; (request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     // Act
     const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
@@ -116,7 +117,7 @@ describe(tenfastAdapter.getRentalObject, () => {
       status: 200,
       data: mockRentalObjectResponse,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -135,7 +136,7 @@ describe(tenfastAdapter.getRentalObject, () => {
       status: 201,
       data: mockRentalObjectResponse,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -153,7 +154,7 @@ describe(tenfastAdapter.getRentalObject, () => {
       status: 200,
       data: { records: [] },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -171,7 +172,7 @@ describe(tenfastAdapter.getRentalObject, () => {
       status: 400,
       data: { error: 'Bad request' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -189,7 +190,7 @@ describe(tenfastAdapter.getRentalObject, () => {
       status: 500,
       data: { error: 'Internal server error' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -209,7 +210,7 @@ describe(tenfastAdapter.getRentalObject, () => {
       status: 200,
       data: invalidData,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -223,7 +224,7 @@ describe(tenfastAdapter.getRentalObject, () => {
 
   it('should return error "could-not-find-rental-object" when request throws an exception', async () => {
     // Arrange
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+    ; (request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     // Act
     const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
@@ -244,7 +245,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       status: 200,
       data: mockTenant,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -263,7 +264,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       status: 201,
       data: mockTenant,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -281,7 +282,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       status: 200,
       data: { records: [] },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -299,7 +300,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       status: 400,
       data: { error: 'Bad request' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -317,7 +318,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       status: 500,
       data: { error: 'Internal server error' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -337,7 +338,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       status: 200,
       data: invalidData,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -351,7 +352,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
 
   it('should return error "unknown" when tenfastApiRequest throws an exception', async () => {
     // Arrange
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+    ; (request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     // Act
     const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
@@ -372,7 +373,7 @@ describe(tenfastAdapter.createTenant, () => {
       status: 200,
       data: mockTenant,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -392,7 +393,7 @@ describe(tenfastAdapter.createTenant, () => {
       status: 201,
       data: mockTenant,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -411,7 +412,7 @@ describe(tenfastAdapter.createTenant, () => {
       status: 400,
       data: { error: 'Bad request' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -430,7 +431,7 @@ describe(tenfastAdapter.createTenant, () => {
       status: 500,
       data: { error: 'Internal server error' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -451,7 +452,7 @@ describe(tenfastAdapter.createTenant, () => {
       status: 200,
       data: invalidData,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -491,7 +492,7 @@ describe(tenfastAdapter.createLease, () => {
       status: 200,
       data: { leaseId: 'LEASE123' }, // adjust to expected structure if needed
     }
-    ;(request as jest.Mock).mockResolvedValue(mockLeaseResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockLeaseResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -529,10 +530,10 @@ describe(tenfastAdapter.createLease, () => {
       .mockResolvedValue({ ok: true, data: mockRentalObject })
 
     let leaseRequestData: any
-    ;(request as jest.Mock).mockImplementation((data) => {
-      leaseRequestData = data.data
-      return Promise.resolve({ status: 200, data: {} })
-    })
+      ; (request as jest.Mock).mockImplementation((data) => {
+        leaseRequestData = data.data
+        return Promise.resolve({ status: 200, data: {} })
+      })
 
     // Act
     const contact = factory.contact.build()
@@ -568,10 +569,10 @@ describe(tenfastAdapter.createLease, () => {
       .mockResolvedValue({ ok: true, data: mockRentalObject })
 
     let leaseRequestData: any
-    ;(request as jest.Mock).mockImplementation((data) => {
-      leaseRequestData = data.data
-      return Promise.resolve({ status: 200, data: {} })
-    })
+      ; (request as jest.Mock).mockImplementation((data) => {
+        leaseRequestData = data.data
+        return Promise.resolve({ status: 200, data: {} })
+      })
 
     // Act
     const contact = factory.contact.build()
@@ -613,7 +614,7 @@ describe(tenfastAdapter.createLease, () => {
       status: 201,
       data: { leaseId: 'LEASE123' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockLeaseResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockLeaseResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -794,7 +795,7 @@ describe(tenfastAdapter.createLease, () => {
       status: 400,
       data: { error: 'Bad request' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockLeaseResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockLeaseResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -838,7 +839,7 @@ describe(tenfastAdapter.createLease, () => {
       status: 500,
       data: { error: 'Internal server error' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockLeaseResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockLeaseResponse)
 
     // Act
     const contact = factory.contact.build()
@@ -877,7 +878,7 @@ describe(tenfastAdapter.createLease, () => {
       ok: true,
       data: mockRentalObject,
     })
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+      ; (request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     // Act
     const contact = factory.contact.build()
@@ -902,10 +903,10 @@ describe(tenfastAdapter.createInvoiceRow, () => {
   it('creates and returns invoice row', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
 
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 200,
-      data: invoiceRow,
-    })
+      ; (request as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: invoiceRow,
+      })
 
     const result = await tenfastAdapter.createInvoiceRow({
       leaseId: 'lease-id',
@@ -918,10 +919,10 @@ describe(tenfastAdapter.createInvoiceRow, () => {
   it('returns ok false on error', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
 
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 500,
-      data: invoiceRow,
-    })
+      ; (request as jest.Mock).mockResolvedValue({
+        status: 500,
+        data: invoiceRow,
+      })
 
     const result = await tenfastAdapter.createInvoiceRow({
       leaseId: 'lease-id',
@@ -934,7 +935,7 @@ describe(tenfastAdapter.createInvoiceRow, () => {
 
 describe(tenfastAdapter.deleteInvoiceRow, () => {
   it('deletes and returns null', async () => {
-    ;(request as jest.Mock).mockResolvedValue({
+    ; (request as jest.Mock).mockResolvedValue({
       status: 200,
     })
 
@@ -947,7 +948,7 @@ describe(tenfastAdapter.deleteInvoiceRow, () => {
   })
 
   it('returns ok false on error', async () => {
-    ;(request as jest.Mock).mockResolvedValue({
+    ; (request as jest.Mock).mockResolvedValue({
       status: 500,
       data: null,
     })
@@ -1028,8 +1029,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: '2023-01-01',
-          to: '2023-12-31',
+          from: toYearMonthString(new Date('2023-01-01')),
+          to: toYearMonthString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1066,8 +1067,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: '2023-01-01',
-          to: '2023-12-31',
+          from: toYearMonthString(new Date('2023-01-01')),
+          to: toYearMonthString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1106,7 +1107,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
       status: 200,
       data: mockRentalObjects,
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObjectRents(
@@ -1128,7 +1129,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
       status: 400,
       data: { error: 'Bad request' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObjectRents(
@@ -1148,7 +1149,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
       status: 404,
       data: { error: 'Internal server error' },
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObjectRents(
@@ -1169,7 +1170,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
       status: 200,
       data: [{ notARentalObject: true }],
     }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
+      ; (request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
     const result = await tenfastAdapter.getRentalObjectRents(
@@ -1203,10 +1204,10 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
         externalId: code,
       })
     )
-    ;(request as jest.Mock)
-      .mockResolvedValueOnce({ status: 200, data: batch1 })
-      .mockResolvedValueOnce({ status: 200, data: batch2 })
-      .mockResolvedValueOnce({ status: 200, data: batch3 })
+      ; (request as jest.Mock)
+        .mockResolvedValueOnce({ status: 200, data: batch1 })
+        .mockResolvedValueOnce({ status: 200, data: batch2 })
+        .mockResolvedValueOnce({ status: 200, data: batch3 })
 
     // Act
     const result = await tenfastAdapter.getRentalObjectRents(
@@ -1224,7 +1225,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
   it('should return error "unknown" when request throws an exception', async () => {
     // Arrange
     const rentalObjectCodes = ['R1001', 'R1002']
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+      ; (request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     // Act
     const result = await tenfastAdapter.getRentalObjectRents(
