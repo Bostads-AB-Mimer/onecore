@@ -210,7 +210,7 @@ describe('leases routes', () => {
     it('creates invoice row even without from/to', async () => {
       const minimalInvoiceRow = {
         amount: 200,
-        article: null,
+        article: 'Rent-001',
         label: 'Rent',
       }
 

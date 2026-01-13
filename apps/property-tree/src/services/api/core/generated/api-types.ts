@@ -1060,6 +1060,67 @@ export interface paths {
       };
     };
   };
+  "/leases/{leaseId}/invoice-rows": {
+    /** Create an invoice row for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            amount: number;
+            article: string;
+            label?: string | null;
+            /** @description Optional start date in YYYY-MM format. */
+            from?: string;
+            /** @description Optional end date in YYYY-MM format. */
+            to?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Successfully created invoice row. */
+        201: {
+          content: never;
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/invoice-rows/{invoiceRowId}": {
+    /** Delete an invoice row for a lease */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+          /** @description The ID of the invoice row. */
+          invoiceRowId: string;
+        };
+      };
+      responses: {
+        /** @description Invoice row deleted. */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/listings": {
     /**
      * Get listings

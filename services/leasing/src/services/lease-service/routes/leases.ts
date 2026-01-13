@@ -5,6 +5,7 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { Contact, Lease, leasing } from '@onecore/types'
+import { z } from 'zod'
 
 import {
   getContactByContactCode,
@@ -14,7 +15,6 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
-import { TenfastInvoiceRowSchema } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
@@ -506,9 +506,12 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  const CreateInvoiceRowRequestBodySchema = TenfastInvoiceRowSchema.omit({
-    _id: true,
-    vat: true,
+  const CreateInvoiceRowRequestBodySchema = z.object({
+    amount: z.number(),
+    article: z.string(),
+    label: z.string().nullable().optional(),
+    from: z.string().optional(),
+    to: z.string().optional(),
   })
 
   router.post(
@@ -519,6 +522,7 @@ export const routes = (router: KoaRouter) => {
 
       const invoiceRow = {
         ...ctx.request.body,
+        label: ctx.request.body.label ?? null,
         vat: 0.25,
       }
 
