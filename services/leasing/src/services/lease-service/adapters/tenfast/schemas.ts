@@ -1,10 +1,19 @@
+import { format } from 'date-fns'
 import { z } from 'zod'
+
+const YearMonthStringSchema = z.string().brand<'yyyy-mm'>()
+
+export type YearMonthString = z.infer<typeof YearMonthStringSchema>
+
+export function toYearMonthString(date: Date): YearMonthString {
+  return YearMonthStringSchema.parse(format(date, 'yyyy-MM'))
+}
 
 export const TenfastInvoiceRowSchema = z.object({
   amount: z.number(),
   vat: z.number(), //moms, percentage in decimal form 0.25 = 25%
-  from: z.string().optional(),
-  to: z.string().optional().nullable(),
+  from: YearMonthStringSchema.optional().nullable(),
+  to: YearMonthStringSchema.optional().nullable(),
   article: z.string().nullable(),
   label: z.string().nullable(),
   _id: z.string(),
