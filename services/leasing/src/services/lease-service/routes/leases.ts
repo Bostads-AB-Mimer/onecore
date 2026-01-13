@@ -21,6 +21,8 @@ import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import z from 'zod'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
+import { TenfastInvoiceRowSchema } from '../adapters/tenfast/schemas'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -850,6 +852,111 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/{id}/invoice-row:
+   *   post:
+   *     summary: Create a invoice row
+   *     description: Create a invoice row.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       201:
+   *         description: Successfully created invoice row.
+   *       404:
+   *         description: Lease not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  const CreateInvoiceRowRequestBodySchema = TenfastInvoiceRowSchema.omit({
+    _id: true,
+  })
+
+  router.post(
+    '(.*)/leases/:leaseId/invoice-row',
+    parseRequestBody(CreateInvoiceRowRequestBodySchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const invoiceRow = ctx.request.body
+
+      const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
+        leaseId: ctx.params.leaseId,
+        invoiceRow: invoiceRow,
+      })
+
+      if (!createInvoiceRow.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: createInvoiceRow.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(createInvoiceRow.data, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{id}/invoice-row/{invoiceRowId}:
+   *   delete:
+   *     summary: Delete an invoice row
+   *     description: Delete an invoice row.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: invoiceRowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the invoice row.
+   *     responses:
+   *       200:
+   *         description: Successfully deleted invoice row.
+   *       404:
+   *         description: Lease not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.delete(
+    '(.*)/leases/:leaseId/invoice-row/:invoiceRowId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const deleteInvoiceRow = await tenfastAdapter.deleteInvoiceRow({
+        leaseId: ctx.params.leaseId,
+        invoiceRowId: ctx.params.invoiceRowId,
+      })
+
+      if (!deleteInvoiceRow.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: deleteInvoiceRow.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(null, metadata)
+    }
+  )
+
+  /**
+   * @swagger
    * /leases/{leaseId}/preliminary-termination:
    *   post:
    *     summary: Preliminary termination of a lease
@@ -896,69 +1003,68 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *       400:
-   *         description: Invalid request body
+   *         description: Invalid request body or tenant missing valid email address
+   *       404:
+   *         description: Lease not found
    *       500:
    *         description: Internal server error. Failed to terminate lease.
    */
 
-  const preliminaryTerminationSchema = z.object({
-    contactCode: z.string(),
-    lastDebitDate: z.string().datetime(),
-    desiredMoveDate: z.string().datetime(),
-  })
+  router.post(
+    '(.*)/leases/:leaseId/preliminary-termination',
+    parseRequestBody(leasing.v1.PreliminaryTerminateLeaseRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
 
-  router.post('(.*)/leases/:leaseId/preliminary-termination', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
+        .body as z.infer<
+        typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+      >
 
-    const bodyValidation = preliminaryTerminationSchema.safeParse(
-      ctx.request.body
-    )
+      const result = await tenfastAdapter.preliminaryTerminateLease(
+        ctx.params.leaseId,
+        contactCode,
+        new Date(lastDebitDate),
+        new Date(desiredMoveDate)
+      )
 
-    if (!bodyValidation.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid request body',
-        details: bodyValidation.error,
-        ...metadata,
-      }
-      return
-    }
+      if (!result.ok) {
+        if (result.err === 'lease-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: result.err,
+            message: 'Lease not found',
+            ...metadata,
+          }
+          return
+        }
 
-    const { contactCode, lastDebitDate, desiredMoveDate } = bodyValidation.data
+        if (result.err === 'tenant-email-missing') {
+          ctx.status = 400
+          ctx.body = {
+            error: result.err,
+            message: 'Tenant missing valid email address',
+            ...metadata,
+          }
+          return
+        }
 
-    const result = await tenfastAdapter.preliminaryTerminateLease(
-      ctx.params.leaseId,
-      contactCode,
-      new Date(lastDebitDate),
-      new Date(desiredMoveDate)
-    )
-
-    if (!result.ok) {
-      if (result.err === 'lease-not-found') {
-        ctx.status = 404
+        ctx.status = 500
         ctx.body = {
           error: result.err,
-          message: 'Lease not found',
+          message: 'Failed to terminate lease',
           ...metadata,
         }
         return
       }
 
-      ctx.status = 500
+      ctx.status = 200
       ctx.body = {
-        error: result.err,
-        message: 'Failed to terminate lease',
+        content: result.data,
         ...metadata,
       }
-      return
     }
-
-    ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
-  })
+  )
 }
 
 async function patchLeasesWithContacts(
