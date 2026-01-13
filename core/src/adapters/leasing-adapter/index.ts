@@ -279,6 +279,7 @@ export {
   getLeasesByRentalObjectCode,
   createInvoiceRow,
   deleteInvoiceRow,
+  getArticles,
 } from './leases'
 
 export {

@@ -958,3 +958,41 @@ describe(tenfastAdapter.deleteInvoiceRow, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
+
+describe(tenfastAdapter.getArticles, () => {
+  it('returns articles when response is valid', async () => {
+    const articles = factory.tenfastArticle.buildList(2)
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: articles,
+    })
+
+    const result = await tenfastAdapter.getArticles()
+
+    expect(result).toEqual({ ok: true, data: articles })
+  })
+
+  it('returns schema error when parse fails', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: [{ foo: 'bar' }],
+    })
+
+    const result = await tenfastAdapter.getArticles()
+
+    expect(result.ok).toBe(false)
+    if (!result.ok && typeof result.err === 'object') {
+      expect(result.err.tag).toBe('schema-error')
+    }
+  })
+
+  it('returns unknown on non-200', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: {},
+    })
+
+    const result = await tenfastAdapter.getArticles()
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})

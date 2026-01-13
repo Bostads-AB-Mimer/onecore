@@ -624,6 +624,32 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(null, metadata)
     }
   )
+
+  /**
+   * @swagger
+   * /articles:
+   *   get:
+   *     summary: List Tenfast articles
+   *     tags: [Leases]
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved articles.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/articles', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const articles = await tenfastAdapter.getArticles()
+
+    if (!articles.ok) {
+      ctx.status = 500
+      ctx.body = { error: articles.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(articles.data, metadata)
+  })
 }
 
 async function patchLeasesWithContacts(

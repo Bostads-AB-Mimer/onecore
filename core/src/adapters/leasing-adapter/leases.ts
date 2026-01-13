@@ -115,6 +115,25 @@ type CreateInvoiceRowResponse = CreateInvoiceRowRequestPayload & {
   _id: string
 }
 
+export type Article = {
+  includeInContract: boolean
+  _id: string
+  label: string
+  type: string
+  accountNr?: string | null
+  createdAt: Date
+  hyresvard: string
+  code: string
+  title: string
+  defaultLabel: string
+  vat?: number
+  description?: string
+  category?: string
+  adjustmentType: 'negotiation' | 'custom' | 'index' | 'none'
+  archivedAt?: Date | null
+  updatedAt: Date
+}
+
 export async function createInvoiceRow(params: {
   leaseId: string
   invoiceRow: CreateInvoiceRowRequestPayload
@@ -155,6 +174,37 @@ export async function deleteInvoiceRow(params: {
     logger.error(
       { error: JSON.stringify(result.data) },
       'Unknown error when deleting invoice row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getArticles(): Promise<
+  AdapterResult<Article[], 'unknown'>
+> {
+  type ApiArticle = Omit<Article, 'createdAt' | 'updatedAt' | 'archivedAt'> & {
+    createdAt: string
+    updatedAt: string
+    archivedAt?: string | null
+  }
+
+  const result = await axios.get<{ content: ApiArticle[] }>(
+    `${tenantsLeasesServiceUrl}/articles`
+  )
+
+  if (result.status === 200) {
+    const articles: Article[] = result.data.content.map((article) => ({
+      ...article,
+      createdAt: new Date(article.createdAt),
+      updatedAt: new Date(article.updatedAt),
+      archivedAt: article.archivedAt ? new Date(article.archivedAt) : null,
+    }))
+    return { ok: true, data: articles }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when fetching articles'
     )
 
     return { ok: false, err: 'unknown' }

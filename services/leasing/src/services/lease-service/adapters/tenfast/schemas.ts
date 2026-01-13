@@ -19,6 +19,25 @@ export const TenfastInvoiceRowSchema = z.object({
   _id: z.string(),
 })
 
+export const TenfastArticleSchema = z.object({
+  _id: z.string(),
+  hyresvard: z.string(),
+  title: z.string(),
+  defaultLabel: z.string(),
+  code: z.string(),
+  accountNr: z.string().nullable().optional(),
+  vat: z.number().optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  includeInContract: z.boolean(),
+  adjustmentType: z.string().optional(),
+  archivedAt: z.coerce.date().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type TenfastArticle = z.infer<typeof TenfastArticleSchema>
+
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
     from: z.string(),

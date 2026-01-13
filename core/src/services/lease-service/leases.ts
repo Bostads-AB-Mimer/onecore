@@ -426,4 +426,34 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /articles:
+   *   get:
+   *     summary: List leasing articles
+   *     tags:
+   *       - Lease service
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved articles
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/articles', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const res = await leasingAdapter.getArticles()
+
+    if (!res.ok) {
+      ctx.status = 500
+      ctx.body = { error: res.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: res.data,
+      ...metadata,
+    }
+  })
 }
