@@ -212,3 +212,71 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
     )
   })
 })
+
+describe('POST /leases/:leaseId/invoice-row', () => {
+  it('validates request body', async () => {
+    const result = await request(app.callback())
+      .post('/leases/123/invoice-row')
+      .send({ foo: 'bar' })
+
+    expect(result.status).toBe(400)
+  })
+
+  it('returns 500 on error', async () => {
+    const invoiceRow = factory.tenfastInvoiceRow.build()
+    const createInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'createInvoiceRow')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const result = await request(app.callback())
+      .post('/leases/123/invoice-row')
+      .send(invoiceRow)
+
+    expect(result.status).toBe(500)
+    expect(createInvoiceRowSpy).toHaveBeenCalled()
+  })
+
+  it('creates and returns invoice row', async () => {
+    const invoiceRow = factory.tenfastInvoiceRow.build()
+    const createInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'createInvoiceRow')
+      .mockResolvedValueOnce({ ok: true, data: invoiceRow })
+
+    const result = await request(app.callback())
+      .post('/leases/123/invoice-row')
+      .send(invoiceRow)
+
+    expect(result.status).toBe(201)
+    expect(result.body.content).toEqual(invoiceRow)
+    expect(createInvoiceRowSpy).toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /leases/:leaseId/invoice-row/:invoiceRowId', () => {
+  it('deletes and returns null', async () => {
+    const deleteInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'deleteInvoiceRow')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const result = await request(app.callback()).delete(
+      '/leases/123/invoice-row/123'
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body.content).toEqual(null)
+    expect(deleteInvoiceRowSpy).toHaveBeenCalled()
+  })
+
+  it('returns 500 on error', async () => {
+    const deleteInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'deleteInvoiceRow')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const result = await request(app.callback()).delete(
+      '/leases/123/invoice-row/123'
+    )
+
+    expect(result.status).toBe(500)
+    expect(deleteInvoiceRowSpy).toHaveBeenCalled()
+  })
+})
