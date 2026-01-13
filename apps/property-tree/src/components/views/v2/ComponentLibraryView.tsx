@@ -804,6 +804,9 @@ const ComponentLibraryView = () => {
           entity={typeDialog.state.entity}
           parentId={viewState.categoryId}
           mode={typeDialog.state.mode}
+          hierarchyData={{
+            categoryId: viewState.categoryId,
+          }}
         />
       ) : null}
 
@@ -815,6 +818,10 @@ const ComponentLibraryView = () => {
           entity={subtypeDialog.state.entity}
           parentId={viewState.typeId}
           mode={subtypeDialog.state.mode}
+          hierarchyData={{
+            categoryId: viewState.categoryId,
+            typeId: viewState.typeId,
+          }}
         />
       ) : null}
 
@@ -826,6 +833,11 @@ const ComponentLibraryView = () => {
           entity={modelDialog.state.entity}
           parentId={viewState.subtypeId}
           mode={modelDialog.state.mode}
+          hierarchyData={{
+            categoryId: viewState.categoryId,
+            typeId: viewState.typeId,
+            subtypeId: viewState.subtypeId,
+          }}
         />
       ) : null}
 
@@ -839,6 +851,12 @@ const ComponentLibraryView = () => {
             defaultValues={instanceDialog.state.defaultValues}
             parentId={viewState.modelId}
             mode={instanceDialog.state.mode}
+            hierarchyData={{
+              categoryId: viewState.categoryId,
+              typeId: viewState.typeId,
+              subtypeId: viewState.subtypeId,
+              modelId: viewState.modelId,
+            }}
           />
 
           {instanceDetailsDialogState.instance && (

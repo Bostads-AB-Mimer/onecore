@@ -89,6 +89,12 @@ export function useComponentEntityMutation<
       const queryKey = buildQueryKey(entityType, parentId)
       await queryClient.invalidateQueries({ queryKey })
 
+      // If entity was moved (parent changed), also invalidate old parent's cache
+      if (variables.oldParentId) {
+        const oldQueryKey = buildQueryKey(entityType, variables.oldParentId)
+        await queryClient.invalidateQueries({ queryKey: oldQueryKey })
+      }
+
       // Call custom onSuccess if provided
       if (options?.onSuccess) {
         await options.onSuccess(data, variables, context)
