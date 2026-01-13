@@ -1074,10 +1074,10 @@ export interface paths {
           "application/json": {
             amount: number;
             article: string;
-            label?: string | null;
-            /** @description Optional start date in YYYY-MM format. */
+            label: string;
+            /** @description Optional start date. */
             from?: string;
-            /** @description Optional end date in YYYY-MM format. */
+            /** @description Optional end date. */
             to?: string;
           };
         };

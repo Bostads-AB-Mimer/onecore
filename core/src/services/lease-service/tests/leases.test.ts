@@ -180,7 +180,7 @@ describe('leases routes', () => {
       amount: 115,
       article: '12334567',
       label: 'Hyra p-plats',
-      from: '2024-01',
+      from: new Date('2024-01-01'),
     }
 
     it('validates request body', async () => {
@@ -203,7 +203,7 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
       expect(createInvoiceRowSpy).toHaveBeenCalledWith({
         leaseId: '1337',
-        invoiceRow,
+        invoiceRow: { ...invoiceRow, from: new Date(invoiceRow.from) },
       })
     })
 
@@ -242,7 +242,12 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'createInvoiceRow')
         .mockResolvedValue({
           ok: true,
-          data: { ...invoiceRow, vat: 0.25, _id: 'row-id' },
+          data: {
+            ...invoiceRow,
+            from: invoiceRow.from?.toISOString(),
+            vat: 0.25,
+            _id: 'row-id',
+          },
         })
 
       const res = await request(app.callback())
@@ -252,10 +257,11 @@ describe('leases routes', () => {
       expect(res.status).toBe(201)
       expect(createInvoiceRowSpy).toHaveBeenCalledWith({
         leaseId: '1337',
-        invoiceRow,
+        invoiceRow: { ...invoiceRow, from: new Date(invoiceRow.from) },
       })
       expect(res.body.content).toEqual({
         ...invoiceRow,
+        from: invoiceRow.from.toISOString(),
         vat: 0.25,
         _id: 'row-id',
       })

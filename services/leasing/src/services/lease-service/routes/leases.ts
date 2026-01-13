@@ -16,6 +16,7 @@ import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { toYearMonthString } from '../adapters/tenfast/schemas'
 
 /**
  * @swagger
@@ -498,6 +499,29 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               amount:
+   *                 type: number
+   *               article:
+   *                 type: string
+   *               label:
+   *                 type: string
+   *               from:
+   *                 type: string
+   *                 description: Optional start date.
+   *               to:
+   *                 type: string
+   *                 description: Optional end date.
+   *             required:
+   *               - amount
+   *               - article
+   *               - label
    *     responses:
    *       201:
    *         description: Successfully created invoice row.
@@ -509,9 +533,9 @@ export const routes = (router: KoaRouter) => {
   const CreateInvoiceRowRequestBodySchema = z.object({
     amount: z.number(),
     article: z.string(),
-    label: z.string().nullable().optional(),
-    from: z.string().optional(),
-    to: z.string().optional(),
+    label: z.string(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
   })
 
   router.post(
@@ -520,15 +544,19 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const invoiceRow = {
-        ...ctx.request.body,
-        label: ctx.request.body.label ?? null,
-        vat: 0.25,
-      }
-
       const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
         leaseId: ctx.params.leaseId,
-        invoiceRow: invoiceRow,
+        invoiceRow: {
+          ...ctx.request.body,
+          from: ctx.request.body.from
+            ? toYearMonthString(ctx.request.body.from)
+            : undefined,
+          to: ctx.request.body.to
+            ? toYearMonthString(ctx.request.body.to)
+            : undefined,
+
+          vat: 0.25, // TODO: What to put for VAT?
+        },
       })
 
       if (!createInvoiceRow.ok) {
