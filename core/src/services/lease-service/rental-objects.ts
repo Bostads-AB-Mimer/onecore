@@ -238,6 +238,88 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
   })
-}
 
-//TODO: Add route to get rent for a list of rental objects
+  /**
+   * @swagger
+   * /rental-objects/rent:
+   *   post:
+   *     summary: Get rent for rental objects
+   *     description: Fetches rent for rental objects by Rental Object Codes.
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               rentalObjectCodes:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of rental object codes to include.
+   *                 example: ["ABC123", "DEF456", "GHI789"]
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 rent:
+   *                   type: number
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *       '404':
+   *         description: Not found. The rent of the specified rental object was not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/rental-objects/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const requestBody = ctx.request.body as
+      | { rentalObjectCodes?: string[] }
+      | undefined
+    const rentalObjectCodes =
+      requestBody?.rentalObjectCodes?.filter(Boolean) ?? []
+
+    const result = await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
+
+    if (!result.ok && result.err === 'rents-not-found') {
+      ctx.status = 404
+      ctx.body = { error: 'Rents not found', ...metadata }
+      return
+    } else if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error:
+          'Unexpected error when getting rent for ' +
+          rentalObjectCodes.join(', '),
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+}

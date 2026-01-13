@@ -4,7 +4,7 @@ export const TenfastInvoiceRowSchema = z.object({
   amount: z.number(),
   vat: z.number(), //moms, percentage in decimal form 0.25 = 25%
   from: z.string().optional(),
-  to: z.string().optional(),
+  to: z.string().optional().nullable(),
   article: z.string().nullable(),
   label: z.string().nullable(),
   _id: z.string(),
@@ -112,6 +112,7 @@ export const TenfastTenantSchema = z.object({
 
 export const TenfastRentalObjectSchema = z.object({
   _id: z.string(),
+  externalId: z.string(),
   hyra: z.number(), //total hyra inklusive moms
   hyraVat: z.number(), // total moms pa hyran
   hyraExcludingVat: z.number(), // hyran exklusive moms

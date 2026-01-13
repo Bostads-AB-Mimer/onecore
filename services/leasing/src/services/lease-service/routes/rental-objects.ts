@@ -67,32 +67,61 @@ export const routes = (router: KoaRouter) => {
       | { includeRentalObjectCodes?: string[] }
       | undefined
     const includeRentalObjectCodes =
-      requestBody?.includeRentalObjectCodes?.filter(Boolean)
+      requestBody?.includeRentalObjectCodes?.filter(Boolean) ?? []
 
-    const result = await getParkingSpaces(includeRentalObjectCodes)
+    const [parkingSpaceResult, rentalObjectRentsResponse] = await Promise.all([
+      getParkingSpaces(includeRentalObjectCodes),
+      tenfastAdapter.getRentalObjectRents(includeRentalObjectCodes, false),
+    ])
 
-    if (result.ok) {
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-      return
-    }
+    if (!parkingSpaceResult.ok) {
+      logger.error(
+        { err: parkingSpaceResult.err },
+        'Error fetching parking spaces:'
+      )
 
-    if (result.err == 'parking-spaces-not-found') {
-      ctx.status = 404
-      ctx.body = {
-        error: `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`,
-        ...metadata,
+      if (parkingSpaceResult.err == 'parking-spaces-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`,
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    if (result.err == 'unknown') {
       ctx.status = 500
       ctx.body = {
         error: 'An error occurred while fetching parking spaces.',
         ...metadata,
       }
+      return
     }
+
+    if (!rentalObjectRentsResponse.ok) {
+      logger.error(
+        { err: rentalObjectRentsResponse.err },
+        'Error fetching rents for parking spaces:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'An error occurred while fetching rents for parking spaces.',
+        ...metadata,
+      }
+      return
+    }
+
+    parkingSpaceResult.data.forEach((ps) => {
+      const rent = rentalObjectRentsResponse.data.find(
+        (rent) => rent.rentalObjectCode === ps.rentalObjectCode
+      )
+      if (rent) {
+        ps.monthlyRent = rent.amount
+      }
+    })
+
+    ctx.status = 200
+    ctx.body = { content: parkingSpaceResult.data, ...metadata }
+    return
   })
 
   /**
@@ -142,7 +171,7 @@ export const routes = (router: KoaRouter) => {
       if (rentResult.ok) {
         ctx.status = 200
         ctx.body = {
-          content: { ...result.data, rent: rentResult.data },
+          content: { ...result.data, monthlyRent: rentResult.data.amount },
           ...metadata,
         }
         return
@@ -225,6 +254,34 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const rentalObjectRentsResponse = await tenfastAdapter.getRentalObjectRents(
+      vacantParkingSpaces.data.map((ps) => ps.rentalObjectCode),
+      false
+    )
+
+    if (!rentalObjectRentsResponse.ok) {
+      logger.error(
+        { err: rentalObjectRentsResponse.err },
+        'Error fetching rents for vacant parking spaces:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error:
+          'An error occurred while fetching rents for vacant parking spaces.',
+        ...metadata,
+      }
+      return
+    }
+
+    vacantParkingSpaces.data.forEach((ps) => {
+      const rent = rentalObjectRentsResponse.data.find(
+        (rent) => rent.rentalObjectCode === ps.rentalObjectCode
+      )
+      if (rent) {
+        ps.monthlyRent = rent.amount
+      }
+    })
+
     ctx.status = 200
     ctx.body = { content: vacantParkingSpaces.data, ...metadata }
   })
@@ -297,5 +354,92 @@ export const routes = (router: KoaRouter) => {
       error: 'An error occurred while fetching rental object rent.',
       ...metadata,
     }
+  })
+
+  /**
+   * @swagger
+   * /rental-objects/rent:
+   *   post:
+   *     summary: Get rent for rental objects
+   *     description: Fetches rent for rental objects by Rental Object Codes.
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               rentalObjectCodes:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of rental object codes to include.
+   *                 example: ["ABC123", "DEF456", "GHI789"]
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 rent:
+   *                   type: number
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *       '404':
+   *         description: Not found. The rent of the specified rental object was not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/rental-objects/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const requestBody = ctx.request.body as
+      | { rentalObjectCodes?: string[] }
+      | undefined
+    const rentalObjectCodes =
+      requestBody?.rentalObjectCodes?.filter(Boolean) ?? []
+
+    const result = await tenfastAdapter.getRentalObjectRents(
+      rentalObjectCodes,
+      false
+    )
+
+    if (!result.ok && result.err === 'could-not-find-rental-objects') {
+      ctx.status = 404
+      ctx.body = { error: 'Rents not found', ...metadata }
+      return
+    } else if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error:
+          'Unexpected error when getting rent for ' +
+          rentalObjectCodes.join(', '),
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 }

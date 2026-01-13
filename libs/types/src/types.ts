@@ -343,6 +343,7 @@ interface RentalObject {
 }
 
 interface RentalObjectRent {
+  rentalObjectCode: string
   amount: number
   vat: number
   rows: Array<RentRow>

@@ -93,9 +93,35 @@ const getRentalObjectRentByCode = async (
   }
 }
 
+const getRentalObjectRents = async (
+  rentalObjectCodes?: string[]
+): Promise<AdapterResult<number[], 'rents-not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/rent`,
+      { rentalObjectCodes }
+    )
+    if (response.status === 404) {
+      logger.error(
+        { rentalObjectCodes },
+        'Rental object rent not found for codes:'
+      )
+      return { ok: false, err: 'rents-not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving rental object rent by codes: ${rentalObjectCodes?.join(', ')}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getAllVacantParkingSpaces,
   getParkingSpaceByCode,
   getParkingSpaces,
   getRentalObjectRentByCode,
+  getRentalObjectRents,
 }
