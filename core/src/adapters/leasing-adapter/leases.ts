@@ -101,3 +101,62 @@ export const createLease = async (
     return { ok: false, err: 'unknown' }
   }
 }
+
+type CreateInvoiceRowRequestPayload = {
+  amount: number
+  article: string | null
+  label: string | null
+  from?: string
+  to?: string
+}
+
+type CreateInvoiceRowResponse = CreateInvoiceRowRequestPayload & {
+  vat: number
+  _id: string
+}
+
+export async function createInvoiceRow(params: {
+  leaseId: string
+  invoiceRow: CreateInvoiceRowRequestPayload
+}): Promise<AdapterResult<CreateInvoiceRowResponse, 'unknown'>> {
+  const result = await axios(
+    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/invoice-rows`,
+    {
+      method: 'POST',
+      data: {
+        ...params.invoiceRow,
+      },
+    }
+  )
+
+  if (result.status === 201) {
+    return { ok: true, data: result.data.content }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when creating invoice row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteInvoiceRow(params: {
+  leaseId: string
+  invoiceRowId: string
+}): Promise<AdapterResult<null, 'unknown'>> {
+  const result = await axios.delete(
+    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/invoice-rows/${params.invoiceRowId}`
+  )
+
+  if (result.status === 200) {
+    return { ok: true, data: null }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when deleting invoice row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}

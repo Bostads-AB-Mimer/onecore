@@ -486,7 +486,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-row:
+   * /leases/{id}/invoice-rows:
    *   post:
    *     summary: Create a invoice row
    *     description: Create a invoice row.
@@ -508,15 +508,19 @@ export const routes = (router: KoaRouter) => {
    */
   const CreateInvoiceRowRequestBodySchema = TenfastInvoiceRowSchema.omit({
     _id: true,
+    vat: true,
   })
 
   router.post(
-    '(.*)/leases/:leaseId/invoice-row',
+    '(.*)/leases/:leaseId/invoice-rows',
     parseRequestBody(CreateInvoiceRowRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const invoiceRow = ctx.request.body
+      const invoiceRow = {
+        ...ctx.request.body,
+        vat: 0.25,
+      }
 
       const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
         leaseId: ctx.params.leaseId,
@@ -539,7 +543,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-row/{invoiceRowId}:
+   * /leases/{id}/invoice-rows/{invoiceRowId}:
    *   delete:
    *     summary: Delete an invoice row
    *     description: Delete an invoice row.
@@ -566,7 +570,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error.
    */
   router.delete(
-    '(.*)/leases/:leaseId/invoice-row/:invoiceRowId',
+    '(.*)/leases/:leaseId/invoice-rows/:invoiceRowId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 

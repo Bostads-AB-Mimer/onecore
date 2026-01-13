@@ -1,9 +1,11 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
+import { z } from 'zod'
 
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -292,6 +294,138 @@ export const routes = (router: KoaRouter) => {
 
     ctx.body = {
       content: responseData,
+      ...metadata,
+    }
+  })
+
+  const CreateInvoiceRowRequestSchema = z.object({
+    amount: z.number(),
+    article: z.string().nullable(),
+    label: z.string().nullable(),
+    from: z.string().optional(),
+    to: z.string().optional(),
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/invoice-rows:
+   *   post:
+   *     summary: Create an invoice row for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               amount:
+   *                 type: number
+   *               article:
+   *                 type: string
+   *                 nullable: true
+   *               label:
+   *                 type: string
+   *                 nullable: true
+   *               from:
+   *                 type: string
+   *                 nullable: true
+   *                 description: Optional start date in YYYY-MM format.
+   *               to:
+   *                 type: string
+   *                 nullable: true
+   *                 description: Optional end date in YYYY-MM format.
+   *             required:
+   *               - amount
+   *               - vat
+   *     responses:
+   *       201:
+   *         description: Successfully created invoice row.
+   *       400:
+   *         description: Invalid request body.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.post(
+    '/leases/:leaseId/invoice-rows',
+    parseRequestBody(CreateInvoiceRowRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const createInvoiceRowResult = await leasingAdapter.createInvoiceRow({
+        leaseId: ctx.params.leaseId,
+        invoiceRow: ctx.request.body,
+      })
+
+      if (!createInvoiceRowResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: createInvoiceRowResult.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: createInvoiceRowResult.data,
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/invoice-rows/{invoiceRowId}:
+   *   delete:
+   *     summary: Delete an invoice row for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: invoiceRowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the invoice row.
+   *     responses:
+   *       200:
+   *         description: Invoice row deleted.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.delete('/leases/:leaseId/invoice-rows/:invoiceRowId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const deleteInvoiceRowResult = await leasingAdapter.deleteInvoiceRow({
+      leaseId: ctx.params.leaseId,
+      invoiceRowId: ctx.params.invoiceRowId,
+    })
+
+    if (!deleteInvoiceRowResult.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: deleteInvoiceRowResult.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: deleteInvoiceRowResult.data,
       ...metadata,
     }
   })

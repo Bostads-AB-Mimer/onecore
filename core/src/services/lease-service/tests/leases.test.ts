@@ -141,7 +141,7 @@ describe('leases routes', () => {
 
   describe('GET /leases/by-pnr/:pnr', () => {
     it('responds with a list of leases', async () => {
-      const getContactForPnrSpy = jest
+      jest
         .spyOn(tenantLeaseAdapter, 'getContactForPnr')
         .mockResolvedValue(factory.contact.build())
       const getLeasesSpy = jest
@@ -172,6 +172,128 @@ describe('leases routes', () => {
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(leaseMock)
       )
+    })
+  })
+
+  describe('POST /leases/:leaseId/invoice-rows', () => {
+    const invoiceRow = {
+      amount: 115,
+      article: '12334567',
+      label: 'Hyra p-plats',
+      from: '2024-01',
+    }
+
+    it('validates request body', async () => {
+      const res = await request(app.callback()).post(
+        '/leases/1337/invoice-rows'
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 500 when adapter returns error', async () => {
+      const createInvoiceRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'createInvoiceRow')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback())
+        .post('/leases/1337/invoice-rows')
+        .send(invoiceRow)
+
+      expect(res.status).toBe(500)
+      expect(createInvoiceRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        invoiceRow,
+      })
+    })
+
+    it('creates invoice row even without from/to', async () => {
+      const minimalInvoiceRow = {
+        amount: 200,
+        article: null,
+        label: 'Rent',
+      }
+
+      const createInvoiceRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'createInvoiceRow')
+        .mockResolvedValue({
+          ok: true,
+          data: { ...minimalInvoiceRow, vat: 0.25, _id: 'row-id' },
+        })
+
+      const res = await request(app.callback())
+        .post('/leases/1337/invoice-rows')
+        .send(minimalInvoiceRow)
+
+      expect(res.status).toBe(201)
+      expect(createInvoiceRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        invoiceRow: minimalInvoiceRow,
+      })
+      expect(res.body.content).toEqual({
+        ...minimalInvoiceRow,
+        vat: 0.25,
+        _id: 'row-id',
+      })
+    })
+
+    it('creates invoice row', async () => {
+      const createInvoiceRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'createInvoiceRow')
+        .mockResolvedValue({
+          ok: true,
+          data: { ...invoiceRow, vat: 0.25, _id: 'row-id' },
+        })
+
+      const res = await request(app.callback())
+        .post('/leases/1337/invoice-rows')
+        .send(invoiceRow)
+
+      expect(res.status).toBe(201)
+      expect(createInvoiceRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        invoiceRow,
+      })
+      expect(res.body.content).toEqual({
+        ...invoiceRow,
+        vat: 0.25,
+        _id: 'row-id',
+      })
+    })
+  })
+
+  describe('DELETE /leases/:leaseId/invoice-rows/:invoiceRowId', () => {
+    it('returns 500 when adapter returns error', async () => {
+      const deleteInvoiceRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'deleteInvoiceRow')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).delete(
+        '/leases/1337/invoice-rows/row-1'
+      )
+
+      expect(res.status).toBe(500)
+      expect(deleteInvoiceRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        invoiceRowId: 'row-1',
+      })
+    })
+
+    it('deletes invoice row', async () => {
+      const deleteInvoiceRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'deleteInvoiceRow')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback()).delete(
+        '/leases/1337/invoice-rows/row-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(deleteInvoiceRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        invoiceRowId: 'row-1',
+      })
+      expect(res.body.content).toBeNull()
     })
   })
 })
