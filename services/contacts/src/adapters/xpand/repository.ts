@@ -97,7 +97,6 @@ export const xpandContactsRepository = (
     getByPhoneNumber: async (
       phoneNumber: PhoneNumber
     ): Promise<Contact[] | null> => {
-      console.log(`Input PhoneNumber: "${phoneNumber}"`)
       const contactObjectKeys = await contactObjectKeysForPhoneNumber(
         db.get(),
         phoneNumber.replaceAll(/[^0-9]/g, '')
