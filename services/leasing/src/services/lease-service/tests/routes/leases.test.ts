@@ -279,7 +279,7 @@ describe('POST /leases', () => {
 describe('POST /leases/:leaseId/invoice-rows', () => {
   it('validates request body', async () => {
     const result = await request(app.callback())
-      .post('/leases/123/invoice-rows')
+      .post('/leases/123/rent-rows')
       .send({ foo: 'bar' })
 
     expect(result.status).toBe(400)
@@ -288,11 +288,11 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
   it('returns 500 on error', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
     const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createInvoiceRow')
+      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback())
-      .post('/leases/123/invoice-rows')
+      .post('/leases/123/rent-rows')
       .send({ ...invoiceRow, vat: undefined })
 
     expect(result.status).toBe(500)
@@ -302,11 +302,11 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
   it('creates and returns invoice row', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
     const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createInvoiceRow')
+      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: invoiceRow })
 
     const result = await request(app.callback())
-      .post('/leases/123/invoice-rows')
+      .post('/leases/123/rent-rows')
       .send({ ...invoiceRow, vat: undefined })
 
     expect(result.status).toBe(201)
@@ -332,14 +332,14 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
       label: 'Hyra p-plats',
     }
     const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createInvoiceRow')
+      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({
         ok: true,
         data: { ...invoiceRow, vat: 0.25, _id: '1' },
       })
 
     const result = await request(app.callback())
-      .post('/leases/123/invoice-rows')
+      .post('/leases/123/rent-rows')
       .send(invoiceRow)
 
     expect(result.status).toBe(201)
@@ -351,14 +351,14 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
   })
 })
 
-describe('DELETE /leases/:leaseId/invoice-rows/:invoiceRowId', () => {
+describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
   it('deletes and returns null', async () => {
     const deleteInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'deleteInvoiceRow')
+      .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback()).delete(
-      '/leases/123/invoice-rows/123'
+      '/leases/123/rent-rows/123'
     )
 
     expect(result.status).toBe(200)
@@ -368,11 +368,11 @@ describe('DELETE /leases/:leaseId/invoice-rows/:invoiceRowId', () => {
 
   it('returns 500 on error', async () => {
     const deleteInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'deleteInvoiceRow')
+      .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback()).delete(
-      '/leases/123/invoice-rows/123'
+      '/leases/123/rent-rows/123'
     )
 
     expect(result.status).toBe(500)

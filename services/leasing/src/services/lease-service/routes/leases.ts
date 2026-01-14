@@ -530,7 +530,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  const CreateInvoiceRowRequestBodySchema = z.object({
+  const CreateLeaseInvoiceRowRequestBodySchema = z.object({
     amount: z.number(),
     article: z.string(),
     label: z.string(),
@@ -539,12 +539,12 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.post(
-    '(.*)/leases/:leaseId/invoice-rows',
-    parseRequestBody(CreateInvoiceRowRequestBodySchema),
+    '(.*)/leases/:leaseId/rent-rows',
+    parseRequestBody(CreateLeaseInvoiceRowRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
+      const createInvoiceRow = await tenfastAdapter.createLeaseInvoiceRow({
         leaseId: ctx.params.leaseId,
         invoiceRow: {
           ...ctx.request.body,
@@ -575,10 +575,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-rows/{invoiceRowId}:
+   * /leases/{id}/rent-rows/{rentRowId}:
    *   delete:
-   *     summary: Delete an invoice row
-   *     description: Delete an invoice row.
+   *     summary: Delete a rent row
+   *     description: Delete a rent row.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -588,42 +588,39 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the lease.
    *       - in: path
-   *         name: invoiceRowId
+   *         name: rentRowId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the invoice row.
+   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Successfully deleted invoice row.
+   *         description: Successfully deleted rent row.
    *       404:
    *         description: Lease not found.
    *       500:
    *         description: Internal server error.
    */
-  router.delete(
-    '(.*)/leases/:leaseId/invoice-rows/:invoiceRowId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
+  router.delete('(.*)/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
 
-      const deleteInvoiceRow = await tenfastAdapter.deleteInvoiceRow({
-        leaseId: ctx.params.leaseId,
-        invoiceRowId: ctx.params.invoiceRowId,
-      })
+    const deleteRentRow = await tenfastAdapter.deleteLeaseInvoiceRow({
+      leaseId: ctx.params.leaseId,
+      invoiceRowId: ctx.params.invoiceRowId,
+    })
 
-      if (!deleteInvoiceRow.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: deleteInvoiceRow.err,
-          ...metadata,
-        }
-        return
+    if (!deleteRentRow.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: deleteRentRow.err,
+        ...metadata,
       }
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(null, metadata)
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(null, metadata)
+  })
 
   /**
    * @swagger

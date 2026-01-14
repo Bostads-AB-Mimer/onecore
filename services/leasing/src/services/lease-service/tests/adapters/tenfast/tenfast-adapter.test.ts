@@ -899,7 +899,7 @@ describe(tenfastAdapter.createLease, () => {
   })
 })
 
-describe(tenfastAdapter.createInvoiceRow, () => {
+describe(tenfastAdapter.createLeaseInvoiceRow, () => {
   it('creates and returns invoice row', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
 
@@ -908,7 +908,7 @@ describe(tenfastAdapter.createInvoiceRow, () => {
         data: invoiceRow,
       })
 
-    const result = await tenfastAdapter.createInvoiceRow({
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRow: invoiceRow,
     })
@@ -924,7 +924,7 @@ describe(tenfastAdapter.createInvoiceRow, () => {
         data: invoiceRow,
       })
 
-    const result = await tenfastAdapter.createInvoiceRow({
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRow: invoiceRow,
     })
@@ -933,13 +933,13 @@ describe(tenfastAdapter.createInvoiceRow, () => {
   })
 })
 
-describe(tenfastAdapter.deleteInvoiceRow, () => {
+describe(tenfastAdapter.deleteLeaseInvoiceRow, () => {
   it('deletes and returns null', async () => {
     ; (request as jest.Mock).mockResolvedValue({
       status: 200,
     })
 
-    const result = await tenfastAdapter.deleteInvoiceRow({
+    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRowId: 'invoice-row-id',
     })
@@ -953,7 +953,7 @@ describe(tenfastAdapter.deleteInvoiceRow, () => {
       data: null,
     })
 
-    const result = await tenfastAdapter.deleteInvoiceRow({
+    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRowId: 'invoice-row-id',
     })
