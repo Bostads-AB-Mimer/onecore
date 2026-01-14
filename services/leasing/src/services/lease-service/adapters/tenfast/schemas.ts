@@ -20,24 +20,9 @@ export const TenfastInvoiceRowSchema = z.object({
   _id: z.string(),
 })
 
-export const TenfastArticleSchema = z.object({
-  _id: z.string(),
-  hyresvard: z.string(),
-  title: z.string(),
-  defaultLabel: z.string(),
-  code: z.string(),
-  accountNr: z.string().nullable().optional(),
-  vat: z.number().optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
-  includeInContract: z.boolean(),
-  adjustmentType: z.string().optional(),
-  archivedAt: z.coerce.date().nullable().optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date().nullable().optional(),
-})
+export const TenfastRentArticleSchema = z.record(z.string(), z.any())
 
-export type TenfastArticle = z.infer<typeof TenfastArticleSchema>
+export type TenfastArticle = z.infer<typeof TenfastRentArticleSchema>
 
 export const TenfastTenantSchema = z.object({
   name: z.object({
