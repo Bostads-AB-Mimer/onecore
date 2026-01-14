@@ -261,10 +261,6 @@ export const componentService = {
   },
 
   async getImages(componentId: string): Promise<DocumentWithUrl[]> {
-    console.log(
-      '[componentService.getImages] Fetching images for:',
-      componentId
-    )
     // 1. Get document metadata from property service
     const { data, error } = await GET(
       '/api/documents/component-instances/{id}',
@@ -292,11 +288,6 @@ export const componentService = {
       })
     )
 
-    console.log(
-      '[componentService.getImages] Returning:',
-      documentsWithUrls.length,
-      'images'
-    )
     return documentsWithUrls as DocumentWithUrl[]
   },
 
