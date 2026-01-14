@@ -98,7 +98,7 @@ export const ModelsTable = ({
 
   const actions: DataTableAction<ComponentModel>[] = [
     {
-      label: 'Visa instanser',
+      label: 'Visa komponenter',
       onClick: onNavigate,
       icon: <Eye className="h-4 w-4 mr-2" />,
     },

@@ -184,7 +184,7 @@ export const ComponentInstallationForm = ({
               }}
               className="w-4 h-4"
             />
-            <span className="text-sm">Ny instans</span>
+            <span className="text-sm">Ny komponent</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -195,7 +195,7 @@ export const ComponentInstallationForm = ({
               onChange={() => setInstallationMode('existing')}
               className="w-4 h-4"
             />
-            <span className="text-sm">Befintlig instans</span>
+            <span className="text-sm">Befintlig komponent</span>
           </label>
         </div>
       </div>
