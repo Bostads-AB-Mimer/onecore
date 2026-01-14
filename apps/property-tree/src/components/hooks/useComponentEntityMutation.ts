@@ -83,11 +83,20 @@ export function useComponentEntityMutation<
     mutationFn: mutationFn as any,
     onSuccess: async (data: any, variables: any, context: any) => {
       // Extract parent ID from variables for cache invalidation
-      const parentId = variables.parentId || variables[parentIdField || '']
+      const vars = variables as { parentId?: string; oldParentId?: string }
+      const parentId =
+        vars.parentId ||
+        (variables as Record<string, unknown>)[parentIdField || '']
 
       // Invalidate the appropriate query key
-      const queryKey = buildQueryKey(entityType, parentId)
+      const queryKey = buildQueryKey(entityType, parentId as string | undefined)
       await queryClient.invalidateQueries({ queryKey })
+
+      // If entity was moved (parent changed), also invalidate old parent's cache
+      if (vars.oldParentId) {
+        const oldQueryKey = buildQueryKey(entityType, vars.oldParentId)
+        await queryClient.invalidateQueries({ queryKey: oldQueryKey })
+      }
 
       // Call custom onSuccess if provided
       if (options?.onSuccess) {
