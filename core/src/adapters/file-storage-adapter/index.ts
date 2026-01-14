@@ -1,24 +1,13 @@
 import { logger, loggedAxios as axios } from '@onecore/utilities'
+import type {
+  FileListItem,
+  FileMetadata,
+  FileUploadResponse,
+  FileUrlResponse,
+} from '@onecore/types'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
-
-export interface FileUploadResponse {
-  fileName: string
-  message: string
-}
-
-export interface FileUrlResponse {
-  url: string
-  expiresIn: number
-}
-
-export interface FileMetadata {
-  size: number
-  etag: string
-  lastModified: string
-  metaData?: Record<string, string>
-}
 
 export async function uploadFile(
   fileName: string,
@@ -137,6 +126,28 @@ export async function fileExists(
     return { ok: true, data: response.data.exists }
   } catch (err: unknown) {
     logger.error({ err, fileName }, 'file-storage-adapter.fileExists')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function listFiles(
+  prefix?: string
+): Promise<AdapterResult<FileListItem[], 'unknown'>> {
+  try {
+    const response = await axios.get<{ files: FileListItem[] }>(
+      `${config.fileStorageService.url}/files`,
+      {
+        params: prefix ? { prefix } : undefined,
+      }
+    )
+
+    if (response.data?.files) {
+      return { ok: true, data: response.data.files }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err: unknown) {
+    logger.error({ err, prefix }, 'file-storage-adapter.listFiles')
     return { ok: false, err: 'unknown' }
   }
 }
