@@ -5,6 +5,7 @@ import {
   type UseMutationResult,
 } from '@tanstack/react-query'
 import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+import { buildQueryKey } from '@/components/hooks/componentLibraryQueryKeys'
 import type {
   EntityType,
   Operation,
@@ -206,23 +207,4 @@ function deleteEntity(entityType: EntityType, id: string) {
     default:
       throw new Error(`Unknown entity type: ${entityType}`)
   }
-}
-
-function buildQueryKey(
-  entityType: EntityType,
-  parentId?: string
-): (string | undefined)[] {
-  const roots = {
-    category: 'component-categories',
-    type: 'component-types',
-    subtype: 'component-subtypes',
-    model: 'component-models',
-    instance: 'component-instances',
-  }
-
-  if (entityType === 'category') {
-    return [roots[entityType]]
-  }
-
-  return [roots[entityType], parentId]
 }

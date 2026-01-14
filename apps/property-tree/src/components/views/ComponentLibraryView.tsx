@@ -1,322 +1,13 @@
-import { useState, Fragment, useEffect, useMemo } from 'react'
-import { Plus, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/v2/Button'
-import { useComponentEntity } from '@/components/hooks/useComponentEntity'
-import { useDebounce } from '@/components/hooks/useDebounce'
-import { useUrlPagination } from '@/components/hooks/useUrlPagination'
-import {
-  useComponentLibraryHandlers,
-  type ViewState,
-} from '@/components/hooks/useComponentLibraryHandlers'
-import { CategoriesTable } from '@/components/component-library/CategoriesTable'
-import { TypesTable } from '@/components/component-library/TypesTable'
-import { SubtypesTable } from '@/components/component-library/SubtypesTable'
-import { ModelsTable } from '@/components/component-library/ModelsTable'
-import { InstancesTable } from '@/components/component-library/InstancesTable'
-import { TableToolbar } from '@/components/component-library/TableToolbar'
-import { GenericEntityDialog } from '@/components/component-library/dialogs/GenericEntityDialog'
-import { InstanceDetailsDialog } from '@/components/component-library/dialogs/InstanceDetailsDialog'
-import { DeinstallationDialog } from '@/components/residence/DeinstallationDialog'
-import type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
-  Component,
-} from '@/services/types'
-
-// Helper function to create dialog state management
-function useDialogState<T>() {
-  const [state, setState] = useState<{
-    isOpen: boolean
-    mode: 'create' | 'edit'
-    entity?: T
-    defaultValues?: Record<string, any>
-  }>({ isOpen: false, mode: 'create' })
-
-  return {
-    state,
-    openCreate: (defaultValues?: Record<string, any>) =>
-      setState({
-        isOpen: true,
-        mode: 'create',
-        entity: undefined,
-        defaultValues,
-      }),
-    openEdit: (entity: T) =>
-      setState({
-        isOpen: true,
-        mode: 'edit',
-        entity,
-        defaultValues: undefined,
-      }),
-    close: () =>
-      setState({
-        isOpen: false,
-        mode: 'create',
-        entity: undefined,
-        defaultValues: undefined,
-      }),
-  }
-}
-
-// Helper function to derive ViewState from URL search params
-function deriveViewStateFromParams(searchParams: URLSearchParams): ViewState {
-  const level = searchParams.get('level') || 'categories'
-
-  if (level === 'types') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    if (categoryId && categoryName) {
-      return { level: 'types', categoryId, categoryName }
-    }
-  }
-
-  if (level === 'subtypes') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    if (categoryId && categoryName && typeId && typeName) {
-      return { level: 'subtypes', categoryId, categoryName, typeId, typeName }
-    }
-  }
-
-  if (level === 'models') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    const subtypeId = searchParams.get('subtypeId')
-    const subtypeName = searchParams.get('subtypeName')
-    if (
-      categoryId &&
-      categoryName &&
-      typeId &&
-      typeName &&
-      subtypeId &&
-      subtypeName
-    ) {
-      return {
-        level: 'models',
-        categoryId,
-        categoryName,
-        typeId,
-        typeName,
-        subtypeId,
-        subtypeName,
-      }
-    }
-  }
-
-  if (level === 'instances') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    const subtypeId = searchParams.get('subtypeId')
-    const subtypeName = searchParams.get('subtypeName')
-    const modelId = searchParams.get('modelId')
-    const modelName = searchParams.get('modelName')
-    if (
-      categoryId &&
-      categoryName &&
-      typeId &&
-      typeName &&
-      subtypeId &&
-      subtypeName &&
-      modelId &&
-      modelName
-    ) {
-      return {
-        level: 'instances',
-        categoryId,
-        categoryName,
-        typeId,
-        typeName,
-        subtypeId,
-        subtypeName,
-        modelId,
-        modelName,
-      }
-    }
-  }
-
-  // Default to categories
-  return { level: 'categories' }
-}
-
-// Helper function to create URL params from ViewState
-function createParamsFromViewState(
-  state: ViewState,
-  search?: string
-): URLSearchParams {
-  const params = new URLSearchParams()
-
-  if (state.level === 'categories') {
-    // No params needed for categories
-    return params
-  }
-
-  params.set('level', state.level)
-  params.set('categoryId', state.categoryId)
-  params.set('categoryName', state.categoryName)
-
-  if (
-    state.level === 'subtypes' ||
-    state.level === 'models' ||
-    state.level === 'instances'
-  ) {
-    params.set('typeId', state.typeId)
-    params.set('typeName', state.typeName)
-  }
-
-  if (state.level === 'models' || state.level === 'instances') {
-    params.set('subtypeId', state.subtypeId)
-    params.set('subtypeName', state.subtypeName)
-  }
-
-  if (state.level === 'instances') {
-    params.set('modelId', state.modelId)
-    params.set('modelName', state.modelName)
-  }
-
-  if (search && search.trim()) {
-    params.set('search', search.trim())
-  }
-
-  return params
-}
+import { useComponentLibraryViewState } from '@/components/hooks/useComponentLibraryViewState'
+import { useComponentLibraryHandlers } from '@/components/hooks/useComponentLibraryHandlers'
+import { ComponentLibraryBreadcrumb } from '@/components/component-library/ComponentLibraryBreadcrumb'
+import { ComponentLibraryContent } from '@/components/component-library/ComponentLibraryContent'
+import { ComponentLibraryDialogs } from '@/components/component-library/ComponentLibraryDialogs'
 
 const ComponentLibraryView = () => {
-  const { searchParams, setSearchParams, updateUrlParams } = useUrlPagination()
+  const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =
+    useComponentLibraryViewState()
 
-  // Derive viewState from URL params
-  const viewState = useMemo(
-    () => deriveViewStateFromParams(searchParams),
-    [searchParams]
-  )
-
-  // Local search input state for immediate feedback
-  const [searchInput, setSearchInput] = useState(
-    searchParams.get('search') || ''
-  )
-
-  // Sync search input when URL changes (e.g., browser back/forward)
-  useEffect(() => {
-    const urlSearch = searchParams.get('search') || ''
-    setSearchInput(urlSearch)
-  }, [searchParams])
-
-  // Debounced search for API calls
-  const debouncedSearch = useDebounce(searchInput, 300)
-
-  // Update URL when debounced search changes (only for levels that support search)
-  useEffect(() => {
-    if (
-      viewState.level === 'subtypes' ||
-      viewState.level === 'models' ||
-      viewState.level === 'instances'
-    ) {
-      const currentSearch = searchParams.get('search') || ''
-      const newSearch = debouncedSearch.trim()
-
-      if (currentSearch !== newSearch) {
-        updateUrlParams({ search: newSearch || undefined }, { replace: true })
-      }
-    }
-  }, [debouncedSearch, viewState, searchParams, updateUrlParams])
-
-  // Navigation helper that updates URL (replaces all params for level changes)
-  const navigateTo = (newState: ViewState) => {
-    const params = createParamsFromViewState(newState)
-    setSearchParams(params)
-    setSearchInput('') // Reset search when navigating
-  }
-
-  // Dialog states using helper
-  const categoryDialog = useDialogState<ComponentCategory>()
-  const typeDialog = useDialogState<ComponentType>()
-  const subtypeDialog = useDialogState<ComponentSubtype>()
-  const modelDialog = useDialogState<ComponentModel>()
-  const instanceDialog = useDialogState<Component>()
-  const [instanceDetailsDialogState, setInstanceDetailsDialogState] = useState<{
-    isOpen: boolean
-    instance?: Component
-  }>({
-    isOpen: false,
-  })
-
-  const [deinstallDialogState, setDeinstallDialogState] = useState<{
-    isOpen: boolean
-    component?: Component
-  }>({
-    isOpen: false,
-  })
-
-  const {
-    data: categories,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useComponentEntity('category')
-
-  const {
-    data: types,
-    isLoading: typesLoading,
-    error: typesError,
-  } = useComponentEntity(
-    'type',
-    viewState.level !== 'categories' ? viewState.categoryId : ''
-  )
-
-  const {
-    data: subtypes,
-    isLoading: subtypesLoading,
-    error: subtypesError,
-  } = useComponentEntity(
-    'subtype',
-    viewState.level === 'subtypes' || viewState.level === 'models'
-      ? viewState.typeId
-      : '',
-    {
-      search:
-        viewState.level === 'subtypes' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
-  )
-
-  const {
-    data: models,
-    isLoading: modelsLoading,
-    error: modelsError,
-  } = useComponentEntity(
-    'model',
-    viewState.level === 'models' ? viewState.subtypeId : '',
-    {
-      search:
-        viewState.level === 'models' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
-  )
-
-  const {
-    data: instances,
-    isLoading: instancesLoading,
-    error: instancesError,
-  } = useComponentEntity(
-    'instance',
-    viewState.level === 'instances' ? viewState.modelId : '',
-    {
-      search:
-        viewState.level === 'instances' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
-  )
-
-  // Use handlers hook
   const {
     handleCreateCategory,
     handleEditCategory,
@@ -339,435 +30,16 @@ const ComponentLibraryView = () => {
     handleEditInstance,
     handleDeleteInstance,
     handleViewHistory,
-    handleCloseInstanceDetailsDialog,
   } = useComponentLibraryHandlers({
     viewState,
     navigateTo,
-    setInstanceDetailsDialogState,
-    categoryDialog,
-    typeDialog,
-    subtypeDialog,
-    modelDialog,
-    instanceDialog,
+    instanceDetailsDialog: dialogs.instanceDetailsDialog,
+    categoryDialog: dialogs.categoryDialog,
+    typeDialog: dialogs.typeDialog,
+    subtypeDialog: dialogs.subtypeDialog,
+    modelDialog: dialogs.modelDialog,
+    instanceDialog: dialogs.instanceDialog,
   })
-
-  const renderContent = () => {
-    // Categories view
-    if (viewState.level === 'categories') {
-      if (categoriesError) {
-        return (
-          <div className="text-center py-10 space-y-4">
-            <h2 className="text-2xl font-bold text-destructive">
-              Ett fel uppstod
-            </h2>
-            <p className="text-muted-foreground">
-              Kunde inte ladda kategorier. Försök igen senare.
-            </p>
-          </div>
-        )
-      }
-
-      if (!categoriesLoading && (!categories || categories.length === 0)) {
-        return (
-          <div className="text-center py-16 space-y-4">
-            <h2 className="text-2xl font-bold">Inga kategorier ännu</h2>
-            <p className="text-muted-foreground">
-              Skapa din första komponentkategori för att komma igång
-            </p>
-            <Button onClick={handleCreateCategory} className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
-              Skapa kategori
-            </Button>
-          </div>
-        )
-      }
-
-      return (
-        <>
-          <TableToolbar
-            onAddNew={handleCreateCategory}
-            addNewLabel="Ny kategori"
-            itemCount={categories?.length}
-            levelName="kategorier"
-          />
-          <CategoriesTable
-            categories={categories || []}
-            isLoading={categoriesLoading}
-            onEdit={handleEditCategory}
-            onDelete={handleDeleteCategory}
-            onNavigate={handleNavigateToTypes}
-          />
-        </>
-      )
-    }
-
-    // Types view
-    if (viewState.level === 'types') {
-      if (typesError) {
-        return (
-          <div className="text-center py-10 space-y-4">
-            <h2 className="text-2xl font-bold text-destructive">
-              Ett fel uppstod
-            </h2>
-            <p className="text-muted-foreground">
-              Kunde inte ladda typer. Försök igen senare.
-            </p>
-          </div>
-        )
-      }
-
-      if (!typesLoading && (!types || types.length === 0)) {
-        return (
-          <div className="text-center py-16 space-y-4">
-            <h2 className="text-2xl font-bold">Inga typer ännu</h2>
-            <p className="text-muted-foreground">
-              Skapa din första komponenttyp för att komma igång
-            </p>
-            <Button onClick={handleCreateType} className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
-              Skapa typ
-            </Button>
-          </div>
-        )
-      }
-
-      return (
-        <>
-          <TableToolbar
-            onAddNew={handleCreateType}
-            addNewLabel="Ny typ"
-            itemCount={types?.length}
-            levelName="typer"
-          />
-          <TypesTable
-            types={types || []}
-            isLoading={typesLoading}
-            onEdit={handleEditType}
-            onDelete={handleDeleteType}
-            onNavigate={handleNavigateToSubtypes}
-          />
-        </>
-      )
-    }
-
-    // Subtypes view
-    if (viewState.level === 'subtypes') {
-      if (subtypesError) {
-        return (
-          <div className="text-center py-10 space-y-4">
-            <h2 className="text-2xl font-bold text-destructive">
-              Ett fel uppstod
-            </h2>
-            <p className="text-muted-foreground">
-              Kunde inte ladda undertyper. Försök igen senare.
-            </p>
-          </div>
-        )
-      }
-
-      const hasActiveSearch = searchInput.trim().length > 0
-
-      // Empty state: no subtypes exist AND no active search
-      if (
-        !subtypesLoading &&
-        (!subtypes || subtypes.length === 0) &&
-        !hasActiveSearch
-      ) {
-        return (
-          <div className="text-center py-16 space-y-4">
-            <h2 className="text-2xl font-bold">Inga undertyper ännu</h2>
-            <p className="text-muted-foreground">
-              Skapa din första undertyp för att komma igång
-            </p>
-          </div>
-        )
-      }
-
-      return (
-        <>
-          <TableToolbar
-            onAddNew={handleCreateSubtype}
-            addNewLabel="Ny undertyp"
-            itemCount={subtypes?.length}
-            levelName="undertyper"
-            searchValue={searchInput}
-            onSearchChange={setSearchInput}
-            searchPlaceholder="Sök efter undertyp..."
-          />
-          {!subtypesLoading && subtypes?.length === 0 && hasActiveSearch ? (
-            <div className="text-center py-16 space-y-4">
-              <h2 className="text-xl font-medium text-muted-foreground">
-                Inga undertyper matchar sökningen
-              </h2>
-              <p className="text-muted-foreground">
-                Försök med en annan sökterm
-              </p>
-            </div>
-          ) : (
-            <SubtypesTable
-              subtypes={subtypes || []}
-              isLoading={subtypesLoading}
-              onEdit={handleEditSubtype}
-              onDelete={handleDeleteSubtype}
-              onNavigate={handleNavigateToModels}
-            />
-          )}
-        </>
-      )
-    }
-
-    // Models view
-    if (viewState.level === 'models') {
-      if (modelsError) {
-        return (
-          <div className="text-center py-10 space-y-4">
-            <h2 className="text-2xl font-bold text-destructive">
-              Ett fel uppstod
-            </h2>
-            <p className="text-muted-foreground">
-              Kunde inte ladda modeller. Försök igen senare.
-            </p>
-          </div>
-        )
-      }
-
-      const hasActiveSearch = searchInput.trim().length > 0
-
-      // Empty state: no models exist AND no active search
-      if (
-        !modelsLoading &&
-        (!models || models.length === 0) &&
-        !hasActiveSearch
-      ) {
-        return (
-          <div className="text-center py-16 space-y-4">
-            <h2 className="text-2xl font-bold">Inga modeller ännu</h2>
-            <p className="text-muted-foreground">
-              Skapa din första modell för att komma igång
-            </p>
-          </div>
-        )
-      }
-
-      return (
-        <>
-          <TableToolbar
-            onAddNew={handleCreateModel}
-            addNewLabel="Ny modell"
-            itemCount={models?.length}
-            levelName="modeller"
-            searchValue={searchInput}
-            onSearchChange={setSearchInput}
-            searchPlaceholder="Sök efter modell eller tillverkare..."
-          />
-          {!modelsLoading && models?.length === 0 && hasActiveSearch ? (
-            <div className="text-center py-16 space-y-4">
-              <h2 className="text-xl font-medium text-muted-foreground">
-                Inga modeller matchar sökningen
-              </h2>
-              <p className="text-muted-foreground">
-                Försök med en annan sökterm
-              </p>
-            </div>
-          ) : (
-            <ModelsTable
-              models={models || []}
-              isLoading={modelsLoading}
-              onEdit={handleEditModel}
-              onDelete={handleDeleteModel}
-              onNavigate={handleNavigateToInstances}
-              onCreateInstance={handleCreateInstance}
-            />
-          )}
-        </>
-      )
-    }
-
-    // Instances view
-    if (viewState.level === 'instances') {
-      if (instancesError) {
-        return (
-          <div className="text-center py-10 space-y-4">
-            <h2 className="text-2xl font-bold text-destructive">
-              Ett fel uppstod
-            </h2>
-            <p className="text-muted-foreground">
-              Kunde inte ladda komponenter. Försök igen senare.
-            </p>
-          </div>
-        )
-      }
-
-      const hasActiveSearch = searchInput.trim().length > 0
-
-      // Empty state: no instances exist AND no active search
-      if (
-        !instancesLoading &&
-        (!instances || instances.length === 0) &&
-        !hasActiveSearch
-      ) {
-        return (
-          <div className="text-center py-16 space-y-4">
-            <h2 className="text-2xl font-bold">Inga komponenter ännu</h2>
-            <p className="text-muted-foreground">
-              Skapa din första komponent för att komma igång
-            </p>
-            <Button onClick={handleCreateInstanceFromTable} className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
-              Skapa komponent
-            </Button>
-          </div>
-        )
-      }
-
-      return (
-        <>
-          <TableToolbar
-            onAddNew={handleCreateInstanceFromTable}
-            addNewLabel="Ny komponent"
-            itemCount={instances?.length}
-            levelName="komponenter"
-            searchValue={searchInput}
-            onSearchChange={setSearchInput}
-            searchPlaceholder="Sök efter serienummer..."
-          />
-          {!instancesLoading && instances?.length === 0 && hasActiveSearch ? (
-            <div className="text-center py-16 space-y-4">
-              <h2 className="text-xl font-medium text-muted-foreground">
-                Inga komponenter matchar sökningen
-              </h2>
-              <p className="text-muted-foreground">
-                Försök med en annan sökterm
-              </p>
-            </div>
-          ) : (
-            <InstancesTable
-              instances={instances || []}
-              isLoading={instancesLoading}
-              onEdit={handleEditInstance}
-              onDelete={handleDeleteInstance}
-              onViewHistory={handleViewHistory}
-              onUninstall={(instance) =>
-                setDeinstallDialogState({ isOpen: true, component: instance })
-              }
-            />
-          )}
-        </>
-      )
-    }
-
-    return null
-  }
-
-  const getBreadcrumbItems = (): Array<{
-    label: string
-    onClick?: () => void
-  }> => {
-    const items: Array<{ label: string; onClick?: () => void }> = []
-
-    // Always start with Categories
-    items.push({
-      label: 'Kategorier',
-      onClick:
-        viewState.level !== 'categories'
-          ? () => navigateTo({ level: 'categories' })
-          : undefined,
-    })
-
-    if (viewState.level === 'categories') return items
-
-    // Add category
-    items.push({
-      label: viewState.categoryName,
-      onClick:
-        viewState.level !== 'types'
-          ? () =>
-              navigateTo({
-                level: 'types',
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-          : undefined,
-    })
-
-    if (viewState.level === 'types') return items
-
-    // Add type
-    items.push({
-      label: viewState.typeName,
-      onClick:
-        viewState.level !== 'subtypes'
-          ? () =>
-              navigateTo({
-                level: 'subtypes',
-                typeId: viewState.typeId,
-                typeName: viewState.typeName,
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-          : undefined,
-    })
-
-    if (viewState.level === 'subtypes') return items
-
-    // Add subtype
-    items.push({
-      label: viewState.subtypeName,
-      onClick:
-        viewState.level !== 'models'
-          ? () =>
-              navigateTo({
-                level: 'models',
-                subtypeId: viewState.subtypeId,
-                subtypeName: viewState.subtypeName,
-                typeId: viewState.typeId,
-                typeName: viewState.typeName,
-                categoryId: viewState.categoryId,
-                categoryName: viewState.categoryName,
-              })
-          : undefined,
-    })
-
-    if (viewState.level === 'models') return items
-
-    // Add model (only for instances level)
-    items.push({
-      label: viewState.modelName,
-    })
-
-    return items
-  }
-
-  const renderBreadcrumb = () => {
-    const items = getBreadcrumbItems()
-
-    return (
-      <div className="flex items-center gap-2">
-        {items.map((item, index) => (
-          <Fragment key={index}>
-            {index > 0 && (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-            {item.onClick ? (
-              <button
-                onClick={item.onClick}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {item.label}
-              </button>
-            ) : (
-              <span className="font-medium">{item.label}</span>
-            )}
-          </Fragment>
-        ))}
-      </div>
-    )
-  }
-
-  const renderNewButton = () => {
-    // All levels now have their buttons in TableToolbar
-    return null
-  }
 
   return (
     <div className="py-4 space-y-6">
@@ -779,113 +51,76 @@ const ComponentLibraryView = () => {
             Hantera komponenter, modeller och installationer
           </p>
         </div>
-        {renderNewButton()}
       </div>
 
       {/* Breadcrumb Navigation */}
-      <div className="text-sm text-muted-foreground">{renderBreadcrumb()}</div>
+      <div className="text-sm text-muted-foreground">
+        <ComponentLibraryBreadcrumb
+          viewState={viewState}
+          onNavigate={navigateTo}
+        />
+      </div>
 
       {/* Content */}
-      {renderContent()}
-
-      {/* Dialogs */}
-      <GenericEntityDialog
-        isOpen={categoryDialog.state.isOpen}
-        onClose={categoryDialog.close}
-        entityType="category"
-        entity={categoryDialog.state.entity}
-        mode={categoryDialog.state.mode}
+      <ComponentLibraryContent
+        viewState={viewState}
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        // Categories
+        categories={data.categories}
+        categoriesLoading={data.categoriesLoading}
+        categoriesError={data.categoriesError}
+        onCreateCategory={handleCreateCategory}
+        onEditCategory={handleEditCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onNavigateToTypes={handleNavigateToTypes}
+        // Types
+        types={data.types}
+        typesLoading={data.typesLoading}
+        typesError={data.typesError}
+        onCreateType={handleCreateType}
+        onEditType={handleEditType}
+        onDeleteType={handleDeleteType}
+        onNavigateToSubtypes={handleNavigateToSubtypes}
+        // Subtypes
+        subtypes={data.subtypes}
+        subtypesLoading={data.subtypesLoading}
+        subtypesError={data.subtypesError}
+        onCreateSubtype={handleCreateSubtype}
+        onEditSubtype={handleEditSubtype}
+        onDeleteSubtype={handleDeleteSubtype}
+        onNavigateToModels={handleNavigateToModels}
+        // Models
+        models={data.models}
+        modelsLoading={data.modelsLoading}
+        modelsError={data.modelsError}
+        onCreateModel={handleCreateModel}
+        onEditModel={handleEditModel}
+        onDeleteModel={handleDeleteModel}
+        onCreateInstance={handleCreateInstance}
+        onNavigateToInstances={handleNavigateToInstances}
+        // Instances
+        instances={data.instances}
+        instancesLoading={data.instancesLoading}
+        instancesError={data.instancesError}
+        onCreateInstanceFromTable={handleCreateInstanceFromTable}
+        onEditInstance={handleEditInstance}
+        onDeleteInstance={handleDeleteInstance}
+        onViewHistory={handleViewHistory}
+        onUninstall={(instance) => dialogs.deinstallDialog.open(instance)}
       />
 
-      {viewState.level === 'types' ||
-      viewState.level === 'subtypes' ||
-      viewState.level === 'models' ? (
-        <GenericEntityDialog
-          isOpen={typeDialog.state.isOpen}
-          onClose={typeDialog.close}
-          entityType="type"
-          entity={typeDialog.state.entity}
-          parentId={viewState.categoryId}
-          mode={typeDialog.state.mode}
-          hierarchyData={{
-            categoryId: viewState.categoryId,
-          }}
-        />
-      ) : null}
-
-      {viewState.level === 'subtypes' || viewState.level === 'models' ? (
-        <GenericEntityDialog
-          isOpen={subtypeDialog.state.isOpen}
-          onClose={subtypeDialog.close}
-          entityType="subtype"
-          entity={subtypeDialog.state.entity}
-          parentId={viewState.typeId}
-          mode={subtypeDialog.state.mode}
-          hierarchyData={{
-            categoryId: viewState.categoryId,
-            typeId: viewState.typeId,
-          }}
-        />
-      ) : null}
-
-      {viewState.level === 'models' ? (
-        <GenericEntityDialog
-          isOpen={modelDialog.state.isOpen}
-          onClose={modelDialog.close}
-          entityType="model"
-          entity={modelDialog.state.entity}
-          parentId={viewState.subtypeId}
-          mode={modelDialog.state.mode}
-          hierarchyData={{
-            categoryId: viewState.categoryId,
-            typeId: viewState.typeId,
-            subtypeId: viewState.subtypeId,
-          }}
-        />
-      ) : null}
-
-      {viewState.level === 'instances' ? (
-        <>
-          <GenericEntityDialog
-            isOpen={instanceDialog.state.isOpen}
-            onClose={instanceDialog.close}
-            entityType="instance"
-            entity={instanceDialog.state.entity}
-            defaultValues={instanceDialog.state.defaultValues}
-            parentId={viewState.modelId}
-            mode={instanceDialog.state.mode}
-            hierarchyData={{
-              categoryId: viewState.categoryId,
-              typeId: viewState.typeId,
-              subtypeId: viewState.subtypeId,
-              modelId: viewState.modelId,
-            }}
-          />
-
-          {instanceDetailsDialogState.instance && (
-            <InstanceDetailsDialog
-              isOpen={instanceDetailsDialogState.isOpen}
-              onClose={handleCloseInstanceDetailsDialog}
-              instance={instanceDetailsDialogState.instance}
-            />
-          )}
-
-          {deinstallDialogState.component && (
-            <DeinstallationDialog
-              isOpen={deinstallDialogState.isOpen}
-              onClose={() =>
-                setDeinstallDialogState({ isOpen: false, component: undefined })
-              }
-              component={deinstallDialogState.component}
-              spaceId={
-                deinstallDialogState.component.componentInstallations?.find(
-                  (inst) => !inst.deinstallationDate
-                )?.spaceId || ''
-              }
-            />
-          )}
-        </>
-      ) : null}
+      {/* Dialogs */}
+      <ComponentLibraryDialogs
+        viewState={viewState}
+        categoryDialog={dialogs.categoryDialog}
+        typeDialog={dialogs.typeDialog}
+        subtypeDialog={dialogs.subtypeDialog}
+        modelDialog={dialogs.modelDialog}
+        instanceDialog={dialogs.instanceDialog}
+        instanceDetailsDialog={dialogs.instanceDetailsDialog}
+        deinstallDialog={dialogs.deinstallDialog}
+      />
     </div>
   )
 }
