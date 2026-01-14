@@ -202,16 +202,19 @@ export function ComponentImageGallery({
     if (!currentImage) return
 
     if (deleteConfirm === currentImage.id) {
-      // Actually delete
-      deleteImage(currentImage.id, {
-        onSuccess: () => {
-          setDeleteConfirm(null)
-          // If we deleted the last image in the list, go back one
-          if (currentIndex >= images.length - 1 && currentIndex > 0) {
-            setCurrentIndex(currentIndex - 1)
-          }
-        },
-      })
+      // Actually delete - pass both documentId and fileId for proper cleanup
+      deleteImage(
+        { documentId: currentImage.id, fileId: currentImage.fileId },
+        {
+          onSuccess: () => {
+            setDeleteConfirm(null)
+            // If we deleted the last image in the list, go back one
+            if (currentIndex >= images.length - 1 && currentIndex > 0) {
+              setCurrentIndex(currentIndex - 1)
+            }
+          },
+        }
+      )
     } else {
       // Show confirmation
       setDeleteConfirm(currentImage.id)

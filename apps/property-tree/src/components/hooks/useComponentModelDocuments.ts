@@ -9,8 +9,8 @@ export function useComponentModelDocuments(modelId: string) {
     fetchFiles: (id) => componentService.getModelDocuments(id),
     uploadFile: (id, { file }) =>
       componentService.uploadModelDocument(id, file),
-    deleteFile: (id, fileId) =>
-      componentService.deleteModelDocument(id, fileId),
+    deleteFile: (_id, { documentId, fileId }) =>
+      componentService.deleteModelDocument(documentId, fileId),
     createOptimisticFile: ({ file }) => ({
       id: `temp-${Date.now()}`,
       fileId: `temp-${Date.now()}`,
