@@ -1060,6 +1060,82 @@ export interface paths {
       };
     };
   };
+  "/leases/{leaseId}/rent-rows": {
+    /** Create a rent row for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            amount: number;
+            article: string;
+            label: string;
+            /** @description Optional start date. */
+            from?: string;
+            /** @description Optional end date. */
+            to?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Successfully created rent row. */
+        201: {
+          content: never;
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/rent-rows/{rentRowId}": {
+    /** Delete a rent row for a lease */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+          /** @description The ID of the rent row. */
+          rentRowId: string;
+        };
+      };
+      responses: {
+        /** @description Rent row deleted. */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/rent-articles": {
+    /** List rent articles articles */
+    get: {
+      responses: {
+        /** @description Successfully retrieved rent articles */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/listings": {
     /**
      * Get listings

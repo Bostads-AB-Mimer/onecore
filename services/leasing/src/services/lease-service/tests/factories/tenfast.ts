@@ -6,6 +6,8 @@ import {
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponse,
   TenfastTenant,
+  TenfastArticle,
+  toYearMonthString,
 } from '../../adapters/tenfast/schemas'
 
 export const TenfastLeaseFactory = Factory.define<TenfastLease>(
@@ -122,9 +124,28 @@ export const TenfastInvoiceRowFactory = Factory.define<TenfastInvoiceRow>(
   ({ sequence }) => ({
     amount: 115,
     vat: 0.25,
-    from: '2013-03',
+    from: toYearMonthString(new Date('2013-03')),
     article: '12334567' + sequence,
     label: 'Hyra p-plats',
     _id: sequence.toString(),
+  })
+)
+
+export const TenfastArticleFactory = Factory.define<TenfastArticle>(
+  ({ sequence }) => ({
+    _id: '67eb8aea545c8f1195bea0d6',
+    hyresvard: '6344b398b63ff59d5bde8257',
+    title: 'Hyra bostad, konto 3011',
+    defaultLabel: 'Hyra bostad, konto 3011',
+    code: `HYRAB1-${sequence}`,
+    accountNr: '3011',
+    vat: 0.25,
+    description: 'Test description',
+    category: 'article-category',
+    includeInContract: false,
+    adjustmentType: 'none',
+    archivedAt: null,
+    createdAt: new Date('2025-04-01T06:43:01.728Z'),
+    updatedAt: new Date('2025-04-02T06:43:01.728Z'),
   })
 )

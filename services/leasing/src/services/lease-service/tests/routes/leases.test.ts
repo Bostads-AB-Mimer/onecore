@@ -3,6 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import nock from 'nock'
+import { schemas } from '@onecore/types'
 
 import { routes } from '../../index'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
@@ -18,6 +19,10 @@ app.use(bodyParser())
 app.use(router.routes())
 
 nock(config.tenfast.baseUrl).get(`/v1/auth`).reply(200)
+
+beforeEach(() => {
+  jest.clearAllMocks()
+})
 
 describe('GET /leases/by-contact-code/:contactCode', () => {
   it('responds with 404 if tenant not found', async () => {
@@ -271,10 +276,10 @@ describe('POST /leases', () => {
   })
 })
 
-describe('POST /leases/:leaseId/invoice-row', () => {
+describe('POST /leases/:leaseId/invoice-rows', () => {
   it('validates request body', async () => {
     const result = await request(app.callback())
-      .post('/leases/123/invoice-row')
+      .post('/leases/123/rent-rows')
       .send({ foo: 'bar' })
 
     expect(result.status).toBe(400)
@@ -283,41 +288,77 @@ describe('POST /leases/:leaseId/invoice-row', () => {
   it('returns 500 on error', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
     const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createInvoiceRow')
+      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback())
-      .post('/leases/123/invoice-row')
-      .send(invoiceRow)
+      .post('/leases/123/rent-rows')
+      .send({ ...invoiceRow, vat: undefined })
 
     expect(result.status).toBe(500)
     expect(createInvoiceRowSpy).toHaveBeenCalled()
   })
 
-  it('creates and returns invoice row', async () => {
+  it('creates and returns null', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
     const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createInvoiceRow')
-      .mockResolvedValueOnce({ ok: true, data: invoiceRow })
+      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
+      .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback())
-      .post('/leases/123/invoice-row')
+      .post('/leases/123/rent-rows')
+      .send({ ...invoiceRow, vat: undefined })
+
+    expect(result.status).toBe(201)
+    expect(result.body.content).toEqual(null)
+    expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
+    expect(createInvoiceRowSpy).toHaveBeenCalledWith({
+      leaseId: '123',
+      invoiceRow: {
+        amount: invoiceRow.amount,
+        article: invoiceRow.article,
+        label: invoiceRow.label,
+        from: invoiceRow.from,
+        to: invoiceRow.to,
+        vat: 0.25,
+      },
+    })
+  })
+
+  it('creates invoice row without from/to dates', async () => {
+    const invoiceRow = {
+      amount: 115,
+      article: '12334567',
+      label: 'Hyra p-plats',
+    }
+    const createInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+    const result = await request(app.callback())
+      .post('/leases/123/rent-rows')
       .send(invoiceRow)
 
     expect(result.status).toBe(201)
-    expect(result.body.content).toEqual(invoiceRow)
-    expect(createInvoiceRowSpy).toHaveBeenCalled()
+    expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
+    expect(createInvoiceRowSpy).toHaveBeenCalledWith({
+      leaseId: '123',
+      invoiceRow: { ...invoiceRow, vat: 0.25 },
+    })
   })
 })
 
-describe('DELETE /leases/:leaseId/invoice-row/:invoiceRowId', () => {
+describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
   it('deletes and returns null', async () => {
     const deleteInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'deleteInvoiceRow')
+      .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback()).delete(
-      '/leases/123/invoice-row/123'
+      '/leases/123/rent-rows/123'
     )
 
     expect(result.status).toBe(200)
@@ -327,14 +368,43 @@ describe('DELETE /leases/:leaseId/invoice-row/:invoiceRowId', () => {
 
   it('returns 500 on error', async () => {
     const deleteInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'deleteInvoiceRow')
+      .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback()).delete(
-      '/leases/123/invoice-row/123'
+      '/leases/123/rent-rows/123'
     )
 
     expect(result.status).toBe(500)
     expect(deleteInvoiceRowSpy).toHaveBeenCalled()
+  })
+})
+
+describe('GET /rent-articles', () => {
+  it('returns articles', async () => {
+    const articles = factory.tenfastArticle.buildList(2)
+    jest.spyOn(tenfastAdapter, 'getArticles').mockResolvedValue({
+      ok: true,
+      data: articles,
+    })
+
+    const res = await request(app.callback()).get('/rent-articles')
+
+    expect(res.status).toBe(200)
+    expect(() =>
+      schemas.v1.RentArticleSchema.array().parse(res.body.content)
+    ).not.toThrow()
+  })
+
+  it('returns 500 on error', async () => {
+    jest.spyOn(tenfastAdapter, 'getArticles').mockResolvedValue({
+      ok: false,
+      err: 'unknown',
+    })
+
+    const res = await request(app.callback()).get('/rent-articles')
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('unknown')
   })
 })

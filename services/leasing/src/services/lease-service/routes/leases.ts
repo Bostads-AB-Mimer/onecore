@@ -5,6 +5,7 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { Contact, Lease, leasing } from '@onecore/types'
+import { z } from 'zod'
 
 import {
   getContactByContactCode,
@@ -13,9 +14,10 @@ import {
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
+import { mapToOnecoreRentArticle } from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
-import { TenfastInvoiceRowSchema } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { toYearMonthString } from '../adapters/tenfast/schemas'
 
 /**
  * @swagger
@@ -486,7 +488,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-row:
+   * /leases/{id}/invoice-rows:
    *   post:
    *     summary: Create a invoice row
    *     description: Create a invoice row.
@@ -498,6 +500,29 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               amount:
+   *                 type: number
+   *               article:
+   *                 type: string
+   *               label:
+   *                 type: string
+   *               from:
+   *                 type: string
+   *                 description: Optional start date.
+   *               to:
+   *                 type: string
+   *                 description: Optional end date.
+   *             required:
+   *               - amount
+   *               - article
+   *               - label
    *     responses:
    *       201:
    *         description: Successfully created invoice row.
@@ -506,21 +531,33 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  const CreateInvoiceRowRequestBodySchema = TenfastInvoiceRowSchema.omit({
-    _id: true,
+  const CreateLeaseInvoiceRowRequestBodySchema = z.object({
+    amount: z.number(),
+    article: z.string(),
+    label: z.string(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
   })
 
   router.post(
-    '(.*)/leases/:leaseId/invoice-row',
-    parseRequestBody(CreateInvoiceRowRequestBodySchema),
+    '(.*)/leases/:leaseId/rent-rows',
+    parseRequestBody(CreateLeaseInvoiceRowRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const invoiceRow = ctx.request.body
-
-      const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
+      const createInvoiceRow = await tenfastAdapter.createLeaseInvoiceRow({
         leaseId: ctx.params.leaseId,
-        invoiceRow: invoiceRow,
+        invoiceRow: {
+          ...ctx.request.body,
+          from: ctx.request.body.from
+            ? toYearMonthString(ctx.request.body.from)
+            : undefined,
+          to: ctx.request.body.to
+            ? toYearMonthString(ctx.request.body.to)
+            : undefined,
+
+          vat: 0.25, // TODO: What to put for VAT?
+        },
       })
 
       if (!createInvoiceRow.ok) {
@@ -539,10 +576,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-row/{invoiceRowId}:
+   * /leases/{id}/rent-rows/{rentRowId}:
    *   delete:
-   *     summary: Delete an invoice row
-   *     description: Delete an invoice row.
+   *     summary: Delete a rent row
+   *     description: Delete a rent row.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -552,42 +589,68 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the lease.
    *       - in: path
-   *         name: invoiceRowId
+   *         name: rentRowId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the invoice row.
+   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Successfully deleted invoice row.
+   *         description: Successfully deleted rent row.
    *       404:
    *         description: Lease not found.
    *       500:
    *         description: Internal server error.
    */
-  router.delete(
-    '(.*)/leases/:leaseId/invoice-row/:invoiceRowId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
+  router.delete('(.*)/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
 
-      const deleteInvoiceRow = await tenfastAdapter.deleteInvoiceRow({
-        leaseId: ctx.params.leaseId,
-        invoiceRowId: ctx.params.invoiceRowId,
-      })
+    const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
+      leaseId: ctx.params.leaseId,
+      invoiceRowId: ctx.params.rentRowId,
+    })
 
-      if (!deleteInvoiceRow.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: deleteInvoiceRow.err,
-          ...metadata,
-        }
-        return
+    if (!deleteLeaseInvoiceRow.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: deleteLeaseInvoiceRow.err,
+        ...metadata,
       }
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(null, metadata)
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(null, metadata)
+  })
+
+  /**
+   * @swagger
+   * /rent-articles:
+   *   get:
+   *     summary: List articles
+   *     tags: [Leases]
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved articles.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/rent-articles', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const articles = await tenfastAdapter.getArticles()
+
+    if (!articles.ok) {
+      ctx.status = 500
+      ctx.body = { error: articles.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(
+      articles.data.map(mapToOnecoreRentArticle),
+      metadata
+    )
+  })
 }
 
 async function patchLeasesWithContacts(

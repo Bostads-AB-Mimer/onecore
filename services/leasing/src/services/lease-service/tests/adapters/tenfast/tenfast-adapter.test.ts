@@ -897,8 +897,8 @@ describe(tenfastAdapter.createLease, () => {
   })
 })
 
-describe(tenfastAdapter.createInvoiceRow, () => {
-  it('creates and returns invoice row', async () => {
+describe(tenfastAdapter.createLeaseInvoiceRow, () => {
+  it('creates and returns null', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
 
     ;(request as jest.Mock).mockResolvedValue({
@@ -906,12 +906,12 @@ describe(tenfastAdapter.createInvoiceRow, () => {
       data: invoiceRow,
     })
 
-    const result = await tenfastAdapter.createInvoiceRow({
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRow: invoiceRow,
     })
 
-    expect(result).toEqual({ ok: true, data: invoiceRow })
+    expect(result).toEqual({ ok: true, data: null })
   })
 
   it('returns ok false on error', async () => {
@@ -922,7 +922,7 @@ describe(tenfastAdapter.createInvoiceRow, () => {
       data: invoiceRow,
     })
 
-    const result = await tenfastAdapter.createInvoiceRow({
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRow: invoiceRow,
     })
@@ -931,13 +931,13 @@ describe(tenfastAdapter.createInvoiceRow, () => {
   })
 })
 
-describe(tenfastAdapter.deleteInvoiceRow, () => {
+describe(tenfastAdapter.deleteLeaseInvoiceRow, () => {
   it('deletes and returns null', async () => {
     ;(request as jest.Mock).mockResolvedValue({
       status: 200,
     })
 
-    const result = await tenfastAdapter.deleteInvoiceRow({
+    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRowId: 'invoice-row-id',
     })
@@ -951,10 +951,49 @@ describe(tenfastAdapter.deleteInvoiceRow, () => {
       data: null,
     })
 
-    const result = await tenfastAdapter.deleteInvoiceRow({
+    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRowId: 'invoice-row-id',
     })
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(tenfastAdapter.getArticles, () => {
+  it('returns articles when response is valid', async () => {
+    const articles = factory.tenfastArticle.buildList(2)
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: articles,
+    })
+
+    const result = await tenfastAdapter.getArticles()
+
+    expect(result).toEqual({ ok: true, data: articles })
+  })
+
+  // TODO: Unskip this test when we have a real schema for rent articles
+  it.skip('returns schema error when parse fails', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: [{ foo: 'bar' }],
+    })
+
+    const result = await tenfastAdapter.getArticles()
+
+    expect(result.ok).toBe(false)
+    if (!result.ok && typeof result.err === 'object') {
+      expect(result.err.tag).toBe('schema-error')
+    }
+  })
+
+  it('returns unknown on non-200', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: {},
+    })
+
+    const result = await tenfastAdapter.getArticles()
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })

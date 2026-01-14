@@ -1,7 +1,7 @@
 import { logger } from '@onecore/utilities'
 import { Contact } from '@onecore/types'
 import { isAxiosError } from 'axios'
-import { ZodError } from 'zod'
+import z from 'zod'
 
 import {
   TenfastTenantByContactCodeResponseSchema,
@@ -14,6 +14,8 @@ import {
   TenfastLease,
   TenfastLeaseSchema,
   TenfastInvoiceRow,
+  TenfastArticle,
+  TenfastRentArticleSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -23,7 +25,7 @@ import { filterByStatus, GetLeasesFilters } from './filters'
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
 
-type SchemaError = { tag: 'schema-error'; error: ZodError }
+type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 
 export const createLease = async (
   contact: Contact,
@@ -486,10 +488,11 @@ export async function getLeaseByLeaseId(
   }
 }
 
-export async function createInvoiceRow(params: {
+// TODO: This function should return a onecore rent row
+export async function createLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRow: Omit<TenfastInvoiceRow, '_id'>
-}): Promise<AdapterResult<TenfastInvoiceRow, 'unknown'>> {
+}): Promise<AdapterResult<null, 'unknown'>> {
   try {
     const res = await tenfastApi.request({
       method: 'patch',
@@ -502,17 +505,17 @@ export async function createInvoiceRow(params: {
     })
 
     if (res.status === 200) {
-      return { ok: true, data: res.data }
+      return { ok: true, data: null }
     } else {
       throw { status: res.status, data: res.data }
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.createInvoiceRow')
+    logger.error(mapHttpError(err), 'tenfast-adapter.createLeaseInvoiceRow')
     return { ok: false, err: 'unknown' }
   }
 }
 
-export async function deleteInvoiceRow(params: {
+export async function deleteLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRowId: string
 }): Promise<AdapterResult<null, 'unknown'>> {
@@ -532,6 +535,32 @@ export async function deleteInvoiceRow(params: {
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.deleteInvoiceRow')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getArticles(): Promise<
+  AdapterResult<TenfastArticle[], 'unknown' | SchemaError>
+> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/articles?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (res.status !== 200) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = z.array(TenfastRentArticleSchema).safeParse(res.data)
+    if (!parsed.success) {
+      logger.error(mapHttpError(parsed.error), 'tenfast-adapter.getArticles')
+      return { ok: false, err: { tag: 'schema-error', error: parsed.error } }
+    }
+
+    return { ok: true, data: parsed.data }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getArticles')
     return { ok: false, err: 'unknown' }
   }
 }

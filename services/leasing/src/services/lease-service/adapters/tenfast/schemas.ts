@@ -1,90 +1,28 @@
+import { format } from 'date-fns'
 import { z } from 'zod'
 
+const YearMonthStringSchema = z.string().brand<'yyyy-mm'>()
+
+export type YearMonthString = z.infer<typeof YearMonthStringSchema>
+
+export function toYearMonthString(date: Date): YearMonthString {
+  return YearMonthStringSchema.parse(format(date, 'yyyy-MM'))
+}
+
+// TODO: Add explanation
 export const TenfastInvoiceRowSchema = z.object({
   amount: z.number(),
   vat: z.number(), //moms, procentsats
-  from: z.string().nullable().optional(),
-  to: z.string().nullable().optional(),
+  from: YearMonthStringSchema.optional().nullable(),
+  to: YearMonthStringSchema.optional().nullable(),
   article: z.string().nullable(),
   label: z.string().nullable(),
   _id: z.string(),
 })
 
-export const TenfastInvoiceSchema = z.object({
-  interval: z.object({
-    from: z.string(),
-    to: z.string(),
-  }),
-  _id: z.string(),
-  hyresvard: z.string(),
-  avtal: z.array(z.string()),
-  hyror: z.array(TenfastInvoiceRowSchema),
-  vatEnabled: z.boolean(),
-  propertyTax: z.boolean(),
-  simpleHyra: z.boolean(),
-  amount: z.number(),
-  amountPaid: z.number(),
-  acceptDiff: z.boolean(),
-  aviseringsTyp: z.string(),
-  expectedInvoiceDate: z.string(),
-  due: z.string(),
-  sentAutomatically: z.boolean(),
-  partiell: z.boolean(),
-  activatedAt: z.string().nullable(),
-  emails: z.array(z.any()),
-  ekoNotifications: z.array(z.any()),
-  skipEmail: z.boolean(),
-  markedAsLate: z.boolean(),
-  reference: z.number(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  __v: z.number(),
-  ocrNumber: z.string(),
-  late: z.boolean(),
-  state: z.string(),
-  id: z.string(),
-})
+export const TenfastRentArticleSchema = z.record(z.string(), z.any())
 
-export const TenfastInvoicesByOcrResponseSchema = z.object({
-  records: z.array(TenfastInvoiceSchema),
-})
-
-export const TenfastInvoicesByTenantIdResponseSchema = z.array(
-  z.object({
-    interval: z.object({
-      from: z.string(),
-      to: z.string(),
-    }),
-    _id: z.string(),
-    hyresvard: z.string(),
-    avtal: z.array(z.string()),
-    hyror: z.array(TenfastInvoiceRowSchema),
-    vatEnabled: z.boolean(),
-    propertyTax: z.boolean(),
-    simpleHyra: z.boolean(),
-    amount: z.number(),
-    amountPaid: z.number(),
-    acceptDiff: z.boolean(),
-    aviseringsTyp: z.string(),
-    expectedInvoiceDate: z.string(),
-    due: z.string(),
-    sentAutomatically: z.boolean(),
-    partiell: z.boolean(),
-    activatedAt: z.string().nullable(),
-    emails: z.array(z.any()),
-    ekoNotifications: z.array(z.any()),
-    skipEmail: z.boolean(),
-    markedAsLate: z.boolean(),
-    reference: z.number(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-    __v: z.number(),
-    ocrNumber: z.string(),
-    late: z.boolean(),
-    state: z.string(),
-    id: z.string(),
-  })
-)
+export type TenfastArticle = z.infer<typeof TenfastRentArticleSchema>
 
 export const TenfastTenantSchema = z.object({
   name: z.object({
@@ -127,13 +65,6 @@ export const TenfastRentalObjectByRentalObjectCodeResponseSchema = z.object({
 })
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
-export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
-export type TenfastInvoicesByOcrResponse = z.infer<
-  typeof TenfastInvoicesByOcrResponseSchema
->
-export type TenfastInvoicesByTenantIdResponse = z.infer<
-  typeof TenfastInvoicesByTenantIdResponseSchema
->
 export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
 export type TenfastTenantByContactCodeResponse = z.infer<
   typeof TenfastTenantByContactCodeResponseSchema

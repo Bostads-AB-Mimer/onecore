@@ -1,9 +1,15 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { leasing } from '@onecore/types'
+import { z } from 'zod'
 
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -294,5 +300,162 @@ export const routes = (router: KoaRouter) => {
       content: responseData,
       ...metadata,
     }
+  })
+
+  const CreateLeaseRentRowRequestSchema = z.object({
+    amount: z.number(),
+    article: z.string(),
+    label: z.string(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+  })
+
+  // TODO: Rename invoice rows to rent rows
+  /**
+   * @swagger
+   * /leases/{leaseId}/rent-rows:
+   *   post:
+   *     summary: Create a rent row for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               amount:
+   *                 type: number
+   *               article:
+   *                 type: string
+   *               label:
+   *                 type: string
+   *               from:
+   *                 type: string
+   *                 description: Optional start date.
+   *               to:
+   *                 type: string
+   *                 description: Optional end date.
+   *             required:
+   *               - amount
+   *               - article
+   *               - label
+   *     responses:
+   *       201:
+   *         description: Successfully created rent row.
+   *       400:
+   *         description: Invalid request body.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.post(
+    '/leases/:leaseId/rent-rows',
+    parseRequestBody(CreateLeaseRentRowRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const createRentRowResult = await leasingAdapter.createLeaseRentRow({
+        leaseId: ctx.params.leaseId,
+        rentRow: ctx.request.body,
+      })
+
+      if (!createRentRowResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: createRentRowResult.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: createRentRowResult.data,
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/rent-rows/{rentRowId}:
+   *   delete:
+   *     summary: Delete a rent row for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: rentRowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the rent row.
+   *     responses:
+   *       200:
+   *         description: Rent row deleted.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.delete('/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const deleteRentRowResult = await leasingAdapter.deleteLeaseRentRow({
+      leaseId: ctx.params.leaseId,
+      rentRowId: ctx.params.rentRowId,
+    })
+
+    if (!deleteRentRowResult.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: deleteRentRowResult.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: deleteRentRowResult.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /rent-articles:
+   *   get:
+   *     summary: List rent articles articles
+   *     tags:
+   *       - Lease service
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved rent articles
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('/rent-articles', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const res = await leasingAdapter.getRentArticles()
+
+    if (!res.ok) {
+      ctx.status = 500
+      ctx.body = { error: res.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(res.data, metadata)
   })
 }

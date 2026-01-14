@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { Lease, leasing } from '@onecore/types'
+import { Lease, leasing, RentArticle, schemas } from '@onecore/types'
 import z from 'zod'
 
 import { AdapterResult } from '../types'
@@ -98,6 +98,91 @@ export const createLease = async (
       { error: result.data.error },
       'Unknown error when creating lease'
     )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type CreateLeaseInvoiceRowRequestPayload = {
+  amount: number
+  article: string
+  label: string
+  from?: string
+  to?: string
+}
+
+export async function createLeaseRentRow(params: {
+  leaseId: string
+  rentRow: CreateLeaseInvoiceRowRequestPayload
+}): Promise<AdapterResult<null, 'unknown'>> {
+  const result = await axios(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows`,
+    {
+      method: 'POST',
+      data: {
+        ...params.rentRow,
+      },
+    }
+  )
+
+  if (result.status === 201) {
+    return { ok: true, data: result.data.content }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when creating rent row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteLeaseRentRow(params: {
+  leaseId: string
+  rentRowId: string
+}): Promise<AdapterResult<null, 'unknown'>> {
+  const result = await axios.delete(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows/${params.rentRowId}`
+  )
+
+  if (result.status === 200) {
+    return { ok: true, data: null }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when deleting rent row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getRentArticles(): Promise<
+  AdapterResult<RentArticle[], 'unknown' | 'schema-error'>
+> {
+  const result = await axios.get<{ content: unknown }>(
+    `${tenantsLeasesServiceUrl}/rent-articles`
+  )
+
+  if (result.status === 200) {
+    const parsed = z
+      .array(schemas.v1.RentArticleSchema)
+      .safeParse(result.data.content)
+    if (!parsed.success) {
+      logger.error(
+        { error: JSON.stringify(parsed.error) },
+        'Failed to parse articles'
+      )
+
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when fetching articles'
+    )
+
     return { ok: false, err: 'unknown' }
   }
 }

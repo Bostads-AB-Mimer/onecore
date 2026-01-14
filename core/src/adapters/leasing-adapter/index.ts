@@ -277,6 +277,9 @@ export {
   getLease,
   getLeasesByContactCode,
   getLeasesByRentalObjectCode,
+  createLeaseRentRow,
+  deleteLeaseRentRow,
+  getRentArticles,
 } from './leases'
 
 export {
