@@ -2,12 +2,11 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Lease } from '@onecore/types'
+import { Lease, schemas } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as factory from '../../../../test/factories'
-import { ArticleSchema } from '../../../adapters/leasing-adapter/leases'
 import { Lease as LeaseSchema } from '../schemas/lease'
 
 const app = new Koa()
@@ -293,21 +292,17 @@ describe('leases routes', () => {
       const articles = [
         {
           includeInContract: false,
-          _id: 'article-1',
+          id: 'article-1',
           title: 'Hyra bostad, konto 3011',
-          label: 'Hyra bostad, konto 3011',
           defaultLabel: 'Hyra bostad, konto 3011',
           code: 'HYRAB1',
           accountNr: '3011',
           vat: 0.25,
           description: 'Test description',
           category: 'article-category',
-          adjustmentType: 'none' as const,
-          archivedAt: null,
           createdAt: new Date('2025-04-01T06:43:01.728Z'),
           updatedAt: new Date('2025-04-02T06:43:01.728Z'),
           hyresvard: 'hyresvard-1',
-          type: 'HYRAB1',
         },
       ]
 
@@ -319,7 +314,9 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/articles')
 
       expect(res.status).toBe(200)
-      expect(() => ArticleSchema.array().parse(res.body.content)).not.toThrow()
+      expect(() =>
+        schemas.v1.RentArticleSchema.array().parse(res.body.content)
+      ).not.toThrow()
     })
 
     it('returns 500 on error', async () => {

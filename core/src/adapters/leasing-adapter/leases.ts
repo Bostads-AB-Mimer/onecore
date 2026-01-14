@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { Lease, leasing } from '@onecore/types'
+import { Lease, leasing, RentArticle, schemas } from '@onecore/types'
 import z from 'zod'
 
 import { AdapterResult } from '../types'
@@ -110,31 +110,6 @@ type CreateLeaseInvoiceRowRequestPayload = {
   to?: string
 }
 
-type CreateLeaseInvoiceRowResponse = CreateLeaseInvoiceRowRequestPayload & {
-  vat: number
-  _id: string
-}
-
-export const ArticleSchema = z.object({
-  _id: z.string(),
-  hyresvard: z.string(),
-  title: z.string(),
-  defaultLabel: z.string(),
-  code: z.string(),
-  accountNr: z.string().nullable().optional(),
-  vat: z.number().optional(),
-  description: z.string().optional(),
-  category: z.string().optional(),
-  includeInContract: z.boolean(),
-  adjustmentType: z.string().optional(),
-  archivedAt: z.coerce.date().nullable().optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date().nullable().optional(),
-})
-
-// TODO: Name and put in onecore types?
-export type Article = z.infer<typeof ArticleSchema>
-
 export async function createLeaseRentRow(params: {
   leaseId: string
   rentRow: CreateLeaseInvoiceRowRequestPayload
@@ -182,14 +157,16 @@ export async function deleteLeaseRentRow(params: {
 }
 
 export async function getArticles(): Promise<
-  AdapterResult<Article[], 'unknown' | 'schema-error'>
+  AdapterResult<RentArticle[], 'unknown' | 'schema-error'>
 > {
   const result = await axios.get<{ content: unknown }>(
     `${tenantsLeasesServiceUrl}/articles`
   )
 
   if (result.status === 200) {
-    const parsed = z.array(ArticleSchema).safeParse(result.data.content)
+    const parsed = z
+      .array(schemas.v1.RentArticleSchema)
+      .safeParse(result.data.content)
     if (!parsed.success) {
       logger.error(
         { error: JSON.stringify(parsed.error) },
