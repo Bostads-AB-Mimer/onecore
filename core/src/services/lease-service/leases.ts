@@ -449,7 +449,6 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const res = await leasingAdapter.getRentArticles()
 
-    console.log('res', res)
     if (!res.ok) {
       ctx.status = 500
       ctx.body = { error: res.err, ...metadata }
@@ -457,7 +456,6 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    console.log('makeSuccessResponseBody', makeSuccessResponseBody)
     ctx.body = makeSuccessResponseBody(res.data, metadata)
   })
 }
