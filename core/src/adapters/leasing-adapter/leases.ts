@@ -115,7 +115,7 @@ export async function createLeaseRentRow(params: {
   rentRow: CreateLeaseInvoiceRowRequestPayload
 }): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios(
-    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/rent-rows`,
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows`,
     {
       method: 'POST',
       data: {
@@ -141,7 +141,7 @@ export async function deleteLeaseRentRow(params: {
   rentRowId: string
 }): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios.delete(
-    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/rent-rows/${params.rentRowId}`
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows/${params.rentRowId}`
   )
 
   if (result.status === 200) {

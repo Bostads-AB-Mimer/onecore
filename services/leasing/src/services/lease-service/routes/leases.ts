@@ -605,15 +605,15 @@ export const routes = (router: KoaRouter) => {
   router.delete('(.*)/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const deleteRentRow = await tenfastAdapter.deleteLeaseInvoiceRow({
+    const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: ctx.params.leaseId,
-      invoiceRowId: ctx.params.invoiceRowId,
+      invoiceRowId: ctx.params.rentRowId,
     })
 
-    if (!deleteRentRow.ok) {
+    if (!deleteLeaseInvoiceRow.ok) {
       ctx.status = 500
       ctx.body = {
-        error: deleteRentRow.err,
+        error: deleteLeaseInvoiceRow.err,
         ...metadata,
       }
       return
