@@ -143,7 +143,8 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const { contactCode, lastDebitDate, desiredMoveDate } = bodyValidation.data
+      const { contactCode, lastDebitDate, desiredMoveDate } =
+        bodyValidation.data
 
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
