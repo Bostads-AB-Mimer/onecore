@@ -58,7 +58,10 @@ export const PropertyDetailTabs = ({
       </TabsContent>
 
       <TabsContent value="documents">
-        <DocumentsTab contextType={ContextType.Property} id={propertyDetail.id} />
+        <DocumentsTab
+          contextType={ContextType.Property}
+          id={propertyDetail.id}
+        />
       </TabsContent>
 
       <TabsContent value="planning">

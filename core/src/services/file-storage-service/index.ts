@@ -80,8 +80,9 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate query parameters
-    const queryResult =
-      fileStorageSchemas.ListFilesQuerySchema.safeParse(ctx.query)
+    const queryResult = fileStorageSchemas.ListFilesQuerySchema.safeParse(
+      ctx.query
+    )
     if (!queryResult.success) {
       ctx.status = 400
       ctx.body = {
@@ -136,8 +137,9 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate request body
-    const bodyResult =
-      fileStorageSchemas.FileUploadRequestSchema.safeParse(ctx.request.body)
+    const bodyResult = fileStorageSchemas.FileUploadRequestSchema.safeParse(
+      ctx.request.body
+    )
     if (!bodyResult.success) {
       ctx.status = 400
       ctx.body = {
@@ -207,8 +209,9 @@ export const routes = (router: KoaRouter) => {
     const { fileName } = ctx.params
 
     // Validate query parameters
-    const queryResult =
-      fileStorageSchemas.FileUrlQuerySchema.safeParse(ctx.query)
+    const queryResult = fileStorageSchemas.FileUrlQuerySchema.safeParse(
+      ctx.query
+    )
     if (!queryResult.success) {
       ctx.status = 400
       ctx.body = {

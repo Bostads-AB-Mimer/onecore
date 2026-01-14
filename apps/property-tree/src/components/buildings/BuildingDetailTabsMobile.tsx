@@ -70,7 +70,9 @@ export const BuildingDetailTabsMobile = ({
       disabled: true,
       icon: FileText,
       title: 'Dokument',
-      content: <DocumentsTab contextType={ContextType.Building} id={building.id} />,
+      content: (
+        <DocumentsTab contextType={ContextType.Building} id={building.id} />
+      ),
     },
   ].filter(Boolean) as MobileAccordionItem[]
 

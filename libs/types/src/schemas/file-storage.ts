@@ -16,7 +16,10 @@ export const FileListItemSchema = z.object({
  * Aligned with MinIO's BucketItemStat type (after JSON serialization)
  */
 export const FileMetadataSchema = FileListItemSchema.extend({
-  metaData: z.record(z.string()).optional().describe('Custom metadata key-value pairs'),
+  metaData: z
+    .record(z.string())
+    .optional()
+    .describe('Custom metadata key-value pairs'),
 })
 
 /**
@@ -69,7 +72,12 @@ export const ListFilesQuerySchema = z.object({
  * Query parameters for get file URL endpoint
  */
 export const FileUrlQuerySchema = z.object({
-  expirySeconds: z.coerce.number().int().positive().default(3600).describe('URL expiry time'),
+  expirySeconds: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3600)
+    .describe('URL expiry time'),
 })
 
 // Export TypeScript types
