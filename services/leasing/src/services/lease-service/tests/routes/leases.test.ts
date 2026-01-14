@@ -300,18 +300,18 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
     expect(createInvoiceRowSpy).toHaveBeenCalled()
   })
 
-  it('creates and returns invoice row', async () => {
+  it('creates and returns null', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
     const createInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
-      .mockResolvedValueOnce({ ok: true, data: invoiceRow })
+      .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows')
       .send({ ...invoiceRow, vat: undefined })
 
     expect(result.status).toBe(201)
-    expect(result.body.content).toEqual(invoiceRow)
+    expect(result.body.content).toEqual(null)
     expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
     expect(createInvoiceRowSpy).toHaveBeenCalledWith({
       leaseId: '123',
@@ -336,7 +336,7 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({
         ok: true,
-        data: { ...invoiceRow, vat: 0.25, _id: '1' },
+        data: null,
       })
 
     const result = await request(app.callback())
