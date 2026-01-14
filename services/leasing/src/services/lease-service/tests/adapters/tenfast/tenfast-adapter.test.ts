@@ -900,7 +900,7 @@ describe(tenfastAdapter.createLease, () => {
 })
 
 describe(tenfastAdapter.createLeaseInvoiceRow, () => {
-  it('creates and returns invoice row', async () => {
+  it('creates and returns null', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
 
       ; (request as jest.Mock).mockResolvedValue({
@@ -913,7 +913,7 @@ describe(tenfastAdapter.createLeaseInvoiceRow, () => {
       invoiceRow: invoiceRow,
     })
 
-    expect(result).toEqual({ ok: true, data: invoiceRow })
+    expect(result).toEqual({ ok: true, data: null })
   })
 
   it('returns ok false on error', async () => {

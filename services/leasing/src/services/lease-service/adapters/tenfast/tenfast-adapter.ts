@@ -629,7 +629,7 @@ export async function getLeaseByLeaseId(
 export async function createLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRow: Omit<TenfastInvoiceRow, '_id'>
-}): Promise<AdapterResult<TenfastInvoiceRow, 'unknown'>> {
+}): Promise<AdapterResult<null, 'unknown'>> {
   try {
     const res = await tenfastApi.request({
       method: 'patch',
@@ -642,7 +642,7 @@ export async function createLeaseInvoiceRow(params: {
     })
 
     if (res.status === 200) {
-      return { ok: true, data: res.data }
+      return { ok: true, data: null }
     } else {
       throw { status: res.status, data: res.data }
     }

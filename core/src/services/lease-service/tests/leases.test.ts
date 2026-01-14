@@ -217,7 +217,7 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
         .mockResolvedValue({
           ok: true,
-          data: { ...minimalRentRow, vat: 0.25, _id: 'row-id' },
+          data: null,
         })
 
       const res = await request(app.callback())
@@ -229,11 +229,7 @@ describe('leases routes', () => {
         leaseId: '1337',
         rentRow: minimalRentRow,
       })
-      expect(res.body.content).toEqual({
-        ...minimalRentRow,
-        vat: 0.25,
-        _id: 'row-id',
-      })
+      expect(res.body.content).toEqual(null)
     })
 
     it('creates rent row', async () => {
@@ -241,12 +237,7 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
         .mockResolvedValue({
           ok: true,
-          data: {
-            ...rentRow,
-            from: rentRow.from?.toISOString(),
-            vat: 0.25,
-            _id: 'row-id',
-          },
+          data: null,
         })
 
       const res = await request(app.callback())
@@ -258,12 +249,7 @@ describe('leases routes', () => {
         leaseId: '1337',
         rentRow: { ...rentRow, from: new Date(rentRow.from) },
       })
-      expect(res.body.content).toEqual({
-        ...rentRow,
-        from: rentRow.from?.toISOString(),
-        vat: 0.25,
-        _id: 'row-id',
-      })
+      expect(res.body.content).toEqual(null)
     })
   })
 

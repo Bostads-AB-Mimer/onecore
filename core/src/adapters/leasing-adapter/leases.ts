@@ -138,7 +138,7 @@ export type Article = z.infer<typeof ArticleSchema>
 export async function createLeaseRentRow(params: {
   leaseId: string
   rentRow: CreateLeaseInvoiceRowRequestPayload
-}): Promise<AdapterResult<CreateLeaseInvoiceRowResponse, 'unknown'>> {
+}): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios(
     `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/rent-rows`,
     {
