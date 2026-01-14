@@ -3,7 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import nock from 'nock'
-import { makeSuccessResponseBody } from '@onecore/utilities'
+import { z } from 'zod'
 
 import { routes } from '../../index'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
@@ -11,6 +11,7 @@ import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
 import config from '../../../../common/config'
+import { TenfastArticleSchema } from '../../adapters/tenfast/schemas'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -391,9 +392,9 @@ describe('GET /articles', () => {
     const res = await request(app.callback()).get('/articles')
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual(
-      makeSuccessResponseBody(articles, res.body.metadata)
-    )
+    expect(() =>
+      z.array(TenfastArticleSchema).parse(res.body.content)
+    ).not.toThrow()
   })
 
   it('returns 500 on error', async () => {

@@ -34,7 +34,7 @@ export const TenfastArticleSchema = z.object({
   adjustmentType: z.string().optional(),
   archivedAt: z.coerce.date().nullable().optional(),
   createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  updatedAt: z.coerce.date().nullable().optional(),
 })
 
 export type TenfastArticle = z.infer<typeof TenfastArticleSchema>

@@ -115,24 +115,25 @@ type CreateLeaseInvoiceRowResponse = CreateLeaseInvoiceRowRequestPayload & {
   _id: string
 }
 
-export type Article = {
-  includeInContract: boolean
-  _id: string
-  label: string
-  type: string
-  accountNr?: string | null
-  createdAt: Date
-  hyresvard: string
-  code: string
-  title: string
-  defaultLabel: string
-  vat?: number
-  description?: string
-  category?: string
-  adjustmentType: 'negotiation' | 'custom' | 'index' | 'none'
-  archivedAt?: Date | null
-  updatedAt: Date
-}
+export const ArticleSchema = z.object({
+  _id: z.string(),
+  hyresvard: z.string(),
+  title: z.string(),
+  defaultLabel: z.string(),
+  code: z.string(),
+  accountNr: z.string().nullable().optional(),
+  vat: z.number().optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  includeInContract: z.boolean(),
+  adjustmentType: z.string().optional(),
+  archivedAt: z.coerce.date().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date().nullable().optional(),
+})
+
+// TODO: Name and put in onecore types?
+export type Article = z.infer<typeof ArticleSchema>
 
 export async function createLeaseRentRow(params: {
   leaseId: string
@@ -181,26 +182,24 @@ export async function deleteLeaseRentRow(params: {
 }
 
 export async function getArticles(): Promise<
-  AdapterResult<Article[], 'unknown'>
+  AdapterResult<Article[], 'unknown' | 'schema-error'>
 > {
-  type ApiArticle = Omit<Article, 'createdAt' | 'updatedAt' | 'archivedAt'> & {
-    createdAt: string
-    updatedAt: string
-    archivedAt?: string | null
-  }
-
-  const result = await axios.get<{ content: ApiArticle[] }>(
+  const result = await axios.get<{ content: unknown }>(
     `${tenantsLeasesServiceUrl}/articles`
   )
 
   if (result.status === 200) {
-    const articles: Article[] = result.data.content.map((article) => ({
-      ...article,
-      createdAt: new Date(article.createdAt),
-      updatedAt: new Date(article.updatedAt),
-      archivedAt: article.archivedAt ? new Date(article.archivedAt) : null,
-    }))
-    return { ok: true, data: articles }
+    const parsed = z.array(ArticleSchema).safeParse(result.data.content)
+    if (!parsed.success) {
+      logger.error(
+        { error: JSON.stringify(parsed.error) },
+        'Failed to parse articles'
+      )
+
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data }
   } else {
     logger.error(
       { error: JSON.stringify(result.data) },

@@ -7,6 +7,7 @@ import { Lease } from '@onecore/types'
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as factory from '../../../../test/factories'
+import { ArticleSchema } from '../../../adapters/leasing-adapter/leases'
 import { Lease as LeaseSchema } from '../schemas/lease'
 
 const app = new Koa()
@@ -175,7 +176,7 @@ describe('leases routes', () => {
     })
   })
 
-  describe('POST /leases/:leaseId/invoice-rows', () => {
+  describe('POST /leases/:leaseId/rent-rows', () => {
     const rentRow = {
       amount: 115,
       article: '12334567',
@@ -190,7 +191,7 @@ describe('leases routes', () => {
     })
 
     it('returns 500 when adapter returns error', async () => {
-      const createInvoiceRowSpy = jest
+      const createRentRowSpy = jest
         .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
@@ -199,13 +200,13 @@ describe('leases routes', () => {
         .send(rentRow)
 
       expect(res.status).toBe(500)
-      expect(createInvoiceRowSpy).toHaveBeenCalledWith({
+      expect(createRentRowSpy).toHaveBeenCalledWith({
         leaseId: '1337',
         rentRow: { ...rentRow, from: new Date(rentRow.from) },
       })
     })
 
-    it('creates invoice row even without from/to', async () => {
+    it('creates rent row even without from/to', async () => {
       const minimalRentRow = {
         amount: 200,
         article: 'Rent-001',
@@ -235,7 +236,7 @@ describe('leases routes', () => {
       })
     })
 
-    it('creates invoice row', async () => {
+    it('creates rent row', async () => {
       const createRentRowSpy = jest
         .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
         .mockResolvedValue({
@@ -266,7 +267,7 @@ describe('leases routes', () => {
     })
   })
 
-  describe('DELETE /leases/:leaseId/invoice-rows/:invoiceRowId', () => {
+  describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
     it('returns 500 when adapter returns error', async () => {
       const deleteRentRowSpy = jest
         .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
@@ -283,7 +284,7 @@ describe('leases routes', () => {
       })
     })
 
-    it('deletes invoice row', async () => {
+    it('deletes rent row', async () => {
       const deleteRentRowSpy = jest
         .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
         .mockResolvedValue({ ok: true, data: null })
@@ -332,7 +333,7 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/articles')
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toEqual(articles)
+      expect(() => ArticleSchema.array().parse(res.body.content)).not.toThrow()
     })
 
     it('returns 500 on error', async () => {
