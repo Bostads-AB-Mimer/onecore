@@ -4,6 +4,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+import { buildQueryKey } from '@/components/hooks/componentLibraryQueryKeys'
 import type { EntityType, EntityData } from '@/services/types'
 
 /**
@@ -66,24 +67,4 @@ export function useComponentEntity<T extends EntityType>(
     enabled: options?.enabled !== false,
     ...options,
   })
-}
-
-function buildQueryKey(
-  entityType: EntityType,
-  parentId?: string,
-  search?: string
-): (string | undefined)[] {
-  const roots = {
-    category: 'component-categories',
-    type: 'component-types',
-    subtype: 'component-subtypes',
-    model: 'component-models',
-    instance: 'component-instances',
-  }
-
-  if (entityType === 'category') {
-    return [roots[entityType]]
-  }
-
-  return [roots[entityType], parentId, search]
 }
