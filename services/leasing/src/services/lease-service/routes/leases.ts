@@ -14,6 +14,7 @@ import {
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
+import { mapToOnecoreRentArticle } from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { toYearMonthString } from '../adapters/tenfast/schemas'
@@ -645,7 +646,10 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = makeSuccessResponseBody(articles.data, metadata)
+    ctx.body = makeSuccessResponseBody(
+      articles.data.map(mapToOnecoreRentArticle),
+      metadata
+    )
   })
 }
 
