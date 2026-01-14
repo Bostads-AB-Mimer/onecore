@@ -3,9 +3,7 @@ import { Pagination } from '@src/adapters'
 import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
-import { DbContact, DbContactRow, DbPhoneNumber } from './db-model'
-import { toContact } from './transform'
-import { Contact } from '../../domain'
+import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
 const NATIONAL_ID_NUMBER = 'cmctc.persorgnr'
@@ -59,7 +57,7 @@ const trimInCriteria = (
  *
  * TRANSLATE can of course only be told what to replace, not what to
  * keep, so we'll have to list every single character we want to remove
- * and replace that with a space. Because TRANSLATE also needs a
+ * and replace that with a whitespace. Because TRANSLATE also needs a
  * counterpart for each character, we need an empty string of the same
  * length as the character list-string, so we generate that with
  * REPLICATE.
@@ -72,9 +70,10 @@ const trimInCriteria = (
  *
  * FIXME:
  * If this ends up surviving itself, we may want to consider creating
- * a shadow table of `cmtel` in a ONECore database and periodically
- * re-import and clean phonenumbers. Or any equivalent cache/lookup table
- * that removes the burden from the database.
+ * a shadow table of `cmtel` with cleaned phone numbers in a ONECore
+ * database and periodically re-import and clean the data.
+ * Or any equivalent cache/lookup table that removes the burden from the
+ * database.
  */
 const PHONE_NUMBER_TRANSFORMATION_SQL = `
 REPLACE(
@@ -86,41 +85,6 @@ REPLACE(
   ' ',
   ''
 )`
-
-export const contactsPageQuery = (db: knex.Knex) => {
-  const query = db.with('page', (b) => b.select('keycmobj').from('cmctc'))
-}
-
-/**
- * Constructs a base query for selecting rows from `cmctc` in the
- * shape of `DbContact`.
- */
-export const contactsBaseQuery = (db: knex.Knex) => {
-  const query = db
-    .from('cmctc')
-    .select(
-      'cmctc.cmctckod as contactCode',
-      'cmctc.fnamn as firstName',
-      'cmctc.enamn as lastName',
-      'cmctc.cmctcben as fullName',
-      'cmctc.persorgnr as nationalRegistrationNumber',
-      'cmctc.birthdate as birthDate',
-      'cmadr.adress1 as street',
-      'cmadr.adress3 as postalCode',
-      'cmadr.adress4 as city',
-      'cmeml.cmemlben as emailAddress',
-      'cmctc.keycmobj as objectKey',
-      'cmctc.keycmctc as contactKey',
-      'cmctc.lagsokt as protectedIdentity',
-      'cmctc.utslag as specialAttention'
-    )
-    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
-    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
-    .whereNot('cmctc.cmctckod', null)
-    .where('cmadr.tdate', null) //only get active address
-
-  return query
-}
 
 /**
  * Constructs a base query for selecting rows from `cmtel`
@@ -137,17 +101,31 @@ const phoneNumbersQuery = (db: knex.Knex) =>
     )
 
 /**
- * Constructs a base query for selecting rows from `cmeml`
- * in the shape of DbEmailAddress
+ * Finds contact object keys for contacts that have the given
+ * phone number.
+ *
+ * Because of the data-quality of `cmtel` this is slower than
+ * a hungover badger on easter day, as it requires
+ * text-manipulation `cmtelben` for each and every row of the
+ * table.
+ *
+ * @see PHONE_NUMBER_TRANSFORMATION_SQL
+ *
+ * @param db - The Knex database connection to use
+ * @param phoneNumber - The phone number to search for
+ * @returns A promise that resolves to an array of ObjectKeys
  */
-const emailAddressesQuery = (db: knex.Knex) =>
-  db
-    .from('cmeml')
-    .select(
-      'keycmobj as ownerObjectKey',
-      'cmemlben as emailAddress',
-      'main as isPrimary'
+export const contactObjectKeysForPhoneNumber = async (
+  db: knex.Knex,
+  phoneNumber: string
+): Promise<ObjectKey[]> => {
+  return (
+    await phoneNumbersQuery(db).whereRaw(
+      `${PHONE_NUMBER_TRANSFORMATION_SQL} = ?`,
+      [phoneNumber]
     )
+  ).map(({ ownerObjectKey }) => ownerObjectKey)
+}
 
 /**
  * Fluent query builder for contacts, tailored to the requirements
@@ -510,50 +488,3 @@ export const contactsQuery = () => {
     },
   }
 }
-
-/**
- * Finds contact object keys for contacts that have the given
- * phone number.
- *
- * Because of the data-quality of `cmtel` this is slower than
- * a hungover badger on easter day, as it requires
- * text-manipulation `cmtelben` for each and every row of the
- * table.
- *
- * @see PHONE_NUMBER_TRANSFORMATION_SQL
- *
- * @param db - The Knex database connection to use
- * @param phoneNumber - The phone number to search for
- * @returns A promise that resolves to an array of ObjectKeys
- */
-export const contactObjectKeysForPhoneNumber = async (
-  db: knex.Knex,
-  phoneNumber: string
-): Promise<ObjectKey[]> => {
-  return (
-    await phoneNumbersQuery(db).whereRaw(
-      `${PHONE_NUMBER_TRANSFORMATION_SQL} = ?`,
-      [phoneNumber]
-    )
-  ).map(({ ownerObjectKey }) => ownerObjectKey)
-}
-
-export const phoneNumbersForContact = async (
-  db: knex.Knex,
-  objectKey: string
-): Promise<DbPhoneNumber[]> =>
-  phoneNumbersQuery(db).where({ keycmobj: objectKey })
-
-export const phoneNumbersForContacts = async (
-  db: knex.Knex,
-  ownerObjectKeys: string[]
-) =>
-  phoneNumbersQuery(db).whereRaw(...trimInCriteria('keycmobj', ownerObjectKeys))
-
-export const emailAddressesForContacts = async (
-  db: knex.Knex,
-  ownerObjectKeys: string[]
-) =>
-  emailAddressesQuery(db).whereRaw(
-    ...trimInCriteria('keycmobj', ownerObjectKeys)
-  )
