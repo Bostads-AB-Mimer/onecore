@@ -200,18 +200,16 @@ export const componentLibraryService = {
     subtypeId?: string,
     options?: { page?: number; limit?: number; search?: string }
   ): Promise<ComponentModel[]> {
+    const query: Record<string, string | number | undefined> = {}
+    if (subtypeId) query.subtypeId = subtypeId
+    if (options?.page) query.page = options.page
+    if (options?.limit) query.limit = options.limit
+    if (options?.search && options.search.trim().length >= 2) {
+      query.modelName = options.search.trim()
+    }
+
     const { data, error } = await GET('/component-models', {
-      params: {
-        query: {
-          subtypeId,
-          page: options?.page,
-          limit: options?.limit,
-          modelName:
-            options?.search && options.search.trim().length >= 2
-              ? options.search.trim()
-              : undefined,
-        },
-      },
+      params: Object.keys(query).length > 0 ? { query } : undefined,
     })
     if (error) throw error
     return (data?.content || []) as ComponentModel[]
