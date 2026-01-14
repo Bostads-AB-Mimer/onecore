@@ -28,7 +28,7 @@ app.on('error', (err) => {
 
 app.use(errorHandler())
 
-app.use(bodyParser())
+app.use(bodyParser({ jsonLimit: '50mb' }))
 
 app.use(
   swaggerMiddleware({
