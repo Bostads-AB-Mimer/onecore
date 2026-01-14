@@ -190,13 +190,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  console.log(
-                    'Images button clicked, componentId:',
-                    component.id
-                  )
-                  setShowGallery(true)
-                }}
+                onClick={() => setShowGallery(true)}
                 className="ml-auto"
                 title="Bilder"
               >

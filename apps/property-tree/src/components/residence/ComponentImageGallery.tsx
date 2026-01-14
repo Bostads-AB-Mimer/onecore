@@ -55,18 +55,6 @@ export function ComponentImageGallery({
 
   const currentImage = images?.[currentIndex]
 
-  // Debug logging
-  useEffect(() => {
-    if (!isOpen) return
-    console.log('ComponentImageGallery render:', {
-      componentId,
-      isOpen,
-      imagesCount: images?.length,
-      isLoading,
-      error,
-    })
-  }, [componentId, isOpen, images?.length, isLoading, error])
-
   // Reset to first image when gallery opens or images change
   useEffect(() => {
     if (isOpen && images && images.length > 0) {
