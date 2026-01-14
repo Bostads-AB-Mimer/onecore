@@ -150,15 +150,19 @@ export const InstanceDetailsDialog = ({
     )
   }
 
-  const handleDelete = (fileId: string) => {
-    if (deleteConfirm === fileId) {
-      deleteImage(fileId, {
-        onSuccess: () => {
-          setDeleteConfirm(null)
-        },
-      })
+  const handleDelete = (documentId: string, fileId: string) => {
+    if (deleteConfirm === documentId) {
+      // Pass both documentId and fileId for proper cleanup
+      deleteImage(
+        { documentId, fileId },
+        {
+          onSuccess: () => {
+            setDeleteConfirm(null)
+          },
+        }
+      )
     } else {
-      setDeleteConfirm(fileId)
+      setDeleteConfirm(documentId)
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
   }
@@ -531,20 +535,20 @@ export const InstanceDetailsDialog = ({
                             </Button>
                             <Button
                               variant={
-                                deleteConfirm === doc.fileId
+                                deleteConfirm === doc.id
                                   ? 'destructive'
                                   : 'outline'
                               }
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleDelete(doc.fileId)
+                                handleDelete(doc.id, doc.fileId)
                               }}
                               disabled={isDeleting}
                               title="Ta bort"
                             >
                               <Trash2 className="h-4 w-4" />
-                              {deleteConfirm === doc.fileId && (
+                              {deleteConfirm === doc.id && (
                                 <span className="ml-1 text-xs">Bekräfta?</span>
                               )}
                             </Button>

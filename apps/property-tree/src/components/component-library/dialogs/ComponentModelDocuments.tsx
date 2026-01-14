@@ -153,17 +153,20 @@ export function ComponentModelDocuments({
     )
   }
 
-  const handleDelete = (fileId: string) => {
-    if (deleteConfirm === fileId) {
-      // Actually delete
-      deleteDocument(fileId, {
-        onSuccess: () => {
-          setDeleteConfirm(null)
-        },
-      })
+  const handleDelete = (documentId: string, fileId: string) => {
+    if (deleteConfirm === documentId) {
+      // Actually delete - pass both documentId and fileId for proper cleanup
+      deleteDocument(
+        { documentId, fileId },
+        {
+          onSuccess: () => {
+            setDeleteConfirm(null)
+          },
+        }
+      )
     } else {
       // Show confirmation
-      setDeleteConfirm(fileId)
+      setDeleteConfirm(documentId)
       // Auto-cancel confirmation after 3 seconds
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
@@ -461,7 +464,7 @@ export function ComponentModelDocuments({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDelete(doc.id)
+                          handleDelete(doc.id, doc.fileId)
                         }}
                         disabled={isDeleting}
                         title="Ta bort"
