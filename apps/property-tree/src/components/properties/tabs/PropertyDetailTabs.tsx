@@ -1,6 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { PropertyInfoTab } from './PropertyInfoTab'
-import { PropertyDocumentsTab } from './PropertyDocumentsTab'
 import { PropertyPlanningTab } from './PropertyPlanningTab'
 import { PropertyBuildingsTab } from './PropertyBuildingsTab'
 import { PropertyApartmentsTab } from './PropertyApartmentsTab'
@@ -8,6 +7,8 @@ import { PropertyStatisticsTab } from './PropertyStatisticsTab'
 import { PropertyMapTab } from './PropertyMapTab'
 //import { PropertyMaintenanceUnitsTab } from './PropertyMaintenanceUnitsTab'
 import type { PropertyDetail } from '@/types/api'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
+import { ContextType } from '@/types/ui'
 
 interface PropertyDetailTabsProps {
   propertyDetail: PropertyDetail
@@ -57,7 +58,7 @@ export const PropertyDetailTabs = ({
       </TabsContent>
 
       <TabsContent value="documents">
-        <PropertyDocumentsTab />
+        <DocumentsTab contextType={ContextType.Property} />
       </TabsContent>
 
       <TabsContent value="planning">

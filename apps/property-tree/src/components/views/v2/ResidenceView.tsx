@@ -17,13 +17,11 @@ import {
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
+import { ContextType } from '@/types/ui'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()

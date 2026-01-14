@@ -1,8 +1,5 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 import { TenantNotes } from '@/components/tenants/TenantNotes'
@@ -16,6 +13,7 @@ import { StickyNote } from 'lucide-react'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { TenantLedger } from '../TenantLedger'
+import { ContextType } from '@/types/ui'
 
 interface TenantDetailTabsContentProps {
   leases: Lease[]
