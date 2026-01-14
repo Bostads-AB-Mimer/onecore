@@ -1,21 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fileStorageService } from '@/services/api/core'
 import { ContextType } from '@/types/ui'
-
-// Helper to convert File to base64
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => {
-      // Extract base64 data (remove "data:mime/type;base64," prefix)
-      const result = reader.result as string
-      const base64 = result.split(',')[1]
-      resolve(base64)
-    }
-    reader.onerror = (error) => reject(error)
-  })
-}
+import { fileToBase64 } from '@/utils/file'
 
 // Helper to extract filename from full path
 const extractFileName = (fullPath: string, prefix: string): string => {
