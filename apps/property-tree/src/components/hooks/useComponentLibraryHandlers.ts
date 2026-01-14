@@ -1,5 +1,9 @@
 import { useComponentEntityMutation } from './useComponentEntityMutation'
 import type {
+  UseDialogStateReturn,
+  UseSimpleDialogStateReturn,
+} from './useDialogState'
+import type {
   ComponentCategory,
   ComponentType,
   ComponentSubtype,
@@ -39,37 +43,31 @@ export type ViewState =
       categoryName: string
     }
 
-// Parameters interface
+// Parameters interface - uses types from useDialogState
 interface UseComponentLibraryHandlersParams {
-  // State
   viewState: ViewState
   navigateTo: (state: ViewState) => void
-  setInstanceDetailsDialogState: (state: {
-    isOpen: boolean
-    instance?: Component
-  }) => void
-
-  // Dialog controls from inline useDialogState helper
-  categoryDialog: {
-    openCreate: (defaultValues?: Record<string, any>) => void
-    openEdit: (entity: ComponentCategory) => void
-  }
-  typeDialog: {
-    openCreate: (defaultValues?: Record<string, any>) => void
-    openEdit: (entity: ComponentType) => void
-  }
-  subtypeDialog: {
-    openCreate: (defaultValues?: Record<string, any>) => void
-    openEdit: (entity: ComponentSubtype) => void
-  }
-  modelDialog: {
-    openCreate: (defaultValues?: Record<string, any>) => void
-    openEdit: (entity: ComponentModel) => void
-  }
-  instanceDialog: {
-    openCreate: (defaultValues?: Record<string, any>) => void
-    openEdit: (entity: Component) => void
-  }
+  instanceDetailsDialog: UseSimpleDialogStateReturn<Component>
+  categoryDialog: Pick<
+    UseDialogStateReturn<ComponentCategory>,
+    'openCreate' | 'openEdit'
+  >
+  typeDialog: Pick<
+    UseDialogStateReturn<ComponentType>,
+    'openCreate' | 'openEdit'
+  >
+  subtypeDialog: Pick<
+    UseDialogStateReturn<ComponentSubtype>,
+    'openCreate' | 'openEdit'
+  >
+  modelDialog: Pick<
+    UseDialogStateReturn<ComponentModel>,
+    'openCreate' | 'openEdit'
+  >
+  instanceDialog: Pick<
+    UseDialogStateReturn<Component>,
+    'openCreate' | 'openEdit'
+  >
 }
 
 // Return type interface
@@ -104,7 +102,6 @@ interface ComponentLibraryHandlers {
   handleEditInstance: (instance: Component) => void
   handleDeleteInstance: (instance: Component) => Promise<void>
   handleViewHistory: (instance: Component) => void
-  handleCloseInstanceDetailsDialog: () => void
 }
 
 export const useComponentLibraryHandlers = (
@@ -113,7 +110,7 @@ export const useComponentLibraryHandlers = (
   const {
     viewState,
     navigateTo,
-    setInstanceDetailsDialogState,
+    instanceDetailsDialog,
     categoryDialog,
     typeDialog,
     subtypeDialog,
@@ -315,17 +312,7 @@ export const useComponentLibraryHandlers = (
   }
 
   const handleViewHistory = (instance: Component) => {
-    setInstanceDetailsDialogState({
-      isOpen: true,
-      instance,
-    })
-  }
-
-  const handleCloseInstanceDetailsDialog = () => {
-    setInstanceDetailsDialogState({
-      isOpen: false,
-      instance: undefined,
-    })
+    instanceDetailsDialog.open(instance)
   }
 
   return {
@@ -359,6 +346,5 @@ export const useComponentLibraryHandlers = (
     handleEditInstance,
     handleDeleteInstance,
     handleViewHistory,
-    handleCloseInstanceDetailsDialog,
   }
 }
