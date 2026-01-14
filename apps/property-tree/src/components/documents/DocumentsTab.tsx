@@ -1,65 +1,37 @@
 import { TabLayout } from '@/components/ui/TabLayout'
-import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/v2/Card'
+import { Card } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/v2/Label'
-import {
-  FileText,
-  Upload,
-  Download,
-  Calendar,
-  User,
-  Trash2,
-} from 'lucide-react'
+import { FileText, Upload, Download, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/hooks/useToast'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { ContextType } from '@/types/ui'
+import { useDocuments } from '@/components/hooks/useDocuments'
 
-interface Document {
-  id: string
-  name: string
-  type: string
-  size: string
-  uploadedBy: string
-  uploadedDate: string
-  category: string
+interface DocumentsTabProps {
+  contextType: ContextType
+  id: string | undefined
 }
 
-// TODO: Fetch documents from API
-const mockDocuments: Document[] = [
-  {
-    id: '1',
-    name: 'Teknisk_beskrivning_2024.pdf',
-    type: 'PDF',
-    size: '3.2 MB',
-    uploadedBy: 'Teknisk avdelning',
-    uploadedDate: '2024-02-15',
-    category: 'Teknisk',
-  },
-  {
-    id: '2',
-    name: 'Besiktningsprotokoll_Ventilation.pdf',
-    type: 'PDF',
-    size: '1.8 MB',
-    uploadedBy: 'Erik Nilsson',
-    uploadedDate: '2024-01-28',
-    category: 'Besiktning',
-  },
-  {
-    id: '3',
-    name: 'Underhållsplan_2024.xlsx',
-    type: 'Excel',
-    size: '0.9 MB',
-    uploadedBy: 'Maria Svensson',
-    uploadedDate: '2024-01-10',
-    category: 'Underhåll',
-  },
-]
+// Helper to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
-export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
-  const [documents, setDocuments] = useState<Document[]>(mockDocuments)
-  const [isUploading, setIsUploading] = useState(false)
+export const DocumentsTab = ({ contextType, id }: DocumentsTabProps) => {
+  const {
+    documents,
+    isLoading,
+    uploadFile,
+    isUploading,
+    deleteFile,
+    isDeleting,
+    getDownloadUrl,
+  } = useDocuments(contextType, id)
+
   const { toast } = useToast()
   const isMobile = useIsMobile()
 
@@ -69,52 +41,85 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    setIsUploading(true)
+    try {
+      uploadFile(file, {
+        onSuccess: () => {
+          toast({
+            title: 'Dokument uppladdat',
+            description: `${file.name} har laddats upp framgångsrikt.`,
+          })
+          // Clear input
+          event.target.value = ''
+        },
+        onError: (error) => {
+          toast({
+            title: 'Uppladdning misslyckades',
+            description:
+              error instanceof Error ? error.message : 'Ett fel uppstod',
+            variant: 'destructive',
+          })
+        },
+      })
+    } catch (error) {
+      toast({
+        title: 'Uppladdning misslyckades',
+        description: error instanceof Error ? error.message : 'Ett fel uppstod',
+        variant: 'destructive',
+      })
+    }
+  }
 
-    // Simulera upload
-    setTimeout(() => {
-      const newDocument: Document = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: file.type.includes('pdf')
-          ? 'PDF'
-          : file.type.includes('excel')
-            ? 'Excel'
-            : 'Okänd',
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-        uploadedBy: 'Du',
-        uploadedDate: new Date().toISOString().split('T')[0],
-        category: 'Övrigt',
-      }
+  const handleDownload = async (documentName: string) => {
+    try {
+      const url = await getDownloadUrl(documentName)
 
-      setDocuments((prev) => [newDocument, ...prev])
-      setIsUploading(false)
+      // Open the presigned URL in a new tab
+      window.open(url, '_blank')
 
       toast({
-        title: 'Dokument uppladdat',
-        description: `${file.name} har laddats upp framgångsrikt.`,
+        title: 'Laddar ner',
+        description: `${documentName} öppnas...`,
       })
-
-      // Rensa input
-      event.target.value = ''
-    }, 2000)
+    } catch (error) {
+      toast({
+        title: 'Nedladdning misslyckades',
+        description: error instanceof Error ? error.message : 'Ett fel uppstod',
+        variant: 'destructive',
+      })
+    }
   }
 
-  const handleDownload = (document: Document) => {
-    toast({
-      title: 'Laddar ner',
-      description: `${document.name} laddas ner...`,
+  const handleDelete = (documentName: string) => {
+    deleteFile(documentName, {
+      onSuccess: () => {
+        toast({
+          title: 'Dokument borttaget',
+          description: 'Dokumentet har tagits bort.',
+          variant: 'destructive',
+        })
+      },
+      onError: (error) => {
+        toast({
+          title: 'Borttagning misslyckades',
+          description:
+            error instanceof Error ? error.message : 'Ett fel uppstod',
+          variant: 'destructive',
+        })
+      },
     })
   }
 
-  const handleDelete = (documentId: string) => {
-    setDocuments((prev) => prev.filter((doc) => doc.id !== documentId))
-    toast({
-      title: 'Dokument borttaget',
-      description: 'Dokumentet har tagits bort.',
-      variant: 'destructive',
-    })
+  if (isLoading) {
+    return (
+      <TabLayout title="Dokument" count={0} showCard={true}>
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Laddar dokument...</p>
+        </div>
+      </TabLayout>
+    )
   }
+
+  console.log(documents)
 
   return (
     <TabLayout title="Dokument" count={documents.length} showCard={true}>
@@ -123,20 +128,20 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
         <div className="text-center space-y-4">
           <Upload className="h-8 w-8 text-gray-400 mx-auto" />
           <div>
-            <Label htmlFor="building-file-upload" className="cursor-pointer">
-              <Button variant="outline" disabled={isUploading} asChild>
+            <Label htmlFor="document-file-upload" className="cursor-pointer">
+              <Button variant="outline" disabled={isUploading || !id} asChild>
                 <span>
                   {isUploading ? 'Laddar upp...' : 'Välj fil att ladda upp'}
                 </span>
               </Button>
             </Label>
             <Input
-              id="building-file-upload"
+              id="document-file-upload"
               type="file"
               className="hidden"
               onChange={handleFileUpload}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.jpg,.jpeg,.png"
-              disabled={isUploading}
+              disabled={isUploading || !id}
             />
           </div>
           <p className="text-sm text-muted-foreground">
@@ -156,16 +161,8 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
                     {document.name}
                   </h4>
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      <span>{document.uploadedBy}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{document.uploadedDate}</span>
-                    </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span>{document.size}</span>
+                      <span>{formatFileSize(document.size)}</span>
                       <span className="bg-gray-100 px-2 py-1 rounded text-xs">
                         {document.type}
                       </span>
@@ -176,7 +173,7 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDownload(document)}
+                    onClick={() => handleDownload(document.name)}
                     className="h-8 w-8 p-0"
                   >
                     <Download className="h-4 w-4" />
@@ -184,7 +181,8 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(document.id)}
+                    onClick={() => handleDelete(document.name)}
+                    disabled={isDeleting}
                     className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -201,15 +199,7 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
                       </h4>
                     </div>
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {document.uploadedBy}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {document.uploadedDate}
-                      </span>
-                      <span>{document.size}</span>
+                      <span>{formatFileSize(document.size)}</span>
                       <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">
                         {document.type}
                       </span>
@@ -220,7 +210,7 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDownload(document)}
+                    onClick={() => handleDownload(document.name)}
                     className="h-8 w-8 p-0"
                   >
                     <Download className="h-4 w-4" />
@@ -228,7 +218,8 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(document.id)}
+                    onClick={() => handleDelete(document.name)}
+                    disabled={isDeleting}
                     className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -240,7 +231,7 @@ export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
         ))}
       </div>
 
-      {documents.length === 0 && (
+      {documents.length === 0 && !isLoading && (
         <div className="text-center py-8">
           <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <p className="text-muted-foreground">Inga dokument uppladdade än</p>

@@ -57,7 +57,7 @@ export const BuildingDetailTabs = ({
       </TabsContent>
 
       <TabsContent value="documents">
-        <DocumentsTab contextType={ContextType.Building} />
+        <DocumentsTab contextType={ContextType.Building} id={building.id} />
       </TabsContent>
     </Tabs>
   )
