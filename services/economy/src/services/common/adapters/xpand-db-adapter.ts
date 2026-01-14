@@ -65,9 +65,9 @@ const buildRentalPropertyQuery = ({
   entityTable: string
   typeCaptionTable: string
   typeJoin: string
-  areaSizeKey: string
+  areaSizeKey?: string
 }) => {
-  return db
+  const query = db
     .select(
       'babuf.hyresid AS rentalId',
       'babuf.caption AS address',
@@ -75,7 +75,7 @@ const buildRentalPropertyQuery = ({
       'cmadr.adress3 AS postalCode',
       'cmadr.adress4 AS city',
       `${typeCaptionTable}.caption AS type`,
-      'cmval.value AS areaSize'
+      areaSizeKey ? 'cmval.value AS areaSize' : db.raw('NULL AS areaSize')
     )
     .from('babuf')
     .innerJoin('cmobj', 'babuf.keycmobj', 'cmobj.keycmobj')
@@ -85,19 +85,23 @@ const buildRentalPropertyQuery = ({
       `${entityTable}.${typeJoin}`,
       `${typeCaptionTable}.${typeJoin}`
     )
-    .innerJoin('cmadr', 'cmobj.keycmobj', 'cmadr.keycode')
-    .leftJoin('cmval', function () {
+    .leftJoin('cmadr', 'cmobj.keycmobj', 'cmadr.keycode')
+    .where('cmobj.keycmobt', entityTable)
+    .whereRaw(
+      `babuf.hyresid IN (${rentalIds.map((id) => `'${id}'`).join(', ')})`
+    )
+
+  if (areaSizeKey) {
+    query.leftJoin('cmval', function () {
       this.on('cmobj.keycmobj', '=', 'cmval.keycode').andOn(
         'cmval.keycmvat',
         '=',
         db.raw('?', [areaSizeKey])
       )
     })
-    .where('cmobj.keycmobt', entityTable)
-    .whereRaw(
-      `babuf.hyresid IN (${rentalIds.map((id) => `'${id}'`).join(', ')})`
-    )
-    .then(trimStrings)
+  }
+
+  return query.then(trimStrings)
 }
 
 export const getRentalProperties = async (
@@ -107,7 +111,7 @@ export const getRentalProperties = async (
     return []
   }
 
-  const [residences, parkingSpaces, facilities] = await Promise.all([
+  const [residences, parkingSpaces, facilities, other] = await Promise.all([
     buildRentalPropertyQuery({
       rentalIds,
       entityTable: 'balgh',
@@ -128,6 +132,12 @@ export const getRentalProperties = async (
       typeCaptionTable: 'balot',
       typeJoin: 'keybalot',
       areaSizeKey: 'BRA',
+    }),
+    buildRentalPropertyQuery({
+      rentalIds,
+      entityTable: 'bahyr',
+      typeCaptionTable: 'bahyt',
+      typeJoin: 'keybahyt',
     }),
   ])
 
@@ -166,6 +176,18 @@ export const getRentalProperties = async (
         city: f.city,
         type: f.type,
         areaSize: f.areaSize,
+      })
+    ),
+    ...other.map(
+      (o): RentalProperty => ({
+        rentalPropertyType: 'Other',
+        rentalId: o.rentalId,
+        address: o.address,
+        code: o.code,
+        postalCode: o.postalCode,
+        city: o.city,
+        type: o.type,
+        areaSize: null,
       })
     ),
   ]
