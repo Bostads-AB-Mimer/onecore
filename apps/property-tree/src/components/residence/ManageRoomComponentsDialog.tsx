@@ -12,12 +12,13 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/v2/Tabs'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Unplug } from 'lucide-react'
 import { DeinstallationDialog } from './DeinstallationDialog'
 import { ComponentInstallationForm } from './ComponentInstallationForm'
 import type { Component } from '@/services/types'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { componentService } from '@/services/api/core/componentService'
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 
 interface ManageComponentsDialogProps {
   isOpen: boolean
@@ -32,6 +33,7 @@ export const ManageComponentsDialog = ({
   spaceId,
   spaceName,
 }: ManageComponentsDialogProps) => {
+  const queryClient = useQueryClient()
   const [deinstallDialogState, setDeinstallDialogState] = useState<{
     isOpen: boolean
     component?: Component
@@ -45,11 +47,29 @@ export const ManageComponentsDialog = ({
     enabled: isOpen,
   })
 
+  const deleteComponent = useMutation({
+    mutationFn: (componentId: string) =>
+      componentLibraryService.deleteInstance(componentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['components', spaceId] })
+    },
+  })
+
   const handleDeinstallClick = (component: Component) => {
     setDeinstallDialogState({
       isOpen: true,
       component,
     })
+  }
+
+  const handleDeleteClick = async (component: Component) => {
+    if (
+      window.confirm(
+        `Är du säker på att du vill ta bort komponenten "${component.serialNumber}" permanent? Detta kan inte ångras.`
+      )
+    ) {
+      await deleteComponent.mutateAsync(component.id)
+    }
   }
 
   const handleCloseDeinstallDialog = () => {
@@ -95,7 +115,7 @@ export const ManageComponentsDialog = ({
             <TabsContent value="avinstallera">
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Välj en komponent att avinstallera
+                  Välj en komponent att avinstallera eller ta bort permanent
                 </p>
 
                 {spaceComponents.length === 0 ? (
@@ -136,14 +156,30 @@ export const ManageComponentsDialog = ({
                               </p>
                             )}
                           </div>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeinstallClick(component)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Avinstallera
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeinstallClick(component)}
+                              disabled={!activeInstallation}
+                              title={
+                                !activeInstallation
+                                  ? 'Komponenten är inte installerad'
+                                  : undefined
+                              }
+                            >
+                              <Unplug className="h-4 w-4 mr-2" />
+                              Avinstallera
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(component)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Ta bort
+                            </Button>
+                          </div>
                         </div>
                       )
                     })}
