@@ -39,7 +39,7 @@ export const componentLibraryService = {
     categoryData: CreateComponentCategory
   ): Promise<ComponentCategory> {
     const { data, error } = await POST('/component-categories', {
-      body: categoryData as any,
+      body: categoryData,
     })
     if (error) throw error
     return data?.content as ComponentCategory
@@ -53,7 +53,7 @@ export const componentLibraryService = {
       params: {
         path: { id },
       },
-      body: categoryData as any,
+      body: categoryData,
     })
     if (error) throw error
     return data?.content as ComponentCategory
@@ -73,7 +73,7 @@ export const componentLibraryService = {
     const { data, error } = await GET('/component-types', {
       params: categoryId
         ? {
-            query: { categoryId } as any, // Type override until swagger is regenerated
+            query: { categoryId },
           }
         : undefined,
     })
@@ -97,7 +97,7 @@ export const componentLibraryService = {
 
   async createType(typeData: CreateComponentType): Promise<ComponentType> {
     const { data, error } = await POST('/component-types', {
-      body: typeData as any,
+      body: typeData,
     })
     if (error) throw error
     return data?.content as ComponentType
@@ -111,7 +111,7 @@ export const componentLibraryService = {
       params: {
         path: { id },
       },
-      body: typeData as any,
+      body: typeData,
     })
     if (error) throw error
     return data?.content as ComponentType
@@ -131,18 +131,17 @@ export const componentLibraryService = {
     typeId?: string,
     params?: { page?: number; limit?: number; search?: string }
   ): Promise<ComponentSubtype[]> {
-    const queryParams: any = {
-      limit: params?.limit || 100,
-    }
-    if (typeId) queryParams.typeId = typeId
-    if (params?.page) queryParams.page = params.page
-    if (params?.search && params.search.trim().length >= 2) {
-      queryParams.subtypeName = params.search.trim()
-    }
-
     const { data, error } = await GET('/component-subtypes', {
       params: {
-        query: queryParams as any,
+        query: {
+          typeId,
+          limit: params?.limit || 100,
+          page: params?.page,
+          subtypeName:
+            params?.search && params.search.trim().length >= 2
+              ? params.search.trim()
+              : undefined,
+        },
       },
     })
     if (error) throw error
@@ -167,7 +166,7 @@ export const componentLibraryService = {
     subtypeData: CreateComponentSubtype
   ): Promise<ComponentSubtype> {
     const { data, error } = await POST('/component-subtypes', {
-      body: subtypeData as any,
+      body: subtypeData,
     })
     if (error) throw error
     return data?.content as ComponentSubtype
@@ -181,7 +180,7 @@ export const componentLibraryService = {
       params: {
         path: { id },
       },
-      body: subtypeData as any,
+      body: subtypeData,
     })
     if (error) throw error
     return data?.content as ComponentSubtype
@@ -201,21 +200,18 @@ export const componentLibraryService = {
     subtypeId?: string,
     options?: { page?: number; limit?: number; search?: string }
   ): Promise<ComponentModel[]> {
-    const queryParams: any = {}
-    if (subtypeId) queryParams.subtypeId = subtypeId
-    if (options?.page) queryParams.page = options.page
-    if (options?.limit) queryParams.limit = options.limit
-    if (options?.search && options.search.trim().length >= 2) {
-      queryParams.modelName = options.search.trim()
-    }
-
     const { data, error } = await GET('/component-models', {
-      params:
-        Object.keys(queryParams).length > 0
-          ? {
-              query: queryParams as any,
-            }
-          : undefined,
+      params: {
+        query: {
+          subtypeId,
+          page: options?.page,
+          limit: options?.limit,
+          modelName:
+            options?.search && options.search.trim().length >= 2
+              ? options.search.trim()
+              : undefined,
+        },
+      },
     })
     if (error) throw error
     return (data?.content || []) as ComponentModel[]
@@ -237,7 +233,7 @@ export const componentLibraryService = {
 
   async createModel(modelData: CreateComponentModel): Promise<ComponentModel> {
     const { data, error } = await POST('/component-models', {
-      body: modelData as any,
+      body: modelData,
     })
     if (error) throw error
     return data?.content as ComponentModel
@@ -251,7 +247,7 @@ export const componentLibraryService = {
       params: {
         path: { id },
       },
-      body: modelData as any,
+      body: modelData,
     })
     if (error) throw error
     return data?.content as ComponentModel
@@ -269,21 +265,25 @@ export const componentLibraryService = {
   // ===== Instance Operations =====
   async getInstances(
     modelId?: string,
-    params?: { page?: number; limit?: number; status?: string; search?: string }
+    params?: {
+      page?: number
+      limit?: number
+      status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+      search?: string
+    }
   ): Promise<Component[]> {
-    const queryParams: any = {
-      limit: params?.limit || 100,
-    }
-    if (modelId) queryParams.modelId = modelId
-    if (params?.page) queryParams.page = params.page
-    if (params?.status) queryParams.status = params.status
-    if (params?.search && params.search.trim().length >= 2) {
-      queryParams.serialNumber = params.search.trim()
-    }
-
     const { data, error } = await GET('/components', {
       params: {
-        query: queryParams as any,
+        query: {
+          modelId,
+          limit: params?.limit || 100,
+          page: params?.page,
+          status: params?.status,
+          serialNumber:
+            params?.search && params.search.trim().length >= 2
+              ? params.search.trim()
+              : undefined,
+        },
       },
     })
     if (error) throw error
@@ -302,7 +302,7 @@ export const componentLibraryService = {
 
   async createInstance(instanceData: CreateComponent): Promise<Component> {
     const { data, error } = await POST('/components', {
-      body: instanceData as any,
+      body: instanceData as any, // Local types allow null, API types expect undefined
     })
     if (error) throw error
     return data?.content as Component
@@ -316,7 +316,7 @@ export const componentLibraryService = {
       params: {
         path: { id },
       },
-      body: instanceData as any,
+      body: instanceData as any, // Local types allow null, API types expect undefined
     })
     if (error) throw error
     return data?.content as Component

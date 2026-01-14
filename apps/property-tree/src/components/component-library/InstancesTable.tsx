@@ -1,4 +1,4 @@
-import { History } from 'lucide-react'
+import { History, Unplug } from 'lucide-react'
 import { Badge } from '@/components/ui/v2/Badge'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
 import type { Component } from '@/services/types'
@@ -9,6 +9,7 @@ interface InstancesTableProps {
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
+  onUninstall: (instance: Component) => void
 }
 
 export const InstancesTable = ({
@@ -17,6 +18,7 @@ export const InstancesTable = ({
   onEdit,
   onDelete,
   onViewHistory,
+  onUninstall,
 }: InstancesTableProps) => {
   const formatCurrency = (value: number) =>
     value.toLocaleString('sv-SE', {
@@ -231,11 +233,23 @@ export const InstancesTable = ({
     },
   ]
 
+  const hasActiveInstallation = (item: Component) =>
+    item.componentInstallations?.some((install) => !install.deinstallationDate)
+
   const actions: DataTableAction<Component>[] = [
     {
       label: 'Visa historik',
       onClick: onViewHistory,
       icon: <History className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: 'Avinstallera',
+      onClick: (item) => {
+        if (hasActiveInstallation(item)) {
+          onUninstall(item)
+        }
+      },
+      icon: <Unplug className="h-4 w-4 mr-2" />,
     },
   ]
 

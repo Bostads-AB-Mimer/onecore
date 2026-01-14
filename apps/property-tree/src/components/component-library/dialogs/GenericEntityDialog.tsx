@@ -9,6 +9,11 @@ import {
 import { Button } from '@/components/ui/v2/Button'
 import { entityDialogConfig } from '../entity-dialog-config'
 import { FieldRenderer } from './FieldRenderer'
+import {
+  ParentHierarchySelector,
+  parentIdFieldMap,
+  type HierarchyData,
+} from './ParentHierarchySelector'
 import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
 import type { EntityType } from '@/services/types'
 
@@ -20,6 +25,7 @@ interface GenericEntityDialogProps<T extends Record<string, any>> {
   parentId?: string
   mode: 'create' | 'edit'
   defaultValues?: Record<string, any>
+  hierarchyData?: HierarchyData
 }
 
 export function GenericEntityDialog<T extends Record<string, any>>({
@@ -30,10 +36,12 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   parentId,
   mode,
   defaultValues,
+  hierarchyData,
 }: GenericEntityDialogProps<T>) {
   const config = entityDialogConfig[entityType]
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
 
   const mutation = useComponentEntityMutation(
     entityType,
@@ -100,6 +108,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         setFormData(editData)
       }
       setErrors({})
+      setNewParentId(undefined) // Reset parent change when dialog opens
     }
   }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
 
@@ -131,6 +140,24 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     return Object.keys(newErrors).length === 0
   }
 
+  // Clean form data by converting empty strings to undefined for optional fields
+  // This prevents validation errors for fields with regex patterns (e.g., ncsCode)
+  const cleanFormData = (data: Record<string, any>): Record<string, any> => {
+    const cleaned: Record<string, any> = {}
+    for (const [key, value] of Object.entries(data)) {
+      // Convert empty strings to undefined for optional fields
+      if (value === '') {
+        const field = config.fields.find((f) => f.name === key)
+        if (field && !field.required) {
+          // Skip empty optional fields (don't include in payload)
+          continue
+        }
+      }
+      cleaned[key] = value
+    }
+    return cleaned
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -142,12 +169,22 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       // For mutations, we need to pass parentId separately for cache invalidation
       let mutationData
       if (mode === 'create') {
-        mutationData = { ...formData, parentId }
+        mutationData = { ...cleanFormData(formData), parentId }
       } else {
+        // Build update data, including new parent ID if changed
+        const updateData = cleanFormData(formData)
+
+        // If parent has changed, add the new parent ID field
+        if (newParentId && entityType !== 'category') {
+          const parentField = parentIdFieldMap[entityType]
+          updateData[parentField] = newParentId
+        }
+
         mutationData = {
           id: entity?.id,
-          data: formData,
-          parentId,
+          data: updateData,
+          parentId: newParentId || parentId,
+          oldParentId: newParentId ? parentId : undefined,
         }
       }
 
@@ -171,6 +208,15 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Parent hierarchy selector for edit mode (non-category entities) */}
+          {mode === 'edit' && entityType !== 'category' && hierarchyData && (
+            <ParentHierarchySelector
+              entityType={entityType}
+              initialHierarchy={hierarchyData}
+              onParentChange={setNewParentId}
+            />
+          )}
+
           {config.fields.map((field) => (
             <FieldRenderer
               key={field.name}

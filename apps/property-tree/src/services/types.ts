@@ -144,10 +144,15 @@ export type UpdateData<T extends EntityType> = T extends 'category'
           ? UpdateComponent
           : never
 
+export type CreateMutationVariables<T extends EntityType> = CreateData<T> & {
+  parentId?: string
+}
+
 export type UpdateMutationVariables<T extends EntityType> = {
   id: string
   data: UpdateData<T>
   parentId?: string
+  oldParentId?: string
 }
 
 export type DeleteMutationVariables = {
@@ -159,7 +164,7 @@ export type MutationVariables<
   T extends EntityType,
   Op extends Operation,
 > = Op extends 'create'
-  ? CreateData<T>
+  ? CreateMutationVariables<T>
   : Op extends 'update'
     ? UpdateMutationVariables<T>
     : Op extends 'delete'

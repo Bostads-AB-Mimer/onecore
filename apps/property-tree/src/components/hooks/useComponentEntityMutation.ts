@@ -10,6 +10,9 @@ import type {
   Operation,
   MutationVariables,
   EntityData,
+  CreateData,
+  UpdateData,
+  CreateMutationVariables,
   UpdateMutationVariables,
   DeleteMutationVariables,
 } from '@/services/types'
@@ -54,7 +57,7 @@ export function useComponentEntityMutation<
     onSuccess?: (
       data: Op extends 'delete' ? void : EntityData<T>,
       variables: MutationVariables<T, Op>,
-      context: any
+      context: unknown
     ) => void | Promise<void>
   }
 ): UseMutationResult<
@@ -64,29 +67,41 @@ export function useComponentEntityMutation<
 > {
   const queryClient = useQueryClient()
 
-  const mutationFn = async (variables: MutationVariables<T, Op>) => {
+  const mutationFn = async (
+    variables: MutationVariables<T, Op>
+  ): Promise<Op extends 'delete' ? void : EntityData<T>> => {
     if (operation === 'create') {
-      return createEntity(entityType, variables as any)
+      const { parentId: _parentId, ...createData } =
+        variables as CreateMutationVariables<T>
+      return createEntity(entityType, createData as CreateData<T>) as Promise<
+        Op extends 'delete' ? void : EntityData<T>
+      >
     }
     if (operation === 'update') {
       const { id, data } = variables as UpdateMutationVariables<T>
-      return updateEntity(entityType, id, data)
+      return updateEntity(entityType, id, data) as Promise<
+        Op extends 'delete' ? void : EntityData<T>
+      >
     }
     if (operation === 'delete') {
       const { id } = variables as DeleteMutationVariables
-      return deleteEntity(entityType, id)
+      return deleteEntity(entityType, id) as Promise<
+        Op extends 'delete' ? void : EntityData<T>
+      >
     }
     throw new Error(`Unknown operation: ${operation}`)
   }
 
   return useMutation({
-    mutationFn: mutationFn as any,
-    onSuccess: async (data: any, variables: any, context: any) => {
+    mutationFn,
+    onSuccess: async (
+      data: Op extends 'delete' ? void : EntityData<T>,
+      variables: MutationVariables<T, Op>,
+      context: unknown
+    ) => {
       // Extract parent ID from variables for cache invalidation
       const vars = variables as { parentId?: string; oldParentId?: string }
-      const parentId =
-        vars.parentId ||
-        (variables as Record<string, unknown>)[parentIdField || '']
+      const parentId = vars.parentId || (variables as Record<string, unknown>)[parentIdField || '']
 
       // Invalidate the appropriate query key
       const queryKey = buildQueryKey(entityType, parentId as string | undefined)
@@ -104,39 +119,71 @@ export function useComponentEntityMutation<
       }
     },
     ...options,
-  } as any)
+  })
 }
 
 // Helper functions for CRUD operations
-function createEntity(entityType: EntityType, data: any) {
+function createEntity<T extends EntityType>(
+  entityType: T,
+  data: CreateData<T>
+): Promise<EntityData<T>> {
   switch (entityType) {
     case 'category':
-      return componentLibraryService.createCategory(data)
+      return componentLibraryService.createCategory(
+        data as CreateData<'category'>
+      ) as Promise<EntityData<T>>
     case 'type':
-      return componentLibraryService.createType(data)
+      return componentLibraryService.createType(
+        data as CreateData<'type'>
+      ) as Promise<EntityData<T>>
     case 'subtype':
-      return componentLibraryService.createSubtype(data)
+      return componentLibraryService.createSubtype(
+        data as CreateData<'subtype'>
+      ) as Promise<EntityData<T>>
     case 'model':
-      return componentLibraryService.createModel(data)
+      return componentLibraryService.createModel(
+        data as CreateData<'model'>
+      ) as Promise<EntityData<T>>
     case 'instance':
-      return componentLibraryService.createInstance(data)
+      return componentLibraryService.createInstance(
+        data as CreateData<'instance'>
+      ) as Promise<EntityData<T>>
     default:
       throw new Error(`Unknown entity type: ${entityType}`)
   }
 }
 
-function updateEntity(entityType: EntityType, id: string, data: any) {
+function updateEntity<T extends EntityType>(
+  entityType: T,
+  id: string,
+  data: UpdateData<T>
+): Promise<EntityData<T>> {
   switch (entityType) {
     case 'category':
-      return componentLibraryService.updateCategory(id, data)
+      return componentLibraryService.updateCategory(
+        id,
+        data as UpdateData<'category'>
+      ) as Promise<EntityData<T>>
     case 'type':
-      return componentLibraryService.updateType(id, data)
+      return componentLibraryService.updateType(
+        id,
+        data as UpdateData<'type'>
+      ) as Promise<EntityData<T>>
     case 'subtype':
-      return componentLibraryService.updateSubtype(id, data)
+      return componentLibraryService.updateSubtype(
+        id,
+        data as UpdateData<'subtype'>
+      ) as Promise<EntityData<T>>
     case 'model':
-      return componentLibraryService.updateModel(id, data)
+      return componentLibraryService.updateModel(
+        id,
+        data as UpdateData<'model'>
+      ) as Promise<EntityData<T>>
     case 'instance':
-      return componentLibraryService.updateInstance(id, data)
+      return componentLibraryService.updateInstance(
+        id,
+        data as UpdateData<'instance'>
+      ) as Promise<EntityData<T>>
     default:
       throw new Error(`Unknown entity type: ${entityType}`)
   }

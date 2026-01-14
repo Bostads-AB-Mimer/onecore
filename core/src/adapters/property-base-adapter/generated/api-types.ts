@@ -3198,6 +3198,46 @@ export interface components {
       additionalInformation: string | null;
       confidence: number;
     };
+    ComponentTypesQueryParams: {
+      /** Format: uuid */
+      categoryId?: string;
+      /** @default 1 */
+      page?: number;
+      /** @default 20 */
+      limit?: number;
+    };
+    ComponentSubtypesQueryParams: {
+      /** Format: uuid */
+      typeId?: string;
+      subtypeName?: string;
+      /** @default 1 */
+      page?: number;
+      /** @default 20 */
+      limit?: number;
+    };
+    ComponentModelsQueryParams: {
+      /** Format: uuid */
+      componentTypeId?: string;
+      /** Format: uuid */
+      subtypeId?: string;
+      manufacturer?: string;
+      modelName?: string;
+      /** @default 1 */
+      page?: number;
+      /** @default 20 */
+      limit?: number;
+    };
+    ComponentsQueryParams: {
+      /** Format: uuid */
+      modelId?: string;
+      /** @enum {string} */
+      status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+      serialNumber?: string;
+      /** @default 1 */
+      page?: number;
+      /** @default 20 */
+      limit?: number;
+    };
   };
   responses: never;
   parameters: never;
