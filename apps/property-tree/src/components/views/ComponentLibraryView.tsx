@@ -16,6 +16,7 @@ import { InstancesTable } from '@/components/component-library/InstancesTable'
 import { TableToolbar } from '@/components/component-library/TableToolbar'
 import { GenericEntityDialog } from '@/components/component-library/dialogs/GenericEntityDialog'
 import { InstanceDetailsDialog } from '@/components/component-library/dialogs/InstanceDetailsDialog'
+import { DeinstallationDialog } from '@/components/residence/DeinstallationDialog'
 import type {
   ComponentCategory,
   ComponentType,
@@ -866,6 +867,21 @@ const ComponentLibraryView = () => {
               isOpen={instanceDetailsDialogState.isOpen}
               onClose={handleCloseInstanceDetailsDialog}
               instance={instanceDetailsDialogState.instance}
+            />
+          )}
+
+          {deinstallDialogState.component && (
+            <DeinstallationDialog
+              isOpen={deinstallDialogState.isOpen}
+              onClose={() =>
+                setDeinstallDialogState({ isOpen: false, component: undefined })
+              }
+              component={deinstallDialogState.component}
+              spaceId={
+                deinstallDialogState.component.componentInstallations?.find(
+                  (inst) => !inst.deinstallationDate
+                )?.spaceId || ''
+              }
             />
           )}
         </>
