@@ -35,6 +35,12 @@ export const routes = (router: KoaRouter) => {
    *           format: uuid
    *         description: Filter subtypes by type ID
    *       - in: query
+   *         name: subtypeName
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Search by subtype name (case-insensitive partial match)
+   *       - in: query
    *         name: page
    *         schema:
    *           type: integer
