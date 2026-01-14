@@ -298,7 +298,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  const CreateInvoiceRowRequestSchema = z.object({
+  const CreateLeaseRentRowRequestSchema = z.object({
     amount: z.number(),
     article: z.string(),
     label: z.string(),
@@ -306,11 +306,12 @@ export const routes = (router: KoaRouter) => {
     to: z.coerce.date().optional(),
   })
 
+  // TODO: Rename invoice rows to rent rows
   /**
    * @swagger
-   * /leases/{leaseId}/invoice-rows:
+   * /leases/{leaseId}/rent-rows:
    *   post:
-   *     summary: Create an invoice row for a lease
+   *     summary: Create a rent row for a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -345,26 +346,26 @@ export const routes = (router: KoaRouter) => {
    *               - label
    *     responses:
    *       201:
-   *         description: Successfully created invoice row.
+   *         description: Successfully created rent row.
    *       400:
    *         description: Invalid request body.
    *       500:
    *         description: Internal server error.
    */
   router.post(
-    '/leases/:leaseId/invoice-rows',
-    parseRequestBody(CreateInvoiceRowRequestSchema),
+    '/leases/:leaseId/rent-rows',
+    parseRequestBody(CreateLeaseRentRowRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const createInvoiceRowResult = await leasingAdapter.createInvoiceRow({
+      const createRentRowResult = await leasingAdapter.createLeaseRentRow({
         leaseId: ctx.params.leaseId,
-        invoiceRow: ctx.request.body,
+        rentRow: ctx.request.body,
       })
 
-      if (!createInvoiceRowResult.ok) {
+      if (!createRentRowResult.ok) {
         ctx.status = 500
         ctx.body = {
-          error: createInvoiceRowResult.err,
+          error: createRentRowResult.err,
           ...metadata,
         }
         return
@@ -372,7 +373,7 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 201
       ctx.body = {
-        content: createInvoiceRowResult.data,
+        content: createRentRowResult.data,
         ...metadata,
       }
     }
@@ -380,9 +381,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/invoice-rows/{invoiceRowId}:
+   * /leases/{leaseId}/rent-rows/{rentRowId}:
    *   delete:
-   *     summary: Delete an invoice row for a lease
+   *     summary: Delete a rent row for a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -393,28 +394,28 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the lease.
    *       - in: path
-   *         name: invoiceRowId
+   *         name: rentRowId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the invoice row.
+   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Invoice row deleted.
+   *         description: Rent row deleted.
    *       500:
    *         description: Internal server error.
    */
-  router.delete('/leases/:leaseId/invoice-rows/:invoiceRowId', async (ctx) => {
+  router.delete('/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const deleteInvoiceRowResult = await leasingAdapter.deleteInvoiceRow({
+    const deleteRentRowResult = await leasingAdapter.deleteLeaseRentRow({
       leaseId: ctx.params.leaseId,
-      invoiceRowId: ctx.params.invoiceRowId,
+      rentRowId: ctx.params.rentRowId,
     })
 
-    if (!deleteInvoiceRowResult.ok) {
+    if (!deleteRentRowResult.ok) {
       ctx.status = 500
       ctx.body = {
-        error: deleteInvoiceRowResult.err,
+        error: deleteRentRowResult.err,
         ...metadata,
       }
       return
@@ -422,7 +423,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: deleteInvoiceRowResult.data,
+      content: deleteRentRowResult.data,
       ...metadata,
     }
   })

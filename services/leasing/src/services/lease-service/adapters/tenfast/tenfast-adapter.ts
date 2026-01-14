@@ -488,7 +488,8 @@ export async function getLeaseByLeaseId(
   }
 }
 
-export async function createInvoiceRow(params: {
+// TODO: This function should return a onecore rent row
+export async function createLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRow: Omit<TenfastInvoiceRow, '_id'>
 }): Promise<AdapterResult<TenfastInvoiceRow, 'unknown'>> {
@@ -509,12 +510,12 @@ export async function createInvoiceRow(params: {
       throw { status: res.status, data: res.data }
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.createInvoiceRow')
+    logger.error(mapHttpError(err), 'tenfast-adapter.createLeaseInvoiceRow')
     return { ok: false, err: 'unknown' }
   }
 }
 
-export async function deleteInvoiceRow(params: {
+export async function deleteLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRowId: string
 }): Promise<AdapterResult<null, 'unknown'>> {

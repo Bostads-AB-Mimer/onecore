@@ -102,7 +102,7 @@ export const createLease = async (
   }
 }
 
-type CreateInvoiceRowRequestPayload = {
+type CreateLeaseInvoiceRowRequestPayload = {
   amount: number
   article: string
   label: string
@@ -110,7 +110,7 @@ type CreateInvoiceRowRequestPayload = {
   to?: string
 }
 
-type CreateInvoiceRowResponse = CreateInvoiceRowRequestPayload & {
+type CreateLeaseInvoiceRowResponse = CreateLeaseInvoiceRowRequestPayload & {
   vat: number
   _id: string
 }
@@ -134,16 +134,16 @@ export type Article = {
   updatedAt: Date
 }
 
-export async function createInvoiceRow(params: {
+export async function createLeaseRentRow(params: {
   leaseId: string
-  invoiceRow: CreateInvoiceRowRequestPayload
-}): Promise<AdapterResult<CreateInvoiceRowResponse, 'unknown'>> {
+  rentRow: CreateLeaseInvoiceRowRequestPayload
+}): Promise<AdapterResult<CreateLeaseInvoiceRowResponse, 'unknown'>> {
   const result = await axios(
-    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/invoice-rows`,
+    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/rent-rows`,
     {
       method: 'POST',
       data: {
-        ...params.invoiceRow,
+        ...params.rentRow,
       },
     }
   )
@@ -153,19 +153,19 @@ export async function createInvoiceRow(params: {
   } else {
     logger.error(
       { error: JSON.stringify(result.data) },
-      'Unknown error when creating invoice row'
+      'Unknown error when creating rent row'
     )
 
     return { ok: false, err: 'unknown' }
   }
 }
 
-export async function deleteInvoiceRow(params: {
+export async function deleteLeaseRentRow(params: {
   leaseId: string
-  invoiceRowId: string
+  rentRowId: string
 }): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios.delete(
-    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/invoice-rows/${params.invoiceRowId}`
+    `${tenantsLeasesServiceUrl}/leases/${params.leaseId}/rent-rows/${params.rentRowId}`
   )
 
   if (result.status === 200) {
@@ -173,7 +173,7 @@ export async function deleteInvoiceRow(params: {
   } else {
     logger.error(
       { error: JSON.stringify(result.data) },
-      'Unknown error when deleting invoice row'
+      'Unknown error when deleting rent row'
     )
 
     return { ok: false, err: 'unknown' }
