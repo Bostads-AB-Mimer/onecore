@@ -115,18 +115,32 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  const preliminaryTerminationSchema = z.object({
+    contactCode: z.string(),
+    lastDebitDate: z.string().datetime(),
+    desiredMoveDate: z.string().datetime(),
+  })
+
   router.post(
     '/leases/by-lease-id/:leaseId/preliminary-termination',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      // TODO: Add proper schema validation with zod
-      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
-        .body as {
-        contactCode: string
-        lastDebitDate: string
-        desiredMoveDate: string
+      const bodyValidation = preliminaryTerminationSchema.safeParse(
+        ctx.request.body
+      )
+
+      if (!bodyValidation.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          details: bodyValidation.error,
+          ...metadata,
+        }
+        return
       }
+
+      const { contactCode, lastDebitDate, desiredMoveDate } = bodyValidation.data
 
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
