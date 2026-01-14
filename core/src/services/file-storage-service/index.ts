@@ -52,12 +52,25 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: File uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     fileName:
+   *                       type: string
+   *                       description: The stored file name
+   *                     message:
+   *                       type: string
    *       400:
    *         description: Invalid request
    *       500:
    *         description: Server error
    */
-  router.post('/files/upload', async (ctx) => {
+  router.post('(.*)/files/upload', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName, fileData, contentType } = ctx.request.body as {
       fileName?: string
@@ -111,12 +124,27 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Presigned URL generated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     url:
+   *                       type: string
+   *                       format: uri
+   *                       description: Presigned URL for downloading the file
+   *                     expiresIn:
+   *                       type: number
+   *                       description: URL expiry time in seconds
    *       404:
    *         description: File not found
    *       500:
    *         description: Server error
    */
-  router.get('/files/:fileName/url', async (ctx) => {
+  router.get('(.*)/files/:fileName/url', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
     const expirySeconds = parseInt(ctx.query.expirySeconds as string) || 3600
@@ -155,7 +183,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Server error
    */
-  router.get('/files/:fileName/metadata', async (ctx) => {
+  router.get('(.*)/files/:fileName/metadata', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
@@ -193,7 +221,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Server error
    */
-  router.delete('/files/:fileName', async (ctx) => {
+  router.delete('(.*)/files/:fileName', async (ctx) => {
     const { fileName } = ctx.params
 
     const result = await fileStorageAdapter.deleteFile(fileName)
@@ -227,7 +255,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Server error
    */
-  router.get('/files/:fileName/exists', async (ctx) => {
+  router.get('(.*)/files/:fileName/exists', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 

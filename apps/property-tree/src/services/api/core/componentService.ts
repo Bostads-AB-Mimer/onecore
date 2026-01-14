@@ -1,6 +1,18 @@
 import { Component, DocumentWithUrl } from '../../types'
 import { GET, POST, PUT, DELETE } from './base-api'
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = reader.result as string
+      resolve(base64.split(',')[1]) // Remove "data:mime/type;base64," prefix
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export const componentService = {
   async getByRoomId(roomId: string): Promise<Component[]> {
     const { data, error } = await GET('/components/by-room/{roomId}', {
@@ -228,16 +240,24 @@ export const componentService = {
 
   // Component Instance Image Operations
   async uploadImage(componentId: string, file: File): Promise<void> {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('componentInstanceId', componentId)
+    const fileData = await fileToBase64(file)
+    const fileName = `component-instance-${componentId}-${Date.now()}-${file.name}`
 
-    const { error } = await POST('/api/documents/upload', {
-      body: formData as any,
-      bodySerializer: (body) => body as any,
+    // 1. Upload file to storage service
+    const { data, error } = await POST('/files/upload', {
+      body: { fileName, fileData, contentType: file.type },
     })
-
     if (error) throw error
+
+    // 2. Create document record in property service
+    const storedFileName = data?.content?.fileName ?? fileName
+    const { error: docError } = await POST('/api/documents', {
+      body: {
+        fileId: storedFileName,
+        componentInstanceId: componentId,
+      },
+    })
+    if (docError) throw docError
   },
 
   async getImages(componentId: string): Promise<DocumentWithUrl[]> {
@@ -245,6 +265,7 @@ export const componentService = {
       '[componentService.getImages] Fetching images for:',
       componentId
     )
+    // 1. Get document metadata from property service
     const { data, error } = await GET(
       '/api/documents/component-instances/{id}',
       {
@@ -256,13 +277,27 @@ export const componentService = {
 
     if (error) throw error
 
-    const images = data || []
+    const documents = (data || []) as Array<{ id: string; fileId: string }>
+
+    // 2. Fetch presigned URLs for each document from file-storage service
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (doc) => {
+        const { data: urlData } = await GET('/files/{fileName}/url', {
+          params: { path: { fileName: doc.fileId } },
+        })
+        return {
+          ...doc,
+          url: urlData?.content?.url ?? '',
+        }
+      })
+    )
+
     console.log(
       '[componentService.getImages] Returning:',
-      images.length,
+      documentsWithUrls.length,
       'images'
     )
-    return images
+    return documentsWithUrls as DocumentWithUrl[]
   },
 
   async deleteImage(componentId: string, documentId: string): Promise<void> {
@@ -277,19 +312,28 @@ export const componentService = {
 
   // Component Model Document Operations
   async uploadModelDocument(modelId: string, file: File): Promise<void> {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('componentModelId', modelId)
+    const fileData = await fileToBase64(file)
+    const fileName = `component-model-${modelId}-${Date.now()}-${file.name}`
 
-    const { error } = await POST('/api/documents/upload', {
-      body: formData as any,
-      bodySerializer: (body) => body as any,
+    // 1. Upload file to storage service
+    const { data, error } = await POST('/files/upload', {
+      body: { fileName, fileData, contentType: file.type },
     })
-
     if (error) throw error
+
+    // 2. Create document record in property service
+    const storedFileName = data?.content?.fileName ?? fileName
+    const { error: docError } = await POST('/api/documents', {
+      body: {
+        fileId: storedFileName,
+        componentModelId: modelId,
+      },
+    })
+    if (docError) throw docError
   },
 
   async getModelDocuments(modelId: string): Promise<DocumentWithUrl[]> {
+    // 1. Get document metadata from property service
     const { data, error } = await GET('/api/documents/component-models/{id}', {
       params: {
         path: { id: modelId },
@@ -298,7 +342,22 @@ export const componentService = {
 
     if (error) throw error
 
-    return data || []
+    const documents = (data || []) as Array<{ id: string; fileId: string }>
+
+    // 2. Fetch presigned URLs for each document from file-storage service
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (doc) => {
+        const { data: urlData } = await GET('/files/{fileName}/url', {
+          params: { path: { fileName: doc.fileId } },
+        })
+        return {
+          ...doc,
+          url: urlData?.content?.url ?? '',
+        }
+      })
+    )
+
+    return documentsWithUrls as DocumentWithUrl[]
   },
 
   async deleteModelDocument(

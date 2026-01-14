@@ -4652,6 +4652,112 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /api/documents:
+   *   post:
+   *     summary: Create a document record
+   *     description: Creates a document metadata record linking a file (already uploaded to file-storage service) to either a component model or component instance.
+   *     tags:
+   *       - Property-base/Components
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fileId
+   *             properties:
+   *               fileId:
+   *                 type: string
+   *                 description: The file ID from the file-storage service
+   *               componentModelId:
+   *                 type: string
+   *                 format: uuid
+   *                 description: The ID of the component model to attach the document to
+   *               componentInstanceId:
+   *                 type: string
+   *                 format: uuid
+   *                 description: The ID of the component instance to attach the document to
+   *     responses:
+   *       200:
+   *         description: Document record created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       format: uuid
+   *                     fileId:
+   *                       type: string
+   *                     createdAt:
+   *                       type: string
+   *                       format: date-time
+   *       400:
+   *         description: Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/documents', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const body = ctx.request.body as {
+      fileId?: string
+      componentModelId?: string
+      componentInstanceId?: string
+    }
+
+    if (!body.fileId) {
+      ctx.status = 400
+      ctx.body = { error: 'fileId is required', ...metadata }
+      return
+    }
+
+    if (!body.componentModelId && !body.componentInstanceId) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Either componentModelId or componentInstanceId required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createDocument({
+        fileId: body.fileId,
+        componentModelId: body.componentModelId,
+        componentInstanceId: body.componentInstanceId,
+      })
+
+      if (!result.ok) {
+        ctx.status = result.err === 'bad_request' ? 400 : 500
+        ctx.body = {
+          error:
+            result.err === 'bad_request'
+              ? 'Invalid request'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Failed to create document record')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /api/documents/{id}:
    *   delete:
    *     summary: Delete a document by ID

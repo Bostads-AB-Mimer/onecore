@@ -4330,6 +4330,56 @@ export interface paths {
       };
     };
   };
+  "/api/documents": {
+    /**
+     * Create a document record
+     * @description Creates a document metadata record linking a file (already uploaded to file-storage service) to either a component model or component instance.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description The file ID from the file-storage service */
+            fileId: string;
+            /**
+             * Format: uuid
+             * @description The ID of the component model to attach the document to
+             */
+            componentModelId?: string;
+            /**
+             * Format: uuid
+             * @description The ID of the component instance to attach the document to
+             */
+            componentInstanceId?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document record created successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** Format: uuid */
+                id?: string;
+                fileId?: string;
+                /** Format: date-time */
+                createdAt?: string;
+              };
+            };
+          };
+        };
+        /** @description Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/api/documents/{id}": {
     /** Delete a document by ID */
     delete: {
@@ -4588,6 +4638,157 @@ export interface paths {
           content: never;
         };
         /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/files/upload": {
+    /** Upload a file */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Name for the file */
+            fileName: string;
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description MIME type of the file */
+            contentType: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description The stored file name */
+                fileName?: string;
+                message?: string;
+              };
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/files/{fileName}/url": {
+    /** Get presigned URL for file download */
+    get: {
+      parameters: {
+        query?: {
+          /** @description URL expiry time in seconds */
+          expirySeconds?: number;
+        };
+        path: {
+          /** @description Name of the file */
+          fileName: string;
+        };
+      };
+      responses: {
+        /** @description Presigned URL generated */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /**
+                 * Format: uri
+                 * @description Presigned URL for downloading the file
+                 */
+                url?: string;
+                /** @description URL expiry time in seconds */
+                expiresIn?: number;
+              };
+            };
+          };
+        };
+        /** @description File not found */
+        404: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/files/{fileName}/metadata": {
+    /** Get file metadata */
+    get: {
+      parameters: {
+        path: {
+          /** @description Name of the file */
+          fileName: string;
+        };
+      };
+      responses: {
+        /** @description File metadata */
+        200: {
+          content: never;
+        };
+        /** @description File not found */
+        404: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/files/{fileName}": {
+    /** Delete a file */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Name of the file to delete */
+          fileName: string;
+        };
+      };
+      responses: {
+        /** @description File deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description File not found */
+        404: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/files/{fileName}/exists": {
+    /** Check if file exists */
+    get: {
+      parameters: {
+        path: {
+          /** @description Name of the file */
+          fileName: string;
+        };
+      };
+      responses: {
+        /** @description File existence status */
+        200: {
+          content: never;
+        };
+        /** @description Server error */
         500: {
           content: never;
         };

@@ -1882,6 +1882,34 @@ export async function deleteComponentModelDocument(
   }
 }
 
+// ==================== DOCUMENT METADATA ====================
+
+export async function createDocument(data: {
+  fileId: string
+  componentInstanceId?: string
+  componentModelId?: string
+}): Promise<
+  AdapterResult<
+    { id: string; fileId: string; createdAt: string },
+    'bad_request' | 'unknown'
+  >
+> {
+  try {
+    const response = await axios.post(
+      `${config.propertyBaseService.url}/documents`,
+      data
+    )
+    return { ok: true, data: response.data }
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } }
+    if (axiosErr.response?.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+    logger.error({ err, data }, 'property-base-adapter.createDocument')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== AI COMPONENT ANALYSIS ====================
 
 export async function analyzeComponentImage(
