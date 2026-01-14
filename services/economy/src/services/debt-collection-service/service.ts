@@ -551,7 +551,7 @@ const createRentInvoiceComment = (
     ' ',
     `${getDateString(invoice.fromDate)}-${getDateString(invoice.toDate)}`,
     ' Enhet:',
-    rightPad(rentalProperty.postalCode.replaceAll(' ', ''), 6, ' '),
+    rightPad(rentalProperty.postalCode?.replaceAll(' ', '') ?? '', 6, ' '),
     ' ',
     rightPad(rentalProperty.code, 4, ' '),
     ' ',
