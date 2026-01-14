@@ -1560,14 +1560,11 @@ export async function getComponentFiles(
   componentId: string
 ): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET(
-      '/documents/component-instances/{id}',
-      {
-        params: {
-          path: { id: componentId },
-        },
-      }
-    )
+    const response = await client().GET('/documents/component-instances/{id}', {
+      params: {
+        path: { id: componentId },
+      },
+    })
 
     if (response.data) {
       return { ok: true, data: response.data }
