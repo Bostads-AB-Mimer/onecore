@@ -4,9 +4,12 @@ import { z } from 'zod'
 export const schemaRegistry: Record<string, any> = {}
 
 export function registerSchema<T extends z.ZodType>(name: string, schema: T) {
-  schemaRegistry[name] = zodToJsonSchema(schema, {
+  const result = zodToJsonSchema(schema, {
     name,
     target: 'openApi3',
     $refStrategy: 'none',
-  }).definitions?.[name]
+  })
+  // Complex schemas with nested refs populate .definitions[name]
+  // Simple flat schemas return the schema directly at the root
+  schemaRegistry[name] = result.definitions?.[name] ?? result
 }

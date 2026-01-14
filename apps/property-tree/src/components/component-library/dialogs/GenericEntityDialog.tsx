@@ -15,7 +15,11 @@ import {
   type HierarchyData,
 } from './ParentHierarchySelector'
 import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
-import type { EntityType } from '@/services/types'
+import type {
+  EntityType,
+  CreateMutationVariables,
+  UpdateMutationVariables,
+} from '@/services/types'
 
 interface GenericEntityDialogProps<T extends Record<string, any>> {
   isOpen: boolean
@@ -167,9 +171,13 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
     try {
       // For mutations, we need to pass parentId separately for cache invalidation
-      let mutationData
       if (mode === 'create') {
-        mutationData = { ...cleanFormData(formData), parentId }
+        // Type assertion needed because entityType is dynamic and cleanFormData returns Record<string, unknown>
+        const createData = {
+          ...cleanFormData(formData),
+          parentId,
+        } as CreateMutationVariables<typeof entityType>
+        await mutation.mutateAsync(createData)
       } else {
         // Build update data, including new parent ID if changed
         const updateData = cleanFormData(formData)
@@ -180,15 +188,15 @@ export function GenericEntityDialog<T extends Record<string, any>>({
           updateData[parentField] = newParentId
         }
 
-        mutationData = {
-          id: entity?.id,
+        // Type assertion needed because entityType is dynamic
+        const updateMutationData = {
+          id: entity?.id ?? '',
           data: updateData,
           parentId: newParentId || parentId,
           oldParentId: newParentId ? parentId : undefined,
-        }
+        } as UpdateMutationVariables<typeof entityType>
+        await mutation.mutateAsync(updateMutationData)
       }
-
-      await mutation.mutateAsync(mutationData as any)
       onClose()
     } catch (error) {
       console.error(

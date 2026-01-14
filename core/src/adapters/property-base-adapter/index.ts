@@ -708,12 +708,12 @@ export async function getComponentCategories(
   limit?: number
 ): Promise<AdapterResult<GetComponentCategoriesResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-categories' as any, {
+    const response = await client().GET('/component-categories', {
       params: { query: { page, limit } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -731,12 +731,12 @@ export async function getComponentCategoryById(
   AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
 > {
   try {
-    const response = await client().GET('/component-categories/{id}' as any, {
+    const response = await client().GET('/component-categories/{id}', {
       params: { path: { id } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -755,11 +755,11 @@ export async function createComponentCategory(
 ): Promise<AdapterResult<GetComponentCategoryResponse, 'unknown'>> {
   try {
     const response = await client().POST('/component-categories', {
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -778,11 +778,11 @@ export async function updateComponentCategory(
   try {
     const response = await client().PUT('/component-categories/{id}', {
       params: { path: { id } },
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -829,12 +829,12 @@ export async function getComponentTypes(
   limit?: number
 ): Promise<AdapterResult<GetComponentTypesResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-types' as any, {
+    const response = await client().GET('/component-types', {
       params: { query: { categoryId, page, limit } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -850,12 +850,12 @@ export async function getComponentTypeById(
   id: string
 ): Promise<AdapterResult<GetComponentTypeResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/component-types/{id}' as any, {
+    const response = await client().GET('/component-types/{id}', {
       params: { path: { id } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -874,11 +874,11 @@ export async function createComponentType(
 ): Promise<AdapterResult<GetComponentTypeResponse, 'unknown'>> {
   try {
     const response = await client().POST('/component-types', {
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -895,11 +895,11 @@ export async function updateComponentType(
   try {
     const response = await client().PUT('/component-types/{id}', {
       params: { path: { id } },
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -947,12 +947,12 @@ export async function getComponentSubtypes(
   subtypeName?: string
 ): Promise<AdapterResult<GetComponentSubtypesResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-subtypes' as any, {
+    const response = await client().GET('/component-subtypes', {
       params: { query: { typeId, page, limit, subtypeName } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -970,12 +970,12 @@ export async function getComponentSubtypeById(
   AdapterResult<GetComponentSubtypeResponse, 'unknown' | 'not_found'>
 > {
   try {
-    const response = await client().GET('/component-subtypes/{id}' as any, {
+    const response = await client().GET('/component-subtypes/{id}', {
       params: { path: { id } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -994,11 +994,11 @@ export async function createComponentSubtype(
 ): Promise<AdapterResult<GetComponentSubtypeResponse, 'unknown'>> {
   try {
     const response = await client().POST('/component-subtypes', {
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1017,11 +1017,11 @@ export async function updateComponentSubtype(
   try {
     const response = await client().PUT('/component-subtypes/{id}', {
       params: { path: { id } },
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1071,7 +1071,7 @@ export async function getComponentModels(
   modelName?: string
 ): Promise<AdapterResult<GetComponentModelsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-models' as any, {
+    const response = await client().GET('/component-models', {
       params: {
         query: {
           componentTypeId,
@@ -1084,8 +1084,8 @@ export async function getComponentModels(
       },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1101,12 +1101,12 @@ export async function getComponentModelById(
   id: string
 ): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/component-models/{id}' as any, {
+    const response = await client().GET('/component-models/{id}', {
       params: { path: { id } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1129,14 +1129,14 @@ export async function findModelByExactName(
 ): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
   try {
     const response = await client().GET(
-      '/component-models/by-name/{modelName}' as any,
+      '/component-models/by-name/{modelName}',
       {
         params: { path: { modelName } },
       }
     )
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1155,11 +1155,11 @@ export async function createComponentModel(
 ): Promise<AdapterResult<GetComponentModelResponse, 'unknown'>> {
   try {
     const response = await client().POST('/component-models', {
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1176,11 +1176,11 @@ export async function updateComponentModel(
   try {
     const response = await client().PUT('/component-models/{id}', {
       params: { path: { id } },
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1229,12 +1229,12 @@ export async function getComponents(
   serialNumber?: string
 ): Promise<AdapterResult<GetComponentsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/components' as any, {
+    const response = await client().GET('/components', {
       params: { query: { modelId, status, page, limit, serialNumber } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1250,12 +1250,12 @@ export async function getComponentById(
   id: string
 ): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET('/components/{id}' as any, {
+    const response = await client().GET('/components/{id}', {
       params: { path: { id } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1274,19 +1274,17 @@ export async function createComponent(
 ): Promise<AdapterResult<GetComponentResponse, 'unknown'>> {
   try {
     const response = await client().POST('/components', {
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     // Log error details from microservice response
     logger.error(
       {
         status: response.response?.status,
-        error: (response.data as any)?.error,
-        stack: (response.data as any)?.stack,
         requestData: data,
       },
       'property-base-adapter.createComponent failed'
@@ -1309,11 +1307,11 @@ export async function updateComponent(
   try {
     const response = await client().PUT('/components/{id}', {
       params: { path: { id } },
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1363,12 +1361,12 @@ export async function getComponentInstallations(
   limit?: number
 ): Promise<AdapterResult<GetComponentInstallationsResponse, 'unknown'>> {
   try {
-    const response = await client().GET('/component-installations' as any, {
+    const response = await client().GET('/component-installations', {
       params: { query: { componentId, spaceId, buildingPartId, page, limit } },
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1387,15 +1385,12 @@ export async function getComponentInstallationById(
   AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
 > {
   try {
-    const response = await client().GET(
-      '/component-installations/{id}' as any,
-      {
-        params: { path: { id } },
-      }
-    )
+    const response = await client().GET('/component-installations/{id}', {
+      params: { path: { id } },
+    })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1414,11 +1409,11 @@ export async function createComponentInstallation(
 ): Promise<AdapterResult<GetComponentInstallationResponse, 'unknown'>> {
   try {
     const response = await client().POST('/component-installations', {
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     return { ok: false, err: 'unknown' }
@@ -1437,11 +1432,11 @@ export async function updateComponentInstallation(
   try {
     const response = await client().PUT('/component-installations/{id}', {
       params: { path: { id } },
-      body: data as any,
+      body: data,
     })
 
-    if ((response.data as any)?.content) {
-      return { ok: true, data: (response.data as any).content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
     if (response.response.status === 404) {
@@ -1488,15 +1483,12 @@ export async function getComponentsByRoomId(
   AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'unknown'>
 > {
   try {
-    const fetchResponse = await client().GET(
-      '/components/by-room/{roomId}' as any,
-      {
-        params: { path: { roomId } },
-      }
-    )
+    const fetchResponse = await client().GET('/components/by-room/{roomId}', {
+      params: { path: { roomId } },
+    })
 
-    if ((fetchResponse.data as any)?.content) {
-      return { ok: true, data: (fetchResponse.data as any).content }
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
     }
 
     if (fetchResponse.response.status === 404) {
@@ -1569,16 +1561,16 @@ export async function getComponentFiles(
 ): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
   try {
     const response = await client().GET(
-      '/documents/component-instances/{id}' as any,
+      '/documents/component-instances/{id}',
       {
         params: {
-          path: { id: componentId } as any,
+          path: { id: componentId },
         },
       }
     )
 
     if (response.data) {
-      return { ok: true, data: response.data as DocumentWithUrl[] }
+      return { ok: true, data: response.data }
     }
 
     return { ok: false, err: 'not_found' }
@@ -1598,9 +1590,9 @@ export async function deleteComponentFile(
   documentId: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
   try {
-    await client().DELETE('/documents/{id}' as any, {
+    await client().DELETE('/documents/{id}', {
       params: {
-        path: { id: documentId } as any,
+        path: { id: documentId },
       },
     })
 
@@ -1671,17 +1663,14 @@ export async function getComponentModelDocuments(
   modelId: string
 ): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
   try {
-    const response = await client().GET(
-      '/documents/component-models/{id}' as any,
-      {
-        params: {
-          path: { id: modelId } as any,
-        },
-      }
-    )
+    const response = await client().GET('/documents/component-models/{id}', {
+      params: {
+        path: { id: modelId },
+      },
+    })
 
     if (response.data) {
-      return { ok: true, data: response.data as DocumentWithUrl[] }
+      return { ok: true, data: response.data }
     }
 
     return { ok: false, err: 'not_found' }
@@ -1701,9 +1690,9 @@ export async function deleteComponentModelDocument(
   documentId: string
 ): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
   try {
-    await client().DELETE('/documents/{id}' as any, {
+    await client().DELETE('/documents/{id}', {
       params: {
-        path: { id: documentId } as any,
+        path: { id: documentId },
       },
     })
 
@@ -1729,7 +1718,7 @@ export async function analyzeComponentImage(
 > {
   try {
     const response = await client().POST('/components/analyze-image', {
-      body: data as any,
+      body: data,
     })
 
     // Cast to access error properties - openapi-fetch types don't include error responses

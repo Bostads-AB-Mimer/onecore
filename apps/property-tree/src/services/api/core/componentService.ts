@@ -1,4 +1,4 @@
-import { Component, DocumentWithUrl } from '../../types'
+import { Component, DocumentWithUrl, ComponentsQuery } from '../../types'
 import { GET, POST, PUT, DELETE } from './base-api'
 
 export const componentService = {
@@ -51,13 +51,12 @@ export const componentService = {
   },
 
   async getInstancesByModel(modelId: string): Promise<Component[]> {
+    const query: ComponentsQuery = {
+      modelId,
+      limit: 100, // Max allowed by backend schema
+    }
     const { data, error } = await GET('/components', {
-      params: {
-        query: {
-          modelId,
-          limit: 100, // Max allowed by backend schema
-        } as any,
-      },
+      params: { query },
     })
     if (error) throw error
     return (data?.content || []) as Component[]
@@ -67,7 +66,7 @@ export const componentService = {
     modelId?: string,
     serialNumber?: string
   ): Promise<Component[]> {
-    const queryParams: any = {
+    const queryParams: ComponentsQuery = {
       limit: 100, // Max allowed by backend schema
     }
 

@@ -303,7 +303,7 @@ export const RoomInfo = (props: RoomInfoProps) => {
                 </div>
 
                 <RoomComponents
-                  propertyObjectId={(room as any).propertyObjectId}
+                  propertyObjectId={room.propertyObjectId}
                   roomName={room.name || room.roomType?.name || room.code}
                 />
               </AccordionContent>

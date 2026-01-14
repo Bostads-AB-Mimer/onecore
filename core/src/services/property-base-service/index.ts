@@ -116,6 +116,20 @@ export const routes = (router: KoaRouter) => {
     schemas.AnalyzeComponentImageRequestSchema
   )
   registerSchema('AIComponentAnalysis', schemas.AIComponentAnalysisSchema)
+  // Query parameter schemas for component library endpoints
+  registerSchema(
+    'ComponentTypesQueryParams',
+    schemas.ComponentTypesQueryParamsSchema
+  )
+  registerSchema(
+    'ComponentSubtypesQueryParams',
+    schemas.ComponentSubtypesQueryParamsSchema
+  )
+  registerSchema(
+    'ComponentModelsQueryParams',
+    schemas.ComponentModelsQueryParamsSchema
+  )
+  registerSchema('ComponentsQueryParams', schemas.ComponentsQueryParamsSchema)
 
   /**
    * @swagger
@@ -3054,8 +3068,7 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.getComponentSubtypes(
         params.data.typeId,
         params.data.page,
-        params.data.limit,
-        params.data.subtypeName
+        params.data.limit
       )
 
       if (!result.ok) {

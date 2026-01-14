@@ -85,24 +85,18 @@ export type CreateComponentModel =
 export type UpdateComponentModel =
   components['schemas']['UpdateComponentModelRequest']
 
-// Component request types
-export type CreateComponent = {
-  modelId: string
-  serialNumber: string
-  specifications?: string | null
-  additionalInformation?: string | null
-  warrantyStartDate?: string | null
-  warrantyMonths: number
-  priceAtPurchase: number
-  depreciationPriceAtPurchase: number
-  ncsCode?: string | null
-  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
-  condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-  quantity: number
-  economicLifespan: number
-}
+// Component request types - use generated schema types for API compatibility
+export type CreateComponent = components['schemas']['CreateComponentRequest']
+export type UpdateComponent = components['schemas']['UpdateComponentRequest']
 
-export type UpdateComponent = Partial<CreateComponent>
+// Query parameter types from generated API schema
+export type ComponentTypesQuery =
+  components['schemas']['ComponentTypesQueryParams']
+export type ComponentSubtypesQuery =
+  components['schemas']['ComponentSubtypesQueryParams']
+export type ComponentModelsQuery =
+  components['schemas']['ComponentModelsQueryParams']
+export type ComponentsQuery = components['schemas']['ComponentsQueryParams']
 
 // Component entity conditional helper types for generic hooks
 export type EntityType = 'category' | 'type' | 'subtype' | 'model' | 'instance'
@@ -144,10 +138,15 @@ export type UpdateData<T extends EntityType> = T extends 'category'
           ? UpdateComponent
           : never
 
+export type CreateMutationVariables<T extends EntityType> = CreateData<T> & {
+  parentId?: string
+}
+
 export type UpdateMutationVariables<T extends EntityType> = {
   id: string
   data: UpdateData<T>
   parentId?: string
+  oldParentId?: string
 }
 
 export type DeleteMutationVariables = {
@@ -159,7 +158,7 @@ export type MutationVariables<
   T extends EntityType,
   Op extends Operation,
 > = Op extends 'create'
-  ? CreateData<T>
+  ? CreateMutationVariables<T>
   : Op extends 'update'
     ? UpdateMutationVariables<T>
     : Op extends 'delete'
