@@ -1,17 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
+export interface DeleteParams {
+  documentId: string
+  fileId: string
+}
+
 interface FileManagementConfig<TFile, TUploadParams> {
   entityId: string
   queryKey: string
   fetchFiles: (entityId: string) => Promise<TFile[]>
   uploadFile: (entityId: string, params: TUploadParams) => Promise<void>
-  deleteFile: (entityId: string, fileId: string) => Promise<void>
+  deleteFile: (entityId: string, params: DeleteParams) => Promise<void>
   createOptimisticFile: (params: TUploadParams) => TFile
   staleTime?: number
 }
 
 export function useFileManagement<
-  TFile extends { fileId: string },
+  TFile extends { id: string; fileId: string },
   TUploadParams extends { file: File },
 >({
   entityId,
@@ -73,8 +78,8 @@ export function useFileManagement<
 
   // Delete mutation with optimistic update
   const deleteMutation = useMutation({
-    mutationFn: (fileId: string) => deleteFile(entityId, fileId),
-    onMutate: async (fileId) => {
+    mutationFn: (params: DeleteParams) => deleteFile(entityId, params),
+    onMutate: async (params) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: [queryKey, entityId] })
 
@@ -84,16 +89,16 @@ export function useFileManagement<
         entityId,
       ])
 
-      // Optimistically update to the new value
+      // Optimistically update to the new value - filter by document id
       queryClient.setQueryData<TFile[]>(
         [queryKey, entityId],
-        (old) => old?.filter((file) => file.fileId !== fileId) || []
+        (old) => old?.filter((file) => file.id !== params.documentId) || []
       )
 
       // Return context with the previous value
       return { previousFiles }
     },
-    onError: (_err, _fileId, context) => {
+    onError: (_err, _params, context) => {
       // Rollback to the previous value on error
       if (context?.previousFiles) {
         queryClient.setQueryData([queryKey, entityId], context.previousFiles)

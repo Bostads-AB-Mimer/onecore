@@ -282,7 +282,21 @@ export const componentService = {
     return documentsWithUrls as DocumentWithUrl[]
   },
 
-  async deleteImage(componentId: string, documentId: string): Promise<void> {
+  async deleteImage(documentId: string, fileId?: string): Promise<void> {
+    // 1. Delete file from Minio storage if fileId is provided
+    if (fileId) {
+      const { error: fileError } = await DELETE('/files/{fileName}', {
+        params: {
+          path: { fileName: fileId },
+        },
+      })
+      // Log but don't fail if file deletion fails (file might already be deleted)
+      if (fileError) {
+        console.warn('Failed to delete file from storage:', fileError)
+      }
+    }
+
+    // 2. Delete document record from database
     const { error } = await DELETE('/api/documents/{id}', {
       params: {
         path: { id: documentId },
@@ -344,9 +358,23 @@ export const componentService = {
   },
 
   async deleteModelDocument(
-    modelId: string,
-    documentId: string
+    documentId: string,
+    fileId?: string
   ): Promise<void> {
+    // 1. Delete file from Minio storage if fileId is provided
+    if (fileId) {
+      const { error: fileError } = await DELETE('/files/{fileName}', {
+        params: {
+          path: { fileName: fileId },
+        },
+      })
+      // Log but don't fail if file deletion fails (file might already be deleted)
+      if (fileError) {
+        console.warn('Failed to delete file from storage:', fileError)
+      }
+    }
+
+    // 2. Delete document record from database
     const { error } = await DELETE('/api/documents/{id}', {
       params: {
         path: { id: documentId },

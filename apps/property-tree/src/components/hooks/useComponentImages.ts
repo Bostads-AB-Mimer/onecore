@@ -8,7 +8,8 @@ export function useComponentImages(componentId: string) {
     queryKey: 'component-images',
     fetchFiles: (id) => componentService.getImages(id),
     uploadFile: (id, { file }) => componentService.uploadImage(id, file),
-    deleteFile: (id, fileId) => componentService.deleteImage(id, fileId),
+    deleteFile: (_id, { documentId, fileId }) =>
+      componentService.deleteImage(documentId, fileId),
     createOptimisticFile: ({ file }) => ({
       id: `temp-${Date.now()}`,
       fileId: `temp-${Date.now()}`,
