@@ -1060,8 +1060,8 @@ export interface paths {
       };
     };
   };
-  "/leases/{leaseId}/invoice-rows": {
-    /** Create an invoice row for a lease */
+  "/leases/{leaseId}/rent-rows": {
+    /** Create a rent row for a lease */
     post: {
       parameters: {
         path: {
@@ -1083,7 +1083,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Successfully created invoice row. */
+        /** @description Successfully created rent row. */
         201: {
           content: never;
         };
@@ -1098,23 +1098,38 @@ export interface paths {
       };
     };
   };
-  "/leases/{leaseId}/invoice-rows/{invoiceRowId}": {
-    /** Delete an invoice row for a lease */
+  "/leases/{leaseId}/rent-rows/{rentRowId}": {
+    /** Delete a rent row for a lease */
     delete: {
       parameters: {
         path: {
           /** @description The ID of the lease. */
           leaseId: string;
-          /** @description The ID of the invoice row. */
-          invoiceRowId: string;
+          /** @description The ID of the rent row. */
+          rentRowId: string;
         };
       };
       responses: {
-        /** @description Invoice row deleted. */
+        /** @description Rent row deleted. */
         200: {
           content: never;
         };
         /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/rent-articles": {
+    /** List rent articles articles */
+    get: {
+      responses: {
+        /** @description Successfully retrieved rent articles */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
         500: {
           content: never;
         };

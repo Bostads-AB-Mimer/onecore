@@ -625,9 +625,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /articles:
+   * /rent-articles:
    *   get:
-   *     summary: List Tenfast articles
+   *     summary: List articles
    *     tags: [Leases]
    *     responses:
    *       200:
@@ -635,7 +635,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.get('(.*)/articles', async (ctx) => {
+  router.get('(.*)/rent-articles', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const articles = await tenfastAdapter.getArticles()
 

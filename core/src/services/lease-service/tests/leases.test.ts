@@ -287,7 +287,7 @@ describe('leases routes', () => {
     })
   })
 
-  describe('GET /articles', () => {
+  describe('GET /rent-articles', () => {
     it('returns articles', async () => {
       const articles = [
         {
@@ -306,12 +306,12 @@ describe('leases routes', () => {
         },
       ]
 
-      jest.spyOn(tenantLeaseAdapter, 'getArticles').mockResolvedValue({
+      jest.spyOn(tenantLeaseAdapter, 'getRentArticles').mockResolvedValue({
         ok: true,
         data: articles,
       })
 
-      const res = await request(app.callback()).get('/articles')
+      const res = await request(app.callback()).get('/rent-articles')
 
       expect(res.status).toBe(200)
       expect(() =>
@@ -320,12 +320,12 @@ describe('leases routes', () => {
     })
 
     it('returns 500 on error', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'getArticles').mockResolvedValue({
+      jest.spyOn(tenantLeaseAdapter, 'getRentArticles').mockResolvedValue({
         ok: false,
         err: 'unknown',
       })
 
-      const res = await request(app.callback()).get('/articles')
+      const res = await request(app.callback()).get('/rent-articles')
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('unknown')

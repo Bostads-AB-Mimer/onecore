@@ -380,7 +380,7 @@ describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
   })
 })
 
-describe('GET /articles', () => {
+describe('GET /rent-articles', () => {
   it('returns articles', async () => {
     const articles = factory.tenfastArticle.buildList(2)
     jest.spyOn(tenfastAdapter, 'getArticles').mockResolvedValue({
@@ -388,7 +388,7 @@ describe('GET /articles', () => {
       data: articles,
     })
 
-    const res = await request(app.callback()).get('/articles')
+    const res = await request(app.callback()).get('/rent-articles')
 
     expect(res.status).toBe(200)
     expect(() =>
@@ -402,7 +402,7 @@ describe('GET /articles', () => {
       err: 'unknown',
     })
 
-    const res = await request(app.callback()).get('/articles')
+    const res = await request(app.callback()).get('/rent-articles')
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('unknown')
