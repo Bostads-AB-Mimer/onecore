@@ -689,8 +689,9 @@ export async function getArticles(): Promise<
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = z.array(TenfastArticleSchema).safeParse(res.data)
+    const parsed = z.array(TenfastRentArticleSchema).safeParse(res.data)
     if (!parsed.success) {
+      logger.error(mapHttpError(parsed.error), 'tenfast-adapter.getArticles')
       return { ok: false, err: { tag: 'schema-error', error: parsed.error } }
     }
 

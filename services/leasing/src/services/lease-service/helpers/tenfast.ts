@@ -66,8 +66,6 @@ export function mapToOnecoreRentArticle(article: TenfastArticle): RentArticle {
     accountNr: article.accountNr,
     vat: article.vat,
     description: article.description,
-    category: article.category,
-    includeInContract: article.includeInContract,
     createdAt: article.createdAt,
     updatedAt: article.updatedAt,
   }
