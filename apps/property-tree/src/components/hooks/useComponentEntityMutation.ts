@@ -101,7 +101,9 @@ export function useComponentEntityMutation<
     ) => {
       // Extract parent ID from variables for cache invalidation
       const vars = variables as { parentId?: string; oldParentId?: string }
-      const parentId = vars.parentId || (variables as Record<string, unknown>)[parentIdField || '']
+      const parentId =
+        vars.parentId ||
+        (variables as Record<string, unknown>)[parentIdField || '']
 
       // Invalidate the appropriate query key
       const queryKey = buildQueryKey(entityType, parentId as string | undefined)
