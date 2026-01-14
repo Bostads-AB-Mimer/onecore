@@ -1,9 +1,9 @@
 import { TabLayout } from '@/components/ui/TabLayout'
 import { useState } from 'react'
-import { Card } from '@/components/ui/v2/Card'
+import { Card, CardContent } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
 import { Input } from '@/components/ui/Input'
-import { Label } from '@/components/ui/Label'
+import { Label } from '@/components/ui/v2/Label'
 import {
   FileText,
   Upload,
@@ -12,7 +12,9 @@ import {
   User,
   Trash2,
 } from 'lucide-react'
+import { useToast } from '@/components/hooks/useToast'
 import { useIsMobile } from '@/components/hooks/useMobile'
+import { ContextType } from '@/types/ui'
 
 interface Document {
   id: string
@@ -24,6 +26,7 @@ interface Document {
   category: string
 }
 
+// TODO: Fetch documents from API
 const mockDocuments: Document[] = [
   {
     id: '1',
@@ -54,9 +57,10 @@ const mockDocuments: Document[] = [
   },
 ]
 
-export const BuildingDocumentsTab = () => {
+export const DocumentsTab = ({ contextType }: { contextType: ContextType }) => {
   const [documents, setDocuments] = useState<Document[]>(mockDocuments)
   const [isUploading, setIsUploading] = useState(false)
+  const { toast } = useToast()
   const isMobile = useIsMobile()
 
   const handleFileUpload = async (
@@ -67,7 +71,7 @@ export const BuildingDocumentsTab = () => {
 
     setIsUploading(true)
 
-    // Simulate file upload delay
+    // Simulera upload
     setTimeout(() => {
       const newDocument: Document = {
         id: Date.now().toString(),
@@ -85,19 +89,36 @@ export const BuildingDocumentsTab = () => {
 
       setDocuments((prev) => [newDocument, ...prev])
       setIsUploading(false)
+
+      toast({
+        title: 'Dokument uppladdat',
+        description: `${file.name} har laddats upp framgångsrikt.`,
+      })
+
+      // Rensa input
       event.target.value = ''
     }, 2000)
   }
 
-  const handleDownload = (document: Document) => {}
+  const handleDownload = (document: Document) => {
+    toast({
+      title: 'Laddar ner',
+      description: `${document.name} laddas ner...`,
+    })
+  }
 
   const handleDelete = (documentId: string) => {
     setDocuments((prev) => prev.filter((doc) => doc.id !== documentId))
+    toast({
+      title: 'Dokument borttaget',
+      description: 'Dokumentet har tagits bort.',
+      variant: 'destructive',
+    })
   }
 
   return (
     <TabLayout title="Dokument" count={documents.length} showCard={true}>
-      {/* Upload section */}
+      {/* Upload sektion */}
       <div className="border-2 border-dashed border-gray-200 rounded-lg p-6">
         <div className="text-center space-y-4">
           <Upload className="h-8 w-8 text-gray-400 mx-auto" />
@@ -124,7 +145,7 @@ export const BuildingDocumentsTab = () => {
         </div>
       </div>
 
-      {/* Document list */}
+      {/* Dokumentlista */}
       <div className="space-y-3">
         {documents.map((document) => (
           <Card key={document.id} className="p-4">

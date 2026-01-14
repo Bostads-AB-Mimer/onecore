@@ -6,6 +6,8 @@ import { BuildingDetailTabsMobile } from './BuildingDetailTabsMobile'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { Building, Staircase } from '@/services/types'
 import { useResidenceStaircaseLookupMap } from '../hooks/useResidenceStaircaseLookupMap'
+import { DocumentsTab } from '../documents/DocumentsTab'
+import { ContextType } from '@/types/ui'
 
 interface BuildingDetailTabsProps {
   building: Building
@@ -39,6 +41,7 @@ export const BuildingDetailTabs = ({
       <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
         <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
         <TabsTrigger value="orders">Ärenden</TabsTrigger>
+        <TabsTrigger value="documents">Dokument</TabsTrigger>
       </TabsList>
 
       <TabsContent value="entrances">
@@ -51,6 +54,10 @@ export const BuildingDetailTabs = ({
 
       <TabsContent value="orders">
         <BuildingOrdersTab building={building} />
+      </TabsContent>
+
+      <TabsContent value="documents">
+        <DocumentsTab contextType={ContextType.Building} />
       </TabsContent>
     </Tabs>
   )
