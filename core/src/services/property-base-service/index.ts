@@ -2044,6 +2044,79 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /maintenance-units/search:
+   *   get:
+   *     summary: Search maintenance units
+   *     description: |
+   *       Searches for maintenance units by code.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (maintenance unit code).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved maintenance units matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/maintenance-units/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const q = ctx.query.q as string
+
+    logger.info(metadata, `GET /maintenance-units/search?q=${q}`)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.searchMaintenanceUnits(q)
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error searching maintenance units from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.MaintenanceUnit>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /facilities/by-property-code/{propertyCode}:
    *   get:
    *     summary: Get facilities by property code.

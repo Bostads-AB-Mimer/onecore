@@ -3352,6 +3352,38 @@ export interface paths {
       }
     }
   }
+  '/maintenance-units/search': {
+    /**
+     * Search maintenance units
+     * @description Searches for maintenance units by code.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (maintenance unit code). */
+          q: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved maintenance units matching the search query. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
+        /** @description Invalid query provided */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/facilities/by-property-code/{propertyCode}': {
     /**
      * Get facilities by property code.
@@ -3483,12 +3515,18 @@ export interface paths {
   '/search': {
     /**
      * Omni-search for different entities
-     * @description Search for properties, buildings, residences, and parking spaces.
+     * @description Search for properties, buildings, residences, parking spaces, and maintenance units.
+     * - Properties: Matches on property name
+     * - Buildings: Matches on building name
+     * - Residences: Matches on rental ID or residence name
+     * - Parking Spaces: Matches on rental ID or parking space name
+     * - Maintenance Units: Matches on code
+     * Returns up to 10 results per entity type (max 50 total results).
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query string. Matches on property name, building name or residence rental object id */
+          /** @description The search query string */
           q: string
         }
       }
@@ -4255,7 +4293,26 @@ export interface components {
         code: string
       } | null
     }
-    /** @description A search result that can be either a property, building, residence or parking space */
+    MaintenanceUnitSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string
+      /**
+       * @description Indicates this is a maintenance unit result
+       * @enum {string}
+       */
+      type: 'maintenance-unit'
+      /** @description Code of the maintenance unit */
+      code: string
+      /** @description Caption/name of the maintenance unit */
+      caption: string | null
+      /** @description Type of maintenance unit */
+      maintenanceType: string | null
+      /** @description Property code */
+      estateCode: string | null
+      /** @description Property name */
+      estate: string | null
+    }
+    /** @description A search result that can be either a property, building, residence, parking space or maintenance unit */
     SearchResult:
       | {
           /** @description Unique identifier for the search result */
@@ -4332,6 +4389,25 @@ export interface components {
             /** @description Name of building associated with the parking space */
             name: string | null
           }
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a maintenance unit result
+           * @enum {string}
+           */
+          type: 'maintenance-unit'
+          /** @description Code of the maintenance unit */
+          code: string
+          /** @description Caption/name of the maintenance unit */
+          caption: string | null
+          /** @description Type of maintenance unit */
+          maintenanceType: string | null
+          /** @description Property code */
+          estateCode: string | null
+          /** @description Property name */
+          estate: string | null
         }
   }
   responses: never
