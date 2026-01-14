@@ -408,6 +408,7 @@ export const preliminaryTerminateLease = async (
       )
       return { ok: false, err: 'termination-failed' }
     }
+    // TODO: Handle error when email is missing in Tenfast, when this is implemented in Tenfast API
 
     const tenfastLeaseId = leaseResponse.data._id
 
@@ -443,7 +444,24 @@ export const preliminaryTerminateLease = async (
       return { ok: true, data: { message: 'Signerings begäran skickad' } }
     }
 
-    // Handle errors
+    // Handle errors - use shared error mapping logic
+    return handleTerminationError(terminationResponse, leaseId)
+  } catch (err: any) {
+    // Handle Axios errors specifically to get status codes
+    if (err.response) {
+      return handleTerminationError(err.response, leaseId)
+    }
+
+    return handleTenfastError(err, 'termination-failed')
+  }
+
+  function handleTerminationError(
+    response: { status: number; data: any },
+    leaseId: string
+  ): AdapterResult<
+    PreliminaryTerminationResponse,
+    'lease-not-found' | 'termination-failed' | 'unknown'
+  > {
     const errorMap: Record<
       number,
       {
@@ -462,7 +480,7 @@ export const preliminaryTerminateLease = async (
       },
     }
 
-    const error = errorMap[terminationResponse.status] || {
+    const error = errorMap[response.status] || {
       err: 'unknown' as const,
       message: 'Unexpected response from tenfast termination endpoint',
     }
@@ -470,14 +488,12 @@ export const preliminaryTerminateLease = async (
     logger.error(
       {
         leaseId,
-        status: terminationResponse.status,
-        error: terminationResponse.data,
+        status: response.status,
+        error: response.data,
       },
       error.message
     )
     return { ok: false, err: error.err }
-  } catch (err) {
-    return handleTenfastError(err, 'termination-failed')
   }
 }
 
