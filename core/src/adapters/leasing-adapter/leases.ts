@@ -156,11 +156,11 @@ export async function deleteLeaseRentRow(params: {
   }
 }
 
-export async function getArticles(): Promise<
+export async function getRentArticles(): Promise<
   AdapterResult<RentArticle[], 'unknown' | 'schema-error'>
 > {
   const result = await axios.get<{ content: unknown }>(
-    `${tenantsLeasesServiceUrl}/articles`
+    `${tenantsLeasesServiceUrl}/rent-articles`
   )
 
   if (result.status === 200) {

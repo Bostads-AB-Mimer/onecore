@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 import { z } from 'zod'
 
@@ -430,21 +434,22 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /articles:
+   * /rent-articles:
    *   get:
-   *     summary: List leasing articles
+   *     summary: List rent articles articles
    *     tags:
    *       - Lease service
    *     responses:
    *       200:
-   *         description: Successfully retrieved articles
+   *         description: Successfully retrieved rent articles
    *       500:
    *         description: Internal server error
    */
-  router.get('/articles', async (ctx) => {
+  router.get('/rent-articles', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const res = await leasingAdapter.getArticles()
+    const res = await leasingAdapter.getRentArticles()
 
+    console.log('res', res)
     if (!res.ok) {
       ctx.status = 500
       ctx.body = { error: res.err, ...metadata }
@@ -452,9 +457,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = {
-      content: res.data,
-      ...metadata,
-    }
+    console.log('makeSuccessResponseBody', makeSuccessResponseBody)
+    ctx.body = makeSuccessResponseBody(res.data, metadata)
   })
 }
