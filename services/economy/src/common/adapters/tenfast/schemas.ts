@@ -138,6 +138,16 @@ export type TenfastTenantByContactCodeResponse = z.infer<
 
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 
-export const TenfastRentArticleSchema = z.record(z.string(), z.any())
+export const TenfastRentArticleSchema = z.object({
+  includeInContract: z.boolean(),
+  _id: z.string(),
+  label: z.string(),
+  type: z.string(),
+  accountNr: z.string().nullable(),
+  createdAt: z.string(),
+  hyresvard: z.string(),
+  code: z.string(),
+  title: z.string(),
+})
 
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
