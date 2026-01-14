@@ -1,17 +1,7 @@
 import { Component, DocumentWithUrl } from '../../types'
 import { GET, POST, PUT, DELETE } from './base-api'
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64 = reader.result as string
-      resolve(base64.split(',')[1]) // Remove "data:mime/type;base64," prefix
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
+import { fileToBase64 } from '@/utils/file'
+import { fileStorageService } from './fileStorageService'
 
 export const componentService = {
   async getByRoomId(roomId: string): Promise<Component[]> {
@@ -244,13 +234,14 @@ export const componentService = {
     const fileName = `component-instance-${componentId}-${Date.now()}-${file.name}`
 
     // 1. Upload file to storage service
-    const { data, error } = await POST('/files/upload', {
-      body: { fileName, fileData, contentType: file.type },
-    })
-    if (error) throw error
+    const data = await fileStorageService.uploadFile(
+      fileName,
+      fileData,
+      file.type
+    )
 
     // 2. Create document record in property service
-    const storedFileName = data?.content?.fileName ?? fileName
+    const storedFileName = data?.fileName ?? fileName
     const { error: docError } = await POST('/api/documents', {
       body: {
         fileId: storedFileName,
@@ -316,13 +307,14 @@ export const componentService = {
     const fileName = `component-model-${modelId}-${Date.now()}-${file.name}`
 
     // 1. Upload file to storage service
-    const { data, error } = await POST('/files/upload', {
-      body: { fileName, fileData, contentType: file.type },
-    })
-    if (error) throw error
+    const data = await fileStorageService.uploadFile(
+      fileName,
+      fileData,
+      file.type
+    )
 
     // 2. Create document record in property service
-    const storedFileName = data?.content?.fileName ?? fileName
+    const storedFileName = data?.fileName ?? fileName
     const { error: docError } = await POST('/api/documents', {
       body: {
         fileId: storedFileName,
