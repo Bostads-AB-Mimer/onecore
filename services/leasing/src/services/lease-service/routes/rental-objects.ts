@@ -1,10 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import {
-  getAllVacantParkingSpaces,
-  getParkingSpace,
-  getParkingSpaces,
-} from '../adapters/xpand/rental-object-adapter'
+import * as xpandAdapter from '../adapters/xpand/rental-object-adapter'
 
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 
@@ -70,7 +66,7 @@ export const routes = (router: KoaRouter) => {
       requestBody?.includeRentalObjectCodes?.filter(Boolean) ?? []
 
     const [parkingSpaceResult, rentalObjectRentsResponse] = await Promise.all([
-      getParkingSpaces(includeRentalObjectCodes),
+      xpandAdapter.getParkingSpaces(includeRentalObjectCodes),
       tenfastAdapter.getRentalObjectRents(includeRentalObjectCodes, false),
     ])
 
@@ -159,7 +155,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
 
-    const result = await getParkingSpace(rentalObjectCode)
+    const result = await xpandAdapter.getParkingSpace(rentalObjectCode)
 
     if (result.ok) {
       //get rent
@@ -239,7 +235,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(metadata, 'Fetching all vacant parking spaces')
 
-    const vacantParkingSpaces = await getAllVacantParkingSpaces()
+    const vacantParkingSpaces = await xpandAdapter.getAllVacantParkingSpaces()
 
     if (!vacantParkingSpaces.ok) {
       logger.error(
@@ -281,7 +277,6 @@ export const routes = (router: KoaRouter) => {
         ps.monthlyRent = rent.amount
       }
     })
-
     ctx.status = 200
     ctx.body = { content: vacantParkingSpaces.data, ...metadata }
   })

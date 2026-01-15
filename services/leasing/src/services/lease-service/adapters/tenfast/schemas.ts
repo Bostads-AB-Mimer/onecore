@@ -117,7 +117,6 @@ export const TenfastRentalObjectSchema = z.object({
   hyraVat: z.number(), // total moms pa hyran
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
-  externalId: z.string(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
