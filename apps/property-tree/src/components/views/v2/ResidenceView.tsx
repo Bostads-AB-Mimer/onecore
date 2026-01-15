@@ -13,6 +13,7 @@ import {
   Users,
   FileText,
   Map,
+  Folder,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
@@ -22,6 +23,7 @@ import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
 import { ContextType } from '@/types/ui'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -106,6 +108,13 @@ export const ResidenceView = () => {
                 <MessageSquare className="h-4 w-4" />
                 <span className="hidden sm:inline">Ärenden</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="documents"
+                className="flex items-center gap-1.5"
+              >
+                <Folder className="h-4 w-4" />
+                <span className="hidden sm:inline">Dokument</span>
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">
               <Card>
@@ -153,6 +162,12 @@ export const ResidenceView = () => {
                   id={residence?.propertyObject.rentalId}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="documents">
+              <DocumentsTab
+                contextType={ContextType.Residence}
+                id={residence.id}
+              />
             </TabsContent>
           </Tabs>
         </div>
