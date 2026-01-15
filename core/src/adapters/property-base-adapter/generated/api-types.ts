@@ -257,6 +257,61 @@ export interface paths {
       };
     };
   };
+  "/component-subtypes": {
+    /**
+     * Get all component subtypes
+     * @description Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter subtypes by type ID */
+          typeId?: string;
+          /** @description Search by subtype name (case-insensitive partial match) */
+          subtypeName?: string;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component subtypes */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"][];
+              pagination?: {
+                page?: number;
+                limit?: number;
+                total?: number;
+                totalPages?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component subtype
+     * @description Creates a subtype with lifecycle parameters. Requires typeId.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
+        };
+      };
+      responses: {
+        /** @description Component subtype created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"];
+            };
+          };
+        };
+      };
+    };
+  };
   "/component-subtypes/{id}": {
     /**
      * Get component subtype by ID
@@ -323,29 +378,6 @@ export interface paths {
         /** @description Component subtype deleted */
         204: {
           content: never;
-        };
-      };
-    };
-  };
-  "/component-subtypes": {
-    /**
-     * Create a new component subtype
-     * @description Creates a subtype with lifecycle parameters. Requires typeId.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component subtype created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
         };
       };
     };
@@ -3072,10 +3104,14 @@ export interface components {
       modelName: string;
       /** Format: uuid */
       componentSubtypeId: string;
-      currentPrice: number;
-      currentInstallPrice: number;
-      warrantyMonths: number;
-      manufacturer: string;
+      /** @default 0 */
+      currentPrice?: number;
+      /** @default 0 */
+      currentInstallPrice?: number;
+      /** @default 0 */
+      warrantyMonths?: number;
+      /** @default */
+      manufacturer?: string;
       technicalSpecification?: string;
       installationInstructions?: string;
       dimensions?: string;
@@ -3101,9 +3137,12 @@ export interface components {
       specifications?: string;
       additionalInformation?: string;
       warrantyStartDate?: string;
-      warrantyMonths: number;
-      priceAtPurchase: number;
-      depreciationPriceAtPurchase: number;
+      /** @default 0 */
+      warrantyMonths?: number;
+      /** @default 0 */
+      priceAtPurchase?: number;
+      /** @default 0 */
+      depreciationPriceAtPurchase?: number;
       ncsCode?: string | null;
       /**
        * @default ACTIVE
@@ -3114,7 +3153,8 @@ export interface components {
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       /** @default 1 */
       quantity?: number;
-      economicLifespan: number;
+      /** @default 0 */
+      economicLifespan?: number;
     };
     UpdateComponentRequest: {
       /** Format: uuid */
@@ -3197,46 +3237,6 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
-    };
-    ComponentTypesQueryParams: {
-      /** Format: uuid */
-      categoryId?: string;
-      /** @default 1 */
-      page?: number;
-      /** @default 20 */
-      limit?: number;
-    };
-    ComponentSubtypesQueryParams: {
-      /** Format: uuid */
-      typeId?: string;
-      subtypeName?: string;
-      /** @default 1 */
-      page?: number;
-      /** @default 20 */
-      limit?: number;
-    };
-    ComponentModelsQueryParams: {
-      /** Format: uuid */
-      componentTypeId?: string;
-      /** Format: uuid */
-      subtypeId?: string;
-      manufacturer?: string;
-      modelName?: string;
-      /** @default 1 */
-      page?: number;
-      /** @default 20 */
-      limit?: number;
-    };
-    ComponentsQueryParams: {
-      /** Format: uuid */
-      modelId?: string;
-      /** @enum {string} */
-      status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-      serialNumber?: string;
-      /** @default 1 */
-      page?: number;
-      /** @default 20 */
-      limit?: number;
     };
   };
   responses: never;

@@ -252,6 +252,8 @@ export const ComponentLibraryContent = ({
         <EmptyState
           title="Inga undertyper ännu"
           description="Skapa din första undertyp för att komma igång"
+          onAction={onCreateSubtype}
+          actionLabel="Skapa undertyp"
         />
       )
     }
@@ -299,6 +301,8 @@ export const ComponentLibraryContent = ({
         <EmptyState
           title="Inga modeller ännu"
           description="Skapa din första modell för att komma igång"
+          onAction={onCreateModel}
+          actionLabel="Skapa modell"
         />
       )
     }

@@ -5819,7 +5819,7 @@ export interface components {
       typeName: string;
       /** Format: uuid */
       categoryId: string;
-      description: string;
+      description?: string;
     };
     UpdateComponentTypeRequest: {
       typeName?: string;
@@ -5832,10 +5832,14 @@ export interface components {
       /** Format: uuid */
       typeId: string;
       xpandCode?: string;
-      depreciationPrice: number;
-      technicalLifespan: number;
-      economicLifespan: number;
-      replacementIntervalMonths: number;
+      /** @default 0 */
+      depreciationPrice?: number;
+      /** @default 0 */
+      technicalLifespan?: number;
+      /** @default 0 */
+      economicLifespan?: number;
+      /** @default 0 */
+      replacementIntervalMonths?: number;
       /** @enum {string} */
       quantityType: "UNIT" | "METER" | "SQUARE_METER" | "CUBIC_METER";
     };
@@ -5855,10 +5859,14 @@ export interface components {
       modelName: string;
       /** Format: uuid */
       componentSubtypeId: string;
-      currentPrice: number;
-      currentInstallPrice: number;
-      warrantyMonths: number;
-      manufacturer: string;
+      /** @default 0 */
+      currentPrice?: number;
+      /** @default 0 */
+      currentInstallPrice?: number;
+      /** @default 0 */
+      warrantyMonths?: number;
+      /** @default */
+      manufacturer?: string;
       technicalSpecification?: string;
       installationInstructions?: string;
       dimensions?: string;
@@ -5885,9 +5893,12 @@ export interface components {
       additionalInformation?: string;
       /** Format: date-time */
       warrantyStartDate?: string;
-      warrantyMonths: number;
-      priceAtPurchase: number;
-      depreciationPriceAtPurchase: number;
+      /** @default 0 */
+      warrantyMonths?: number;
+      /** @default 0 */
+      priceAtPurchase?: number;
+      /** @default 0 */
+      depreciationPriceAtPurchase?: number;
       ncsCode?: string;
       /**
        * @default ACTIVE
@@ -5898,7 +5909,8 @@ export interface components {
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
       /** @default 1 */
       quantity?: number;
-      economicLifespan: number;
+      /** @default 0 */
+      economicLifespan?: number;
       files?: string;
     };
     UpdateComponentRequest: {

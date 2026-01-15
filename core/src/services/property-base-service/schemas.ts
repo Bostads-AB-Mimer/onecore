@@ -800,7 +800,7 @@ export const UpdateComponentCategorySchema = z.object({
 export const CreateComponentTypeSchema = z.object({
   typeName: z.string().trim().min(1, 'Type name is required'),
   categoryId: z.string().uuid(),
-  description: z.string().trim().min(1, 'Description is required'),
+  description: z.string().trim().optional(),
 })
 
 export const UpdateComponentTypeSchema = z.object({
@@ -813,10 +813,10 @@ export const CreateComponentSubtypeSchema = z.object({
   subTypeName: z.string().trim().min(1, 'Subtype name is required'),
   typeId: z.string().uuid(),
   xpandCode: z.string().trim().optional(),
-  depreciationPrice: z.number().min(0),
-  technicalLifespan: z.number().min(0),
-  economicLifespan: z.number().min(0),
-  replacementIntervalMonths: z.number().int().min(0),
+  depreciationPrice: z.number().min(0).optional().default(0),
+  technicalLifespan: z.number().min(0).optional().default(0),
+  economicLifespan: z.number().min(0).optional().default(0),
+  replacementIntervalMonths: z.number().int().min(0).optional().default(0),
   quantityType: QuantityTypeEnum,
 })
 
@@ -834,10 +834,10 @@ export const UpdateComponentSubtypeSchema = z.object({
 export const CreateComponentModelSchema = z.object({
   modelName: z.string().trim().min(1, 'Model name is required'),
   componentSubtypeId: z.string().uuid(),
-  currentPrice: z.number().min(0),
-  currentInstallPrice: z.number().min(0),
-  warrantyMonths: z.number().int().min(0),
-  manufacturer: z.string().trim().min(1, 'Manufacturer is required'),
+  currentPrice: z.number().min(0).optional().default(0),
+  currentInstallPrice: z.number().min(0).optional().default(0),
+  warrantyMonths: z.number().int().min(0).optional().default(0),
+  manufacturer: z.string().trim().optional().default(''),
   technicalSpecification: z.string().trim().optional(),
   installationInstructions: z.string().trim().optional(),
   dimensions: z.string().trim().optional(),
@@ -863,14 +863,14 @@ export const CreateComponentSchema = z.object({
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.coerce.date().optional(),
-  warrantyMonths: z.number().int().min(0),
-  priceAtPurchase: z.number().min(0),
-  depreciationPriceAtPurchase: z.number().min(0),
+  warrantyMonths: z.number().int().min(0).optional().default(0),
+  priceAtPurchase: z.number().min(0).optional().default(0),
+  depreciationPriceAtPurchase: z.number().min(0).optional().default(0),
   ncsCode: z.string().trim().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
   condition: ComponentConditionEnum.nullable().optional(),
-  quantity: z.number().min(0).default(1),
-  economicLifespan: z.number().min(0),
+  quantity: z.number().min(0).optional().default(1),
+  economicLifespan: z.number().min(0).optional().default(0),
   files: z.string().trim().optional(),
 })
 
