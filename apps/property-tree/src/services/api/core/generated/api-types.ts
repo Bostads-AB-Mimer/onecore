@@ -4644,6 +4644,34 @@ export interface paths {
       };
     };
   };
+  "/files": {
+    /** List files with optional prefix */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter files by prefix */
+          prefix?: string;
+        };
+      };
+      responses: {
+        /** @description List of files */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Array of file names */
+                files?: string[];
+              };
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/files/upload": {
     /** Upload a file */
     post: {

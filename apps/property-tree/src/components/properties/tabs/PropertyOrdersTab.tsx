@@ -1,9 +1,7 @@
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TabLayout } from '@/components/ui/TabLayout'
 import type { PropertyDetail } from '@/types/api'
+import { ContextType } from '@/types/ui'
 
 interface PropertyOrdersTabProps {
   propertyDetail: PropertyDetail
