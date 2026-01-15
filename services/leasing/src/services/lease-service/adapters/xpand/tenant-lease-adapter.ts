@@ -425,12 +425,48 @@ const getContactsDataBySearchQuery = async (
   >
 > => {
   try {
+    const isEmailSearch = q.includes('@')
+
+    if (isEmailSearch) {
+      // Email search only
+      const rows = await xpandDb
+        .from('cmctc')
+        .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+        .where(
+          'cmctc.keycmobj',
+          'in',
+          xpandDb
+            .select('keycmobj')
+            .from('cmeml')
+            .where('cmemlben', 'like', `${q}%`)
+        )
+        .limit(10)
+
+      return {
+        ok: true,
+        data: rows,
+      }
+    }
+
+    // Name/code/PNR search
+    const searchTerms = q
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0)
+      .map((word) => `"${word}*"`)
+      .join(' AND ')
+
     const rows = await xpandDb
       .from('cmctc')
       .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
-      .where('cmctc.cmctckod', 'like', `%${q}%`)
-      .orWhere('cmctc.persorgnr', 'like', `%${q}%`)
-      .limit(5)
+      .where((builder) => {
+        builder.where('cmctc.cmctckod', 'like', `${q}%`)
+        builder.orWhere('cmctc.persorgnr', 'like', `${q}%`)
+        if (searchTerms) {
+          builder.orWhereRaw('CONTAINS(cmctc.cmctcben, ?)', [searchTerms])
+        }
+      })
+      .limit(10)
 
     return {
       ok: true,
