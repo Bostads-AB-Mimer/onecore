@@ -185,24 +185,25 @@ export const transformAddress = (
     (result, line) => {
       if (line && line.trim()) {
         if (result.state === 'initial') {
-          const match = line.match(/^([^0-9]+(\s[^0-9])*)\s?([0-9 ]*.*)/)
-          if (match) {
-            result.address.street = match[1]?.trim() ?? ''
-            result.address.number = match[3]?.trim() ?? ''
+          if (line.match(/^([^0-9]+(\s[^0-9])*)\s?([0-9 ]*.*)/)) {
+            result.address.street = line.trim()
             result.state = 'expect-zip'
           }
         } else if (result.state === 'expect-zip') {
-          const match = line.match(/^[0-9 ]+/)
-          result.address.zipCode = line.trim()
-          result.state = 'expect-city'
+          if (line.match(/^[0-9 ]+$/)) {
+            result.address.zipCode = line.trim()
+            result.state = 'expect-city'
+          }
         } else if (result.state === 'expect-city') {
-          const match = line.match(/^[\w[\s]?]+/)
-          result.address.city = line.trim()
-          result.state = 'expect-country'
+          if (line.match(/^[\w\s]+/)) {
+            result.address.city = line.trim()
+            result.state = 'expect-country'
+          }
         } else if (result.state === 'expect-country') {
-          const match = line.match(/^[\w[\s]?]+/)
-          result.address.country = line.trim()
-          result.state = 'done'
+          if (line.match(/^[\w\s]+/)) {
+            result.address.country = line.trim()
+            result.state = 'done'
+          }
         }
       }
       return result
@@ -211,7 +212,6 @@ export const transformAddress = (
       state: 'initial' as string,
       address: {
         street: '',
-        number: '',
         zipCode: '',
         city: '',
         country: '',
@@ -265,7 +265,8 @@ export const toCommunicationFragment = (
 export const toAddresses = (
   addresses: DbAddress[],
   protectedIdentity: boolean
-) => addresses.map(transformAddress)
+): ContactAddress[] =>
+  addresses.map(transformAddress).filter((a) => a !== undefined)
 
 /**
  * Transform a DbContact row to a ContactIndividual domain object.
