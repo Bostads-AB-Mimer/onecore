@@ -16,7 +16,8 @@ describe('extractPhoneNumber', () => {
     ['Christer 0731112233           ', '0731112233'],
     ['       070-1943334 (Maud)     ', '070-1943334'],
     ['      021-110033 Björn        ', '021-110033'],
-    ['  På en grusväg               ', undefined], // This an honest-to-god example from real life
+    // This is an honest-to-god example from real life. I don't even...
+    ['  På en grusväg               ', undefined],
   ])('should process "%s" and extract phone number "%s"', (input, expected) => {
     expect(extractPhoneNumber(input)).toEqual(expected)
   })
@@ -32,7 +33,7 @@ describe('extractPhoneNumber', () => {
     ['Christer 0701112233           ', 'Christer'],
     ['       070-1943334 (Maud)     ', '(Maud)'],
     ['      021-110033 Björn        ', 'Björn'],
-    ['  På en grusväg               ', 'På en grusväg'], // This an honest-to-god example from real life
+    ['  På en grusväg               ', 'På en grusväg'],
   ])('should process "%s" and extract comment "%s"', (input, expected) => {
     expect(extractPhoneNumberComment(input)).toEqual(expected)
   })
@@ -63,8 +64,7 @@ describe('transformAddress', () => {
         ],
       },
       {
-        street: 'Holländargatan',
-        number: '31',
+        street: 'Holländargatan 31',
         zipCode: '113 59',
         city: 'STOCKHOLM',
         country: 'SVERIGE',
@@ -87,8 +87,7 @@ describe('transformAddress', () => {
         ],
       },
       {
-        street: 'Holländargatan',
-        number: '31',
+        street: 'Holländargatan 31',
         zipCode: '113 59',
         city: 'STOCKHOLM',
         country: 'SVERIGE',
@@ -96,9 +95,10 @@ describe('transformAddress', () => {
       },
     ],
   ] as AddressTestCase[])(
-    'should process "%s" and extract address "%s"',
+    'should process "%o" and extract address "%s"',
     (input, expected) => {
       const dbAddress = {
+        addressId: 'wtfever',
         adress1: input.lines[0],
         adress2: input.lines[1],
         adress3: input.lines[2],

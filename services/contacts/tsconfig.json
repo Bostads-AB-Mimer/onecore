@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "composite": true,
-    "rootDirs": ["./src", "./test"],
+    "rootDirs": ["./src", "./test", "./scripts"],
     "types": [
       "jest",
       "node"
@@ -13,5 +13,5 @@
       "@src/*": ["./src/*"]
     }
   },
-  "include": ["scripts/"]
+  "include": ["scripts/", "src/", "test/"]
 }
