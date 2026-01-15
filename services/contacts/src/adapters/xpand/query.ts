@@ -12,6 +12,9 @@ const NATIONAL_ID_NUMBER = 'cmctc.persorgnr'
  * Utility-function that generates the arguments for knex.whereRaw
  * for case-insensitive and accent-insensitive wildcard WHERE-criteria.
  *
+ * Usage:
+ * <knex-builder>.whereRaw(...wildcard('knut'))
+ *
  * @param column - The column name to apply the wildcard search on
  * @param wc - The wildcard string to search for
  *
