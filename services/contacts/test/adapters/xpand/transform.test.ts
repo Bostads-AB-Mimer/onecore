@@ -1,10 +1,11 @@
 import {
   extractPhoneNumber,
   extractPhoneNumberComment,
-} from '@src/adapters/xpand/transform'
-import { ContactAddress } from '../../../src/domain/contact'
-import { DbAddress } from '../../../src/adapters/xpand/db-model'
-import { transformAddress } from '../../../src/adapters/xpand/transform'
+  parseCareOf,
+  extractAddress,
+} from '@xpand/transform'
+import { ContactAddress } from '@src/domain/contact'
+import { DbAddress } from '@xpand/db-model'
 
 describe('extractPhoneNumber', () => {
   it.each([
@@ -46,22 +47,11 @@ type AddressTestCase = [
   ContactAddress,
 ]
 
-describe('transformAddress', () => {
+describe('extractAddress', () => {
   it.each([
     [
       {
-        lines: [
-          'Holländargatan 31',
-          null,
-          '113 59',
-          'STOCKHOLM',
-          'SVERIGE',
-          null,
-          null,
-          null,
-          null,
-          null,
-        ],
+        lines: ['Holländargatan 31', null, '113 59', 'STOCKHOLM', 'SVERIGE'],
       },
       {
         street: 'Holländargatan 31',
@@ -79,11 +69,6 @@ describe('transformAddress', () => {
           '113 59',
           'STOCKHOLM',
           'SVERIGE',
-          null,
-          null,
-          null,
-          null,
-          null,
         ],
       },
       {
@@ -92,6 +77,38 @@ describe('transformAddress', () => {
         city: 'STOCKHOLM',
         country: 'SVERIGE',
         full: 'Holländargatan 31, 113 59, STOCKHOLM, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: [
+          'C/o Ronny Maräng',
+          'Svissgatan 22',
+          '600 12',
+          'KLOPPETIKLOPPKÖPING',
+          'SVERIGE',
+        ],
+      },
+      {
+        careOf: 'C/o Ronny Maräng',
+        street: 'Svissgatan 22',
+        zipCode: '600 12',
+        city: 'KLOPPETIKLOPPKÖPING',
+        country: 'SVERIGE',
+        full: 'C/o Ronny Maräng, Svissgatan 22, 600 12, KLOPPETIKLOPPKÖPING, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['c/o B.ergsäker Granitg.55', null, '720 20', 'Västerås'],
+      },
+      {
+        careOf: 'c/o B.ergsäker',
+        street: 'Granitg.55',
+        zipCode: '720 20',
+        city: 'Västerås',
+        full: 'c/o B.ergsäker Granitg.55, 720 20, Västerås',
+        country: '',
       },
     ],
   ] as AddressTestCase[])(
@@ -111,7 +128,63 @@ describe('transformAddress', () => {
         adress10: input.lines[9],
       }
 
-      expect(transformAddress(dbAddress)).toEqual(expected)
+      expect(extractAddress(dbAddress)).toEqual(expected)
     }
   )
+})
+
+describe('parseCareOf', () => {
+  it.each([
+    ['c/o Ronny Maräng', { careOf: 'c/o Ronny Maräng' }],
+    ['C/O Ronny Maräng', { careOf: 'C/O Ronny Maräng' }],
+    [
+      'c/o B.ergsäker Granitg.22',
+      { careOf: 'c/o B.ergsäker', street: 'Granitg.22' },
+    ],
+    [
+      'c/oOM Korvstad Snusmumrikg12',
+      { careOf: 'c/o OM Korvstad', street: 'Snusmumrikg12' },
+    ],
+    [
+      'c/o Baloo, Djungelbokv 370',
+      { careOf: 'c/o Baloo', street: 'Djungelbokv 370' },
+    ],
+    [
+      'c/o E Dumbom/Mistlursg. 35',
+      {
+        careOf: 'c/o E Dumbom',
+        street: 'Mistlursg. 35',
+      },
+    ],
+    [
+      'c/o B O Burkmat, Glasskioskvägen 7',
+      {
+        careOf: 'c/o B O Burkmat',
+        street: 'Glasskioskvägen 7',
+      },
+    ],
+    [
+      'c/o A. Grumh Flygplansg. 41',
+      {
+        careOf: 'c/o A. Grumh',
+        street: 'Flygplansg. 41',
+      },
+    ],
+    [
+      'Plumsv. 7 c/o Gottlieb',
+      {
+        careOf: 'c/o Gottlieb',
+        street: 'Plumsv. 7',
+      },
+    ],
+    [
+      'c/o  Efternamn Gatgatan 5',
+      {
+        careOf: 'c/o Efternamn',
+        street: 'Gatgatan 5',
+      },
+    ],
+  ])('should parse "%s" and yield %o', (input, expected) => {
+    expect(parseCareOf(input)).toEqual(expected)
+  })
 })
