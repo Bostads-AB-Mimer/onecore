@@ -71,12 +71,13 @@ export function TenantMobileAccordion({
       title: 'Fakturor & betalningar',
       content: <TenantLedger contactCode={contactCode} />,
     },
-    /*
     {
       id: 'notes',
       title: 'Noteringar',
       content: <TenantNotes contactCode={contactCode} />,
     },
+    /*
+    
     {
       id: 'keys',
       title: 'Nyckelknippa',

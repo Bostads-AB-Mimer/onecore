@@ -65,11 +65,11 @@ export const TenantDetailTabsContent = ({
         <TenantLedger contactCode={contactCode} />
       </TabsContent>
 
-      {/*
       <TabsContent value="notes">
         <TenantNotes contactCode={contactCode} />
       </TabsContent>
 
+      {/*
       <TabsContent value="keys">
         <div>Placeholder Nyckelknippa</div>
       </TabsContent>
