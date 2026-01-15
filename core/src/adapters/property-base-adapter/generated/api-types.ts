@@ -1332,6 +1332,7 @@ export interface components {
         allowSmallRoomsInValuation: number;
         timestamp: string;
       }) | null;
+      area?: number;
     };
     Company: {
       id: string;

@@ -46,6 +46,23 @@ const getLease = async (
   return leaseResponse.data.content
 }
 
+const getLeases = async (
+  leaseIds: string[],
+  includeContacts: string | string[] | undefined
+) => {
+  const uniqueIds = [...new Set(leaseIds)]
+
+  const leaseResults = await Promise.allSettled(
+    uniqueIds.map((id) => getLease(id, includeContacts))
+  )
+
+  const leases = leaseResults
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value)
+
+  return Object.fromEntries(leases.map((lease) => [lease.leaseId, lease]))
+}
+
 const getLeasesForPnr = async (
   nationalRegistrationNumber: string,
   options: GetLeasesOptions
@@ -665,6 +682,7 @@ export {
   getContactsDataBySearchQuery,
   getCreditInformation,
   getLease,
+  getLeases,
   getLeasesForPnr,
   getLeasesForContactCode,
   getLeasesForPropertyId,

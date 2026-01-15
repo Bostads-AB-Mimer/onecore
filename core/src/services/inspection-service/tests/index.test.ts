@@ -2,6 +2,7 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import * as inspectionAdapter from '../../../adapters/inspection-adapter'
+import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import * as schemas from '../schemas'
@@ -14,6 +15,14 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('inspection-service index', () => {
+  beforeEach(() => {
+    jest.spyOn(leasingAdapter, 'getLeases').mockResolvedValue({})
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   describe('GET /inspections/xpand', () => {
     const mockInspections = XpandInspectionFactory.buildList(2)
 

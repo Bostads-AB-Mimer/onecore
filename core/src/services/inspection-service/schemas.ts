@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { Lease } from '../lease-service/schemas/lease'
 
 export const XpandInspectionSchema = z.object({
   id: z.string(),
@@ -9,6 +10,11 @@ export const XpandInspectionSchema = z.object({
   address: z.string(),
   apartmentCode: z.string(),
   leaseId: z.string(),
+  masterKeyAccess: z.string().nullable(),
+})
+
+export const InspectionSchema = XpandInspectionSchema.extend({
+  lease: Lease.nullable(),
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({
@@ -21,3 +27,4 @@ export const GetInspectionsFromXpandQuerySchema = z.object({
 })
 
 export type XpandInspection = z.infer<typeof XpandInspectionSchema>
+export type Inspection = z.infer<typeof InspectionSchema>

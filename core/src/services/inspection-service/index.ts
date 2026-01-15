@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
@@ -22,7 +23,7 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
  *   - bearerAuth: []
  */
 export const routes = (router: KoaRouter) => {
-  registerSchema('XpandInspection', schemas.XpandInspectionSchema)
+  registerSchema('Inspection', schemas.InspectionSchema)
 
   /**
    * @swagger
@@ -65,7 +66,7 @@ export const routes = (router: KoaRouter) => {
    *                     inspections:
    *                       type: array
    *                       items:
-   *                         $ref: '#/components/schemas/XpandInspection'
+   *                         $ref: '#/components/schemas/Inspection'
    *       '400':
    *         description: Invalid query parameters.
    *         content:
@@ -113,10 +114,29 @@ export const routes = (router: KoaRouter) => {
       })
 
       if (result.ok) {
+        const inspections = result.data ?? []
+
+        const leaseIds = inspections
+          .filter(
+            (inspection) =>
+              inspection.leaseId !== null && inspection.leaseId !== ''
+          )
+          .map((inspection) => inspection.leaseId)
+
+        const leasesById =
+          leaseIds.length > 0
+            ? await leasingAdapter.getLeases(leaseIds, 'true')
+            : {}
+
+        const inspectionsWithLeaseData = inspections.map((inspection) => ({
+          ...inspection,
+          lease: inspection.leaseId ? leasesById[inspection.leaseId] : null,
+        }))
+
         ctx.status = 200
         ctx.body = {
           content: {
-            inspections: result.data,
+            inspections: inspectionsWithLeaseData,
           },
           ...metadata,
         }
@@ -168,7 +188,7 @@ export const routes = (router: KoaRouter) => {
    *                     inspections:
    *                       type: array
    *                       items:
-   *                         $ref: '#/components/schemas/XpandInspection'
+   *                         $ref: '#/components/schemas/Inspection'
    *       '404':
    *         description: No inspections found for the specified residence ID.
    *         content:
@@ -201,10 +221,27 @@ export const routes = (router: KoaRouter) => {
         await inspectionAdapter.getXpandInspectionsByResidenceId(residenceId)
 
       if (result.ok) {
+        const leaseIds = result.data
+          .filter(
+            (inspection) =>
+              inspection.leaseId !== null && inspection.leaseId !== ''
+          )
+          .map((inspection) => inspection.leaseId)
+
+        const leasesById =
+          leaseIds.length > 0
+            ? await leasingAdapter.getLeases(leaseIds, 'true')
+            : {}
+
+        const inspectionsWithLeaseData = result.data.map((inspection) => ({
+          ...inspection,
+          lease: inspection.leaseId ? leasesById[inspection.leaseId] : null,
+        }))
+
         ctx.status = 200
         ctx.body = {
           content: {
-            inspections: result.data,
+            inspections: inspectionsWithLeaseData,
           },
           ...metadata,
         }

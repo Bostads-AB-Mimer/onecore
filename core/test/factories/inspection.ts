@@ -13,4 +13,5 @@ export const XpandInspectionFactory = Factory.define<
   address: '123 Main St',
   apartmentCode: `A${sequence}`,
   leaseId: `lease-${sequence}`,
+  masterKeyAccess: 'Huvudnyckel',
 }))
