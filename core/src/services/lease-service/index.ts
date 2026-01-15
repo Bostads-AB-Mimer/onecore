@@ -111,7 +111,11 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *       '400':
-   *         description: Invalid request body
+   *         description: Invalid request body or tenant missing valid email address
+   *       '404':
+   *         description: Lease not found
+   *       '500':
+   *         description: Internal server error. Failed to terminate lease.
    *     security:
    *       - bearerAuth: []
    */
@@ -157,6 +161,16 @@ export const routes = (router: KoaRouter) => {
             ctx.body = {
               error: result.err,
               message: 'Lease not found',
+              ...metadata,
+            }
+            return
+          }
+
+          if (result.err === 'tenant-email-missing') {
+            ctx.status = 400
+            ctx.body = {
+              error: result.err,
+              message: 'Tenant missing valid email address',
               ...metadata,
             }
             return
