@@ -3,7 +3,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponse,
-} from '../../../../common/adapters/tenfast/schemas'
+} from '../../adapters/tenfast/schemas'
 
 export const TenfastRentalObjectByRentalObjectCodeResponseSchemaFactory =
   Factory.define<TenfastRentalObjectByRentalObjectCodeResponse>(() => ({
