@@ -46,9 +46,9 @@ export const ContactCommunicationSchema = z.object({
 
 export const ContactAddressSchema = z.object({
   street: z.string(),
-  number: z.string(),
   zipCode: z.string(),
   city: z.string(),
+  region: z.string(),
   country: z.string(),
   full: z.string(),
 })
