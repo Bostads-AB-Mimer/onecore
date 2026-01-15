@@ -18,7 +18,7 @@ export {
 } from './application-profile'
 export { TenfastLeaseTemplateFactory as tenfastTemplate } from './tenfast-template'
 export { TenfastLeaseFactory as tenfastLease } from './tenfast'
-export { TenfastTenantFactory as tenfastTenant } from './tenfast'
+export { TenfastTenantFactory as tenfastTenant } from './tenfast-tenant'
 export { TenfastRentalObjectFactory as tenfastRentalObject } from './tenfast-rental-object'
 export { TenfastInvoiceRowFactory as tenfastInvoiceRow } from './tenfast-rental-object'
 export { TenfastRentalObjectByRentalObjectCodeResponseFactory as tenfastRentalObjectResponse } from './tenfast-rental-object'

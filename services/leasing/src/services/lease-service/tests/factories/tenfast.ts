@@ -1,6 +1,6 @@
 import { Factory } from 'fishery'
 
-import { TenfastLease, TenfastTenant } from '../../adapters/tenfast/schemas'
+import { TenfastLease } from '../../adapters/tenfast/schemas'
 import { TenfastRentalObjectFactory } from './tenfast-rental-object'
 
 export const TenfastLeaseFactory = Factory.define<TenfastLease>(
@@ -57,28 +57,5 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     startInvoicingFrom: new Date(),
     signedAt: new Date(),
     tags: [],
-  })
-)
-
-export const TenfastTenantFactory = Factory.define<TenfastTenant>(
-  ({ sequence }) => ({
-    _id: `tenant-${sequence}`,
-    name: { first: `first-${sequence}`, last: `last-${sequence}` },
-    moms: 123,
-    alternatePhones: [],
-    comments: [],
-    onlineInboxes: {},
-    signeringsMetod: 'digital',
-    hyresvard: 'hyresvard-1',
-    isCompany: false,
-    phone: '1234567890',
-    idbeteckning: 'idbeteckning-1',
-    postadress: 'postadress-1',
-    postnummer: 'postnummer-1',
-    stad: 'stad-1',
-    externalId: 'externalId-1',
-    borgenarer: [],
-    firmatecknare: [],
-    displayName: 'displayName-1',
   })
 )
