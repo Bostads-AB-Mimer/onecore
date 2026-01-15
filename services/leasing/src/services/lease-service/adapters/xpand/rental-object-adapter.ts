@@ -2,7 +2,6 @@ import { logger } from '@onecore/utilities'
 import { RentalObject } from '@onecore/types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
-import { calculateMonthlyRentFromYearRentRows } from './transformations-helper'
 
 const districts = {
   Mitt: ['Centrum', 'Gryta', 'Skallberget', 'Nordanby', 'Vega', 'Hökåsen'],
@@ -103,16 +102,9 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
   }
 
-  const yearRentRows = row.yearrentrows ? JSON.parse(row.yearrentrows) : []
-  const monthlyRent = calculateMonthlyRentFromYearRentRows(
-    yearRentRows,
-    vacantFrom
-  )
-
   return {
     rentalObjectCode: row.rentalObjectCode,
     address: row.postaladdress,
-    monthlyRent: monthlyRent,
     propertyCaption: row.estatecaption,
     propertyCode: row.estatecode,
     residentialAreaCode: row.residentialareacode,
@@ -159,7 +151,6 @@ const buildMainQuery = (queries: {
         'ac.fromdate as contractfromdate',
         'ac.todate as contracttodate',
         'ac.lastdebitdate',
-        'rent.yearrentrows',
         'cmvalbar.value as braarea'
       )
       .leftJoin(
@@ -174,7 +165,6 @@ const buildMainQuery = (queries: {
         'ac.fromdate as contractfromdate',
         'ac.todate as contracttodate',
         'ac.lastdebitdate',
-        'rent.yearrentrows',
         'cmvalbar.value as braarea'
       )
       .leftJoin(
@@ -190,35 +180,14 @@ const buildMainQuery = (queries: {
       .leftJoin(queries.rentalBlockDatesQuery, 'orb.keycmobj', 'ps.keycmobj')
   }
 
-  return query
-    .leftJoin(
-      xpandDb.raw(`
-          (
-            SELECT
-              rentalpropertyid,
-              (
-                SELECT yearrent,
-                  debittodate,
-                  debitfdate
-                FROM hy_debitrowrentalproperty_xpand_api x2
-                WHERE x2.rentalpropertyid = x1.rentalpropertyid
-                FOR JSON PATH
-              ) as yearrentrows
-            FROM hy_debitrowrentalproperty_xpand_api x1
-            GROUP BY rentalpropertyid
-          ) as rent
-        `),
-      'rent.rentalpropertyid',
-      'ps.rentalObjectCode'
-    )
-    .leftJoin(
-      xpandDb('cmval as cmvalbar')
-        .select('cmvalbar.keycode', 'cmvalbar.value')
-        .where('cmvalbar.keycmvat', 'BRA')
-        .as('cmvalbar'),
-      'cmvalbar.keycode',
-      'ps.keycmobj'
-    )
+  return query.leftJoin(
+    xpandDb('cmval as cmvalbar')
+      .select('cmvalbar.keycode', 'cmvalbar.value')
+      .where('cmvalbar.keycmvat', 'BRA')
+      .as('cmvalbar'),
+    'cmvalbar.keycode',
+    'ps.keycmobj'
+  )
 }
 
 const buildSubQueries = () => {
