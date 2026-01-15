@@ -1058,7 +1058,17 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.status = 200
+      if (result.err === 'tenant-email-missing') {
+        ctx.status = 400
+        ctx.body = {
+          error: result.err,
+          message: 'Tenant missing valid email address',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
       ctx.body = {
         content: result.data,
         ...metadata,
