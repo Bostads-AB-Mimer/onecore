@@ -381,6 +381,28 @@ export async function getRooms(
   }
 }
 
+export async function getRoomsByFacilityId(
+  facilityId: string
+): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET(
+      '/rooms/by-facility-id/{facilityId}',
+      {
+        params: { path: { facilityId } },
+      }
+    )
+
+    if (!fetchResponse.data?.content) {
+      throw { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: fetchResponse.data.content }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getRoomsByFacilityId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type SearchParkingSpacesResponse =
   components['schemas']['ParkingSpaceSearchResult'][]
 
@@ -402,6 +424,20 @@ export async function searchFacilities(
   q: string
 ): Promise<AdapterResult<SearchFacilitiesResponse, 'unknown'>> {
   const response = await client().GET('/facilities/search', {
+    params: { query: { q } },
+  })
+  if (response.data) {
+    return { ok: true, data: response.data.content ?? [] }
+  }
+  throw { ok: false, err: 'missing response data invariant' }
+}
+
+type SearchMaintenanceUnitsResponse = components['schemas']['MaintenanceUnit'][]
+
+export async function searchMaintenanceUnits(
+  q: string
+): Promise<AdapterResult<SearchMaintenanceUnitsResponse, 'unknown'>> {
+  const response = await client().GET('/maintenance-units/search', {
     params: { query: { q } },
   })
   if (response.data) {
@@ -481,8 +517,9 @@ export async function getMaintenanceUnitsByBuildingCode(
       return { ok: true, data: fetchResponse.data.content }
     }
 
+    // Return empty array for 404 (no maintenance units found)
     if (fetchResponse.response.status === 404) {
-      return { ok: false, err: 'not-found' }
+      return { ok: true, data: [] }
     }
 
     return { ok: false, err: 'unknown' }
@@ -693,6 +730,44 @@ export async function getResidenceSummariesByBuildingCode(
       { err },
       'property-base-adapter.getResidenceSummariesByBuildingCode'
     )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetRentalBlocksByRentalIdResponse = components['schemas']['RentalBlock'][]
+
+export async function getRentalBlocksByRentalId(
+  rentalId: string,
+  options?: { includeActiveBlocksOnly?: boolean }
+): Promise<
+  AdapterResult<GetRentalBlocksByRentalIdResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+
+    const fetchResponse = await client().GET(
+      '/residences/rental-id/{rentalId}/rental-blocks',
+      {
+        params: {
+          path: { rentalId },
+          query: { includeActiveBlocksOnly },
+        },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalBlocksByRentalId')
     return { ok: false, err: 'unknown' }
   }
 }

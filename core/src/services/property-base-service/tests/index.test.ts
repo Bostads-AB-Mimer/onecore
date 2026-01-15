@@ -20,6 +20,7 @@ import {
   ResidenceByRentalIdSchema,
   FacilityDetailsSchema,
   ResidenceSummarySchema,
+  RentalBlockSchema,
 } from '../schemas'
 import { LeaseStatus } from '@onecore/types'
 
@@ -654,6 +655,85 @@ describe('@onecore/property-service', () => {
     })
   })
 
+  describe('GET /maintenance-units/search', () => {
+    it('returns 200 and a list of maintenance units', async () => {
+      const maintenanceUnitsMock =
+        factory.propertyBaseMaintenanceUnit.buildList(3)
+
+      const searchMaintenanceUnitsSpy = jest
+        .spyOn(propertyBaseAdapter, 'searchMaintenanceUnits')
+        .mockResolvedValueOnce({ ok: true, data: maintenanceUnitsMock })
+
+      const res = await request(app.callback()).get(
+        '/maintenance-units/search?q=705'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchMaintenanceUnitsSpy).toHaveBeenCalledWith('705')
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(maintenanceUnitsMock)
+      )
+      expect(() =>
+        z.array(MaintenanceUnitSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 400 if query parameter is missing', async () => {
+      const res = await request(app.callback()).get('/maintenance-units/search')
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const searchMaintenanceUnitsSpy = jest
+        .spyOn(propertyBaseAdapter, 'searchMaintenanceUnits')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/maintenance-units/search?q=705'
+      )
+
+      expect(res.status).toBe(500)
+      expect(searchMaintenanceUnitsSpy).toHaveBeenCalledWith('705')
+    })
+  })
+
+  describe('GET /maintenance-units/by-code/:code', () => {
+    it('returns 200 and a maintenance unit', async () => {
+      const maintenanceUnitMock = factory.propertyBaseMaintenanceUnit.build()
+
+      const getMaintenanceUnitByCodeSpy = jest
+        .spyOn(propertyBaseAdapter, 'getMaintenanceUnitByCode')
+        .mockResolvedValueOnce({ ok: true, data: maintenanceUnitMock })
+
+      const res = await request(app.callback()).get(
+        `/maintenance-units/by-code/${maintenanceUnitMock.code}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getMaintenanceUnitByCodeSpy).toHaveBeenCalledWith(
+        maintenanceUnitMock.code
+      )
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(maintenanceUnitMock)
+      )
+      expect(() => MaintenanceUnitSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('returns 404 if maintenance unit is not found', async () => {
+      const getMaintenanceUnitByCodeSpy = jest
+        .spyOn(propertyBaseAdapter, 'getMaintenanceUnitByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/maintenance-units/by-code/NONEXISTENT'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getMaintenanceUnitByCodeSpy).toHaveBeenCalledWith('NONEXISTENT')
+    })
+  })
+
   describe('GET /property/residences/summary/by-building-code/:buildingCode', () => {
     it('returns 200 and a list of residence summaries', async () => {
       const residenceSummariesMock = factory.residenceSummary.buildList(3)
@@ -712,6 +792,82 @@ describe('@onecore/property-service', () => {
         '202-002',
         undefined
       )
+    })
+  })
+
+  describe('GET /property/residences/rental-blocks/by-rental-id/:rentalId', () => {
+    it('returns 200 and a list of rental blocks', async () => {
+      const rentalBlocksMock = factory.rentalBlock.buildList(3)
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: rentalBlocksMock })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: false,
+      })
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(rentalBlocksMock)
+      )
+      expect(() =>
+        z.array(RentalBlockSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 200 and filtered rental blocks when includeActiveBlocksOnly is true', async () => {
+      const rentalBlocksMock = factory.rentalBlock.buildList(2)
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: rentalBlocksMock })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234?includeActiveBlocksOnly=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: true,
+      })
+      expect(JSON.stringify(res.body.content)).toEqual(
+        JSON.stringify(rentalBlocksMock)
+      )
+      expect(() =>
+        z.array(RentalBlockSchema).parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('returns 404 if rental ID is not found', async () => {
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(404)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: false,
+      })
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      const getRentalBlocksSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/property/residences/rental-blocks/by-rental-id/1234'
+      )
+
+      expect(res.status).toBe(500)
+      expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
+        includeActiveBlocksOnly: false,
+      })
     })
   })
 })

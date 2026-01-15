@@ -1,6 +1,12 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
+import {
+  ClipboardList,
+  Users,
+  MessageSquare,
+  FileText,
+  Info,
+} from 'lucide-react'
 
 import { facilityService, leaseService } from '@/services/api/core'
 import { FacilityBasicInfo } from '../facility/FacilityBasicInfo'
@@ -12,6 +18,7 @@ import {
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 import { RentalObjectContracts } from '../rental-object/RentalObjectContracts'
+import { RoomInfo } from '../residence/RoomInfo'
 
 export function FacilityView() {
   const { rentalId } = useParams()
@@ -74,6 +81,12 @@ export function FacilityView() {
       <ObjectPageTabs
         defaultTab="tenant"
         tabs={[
+          {
+            value: 'rooms',
+            label: 'Rumsinformation',
+            icon: Info,
+            content: <RoomInfo facilityId={facility.id} />,
+          },
           {
             value: 'tenant',
             label: 'Hyresgäst',

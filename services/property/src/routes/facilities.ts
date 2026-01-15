@@ -28,7 +28,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search facilities
    *     description: |
-   *       Searches for facilities by rental id.
+   *       Searches for facilities by rental ID or name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
    *     tags:
    *       - Facilities
    *     parameters:
@@ -37,7 +37,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query (rental id).
+   *         description: The search query. Matches against rental ID or facility name.
    *     responses:
    *       200:
    *         description: |
@@ -70,7 +70,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const facilities = await searchFacilities(q)
+      // Search for facilities by rental id and name
+      const facilities = await searchFacilities(q, ['rentalId', 'name'])
 
       ctx.status = 200
       ctx.body = {
