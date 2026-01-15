@@ -11,6 +11,7 @@ import { z } from 'zod'
 
 import { AdapterResult } from './../types'
 import config from '../../common/config'
+import { getListingByListingId } from './listings'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -246,6 +247,87 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
+const preliminaryTerminateLease = async (
+  leaseId: string,
+  contactCode: string,
+  lastDebitDate: Date,
+  desiredMoveDate: Date
+): Promise<
+  AdapterResult<
+    any,
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
+      {
+        contactCode,
+        lastDebitDate: lastDebitDate.toISOString(),
+        desiredMoveDate: desiredMoveDate.toISOString(),
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    // Handle error responses that don't throw (status < 500)
+    const errorType = response.data?.error
+
+    if (response.status === 404) {
+      return {
+        ok: false,
+        err: 'lease-not-found',
+      }
+    }
+
+    if (response.status === 400 && errorType === 'tenant-email-missing') {
+      return {
+        ok: false,
+        err: 'tenant-email-missing',
+      }
+    }
+
+    logger.error(
+      { status: response.status, data: response.data },
+      'Failed to preliminary terminate lease'
+    )
+    return { ok: false, err: 'termination-failed' }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response) {
+      const errorType = err.response.data?.error
+      const status = err.response.status
+
+      if (status === 404) {
+        return {
+          ok: false,
+          err: 'lease-not-found',
+        }
+      }
+
+      if (status === 400 && errorType === 'tenant-email-missing') {
+        return {
+          ok: false,
+          err: 'tenant-email-missing',
+        }
+      }
+
+      logger.error(
+        { status, error: errorType, leaseId },
+        'Error preliminary terminating lease'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+
+    logger.error(err, `Error preliminary terminating lease: ${leaseId}`)
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   getApplicationProfileByContactCode,
@@ -255,6 +337,7 @@ export {
   getContactsDataBySearchQuery,
   getCreditInformation,
   getTenantByContactCode,
+  preliminaryTerminateLease,
   resetWaitingList,
   createOrUpdateApplicationProfileByContactCode,
 }

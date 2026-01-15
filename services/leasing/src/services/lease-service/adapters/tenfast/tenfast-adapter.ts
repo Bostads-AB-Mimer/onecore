@@ -11,6 +11,7 @@ import {
   TenfastLeaseTemplate,
   TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
+  PreliminaryTerminationResponse,
   TenfastLease,
   TenfastLeaseSchema,
   TenfastInvoiceRow,
@@ -369,10 +370,153 @@ function buildTenantRequestData(contact: Contact) {
       last: contact.lastName ?? '',
     },
     email: contact.emailAddress,
-    phone: contact.phoneNumbers?.find((p) => p.isMainNumber)?.phoneNumber,
+    phone: contact.phoneNumbers?.find(
+      (p: { isMainNumber: any }) => p.isMainNumber
+    )?.phoneNumber,
     postadress: `${contact.address?.street} ${contact.address?.number}`,
     postnummer: contact.address?.postalCode,
     stad: contact.address?.city,
+  }
+}
+
+export const preliminaryTerminateLease = async (
+  leaseId: string,
+  contactCode: string,
+  lastDebitDate: Date,
+  desiredMoveDate: Date
+): Promise<
+  AdapterResult<
+    PreliminaryTerminationResponse,
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
+  >
+> => {
+  try {
+    // Get the lease from tenfast using our leaseId (externalId)
+    const leaseResponse = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (leaseResponse.status === 404) {
+      logger.error({ leaseId }, 'Lease not found in tenfast')
+      return { ok: false, err: 'lease-not-found' }
+    }
+
+    if (leaseResponse.status !== 200) {
+      logger.error(
+        { leaseId, status: leaseResponse.status },
+        'Failed to retrieve lease from tenfast'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+    // TODO: Handle error when email is missing in Tenfast, when this is implemented in Tenfast API
+
+    const tenfastLeaseId = leaseResponse.data._id
+
+    // Format dates to YYYY-MM-DD format as required by tenfast API
+    const endDate = lastDebitDate.toISOString().split('T')[0]
+
+    const requestData: {
+      endDate: string
+      cancelledByType: string
+      reason: string
+      preferredMoveOutDate?: string
+    } = {
+      endDate,
+      cancelledByType: 'hyresgast',
+      reason: 'Tenant requested termination',
+    }
+
+    // Only include preferredMoveOutDate if desiredMoveDate is provided
+    if (desiredMoveDate) {
+      requestData.preferredMoveOutDate = desiredMoveDate
+        .toISOString()
+        .split('T')[0]
+    }
+
+    const terminationResponse = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/send-simplesign-termination?hyresvard=${tenfastCompanyId}`,
+      data: requestData,
+    })
+
+    // Handle success
+    if (terminationResponse.status === 200) {
+      return { ok: true, data: { message: 'Signerings begäran skickad' } }
+    }
+
+    // Handle errors - use shared error mapping logic
+    return handleTerminationError(terminationResponse, leaseId)
+  } catch (err: any) {
+    // Handle Axios errors specifically to get status codes
+    if (err.response) {
+      return handleTerminationError(err.response, leaseId)
+    }
+
+    return handleTenfastError(err, 'termination-failed')
+  }
+
+  function handleTerminationError(
+    response: { status: number; data: any },
+    leaseId: string
+  ): AdapterResult<
+    PreliminaryTerminationResponse,
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
+  > {
+    const errorMessage = response.data?.error
+    if (
+      errorMessage ===
+      'En eller flera hyresgäster saknar en giltig e-postadress'
+    ) {
+      logger.error(
+        { leaseId, status: response.status, error: response.data },
+        'Tenant missing valid email address'
+      )
+      return { ok: false, err: 'tenant-email-missing' }
+    }
+
+    const errorMap: Record<
+      number,
+      {
+        err:
+          | 'lease-not-found'
+          | 'tenant-email-missing'
+          | 'termination-failed'
+          | 'unknown'
+        message: string
+      }
+    > = {
+      400: {
+        err: 'termination-failed',
+        message: 'Invalid termination request data',
+      },
+      404: { err: 'lease-not-found', message: 'Lease not found in tenfast' },
+      500: {
+        err: 'termination-failed',
+        message: 'Tenfast server error during termination',
+      },
+    }
+
+    const error = errorMap[response.status] || {
+      err: 'unknown' as const,
+      message: 'Unexpected response from tenfast termination endpoint',
+    }
+
+    logger.error(
+      {
+        leaseId,
+        status: response.status,
+        error: response.data,
+      },
+      error.message
+    )
+    return { ok: false, err: error.err }
   }
 }
 
