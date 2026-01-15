@@ -35,7 +35,8 @@ const useWorkOrders = (
     contextType === 'property' ||
     contextType === 'building' ||
     contextType === 'residence' ||
-    contextType === 'tenant'
+    contextType === 'tenant' ||
+    contextType === 'maintenanceUnit'
 
   const workOrdersQuery = useQuery({
     queryKey: ['workOrders', contextType, id],

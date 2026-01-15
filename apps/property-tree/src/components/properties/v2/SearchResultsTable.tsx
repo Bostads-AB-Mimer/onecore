@@ -103,7 +103,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'facility':
         return `/facilities/${result.rentalId}`
       case 'maintenance-unit':
-        return `/maintenance-units/${result.id}`
+        return `/maintenance-units/${result.code}`
       default:
         return '#'
     }
