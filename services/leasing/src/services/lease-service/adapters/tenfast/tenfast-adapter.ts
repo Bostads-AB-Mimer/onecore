@@ -387,7 +387,10 @@ export const preliminaryTerminateLease = async (
 ): Promise<
   AdapterResult<
     PreliminaryTerminationResponse,
-    'lease-not-found' | 'termination-failed' | 'unknown'
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
   >
 > => {
   try {
@@ -461,12 +464,31 @@ export const preliminaryTerminateLease = async (
     leaseId: string
   ): AdapterResult<
     PreliminaryTerminationResponse,
-    'lease-not-found' | 'termination-failed' | 'unknown'
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
   > {
+    const errorMessage = response.data?.error
+    if (
+      errorMessage ===
+      'En eller flera hyresgäster saknar en giltig e-postadress'
+    ) {
+      logger.error(
+        { leaseId, status: response.status, error: response.data },
+        'Tenant missing valid email address'
+      )
+      return { ok: false, err: 'tenant-email-missing' }
+    }
+
     const errorMap: Record<
       number,
       {
-        err: 'lease-not-found' | 'termination-failed' | 'unknown'
+        err:
+          | 'lease-not-found'
+          | 'tenant-email-missing'
+          | 'termination-failed'
+          | 'unknown'
         message: string
       }
     > = {
