@@ -59,7 +59,7 @@ describe('parking spaces', () => {
       )
     })
 
-    it('should set monthlyRent on parking spaces if rent is found', async () => {
+    it('should set rent on parking spaces if rent is found', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'code-1',
@@ -84,13 +84,14 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content[0].monthlyRent).toBe(999)
+      expect(res.body.content[0].rent.amount).toBe(999)
     })
 
-    it('should not set monthlyRent if rent is not found for parking space', async () => {
+    it('should not set rent if rent is not found for parking space', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'code-1',
+        rent: undefined,
       })
       jest
         .spyOn(rentalObjectAdapter, 'getParkingSpaces')
@@ -108,12 +109,12 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content[0].monthlyRent).toBe(parkingSpace.monthlyRent)
+      expect(res.body.content[0].rent).toBeUndefined()
     })
   })
 
   describe('GET /parking-spaces/by-code/:rentalObjectCode', () => {
-    it('should respond with 200 and include monthlyRent if rent is found', async () => {
+    it('should respond with 200 and include rent if rent is found', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'code-1',
@@ -133,14 +134,14 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content.monthlyRent).toBe(1234)
+      expect(res.body.content.rent.amount).toBe(1234)
     })
 
-    it('should respond with 200 and not include monthlyRent if rent is not found', async () => {
+    it('should respond with 200 and not include rent if rent is not found', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'code-1',
-        monthlyRent: 0,
+        rent: undefined,
       })
       jest
         .spyOn(rentalObjectAdapter, 'getParkingSpace')
@@ -157,7 +158,7 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content.monthlyRent).toBe(0)
+      expect(res.body.content.rent).toBeUndefined()
     })
 
     it('should respond with 404 if parking space is not found', async () => {
@@ -198,7 +199,7 @@ describe('parking spaces', () => {
   })
 
   describe('GET /vacant-parkingspaces', () => {
-    it('should return a list of vacant parking spaces with monthlyRent if rent is found', async () => {
+    it('should return a list of vacant parking spaces with rent if rent is found', async () => {
       // Arrange
       const mockedVacantParkingSpaces = [
         {
@@ -210,7 +211,7 @@ describe('parking spaces', () => {
           vehicleSpaceCode: '0008',
           districtCaption: 'Distrikt Norr',
           districtCode: '2',
-          monthlyRent: 0,
+          rent: undefined,
           residentialAreaCaption: 'Centrum',
           residentialAreaCode: 'CTR',
           vacantFrom: new Date('2023-10-01'),
@@ -234,13 +235,13 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content[0].monthlyRent).toBe(1234)
+      expect(res.body.content[0].rent.amount).toBe(1234)
     })
 
-    it('should return a list of vacant parking spaces without monthlyRent if rent is not found', async () => {
+    it('should return a list of vacant parking spaces without rent if rent is not found', async () => {
       // Arrange
       const mockedVacantParkingSpaces = factory.rentalObject.buildList(1, {
-        monthlyRent: 0,
+        rent: undefined,
       })
 
       jest
@@ -255,7 +256,7 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content[0].monthlyRent).toBe(0)
+      expect(res.body.content[0].rent).toBeUndefined()
     })
 
     it('should respond with 500 if fetching rents for vacant parking spaces fails', async () => {
@@ -270,7 +271,7 @@ describe('parking spaces', () => {
           vehicleSpaceCode: '0008',
           districtCaption: 'Distrikt Norr',
           districtCode: '2',
-          monthlyRent: 0,
+          rent: undefined,
           residentialAreaCaption: 'Centrum',
           residentialAreaCode: 'CTR',
           vacantFrom: new Date('2023-10-01'),

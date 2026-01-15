@@ -57,7 +57,9 @@ describe('GET /vacant-parkingspaces', () => {
         expect.objectContaining({
           rentalObjectCode: expect.any(String),
           address: expect.any(String),
-          monthlyRent: expect.any(Number),
+          rent: expect.objectContaining({
+            amount: expect.any(Number),
+          }),
           districtCaption: expect.any(String),
           districtCode: expect.any(String),
           propertyCaption: expect.any(String),

@@ -36,8 +36,11 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                       address:
    *                         type: string
-   *                       monthlyRent:
-   *                         type: number
+   *                       rent:
+   *                         type: object
+   *                         properties:
+   *                           amount:
+   *                             type: number
    *                       propertyCaption:
    *                         type: string
    *                       propertyCode:
@@ -117,8 +120,11 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                       address:
    *                         type: string
-   *                       monthlyRent:
-   *                         type: number
+   *                       rent:
+   *                         type: object
+   *                         properties:
+   *                           amount:
+   *                             type: number
    *                       propertyCaption:
    *                         type: string
    *                       propertyCode:

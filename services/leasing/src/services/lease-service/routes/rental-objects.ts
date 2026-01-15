@@ -111,7 +111,7 @@ export const routes = (router: KoaRouter) => {
         (rent) => rent.rentalObjectCode === ps.rentalObjectCode
       )
       if (rent) {
-        ps.monthlyRent = rent.amount
+        ps.rent = rent
       }
     })
 
@@ -167,7 +167,7 @@ export const routes = (router: KoaRouter) => {
       if (rentResult.ok) {
         ctx.status = 200
         ctx.body = {
-          content: { ...result.data, monthlyRent: rentResult.data.amount },
+          content: { ...result.data, rent: rentResult.data },
           ...metadata,
         }
         return
@@ -274,7 +274,7 @@ export const routes = (router: KoaRouter) => {
         (rent) => rent.rentalObjectCode === ps.rentalObjectCode
       )
       if (rent) {
-        ps.monthlyRent = rent.amount
+        ps.rent = rent
       }
     })
     ctx.status = 200
