@@ -455,7 +455,13 @@ const preliminaryTerminateLease = async (
   lastDebitDate: Date,
   desiredMoveDate: Date
 ): Promise<
-  AdapterResult<any, 'lease-not-found' | 'termination-failed' | 'unknown'>
+  AdapterResult<
+    any,
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
+  >
 > => {
   try {
     const response = await axios.post(
@@ -471,11 +477,28 @@ const preliminaryTerminateLease = async (
       return { ok: true, data: response.data.content }
     }
 
+    // Handle error responses that don't throw (status < 500)
+    const errorType = response.data?.error
+
+    if (response.status === 404) {
+      return {
+        ok: false,
+        err: 'lease-not-found',
+      }
+    }
+
+    if (response.status === 400 && errorType === 'tenant-email-missing') {
+      return {
+        ok: false,
+        err: 'tenant-email-missing',
+      }
+    }
+
     logger.error(
       { status: response.status, data: response.data },
       'Failed to preliminary terminate lease'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'termination-failed' }
   } catch (err) {
     if (err instanceof AxiosError && err.response) {
       const errorType = err.response.data?.error
@@ -485,6 +508,13 @@ const preliminaryTerminateLease = async (
         return {
           ok: false,
           err: 'lease-not-found',
+        }
+      }
+
+      if (status === 400 && errorType === 'tenant-email-missing') {
+        return {
+          ok: false,
+          err: 'tenant-email-missing',
         }
       }
 
