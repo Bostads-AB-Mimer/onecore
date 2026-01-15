@@ -4,10 +4,8 @@ import { InspectorSelectionCard } from '../mobile/InspectorSelectionCard'
 import { useInspectionForm } from '@/components/hooks/useInspectionForm'
 import type { Room } from '@/services/types'
 import type {
-  InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
   TenantSnapshot,
-  InternalInspection,
 } from '@/components/inspections/types'
 import { CheckCircle2 } from 'lucide-react'
 import {
@@ -18,18 +16,22 @@ import {
 } from '@/components/ui/Accordion'
 import { Badge } from '@/components/ui/v3/Badge'
 import { useEffect } from 'react'
+import type { components } from '@/services/api/core/generated/api-types'
+
+type Inspection = components['schemas']['Inspection']
+type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface DesktopInspectionFormProps {
   rooms: Room[]
   onSave: (
     inspectorName: string,
-    rooms: Record<string, InspectionRoomType>,
+    rooms: Record<string, InspectionRoom>,
     status: 'draft' | 'completed',
     additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
   tenant?: any
-  existingInspection?: InternalInspection
+  existingInspection?: Inspection
 }
 
 const currentUser = 'Anna Andersson'
@@ -81,28 +83,28 @@ export function DesktopInspectionForm({
     }
   }
 
-  const handleSubmit = () => {
-    if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', {
-        needsMasterKey,
-        tenant: createTenantSnapshot(),
-      })
-    }
-  }
+  // const handleSubmit = () => {
+  //   if (canComplete) {
+  //     onSave(inspectorName, inspectionData, 'completed', {
+  //       needsMasterKey,
+  //       tenant: createTenantSnapshot(),
+  //     })
+  //   }
+  // }
 
-  const handleSaveDraft = () => {
-    if (inspectorName.trim()) {
-      onSave(inspectorName, inspectionData, 'draft', {
-        needsMasterKey,
-        tenant: createTenantSnapshot(),
-      })
-    }
-  }
+  // const handleSaveDraft = () => {
+  //   if (inspectorName.trim()) {
+  //     onSave(inspectorName, inspectionData, 'draft', {
+  //       needsMasterKey,
+  //       tenant: createTenantSnapshot(),
+  //     })
+  //   }
+  // }
 
   return (
     <div className="space-y-6 min-w-0">
       {/* Reuse the same card component with horizontal layout for desktop */}
-      <InspectorSelectionCard
+      {/* <InspectorSelectionCard
         inspectorName={inspectorName}
         setInspectorName={setInspectorName}
         inspectionTime={inspectionTime}
@@ -111,7 +113,7 @@ export function DesktopInspectionForm({
         setNeedsMasterKey={setNeedsMasterKey}
         tenant={tenant}
         layout="horizontal"
-      />
+      /> */}
 
       {/* Progress counter */}
       <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
@@ -179,7 +181,7 @@ export function DesktopInspectionForm({
         <Button variant="outline" onClick={onCancel}>
           Avbryt
         </Button>
-        <Button
+        {/* <Button
           variant="secondary"
           onClick={handleSaveDraft}
           disabled={!inspectorName.trim()}
@@ -188,7 +190,7 @@ export function DesktopInspectionForm({
         </Button>
         <Button onClick={handleSubmit} disabled={!canComplete}>
           Slutför besiktning
-        </Button>
+        </Button> */}
       </div>
     </div>
   )

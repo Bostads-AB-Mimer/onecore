@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import type { Room } from '@/services/types'
-import type { InspectionRoom } from '@/components/inspections/types'
 import { ComponentInspectionCard } from '@/components/residence/inspection/ComponentInspectionCard'
 import { ComponentDetailSheet } from '@/components/residence/inspection/ComponentDetailSheet'
+import type { components } from '@/services/api/core/generated/api-types'
+type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface RoomInspectionMobileProps {
   room: Room

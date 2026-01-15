@@ -1,4 +1,6 @@
-import type { InspectionRoom } from '@/components/inspections/types'
+import type { components } from '@/services/api/core/generated/api-types'
+
+type InspectionRoom = components['schemas']['InspectionRoom']
 
 export const initialRoomData: InspectionRoom = {
   roomId: '',

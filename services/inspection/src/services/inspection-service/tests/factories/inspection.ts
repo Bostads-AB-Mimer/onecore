@@ -12,6 +12,7 @@ export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
     address: '123 Main St',
     apartmentCode: 'APT001',
     leaseId: 'LEASE001',
+    masterKeyAccess: 'Huvudnyckel',
   })
 )
 
@@ -24,4 +25,5 @@ export const XpandInspectionFactory = Factory.define<XpandInspection>(() => ({
   address: '123 Main St',
   apartmentCode: 'APT001',
   leaseId: 'LEASE001',
+  masterKeyAccess: 'Huvudnyckel',
 }))

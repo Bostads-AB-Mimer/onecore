@@ -13,31 +13,29 @@ import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
 import { DesktopInspectionForm } from './desktop/DesktopInspectionForm'
 
 import { components } from '@/services/api/core/generated/api-types'
-type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
+type Inspection = components['schemas']['Inspection']
+type InspectionRoom = components['schemas']['InspectionRoom']
+
 import type { Room } from '@/services/types'
-import type {
-  InspectionRoom as InspectionRoomType,
-  InspectionSubmitData,
-  InternalInspection,
-} from '@/components/inspections/types'
+import type { InspectionSubmitData } from '@/components/inspections/types'
 
 interface InspectionFormDialogProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (
     inspectorName: string,
-    rooms: Record<string, InspectionRoomType>,
+    rooms: Record<string, InspectionRoom>,
     status: 'draft' | 'completed',
     additionalData: InspectionSubmitData
   ) => void
   rooms: Room[]
   buttonSize?: string
   tenant?: any
-  existingInspection?: InternalInspection
+  existingInspection?: Inspection
 }
 
 // Check if inspection has actual saved data
-const hasExistingData = (inspection?: InternalInspection): boolean => {
+const hasExistingData = (inspection?: Inspection): boolean => {
   if (!inspection?.rooms) return false
   return (
     Object.keys(inspection.rooms).length > 0 &&

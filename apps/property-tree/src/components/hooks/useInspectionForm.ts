@@ -1,17 +1,17 @@
 import { useState, useCallback } from 'react'
-import type {
-  InspectionRoom,
-  InternalInspection,
-} from '@/components/inspections/types'
+import { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 import { initializeInspectionData } from '@/components/residence/inspection/form/initialData'
 
+type Inspection = components['schemas']['Inspection']
+type InspectionRoom = components['schemas']['InspectionRoom']
+
 export function useInspectionForm(
   rooms: Room[],
-  existingInspection?: InternalInspection
+  existingInspection?: Inspection
 ) {
   const [inspectorName, setInspectorName] = useState(
-    existingInspection?.inspectedBy || ''
+    existingInspection?.inspector || ''
   )
   const [inspectionTime, setInspectionTime] = useState(() => {
     if (existingInspection?.date) {
@@ -24,25 +24,31 @@ export function useInspectionForm(
     return `${hours}:${minutes}`
   })
   const [needsMasterKey, setNeedsMasterKey] = useState(
-    existingInspection?.needsMasterKey || false
+    existingInspection?.masterKeyAccess || false
   )
   const [apartmentInfo, setApartmentInfo] = useState<{
     address: string
-    hasMainKey: boolean
+    masterKeyAccess: string
   }>({
-    address:
-      existingInspection?.residence?.address || 'Odenplan 5, lägenhet 1001',
-    hasMainKey: existingInspection?.needsMasterKey || true,
+    address: existingInspection?.address || 'Odenplan 5, lägenhet 1001',
+    masterKeyAccess: existingInspection?.masterKeyAccess || 'true',
   })
   const [expandedRoomIds, setExpandedRoomIds] = useState<string[]>([])
   const [inspectionData, setInspectionData] = useState<
     Record<string, InspectionRoom>
-  >(() =>
-    existingInspection?.rooms &&
-    Object.keys(existingInspection.rooms).length > 0
-      ? existingInspection.rooms
-      : initializeInspectionData(rooms)
-  )
+  >(() => {
+    if (existingInspection?.rooms && existingInspection.rooms.length > 0) {
+      // Convert array of rooms to Record keyed by roomId
+      return existingInspection.rooms.reduce(
+        (acc, room) => {
+          acc[room.roomId] = room
+          return acc
+        },
+        {} as Record<string, InspectionRoom>
+      )
+    }
+    return initializeInspectionData(rooms)
+  })
 
   const handleCancel = () => {
     setInspectorName('')

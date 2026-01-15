@@ -13,8 +13,54 @@ export const XpandInspectionSchema = z.object({
   masterKeyAccess: z.string().nullable(),
 })
 
+export const InspectionRoomSchema = z.object({
+  roomId: z.string(),
+  conditions: z.object({
+    wall1: z.string(),
+    wall2: z.string(),
+    wall3: z.string(),
+    wall4: z.string(),
+    floor: z.string(),
+    ceiling: z.string(),
+    details: z.string(),
+  }),
+  actions: z.object({
+    wall1: z.array(z.string()),
+    wall2: z.array(z.string()),
+    wall3: z.array(z.string()),
+    wall4: z.array(z.string()),
+    floor: z.array(z.string()),
+    ceiling: z.array(z.string()),
+    details: z.array(z.string()),
+  }),
+  componentNotes: z.object({
+    wall1: z.string(),
+    wall2: z.string(),
+    wall3: z.string(),
+    wall4: z.string(),
+    floor: z.string(),
+    ceiling: z.string(),
+    details: z.string(),
+  }),
+  componentPhotos: z.object({
+    wall1: z.array(z.string()),
+    wall2: z.array(z.string()),
+    wall3: z.array(z.string()),
+    wall4: z.array(z.string()),
+    floor: z.array(z.string()),
+    ceiling: z.array(z.string()),
+    details: z.array(z.string()),
+  }),
+  photos: z.array(z.string()),
+  isApproved: z.boolean(),
+  isHandled: z.boolean(),
+})
+
 export const InspectionSchema = XpandInspectionSchema.extend({
   lease: Lease.nullable(),
+
+  // TODO: rooms are nullable for now because xpand inspections currently lack this data
+  rooms: z.array(InspectionRoomSchema).nullable(),
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({
@@ -28,3 +74,4 @@ export const GetInspectionsFromXpandQuerySchema = z.object({
 
 export type XpandInspection = z.infer<typeof XpandInspectionSchema>
 export type Inspection = z.infer<typeof InspectionSchema>
+export type InspectionRoom = z.infer<typeof InspectionRoomSchema>

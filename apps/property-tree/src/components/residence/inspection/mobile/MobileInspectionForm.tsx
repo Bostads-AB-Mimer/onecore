@@ -6,27 +6,29 @@ import { ScrollArea } from '@/components/ui/ScrollArea'
 import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 import type { Room } from '@/services/types'
 import type {
-  InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
   TenantSnapshot,
-  InternalInspection,
 } from '@/components/inspections/types'
 import { useInspectionForm } from '@/components/hooks/useInspectionForm'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 import { RoomInspectionMobile } from './RoomInspectionMobile'
 import { InspectorSelectionCard } from './InspectorSelectionCard'
 
+import type { components } from '@/services/api/core/generated/api-types'
+type Inspection = components['schemas']['Inspection']
+type InspectionRoom = components['schemas']['InspectionRoom']
+
 interface MobileInspectionFormProps {
   rooms: Room[]
   onSave: (
     inspectorName: string,
-    rooms: Record<string, InspectionRoomType>,
+    rooms: Record<string, InspectionRoom>,
     status: 'draft' | 'completed',
     additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
   tenant?: any
-  existingInspection?: InternalInspection
+  existingInspection?: Inspection
 }
 
 export function MobileInspectionForm({
@@ -87,23 +89,23 @@ export function MobileInspectionForm({
     }
   }
 
-  const handleSubmit = () => {
-    if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', {
-        needsMasterKey,
-        tenant: createTenantSnapshot(),
-      })
-    }
-  }
+  // const handleSubmit = () => {
+  //   if (canComplete) {
+  //     onSave(inspectorName, inspectionData, 'completed', {
+  //       needsMasterKey,
+  //       tenant: createTenantSnapshot(),
+  //     })
+  //   }
+  // }
 
-  const handleSaveDraft = () => {
-    if (inspectorName.trim()) {
-      onSave(inspectorName, inspectionData, 'draft', {
-        needsMasterKey,
-        tenant: createTenantSnapshot(),
-      })
-    }
-  }
+  // const handleSaveDraft = () => {
+  //   if (inspectorName.trim()) {
+  //     onSave(inspectorName, inspectionData, 'draft', {
+  //       needsMasterKey,
+  //       tenant: createTenantSnapshot(),
+  //     })
+  //   }
+  // }
 
   const canComplete =
     inspectorName && inspectionTime && completedRooms === rooms.length
@@ -135,7 +137,7 @@ export function MobileInspectionForm({
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            <InspectorSelectionCard
+            {/* <InspectorSelectionCard
               inspectorName={inspectorName}
               setInspectorName={setInspectorName}
               inspectionTime={inspectionTime}
@@ -143,7 +145,7 @@ export function MobileInspectionForm({
               needsMasterKey={needsMasterKey}
               setNeedsMasterKey={setNeedsMasterKey}
               tenant={tenant}
-            />
+            /> */}
 
             <div className="pt-4 pb-20">
               <Button
@@ -273,7 +275,7 @@ export function MobileInspectionForm({
               Föregående
             </Button>
 
-            {currentRoomIndex === rooms.length - 1 ? (
+            {/* {currentRoomIndex === rooms.length - 1 ? (
               <Button
                 onClick={handleSubmit}
                 disabled={!canComplete}
@@ -286,16 +288,16 @@ export function MobileInspectionForm({
                 Nästa
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
-            )}
+            )} */}
           </div>
-          <Button
+          {/* <Button
             variant="secondary"
             onClick={handleSaveDraft}
             disabled={!inspectorName.trim()}
             className="w-full"
           >
             Spara utkast
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>

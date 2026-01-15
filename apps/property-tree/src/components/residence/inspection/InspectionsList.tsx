@@ -9,20 +9,22 @@ import {
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { InspectionFormDialog } from '@/components/residence/inspection/InspectionFormDialog'
-import { InspectionReadOnly } from '@/components/residence/inspection/InspectionReadOnly'
 import { InspectionTable } from '@/components/inspections/InspectionTable'
 import { roomService } from '@/services/api/core'
 import { Grid } from '@/components/ui/Grid'
+import { components } from '@/services/api/core/generated/api-types'
 
-import type { Room, ResidenceDetails } from '@/services/types'
+import type { ResidenceDetails } from '@/services/types'
 import type {
-  Inspection,
-  InspectionRoom as InspectionRoomType,
   InspectionSubmitData,
   ResidenceInfo,
   TenantSnapshot,
 } from '@/components/inspections/types'
 import { useToast } from '@/components/hooks/useToast'
+import { InspectionReadOnly } from './InspectionReadOnly'
+
+type Inspection = components['schemas']['Inspection']
+type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface InspectionsListProps {
   residenceId: string
@@ -70,7 +72,7 @@ export function InspectionsList({
   tenant,
   residence,
 }: InspectionsListProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedInspection, setSelectedInspection] =
     useState<Inspection | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
@@ -97,34 +99,13 @@ export function InspectionsList({
 
   const rooms = roomsQuery.data ?? []
 
-  // Helper to check if inspection is internal (has rooms)
-  const isInternalInspection = (
-    inspection: Inspection
-  ): inspection is Inspection & { _tag: 'internal' } => {
-    return inspection._tag === 'internal'
-  }
-
-  // Helper to check if inspection is active/ongoing
-  const isActiveInspection = (inspection: Inspection): boolean => {
-    if (isInternalInspection(inspection)) {
-      // Internal: check if not completed and has incomplete rooms
-      return (
-        !inspection.isCompleted &&
-        Object.keys(inspection.rooms).length > 0 &&
-        !Object.values(inspection.rooms).every((room) => room.isHandled)
-      )
-    } else {
-      // External: check if status is not completed
-      return inspection.status !== 'Genomförd'
-    }
-  }
-
-  const activeInspection = inspections.find((inspection) =>
-    isActiveInspection(inspection)
+  // Filter inspections by status (API-based inspections)
+  const activeInspection = inspections.find(
+    (inspection) => inspection.status !== 'Genomförd'
   )
 
   const completedInspections = inspections.filter(
-    (inspection) => inspection !== activeInspection
+    (inspection) => inspection.status === 'Genomförd'
   )
 
   const handleOpenInspection = (inspection: Inspection) => {
@@ -132,62 +113,61 @@ export function InspectionsList({
     setIsViewDialogOpen(true)
   }
 
-  const handleSubmit = (
-    inspectorName: string,
-    roomsData: Record<string, InspectionRoomType>,
-    status: 'draft' | 'completed',
-    additionalData: InspectionSubmitData
-  ) => {
-    const newInspection: Inspection = {
-      _tag: 'internal',
-      id: `inspection-${Date.now()}`,
-      inspectionNumber: generateInspectionNumber(),
-      date: new Date().toISOString(),
-      inspectedBy: inspectorName,
-      rooms: roomsData,
-      status: status,
-      isCompleted: status === 'completed',
+  // const handleSubmit = (
+  //   inspectorName: string,
+  //   roomsData: Record<string, InspectionRoomType>,
+  //   status: 'draft' | 'completed',
+  //   additionalData: InspectionSubmitData
+  // ) => {
+  //   const newInspection: LocalInspection = {
+  //     _tag: 'internal',
+  //     id: `inspection-${Date.now()}`,
+  //     inspectionNumber: generateInspectionNumber(),
+  //     date: new Date().toISOString(),
+  //     inspectedBy: inspectorName,
+  //     rooms: roomsData,
+  //     status: status,
+  //     isCompleted: status === 'completed',
 
-      // Auto-hämtad residence-info
-      residence: createResidenceInfo(residence),
+  //     // Auto-hämtad residence-info
+  //     residence: createResidenceInfo(residence),
 
-      // Data från formuläret
-      needsMasterKey: additionalData.needsMasterKey,
-      tenant: additionalData.tenant,
-    }
+  //     // Data från formuläret
+  //     needsMasterKey: additionalData.needsMasterKey,
+  //     tenant: additionalData.tenant,
+  //   }
 
-    // Spara till localStorage
-    const existingInspections = JSON.parse(
-      localStorage.getItem('inspections') || '[]'
-    )
-    localStorage.setItem(
-      'inspections',
-      JSON.stringify([...existingInspections, newInspection])
-    )
+  //   // Spara till localStorage
+  //   const existingInspections = JSON.parse(
+  //     localStorage.getItem('inspections') || '[]'
+  //   )
+  //   localStorage.setItem(
+  //     'inspections',
+  //     JSON.stringify([...existingInspections, newInspection])
+  //   )
 
-    const toastTitle =
-      status === 'draft' ? 'Utkast sparat' : 'Besiktning sparad'
-    const toastDescription =
-      status === 'draft'
-        ? `Utkastet av ${inspectorName} har sparats. Du kan återuppta besiktningen senare.`
-        : `Besiktningen genomförd av ${inspectorName} har sparats.`
+  //   const toastTitle =
+  //     status === 'draft' ? 'Utkast sparat' : 'Besiktning sparad'
+  //   const toastDescription =
+  //     status === 'draft'
+  //       ? `Utkastet av ${inspectorName} har sparats. Du kan återuppta besiktningen senare.`
+  //       : `Besiktningen genomförd av ${inspectorName} har sparats.`
 
-    toast({
-      title: toastTitle,
-      description: toastDescription,
-    })
+  //   toast({
+  //     title: toastTitle,
+  //     description: toastDescription,
+  //   })
 
-    onInspectionCreated()
-    setIsDialogOpen(false)
-  }
+  //   onInspectionCreated()
+  //   setIsCreateDialogOpen(false)
+  // }
 
   const renderInspectionsTable = (inspectionsData: Inspection[]) => {
     return (
       <InspectionTable
         inspections={inspectionsData}
         onInspectionClick={handleOpenInspection}
-        showAddress={false}
-        showRoomCount={true}
+        hiddenColumns={['address']}
       />
     )
   }
@@ -197,7 +177,7 @@ export function InspectionsList({
       <div className="flex gap-2">
         <Button
           size="sm"
-          onClick={() => setIsDialogOpen(true)}
+          onClick={() => setIsCreateDialogOpen(true)}
           className="flex items-center gap-1"
         >
           <Plus className="h-4 w-4" /> Skapa ny
@@ -244,17 +224,18 @@ export function InspectionsList({
         </TabsContent>
       </Tabs>
 
-      {isDialogOpen && (
+      {isCreateDialogOpen && (
         <InspectionFormDialog
-          isOpen={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
-          onSubmit={handleSubmit}
+          isOpen={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onSubmit={() => {}}
           rooms={rooms}
           tenant={tenant}
         />
       )}
 
-      {selectedInspection && isInternalInspection(selectedInspection) && (
+      {/* TODO: Handle viewing API-based inspections */}
+      {selectedInspection && (
         <InspectionReadOnly
           inspection={selectedInspection}
           isOpen={isViewDialogOpen}

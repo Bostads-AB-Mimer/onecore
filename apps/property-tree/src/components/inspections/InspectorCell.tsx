@@ -17,13 +17,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/AlertDialog'
 import { Textarea } from '@/components/ui/Textarea'
-import { AVAILABLE_INSPECTORS } from './mockdata/mockInspections'
-import { ExternalInspection } from '@/services/api/core/inspectionService'
+import type { components } from '@/services/api/core/generated/api-types'
+
+type Inspection = components['schemas']['Inspection']
 
 interface InspectorCellProps {
-  inspection: ExternalInspection
+  inspection: Inspection
   readOnly?: boolean
-  onUpdate: (id: string, updates: Partial<ExternalInspection>) => void
+  onUpdate: (id: string, updates: Partial<Inspection>) => void
 }
 
 export function InspectorCell({
@@ -37,10 +38,10 @@ export function InspectorCell({
   const [changeComment, setChangeComment] = useState<string>('')
 
   // Include current inspector in the list if it's not already there
-  const availableInspectors =
-    inspection.inspector && !AVAILABLE_INSPECTORS.includes(inspection.inspector)
-      ? [...AVAILABLE_INSPECTORS, inspection.inspector].sort()
-      : AVAILABLE_INSPECTORS
+  // const availableInspectors =
+  //   inspection.inspector && !AVAILABLE_INSPECTORS.includes(inspection.inspector)
+  //     ? [...AVAILABLE_INSPECTORS, inspection.inspector].sort()
+  //     : AVAILABLE_INSPECTORS
 
   // Om readOnly, visa bara resursens namn
   if (readOnly) {
@@ -92,14 +93,14 @@ export function InspectorCell({
         <SelectTrigger className="w-40">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        {/* <SelectContent>
           <SelectItem value="none">Ej tilldelad</SelectItem>
           {availableInspectors.map((inspector) => (
             <SelectItem key={inspector} value={inspector}>
               {inspector}
             </SelectItem>
           ))}
-        </SelectContent>
+        </SelectContent> */}
       </Select>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

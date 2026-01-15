@@ -24,6 +24,7 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('Inspection', schemas.InspectionSchema)
+  registerSchema('InspectionRoom', schemas.InspectionRoomSchema)
 
   /**
    * @swagger

@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/Input'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { ExternalInspection } from '@/services/api/core/inspectionService'
+import type { components } from '@/services/api/core/generated/api-types'
+type Inspection = components['schemas']['Inspection']
 
 interface DateCellProps {
-  inspection: ExternalInspection
+  inspection: Inspection
   readOnly?: boolean
-  onUpdate: (id: string, updates: Partial<ExternalInspection>) => void
+  onUpdate: (id: string, updates: Partial<Inspection>) => void
 }
 
 export function DateCell({

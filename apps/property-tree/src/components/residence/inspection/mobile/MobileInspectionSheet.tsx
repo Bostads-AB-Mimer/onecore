@@ -1,24 +1,23 @@
 import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { MobileInspectionForm } from './MobileInspectionForm'
 import type { Room } from '@/services/types'
-import type {
-  InspectionRoom as InspectionRoomType,
-  InspectionSubmitData,
-  InternalInspection,
-} from '@/components/inspections/types'
+import type { InspectionSubmitData } from '@/components/inspections/types'
+import type { components } from '@/services/api/core/generated/api-types'
+type Inspection = components['schemas']['Inspection']
+type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface MobileInspectionSheetProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (
     inspectorName: string,
-    rooms: Record<string, InspectionRoomType>,
+    rooms: Record<string, InspectionRoom>,
     status: 'draft' | 'completed',
     additionalData: InspectionSubmitData
   ) => void
   rooms: Room[]
   tenant?: any
-  existingInspection?: InternalInspection
+  existingInspection?: Inspection
 }
 
 export function MobileInspectionSheet({

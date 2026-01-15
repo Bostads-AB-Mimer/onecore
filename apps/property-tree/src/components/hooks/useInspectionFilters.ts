@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
-// import type { ExtendedInspection } from '@/components/inspections/mockdata/mockInspections'
-import { ExternalInspection } from '../../services/api/core/inspectionService'
 
-export function useInspectionFilters(inspections: ExternalInspection[]) {
+import type { components } from '@/services/api/core/generated/api-types'
+
+type Inspection = components['schemas']['Inspection']
+
+export function useInspectionFilters(inspections: Inspection[]) {
   const [selectedInspector, setSelectedInspector] = useState<string>('')
   const [selectedAddress, setSelectedAddress] = useState<string>('')
   const [selectedDistrict, setSelectedDistrict] = useState<string>('')
@@ -40,7 +42,7 @@ export function useInspectionFilters(inspections: ExternalInspection[]) {
   //   { value: 'inflytt', label: 'Inflytt' },
   // ]
 
-  const filterInspections = (inspectionsList: ExternalInspection[]) => {
+  const filterInspections = (inspectionsList: Inspection[]) => {
     let filtered = [...inspectionsList]
 
     if (selectedInspector) {

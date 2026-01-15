@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import type { ExternalInspection } from '@/services/api/core/inspectionService'
+import type { components } from '@/services/api/core/generated/api-types'
 
-export type SortField = 'leaseId' | 'address' | 'date'
+type Inspection = components['schemas']['Inspection']
+
+export type SortField = 'leaseId' | 'address' | 'date' | 'type'
 export type SortDirection = 'asc' | 'desc'
 
 export function useInspectionSorting() {
@@ -17,7 +19,7 @@ export function useInspectionSorting() {
     }
   }
 
-  const sortInspections = (inspections: ExternalInspection[]) => {
+  const sortInspections = (inspections: Inspection[]) => {
     return [...inspections].sort((a, b) => {
       let aValue: string | number
       let bValue: string | number
@@ -30,6 +32,10 @@ export function useInspectionSorting() {
         case 'address':
           aValue = a.address || ''
           bValue = b.address || ''
+          break
+        case 'type':
+          aValue = a.type || ''
+          bValue = b.type || ''
           break
         case 'date':
           aValue = a.date ? new Date(a.date).getTime() : 0

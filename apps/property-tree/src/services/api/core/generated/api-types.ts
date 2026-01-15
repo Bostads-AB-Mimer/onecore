@@ -3370,7 +3370,7 @@ export interface paths {
           content: {
             "application/json": {
               content?: {
-                inspections?: components["schemas"]["XpandInspection"][];
+                inspections?: components["schemas"]["Inspection"][];
               };
             };
           };
@@ -3414,7 +3414,7 @@ export interface paths {
           content: {
             "application/json": {
               content?: {
-                inspections?: components["schemas"]["XpandInspection"][];
+                inspections?: components["schemas"]["Inspection"][];
               };
             };
           };
@@ -4238,7 +4238,7 @@ export interface components {
         name: string | null;
       };
     });
-    XpandInspection: {
+    Inspection: {
       id: string;
       status: string;
       /** Format: date-time */
@@ -4248,6 +4248,184 @@ export interface components {
       address: string;
       apartmentCode: string;
       leaseId: string;
+      masterKeyAccess: string | null;
+      lease: ({
+        leaseId: string;
+        leaseNumber: string;
+        /** Format: date-time */
+        leaseStartDate: string;
+        /** Format: date-time */
+        leaseEndDate?: string;
+        /** @enum {string} */
+        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+        tenantContactIds?: string[];
+        rentalPropertyId: string;
+        rentalProperty?: {
+          rentalPropertyId: string;
+          apartmentNumber: number;
+          size: number;
+          type: string;
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          rentalPropertyType: string;
+          additionsIncludedInRent: string;
+          otherInfo?: string;
+          roomTypes?: {
+              roomTypeId: string;
+              name: string;
+            }[];
+          /** Format: date-time */
+          lastUpdated?: string;
+        };
+        type: string;
+        rentInfo?: {
+          currentRent: {
+            rentId?: string;
+            leaseId?: string;
+            currentRent: number;
+            vat: number;
+            additionalChargeDescription?: string;
+            additionalChargeAmount?: number;
+            /** Format: date-time */
+            rentStartDate?: string;
+            /** Format: date-time */
+            rentEndDate?: string;
+          };
+        };
+        address?: definitions["Inspection"]["lease"]["rentalProperty"]["address"];
+        noticeGivenBy?: string;
+        /** Format: date-time */
+        noticeDate?: string;
+        noticeTimeTenant?: string;
+        /** Format: date-time */
+        preferredMoveOutDate?: string;
+        /** Format: date-time */
+        terminationDate?: string;
+        /** Format: date-time */
+        contractDate?: string;
+        /** Format: date-time */
+        lastDebitDate?: string;
+        /** Format: date-time */
+        approvalDate?: string;
+        residentialArea?: {
+          code: string;
+          caption: string;
+        };
+        tenants?: {
+            contactCode: string;
+            contactKey: string;
+            leaseIds?: string[];
+            firstName: string;
+            lastName: string;
+            fullName: string;
+            nationalRegistrationNumber: string;
+            /** Format: date-time */
+            birthDate: string;
+            address?: definitions["Inspection"]["lease"]["rentalProperty"]["address"];
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: boolean;
+              }[];
+            emailAddress?: string;
+            isTenant: boolean;
+            parkingSpaceWaitingList?: {
+              /** Format: date-time */
+              queueTime: string;
+              queuePoints: number;
+              type: number;
+            };
+            specialAttention?: boolean;
+          }[];
+      }) | null;
+      rooms: {
+          roomId: string;
+          conditions: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          actions: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          componentNotes: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          componentPhotos: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          photos: string[];
+          isApproved: boolean;
+          isHandled: boolean;
+        }[] | null;
+    };
+    InspectionRoom: {
+      roomId: string;
+      conditions: {
+        wall1: string;
+        wall2: string;
+        wall3: string;
+        wall4: string;
+        floor: string;
+        ceiling: string;
+        details: string;
+      };
+      actions: {
+        wall1: string[];
+        wall2: string[];
+        wall3: string[];
+        wall4: string[];
+        floor: string[];
+        ceiling: string[];
+        details: string[];
+      };
+      componentNotes: {
+        wall1: string;
+        wall2: string;
+        wall3: string;
+        wall4: string;
+        floor: string;
+        ceiling: string;
+        details: string;
+      };
+      componentPhotos: {
+        wall1: string[];
+        wall2: string[];
+        wall3: string[];
+        wall4: string[];
+        floor: string[];
+        ceiling: string[];
+        details: string[];
+      };
+      photos: string[];
+      isApproved: boolean;
+      isHandled: boolean;
     };
   };
   responses: never;

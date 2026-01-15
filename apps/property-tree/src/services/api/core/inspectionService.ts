@@ -1,14 +1,15 @@
 import { GET } from './base-api'
 import { components } from './generated/api-types'
 
+type Inspection = components['schemas']['Inspection']
 // export type InternalInspection = {
 //   _tag: 'internal'
 // } & components['schemas']['Inspection']
-export type ExternalInspection = {
-  _tag: 'external'
-} & components['schemas']['XpandInspection']
-// export type Inspection = InternalInspection | ExternalInspection
-export type Inspection = ExternalInspection
+// export type ExternalInspection = {
+//   _tag: 'external'
+// } & components['schemas']['XpandInspection']
+// // export type Inspection = InternalInspection | ExternalInspection
+// export type Inspection = ExternalInspection
 
 export const inspectionService = {
   async getAllInspections(): Promise<Inspection[]> {

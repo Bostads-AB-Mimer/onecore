@@ -9,6 +9,7 @@ export const XpandInspectionSchema = z.object({
   address: z.string(),
   apartmentCode: z.string(),
   leaseId: z.string(),
+  masterKeyAccess: z.string().nullable(),
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({

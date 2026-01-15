@@ -45,12 +45,14 @@ export async function getInspections({
       'lbbka.caption AS type',
       'babuf.caption AS address',
       'babuf.lghcode AS apartmentCode',
-      'hyobj.hyobjben AS leaseId'
+      'hyobj.hyobjben AS leaseId',
+      'aotlt.caption AS masterKeyAccess'
     )
     .innerJoin('babuf', 'lbbes.keycmobj', 'babuf.keycmobj')
     .innerJoin('cmctc', 'lbbes.keycmctc', 'cmctc.keycmctc')
     .innerJoin('hyobj', 'lbbes.keyhyobj', 'hyobj.keyhyobj')
     .innerJoin('lbbka', 'lbbes.KEYLBBKA', 'lbbka.KEYLBBKA')
+    .leftJoin('aotlt', 'lbbes.KEYAOTLT', 'aotlt.KEYAOTLT')
     .whereNot('lbbes.status', 6)
     .orderBy('lbbes.besdat', sortAscending ? 'asc' : 'desc')
     .offset(skip)
@@ -88,12 +90,14 @@ export async function getInspectionsByResidenceId(
       'lbbka.caption AS type',
       'babuf.caption AS address',
       'babuf.lghcode AS apartmentCode',
-      'hyobj.hyobjben AS leaseId'
+      'hyobj.hyobjben AS leaseId',
+      'aotlt.caption AS masterKeyAccess'
     )
     .innerJoin('babuf', 'lbbes.keycmobj', 'babuf.keycmobj')
     .innerJoin('cmctc', 'lbbes.keycmctc', 'cmctc.keycmctc')
     .innerJoin('hyobj', 'lbbes.keyhyobj', 'hyobj.keyhyobj')
     .innerJoin('lbbka', 'lbbes.KEYLBBKA', 'lbbka.KEYLBBKA')
+    .leftJoin('aotlt', 'lbbes.KEYAOTLT', 'aotlt.KEYAOTLT')
     .whereNot('lbbes.status', 6)
     .andWhere('babuf.hyresid', residenceId)
     .orderBy('lbbes.besdat', 'desc')
