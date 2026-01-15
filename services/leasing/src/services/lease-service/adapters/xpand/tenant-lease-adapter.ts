@@ -425,12 +425,24 @@ const getContactsDataBySearchQuery = async (
   >
 > => {
   try {
+    const searchTerms = q
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0)
+      .map((word) => `"${word}*"`)
+      .join(' AND ')
+
     const rows = await xpandDb
       .from('cmctc')
       .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
-      .where('cmctc.cmctckod', 'like', `%${q}%`)
-      .orWhere('cmctc.persorgnr', 'like', `%${q}%`)
-      .limit(5)
+      .where((builder) => {
+        builder.where('cmctc.cmctckod', 'like', `${q}%`)
+        builder.orWhere('cmctc.persorgnr', 'like', `${q}%`)
+        if (searchTerms) {
+          builder.orWhereRaw('CONTAINS(cmctc.cmctcben, ?)', [searchTerms])
+        }
+      })
+      .limit(10)
 
     return {
       ok: true,

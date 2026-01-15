@@ -541,17 +541,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /contacts/search:
    *   get:
-   *     summary: Search contacts by PNR or contact code
+   *     summary: Search contacts by name, PNR, or contact code
    *     tags:
    *       - Lease service
-   *     description: Retrieves contacts based on the provided search query.
+   *     description: Search contacts by contact code, personal registration number, or name. Supports searching by full name or partial name (e.g., "john smith" or "smith"). Multiple search terms are matched with AND logic.
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query to filter contacts.
+   *         description: Search query - can be contact code, personal registration number, or name (first name, last name, or full name).
    *     responses:
    *       '200':
    *         description: Successful response with search results
