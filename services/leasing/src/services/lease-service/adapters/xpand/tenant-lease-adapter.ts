@@ -425,6 +425,30 @@ const getContactsDataBySearchQuery = async (
   >
 > => {
   try {
+    const isEmailSearch = q.includes('@')
+
+    if (isEmailSearch) {
+      // Email search only
+      const rows = await xpandDb
+        .from('cmctc')
+        .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+        .where(
+          'cmctc.keycmobj',
+          'in',
+          xpandDb
+            .select('keycmobj')
+            .from('cmeml')
+            .where('cmemlben', 'like', `${q}%`)
+        )
+        .limit(10)
+
+      return {
+        ok: true,
+        data: rows,
+      }
+    }
+
+    // Name/code/PNR search
     const searchTerms = q
       .trim()
       .split(/\s+/)
