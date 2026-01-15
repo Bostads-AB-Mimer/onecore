@@ -33,27 +33,54 @@ export const SubtypesTable = ({
     {
       key: 'technicalLifespan',
       label: 'Teknisk livslängd',
-      render: (item) => `${item.technicalLifespan} år`,
+      render: (item) => (
+        <span
+          className={!item.technicalLifespan ? 'text-muted-foreground' : ''}
+        >
+          {item.technicalLifespan ? `${item.technicalLifespan} år` : '-'}
+        </span>
+      ),
     },
     {
       key: 'economicLifespan',
       label: 'Ekonomisk livslängd',
-      render: (item) => `${item.economicLifespan} år`,
+      render: (item) => (
+        <span className={!item.economicLifespan ? 'text-muted-foreground' : ''}>
+          {item.economicLifespan ? `${item.economicLifespan} år` : '-'}
+        </span>
+      ),
     },
     {
       key: 'depreciationPrice',
       label: 'Avskrivningspris',
-      render: (item) =>
-        item.depreciationPrice.toLocaleString('sv-SE', {
-          style: 'currency',
-          currency: 'SEK',
-          maximumFractionDigits: 0,
-        }),
+      render: (item) => (
+        <span
+          className={!item.depreciationPrice ? 'text-muted-foreground' : ''}
+        >
+          {item.depreciationPrice
+            ? item.depreciationPrice.toLocaleString('sv-SE', {
+                style: 'currency',
+                currency: 'SEK',
+                maximumFractionDigits: 0,
+              })
+            : '-'}
+        </span>
+      ),
     },
     {
       key: 'replacementIntervalMonths',
       label: 'Utbytesintervall',
-      render: (item) => `${item.replacementIntervalMonths} mån`,
+      render: (item) => (
+        <span
+          className={
+            !item.replacementIntervalMonths ? 'text-muted-foreground' : ''
+          }
+        >
+          {item.replacementIntervalMonths
+            ? `${item.replacementIntervalMonths} mån`
+            : '-'}
+        </span>
+      ),
     },
     {
       key: 'quantityType',

@@ -134,17 +134,29 @@ export const InstancesTable = ({
     {
       key: 'quantity',
       label: 'Antal',
-      render: (item) => item.quantity,
+      render: (item) => (
+        <span className={!item.quantity ? 'text-muted-foreground' : ''}>
+          {item.quantity || '-'}
+        </span>
+      ),
     },
     {
       key: 'priceAtPurchase',
       label: 'Inköpspris',
-      render: (item) => formatCurrency(item.priceAtPurchase),
+      render: (item) => (
+        <span className={!item.priceAtPurchase ? 'text-muted-foreground' : ''}>
+          {item.priceAtPurchase ? formatCurrency(item.priceAtPurchase) : '-'}
+        </span>
+      ),
     },
     {
       key: 'warrantyMonths',
       label: 'Garantitid',
-      render: (item) => `${item.warrantyMonths} mån`,
+      render: (item) => (
+        <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
+          {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
+        </span>
+      ),
     },
     {
       key: 'warrantyStartDate',
@@ -160,7 +172,11 @@ export const InstancesTable = ({
     {
       key: 'economicLifespan',
       label: 'Ekon. livslängd',
-      render: (item) => `${item.economicLifespan} år`,
+      render: (item) => (
+        <span className={!item.economicLifespan ? 'text-muted-foreground' : ''}>
+          {item.economicLifespan ? `${item.economicLifespan} år` : '-'}
+        </span>
+      ),
     },
     {
       key: 'ncsCode',

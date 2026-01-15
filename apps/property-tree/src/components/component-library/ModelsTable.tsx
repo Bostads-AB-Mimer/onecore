@@ -34,33 +34,51 @@ export const ModelsTable = ({
       key: 'manufacturer',
       label: 'Tillverkare',
       render: (item) => (
-        <span className="text-muted-foreground">{item.manufacturer}</span>
+        <span className={!item.manufacturer ? 'text-muted-foreground' : ''}>
+          {item.manufacturer || '-'}
+        </span>
       ),
     },
     {
       key: 'currentPrice',
       label: 'Pris',
-      render: (item) =>
-        item.currentPrice.toLocaleString('sv-SE', {
-          style: 'currency',
-          currency: 'SEK',
-          maximumFractionDigits: 0,
-        }),
+      render: (item) => (
+        <span className={!item.currentPrice ? 'text-muted-foreground' : ''}>
+          {item.currentPrice
+            ? item.currentPrice.toLocaleString('sv-SE', {
+                style: 'currency',
+                currency: 'SEK',
+                maximumFractionDigits: 0,
+              })
+            : '-'}
+        </span>
+      ),
     },
     {
       key: 'currentInstallPrice',
       label: 'Installationspris',
-      render: (item) =>
-        item.currentInstallPrice.toLocaleString('sv-SE', {
-          style: 'currency',
-          currency: 'SEK',
-          maximumFractionDigits: 0,
-        }),
+      render: (item) => (
+        <span
+          className={!item.currentInstallPrice ? 'text-muted-foreground' : ''}
+        >
+          {item.currentInstallPrice
+            ? item.currentInstallPrice.toLocaleString('sv-SE', {
+                style: 'currency',
+                currency: 'SEK',
+                maximumFractionDigits: 0,
+              })
+            : '-'}
+        </span>
+      ),
     },
     {
       key: 'warrantyMonths',
       label: 'Garanti',
-      render: (item) => `${item.warrantyMonths} mån`,
+      render: (item) => (
+        <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
+          {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
+        </span>
+      ),
     },
     {
       key: 'dimensions',

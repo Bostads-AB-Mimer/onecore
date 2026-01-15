@@ -10,6 +10,7 @@ import type {
   ComponentModel,
   Component,
 } from '@/services/types'
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 
 // ViewState type definition
 export type ViewState =
@@ -98,7 +99,7 @@ interface ComponentLibraryHandlers {
   handleNavigateToInstances: (model: ComponentModel) => void
 
   // Instance handlers
-  handleCreateInstanceFromTable: () => void
+  handleCreateInstanceFromTable: () => Promise<void>
   handleEditInstance: (instance: Component) => void
   handleDeleteInstance: (instance: Component) => Promise<void>
   handleViewHistory: (instance: Component) => void
@@ -283,9 +284,27 @@ export const useComponentLibraryHandlers = (
   }
 
   // Instance handlers
-  const handleCreateInstanceFromTable = () => {
+  const handleCreateInstanceFromTable = async () => {
     if (viewState.level !== 'instances') return
-    instanceDialog.openCreate() // Clear any pre-filled values
+
+    try {
+      // Fetch model data to get pre-fill values
+      const model = await componentLibraryService.getModelById(
+        viewState.modelId
+      )
+
+      // Pre-fill same as handleCreateInstance
+      instanceDialog.openCreate({
+        warrantyMonths: model.warrantyMonths || 0,
+        priceAtPurchase: model.currentPrice || 0,
+        depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
+        economicLifespan: model.subtype?.economicLifespan || 0,
+      })
+    } catch (error) {
+      console.error('Error fetching model data:', error)
+      // Fallback: open dialog without pre-fill
+      instanceDialog.openCreate()
+    }
   }
 
   const handleEditInstance = (instance: Component) =>
