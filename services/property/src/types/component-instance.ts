@@ -126,14 +126,14 @@ export const CreateComponentSchema = z.object({
     .union([z.string(), z.date()])
     .optional()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
-  warrantyMonths: z.number().int().min(0),
-  priceAtPurchase: z.number().min(0),
-  depreciationPriceAtPurchase: z.number().min(0),
+  warrantyMonths: z.number().int().min(0).optional().default(0),
+  priceAtPurchase: z.number().min(0).optional().default(0),
+  depreciationPriceAtPurchase: z.number().min(0).optional().default(0),
   ncsCode: z.string().trim().nullable().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
   condition: ComponentConditionEnum.nullable().optional(),
-  quantity: z.number().min(0).default(1),
-  economicLifespan: z.number().min(0),
+  quantity: z.number().min(0).optional().default(1),
+  economicLifespan: z.number().min(0).optional().default(0),
 })
 
 // Update schema

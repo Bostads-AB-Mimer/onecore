@@ -20,8 +20,11 @@ export function FieldRenderer({
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const newValue =
-      field.type === 'number' ? Number(e.target.value) : e.target.value
+    let newValue: any = e.target.value
+    if (field.type === 'number') {
+      // Keep empty string as empty (don't convert to 0)
+      newValue = e.target.value === '' ? '' : Number(e.target.value)
+    }
     onChange(field.name, newValue)
   }
 
@@ -58,7 +61,7 @@ export function FieldRenderer({
                 ? '0.01'
                 : '1'
             }
-            value={value ?? field.defaultValue ?? 0}
+            value={value ?? field.defaultValue ?? ''}
             onChange={handleChange}
             placeholder={field.placeholder}
           />
