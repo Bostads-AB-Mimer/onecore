@@ -40,6 +40,42 @@ export interface paths {
       };
     };
   };
+  "/cards/{cardId}": {
+    /**
+     * Get a card by ID
+     * @description Fetch a single access control card from DAX by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/dax/contracts": {
     /**
      * Get all contracts from DAX

@@ -3435,6 +3435,38 @@ export interface paths {
       };
     };
   };
+  "/cards/{cardId}": {
+    /** Get card by ID */
+    get: {
+      parameters: {
+        path: {
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/keys/{id}": {
     /** Get key by ID */
     get: {

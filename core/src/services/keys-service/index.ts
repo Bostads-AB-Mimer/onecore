@@ -1422,6 +1422,65 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /cards/{cardId}:
+   *   get:
+   *     summary: Get card by ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: cardId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Card found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Card'
+   *       404:
+   *         description: Card not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/cards/:cardId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await CardsApi.getById(ctx.params.cardId)
+
+    if (!result.ok) {
+      logger.error({ err: result.err, metadata }, 'Error fetching card by ID')
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      ctx.body = {
+        error:
+          result.err === 'not-found'
+            ? 'Card not found'
+            : 'Internal server error',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /keys/{id}:
    *   get:
    *     summary: Get key by ID

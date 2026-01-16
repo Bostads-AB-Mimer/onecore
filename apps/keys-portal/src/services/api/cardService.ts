@@ -1,8 +1,22 @@
-import type { CardDetails } from '@/services/types'
+import type { Card, CardDetails } from '@/services/types'
 
 import { GET } from './core/base-api'
 
 export const cardService = {
+  /**
+   * Get a card by ID
+   */
+  async getCard(cardId: string): Promise<Card | null> {
+    const { data, error } = await GET('/cards/{cardId}', {
+      params: {
+        path: { cardId },
+      },
+    })
+
+    if (error) throw error
+    return (data?.content ?? null) as Card | null
+  },
+
   /**
    * Get cards by rental object code with optional loan enrichment
    */

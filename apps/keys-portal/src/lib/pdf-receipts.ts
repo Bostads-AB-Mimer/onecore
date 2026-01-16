@@ -2,7 +2,11 @@ import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { ReceiptData, MaintenanceReceiptData } from '@/services/types'
+import type {
+  ReceiptData,
+  MaintenanceReceiptData,
+  Card,
+} from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
@@ -340,6 +344,117 @@ const renderKeysTable = (
   return cy
 }
 
+/**
+ * Helper function to render cards in table format with multi-page support
+ * @param doc - jsPDF document
+ * @param cards - Cards to render
+ * @param y - Starting Y position
+ * @param headerText - Section header text
+ * @param headerColor - RGB color for header (optional, defaults to black)
+ * @param reserveAfter - Space to reserve after the table (only for final section)
+ * @returns New Y position after rendering
+ */
+const renderCardsTable = (
+  doc: jsPDF,
+  cards: Card[],
+  y: number,
+  headerText: string,
+  headerColor?: { r: number; g: number; b: number },
+  reserveAfter: number = 0
+): number => {
+  const bottom = contentBottom(doc)
+
+  // Minimum space needed for a table section header + one row
+  const minSpaceNeeded = 35
+
+  // If not enough space for even the header, add new page
+  if (y + minSpaceNeeded > bottom) {
+    doc.addPage()
+    y = 20 // Start from top of new page
+  }
+
+  // Helper function to render table header
+  const renderTableHeader = (yPos: number) => {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.text('Kortnamn', MARGIN_X, yPos)
+    doc.text('Kort-ID', 80, yPos)
+    doc.text('Status', 140, yPos)
+
+    doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
+    doc.setLineWidth(0.4)
+    doc.line(MARGIN_X, yPos + 2, 180, yPos + 2)
+
+    return yPos + 7 // Return Y position after header
+  }
+
+  // Section header
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  if (headerColor) {
+    doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+  } else {
+    doc.setTextColor(0, 0, 0)
+  }
+  doc.text(headerText, MARGIN_X, y)
+  doc.setTextColor(0, 0, 0) // Reset to black for table content
+
+  // Table header
+  const top = y + 8
+  let cy = renderTableHeader(top)
+
+  // Table rows with multi-page support
+  const rowH = 6
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+
+  cards.forEach((card, index) => {
+    // Check if we need a new page (reserve space only on last page)
+    const isLastCard = index === cards.length - 1
+    const spaceNeeded = isLastCard ? reserveAfter + 20 : rowH + 5
+
+    if (cy + spaceNeeded > bottom) {
+      // Draw bottom line before page break
+      doc.line(MARGIN_X, cy, 180, cy)
+
+      // Add new page and render table header again
+      doc.addPage()
+      cy = 20
+
+      // Re-render section header on new page
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      if (headerColor) {
+        doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+      }
+      doc.text(`${headerText} (fortsättning)`, MARGIN_X, cy)
+      doc.setTextColor(0, 0, 0)
+
+      cy = renderTableHeader(cy + 8)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+    }
+
+    // Render the card row
+    doc.text(card.name || '-', MARGIN_X, cy)
+    doc.text(card.cardId, 80, cy)
+    doc.text(card.disabled ? 'Inaktiv' : 'Aktiv', 140, cy)
+    cy += rowH
+  })
+
+  // Bottom rule
+  doc.line(MARGIN_X, cy, 180, cy)
+  cy += 8
+
+  // Summary
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text(`Totalt antal kort: ${cards.length}`, MARGIN_X, cy)
+  cy += 6
+
+  return cy
+}
+
 const addKeysTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
@@ -383,6 +498,60 @@ const addKeysTable = (
       cy,
       'TIDIGARE KASSERADE NYCKLAR',
       grayColor,
+      reserveAfter
+    )
+  }
+
+  return cy
+}
+
+const addCardsTable = (
+  doc: jsPDF,
+  cards: ReceiptData['cards'],
+  y: number,
+  reserveAfter: number,
+  missingCards?: ReceiptData['missingCards']
+) => {
+  if (!cards || cards.length === 0) {
+    // No cards to render, check if there are missing cards
+    if (missingCards && missingCards.length > 0) {
+      const redColor = { r: 200, g: 0, b: 0 }
+      return renderCardsTable(
+        doc,
+        missingCards,
+        y,
+        'KORT SAKNAS VID INLÄMNING',
+        redColor,
+        reserveAfter
+      )
+    }
+    return y
+  }
+
+  const hasMissingCards = missingCards && missingCards.length > 0
+
+  // Render returned cards section
+  const headerText = hasMissingCards ? 'INLÄMNADE KORT' : 'KORT'
+  const returnedReserve = !hasMissingCards ? reserveAfter : 0
+  let cy = renderCardsTable(
+    doc,
+    cards,
+    y,
+    headerText,
+    undefined,
+    returnedReserve
+  )
+
+  // Render missing cards section if present
+  if (hasMissingCards) {
+    cy += 4
+    const redColor = { r: 200, g: 0, b: 0 }
+    cy = renderCardsTable(
+      doc,
+      missingCards,
+      cy,
+      'KORT SAKNAS VID INLÄMNING',
+      redColor,
       reserveAfter
     )
   }
@@ -506,7 +675,20 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'loan')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
-  y = addKeysTable(doc, data.keys, y, 42, data.missingKeys)
+
+  // Check if we have cards to display
+  const hasCards = data.cards && data.cards.length > 0
+
+  // Reserve space for signature section, but if we have cards, don't reserve yet
+  const keysReserve = hasCards ? 0 : 42
+  y = addKeysTable(doc, data.keys, y, keysReserve, data.missingKeys)
+
+  // Add cards section if present
+  if (hasCards) {
+    y += 6
+    y = addCardsTable(doc, data.cards, y, 42)
+  }
+
   addSignatureSection(doc, y, data.tenants)
   addFooter(doc, 'loan', receiptId)
   const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
@@ -520,8 +702,28 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   const doc = new jsPDF()
   let y = await addHeader(doc, 'return')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
-  // keep ~22mm for confirmation text
-  y = addKeysTable(doc, data.keys, y, 22, data.missingKeys, data.disposedKeys)
+
+  // Check if we have cards to display
+  const hasCards =
+    (data.cards && data.cards.length > 0) ||
+    (data.missingCards && data.missingCards.length > 0)
+
+  // keep ~22mm for confirmation text, but if we have cards, don't reserve yet
+  const keysReserve = hasCards ? 0 : 22
+  y = addKeysTable(
+    doc,
+    data.keys,
+    y,
+    keysReserve,
+    data.missingKeys,
+    data.disposedKeys
+  )
+
+  // Add cards section if present
+  if (hasCards) {
+    y += 6
+    y = addCardsTable(doc, data.cards, y, 22, data.missingCards)
+  }
 
   const bottom = contentBottom(doc)
   const need = 18
@@ -531,13 +733,24 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
     doc.text('BEKRÄFTELSE', MARGIN_X, y)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9.5)
-    const confirmText =
-      data.missingKeys && data.missingKeys.length > 0
-        ? 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar saknas (se lista ovan).'
-        : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+
+    const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
+    const hasMissingCards = data.missingCards && data.missingCards.length > 0
+    let confirmText: string
+
+    if (hasMissingKeys || hasMissingCards) {
+      const missingItems: string[] = []
+      if (hasMissingKeys) missingItems.push('nycklar')
+      if (hasMissingCards) missingItems.push('kort')
+      confirmText = `Ovanstående har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa ${missingItems.join(' och ')} saknas (se lista ovan).`
+    } else {
+      confirmText =
+        'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+    }
+
     const lines = doc.splitTextToSize(confirmText, 170)
     let cy = y + 7
-    lines.forEach((line) => {
+    lines.forEach((line: string) => {
       doc.text(line, MARGIN_X, cy)
       cy += 5.5
     })

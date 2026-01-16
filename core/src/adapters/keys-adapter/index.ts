@@ -1102,6 +1102,13 @@ export const DaxApi = {
  * ---- CARDS -----------------------------------------------------------------
  */
 export const CardsApi = {
+  getById: async (
+    cardId: string
+  ): Promise<AdapterResult<Card, 'not-found' | CommonErr>> => {
+    const r = await getJSON<{ content: Card }>(`${BASE}/cards/${cardId}`)
+    return r.ok ? ok(r.data.content) : r
+  },
+
   getByRentalObjectCode: async (
     rentalObjectCode: string,
     options?: {

@@ -78,4 +78,61 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /cards/{cardId}:
+   *   get:
+   *     summary: Get a card by ID
+   *     description: Fetch a single access control card from DAX by its ID
+   *     tags: [Cards]
+   *     parameters:
+   *       - in: path
+   *         name: cardId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The card ID
+   *     responses:
+   *       200:
+   *         description: Card found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Card'
+   *       404:
+   *         description: Card not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   */
+  router.get('/cards/:cardId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const card = await cardsAdapter.getCardById(ctx.params.cardId)
+
+      if (!card) {
+        ctx.status = 404
+        ctx.body = { error: 'Card not found', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: card, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching card by ID')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 }

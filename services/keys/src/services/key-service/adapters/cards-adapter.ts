@@ -124,3 +124,16 @@ export async function getCardsDetails(
 
   return enrichedCards
 }
+
+/**
+ * Get a single card by ID from DAX
+ */
+export async function getCardById(cardId: string): Promise<Card | null> {
+  try {
+    const card = await daxService.getCardById(cardId)
+    return card
+  } catch (error) {
+    console.error('Failed to fetch card from DAX:', error)
+    return null
+  }
+}

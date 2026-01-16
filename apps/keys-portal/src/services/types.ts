@@ -252,6 +252,8 @@ export interface ReceiptData {
   operationDate?: Date
   missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
   disposedKeys?: Key[] // For RETURN: keys that were disposed
+  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
+  missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
 }
 
 export interface MaintenanceReceiptData {
@@ -263,4 +265,6 @@ export interface MaintenanceReceiptData {
   operationDate?: Date
   missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
   disposedKeys?: Key[] // For RETURN: keys that were disposed
+  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
+  missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
 }
