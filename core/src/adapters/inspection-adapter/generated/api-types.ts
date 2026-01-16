@@ -119,6 +119,41 @@ export interface paths {
       };
     };
   };
+  "/inspections/xpand/{inspectionId}": {
+    /** Get a detailed inspection from Xpand by inspection ID */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to fetch */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description The inspection details from Xpand */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                inspection?: components["schemas"]["DetailedXpandInspection"];
+              };
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Internal Server Error - Failed to fetch inspections from Xpand */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -136,6 +171,117 @@ export interface components {
       apartmentCode: string;
       leaseId: string;
       masterKeyAccess: string | null;
+    };
+    DetailedXpandInspection: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+    };
+    DetailedXpandInspectionRoom: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+    };
+    DetailedXpandInspectionRemark: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
     };
   };
   responses: never;

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import type { Room } from '@/services/types'
-import { ComponentInspectionCard } from '@/components/residence/inspection/ComponentInspectionCard'
-import { ComponentDetailSheet } from '@/components/residence/inspection/ComponentDetailSheet'
+import { ComponentInspectionCard } from '@/inspections/components/ComponentInspectionCard'
+import { ComponentDetailSheet } from '@/inspections/components/ComponentDetailSheet'
 import type { components } from '@/services/api/core/generated/api-types'
+import { ROOM_COMPONENTS } from '@/inspections/constants'
+
 type InspectionRoom = components['schemas']['InspectionRoom']
 
-interface RoomInspectionMobileProps {
+interface RoomInspectionEditorProps {
   room: Room
   inspectionData: InspectionRoom
   onConditionUpdate: (
@@ -31,21 +33,7 @@ interface RoomInspectionMobileProps {
   ) => void
 }
 
-const COMPONENTS: Array<{
-  key: keyof InspectionRoom['conditions']
-  label: string
-  type: 'walls' | 'floor' | 'ceiling' | 'details'
-}> = [
-  { key: 'wall1', label: 'Vägg 1', type: 'walls' },
-  { key: 'wall2', label: 'Vägg 2', type: 'walls' },
-  { key: 'wall3', label: 'Vägg 3', type: 'walls' },
-  { key: 'wall4', label: 'Vägg 4', type: 'walls' },
-  { key: 'floor', label: 'Golv', type: 'floor' },
-  { key: 'ceiling', label: 'Tak', type: 'ceiling' },
-  { key: 'details', label: 'Detaljer', type: 'details' },
-]
-
-export function RoomInspectionMobile({
+export function RoomInspectionEditor({
   room,
   inspectionData,
   onConditionUpdate,
@@ -53,7 +41,7 @@ export function RoomInspectionMobile({
   onComponentNoteUpdate,
   onComponentPhotoAdd,
   onComponentPhotoRemove,
-}: RoomInspectionMobileProps) {
+}: RoomInspectionEditorProps) {
   const [openDetailComponent, setOpenDetailComponent] = useState<
     keyof InspectionRoom['conditions'] | null
   >(null)
@@ -66,7 +54,7 @@ export function RoomInspectionMobile({
         </div>
 
         <div>
-          {COMPONENTS.map((component) => (
+          {ROOM_COMPONENTS.map((component) => (
             <ComponentInspectionCard
               key={component.key}
               componentKey={component.key}
@@ -90,7 +78,7 @@ export function RoomInspectionMobile({
         </div>
 
         {/* Detail sheets for each component */}
-        {COMPONENTS.map((component) => (
+        {ROOM_COMPONENTS.map((component) => (
           <ComponentDetailSheet
             key={`detail-${component.key}`}
             isOpen={openDetailComponent === component.key}

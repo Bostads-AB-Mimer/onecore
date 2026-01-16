@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/v3/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Separator } from '@/components/ui/v2/Separator'
-import { PhotoGallery } from '@/components/residence/inspection/PhotoGallery'
-import { ActionChecklist } from '@/components/residence/inspection/ActionChecklist'
+import { PhotoGallery } from '@/inspections/components/PhotoGallery'
+import { ActionChecklist } from '@/inspections/components/ActionChecklist'
 import { Camera, Wrench, MessageSquare, Clock, FileText } from 'lucide-react'
+import { getConditionConfig, type ComponentType } from '@/inspections/constants'
 
 interface ComponentDetailSheetProps {
   isOpen: boolean
@@ -21,23 +22,11 @@ interface ComponentDetailSheetProps {
   note: string
   photos: string[]
   actions: string[]
-  componentType: 'walls' | 'floor' | 'ceiling' | 'details'
+  componentType: ComponentType
   onNoteChange: (note: string) => void
   onPhotoAdd: (photoDataUrl: string) => void
   onPhotoRemove: (index: number) => void
   onActionToggle: (action: string) => void
-}
-
-const CONDITION_CONFIG = {
-  God: {
-    variant: 'default' as const,
-    className: 'bg-green-500 hover:bg-green-600',
-  },
-  Acceptabel: {
-    variant: 'secondary' as const,
-    className: 'bg-yellow-500 hover:bg-yellow-600',
-  },
-  Skadad: { variant: 'destructive' as const, className: '' },
 }
 
 export function ComponentDetailSheet({
@@ -54,9 +43,7 @@ export function ComponentDetailSheet({
   onPhotoRemove,
   onActionToggle,
 }: ComponentDetailSheetProps) {
-  const conditionConfig = condition
-    ? CONDITION_CONFIG[condition as keyof typeof CONDITION_CONFIG]
-    : null
+  const conditionConfig = getConditionConfig(condition)
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -71,8 +58,8 @@ export function ComponentDetailSheet({
             <div>
               <p className="text-sm text-muted-foreground mb-2">Skick</p>
               <Badge
-                variant={conditionConfig.variant}
-                className={conditionConfig.className}
+                variant={conditionConfig.badgeVariant}
+                className={conditionConfig.badgeClassName}
               >
                 {condition}
               </Badge>

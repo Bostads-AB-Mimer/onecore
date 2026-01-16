@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/v2/Button'
-import { RoomInspectionMobile } from '../mobile/RoomInspectionMobile'
-import { InspectorSelectionCard } from '../mobile/InspectorSelectionCard'
-import { useInspectionForm } from '@/components/hooks/useInspectionForm'
+import { RoomInspectionEditor } from './RoomInspectionEditor'
+import { InspectorSelectionCard } from './InspectorSelectionCard'
+import { useInspectionForm } from '@/hooks/inspections/useInspectionForm'
 import type { Room } from '@/services/types'
 import type {
   InspectionSubmitData,
   TenantSnapshot,
-} from '@/components/inspections/types'
+} from '@/types/inspections/index'
 import { CheckCircle2 } from 'lucide-react'
 import {
   Accordion,
@@ -150,7 +150,7 @@ export function DesktopInspectionForm({
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pr-4 min-w-0">
-                  <RoomInspectionMobile
+                  <RoomInspectionEditor
                     room={room}
                     inspectionData={roomData}
                     onConditionUpdate={(field, value) =>

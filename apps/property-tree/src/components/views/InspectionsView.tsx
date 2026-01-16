@@ -29,10 +29,10 @@ import {
 } from '@/components/ui/Command'
 import { ChevronsUpDown, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { InspectionsHeader } from '@/components/inspections/InspectionsHeader'
-import { InspectionTable } from '@/components/inspections/InspectionTable'
-import { useInspectionFilters } from '@/components/hooks/useInspectionFilters'
-import { useInspectionSorting } from '@/components/hooks/useInspectionSorting'
+
+import { InspectionTable } from '@/inspections/components/InspectionTable'
+import { useInspectionFilters } from '@/hooks/inspections/useInspectionFilters'
+import { useInspectionSorting } from '@/hooks/inspections/useInspectionSorting'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import { useQuery } from '@tanstack/react-query'
 
@@ -94,11 +94,6 @@ export default function AllInspectionsPage() {
     return <div>Error loading inspections</div>
   }
 
-  const handleViewInspection = (inspection: Inspection) => {
-    setSelectedInspection(inspection)
-  }
-
-  // Filter inspections by category and apply filters
   const ongoingInspections = sortInspections(
     filterInspections(
       inspections.filter((inspection) => inspection.status !== 'Genomförd')
@@ -113,6 +108,8 @@ export default function AllInspectionsPage() {
   //     )
   //   )
   // )
+  const myInspections: Inspection[] = []
+
   const completedInspections = filterInspections(
     inspections.filter((inspection) => inspection.status === 'Genomförd')
   )
@@ -132,11 +129,7 @@ export default function AllInspectionsPage() {
         </CardHeader>
         <CardContent>
           {data.length > 0 ? (
-            <InspectionTable
-              inspections={data}
-              onInspectionClick={handleViewInspection}
-              isCompleted={isCompleted}
-            />
+            <InspectionTable inspections={data} isCompleted={isCompleted} />
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
@@ -152,7 +145,14 @@ export default function AllInspectionsPage() {
   return (
     <div className="py-4 animate-in max-w-full overflow-hidden">
       <div className="space-y-6">
-        <InspectionsHeader />
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Besiktningar</h1>
+            <p className="text-muted-foreground">
+              Översikt över alla besiktningar och tilldelningar
+            </p>
+          </div>
+        </div>
 
         {/* Filters */}
         <div className="flex flex-col gap-4">
@@ -390,9 +390,9 @@ export default function AllInspectionsPage() {
             <TabsTrigger value="ongoing">
               Pågående ({ongoingInspections.length})
             </TabsTrigger>
-            {/* <TabsTrigger value="mine">
+            <TabsTrigger value="mine">
               Mina besiktningar ({myInspections.length})
-            </TabsTrigger> */}
+            </TabsTrigger>
             <TabsTrigger value="completed">
               Avslutade ({completedInspections.length})
             </TabsTrigger>
@@ -405,9 +405,9 @@ export default function AllInspectionsPage() {
             )}
           </TabsContent>
 
-          {/* <TabsContent value="mine" className="space-y-4">
+          <TabsContent value="mine" className="space-y-4">
             {renderInspectionTable(myInspections, 'Mina besiktningar')}
-          </TabsContent> */}
+          </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
             {renderInspectionTable(
@@ -425,7 +425,7 @@ export default function AllInspectionsPage() {
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedInspection && (
-            <InspectionReadOnly
+            <InspectionProtocol
               inspection={selectedInspection}
               onClose={() => setSelectedInspection(null)}
             />

@@ -21,7 +21,7 @@ describe('inspection-adapter', () => {
   })
 
   describe(inspectionAdapter.getXpandInspections, () => {
-    const xpandInspectionMock = factory.externalXpandInspection.buildList(3)
+    const xpandInspectionMock = factory.XpandInspection.buildList(3)
 
     it('returns err if request fails', async () => {
       mockServer.use(
@@ -84,7 +84,7 @@ describe('inspection-adapter', () => {
 
   describe(inspectionAdapter.getXpandInspectionsByResidenceId, () => {
     const residenceId = '406-028-02-0101'
-    const xpandInspectionMock = factory.externalXpandInspection.buildList(2)
+    const xpandInspectionMock = factory.XpandInspection.buildList(2)
 
     it('returns err if request fails', async () => {
       mockServer.use(
@@ -142,6 +142,48 @@ describe('inspection-adapter', () => {
       expect(result).toMatchObject({
         ok: true,
         data: xpandInspectionMock,
+      })
+    })
+  })
+  describe(inspectionAdapter.getXpandInspectionById, () => {
+    const inspectionId = 'inspection-123'
+    const detailedXpandInspectionMock = factory.DetailedXpandInspection.build()
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.inspectionService.url}/inspections/xpand/${inspectionId}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns inspection data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.inspectionService.url}/inspections/xpand/${inspectionId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { inspection: detailedXpandInspectionMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: detailedXpandInspectionMock,
       })
     })
   })

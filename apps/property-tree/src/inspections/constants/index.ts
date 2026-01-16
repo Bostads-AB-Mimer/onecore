@@ -1,0 +1,21 @@
+/**
+ * Inspections Constants
+ *
+ * Centralized re-export of all inspection-related constants.
+ * Import from this file for convenient access to all constants.
+ *
+ * @example
+ * import {
+ *   INSPECTION_STATUS,
+ *   CONDITION_CONFIG,
+ *   ROOM_COMPONENTS,
+ *   getStatusConfig
+ * } from '@/inspections/constants'
+ */
+
+export * from './statuses'
+export * from './conditions'
+export * from './actions'
+export * from './components'
+export * from './inspection-types'
+export * from './table-columns'

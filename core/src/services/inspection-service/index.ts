@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
@@ -25,6 +26,9 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 export const routes = (router: KoaRouter) => {
   registerSchema('Inspection', schemas.InspectionSchema)
   registerSchema('InspectionRoom', schemas.InspectionRoomSchema)
+  registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
+  registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)
+  registerSchema('DetailedInspectionRemark', schemas.DetailedInspectionSchema)
 
   /**
    * @swagger
@@ -262,6 +266,112 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { error, residenceId },
         'Error getting inspections by residenceId from xpand'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/{inspectionId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve an inspection by ID from Xpand
+   *     description: Retrieves a specific inspection by its ID from Xpand.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to retrieve.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DetailedInspection'
+   *       '404':
+   *         description: Inspection not found for the specified ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: not-found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
+
+      if (result.ok) {
+        const inspection = result.data
+
+        let lease = null
+        if (inspection.leaseId) {
+          lease = await leasingAdapter.getLease(inspection.leaseId, 'true')
+        }
+
+        let residence = null
+        if (inspection.residenceId) {
+          const res = await propertyBaseAdapter.getResidenceByRentalId(
+            inspection.residenceId
+          )
+          if (res.ok) {
+            residence = res.data
+          }
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            ...inspection,
+            lease,
+            residence,
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            inspectionId,
+            metadata,
+          },
+          'Error getting inspection by id from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error getting inspection by id from xpand'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }

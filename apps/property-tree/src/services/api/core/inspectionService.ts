@@ -2,6 +2,7 @@ import { GET } from './base-api'
 import { components } from './generated/api-types'
 
 type Inspection = components['schemas']['Inspection']
+type DetailedInspection = components['schemas']['DetailedInspection']
 // export type InternalInspection = {
 //   _tag: 'internal'
 // } & components['schemas']['Inspection']
@@ -42,5 +43,18 @@ export const inspectionService = {
       _tag: 'external' as const,
       ...v,
     }))
+  },
+
+  async getInspectionById(inspectionId: string): Promise<DetailedInspection> {
+    const inspectionResponse = await GET('/inspections/xpand/{inspectionId}', {
+      params: { path: { inspectionId } },
+    })
+    if (inspectionResponse.error) throw inspectionResponse.error
+    if (!inspectionResponse.data.content)
+      throw new Error('No data returned from API')
+
+    return {
+      ...inspectionResponse.data.content,
+    }
   },
 }
