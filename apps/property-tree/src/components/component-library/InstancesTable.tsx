@@ -1,5 +1,6 @@
-import { History, Unplug } from 'lucide-react'
+import { History, Unplug, ImageIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/v2/Badge'
+import { Button } from '@/components/ui/v2/Button'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
 import type { Component } from '@/services/types'
 
@@ -10,6 +11,7 @@ interface InstancesTableProps {
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
   onUninstall: (instance: Component) => void
+  onViewImages: (instance: Component) => void
 }
 
 export const InstancesTable = ({
@@ -19,6 +21,7 @@ export const InstancesTable = ({
   onDelete,
   onViewHistory,
   onUninstall,
+  onViewImages,
 }: InstancesTableProps) => {
   const formatCurrency = (value: number) =>
     value.toLocaleString('sv-SE', {
@@ -246,6 +249,24 @@ export const InstancesTable = ({
           </button>
         )
       },
+    },
+    {
+      key: 'images',
+      label: 'Bilder',
+      render: (item) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={(e) => {
+            e.stopPropagation()
+            onViewImages(item)
+          }}
+          title="Visa bilder"
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
+      ),
     },
   ]
 

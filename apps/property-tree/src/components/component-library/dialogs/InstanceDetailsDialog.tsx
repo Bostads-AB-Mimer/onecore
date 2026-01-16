@@ -62,6 +62,7 @@ export const InstanceDetailsDialog = ({
     uploadError,
     deleteImage,
     isDeleting,
+    getDownloadUrl,
   } = useComponentImages(instance.id)
 
   const dangerousExtensions = [
@@ -139,30 +140,17 @@ export const InstanceDetailsDialog = ({
       return
     }
 
-    upload(
-      { file: uploadFile },
-      {
-        onSuccess: () => {
-          setUploadFile(null)
-          setUploadValidationError(null)
-        },
-      }
-    )
+    upload(uploadFile)
+    setUploadFile(null)
+    setUploadValidationError(null)
   }
 
-  const handleDelete = (documentId: string, fileId: string) => {
-    if (deleteConfirm === documentId) {
-      // Pass both documentId and fileId for proper cleanup
-      deleteImage(
-        { documentId, fileId },
-        {
-          onSuccess: () => {
-            setDeleteConfirm(null)
-          },
-        }
-      )
+  const handleDelete = (docId: string, fileName: string) => {
+    if (deleteConfirm === docId) {
+      deleteImage(fileName)
+      setDeleteConfirm(null)
     } else {
-      setDeleteConfirm(documentId)
+      setDeleteConfirm(docId)
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
   }
@@ -175,17 +163,17 @@ export const InstanceDetailsDialog = ({
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
   }
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return Image
-    if (mimeType.includes('pdf')) return FileText
+  const getFileIcon = (type: string) => {
+    if (type === 'Bild') return Image
+    if (type === 'PDF') return FileText
     return File
   }
 
-  const canPreview = (mimeType: string, fileName: string): boolean => {
+  const canPreview = (type: string, fileName: string): boolean => {
     return (
-      mimeType.includes('pdf') ||
+      type === 'PDF' ||
       fileName.toLowerCase().endsWith('.pdf') ||
-      mimeType.startsWith('image/')
+      type === 'Bild'
     )
   }
 
@@ -483,29 +471,33 @@ export const InstanceDetailsDialog = ({
                 {documents && documents.length > 0 ? (
                   <div className="space-y-2">
                     {documents.map((doc) => {
-                      const FileIcon = getFileIcon(doc.mimeType)
-                      const showPreview = canPreview(
-                        doc.mimeType,
-                        doc.originalName
-                      )
+                      const FileIcon = getFileIcon(doc.type)
+                      const showPreview = canPreview(doc.type, doc.name)
                       return (
                         <div
-                          key={doc.fileId}
+                          key={doc.id}
                           className={cn(
                             'flex items-center gap-3 p-3 rounded-lg border',
                             showPreview &&
                               'cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-shadow'
                           )}
-                          onClick={() => showPreview && setPreviewDoc(doc)}
+                          onClick={async () => {
+                            if (showPreview) {
+                              const url = await getDownloadUrl(doc.name)
+                              setPreviewDoc({
+                                url,
+                                originalName: doc.name,
+                                mimeType: doc.type,
+                              })
+                            }
+                          }}
                         >
                           <FileIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">
-                              {doc.originalName}
-                            </p>
+                            <p className="font-medium truncate">{doc.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {formatFileSize(doc.size)} •{' '}
-                              {formatDate(doc.createdAt)}
+                              {formatDate(doc.lastModified)}
                             </p>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
@@ -513,9 +505,14 @@ export const InstanceDetailsDialog = ({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation()
-                                  setPreviewDoc(doc)
+                                  const url = await getDownloadUrl(doc.name)
+                                  setPreviewDoc({
+                                    url,
+                                    originalName: doc.name,
+                                    mimeType: doc.type,
+                                  })
                                 }}
                                 title="Förhandsgranska"
                               >
@@ -525,9 +522,10 @@ export const InstanceDetailsDialog = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation()
-                                window.open(doc.url, '_blank')
+                                const url = await getDownloadUrl(doc.name)
+                                window.open(url, '_blank')
                               }}
                               title="Ladda ner"
                             >
@@ -542,7 +540,7 @@ export const InstanceDetailsDialog = ({
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleDelete(doc.id, doc.fileId)
+                                handleDelete(doc.id, doc.name)
                               }}
                               disabled={isDeleting}
                               title="Ta bort"

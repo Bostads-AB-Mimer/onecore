@@ -1,37 +1,20 @@
-import { componentService } from '@/services/api/core/componentService'
-import { DocumentWithUrl } from '@/services/types'
-import { useFileManagement } from './useFileManagement'
+import { useDocuments } from './useDocuments'
+import { ContextType } from '@/types/ui'
 
 export function useComponentImages(componentId: string) {
-  const result = useFileManagement<DocumentWithUrl, { file: File }>({
-    entityId: componentId,
-    queryKey: 'component-images',
-    fetchFiles: (id) => componentService.getImages(id),
-    uploadFile: (id, { file }) => componentService.uploadImage(id, file),
-    deleteFile: (_id, { documentId, fileId }) =>
-      componentService.deleteImage(documentId, fileId),
-    createOptimisticFile: ({ file }) => ({
-      id: `temp-${Date.now()}`,
-      fileId: `temp-${Date.now()}`,
-      originalName: file.name,
-      size: file.size,
-      mimeType: file.type,
-      createdAt: new Date().toISOString(),
-      url: '',
-    }),
-  })
+  const docs = useDocuments(ContextType.ComponentInstance, componentId)
 
   return {
-    images: result.files,
-    isLoading: result.isLoading,
-    error: result.error,
-    upload: result.upload,
-    uploadAsync: result.uploadAsync,
-    isUploading: result.isUploading,
-    uploadError: result.uploadError,
-    deleteImage: result.deleteFile,
-    deleteAsync: result.deleteAsync,
-    isDeleting: result.isDeleting,
-    deleteError: result.deleteError,
+    images: docs.documents,
+    isLoading: docs.isLoading,
+    error: docs.error,
+    upload: (file: File) => docs.uploadFile(file),
+    uploadAsync: docs.uploadFileAsync,
+    isUploading: docs.isUploading,
+    uploadError: docs.uploadError,
+    deleteImage: (name: string) => docs.deleteFile(name),
+    deleteAsync: docs.deleteFileAsync,
+    isDeleting: docs.isDeleting,
+    getDownloadUrl: docs.getDownloadUrl,
   }
 }

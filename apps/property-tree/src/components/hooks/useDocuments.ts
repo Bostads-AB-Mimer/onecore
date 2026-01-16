@@ -122,6 +122,7 @@ export function useDocuments(contextType: ContextType, id: string | undefined) {
     uploadFile: uploadMutation.mutate,
     uploadFileAsync: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,
+    uploadError: uploadMutation.error,
     deleteFile: deleteMutation.mutate,
     deleteFileAsync: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,

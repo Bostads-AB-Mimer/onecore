@@ -96,17 +96,11 @@ export function ComponentImageUpload({
       return
     }
 
-    upload(
-      { file },
-      {
-        onSuccess: () => {
-          // Reset form and close modal
-          setFile(null)
-          setValidationError(null)
-          onClose()
-        },
-      }
-    )
+    upload(file)
+    // Reset form and close modal after upload starts
+    setFile(null)
+    setValidationError(null)
+    onClose()
   }
 
   const formatFileSize = (bytes: number): string => {
