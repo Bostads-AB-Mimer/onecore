@@ -26,6 +26,80 @@ interface ComponentImageGalleryProps {
   onClose: () => void
 }
 
+// Helper component to load image with URL fetch
+function ImageWithUrl({
+  imageName,
+  getDownloadUrl,
+}: {
+  imageName: string
+  getDownloadUrl: (name: string) => Promise<string>
+}) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    getDownloadUrl(imageName).then(setUrl)
+  }, [imageName, getDownloadUrl])
+
+  if (!url) {
+    return (
+      <div className="flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <motion.img
+      src={url}
+      alt={imageName}
+      className="max-h-full max-w-full object-contain"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    />
+  )
+}
+
+// Helper component for thumbnails
+function ThumbnailWithUrl({
+  imageName,
+  getDownloadUrl,
+  isSelected,
+  onClick,
+}: {
+  imageName: string
+  getDownloadUrl: (name: string) => Promise<string>
+  isSelected: boolean
+  onClick: () => void
+}) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    getDownloadUrl(imageName).then(setUrl)
+  }, [imageName, getDownloadUrl])
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex-shrink-0 w-20 h-20 rounded border-2 overflow-hidden transition-all',
+        isSelected
+          ? 'border-primary ring-2 ring-primary ring-offset-2'
+          : 'border-transparent hover:border-gray-300'
+      )}
+    >
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+    </button>
+  )
+}
+
 export function ComponentImageGallery({
   componentId,
   isOpen,
@@ -51,6 +125,7 @@ export function ComponentImageGallery({
     upload,
     isUploading,
     uploadError,
+    getDownloadUrl,
   } = useComponentImages(componentId)
 
   const currentImage = images?.[currentIndex]
@@ -186,35 +261,23 @@ export function ComponentImageGallery({
       return
     }
 
-    upload(
-      { file: uploadFile },
-      {
-        onSuccess: () => {
-          // Reset form
-          setUploadFile(null)
-          setUploadValidationError(null)
-        },
-      }
-    )
+    upload(uploadFile)
+    // Reset form after upload starts
+    setUploadFile(null)
+    setUploadValidationError(null)
   }
 
   const handleDelete = () => {
     if (!currentImage) return
 
     if (deleteConfirm === currentImage.id) {
-      // Actually delete - pass both documentId and fileId for proper cleanup
-      deleteImage(
-        { documentId: currentImage.id, fileId: currentImage.fileId },
-        {
-          onSuccess: () => {
-            setDeleteConfirm(null)
-            // If we deleted the last image in the list, go back one
-            if (currentIndex >= images.length - 1 && currentIndex > 0) {
-              setCurrentIndex(currentIndex - 1)
-            }
-          },
-        }
-      )
+      // Actually delete - just pass the filename
+      deleteImage(currentImage.name)
+      setDeleteConfirm(null)
+      // If we deleted the last image in the list, go back one
+      if (currentIndex >= images.length - 1 && currentIndex > 0) {
+        setCurrentIndex(currentIndex - 1)
+      }
     } else {
       // Show confirmation
       setDeleteConfirm(currentImage.id)
@@ -373,15 +436,10 @@ export function ComponentImageGallery({
             {/* Image viewer */}
             <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 rounded-lg flex items-center justify-center overflow-hidden">
               <AnimatePresence mode="wait">
-                <motion.img
-                  key={currentImage.fileId}
-                  src={currentImage.url}
-                  alt={currentImage.originalName}
-                  className="max-h-full max-w-full object-contain"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                <ImageWithUrl
+                  key={currentImage.id}
+                  imageName={currentImage.name}
+                  getDownloadUrl={getDownloadUrl}
                 />
               </AnimatePresence>
 
@@ -418,12 +476,10 @@ export function ComponentImageGallery({
             {/* Image metadata */}
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">
-                  {currentImage.originalName}
-                </p>
+                <p className="font-medium truncate">{currentImage.name}</p>
                 <p className="text-sm text-muted-foreground">
                   {formatFileSize(currentImage.size)} •{' '}
-                  {formatDate(currentImage.createdAt)}
+                  {formatDate(currentImage.lastModified)}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -447,22 +503,13 @@ export function ComponentImageGallery({
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {images.map((img, idx) => (
-                  <button
-                    key={img.fileId}
+                  <ThumbnailWithUrl
+                    key={img.id}
+                    imageName={img.name}
+                    getDownloadUrl={getDownloadUrl}
+                    isSelected={idx === currentIndex}
                     onClick={() => setCurrentIndex(idx)}
-                    className={cn(
-                      'flex-shrink-0 w-20 h-20 rounded border-2 overflow-hidden transition-all',
-                      idx === currentIndex
-                        ? 'border-primary ring-2 ring-primary ring-offset-2'
-                        : 'border-transparent hover:border-gray-300'
-                    )}
-                  >
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
+                  />
                 ))}
               </div>
             )}

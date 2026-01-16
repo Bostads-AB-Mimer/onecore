@@ -3,6 +3,7 @@ import { useComponentLibraryHandlers } from '@/components/hooks/useComponentLibr
 import { ComponentLibraryBreadcrumb } from '@/components/component-library/ComponentLibraryBreadcrumb'
 import { ComponentLibraryContent } from '@/components/component-library/ComponentLibraryContent'
 import { ComponentLibraryDialogs } from '@/components/component-library/ComponentLibraryDialogs'
+import { ComponentImageGallery } from '@/components/residence/ComponentImageGallery'
 
 const ComponentLibraryView = () => {
   const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =
@@ -108,6 +109,7 @@ const ComponentLibraryView = () => {
         onDeleteInstance={handleDeleteInstance}
         onViewHistory={handleViewHistory}
         onUninstall={(instance) => dialogs.deinstallDialog.open(instance)}
+        onViewImages={(instance) => dialogs.imageGalleryDialog.open(instance)}
       />
 
       {/* Dialogs */}
@@ -121,6 +123,15 @@ const ComponentLibraryView = () => {
         instanceDetailsDialog={dialogs.instanceDetailsDialog}
         deinstallDialog={dialogs.deinstallDialog}
       />
+
+      {/* Image Gallery Dialog */}
+      {dialogs.imageGalleryDialog.state.data && (
+        <ComponentImageGallery
+          componentId={dialogs.imageGalleryDialog.state.data.id}
+          isOpen={dialogs.imageGalleryDialog.state.isOpen}
+          onClose={dialogs.imageGalleryDialog.close}
+        />
+      )}
     </div>
   )
 }

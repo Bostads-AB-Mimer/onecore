@@ -149,6 +149,7 @@ export interface ComponentLibraryDialogStates {
   instanceDialog: UseDialogStateReturn<Component>
   instanceDetailsDialog: UseSimpleDialogStateReturn<Component>
   deinstallDialog: UseSimpleDialogStateReturn<Component>
+  imageGalleryDialog: UseSimpleDialogStateReturn<Component>
 }
 
 export interface ComponentLibraryDataState {
@@ -241,6 +242,7 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
 
   const instanceDetailsDialog = useSimpleDialogState<Component>()
   const deinstallDialog = useSimpleDialogState<Component>()
+  const imageGalleryDialog = useSimpleDialogState<Component>()
 
   // Data fetching
   const {
@@ -319,6 +321,7 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
       instanceDialog,
       instanceDetailsDialog,
       deinstallDialog,
+      imageGalleryDialog,
     },
     data: {
       categories,

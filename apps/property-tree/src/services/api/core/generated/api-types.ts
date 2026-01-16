@@ -4649,21 +4649,21 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter files by prefix */
           prefix?: string;
         };
       };
       responses: {
-        /** @description List of files */
+        /** @description List of files with metadata */
         200: {
           content: {
             "application/json": {
-              content?: {
-                /** @description Array of file names */
-                files?: string[];
-              };
+              content?: components["schemas"]["ListFilesResponse"];
             };
           };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
         };
         /** @description Server error */
         500: {
@@ -4677,14 +4677,7 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
-            /** @description Name for the file */
-            fileName: string;
-            /** @description Base64 encoded file data */
-            fileData: string;
-            /** @description MIME type of the file */
-            contentType: string;
-          };
+          "application/json": components["schemas"]["FileUploadRequest"];
         };
       };
       responses: {
@@ -4692,11 +4685,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                /** @description The stored file name */
-                fileName?: string;
-                message?: string;
-              };
+              content?: components["schemas"]["FileUploadResponse"];
             };
           };
         };
@@ -4729,17 +4718,13 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                /**
-                 * Format: uri
-                 * @description Presigned URL for downloading the file
-                 */
-                url?: string;
-                /** @description URL expiry time in seconds */
-                expiresIn?: number;
-              };
+              content?: components["schemas"]["FileUrlResponse"];
             };
           };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
         };
         /** @description File not found */
         404: {
@@ -4764,7 +4749,11 @@ export interface paths {
       responses: {
         /** @description File metadata */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FileMetadata"];
+            };
+          };
         };
         /** @description File not found */
         404: {
@@ -4814,7 +4803,11 @@ export interface paths {
       responses: {
         /** @description File existence status */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: components["schemas"]["FileExistsResponse"];
+            };
+          };
         };
         /** @description Server error */
         500: {
@@ -6123,6 +6116,90 @@ export interface components {
         name: string | null;
       };
     });
+    FileListItem: {
+      /** @description Full file path/name */
+      name: string;
+      /**
+       * Format: date-time
+       * @description ISO 8601 timestamp
+       */
+      lastModified: string;
+      /** @description ETag for file version */
+      etag: string;
+      /** @description File size in bytes */
+      size: number;
+    };
+    FileMetadata: {
+      /** @description Full file path/name */
+      name: string;
+      /**
+       * Format: date-time
+       * @description ISO 8601 timestamp
+       */
+      lastModified: string;
+      /** @description ETag for file version */
+      etag: string;
+      /** @description File size in bytes */
+      size: number;
+      /** @description Custom metadata key-value pairs */
+      metaData?: {
+        [key: string]: string;
+      };
+    };
+    FileUploadRequest: {
+      /** @description Target file name/path */
+      fileName: string;
+      /** @description Base64 encoded file content */
+      fileData: string;
+      /** @description MIME type of the file */
+      contentType: string;
+    };
+    FileUploadResponse: {
+      /** @description Stored file name/path */
+      fileName: string;
+      /** @description Success message */
+      message: string;
+    };
+    FileUrlResponse: {
+      /**
+       * Format: uri
+       * @description Presigned download URL
+       */
+      url: string;
+      /** @description URL expiry time in seconds */
+      expiresIn: number;
+    };
+    FileExistsResponse: {
+      /** @description Whether the file exists */
+      exists: boolean;
+    };
+    ListFilesResponse: {
+      /** @description Array of file metadata objects */
+      files: {
+          /** @description Full file path/name */
+          name: string;
+          /**
+           * Format: date-time
+           * @description ISO 8601 timestamp
+           */
+          lastModified: string;
+          /** @description ETag for file version */
+          etag: string;
+          /** @description File size in bytes */
+          size: number;
+        }[];
+    };
+    ListFilesQuery: {
+      /** @description Filter files by prefix */
+      prefix?: string;
+    };
+    FileUrlQuery: {
+      /**
+       * @description URL expiry time
+       * @default 3600
+       */
+      expirySeconds?: number;
+    };
   };
   responses: never;
   parameters: never;

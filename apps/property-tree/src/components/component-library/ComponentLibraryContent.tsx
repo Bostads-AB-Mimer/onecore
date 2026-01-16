@@ -66,6 +66,7 @@ interface ComponentLibraryContentProps {
   onDeleteInstance: (instance: Component) => void
   onViewHistory: (instance: Component) => void
   onUninstall: (instance: Component) => void
+  onViewImages: (instance: Component) => void
 }
 
 // Error state component
@@ -156,6 +157,7 @@ export const ComponentLibraryContent = ({
   onDeleteInstance,
   onViewHistory,
   onUninstall,
+  onViewImages,
 }: ComponentLibraryContentProps) => {
   const hasActiveSearch = searchInput.trim().length > 0
 
@@ -378,6 +380,7 @@ export const ComponentLibraryContent = ({
             onDelete={onDeleteInstance}
             onViewHistory={onViewHistory}
             onUninstall={onUninstall}
+            onViewImages={onViewImages}
           />
         )}
       </>

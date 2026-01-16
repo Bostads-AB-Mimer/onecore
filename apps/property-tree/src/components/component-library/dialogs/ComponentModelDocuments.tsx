@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Upload,
   Check,
@@ -28,6 +28,59 @@ interface ComponentModelDocumentsProps {
   onClose: () => void
 }
 
+interface PreviewModalProps {
+  doc: { name: string; fullPath: string }
+  getDownloadUrl: (name: string) => Promise<string>
+  onClose: () => void
+}
+
+function PreviewModal({ doc, getDownloadUrl, onClose }: PreviewModalProps) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  // Fetch the URL when the modal opens
+  useEffect(() => {
+    getDownloadUrl(doc.name).then(setUrl)
+  }, [doc.name, getDownloadUrl])
+
+  if (!url) {
+    return (
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{doc.name}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-hidden">
+          <iframe
+            src={url}
+            className="w-full h-full border-0"
+            title={`Preview of ${doc.name}`}
+          />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => window.open(url, '_blank')}>
+            <Download className="h-4 w-4 mr-2" />
+            Ladda ner
+          </Button>
+          <Button onClick={onClose}>Stäng</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function ComponentModelDocuments({
   modelId,
   isOpen,
@@ -52,6 +105,7 @@ export function ComponentModelDocuments({
     uploadError,
     deleteDocument,
     isDeleting,
+    getDownloadUrl,
   } = useComponentModelDocuments(modelId)
 
   const dangerousExtensions = [
@@ -141,32 +195,20 @@ export function ComponentModelDocuments({
       return
     }
 
-    upload(
-      { file: uploadFile },
-      {
-        onSuccess: () => {
-          // Reset form
-          setUploadFile(null)
-          setUploadValidationError(null)
-        },
-      }
-    )
+    upload(uploadFile)
+    // Reset form after upload starts
+    setUploadFile(null)
+    setUploadValidationError(null)
   }
 
-  const handleDelete = (documentId: string, fileId: string) => {
-    if (deleteConfirm === documentId) {
-      // Actually delete - pass both documentId and fileId for proper cleanup
-      deleteDocument(
-        { documentId, fileId },
-        {
-          onSuccess: () => {
-            setDeleteConfirm(null)
-          },
-        }
-      )
+  const handleDelete = (docId: string, fileName: string) => {
+    if (deleteConfirm === docId) {
+      // Actually delete - just pass the filename
+      deleteDocument(fileName)
+      setDeleteConfirm(null)
     } else {
       // Show confirmation
-      setDeleteConfirm(documentId)
+      setDeleteConfirm(docId)
       // Auto-cancel confirmation after 3 seconds
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
@@ -189,19 +231,17 @@ export function ComponentModelDocuments({
     })
   }
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return Image
-    if (mimeType.includes('pdf')) return FileText
-    if (mimeType.includes('sheet') || mimeType.includes('excel')) return Table
+  const getFileIcon = (type: string) => {
+    if (type === 'Bild') return Image
+    if (type === 'PDF') return FileText
+    if (type === 'Excel') return Table
     return File
   }
 
   // Helper to determine if file is a PDF (only PDFs are previewable)
   const isPdf = (doc: (typeof documents)[0]): boolean => {
     if (!doc) return false
-    const mimeType = doc.mimeType.toLowerCase()
-    const fileName = doc.originalName.toLowerCase()
-    return mimeType.includes('pdf') || fileName.endsWith('.pdf')
+    return doc.type === 'PDF' || doc.name.toLowerCase().endsWith('.pdf')
   }
 
   // Loading skeleton
@@ -413,11 +453,11 @@ export function ComponentModelDocuments({
             {/* Document list */}
             <div className="space-y-2">
               {documents.map((doc) => {
-                const FileIcon = getFileIcon(doc.mimeType)
+                const FileIcon = getFileIcon(doc.type)
                 const canPreview = isPdf(doc)
                 return (
                   <div
-                    key={doc.fileId}
+                    key={doc.id}
                     className={cn(
                       'flex items-center gap-3 p-3 rounded-lg border',
                       canPreview &&
@@ -427,9 +467,10 @@ export function ComponentModelDocuments({
                   >
                     <FileIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{doc.originalName}</p>
+                      <p className="font-medium truncate">{doc.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatFileSize(doc.size)} • {formatDate(doc.createdAt)}
+                        {formatFileSize(doc.size)} •{' '}
+                        {formatDate(doc.lastModified)}
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
@@ -437,7 +478,7 @@ export function ComponentModelDocuments({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation()
                             setPreviewDoc(doc)
                           }}
@@ -449,9 +490,10 @@ export function ComponentModelDocuments({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation()
-                          window.open(doc.url, '_blank')
+                          const url = await getDownloadUrl(doc.name)
+                          window.open(url, '_blank')
                         }}
                         title="Ladda ner"
                       >
@@ -464,7 +506,7 @@ export function ComponentModelDocuments({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDelete(doc.id, doc.fileId)
+                          handleDelete(doc.id, doc.name)
                         }}
                         disabled={isDeleting}
                         title="Ta bort"
@@ -491,32 +533,11 @@ export function ComponentModelDocuments({
 
       {/* Document Preview Modal */}
       {previewDoc && (
-        <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
-          <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>{previewDoc.originalName}</DialogTitle>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-hidden">
-              <iframe
-                src={previewDoc.url}
-                className="w-full h-full border-0"
-                title={`Preview of ${previewDoc.originalName}`}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => window.open(previewDoc.url, '_blank')}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Ladda ner
-              </Button>
-              <Button onClick={() => setPreviewDoc(null)}>Stäng</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <PreviewModal
+          doc={previewDoc}
+          getDownloadUrl={getDownloadUrl}
+          onClose={() => setPreviewDoc(null)}
+        />
       )}
     </>
   )
