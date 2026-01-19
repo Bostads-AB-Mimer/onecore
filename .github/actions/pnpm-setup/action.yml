@@ -72,9 +72,9 @@ runs:
       shell: bash
       run: pnpm generate:static
 
-    # Build shared libs once for downstreams jobs that need compiled deps
+    # Build shared libs for downstream jobs that need compiled deps
+    # Always run - cache may have partial restore from older branch without new libs
     - name: Build libs
-      if: steps.pnpm-store.outputs.cache-hit != 'true'
       shell: bash
       run: pnpm run build:libs
 
