@@ -4566,7 +4566,10 @@ export const routes = (router: KoaRouter) => {
 
       if (!fileData || !fileName || !contentType) {
         ctx.status = 400
-        ctx.body = { error: 'fileData, fileName, and contentType are required', ...metadata }
+        ctx.body = {
+          error: 'fileData, fileName, and contentType are required',
+          ...metadata,
+        }
         return
       }
 
@@ -4889,7 +4892,10 @@ export const routes = (router: KoaRouter) => {
 
       if (!fileData || !fileName || !contentType) {
         ctx.status = 400
-        ctx.body = { error: 'fileData, fileName, and contentType are required', ...metadata }
+        ctx.body = {
+          error: 'fileData, fileName, and contentType are required',
+          ...metadata,
+        }
         return
       }
 
@@ -4991,7 +4997,10 @@ export const routes = (router: KoaRouter) => {
 
       if (!body.fileData || !body.fileName || !body.contentType) {
         ctx.status = 400
-        ctx.body = { error: 'fileData, fileName, and contentType are required', ...metadata }
+        ctx.body = {
+          error: 'fileData, fileName, and contentType are required',
+          ...metadata,
+        }
         return
       }
 
