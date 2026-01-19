@@ -177,12 +177,17 @@ describe('Component Types API', () => {
       assert(existingCategoryId, 'Setup failed: no existing category found')
 
       // Create a type to update
-      const originalType = factory.type.build({ categoryId: existingCategoryId })
+      const originalType = factory.type.build({
+        categoryId: existingCategoryId,
+      })
       const createResponse = await request(app.callback())
         .post('/component-types')
         .send(originalType)
 
-      assert(createResponse.status === 201, 'Setup failed: could not create type')
+      assert(
+        createResponse.status === 201,
+        'Setup failed: could not create type'
+      )
       const typeId = createResponse.body.content.id
 
       // Update the type
@@ -233,7 +238,10 @@ describe('Component Types API', () => {
         .post('/component-types')
         .send(newType)
 
-      assert(createResponse.status === 201, 'Setup failed: could not create type')
+      assert(
+        createResponse.status === 201,
+        'Setup failed: could not create type'
+      )
       const typeId = createResponse.body.content.id
 
       // Delete the type

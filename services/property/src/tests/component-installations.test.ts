@@ -28,11 +28,9 @@ describe('Component Installations API', () => {
       })
 
       // All returned installations should have the specified componentId
-      response.body.content.forEach(
-        (installation: { componentId: string }) => {
-          expect(installation.componentId).toBe(existingComponentId)
-        }
-      )
+      response.body.content.forEach((installation: { componentId: string }) => {
+        expect(installation.componentId).toBe(existingComponentId)
+      })
     })
 
     it('should return installations filtered by spaceId', async () => {

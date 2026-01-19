@@ -44,7 +44,9 @@ describe('Component Subtypes API', () => {
 
     it('should search by subtypeName with 2+ characters', async () => {
       // First get a subtype to know a valid name to search for
-      const allResponse = await request(app.callback()).get('/component-subtypes')
+      const allResponse = await request(app.callback()).get(
+        '/component-subtypes'
+      )
       expect(allResponse.status).toBe(200)
 
       if (allResponse.body.content.length === 0) {
@@ -75,7 +77,9 @@ describe('Component Subtypes API', () => {
 
     it('should ignore subtypeName search with < 2 characters (returns all)', async () => {
       // Get total count without filter
-      const allResponse = await request(app.callback()).get('/component-subtypes')
+      const allResponse = await request(app.callback()).get(
+        '/component-subtypes'
+      )
       expect(allResponse.status).toBe(200)
       const totalWithoutFilter = allResponse.body.pagination.total
 
