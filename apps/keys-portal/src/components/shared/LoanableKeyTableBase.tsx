@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Table,
   TableBody,
@@ -118,7 +118,6 @@ export function LoanableKeyTableBase({
   selectedKeys = [],
   onKeySelectionChange,
 }: LoanableKeyTableBaseProps) {
-  const navigate = useNavigate()
 
   const {
     columns = {
@@ -249,8 +248,8 @@ export function LoanableKeyTableBase({
     new Set(grouped.loaned.map((cg) => cg.contact))
   )
 
-  // Handle key click - navigate to /Keys page with key details
-  const handleKeyClick = (key: KeyDetails) => {
+  // Build URL for key details page
+  const getKeyUrl = (key: KeyDetails) => {
     const disposed = key.disposed ? 'true' : 'false'
     const params = new URLSearchParams({
       disposed,
@@ -262,7 +261,7 @@ export function LoanableKeyTableBase({
       params.set('rentalObjectCode', key.rentalObjectCode)
     }
 
-    navigate(`/Keys?${params.toString()}`)
+    return `/Keys?${params.toString()}`
   }
 
   // State to track if unloaned section is expanded (default: expanded)
@@ -374,7 +373,7 @@ export function LoanableKeyTableBase({
                           selectable={selectable}
                           isSelected={selectedKeys.includes(key.id)}
                           onSelectionChange={onKeySelectionChange}
-                          onKeyClick={handleKeyClick}
+                          keyUrl={getKeyUrl(key)}
                         />
                       ))}
                     </React.Fragment>
@@ -439,7 +438,7 @@ export function LoanableKeyTableBase({
                         selectable={selectable}
                         isSelected={selectedKeys.includes(key.id)}
                         onSelectionChange={onKeySelectionChange}
-                        onKeyClick={handleKeyClick}
+                        keyUrl={getKeyUrl(key)}
                       />
                     ))}
                   </React.Fragment>
@@ -505,7 +504,7 @@ interface KeyRowProps {
   selectable?: boolean
   isSelected?: boolean
   onSelectionChange?: (keyId: string, checked: boolean) => void
-  onKeyClick?: (key: KeyDetails) => void
+  keyUrl?: string
 }
 
 function KeyRow({
@@ -515,7 +514,7 @@ function KeyRow({
   selectable = false,
   isSelected = false,
   onSelectionChange,
-  onKeyClick,
+  keyUrl,
 }: KeyRowProps) {
   return (
     <TableRow className="bg-background">
@@ -533,12 +532,16 @@ function KeyRow({
         <TableCell
           className={`font-medium w-[22%] ${!selectable && indent ? 'pl-8' : ''}`}
         >
-          <button
-            onClick={() => onKeyClick?.(keyData)}
-            className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-          >
-            {keyData.keyName}
-          </button>
+          {keyUrl ? (
+            <Link
+              to={keyUrl}
+              className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              {keyData.keyName}
+            </Link>
+          ) : (
+            <span className="font-medium text-sm">{keyData.keyName}</span>
+          )}
         </TableCell>
       )}
       {columns.sequence && (
