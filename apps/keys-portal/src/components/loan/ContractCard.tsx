@@ -290,7 +290,7 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
           </div>
 
           {activeTab === 'keys' && (
-            <div className="mt-3 pt-3 border-t bg-slate-50/50 -mx-3 px-3 -mb-3 pb-3 rounded-b-xl">
+            <div className="mt-3 pt-3 border-t bg-slate-50 -mx-6 px-6 -mb-3 pb-3 rounded-b-xl">
               <LeaseKeyStatusList
                 lease={lease}
                 keysData={keys}
@@ -309,7 +309,7 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
           )}
 
           {activeTab === 'history' && (
-            <div className="mt-3 pt-3 border-t bg-slate-50/50 -mx-3 px-3 -mb-3 pb-3 rounded-b-xl">
+            <div className="mt-3 pt-3 border-t bg-slate-50 -mx-6 px-6 -mb-3 pb-3 rounded-b-xl">
               <KeyLoansHistory
                 lease={lease}
                 refreshKey={keyLoansRefreshKey}
