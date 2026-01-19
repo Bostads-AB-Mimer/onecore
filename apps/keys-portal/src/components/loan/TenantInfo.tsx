@@ -260,15 +260,17 @@ export function TenantInfo({
               Avslutade kontrakt ({totalEnded})
             </h3>
             <div className="space-y-4">
-              {[...endedRecentContracts, ...endedOlderContracts].map((lease) => (
-                <ContractCard
-                  key={lease.leaseId}
-                  lease={lease}
-                  defaultTab={
-                    lease.leaseId === priorityContractId ? 'keys' : ''
-                  }
-                />
-              ))}
+              {[...endedRecentContracts, ...endedOlderContracts].map(
+                (lease) => (
+                  <ContractCard
+                    key={lease.leaseId}
+                    lease={lease}
+                    defaultTab={
+                      lease.leaseId === priorityContractId ? 'keys' : ''
+                    }
+                  />
+                )
+              )}
             </div>
           </div>
         )}
