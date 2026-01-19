@@ -4513,22 +4513,29 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: uuid
    *         description: Component ID
-   *       - in: query
-   *         name: caption
-   *         required: false
-   *         schema:
-   *           type: string
-   *         description: Optional caption for the file
    *     requestBody:
    *       required: true
    *       content:
-   *         multipart/form-data:
+   *         application/json:
    *           schema:
    *             type: object
+   *             required:
+   *               - fileData
+   *               - fileName
+   *               - contentType
    *             properties:
-   *               file:
+   *               fileData:
    *                 type: string
-   *                 format: binary
+   *                 description: Base64 encoded file data
+   *               fileName:
+   *                 type: string
+   *                 description: Original file name
+   *               contentType:
+   *                 type: string
+   *                 description: MIME type of the file
+   *               caption:
+   *                 type: string
+   *                 description: Optional caption for the file
    *     responses:
    *       200:
    *         description: File uploaded successfully
@@ -4549,27 +4556,28 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const caption = z.string().optional().safeParse(ctx.query.caption)
-
     try {
-      const file = ctx.request.files?.file
+      const { fileData, fileName, contentType, caption } = ctx.request.body as {
+        fileData?: string
+        fileName?: string
+        contentType?: string
+        caption?: string
+      }
 
-      if (!file || Array.isArray(file)) {
+      if (!fileData || !fileName || !contentType) {
         ctx.status = 400
-        ctx.body = { error: 'Single file required', ...metadata }
+        ctx.body = { error: 'fileData, fileName, and contentType are required', ...metadata }
         return
       }
 
-      // Read file buffer (koa-body stores files on disk)
-      const fs = await import('fs')
-      const fileBuffer = await fs.promises.readFile(file.filepath)
+      const fileBuffer = Buffer.from(fileData, 'base64')
 
       const result = await propertyBaseAdapter.uploadComponentFile(
         id.data,
         fileBuffer,
-        file.originalFilename || 'unknown',
-        file.mimetype || 'application/octet-stream',
-        caption.success ? caption.data : undefined
+        fileName,
+        contentType,
+        caption
       )
 
       if (!result.ok) {
@@ -4835,13 +4843,23 @@ export const routes = (router: KoaRouter) => {
    *     requestBody:
    *       required: true
    *       content:
-   *         multipart/form-data:
+   *         application/json:
    *           schema:
    *             type: object
+   *             required:
+   *               - fileData
+   *               - fileName
+   *               - contentType
    *             properties:
-   *               file:
+   *               fileData:
    *                 type: string
-   *                 format: binary
+   *                 description: Base64 encoded file data
+   *               fileName:
+   *                 type: string
+   *                 description: Original file name
+   *               contentType:
+   *                 type: string
+   *                 description: MIME type of the file
    *     responses:
    *       200:
    *         description: Document uploaded successfully
@@ -4863,17 +4881,19 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const file = ctx.request.files?.file
+      const { fileData, fileName, contentType } = ctx.request.body as {
+        fileData?: string
+        fileName?: string
+        contentType?: string
+      }
 
-      if (!file || Array.isArray(file)) {
+      if (!fileData || !fileName || !contentType) {
         ctx.status = 400
-        ctx.body = { error: 'Single file required', ...metadata }
+        ctx.body = { error: 'fileData, fileName, and contentType are required', ...metadata }
         return
       }
 
-      // Read file buffer (koa-body stores files on disk)
-      const fs = await import('fs')
-      const fileBuffer = await fs.promises.readFile(file.filepath)
+      const fileBuffer = Buffer.from(fileData, 'base64')
 
       // Normalize Swedish characters to ASCII equivalents
       // This avoids encoding issues entirely by removing non-ASCII characters
@@ -4887,14 +4907,13 @@ export const routes = (router: KoaRouter) => {
           .replace(/å/g, 'a')
       }
 
-      const originalFilename = file.originalFilename || 'unknown'
-      const normalizedFilename = normalizeFilename(originalFilename)
+      const normalizedFilename = normalizeFilename(fileName)
 
       const result = await propertyBaseAdapter.uploadComponentModelDocument(
         id.data,
         fileBuffer,
         normalizedFilename,
-        file.mimetype || 'application/octet-stream'
+        contentType
       )
 
       if (!result.ok) {
@@ -4924,13 +4943,23 @@ export const routes = (router: KoaRouter) => {
    *     requestBody:
    *       required: true
    *       content:
-   *         multipart/form-data:
+   *         application/json:
    *           schema:
    *             type: object
+   *             required:
+   *               - fileData
+   *               - fileName
+   *               - contentType
    *             properties:
-   *               file:
+   *               fileData:
    *                 type: string
-   *                 format: binary
+   *                 description: Base64 encoded file data
+   *               fileName:
+   *                 type: string
+   *                 description: Original file name
+   *               contentType:
+   *                 type: string
+   *                 description: MIME type of the file
    *               componentInstanceId:
    *                 type: string
    *                 format: uuid
@@ -4953,18 +4982,19 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const file = ctx.request.files?.file
-
-      if (!file || Array.isArray(file)) {
-        ctx.status = 400
-        ctx.body = { error: 'Single file required', ...metadata }
-        return
-      }
-
       const body = ctx.request.body as {
+        fileData?: string
+        fileName?: string
+        contentType?: string
         componentInstanceId?: string
         componentModelId?: string
         caption?: string
+      }
+
+      if (!body.fileData || !body.fileName || !body.contentType) {
+        ctx.status = 400
+        ctx.body = { error: 'fileData, fileName, and contentType are required', ...metadata }
+        return
       }
 
       if (!body.componentInstanceId && !body.componentModelId) {
@@ -4976,25 +5006,23 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // Read file buffer (koa-body stores files on disk)
-      const fs = await import('fs')
-      const fileBuffer = await fs.promises.readFile(file.filepath)
+      const fileBuffer = Buffer.from(body.fileData, 'base64')
 
       let result
       if (body.componentInstanceId) {
         result = await propertyBaseAdapter.uploadComponentFile(
           body.componentInstanceId,
           fileBuffer,
-          file.originalFilename || 'unknown',
-          file.mimetype || 'application/octet-stream',
+          body.fileName,
+          body.contentType,
           body.caption
         )
       } else {
         result = await propertyBaseAdapter.uploadComponentModelDocument(
           body.componentModelId!,
           fileBuffer,
-          file.originalFilename || 'unknown',
-          file.mimetype || 'application/octet-stream'
+          body.fileName,
+          body.contentType
         )
       }
 

@@ -4270,10 +4270,6 @@ export interface paths {
      */
     post: {
       parameters: {
-        query?: {
-          /** @description Optional caption for the file */
-          caption?: string;
-        };
         path: {
           /** @description Component ID */
           id: string;
@@ -4281,9 +4277,15 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
+          "application/json": {
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description Original file name */
+            fileName: string;
+            /** @description MIME type of the file */
+            contentType: string;
+            /** @description Optional caption for the file */
+            caption?: string;
           };
         };
       };
@@ -4419,9 +4421,13 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
+          "application/json": {
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description Original file name */
+            fileName: string;
+            /** @description MIME type of the file */
+            contentType: string;
           };
         };
       };
@@ -4446,9 +4452,13 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
+          "application/json": {
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description Original file name */
+            fileName: string;
+            /** @description MIME type of the file */
+            contentType: string;
             /** Format: uuid */
             componentInstanceId?: string;
             /** Format: uuid */
