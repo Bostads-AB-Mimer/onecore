@@ -3,7 +3,6 @@ import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Calendar,
   Home,
@@ -14,6 +13,8 @@ import {
   Copy,
   Check,
   History,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import type { Lease, KeyDetails, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
@@ -48,10 +49,11 @@ function statusBadge(status: 'active' | 'upcoming' | 'ended') {
 type Props = {
   lease: Lease
   rentalAddress?: string
+  defaultTab?: 'keys' | 'history' | ''
 }
 
-export function ContractCard({ lease, rentalAddress }: Props) {
-  const [activeTab, setActiveTab] = useState<string>('')
+export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
+  const [activeTab, setActiveTab] = useState<string>(defaultTab)
   const [addressStr, setAddressStr] = useState<string | null>(
     rentalAddress ?? null
   )
@@ -242,43 +244,80 @@ export function ContractCard({ lease, rentalAddress }: Props) {
           )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
-          <TabsList className="bg-slate-100/70 p-1 rounded-lg">
-            <TabsTrigger value="keys" className="flex items-center gap-1.5">
+        <div className="mt-3">
+          <div className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100/70 p-1 text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => setActiveTab(activeTab === 'keys' ? '' : 'keys')}
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 gap-1.5 ${
+                activeTab === 'keys'
+                  ? 'bg-background text-foreground shadow'
+                  : ''
+              }`}
+            >
               <KeyRound className="h-4 w-4" />
               Nycklar
-            </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-1.5">
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setActiveTab(activeTab === 'history' ? '' : 'history')
+              }
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 gap-1.5 ${
+                activeTab === 'history'
+                  ? 'bg-background text-foreground shadow'
+                  : ''
+              }`}
+            >
               <History className="h-4 w-4" />
               Lånhistorik
-            </TabsTrigger>
-          </TabsList>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('')}
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                activeTab === ''
+                  ? 'bg-background text-foreground shadow'
+                  : ''
+              }`}
+            >
+              {activeTab === '' ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </button>
+          </div>
 
-          <TabsContent value="keys">
-            <LeaseKeyStatusList
-              lease={lease}
-              keysData={keys}
-              refreshTrigger={keyStatusRefreshKey}
-              onKeysLoaned={() => {
-                setActiveTab('history')
-                setKeyLoansRefreshKey((prev) => prev + 1)
-              }}
-              onKeysReturned={() => {
-                setActiveTab('history')
-                setKeyLoansRefreshKey((prev) => prev + 1)
-              }}
-              onKeyCreated={refetchKeys}
-            />
-          </TabsContent>
+          {activeTab === 'keys' && (
+            <div className="mt-2">
+              <LeaseKeyStatusList
+                lease={lease}
+                keysData={keys}
+                refreshTrigger={keyStatusRefreshKey}
+                onKeysLoaned={() => {
+                  setActiveTab('history')
+                  setKeyLoansRefreshKey((prev) => prev + 1)
+                }}
+                onKeysReturned={() => {
+                  setActiveTab('history')
+                  setKeyLoansRefreshKey((prev) => prev + 1)
+                }}
+                onKeyCreated={refetchKeys}
+              />
+            </div>
+          )}
 
-          <TabsContent value="history">
-            <KeyLoansHistory
-              lease={lease}
-              refreshKey={keyLoansRefreshKey}
-              onReceiptUploaded={handleReceiptUploaded}
-            />
-          </TabsContent>
-        </Tabs>
+          {activeTab === 'history' && (
+            <div className="mt-2">
+              <KeyLoansHistory
+                lease={lease}
+                refreshKey={keyLoansRefreshKey}
+                onReceiptUploaded={handleReceiptUploaded}
+              />
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
