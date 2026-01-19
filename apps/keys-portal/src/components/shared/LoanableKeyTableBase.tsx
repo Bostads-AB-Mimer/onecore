@@ -118,7 +118,6 @@ export function LoanableKeyTableBase({
   selectedKeys = [],
   onKeySelectionChange,
 }: LoanableKeyTableBaseProps) {
-
   const {
     columns = {
       keyName: true,

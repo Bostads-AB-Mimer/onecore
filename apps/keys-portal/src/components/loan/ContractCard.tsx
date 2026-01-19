@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
@@ -16,14 +16,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import type { Lease, KeyDetails, KeyType } from '@/services/types'
-import { KeyTypeLabels } from '@/services/types'
+import type { Lease } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { KeyLoansHistory } from './KeyLoansHistory'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
-import { keyService } from '@/services/api/keyService'
 
 const getLeaseTypeIcon = (type: string) => {
   const t = (type ?? '').toLowerCase()
@@ -59,10 +57,15 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
   )
   const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
 
-  const [keys, setKeys] = useState<KeyDetails[]>([])
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
   const [keyStatusRefreshKey, setKeyStatusRefreshKey] = useState(0)
+
+  // Track if tabs have been opened at least once (for lazy loading + persistence)
+  const [keysTabOpened, setKeysTabOpened] = useState(defaultTab === 'keys')
+  const [historyTabOpened, setHistoryTabOpened] = useState(
+    defaultTab === 'history'
+  )
 
   const handleReceiptUploaded = useCallback(() => {
     // Trigger refresh of key statuses when a receipt is uploaded
@@ -100,27 +103,6 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
     }
   }, [lease.rentalPropertyId, rentalAddress])
 
-  // Refetch keys function that can be called externally
-  const refetchKeys = useCallback(async () => {
-    try {
-      const keysWithStatus = await keyService.getKeysByRentalObjectCode(
-        lease.rentalPropertyId,
-        {
-          includeLoans: true,
-          includeEvents: true,
-          includeKeySystem: true,
-        }
-      )
-      setKeys(keysWithStatus)
-    } catch (err) {
-      console.error('Failed to load keys:', err)
-    }
-  }, [lease.rentalPropertyId])
-
-  useEffect(() => {
-    refetchKeys()
-  }, [refetchKeys])
-
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)
 
@@ -131,20 +113,6 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
   const endStr = endIso
     ? format(new Date(endIso), 'dd MMM yyyy', { locale: sv })
     : undefined
-
-  // 🔹 Count by type using *real* keys
-  const keyCounts = useMemo(() => {
-    const counts: Partial<Record<KeyType, number>> = {}
-    keys.forEach((k) => {
-      const t = (k.keyType ?? 'LGH') as KeyType
-      counts[t] = (counts[t] ?? 0) + 1
-    })
-    return counts
-  }, [keys])
-
-  const totalKeys = keys.length
-  const hasAnyKeys = totalKeys > 0
-  const order: KeyType[] = ['LGH', 'PB', 'FS', 'HN']
 
   return (
     <Card className="relative border rounded-xl overflow-hidden">
@@ -215,40 +183,17 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
               )}
             </button>
           </div>
-
-          {hasAnyKeys && (
-            <div className="md:col-span-12 flex flex-wrap items-start gap-1.5 mt-1">
-              <div className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                <KeyRound className="h-3.5 w-3.5 opacity-80" />
-                <span>Nycklar</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {order.map((t) => {
-                  const count = keyCounts[t] ?? 0
-                  if (!count) return null
-                  return (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-1 rounded-full border px-1.5 h-5 text-[11px] text-foreground/80"
-                      title={`${KeyTypeLabels[t]}: ${count}`}
-                    >
-                      {KeyTypeLabels[t]}
-                      <span className="inline-flex items-center justify-center rounded-full bg-muted px-1 min-w-[1rem] h-4 text-[10px] font-medium">
-                        {count}
-                      </span>
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="mt-3">
           <div className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100/70 p-1 text-muted-foreground">
             <button
               type="button"
-              onClick={() => setActiveTab(activeTab === 'keys' ? '' : 'keys')}
+              onClick={() => {
+                const newTab = activeTab === 'keys' ? '' : 'keys'
+                setActiveTab(newTab)
+                if (newTab === 'keys') setKeysTabOpened(true)
+              }}
               className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 gap-1.5 ${
                 activeTab === 'keys'
                   ? 'bg-background text-foreground shadow'
@@ -260,9 +205,11 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
             </button>
             <button
               type="button"
-              onClick={() =>
-                setActiveTab(activeTab === 'history' ? '' : 'history')
-              }
+              onClick={() => {
+                const newTab = activeTab === 'history' ? '' : 'history'
+                setActiveTab(newTab)
+                if (newTab === 'history') setHistoryTabOpened(true)
+              }}
               className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 gap-1.5 ${
                 activeTab === 'history'
                   ? 'bg-background text-foreground shadow'
@@ -287,27 +234,36 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
             </button>
           </div>
 
-          {activeTab === 'keys' && (
-            <div className="mt-3 pt-3 border-t bg-slate-50 -mx-6 px-6 -mb-3 pb-3 rounded-b-xl">
+          {/* Keep tabs mounted but hidden to preserve state and avoid refetching */}
+          {keysTabOpened && (
+            <div
+              className={`mt-3 pt-3 border-t bg-slate-50 -mx-6 px-6 -mb-3 pb-3 rounded-b-xl ${
+                activeTab !== 'keys' ? 'hidden' : ''
+              }`}
+            >
               <LeaseKeyStatusList
                 lease={lease}
-                keysData={keys}
                 refreshTrigger={keyStatusRefreshKey}
                 onKeysLoaned={() => {
                   setActiveTab('history')
+                  setHistoryTabOpened(true)
                   setKeyLoansRefreshKey((prev) => prev + 1)
                 }}
                 onKeysReturned={() => {
                   setActiveTab('history')
+                  setHistoryTabOpened(true)
                   setKeyLoansRefreshKey((prev) => prev + 1)
                 }}
-                onKeyCreated={refetchKeys}
               />
             </div>
           )}
 
-          {activeTab === 'history' && (
-            <div className="mt-3 pt-3 border-t bg-slate-50 -mx-6 px-6 -mb-3 pb-3 rounded-b-xl">
+          {historyTabOpened && (
+            <div
+              className={`mt-3 pt-3 border-t bg-slate-50 -mx-6 px-6 -mb-3 pb-3 rounded-b-xl ${
+                activeTab !== 'history' ? 'hidden' : ''
+              }`}
+            >
               <KeyLoansHistory
                 lease={lease}
                 refreshKey={keyLoansRefreshKey}

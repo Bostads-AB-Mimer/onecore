@@ -30,17 +30,13 @@ function getLeaseContactCodes(lease: Lease): string[] {
 
 export function LeaseKeyStatusList({
   lease,
-  keysData,
   onKeysLoaned,
   onKeysReturned,
-  onKeyCreated,
   refreshTrigger,
 }: {
   lease: Lease
-  keysData?: KeyDetails[]
   onKeysLoaned?: () => void
   onKeysReturned?: () => void
-  onKeyCreated?: () => void
   refreshTrigger?: number
 }) {
   const { toast } = useToast()
@@ -77,11 +73,8 @@ export function LeaseKeyStatusList({
     [lease]
   )
 
-  // Initial fetch - only if keysData is NOT provided as prop
+  // Fetch keys and cards on mount
   useEffect(() => {
-    // If parent provides keysData, skip fetching
-    if (keysData) return
-
     let cancelled = false
     ;(async () => {
       setLoading(true)
@@ -107,41 +100,7 @@ export function LeaseKeyStatusList({
     return () => {
       cancelled = true
     }
-  }, [lease.rentalPropertyId, keysData])
-
-  // Handle keysData prop changes - no fetching, just update state
-  useEffect(() => {
-    if (keysData) {
-      setKeys(keysData)
-      setLoading(false)
-    }
-  }, [keysData])
-
-  // Fetch cards separately if keysData is provided but we don't have cards yet
-  useEffect(() => {
-    if (!keysData) return // Only fetch cards if parent is providing keys
-    if (cards.length > 0) return // Already have cards
-
-    let cancelled = false
-    ;(async () => {
-      try {
-        const fetchedCards = await cardService.getCardsByRentalObjectCode(
-          lease.rentalPropertyId,
-          {
-            includeLoans: true,
-          }
-        )
-        if (!cancelled) {
-          setCards(fetchedCards)
-        }
-      } catch (error) {
-        console.error('Failed to fetch cards:', error)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [lease.rentalPropertyId, keysData, cards.length])
+  }, [lease.rentalPropertyId])
 
   // Refresh when external trigger changes (e.g., after receipt upload)
   useEffect(() => {
@@ -151,13 +110,6 @@ export function LeaseKeyStatusList({
   }, [refreshTrigger])
 
   const refreshStatuses = async () => {
-    // If parent provides keysData, delegate refresh to parent
-    if (keysData && onKeyCreated) {
-      onKeyCreated()
-      return
-    }
-
-    // Only fetch directly if component is standalone (no parent providing data)
     const [fetchedKeys, fetchedCards] = await Promise.all([
       keyService.getKeysByRentalObjectCode(lease.rentalPropertyId, {
         includeLoans: true,
@@ -174,9 +126,8 @@ export function LeaseKeyStatusList({
 
   const handleKeyCreated = async () => {
     setShowAddKeyForm(false)
-    // Notify parent component to refetch its keys data
-    // Parent will refetch and pass updated keysData down, triggering our useEffect
-    onKeyCreated?.()
+    // Refresh keys after a new key is created
+    await refreshStatuses()
   }
 
   const onRent = async (keyIds: string[], cardIds: string[]) => {
