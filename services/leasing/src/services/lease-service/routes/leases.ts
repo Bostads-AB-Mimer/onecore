@@ -539,8 +539,9 @@ export const routes = (router: KoaRouter) => {
       const createInvoiceRow = await tenfastAdapter.createLeaseInvoiceRow({
         leaseId: ctx.params.leaseId,
         invoiceRow: {
-          ...ctx.request.body,
+          amount: ctx.request.body.amount,
           article: ctx.request.body.articleId,
+          label: ctx.request.body.label,
           from: ctx.request.body.from
             ? toYearMonthString(ctx.request.body.from)
             : undefined,

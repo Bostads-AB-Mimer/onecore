@@ -178,7 +178,7 @@ describe('leases routes', () => {
   describe('POST /leases/:leaseId/rent-rows', () => {
     const rentRow = {
       amount: 115,
-      article: '12334567',
+      articleId: '12334567',
       label: 'Hyra p-plats',
       from: new Date('2024-01-01'),
     }
@@ -208,7 +208,7 @@ describe('leases routes', () => {
     it('creates rent row even without from/to', async () => {
       const minimalRentRow = {
         amount: 200,
-        article: 'Rent-001',
+        articleId: 'Rent-001',
         label: 'Rent',
       }
 

@@ -276,7 +276,7 @@ describe('POST /leases', () => {
   })
 })
 
-describe('POST /leases/:leaseId/invoice-rows', () => {
+describe('POST /leases/:leaseId/rent-rows', () => {
   it('validates request body', async () => {
     const result = await request(app.callback())
       .post('/leases/123/rent-rows')
@@ -293,7 +293,7 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows')
-      .send({ ...invoiceRow, vat: undefined })
+      .send({ ...invoiceRow, articleId: invoiceRow.article, vat: undefined })
 
     expect(result.status).toBe(500)
     expect(createInvoiceRowSpy).toHaveBeenCalled()
@@ -307,7 +307,7 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows')
-      .send({ ...invoiceRow, vat: undefined })
+      .send({ ...invoiceRow, articleId: invoiceRow.article, vat: undefined })
 
     expect(result.status).toBe(201)
     expect(result.body.content).toEqual(null)
@@ -325,10 +325,10 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
     })
   })
 
-  it('creates invoice row without from/to dates', async () => {
+  it('creates rent row without from/to dates', async () => {
     const invoiceRow = {
       amount: 115,
-      article: '12334567',
+      articleId: '12334567',
       label: 'Hyra p-plats',
     }
     const createInvoiceRowSpy = jest
@@ -346,7 +346,7 @@ describe('POST /leases/:leaseId/invoice-rows', () => {
     expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
     expect(createInvoiceRowSpy).toHaveBeenCalledWith({
       leaseId: '123',
-      invoiceRow: { ...invoiceRow, vat: 0.25 },
+      invoiceRow: { amount: invoiceRow.amount, article: invoiceRow.articleId, label: invoiceRow.label, vat: 0.25, from: undefined, to: undefined },
     })
   })
 })
