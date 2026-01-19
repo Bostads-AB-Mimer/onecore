@@ -2484,6 +2484,1203 @@ export interface paths {
       };
     };
   };
+  "/components/by-room/{roomId}": {
+    /**
+     * Get components by room ID
+     * @description Returns all components currently installed in a specific space via their installation records.
+     * Components are returned ordered by installation date (newest first).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the room */
+          roomId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the components list */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"][];
+            };
+          };
+        };
+        /** @description Room not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Room not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/component-categories": {
+    /**
+     * Get all component categories
+     * @description Top-level groupings for building components (e.g., Ventilation, VVS, Vitvaror, Tak). Use categoryId to filter component types.
+     */
+    get: {
+      parameters: {
+        query?: {
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component categories */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"][];
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component category
+     * @description Creates a new top-level category for organizing component types.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentCategoryRequest"];
+        };
+      };
+      responses: {
+        /** @description Component category created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/component-categories/{id}": {
+    /**
+     * Get component category by ID
+     * @description Returns a single category with its name and metadata.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component category details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"];
+            };
+          };
+        };
+        /** @description Component category not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a component category
+     * @description Updates category name or metadata.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentCategoryRequest"];
+        };
+      };
+      responses: {
+        /** @description Component category updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentCategory"];
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Delete a component category
+     * @description Removes a category. Will fail if category has associated types.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component category deleted */
+        204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-types": {
+    /**
+     * Get all component types
+     * @description Specific kinds of components within a category (e.g., Diskmaskin, Värmepump, Takbeläggning). Filter by categoryId to get types for a specific category.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter types by category ID */
+          categoryId?: string;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component types */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentType"][];
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component type
+     * @description Creates a new type within a category. Requires categoryId.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentTypeRequest"];
+        };
+      };
+      responses: {
+        /** @description Component type created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentType"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/component-types/{id}": {
+    /**
+     * Get component type by ID
+     * @description Returns a single type with its category relationship.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component type details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentType"];
+            };
+          };
+        };
+        /** @description Component type not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a component type
+     * @description Updates type name or category assignment.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentTypeRequest"];
+        };
+      };
+      responses: {
+        /** @description Component type updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentType"];
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Delete a component type
+     * @description Removes a type. Will fail if type has associated subtypes.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component type deleted */
+        204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-subtypes": {
+    /**
+     * Get all component subtypes
+     * @description Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter subtypes by type ID */
+          typeId?: string;
+          /** @description Search subtypes by name (case-insensitive) */
+          subtypeName?: string;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component subtypes */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"][];
+              pagination?: {
+                page?: number;
+                limit?: number;
+                total?: number;
+                totalPages?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component subtype
+     * @description Creates a subtype with lifecycle parameters. Requires typeId.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
+        };
+      };
+      responses: {
+        /** @description Component subtype created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/component-subtypes/{id}": {
+    /**
+     * Get component subtype by ID
+     * @description Returns subtype with full lifecycle and cost planning data.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component subtype details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"];
+            };
+          };
+        };
+        /** @description Component subtype not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a component subtype
+     * @description Updates subtype specifications or lifecycle data.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentSubtypeRequest"];
+        };
+      };
+      responses: {
+        /** @description Component subtype updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentSubtype"];
+            };
+          };
+        };
+        /** @description Component subtype not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a component subtype
+     * @description Removes a subtype. Will fail if subtype has associated models.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component subtype deleted */
+        204: {
+          content: never;
+        };
+        /** @description Component subtype not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-models": {
+    /**
+     * Get all component models
+     * @description Specific manufacturer products with pricing, warranty, specifications, and dimensions. Filter by subtypeId, manufacturer, or modelName.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter models by component type ID */
+          componentTypeId?: string;
+          /** @description Filter models by subtype ID */
+          subtypeId?: string;
+          /** @description Filter models by manufacturer name */
+          manufacturer?: string;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component models */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"][];
+              pagination?: {
+                page?: number;
+                limit?: number;
+                total?: number;
+                totalPages?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component model
+     * @description Creates a manufacturer product entry. Requires subtypeId.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentModelRequest"];
+        };
+      };
+      responses: {
+        /** @description Component model created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/documents/component-models/{id}": {
+    /** Get all documents for a component model */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Array of documents with presigned URLs */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DocumentWithUrl"][];
+          };
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-models/{id}": {
+    /**
+     * Get component model by ID
+     * @description Returns full model details including specs and current pricing.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component model details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"];
+            };
+          };
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a component model
+     * @description Updates model pricing, specs, or warranty info.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentModelRequest"];
+        };
+      };
+      responses: {
+        /** @description Component model updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"];
+            };
+          };
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a component model
+     * @description Removes a model. Will fail if model has associated components.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component model deleted */
+        204: {
+          content: never;
+        };
+        /** @description Component model not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components": {
+    /**
+     * Get all components
+     * @description Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+     */
+    get: {
+      parameters: {
+        query?: {
+          modelId?: string;
+          status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+          /** @description Search by serial number (case-insensitive partial match) */
+          serialNumber?: string;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of components */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"][];
+              pagination?: {
+                page?: number;
+                limit?: number;
+                total?: number;
+                totalPages?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component
+     * @description Registers a new physical unit. Requires modelId and serialNumber.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentRequest"];
+        };
+      };
+      responses: {
+        /** @description Component created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/components/{id}": {
+    /**
+     * Get component by ID
+     * @description Returns full component details including purchase info, warranty dates, and current status.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"];
+            };
+          };
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a component
+     * @description Updates component status, warranty dates, or other attributes.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentRequest"];
+        };
+      };
+      responses: {
+        /** @description Component updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"];
+            };
+          };
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a component
+     * @description Removes a component record. Automatically deletes associated installation records.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component deleted */
+        204: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/component-installations": {
+    /**
+     * Get all component installations
+     * @description Placement records linking components to property locations (spaceId). A component can be moved between locations over time. Filter by componentId, spaceId, or buildingPartId.
+     */
+    get: {
+      parameters: {
+        query?: {
+          componentId?: string;
+          spaceId?: string;
+          buildingPartId?: string;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description List of component installations */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentInstallation"][];
+              pagination?: {
+                page?: number;
+                limit?: number;
+                total?: number;
+                totalPages?: number;
+              };
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create a new component installation
+     * @description Records a component being installed at a location. Requires componentId and spaceId.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateComponentInstallationRequest"];
+        };
+      };
+      responses: {
+        /** @description Component installation created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentInstallation"];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/component-installations/{id}": {
+    /**
+     * Get component installation by ID
+     * @description Returns installation record with dates, location, order number, and cost.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component installation details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentInstallation"];
+            };
+          };
+        };
+        /** @description Component installation not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a component installation
+     * @description Updates installation details or records deinstallation date.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component installation ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateComponentInstallationRequest"];
+        };
+      };
+      responses: {
+        /** @description Component installation updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentInstallation"];
+            };
+          };
+        };
+        /** @description Component installation not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a component installation
+     * @description Removes an installation record.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Component installation deleted */
+        204: {
+          content: never;
+        };
+        /** @description Component installation not found */
+        404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/components/{id}/upload": {
+    /**
+     * Upload a file to a component
+     * @description Attach photos or documents to a specific component (e.g., installation photos, receipts).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description Original file name */
+            fileName: string;
+            /** @description MIME type of the file */
+            contentType: string;
+            /** @description Optional caption for the file */
+            caption?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/documents/component-instances/{id}": {
+    /** Get all documents for a component */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Array of documents with presigned URLs */
+        200: {
+          content: {
+            "application/json": components["schemas"]["DocumentWithUrl"][];
+          };
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/documents": {
+    /**
+     * Create a document record
+     * @description Creates a document metadata record linking a file (already uploaded to file-storage service) to either a component model or component instance.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description The file ID from the file-storage service */
+            fileId: string;
+            /**
+             * Format: uuid
+             * @description The ID of the component model to attach the document to
+             */
+            componentModelId?: string;
+            /**
+             * Format: uuid
+             * @description The ID of the component instance to attach the document to
+             */
+            componentInstanceId?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document record created successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** Format: uuid */
+                id?: string;
+                fileId?: string;
+                /** Format: date-time */
+                createdAt?: string;
+              };
+            };
+          };
+        };
+        /** @description Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/documents/{id}": {
+    /** Delete a document by ID */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Document ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Document deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Document not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/component-models/{id}/upload": {
+    /**
+     * Upload a document to a component model
+     * @description Attach product documentation, manuals, or spec sheets to a model for reference.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component model ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description Original file name */
+            fileName: string;
+            /** @description MIME type of the file */
+            contentType: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/api/documents/upload": {
+    /** Upload a document for a component instance */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded file data */
+            fileData: string;
+            /** @description Original file name */
+            fileName: string;
+            /** @description MIME type of the file (e.g., image/png, image/webp, application/pdf) */
+            contentType: string;
+            /**
+             * Format: uuid
+             * @description ID of the component instance to attach the document to
+             */
+            componentInstanceId: string;
+            caption?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Document uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Bad request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/analyze-image": {
+    /**
+     * Analyze component image(s) using AI
+     * @description Upload photos to identify component type, model, or condition using AI image analysis. Can accept a typeplate/label image, product photo, or both for improved accuracy.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["AnalyzeComponentImageRequest"];
+        };
+      };
+      responses: {
+        /** @description Component analysis successful */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["AIComponentAnalysis"];
+            };
+          };
+        };
+        /** @description Invalid request (e.g., image too large, missing required fields) */
+        400: {
+          content: never;
+        };
+        /** @description AI analysis failed */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/processes/add-component": {
+    /**
+     * Add a component with model, instance, and installation
+     * @description Unified process to add a component. This handles:
+     * 1. Finding or creating a component model (by exact modelName match)
+     * 2. Creating a component instance
+     * 3. Creating a component installation
+     *
+     * If the model doesn't exist, it will be created. In this case, the model fields
+     * (manufacturer, currentPrice, currentInstallPrice, modelWarrantyMonths) are required.
+     *
+     * Categories, types, and subtypes must be created manually beforehand.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Model name (used to find existing model or create new one) */
+            modelName: string;
+            /**
+             * Format: uuid
+             * @description Subtype ID (must exist)
+             */
+            componentSubtypeId: string;
+            /** @description Required if model doesn't exist */
+            manufacturer?: string;
+            /** @description Required if model doesn't exist */
+            currentPrice?: number;
+            /** @description Required if model doesn't exist */
+            currentInstallPrice?: number;
+            /** @description Required if model doesn't exist */
+            modelWarrantyMonths?: number;
+            technicalSpecification?: string;
+            dimensions?: string;
+            coclassCode?: string;
+            serialNumber: string;
+            specifications?: string;
+            additionalInformation?: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 DateTime format (e.g., 2026-01-01T00:00:00.000Z)
+             */
+            warrantyStartDate?: string;
+            componentWarrantyMonths: number;
+            priceAtPurchase: number;
+            depreciationPriceAtPurchase: number;
+            economicLifespan: number;
+            /** @default 1 */
+            quantity?: number;
+            /** @description NCS color code */
+            ncsCode?: string;
+            /**
+             * @default ACTIVE
+             * @enum {string}
+             */
+            status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
+            /**
+             * @description Physical condition of the component (optional)
+             * @enum {string|null}
+             */
+            condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+            /** @description Where to install the component */
+            spaceId: string;
+            /** @enum {string} */
+            spaceType: "OBJECT" | "PropertyObject";
+            installationDate: string;
+            orderNumber?: string;
+            installationCost: number;
+          };
+        };
+      };
+      responses: {
+        /** @description Component added successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                modelCreated?: boolean;
+                model?: {
+                  id?: string;
+                  modelName?: string;
+                  manufacturer?: string;
+                };
+                component?: {
+                  id?: string;
+                  serialNumber?: string;
+                  status?: string;
+                };
+                installation?: {
+                  id?: string;
+                  spaceId?: string;
+                  installationDate?: string;
+                };
+              };
+            };
+          };
+        };
+        /** @description Validation error or missing required model fields */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/buildings": {
     /**
      * Get all buildings for a specific property
@@ -3096,49 +4293,6 @@ export interface paths {
       };
     };
   };
-  "/components/by-room/{roomId}": {
-    /**
-     * Get components by room ID
-     * @description Returns all components currently installed in a specific space via their installation records.
-     * Components are returned ordered by installation date (newest first).
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the room */
-          roomId: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved the components list */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Component"][];
-            };
-          };
-        };
-        /** @description Room not found */
-        404: {
-          content: {
-            "application/json": {
-              /** @example Room not found */
-              error?: string;
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": {
-              /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
   "/parking-spaces/by-rental-id/{rentalId}": {
     /**
      * Get parking space data by rentalId
@@ -3459,1080 +4613,6 @@ export interface paths {
           };
         };
         /** @description Invalid query provided */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-categories": {
-    /**
-     * Get all component categories
-     * @description Top-level groupings for building components (e.g., Ventilation, VVS, Vitvaror, Tak). Use categoryId to filter component types.
-     */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component categories */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"][];
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component category
-     * @description Creates a new top-level category for organizing component types.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-categories/{id}": {
-    /**
-     * Get component category by ID
-     * @description Returns a single category with its name and metadata.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-        /** @description Component category not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a component category
-     * @description Updates category name or metadata.
-     */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentCategoryRequest"];
-        };
-      };
-      responses: {
-        /** @description Component category updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentCategory"];
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Delete a component category
-     * @description Removes a category. Will fail if category has associated types.
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component category deleted */
-        204: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-types": {
-    /**
-     * Get all component types
-     * @description Specific kinds of components within a category (e.g., Diskmaskin, Värmepump, Takbeläggning). Filter by categoryId to get types for a specific category.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter types by category ID */
-          categoryId?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component types */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"][];
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component type
-     * @description Creates a new type within a category. Requires categoryId.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentTypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component type created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-types/{id}": {
-    /**
-     * Get component type by ID
-     * @description Returns a single type with its category relationship.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component type details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"];
-            };
-          };
-        };
-        /** @description Component type not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a component type
-     * @description Updates type name or category assignment.
-     */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentTypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component type updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentType"];
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Delete a component type
-     * @description Removes a type. Will fail if type has associated subtypes.
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component type deleted */
-        204: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-subtypes": {
-    /**
-     * Get all component subtypes
-     * @description Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter subtypes by type ID */
-          typeId?: string;
-          /** @description Search subtypes by name (case-insensitive) */
-          subtypeName?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component subtypes */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component subtype
-     * @description Creates a subtype with lifecycle parameters. Requires typeId.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentSubtypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component subtype created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-subtypes/{id}": {
-    /**
-     * Get component subtype by ID
-     * @description Returns subtype with full lifecycle and cost planning data.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component subtype details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-        /** @description Component subtype not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a component subtype
-     * @description Updates subtype specifications or lifecycle data.
-     */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentSubtypeRequest"];
-        };
-      };
-      responses: {
-        /** @description Component subtype updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentSubtype"];
-            };
-          };
-        };
-        /** @description Component subtype not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a component subtype
-     * @description Removes a subtype. Will fail if subtype has associated models.
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component subtype deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component subtype not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-models": {
-    /**
-     * Get all component models
-     * @description Specific manufacturer products with pricing, warranty, specifications, and dimensions. Filter by subtypeId, manufacturer, or modelName.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter models by component type ID */
-          componentTypeId?: string;
-          /** @description Filter models by subtype ID */
-          subtypeId?: string;
-          /** @description Filter models by manufacturer name */
-          manufacturer?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component models */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component model
-     * @description Creates a manufacturer product entry. Requires subtypeId.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentModelRequest"];
-        };
-      };
-      responses: {
-        /** @description Component model created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/documents/component-models/{id}": {
-    /** Get all documents for a component model */
-    get: {
-      parameters: {
-        path: {
-          /** @description Component model ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Array of documents with presigned URLs */
-        200: {
-          content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
-          };
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-models/{id}": {
-    /**
-     * Get component model by ID
-     * @description Returns full model details including specs and current pricing.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component model details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"];
-            };
-          };
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a component model
-     * @description Updates model pricing, specs, or warranty info.
-     */
-    put: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentModelRequest"];
-        };
-      };
-      responses: {
-        /** @description Component model updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentModel"];
-            };
-          };
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a component model
-     * @description Removes a model. Will fail if model has associated components.
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component model deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component model not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/components": {
-    /**
-     * Get all components
-     * @description Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
-     */
-    get: {
-      parameters: {
-        query?: {
-          modelId?: string;
-          status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-          /** @description Search by serial number (case-insensitive partial match) */
-          serialNumber?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of components */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Component"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component
-     * @description Registers a new physical unit. Requires modelId and serialNumber.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentRequest"];
-        };
-      };
-      responses: {
-        /** @description Component created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Component"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/components/{id}": {
-    /**
-     * Get component by ID
-     * @description Returns full component details including purchase info, warranty dates, and current status.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Component"];
-            };
-          };
-        };
-        /** @description Component not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a component
-     * @description Updates component status, warranty dates, or other attributes.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description Component ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentRequest"];
-        };
-      };
-      responses: {
-        /** @description Component updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Component"];
-            };
-          };
-        };
-        /** @description Component not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a component
-     * @description Removes a component record. Automatically deletes associated installation records.
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-installations": {
-    /**
-     * Get all component installations
-     * @description Placement records linking components to property locations (spaceId). A component can be moved between locations over time. Filter by componentId, spaceId, or buildingPartId.
-     */
-    get: {
-      parameters: {
-        query?: {
-          componentId?: string;
-          spaceId?: string;
-          buildingPartId?: string;
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description List of component installations */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"][];
-              pagination?: {
-                page?: number;
-                limit?: number;
-                total?: number;
-                totalPages?: number;
-              };
-            };
-          };
-        };
-      };
-    };
-    /**
-     * Create a new component installation
-     * @description Records a component being installed at a location. Requires componentId and spaceId.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateComponentInstallationRequest"];
-        };
-      };
-      responses: {
-        /** @description Component installation created */
-        201: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/component-installations/{id}": {
-    /**
-     * Get component installation by ID
-     * @description Returns installation record with dates, location, order number, and cost.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component installation details */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"];
-            };
-          };
-        };
-        /** @description Component installation not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Update a component installation
-     * @description Updates installation details or records deinstallation date.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description Component installation ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UpdateComponentInstallationRequest"];
-        };
-      };
-      responses: {
-        /** @description Component installation updated */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ComponentInstallation"];
-            };
-          };
-        };
-        /** @description Component installation not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-    /**
-     * Delete a component installation
-     * @description Removes an installation record.
-     */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Component installation deleted */
-        204: {
-          content: never;
-        };
-        /** @description Component installation not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/components/{id}/upload": {
-    /**
-     * Upload a file to a component
-     * @description Attach photos or documents to a specific component (e.g., installation photos, receipts).
-     * The component ID can be provided either in the URL path or in the request body as componentInstanceId.
-     * If both are provided, the URL path takes precedence.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description Component ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Base64 encoded file data */
-            fileData: string;
-            /** @description Original file name */
-            fileName: string;
-            /** @description MIME type of the file */
-            contentType: string;
-            /**
-             * Format: uuid
-             * @description Component ID (alternative to URL path parameter)
-             */
-            componentInstanceId?: string;
-            /** @description Optional caption for the file */
-            caption?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Bad request */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/documents/component-instances/{id}": {
-    /** Get all documents for a component */
-    get: {
-      parameters: {
-        path: {
-          /** @description Component ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Array of documents with presigned URLs */
-        200: {
-          content: {
-            "application/json": components["schemas"]["DocumentWithUrl"][];
-          };
-        };
-        /** @description Component not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/documents/{id}": {
-    /** Delete a document by ID */
-    delete: {
-      parameters: {
-        path: {
-          /** @description Document ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Document deleted successfully */
-        204: {
-          content: never;
-        };
-        /** @description Document not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/component-models/{id}/upload": {
-    /**
-     * Upload a document to a component model
-     * @description Attach product documentation, manuals, or spec sheets to a model for reference.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description Component model ID */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Base64 encoded file data */
-            fileData: string;
-            /** @description Original file name */
-            fileName: string;
-            /** @description MIME type of the file */
-            contentType: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Document uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Bad request */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/components/analyze-image": {
-    /**
-     * Analyze component image(s) using AI
-     * @description Upload photos to identify component type, model, or condition using AI image analysis. Can accept a typeplate/label image, product photo, or both for improved accuracy.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["AnalyzeComponentImageRequest"];
-        };
-      };
-      responses: {
-        /** @description Component analysis successful */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["AIComponentAnalysis"];
-            };
-          };
-        };
-        /** @description Invalid request (e.g., image too large, missing required fields) */
-        400: {
-          content: never;
-        };
-        /** @description AI analysis failed */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/processes/add-component": {
-    /**
-     * Add a component with model, instance, and installation
-     * @description Unified process to add a component. This handles:
-     * 1. Finding or creating a component model (by exact modelName match)
-     * 2. Creating a component instance
-     * 3. Creating a component installation
-     *
-     * If the model doesn't exist, it will be created. In this case, the model fields
-     * (manufacturer, currentPrice, currentInstallPrice, modelWarrantyMonths) are required.
-     *
-     * Categories, types, and subtypes must be created manually beforehand.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Model name (used to find existing model or create new one) */
-            modelName: string;
-            /**
-             * Format: uuid
-             * @description Subtype ID (must exist)
-             */
-            componentSubtypeId: string;
-            /** @description Required if model doesn't exist */
-            manufacturer?: string;
-            /** @description Required if model doesn't exist */
-            currentPrice?: number;
-            /** @description Required if model doesn't exist */
-            currentInstallPrice?: number;
-            /** @description Required if model doesn't exist */
-            modelWarrantyMonths?: number;
-            technicalSpecification?: string;
-            dimensions?: string;
-            coclassCode?: string;
-            serialNumber: string;
-            specifications?: string;
-            additionalInformation?: string;
-            /**
-             * Format: date-time
-             * @description ISO-8601 DateTime format (e.g., 2026-01-01T00:00:00.000Z)
-             */
-            warrantyStartDate?: string;
-            componentWarrantyMonths: number;
-            priceAtPurchase: number;
-            depreciationPriceAtPurchase: number;
-            economicLifespan: number;
-            /** @default 1 */
-            quantity?: number;
-            /** @description NCS color code */
-            ncsCode?: string;
-            /**
-             * @default ACTIVE
-             * @enum {string}
-             */
-            status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
-            /**
-             * @description Physical condition of the component (optional)
-             * @enum {string|null}
-             */
-            condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
-            /** @description Where to install the component */
-            spaceId: string;
-            /** @enum {string} */
-            spaceType: "OBJECT" | "PropertyObject";
-            installationDate: string;
-            orderNumber?: string;
-            installationCost: number;
-          };
-        };
-      };
-      responses: {
-        /** @description Component added successfully */
-        201: {
-          content: {
-            "application/json": {
-              content?: {
-                modelCreated?: boolean;
-                model?: {
-                  id?: string;
-                  modelName?: string;
-                  manufacturer?: string;
-                };
-                component?: {
-                  id?: string;
-                  serialNumber?: string;
-                  status?: string;
-                };
-                installation?: {
-                  id?: string;
-                  spaceId?: string;
-                  installationDate?: string;
-                };
-              };
-            };
-          };
-        };
-        /** @description Validation error or missing required model fields */
         400: {
           content: never;
         };

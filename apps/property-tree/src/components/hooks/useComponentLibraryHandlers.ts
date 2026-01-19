@@ -212,7 +212,9 @@ export const useComponentLibraryHandlers = (
         })
       } catch (error) {
         console.error('Error deleting subtype:', error)
-        alert('Det gick inte att ta bort undertypen.')
+        alert(
+          'Det gick inte att ta bort undertypen, den kan ha kopplade modeller.'
+        )
       }
     }
   }
