@@ -34,7 +34,7 @@ import {
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
 import { fetchContactByContactCode } from '@/services/api/contactService'
@@ -76,7 +76,6 @@ export function KeysTable({
   onKeySystemSelect,
   onKeySystemSearch,
 }: KeysTableProps) {
-  const navigate = useNavigate()
   const [expandedKeyId, setExpandedKeyId] = useState<string | null>(null)
   const [keyDetails, setKeyDetails] = useState<{
     loans: KeyLoan[]
@@ -88,10 +87,6 @@ export function KeysTable({
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '-'
     return new Date(dateString).toLocaleDateString('sv-SE')
-  }
-
-  const handleObjectClick = (rentalObjectCode: string) => {
-    navigate(`/KeyLoan?object=${rentalObjectCode}`)
   }
 
   const handleToggleExpand = async (keyId: string) => {
@@ -332,14 +327,12 @@ export function KeysTable({
                     <TableCell className="font-medium">{key.keyName}</TableCell>
                     <TableCell>
                       {key.rentalObjectCode ? (
-                        <button
-                          onClick={() =>
-                            handleObjectClick(key.rentalObjectCode!)
-                          }
-                          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        <Link
+                          to={`/KeyLoan?object=${key.rentalObjectCode}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           {key.rentalObjectCode}
-                        </button>
+                        </Link>
                       ) : (
                         '-'
                       )}
