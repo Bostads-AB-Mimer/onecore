@@ -1,7 +1,7 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
-import * as daxService from '../dax-service'
+import * as daxAdapter from './dax-adapter'
 import type { Card } from 'dax-client'
 
 type KeyLoan = keys.v1.KeyLoan
@@ -313,7 +313,7 @@ export async function getKeyLoansByRentalObject(
   // Step 3: Get all cards for this rental object from DAX
   let allCards: Card[] = []
   try {
-    const cardOwners = await daxService.searchCardOwners({
+    const cardOwners = await daxAdapter.searchCardOwners({
       nameFilter: rentalObjectCode,
       expand: 'cards',
     })

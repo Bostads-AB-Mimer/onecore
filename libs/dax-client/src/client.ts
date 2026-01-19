@@ -11,6 +11,14 @@ import type { DaxApiResponse, DaxClientConfig } from './types'
 export class DaxClient {
   constructor(private config: DaxClientConfig) {}
 
+  get partnerId(): string {
+    return this.config.partnerId
+  }
+
+  get instanceId(): string {
+    return this.config.instanceId
+  }
+
   /**
    * Make authenticated request to DAX API
    */

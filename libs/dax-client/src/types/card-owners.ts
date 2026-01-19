@@ -23,12 +23,8 @@ export interface CardOwner {
   createTime?: string
 }
 
-export interface QueryCardOwnersParams {
-  // Path parameters (required, but passed separately in the function call)
-  owningPartnerId: string
-  owningInstanceId: string
-
-  // Query parameters (optional)
+// Query parameters for filtering card owners
+export interface CardOwnerQueryParams {
   expand?: string // e.g., "cards,postbox"
   idfilter?: string // Comma separated list of IDs
   nameFilter?: string // Comma separated list of names

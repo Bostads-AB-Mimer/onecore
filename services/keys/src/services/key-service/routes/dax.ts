@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
-import * as daxService from '../dax-service'
+import * as daxAdapter from '../adapters/dax-adapter'
 import createHttpError from 'http-errors'
 import { registerSchema } from '../../../utils/openapi'
 
@@ -51,7 +51,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/dax/contracts', async (ctx) => {
     try {
-      const contracts = await daxService.getAllContracts()
+      const contracts = await daxAdapter.getContracts()
 
       ctx.body = {
         contracts,
@@ -112,7 +112,7 @@ export const routes = (router: KoaRouter) => {
       const { cardOwnerId } = ctx.params
       const expand = ctx.query.expand as string | undefined
 
-      const cardOwner = await daxService.getCardOwnerById(cardOwnerId, expand)
+      const cardOwner = await daxAdapter.getCardOwnerById(cardOwnerId, expand)
 
       ctx.body = {
         cardOwner,
@@ -213,7 +213,7 @@ export const routes = (router: KoaRouter) => {
         expand: ctx.query.expand as string | undefined,
       }
 
-      const cardOwners = await daxService.searchCardOwners(params)
+      const cardOwners = await daxAdapter.searchCardOwners(params)
 
       ctx.body = {
         cardOwners,
@@ -265,7 +265,7 @@ export const routes = (router: KoaRouter) => {
       const { cardId } = ctx.params
       const expand = ctx.query.expand as string | undefined
 
-      const card = await daxService.getCardById(cardId, expand)
+      const card = await daxAdapter.getCardById(cardId, expand)
 
       ctx.body = {
         card,

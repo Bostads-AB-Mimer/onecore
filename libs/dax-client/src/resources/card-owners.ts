@@ -3,7 +3,7 @@
  */
 
 import type { DaxClient } from '../client'
-import type { CardOwner, QueryCardOwnersParams } from '../types'
+import type { CardOwner, CardOwnerQueryParams } from '../types'
 
 export class CardOwnersResource {
   constructor(private client: DaxClient) {}
@@ -11,25 +11,24 @@ export class CardOwnersResource {
   /**
    * Query card owners with filters
    */
-  async query(params: QueryCardOwnersParams): Promise<{ cardOwners: CardOwner[] }> {
-    const { owningPartnerId, owningInstanceId, ...queryParams } = params
+  async query(params?: CardOwnerQueryParams): Promise<{ cardOwners: CardOwner[] }> {
+    const path = `/partners/${this.client.partnerId}/instances/${this.client.instanceId}/cardowners`
 
-    const path = `/partners/${owningPartnerId}/instances/${owningInstanceId}/cardowners`
-
-    return this.client.request('GET', path, { queryParams, context: 'QueryCardOwners' })
+    return this.client.request('GET', path, {
+      queryParams: params ? { ...params } : undefined,
+      context: 'QueryCardOwners',
+    })
   }
 
   /**
    * Get a specific card owner by ID
    */
   async getById(
-    owningPartnerId: string,
-    owningInstanceId: string,
     cardOwnerId: string,
     expand?: string,
     context?: string
   ): Promise<{ cardOwner: CardOwner }> {
-    const path = `/partners/${owningPartnerId}/instances/${owningInstanceId}/cardowners/${cardOwnerId}`
+    const path = `/partners/${this.client.partnerId}/instances/${this.client.instanceId}/cardowners/${cardOwnerId}`
 
     return this.client.request('GET', path, {
       queryParams: expand ? { expand } : undefined,

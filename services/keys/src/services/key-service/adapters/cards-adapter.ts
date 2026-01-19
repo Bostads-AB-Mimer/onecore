@@ -2,7 +2,7 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 import type { Card } from 'dax-client'
-import * as daxService from '../dax-service'
+import * as daxAdapter from './dax-adapter'
 
 type CardDetails = keys.v1.CardDetails
 type KeyLoan = keys.v1.KeyLoan
@@ -73,7 +73,7 @@ export async function getCardsDetails(
   // Step 1: Fetch cards from DAX service
   let allCards: Card[] = []
   try {
-    const cardOwners = await daxService.searchCardOwners({
+    const cardOwners = await daxAdapter.searchCardOwners({
       nameFilter: rentalObjectCode,
       expand: 'cards',
     })
@@ -130,7 +130,7 @@ export async function getCardsDetails(
  */
 export async function getCardById(cardId: string): Promise<Card | null> {
   try {
-    const card = await daxService.getCardById(cardId)
+    const card = await daxAdapter.getCardById(cardId)
     return card
   } catch (error) {
     console.error('Failed to fetch card from DAX:', error)

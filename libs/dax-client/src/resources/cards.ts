@@ -12,13 +12,11 @@ export class CardsResource {
    * Get a specific card by ID
    */
   async getById(
-    owningPartnerId: string,
-    owningInstanceId: string,
     cardId: string,
     expand?: string,
     context?: string
   ): Promise<{ card: Card }> {
-    const path = `/partners/${owningPartnerId}/instances/${owningInstanceId}/cards/${cardId}`
+    const path = `/partners/${this.client.partnerId}/instances/${this.client.instanceId}/cards/${cardId}`
 
     return this.client.request('GET', path, {
       queryParams: expand ? { expand } : undefined,

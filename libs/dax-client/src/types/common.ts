@@ -22,4 +22,6 @@ export interface DaxClientConfig {
   password: string
   privateKey: string
   apiVersion?: string
+  partnerId: string
+  instanceId: string
 }
