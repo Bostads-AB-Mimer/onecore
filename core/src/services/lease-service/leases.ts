@@ -301,7 +301,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-
   /**
    * @swagger
    * /leases/{leaseId}/rent-rows:
@@ -400,6 +399,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
+
   router.delete('/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const deleteRentRowResult = await leasingAdapter.deleteLeaseRentRow({

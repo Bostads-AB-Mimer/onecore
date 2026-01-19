@@ -102,7 +102,6 @@ export const createLease = async (
   }
 }
 
-
 export async function createLeaseRentRow(params: {
   leaseId: string
   rentRow: z.infer<typeof leasing.v1.CreateLeaseRentRowRequestBodySchema>
