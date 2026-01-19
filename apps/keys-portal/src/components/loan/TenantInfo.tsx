@@ -87,8 +87,8 @@ export function TenantInfo({
     }
   }, [contracts])
 
-  // Determine priority contract (can be used for auto-opening in the future)
-  const _priorityContractId = useMemo(
+  // Determine which contract should have keys tab auto-opened
+  const priorityContractId = useMemo(
     () => getPriorityContractId(contracts),
     [contracts]
   )
@@ -223,7 +223,13 @@ export function TenantInfo({
             </h3>
             <div className="space-y-4">
               {activeContracts.map((lease) => (
-                <ContractCard key={lease.leaseId} lease={lease} />
+                <ContractCard
+                  key={lease.leaseId}
+                  lease={lease}
+                  defaultTab={
+                    lease.leaseId === priorityContractId ? 'keys' : ''
+                  }
+                />
               ))}
             </div>
           </div>
@@ -236,7 +242,13 @@ export function TenantInfo({
             </h3>
             <div className="space-y-4">
               {upcomingContracts.map((lease) => (
-                <ContractCard key={lease.leaseId} lease={lease} />
+                <ContractCard
+                  key={lease.leaseId}
+                  lease={lease}
+                  defaultTab={
+                    lease.leaseId === priorityContractId ? 'keys' : ''
+                  }
+                />
               ))}
             </div>
           </div>
@@ -249,7 +261,13 @@ export function TenantInfo({
             </h3>
             <div className="space-y-4">
               {[...endedRecentContracts, ...endedOlderContracts].map((lease) => (
-                <ContractCard key={lease.leaseId} lease={lease} />
+                <ContractCard
+                  key={lease.leaseId}
+                  lease={lease}
+                  defaultTab={
+                    lease.leaseId === priorityContractId ? 'keys' : ''
+                  }
+                />
               ))}
             </div>
           </div>
