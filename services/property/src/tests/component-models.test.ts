@@ -18,7 +18,9 @@ describe('Component Models API', () => {
     }
 
     // Get an existing model for tests
-    const modelsResponse = await request(app.callback()).get('/component-models')
+    const modelsResponse = await request(app.callback()).get(
+      '/component-models'
+    )
     if (modelsResponse.body.content?.length > 0) {
       existingModelId = modelsResponse.body.content[0].id
       existingModelName = modelsResponse.body.content[0].modelName

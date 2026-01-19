@@ -16,7 +16,9 @@ describe('Component Categories API', () => {
 
   describe('GET /component-categories', () => {
     it('should return paginated categories with default pagination', async () => {
-      const response = await request(app.callback()).get('/component-categories')
+      const response = await request(app.callback()).get(
+        '/component-categories'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
@@ -46,7 +48,9 @@ describe('Component Categories API', () => {
         expect.arrayContaining([
           expect.objectContaining({
             path: expect.arrayContaining(['page']),
-            message: expect.stringMatching(/greater than|at least|minimum|too_small/i),
+            message: expect.stringMatching(
+              /greater than|at least|minimum|too_small/i
+            ),
           }),
         ])
       )
@@ -62,7 +66,9 @@ describe('Component Categories API', () => {
         expect.arrayContaining([
           expect.objectContaining({
             path: expect.arrayContaining(['limit']),
-            message: expect.stringMatching(/less than|at most|maximum|too_big/i),
+            message: expect.stringMatching(
+              /less than|at most|maximum|too_big/i
+            ),
           }),
         ])
       )
@@ -205,7 +211,9 @@ describe('Component Categories API', () => {
       })
 
       // Cleanup
-      await request(app.callback()).delete(`/component-categories/${categoryId}`)
+      await request(app.callback()).delete(
+        `/component-categories/${categoryId}`
+      )
     })
 
     it('should allow partial update (only categoryName)', async () => {
@@ -234,7 +242,9 @@ describe('Component Categories API', () => {
       })
 
       // Cleanup
-      await request(app.callback()).delete(`/component-categories/${categoryId}`)
+      await request(app.callback()).delete(
+        `/component-categories/${categoryId}`
+      )
     })
 
     it('should return error for non-existent ID', async () => {

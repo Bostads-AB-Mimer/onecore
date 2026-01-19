@@ -9,7 +9,9 @@ describe('Component Instances API', () => {
 
   beforeAll(async () => {
     // Get an existing model for tests
-    const modelsResponse = await request(app.callback()).get('/component-models')
+    const modelsResponse = await request(app.callback()).get(
+      '/component-models'
+    )
     if (modelsResponse.body.content?.length > 0) {
       existingModelId = modelsResponse.body.content[0].id
     }
@@ -70,7 +72,9 @@ describe('Component Instances API', () => {
       // All results should contain the search term in serialNumber
       response.body.content.forEach((component: { serialNumber: string }) => {
         expect(
-          component.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())
+          component.serialNumber
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
         ).toBe(true)
       })
     })
@@ -153,17 +157,22 @@ describe('Component Instances API', () => {
   describe('GET /components/by-room/:roomId', () => {
     it('should return components by room ID', async () => {
       // First get any component with an installation to find a valid roomId
-      const componentsResponse = await request(app.callback()).get('/components')
+      const componentsResponse = await request(app.callback()).get(
+        '/components'
+      )
       expect(componentsResponse.status).toBe(200)
 
       const componentWithInstallation = componentsResponse.body.content.find(
         (c: { componentInstallations?: Array<{ spaceId: string }> }) =>
-          c.componentInstallations?.length > 0 &&
-          c.componentInstallations[0].spaceId
+          c.componentInstallations?.length &&
+          c.componentInstallations.length > 0 &&
+          c.componentInstallations[0]?.spaceId
       )
 
       if (!componentWithInstallation) {
-        console.log('No components with installations available to test by-room')
+        console.log(
+          'No components with installations available to test by-room'
+        )
         return
       }
 
