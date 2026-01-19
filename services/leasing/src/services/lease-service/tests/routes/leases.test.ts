@@ -346,7 +346,14 @@ describe('POST /leases/:leaseId/rent-rows', () => {
     expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
     expect(createInvoiceRowSpy).toHaveBeenCalledWith({
       leaseId: '123',
-      invoiceRow: { amount: invoiceRow.amount, article: invoiceRow.articleId, label: invoiceRow.label, vat: 0.25, from: undefined, to: undefined },
+      invoiceRow: {
+        amount: invoiceRow.amount,
+        article: invoiceRow.articleId,
+        label: invoiceRow.label,
+        vat: 0.25,
+        from: undefined,
+        to: undefined,
+      },
     })
   })
 })
@@ -376,6 +383,7 @@ describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
     )
 
     expect(result.status).toBe(500)
+
     expect(deleteInvoiceRowSpy).toHaveBeenCalled()
   })
 })
