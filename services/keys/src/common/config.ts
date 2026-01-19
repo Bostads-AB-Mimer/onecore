@@ -29,7 +29,7 @@ export interface Config {
     username: string
     password: string
     clientId: string
-    pemKeyPath: string
+    pemKey: string
     partnerId: string
     owningInstanceId: string
   }
@@ -64,7 +64,7 @@ const config = configPackage({
       username: '',
       password: '',
       clientId: '',
-      pemKeyPath: '',
+      pemKey: '',
       partnerId: '',
       owningInstanceId: '',
     },

@@ -13,21 +13,18 @@ import {
 } from 'dax-client'
 import { logger } from '@onecore/utilities'
 import Config from '../../../common/config'
-import fs from 'fs'
 
 // Singleton client instance
 let clientInstance: ReturnType<typeof createDaxClient> | null = null
 
 function getClient() {
   if (!clientInstance) {
-    const privateKey = fs.readFileSync(Config.alliera.pemKeyPath, 'utf8')
-
     clientInstance = createDaxClient({
       apiUrl: Config.alliera.apiUrl,
       clientId: Config.alliera.clientId,
       username: Config.alliera.username,
       password: Config.alliera.password,
-      privateKey: privateKey,
+      privateKey: Config.alliera.pemKey,
       apiVersion: '2.0',
       partnerId: Config.alliera.partnerId,
       instanceId: Config.alliera.owningInstanceId,
