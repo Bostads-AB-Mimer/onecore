@@ -276,9 +276,7 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
               type="button"
               onClick={() => setActiveTab('')}
               className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-2 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                activeTab === ''
-                  ? 'bg-background text-foreground shadow'
-                  : ''
+                activeTab === '' ? 'bg-background text-foreground shadow' : ''
               }`}
             >
               {activeTab === '' ? (
