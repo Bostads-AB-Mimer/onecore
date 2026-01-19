@@ -16,7 +16,7 @@ import {
   InvoiceDeliveryMethod,
   xledgerDateString,
   XpandContact,
-} from '@src/common/types'
+} from '@src/common/types/legacyTypes'
 
 type RentalSpecificRule = {
   costCode: string

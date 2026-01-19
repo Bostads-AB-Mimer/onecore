@@ -8,6 +8,7 @@ export const TenfastInvoiceRowSchema = z.object({
   article: z.string().nullable(),
   label: z.string().nullable(),
   accountingRows: z.array(z.any()),
+  hyresobjekt: z.string(),
   _id: z.string(),
 })
 
@@ -73,6 +74,7 @@ export const TenfastInvoicesByTenantIdResponseSchema = z.array(
     sentAutomatically: z.boolean(),
     partiell: z.boolean(),
     activatedAt: z.string().nullable(),
+    roundingAmount: z.number(),
     emails: z.array(z.any()),
     ekoNotifications: z.array(z.any()),
     skipEmail: z.boolean(),
@@ -177,3 +179,11 @@ export const TenfastRentArticleSchema = z.object({
 })
 
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
+
+export const TenfastInvoiceRowWithAccountingSchema = z.union([
+  TenfastInvoiceRowSchema,
+  z.object({ article: TenfastRentArticleSchema }),
+])
+export type TenfastInvoiceRowWithAccounting = z.infer<
+  typeof TenfastInvoiceRowWithAccountingSchema
+>

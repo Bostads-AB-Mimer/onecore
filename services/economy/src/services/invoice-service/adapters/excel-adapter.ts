@@ -1,6 +1,6 @@
 import { Workbook, ValueType, Cell } from 'exceljs'
 import { createReadStream } from 'fs'
-import { columnNames, InvoiceDataRow } from '../../../common/types'
+import { columnNames, InvoiceDataRow } from '../../../common/types/legacyTypes'
 
 const getCellValue = (cell: Cell): string | number => {
   if (cell.type === ValueType.Date) {

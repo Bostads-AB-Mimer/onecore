@@ -29,10 +29,7 @@ import {
   InvoiceContract,
   InvoiceDataRow,
   Invoice,
-  ExportedInvoiceRow,
-  TOTAL_ACCOUNT,
-  CUSTOMER_LEDGER_ACCOUNT,
-} from '../../common/types'
+} from '../../common/types/legacyTypes'
 import {
   createCustomerLedgerRow,
   transformAggregatedInvoiceRow,
@@ -41,53 +38,6 @@ import {
 } from './adapters/xledger-adapter'
 import { Contact } from '@onecore/types'
 import { logger } from '@onecore/utilities'
-import {
-  convertToDate,
-  getInvoicesNotExported,
-} from '@src/common/adapters/tenfast/tenfast-adapter'
-
-/**
- *
- */
-export const exportRentalInvoicesAccounting = async (
-  fromDate: Date,
-  toDate: Date,
-  companyId: string
-) => {
-  try {
-    const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 500
-
-    const batchId = await createBatch()
-    logger.info(`Created new batch: ${batchId}`)
-
-    let invoicesToImport: InvoiceDataRow[] = []
-    do {
-      const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
-      if (!invoicesResult.ok) {
-        logger.error(
-          { error: invoicesResult.err },
-          'Could not get rental invoices for export'
-        )
-        throw new Error(invoicesResult.err)
-      } else {
-        logger.info(
-          { invoicesToImport: invoicesToImport.length },
-          'Importing invoices'
-        )
-      }
-
-      const invoiceDataRows = convertToInvoiceDataRows(invoicesToImport)
-      const contactCodes = await processInvoiceRows(invoiceDataRows, batchId)
-      const contacts = await getXpandContacts(contactCodes.contacts)
-      await saveContacts(contacts, batchId)
-    } while (invoicesToImport.length > 0)
-  } catch (error: any) {
-    logger.error(error, 'Error importing invoices - batch could not be created')
-
-    throw error
-  }
-}
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -405,6 +355,11 @@ export const createAggregateTotalRow = (
   totalRow.amount =
     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
+  if (!totalRow.account || totalRow.account == 'null') {
+    console.log(aggregatedRows[0])
+    throw new Error('Account is missing in aggregation')
+  }
+
   return totalRow
 }
 
@@ -624,76 +579,15 @@ const getContractCode = (invoiceRow: InvoiceDataRow) => {
   }
 }
 
-const convertToExportedInvoiceRows = async (
-  invoices: TenfastInvoice[]
-): Promise<ExportedInvoiceRow[]> => {
-  const exportedInvoiceRows: ExportedInvoiceRow[] = []
-  const counterPartCustomers = await getCounterPartCustomers()
-
-  for (const invoice of invoices) {
-    const tenantName = 'Test' // TODO: await getTenant();
-    let totalAccount = TOTAL_ACCOUNT
-    let ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
-
-    const counterPartCustomerInfo = counterPartCustomers.find(
-      counterPartCustomers.customers,
-      tenantName
-    )
-    if (counterPartCustomerInfo) {
-      totalAccount = counterPartCustomerInfo.totalAccount
-      ledgerAccount = counterPartCustomerInfo.ledgerAccount
-    }
-
-    for (const row of invoice.hyror) {
-      // TODO: Get rent article for row
-      const rentArticle = {
-        name: 'HYRABS',
-        account: '1122',
-        costCode: '550',
-      }
-
-      exportedInvoiceRows.push({
-        amount: row.amount,
-        deduction: 0, // TODO
-        vat: row.vat,
-        rowTotalAmount: row.amount + /*row.deduction +*/ row.vat,
-        invoiceTotalAmount: invoice.amount,
-        invoiceDate: convertToDate(invoice.activatedAt ?? ''), // TODO: ta reda på vad som faktiskt är fakturadatum
-        invoiceDueDate: convertToDate(invoice.due),
-        invoiceNumber: invoice.ocrNumber,
-        invoiceRowText: row.label,
-        fromDate: convertToDate(invoice.interval.from),
-        toDate: convertToDate(invoice.interval.to),
-        //contractCode: TODO
-        //contactCode: TODO
-        rentArticle: rentArticle.name,
-        account: rentArticle.account,
-        costCode: rentArticle.costCode,
-        //property: string TODO
-        //freeCode: string TODO
-        totalAccount,
-        ledgerAccount,
-        tenantName,
-        //company: string - Needed?
-      })
-    }
-
-    exportedInvoiceRows.push(createRoundOffRow(invoice))
-  }
-
-  return exportedInvoiceRows
-}
-
 const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
   const cleanedInvoiceRows: InvoiceDataRow[] = []
   let currentContractCode = ''
 
   invoiceRows.forEach((invoiceRow) => {
-    if (
-      (invoiceRow.rowType as number) === 3 &&
-      /^\d/.test(invoiceRow.invoiceRowText as string)
-    ) {
-      currentContractCode = getContractCode(invoiceRow)
+    if ((invoiceRow.rowType as number) === 3) {
+      if (/^\d/.test(invoiceRow.invoiceRowText as string)) {
+        currentContractCode = getContractCode(invoiceRow)
+      }
     } else {
       invoiceRow.contractCode = currentContractCode
       cleanedInvoiceRows.push(invoiceRow)
@@ -701,6 +595,131 @@ const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
   })
 
   return cleanedInvoiceRows
+}
+
+export const importInvoiceRows = async (
+  fromDate: Date,
+  toDate: Date,
+  companyId: string
+) => {
+  try {
+    const errors: { invoiceNumber: string; error: string }[] = []
+    const CHUNK_SIZE = 500
+
+    const importedInvoiceNumbers = await getImportedInvoiceNumbers()
+    const rentalInvoiceNumbers = (
+      await getRentalInvoices(fromDate, toDate, companyId)
+    ).map((invoice: any) => {
+      try {
+        const invoiceNumber = invoice.invoice.trimEnd()
+        return invoiceNumber
+      } catch (err) {
+        logger.error({ invoice, err }, 'Error getting invoice number')
+      }
+    })
+
+    const invoicesToImport = rentalInvoiceNumbers.filter(
+      (rentalInvoiceNumber: string) =>
+        !importedInvoiceNumbers.includes(rentalInvoiceNumber)
+    )
+
+    /*const rentalInvoiceNumbers = []
+    const invoicesToImport = ['552511356128155K']*/
+
+    if (!invoicesToImport || invoicesToImport.length === 0) {
+      return {
+        batchId: null,
+        processedInvoices: 0,
+        errorInvoices: null,
+      }
+    }
+
+    const batchTotal = await getXpandBatchTotalAmount(invoicesToImport)
+
+    logger.info(
+      {
+        invoicesInXpand: rentalInvoiceNumbers.length,
+        invoicesToImport: invoicesToImport.length,
+      },
+      'Importing invoices'
+    )
+
+    const invoiceRows = await getXpandInvoiceRows(
+      fromDate.getFullYear(),
+      companyId,
+      invoicesToImport
+    )
+    const invoiceDataRows = cleanInvoiceRows(invoiceRows as any)
+
+    logger.info(
+      {
+        readRows: invoiceRows.length,
+        rowsToProcess: invoiceDataRows.length,
+        companyId,
+      },
+      'Got invoice rows from xpand db'
+    )
+
+    if (invoiceRows.length === 0) {
+      return {
+        batchId: null,
+        processedInvoices: 0,
+        errors: null,
+      }
+    }
+
+    const batchId = await createBatch(batchTotal)
+    logger.info(`Created new batch: ${batchId}`)
+
+    let chunkStart = 0
+
+    while (chunkStart < invoiceDataRows.length) {
+      // Find first row with a new invoice number past the max chunk size
+      let chunkEnd = Math.min(
+        chunkStart + CHUNK_SIZE,
+        invoiceDataRows.length - 1
+      )
+
+      let endInvoiceNumber = invoiceDataRows[chunkEnd].invoiceNumber
+
+      while (
+        chunkEnd < invoiceDataRows.length &&
+        invoiceDataRows[chunkEnd].invoiceNumber === endInvoiceNumber
+      ) {
+        chunkEnd++
+      }
+
+      logger.info(
+        {
+          chunkStart: chunkStart,
+          chunkEnd: chunkEnd - 1,
+          totalRows: invoiceDataRows.length,
+        },
+        'Processing rows'
+      )
+      const chunkInvoiceDataRows = invoiceDataRows.slice(chunkStart, chunkEnd)
+      chunkStart = chunkEnd
+
+      const contactCodes = await processInvoiceRows(
+        chunkInvoiceDataRows,
+        batchId
+      )
+      const contacts = await getXpandContacts(contactCodes.contacts)
+      await saveContacts(contacts, batchId)
+    }
+
+    await verifyImport(invoicesToImport, batchId, batchTotal)
+
+    return {
+      batchId,
+      errors,
+      processedInvoices: invoicesToImport.length,
+    }
+  } catch (error: any) {
+    logger.error(error, 'Error importing invoices - batch could not be created')
+
+    throw error
+  }
 }
 
 const calculateAccountTotals = (aggregateRows: InvoiceDataRow[]) => {

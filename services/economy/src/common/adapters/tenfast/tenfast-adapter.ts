@@ -8,8 +8,16 @@ import {
   TenfastTenant,
   TenfastInvoicesByOcrResponseSchema,
   TenfastInvoice,
+  TenfastRentArticle,
   TenfastInvoiceRow,
+  TenfastInvoiceRowWithAccounting,
 } from './schemas'
+import {
+  Invoice,
+  InvoiceRow,
+  InvoiceTransactionType,
+  PaymentStatus,
+} from '@onecore/types'
 
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
@@ -19,6 +27,49 @@ const axiosOptions = {
     'Content-type': 'application/json',
     'api-token': apiKey,
   },
+}
+const articles: TenfastRentArticle[] = []
+
+const getRentArticles = async (): Promise<TenfastRentArticle[]> => {
+  if (articles.length === 0) {
+    const result = await axios.get(
+      `${baseUrl}/v1/hyresvard/articles`,
+      axiosOptions
+    )
+    if (result.status == 200) {
+      articles.push(...result.data)
+    }
+  }
+
+  return articles
+}
+
+const transformToInvoice = (
+  tenfastInvoice: TenfastInvoice,
+  rentArticles: TenfastRentArticle[]
+): Invoice => {
+  const invoiceRows: InvoiceRow[] = []
+  const invoice: Invoice = {
+    invoiceId: tenfastInvoice.id,
+    leaseId: '', // TODO: Add,
+    amount: tenfastInvoice.amount,
+    reference: '', // TODO: Add
+    fromDate: new Date(tenfastInvoice.interval.from),
+    toDate: new Date(tenfastInvoice.interval.to),
+    invoiceDate: new Date(tenfastInvoice.expectedInvoiceDate),
+    expirationDate: new Date(tenfastInvoice.due),
+    debitStatus: 0,
+    paymentStatus: PaymentStatus.Unpaid,
+    transactionType: InvoiceTransactionType.Rent,
+    transactionTypeName: 'Rent',
+    type: 'Regular',
+    source: 'next',
+    invoiceRows,
+  }
+
+  tenfastInvoice
+
+  return invoice
 }
 
 export const getTenantByContactCode = async (
@@ -84,7 +135,6 @@ export const getInvoiceByOcr = async (
   ocr: string
 ): Promise<AdapterResult<TenfastInvoice | null, string>> => {
   try {
-    console.log('ocr', ocr)
     const result = await axios.get(
       `${baseUrl}/v1/hyresvard/hyror?filter[ocrNumber]=${ocr}`,
       axiosOptions
@@ -92,6 +142,8 @@ export const getInvoiceByOcr = async (
     if (result.status !== 200) {
       return { ok: false, err: result.statusText }
     }
+
+    console.log(result.data.records[0])
 
     const parsedResponse = TenfastInvoicesByOcrResponseSchema.safeParse(
       result.data
@@ -109,28 +161,22 @@ export const getInvoiceByOcr = async (
   }
 }
 
-export const getInvoiceArticle = async (
-  articleId: string
-): Promise<AdapterResult<TenfastInvoiceRow[], string>> => {
-  try {
-    const result = await axios.get(
-      `${baseUrl}/v1/hyresvard/articles/${articleId}`,
-      axiosOptions
-    )
-    if (result.status !== 200) {
-      return { ok: false, err: result.statusText }
-    }
-
-    return { ok: true, data: result.data.hyror }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.statusCode }
-  }
-}
-
-export const getInvoicesNotExported = async (maxCount: number) => {
+export const getInvoicesNotExported = async (
+  maxCount: number
+): Promise<AdapterResult<Invoice[], string>> => {
   // Dummy implementation awaiting exported flag in Tenfast
-  return await getInvoicesForTenant('67eb3cdbc334e091aa28f2fe')
+  const tenfastInvoicesResult = await getInvoiceByOcr('2007826013131')
+  const invoices: Invoice[] = []
+  const rentArticles = await getRentArticles()
+
+  if (tenfastInvoicesResult.ok && tenfastInvoicesResult.data) {
+    //for (const tenfastInvoice of tenfastInvoicesResult.data) {
+    invoices.push(transformToInvoice(tenfastInvoicesResult.data, rentArticles))
+    //}
+    return { ok: true, data: invoices }
+  } else {
+    return { ok: false, err: 'error-getting-invoices' }
+  }
 }
 
 export const convertToDate = (tenfastDate: string) => {

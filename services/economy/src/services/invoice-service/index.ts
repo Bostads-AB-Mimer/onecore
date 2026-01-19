@@ -5,7 +5,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
-
 import {
   getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
@@ -16,8 +15,16 @@ import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
+import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
+  router.get('(.*)/invoices/import', async (ctx) => {
+    const invoices = await getInvoicesNotExported(123)
+
+    ctx.status = 200
+    ctx.body = invoices.ok ? invoices.data : { error: true }
+  })
+
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(

@@ -7,7 +7,7 @@ import {
   InvoiceDataRow,
   TOTAL_ACCOUNT,
   XpandContact,
-} from '../../../common/types'
+} from '../../../common/types/legacyTypes'
 import knex from 'knex'
 import config from '../../../common/config'
 import { logger } from '@onecore/utilities'

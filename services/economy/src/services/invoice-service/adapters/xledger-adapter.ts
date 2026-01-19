@@ -11,7 +11,10 @@ import { gql } from 'graphql-request'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 
 import config from '../../../common/config'
-import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import {
+  AdapterResult,
+  InvoiceDataRow,
+} from '../../../common/types/legacyTypes'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
