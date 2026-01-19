@@ -1,5 +1,5 @@
 # ==========================
-# Node.js Build stage
+# Build stage
 # ==========================
 FROM node:23-slim AS builder
 
@@ -33,8 +33,6 @@ FROM node:23-slim AS runner
 RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
 
 WORKDIR /app
-
-# Copy Node.js application
 COPY --from=builder /out ./
 COPY --from=builder /app/services/keys/knexfile.js .
 COPY --from=builder /app/services/keys/migrations ./migrations
