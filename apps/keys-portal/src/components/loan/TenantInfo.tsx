@@ -13,6 +13,7 @@ import { useMemo } from 'react'
 import { ContractCard } from './ContractCard'
 import { KeyNoteDisplay } from './KeyNoteDisplay'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
+import { getPriorityContractId } from '@/utils/contractPriority'
 
 function formatAddress(addr?: Address): string {
   if (!addr) return 'Okänd adress'
@@ -92,51 +93,11 @@ export function TenantInfo({
     }
   }, [contracts])
 
-  // Determine which contract should have key loans auto-opened
-  const autoOpenKeyLoansForLeaseId = useMemo(() => {
-    // Priority 1: Active housing contract with most recent leaseStartDate
-    const activeHousingContracts = activeContracts.filter(
-      (c) => c.type === 'Bostadskontrakt'
-    )
-    if (activeHousingContracts.length > 0) {
-      // Sort by leaseStartDate descending (most recent first)
-      const sorted = [...activeHousingContracts].sort(
-        (a, b) => toMs(b.leaseStartDate) - toMs(a.leaseStartDate)
-      )
-      return sorted[0].leaseId
-    }
-
-    // Priority 2: Upcoming housing contract with most recent leaseStartDate
-    const upcomingHousingContracts = upcomingContracts.filter(
-      (c) => c.type === 'Bostadskontrakt'
-    )
-    if (upcomingHousingContracts.length > 0) {
-      // Sort by leaseStartDate descending (most recent first)
-      const sorted = [...upcomingHousingContracts].sort(
-        (a, b) => toMs(b.leaseStartDate) - toMs(a.leaseStartDate)
-      )
-      return sorted[0].leaseId
-    }
-
-    // Priority 3: ANY active contract (latest by start date)
-    if (activeContracts.length > 0) {
-      const sorted = [...activeContracts].sort(
-        (a, b) => toMs(b.leaseStartDate) - toMs(a.leaseStartDate)
-      )
-      return sorted[0].leaseId
-    }
-
-    // Priority 4: ANY upcoming contract (latest by start date)
-    if (upcomingContracts.length > 0) {
-      const sorted = [...upcomingContracts].sort(
-        (a, b) => toMs(b.leaseStartDate) - toMs(a.leaseStartDate)
-      )
-      return sorted[0].leaseId
-    }
-
-    // No auto-open if no contracts exist
-    return null
-  }, [activeContracts, upcomingContracts])
+  // Determine priority contract (can be used for auto-opening in the future)
+  const _priorityContractId = useMemo(
+    () => getPriorityContractId(contracts),
+    [contracts]
+  )
 
   const totalEnded = endedRecentContracts.length + endedOlderContracts.length
 
@@ -270,13 +231,7 @@ export function TenantInfo({
             </CardHeader>
             <CardContent className="space-y-4">
               {activeContracts.map((lease) => (
-                <ContractCard
-                  key={lease.leaseId}
-                  lease={lease}
-                  defaultKeyLoansOpen={
-                    lease.leaseId === autoOpenKeyLoansForLeaseId
-                  }
-                />
+                <ContractCard key={lease.leaseId} lease={lease} />
               ))}
             </CardContent>
           </Card>
@@ -291,13 +246,7 @@ export function TenantInfo({
             </CardHeader>
             <CardContent className="space-y-4">
               {upcomingContracts.map((lease) => (
-                <ContractCard
-                  key={lease.leaseId}
-                  lease={lease}
-                  defaultKeyLoansOpen={
-                    lease.leaseId === autoOpenKeyLoansForLeaseId
-                  }
-                />
+                <ContractCard key={lease.leaseId} lease={lease} />
               ))}
             </CardContent>
           </Card>
