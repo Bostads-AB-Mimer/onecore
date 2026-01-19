@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Calendar,
   Home,
@@ -11,15 +11,14 @@ import {
   Package,
   Building,
   KeyRound,
-  ChevronDown,
-  ChevronUp,
   Copy,
   Check,
+  History,
 } from 'lucide-react'
 import type { Lease, KeyDetails, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { LeaseKeyStatusList } from './LeaseKeyStatusList'
-import { KeyLoansAccordion } from './KeyLoansAccordion'
+import { KeyLoansHistory } from './KeyLoansHistory'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
@@ -48,19 +47,11 @@ function statusBadge(status: 'active' | 'upcoming' | 'ended') {
 
 type Props = {
   lease: Lease
-  defaultOpen?: boolean
-  defaultKeyLoansOpen?: boolean
   rentalAddress?: string
 }
 
-export function ContractCard({
-  lease,
-  defaultOpen = false,
-  defaultKeyLoansOpen = false,
-  rentalAddress,
-}: Props) {
-  const [open, setOpen] = useState(defaultOpen)
-  const [keyLoansOpen, setKeyLoansOpen] = useState(defaultKeyLoansOpen)
+export function ContractCard({ lease, rentalAddress }: Props) {
+  const [activeTab, setActiveTab] = useState<string>('')
   const [addressStr, setAddressStr] = useState<string | null>(
     rentalAddress ?? null
   )
@@ -152,8 +143,6 @@ export function ContractCard({
   const totalKeys = keys.length
   const hasAnyKeys = totalKeys > 0
   const order: KeyType[] = ['LGH', 'PB', 'FS', 'HN']
-  const keysRegionId = `keys-${lease.leaseId}`
-  const keyLoansRegionId = `key-loans-${lease.leaseId}`
 
   return (
     <Card className="relative border rounded-xl">
@@ -172,46 +161,6 @@ export function ContractCard({
 
           <div className="flex items-center gap-2">
             <RentalObjectNotes rentalObjectCode={lease.rentalPropertyId} />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setKeyLoansOpen((v) => !v)}
-              aria-expanded={keyLoansOpen}
-              aria-controls={keyLoansRegionId}
-              className="h-7 px-2 text-xs gap-1"
-            >
-              {keyLoansOpen ? (
-                <>
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  Dölj nyckellån
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                  Visa nyckellån
-                </>
-              )}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setOpen((v) => !v)}
-              aria-expanded={open}
-              aria-controls={keysRegionId}
-              className="h-7 px-2 text-xs gap-1"
-            >
-              {open ? (
-                <>
-                  <ChevronUp className="h-3.5 w-3.5" />
-                  Dölj nycklar
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                  Visa nycklar
-                </>
-              )}
-            </Button>
             <Badge variant={variant} className="text-[11px] py-0.5">
               {label}
             </Badge>
@@ -293,38 +242,43 @@ export function ContractCard({
           )}
         </div>
 
-        {keyLoansOpen && (
-          <div className="pt-2" id={keyLoansRegionId}>
-            <KeyLoansAccordion
-              lease={lease}
-              refreshKey={keyLoansRefreshKey}
-              onReceiptUploaded={handleReceiptUploaded}
-            />
-          </div>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
+          <TabsList className="bg-slate-100/70 p-1 rounded-lg">
+            <TabsTrigger value="keys" className="flex items-center gap-1.5">
+              <KeyRound className="h-4 w-4" />
+              Nycklar
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-1.5">
+              <History className="h-4 w-4" />
+              Lånhistorik
+            </TabsTrigger>
+          </TabsList>
 
-        {open && (
-          <div id={keysRegionId} className="pt-2">
+          <TabsContent value="keys">
             <LeaseKeyStatusList
               lease={lease}
               keysData={keys}
               refreshTrigger={keyStatusRefreshKey}
               onKeysLoaned={() => {
-                setKeyLoansOpen(true)
-                setOpen(false)
-                // Force KeyLoansAccordion to refresh and show the new loan
+                setActiveTab('history')
                 setKeyLoansRefreshKey((prev) => prev + 1)
               }}
               onKeysReturned={() => {
-                setKeyLoansOpen(true)
-                setOpen(false)
-                // Force KeyLoansAccordion to refresh and show the returned loan
+                setActiveTab('history')
                 setKeyLoansRefreshKey((prev) => prev + 1)
               }}
               onKeyCreated={refetchKeys}
             />
-          </div>
-        )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            <KeyLoansHistory
+              lease={lease}
+              refreshKey={keyLoansRefreshKey}
+              onReceiptUploaded={handleReceiptUploaded}
+            />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   )
