@@ -102,7 +102,7 @@ export const createLease = async (
   }
 }
 
-type CreateLeaseInvoiceRowRequestPayload = {
+type CreateLeaseRentRowRequestPayload = {
   amount: number
   article: string
   label: string
@@ -112,7 +112,7 @@ type CreateLeaseInvoiceRowRequestPayload = {
 
 export async function createLeaseRentRow(params: {
   leaseId: string
-  rentRow: CreateLeaseInvoiceRowRequestPayload
+  rentRow: CreateLeaseRentRowRequestPayload
 }): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios(
     `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows`,

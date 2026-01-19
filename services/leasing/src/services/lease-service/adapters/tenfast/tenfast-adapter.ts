@@ -625,7 +625,6 @@ export async function getLeaseByLeaseId(
   }
 }
 
-// TODO: This function should return a onecore rent row
 export async function createLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRow: Omit<TenfastInvoiceRow, '_id'>

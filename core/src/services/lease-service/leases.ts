@@ -310,7 +310,6 @@ export const routes = (router: KoaRouter) => {
     to: z.coerce.date().optional(),
   })
 
-  // TODO: Rename invoice rows to rent rows
   /**
    * @swagger
    * /leases/{leaseId}/rent-rows:
