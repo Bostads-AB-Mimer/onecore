@@ -123,8 +123,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Component type not found
    */
   router.get('(.*)/component-types/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
+
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
 
     try {
       const type = await getComponentTypeById(id)
@@ -186,9 +193,23 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
-        ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
+        // Check for foreign key constraint violation (Prisma P2003)
+        const isPrismaFKError =
+          err &&
+          typeof err === 'object' &&
+          'code' in err &&
+          (err as { code: string }).code === 'P2003'
+        if (isPrismaFKError) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Invalid categoryId: category does not exist',
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
         ctx.body = { error: errorMessage, ...metadata }
       }
     }
@@ -230,11 +251,25 @@ export const routes = (router: KoaRouter) => {
       body: UpdateComponentTypeSchema,
     }),
     async (ctx) => {
-      const id = z.string().uuid().parse(ctx.params.id)
-      const data = ctx.request.parsedBody
       const metadata = generateRouteMetadata(ctx)
 
+      const idResult = z.string().uuid().safeParse(ctx.params.id)
+      if (!idResult.success) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid UUID format', ...metadata }
+        return
+      }
+      const id = idResult.data
+      const data = ctx.request.parsedBody
+
       try {
+        const existing = await getComponentTypeById(id)
+        if (!existing) {
+          ctx.status = 404
+          ctx.body = { error: 'Component type not found', ...metadata }
+          return
+        }
+
         const type = await updateComponentType(id, data)
 
         ctx.body = {
@@ -268,15 +303,43 @@ export const routes = (router: KoaRouter) => {
    *         description: Component type deleted
    */
   router.delete('(.*)/component-types/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
 
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
+
     try {
+      const existing = await getComponentTypeById(id)
+      if (!existing) {
+        ctx.status = 404
+        ctx.body = { error: 'Component type not found', ...metadata }
+        return
+      }
+
       await deleteComponentType(id)
       ctx.status = 204
     } catch (err) {
-      ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      // Check for foreign key constraint violation (Prisma P2003)
+      const isPrismaFKError =
+        err &&
+        typeof err === 'object' &&
+        'code' in err &&
+        (err as { code: string }).code === 'P2003'
+      if (isPrismaFKError) {
+        ctx.status = 409
+        ctx.body = {
+          error: 'Cannot delete type with dependent subtypes',
+          ...metadata,
+        }
+        return
+      }
+      ctx.status = 500
       ctx.body = { error: errorMessage, ...metadata }
     }
   })
