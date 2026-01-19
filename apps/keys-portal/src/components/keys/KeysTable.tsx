@@ -138,7 +138,7 @@ export function KeysTable({
                 onSelectionChange={onTypeFilterChange}
               />
             </FilterableTableHeader>
-            <FilterableTableHeader label="Låssystem">
+            <FilterableTableHeader label="">
               <SearchDropdown
                 preSuggestions={[]}
                 searchFn={onKeySystemSearch}
@@ -153,7 +153,7 @@ export function KeysTable({
                 onChange={onKeySystemSearchChange}
                 onSelect={onKeySystemSelect}
                 selectedValue={selectedKeySystem}
-                placeholder="Filtrera..."
+                placeholder="Låssystem"
               />
             </FilterableTableHeader>
             <TableHead>Löpnummer</TableHead>
