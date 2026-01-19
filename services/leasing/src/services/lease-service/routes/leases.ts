@@ -5,7 +5,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { Contact, Lease, leasing } from '@onecore/types'
-import { z } from 'zod'
 
 import {
   getContactByContactCode,
@@ -105,8 +104,7 @@ export const routes = (router: KoaRouter) => {
       ? { status: queryParams.data.status }
       : undefined
 
-    const getLeases = await tenfastAdapter.getLeasesByTenantId(
-      contact.data._id,
+    const getLeases = await tenfastAdapter.getLeasesByTenantId(contact.data._id,
       filters
     )
 
@@ -531,17 +529,10 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  const CreateLeaseInvoiceRowRequestBodySchema = z.object({
-    amount: z.number(),
-    article: z.string(),
-    label: z.string(),
-    from: z.coerce.date().optional(),
-    to: z.coerce.date().optional(),
-  })
 
   router.post(
     '(.*)/leases/:leaseId/rent-rows',
-    parseRequestBody(CreateLeaseInvoiceRowRequestBodySchema),
+    parseRequestBody(leasing.v1.CreateLeaseRentRowRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
@@ -549,13 +540,13 @@ export const routes = (router: KoaRouter) => {
         leaseId: ctx.params.leaseId,
         invoiceRow: {
           ...ctx.request.body,
+          article: ctx.request.body.articleId,
           from: ctx.request.body.from
             ? toYearMonthString(ctx.request.body.from)
             : undefined,
           to: ctx.request.body.to
             ? toYearMonthString(ctx.request.body.to)
             : undefined,
-
           vat: 0.25, // TODO: What to put for VAT?
         },
       })

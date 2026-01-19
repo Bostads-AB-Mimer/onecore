@@ -102,17 +102,10 @@ export const createLease = async (
   }
 }
 
-type CreateLeaseRentRowRequestPayload = {
-  amount: number
-  article: string
-  label: string
-  from?: string
-  to?: string
-}
 
 export async function createLeaseRentRow(params: {
   leaseId: string
-  rentRow: CreateLeaseRentRowRequestPayload
+  rentRow: z.infer<typeof leasing.v1.CreateLeaseRentRowRequestBodySchema>
 }): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios(
     `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows`,

@@ -5,7 +5,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
-import { z } from 'zod'
 
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -302,13 +301,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  const CreateLeaseRentRowRequestSchema = z.object({
-    amount: z.number(),
-    article: z.string(),
-    label: z.string(),
-    from: z.coerce.date().optional(),
-    to: z.coerce.date().optional(),
-  })
 
   /**
    * @swagger
@@ -357,7 +349,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.post(
     '/leases/:leaseId/rent-rows',
-    parseRequestBody(CreateLeaseRentRowRequestSchema),
+    parseRequestBody(leasing.v1.CreateLeaseRentRowRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const createRentRowResult = await leasingAdapter.createLeaseRentRow({
