@@ -132,8 +132,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Component installation not found
    */
   router.get('(.*)/component-installations/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
+
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
 
     try {
       const installation = await getComponentInstallationById(id)
@@ -246,11 +253,25 @@ export const routes = (router: KoaRouter) => {
       body: UpdateComponentInstallationSchema,
     }),
     async (ctx) => {
-      const id = z.string().uuid().parse(ctx.params.id)
-      const data = ctx.request.parsedBody
       const metadata = generateRouteMetadata(ctx)
 
+      const idResult = z.string().uuid().safeParse(ctx.params.id)
+      if (!idResult.success) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid UUID format', ...metadata }
+        return
+      }
+      const id = idResult.data
+      const data = ctx.request.parsedBody
+
       try {
+        const existing = await getComponentInstallationById(id)
+        if (!existing) {
+          ctx.status = 404
+          ctx.body = { error: 'Component installation not found', ...metadata }
+          return
+        }
+
         const installation = await updateComponentInstallation(id, data)
 
         ctx.body = {
@@ -285,10 +306,24 @@ export const routes = (router: KoaRouter) => {
    *         description: Component installation deleted
    */
   router.delete('(.*)/component-installations/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
 
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
+
     try {
+      const existing = await getComponentInstallationById(id)
+      if (!existing) {
+        ctx.status = 404
+        ctx.body = { error: 'Component installation not found', ...metadata }
+        return
+      }
+
       await deleteComponentInstallation(id)
       ctx.status = 204
     } catch (err) {

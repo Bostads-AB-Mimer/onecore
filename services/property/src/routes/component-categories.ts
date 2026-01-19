@@ -116,8 +116,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Component category not found
    */
   router.get('(.*)/component-categories/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
+
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
 
     try {
       const category = await getComponentCategoryById(id)
@@ -225,11 +232,25 @@ export const routes = (router: KoaRouter) => {
       body: UpdateComponentCategorySchema,
     }),
     async (ctx) => {
-      const id = z.string().uuid().parse(ctx.params.id)
-      const data = ctx.request.parsedBody
       const metadata = generateRouteMetadata(ctx)
 
+      const idResult = z.string().uuid().safeParse(ctx.params.id)
+      if (!idResult.success) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid UUID format', ...metadata }
+        return
+      }
+      const id = idResult.data
+      const data = ctx.request.parsedBody
+
       try {
+        const existing = await getComponentCategoryById(id)
+        if (!existing) {
+          ctx.status = 404
+          ctx.body = { error: 'Component category not found', ...metadata }
+          return
+        }
+
         const category = await updateComponentCategory(id, data)
 
         ctx.body = {
@@ -265,15 +286,43 @@ export const routes = (router: KoaRouter) => {
    *         description: Component category not found
    */
   router.delete('(.*)/component-categories/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
 
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
+
     try {
+      const existing = await getComponentCategoryById(id)
+      if (!existing) {
+        ctx.status = 404
+        ctx.body = { error: 'Component category not found', ...metadata }
+        return
+      }
+
       await deleteComponentCategory(id)
       ctx.status = 204
     } catch (err) {
-      ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      // Check for foreign key constraint violation (Prisma P2003)
+      const isPrismaFKError =
+        err &&
+        typeof err === 'object' &&
+        'code' in err &&
+        (err as { code: string }).code === 'P2003'
+      if (isPrismaFKError) {
+        ctx.status = 409
+        ctx.body = {
+          error: 'Cannot delete category with dependent types',
+          ...metadata,
+        }
+        return
+      }
+      ctx.status = 500
       ctx.body = { error: errorMessage, ...metadata }
     }
   })

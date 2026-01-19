@@ -139,8 +139,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Component not found
    */
   router.get('(.*)/components/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
+
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
 
     try {
       const component = await getComponentById(id)
@@ -250,11 +257,25 @@ export const routes = (router: KoaRouter) => {
       body: UpdateComponentSchema,
     }),
     async (ctx) => {
-      const id = z.string().uuid().parse(ctx.params.id)
-      const data = ctx.request.parsedBody
       const metadata = generateRouteMetadata(ctx)
 
+      const idResult = z.string().uuid().safeParse(ctx.params.id)
+      if (!idResult.success) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid UUID format', ...metadata }
+        return
+      }
+      const id = idResult.data
+      const data = ctx.request.parsedBody
+
       try {
+        const existing = await getComponentById(id)
+        if (!existing) {
+          ctx.status = 404
+          ctx.body = { error: 'Component not found', ...metadata }
+          return
+        }
+
         const component = await updateComponent(id, data)
 
         ctx.body = {
@@ -289,10 +310,24 @@ export const routes = (router: KoaRouter) => {
    *         description: Component instance deleted
    */
   router.delete('(.*)/components/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
 
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
+
     try {
+      const existing = await getComponentById(id)
+      if (!existing) {
+        ctx.status = 404
+        ctx.body = { error: 'Component not found', ...metadata }
+        return
+      }
+
       await deleteComponent(id)
       ctx.status = 204
     } catch (err) {

@@ -202,8 +202,15 @@ export const routes = (router: KoaRouter) => {
    *         description: Component model not found
    */
   router.get('(.*)/component-models/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
+
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
 
     try {
       const model = await getComponentModelById(id)
@@ -310,11 +317,25 @@ export const routes = (router: KoaRouter) => {
       body: UpdateComponentModelSchema,
     }),
     async (ctx) => {
-      const id = z.string().uuid().parse(ctx.params.id)
-      const data = ctx.request.parsedBody
       const metadata = generateRouteMetadata(ctx)
 
+      const idResult = z.string().uuid().safeParse(ctx.params.id)
+      if (!idResult.success) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid UUID format', ...metadata }
+        return
+      }
+      const id = idResult.data
+      const data = ctx.request.parsedBody
+
       try {
+        const existing = await getComponentModelById(id)
+        if (!existing) {
+          ctx.status = 404
+          ctx.body = { error: 'Component model not found', ...metadata }
+          return
+        }
+
         const model = await updateComponentModel(id, data)
 
         ctx.body = {
@@ -349,15 +370,43 @@ export const routes = (router: KoaRouter) => {
    *         description: Component model deleted
    */
   router.delete('(.*)/component-models/:id', async (ctx) => {
-    const id = z.string().uuid().parse(ctx.params.id)
     const metadata = generateRouteMetadata(ctx)
 
+    const idResult = z.string().uuid().safeParse(ctx.params.id)
+    if (!idResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+    const id = idResult.data
+
     try {
+      const existing = await getComponentModelById(id)
+      if (!existing) {
+        ctx.status = 404
+        ctx.body = { error: 'Component model not found', ...metadata }
+        return
+      }
+
       await deleteComponentModel(id)
       ctx.status = 204
     } catch (err) {
-      ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      // Check for foreign key constraint violation (Prisma P2003)
+      const isPrismaFKError =
+        err &&
+        typeof err === 'object' &&
+        'code' in err &&
+        (err as { code: string }).code === 'P2003'
+      if (isPrismaFKError) {
+        ctx.status = 409
+        ctx.body = {
+          error: 'Cannot delete model with dependent components',
+          ...metadata,
+        }
+        return
+      }
+      ctx.status = 500
       ctx.body = { error: errorMessage, ...metadata }
     }
   })
