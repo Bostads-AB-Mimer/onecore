@@ -75,6 +75,8 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid query parameters
    *       500:
    *         description: Server error
+   *     security:
+   *       - bearerAuth: []
    */
   router.get('(.*)/files', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -132,6 +134,8 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid request
    *       500:
    *         description: Server error
+   *     security:
+   *       - bearerAuth: []
    */
   router.post('(.*)/files/upload', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -203,6 +207,8 @@ export const routes = (router: KoaRouter) => {
    *         description: File not found
    *       500:
    *         description: Server error
+   *     security:
+   *       - bearerAuth: []
    */
   router.get('(.*)/files/:fileName/url', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -262,6 +268,8 @@ export const routes = (router: KoaRouter) => {
    *         description: File not found
    *       500:
    *         description: Server error
+   *     security:
+   *       - bearerAuth: []
    */
   router.get('(.*)/files/:fileName/metadata', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -300,6 +308,8 @@ export const routes = (router: KoaRouter) => {
    *         description: File not found
    *       500:
    *         description: Server error
+   *     security:
+   *       - bearerAuth: []
    */
   router.delete('(.*)/files/:fileName', async (ctx) => {
     const { fileName } = ctx.params
@@ -341,6 +351,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/FileExistsResponse'
    *       500:
    *         description: Server error
+   *     security:
+   *       - bearerAuth: []
    */
   router.get('(.*)/files/:fileName/exists', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
