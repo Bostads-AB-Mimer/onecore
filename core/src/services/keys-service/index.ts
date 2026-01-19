@@ -423,7 +423,7 @@ export const routes = (router: KoaRouter) => {
    *       200:
    *         description: Array of loans for this card
    *         content:
-   *           application\json:
+   *           application/json:
    *             schema:
    *               type: object
    *               properties:

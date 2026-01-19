@@ -10,6 +10,7 @@ export const KeyLoanFactory = Factory.define<KeyLoan>(({ sequence }) => ({
     '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000002',
   ]),
+  keyCards: JSON.stringify([]),
   loanType: 'TENANT',
   contact: 'P123456',
   contact2: undefined,
@@ -31,6 +32,7 @@ export const KeyLoanWithDetailsFactory = Factory.define<KeyLoanWithDetails>(
       '00000000-0000-0000-0000-000000000001',
       '00000000-0000-0000-0000-000000000002',
     ]),
+    keyCards: JSON.stringify([]),
     loanType: 'TENANT',
     contact: 'P123456',
     contact2: undefined,
@@ -44,6 +46,7 @@ export const KeyLoanWithDetailsFactory = Factory.define<KeyLoanWithDetails>(
     createdBy: 'test-user@mimer.nu',
     updatedBy: null,
     keysArray: [],
+    keyCardsArray: [],
     receipts: [],
   })
 )

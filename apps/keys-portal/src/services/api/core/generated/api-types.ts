@@ -3029,7 +3029,7 @@ export interface paths {
         /** @description Array of loans for this card */
         200: {
           content: {
-            "application\json": {
+            "application/json": {
               content?: components["schemas"]["KeyLoan"][];
             };
           };
