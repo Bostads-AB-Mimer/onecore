@@ -3891,7 +3891,7 @@ export interface paths {
       };
     };
   };
-  "/api/documents/component-models/{id}": {
+  "/documents/component-models/{id}": {
     /** Get all documents for a component model */
     get: {
       parameters: {
@@ -4263,10 +4263,12 @@ export interface paths {
       };
     };
   };
-  "/api/components/{id}/upload": {
+  "/components/{id}/upload": {
     /**
      * Upload a file to a component
      * @description Attach photos or documents to a specific component (e.g., installation photos, receipts).
+     * The component ID can be provided either in the URL path or in the request body as componentInstanceId.
+     * If both are provided, the URL path takes precedence.
      */
     post: {
       parameters: {
@@ -4284,6 +4286,11 @@ export interface paths {
             fileName: string;
             /** @description MIME type of the file */
             contentType: string;
+            /**
+             * Format: uuid
+             * @description Component ID (alternative to URL path parameter)
+             */
+            componentInstanceId?: string;
             /** @description Optional caption for the file */
             caption?: string;
           };
@@ -4305,7 +4312,7 @@ export interface paths {
       };
     };
   };
-  "/api/documents/component-instances/{id}": {
+  "/documents/component-instances/{id}": {
     /** Get all documents for a component */
     get: {
       parameters: {
@@ -4332,57 +4339,7 @@ export interface paths {
       };
     };
   };
-  "/api/documents": {
-    /**
-     * Create a document record
-     * @description Creates a document metadata record linking a file (already uploaded to file-storage service) to either a component model or component instance.
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description The file ID from the file-storage service */
-            fileId: string;
-            /**
-             * Format: uuid
-             * @description The ID of the component model to attach the document to
-             */
-            componentModelId?: string;
-            /**
-             * Format: uuid
-             * @description The ID of the component instance to attach the document to
-             */
-            componentInstanceId?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Document record created successfully */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                /** Format: uuid */
-                id?: string;
-                fileId?: string;
-                /** Format: date-time */
-                createdAt?: string;
-              };
-            };
-          };
-        };
-        /** @description Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/documents/{id}": {
+  "/documents/{id}": {
     /** Delete a document by ID */
     delete: {
       parameters: {
@@ -4407,7 +4364,7 @@ export interface paths {
       };
     };
   };
-  "/api/component-models/{id}/upload": {
+  "/component-models/{id}/upload": {
     /**
      * Upload a document to a component model
      * @description Attach product documentation, manuals, or spec sheets to a model for reference.
@@ -4428,42 +4385,6 @@ export interface paths {
             fileName: string;
             /** @description MIME type of the file */
             contentType: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Document uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Bad request */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/api/documents/upload": {
-    /** Upload a document for a component or model */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Base64 encoded file data */
-            fileData: string;
-            /** @description Original file name */
-            fileName: string;
-            /** @description MIME type of the file */
-            contentType: string;
-            /** Format: uuid */
-            componentInstanceId?: string;
-            /** Format: uuid */
-            componentModelId?: string;
-            caption?: string;
           };
         };
       };

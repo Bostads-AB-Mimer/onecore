@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fileStorageService } from '@/services/api/core'
+import { POST } from '@/services/api/core/base-api'
 import { ContextType } from '@/types/ui'
 import { fileToBase64 } from '@/utils/file'
 
@@ -81,8 +82,37 @@ export function useDocuments(contextType: ContextType, id: string | undefined) {
 
       // Convert file to base64
       const fileData = await fileToBase64(file)
-      const fullPath = `${contextType}/${id}/${file.name}`
 
+      // For component types, use backend endpoints that create DB records
+      if (contextType === ContextType.ComponentInstance) {
+        const { data, error } = await POST('/components/{id}/upload', {
+          params: { path: { id } },
+          body: {
+            fileData,
+            fileName: file.name,
+            contentType: file.type,
+          },
+        })
+        if (error) throw new Error('Upload failed')
+        return data
+      }
+
+      if (contextType === ContextType.ComponentModel) {
+        const { data, error } = await POST('/component-models/{id}/upload', {
+          params: { path: { id } },
+          body: {
+            fileData,
+            fileName: file.name,
+            contentType: file.type,
+          },
+        })
+        if (error) throw new Error('Upload failed')
+        return data
+      }
+
+      // Fallback for other context types (property, building, residence, tenant)
+      // Keep using file-storage directly (no DB linking needed for these)
+      const fullPath = `${contextType}/${id}/${file.name}`
       return fileStorageService.uploadFile(fullPath, fileData, file.type)
     },
     onSuccess: () => {

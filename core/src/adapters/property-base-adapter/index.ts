@@ -1709,9 +1709,9 @@ export async function uploadComponentModelDocument(
 > {
   try {
     // Step 1: Upload file to file-storage service
-    // Use folder structure: ComponentModel/{modelId}/{fileName}
-    // This matches the frontend pattern in useDocuments.ts
-    const storageFileName = `ComponentModel/${modelId}/${fileName}`
+    // Use folder structure: component-model/{modelId}/{fileName}
+    // This matches the frontend ContextType.ComponentModel = 'component-model'
+    const storageFileName = `component-model/${modelId}/${fileName}`
 
     const uploadResult = await fileStorageAdapter.uploadFile(
       storageFileName,
