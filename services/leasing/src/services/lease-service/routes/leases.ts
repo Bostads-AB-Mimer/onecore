@@ -104,7 +104,8 @@ export const routes = (router: KoaRouter) => {
       ? { status: queryParams.data.status }
       : undefined
 
-    const getLeases = await tenfastAdapter.getLeasesByTenantId(contact.data._id,
+    const getLeases = await tenfastAdapter.getLeasesByTenantId(
+      contact.data._id,
       filters
     )
 
