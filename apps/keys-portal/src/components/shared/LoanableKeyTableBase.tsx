@@ -285,10 +285,10 @@ export function LoanableKeyTableBase({
     Object.values(columns).filter(Boolean).length + (selectable ? 1 : 0)
 
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-hidden">
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader className="bg-background">
+          <TableRow className="bg-background">
             {selectable && <TableHead className="w-[50px]"></TableHead>}
             {columns.keyName && (
               <TableHead className="w-[22%]">Nyckelnamn</TableHead>
@@ -518,7 +518,7 @@ function KeyRow({
   onKeyClick,
 }: KeyRowProps) {
   return (
-    <TableRow>
+    <TableRow className="bg-background">
       {selectable && (
         <TableCell className={`w-[50px] ${indent ? 'pl-8' : ''}`}>
           <Checkbox

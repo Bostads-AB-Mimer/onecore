@@ -244,10 +244,10 @@ export function LoanableCardTableBase({
     Object.values(columns).filter(Boolean).length + (selectable ? 1 : 0)
 
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-hidden">
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader className="bg-background">
+          <TableRow className="bg-background">
             {selectable && <TableHead className="w-[50px]"></TableHead>}
             {columns.cardName && (
               <TableHead className="w-[30%]">Kortnamn</TableHead>
@@ -471,7 +471,7 @@ function CardRow({
   return (
     <>
       <TableRow
-        className={hasCodes ? 'cursor-pointer hover:bg-muted/50' : ''}
+        className={`bg-background ${hasCodes ? 'cursor-pointer hover:bg-muted/50' : ''}`}
         onClick={() => hasCodes && setExpanded(!expanded)}
       >
         {selectable && (
