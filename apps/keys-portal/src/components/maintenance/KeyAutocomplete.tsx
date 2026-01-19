@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { keyService } from '@/services/api/keyService'
+import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { Badge } from '@/components/ui/badge'
-import type { Key } from '@/services/types'
+import type { Key, KeySystem } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 
@@ -25,14 +26,27 @@ export function KeyAutocomplete({
   disabled = false,
 }: KeyAutocompleteProps) {
   const [searchValue, setSearchValue] = useState('')
+  const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
+    null
+  )
+  const [keySystemSearch, setKeySystemSearch] = useState('')
 
-  // Search function that filters out disposed keys
+  // Search function that filters out disposed keys and optionally filters by key system
   const searchKeys = async (query: string): Promise<Key[]> => {
     const results = await keyService.searchKeys({
       q: query,
       disposed: 'false',
+      ...(selectedKeySystem?.id && { keySystemId: selectedKeySystem.id }),
     })
     return results.content
+  }
+
+  // Search function for key systems
+  const searchKeySystems = async (query: string): Promise<KeySystem[]> => {
+    return await keySystemSearchService.search({
+      q: query,
+      fields: ['systemCode', 'name'],
+    })
   }
 
   // Filter out already selected keys from search results
@@ -86,38 +100,69 @@ export function KeyAutocomplete({
         </div>
       )}
 
-      {/* Search Input */}
-      <SearchDropdown
-        preSuggestions={[]} // No pre-suggestions for key search
-        searchFn={searchKeysFiltered}
-        minSearchLength={3}
-        debounceMs={300}
-        formatItem={(key) => ({
-          primaryText: key.keyName,
-          secondaryText: [
-            KeyTypeLabels[key.keyType],
-            key.rentalObjectCode,
-            key.flexNumber ? `Flex: ${key.flexNumber}` : null,
-          ]
-            .filter(Boolean)
-            .join(' · '),
-          searchableText: `${key.keyName} ${key.rentalObjectCode || ''} ${key.flexNumber || ''}`,
-        })}
-        getKey={(key) => key.id}
-        value={searchValue}
-        onChange={setSearchValue}
-        onSelect={handleSelect}
-        selectedValue={null} // Never show as selected since we clear after each selection
-        placeholder="Sök nyckelnamn eller hyresobjekt..."
-        emptyMessage={
-          selectedKeyIds.size > 0
-            ? 'Alla hittade nycklar är redan valda'
-            : 'Inga nycklar hittades'
-        }
-        loadingMessage="Söker nycklar..."
-        disabled={disabled}
-        showClearButton={false} // Don't show clear button for multi-select
-      />
+      {/* Key System Filter and Key Search - Side by Side */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Key System Filter */}
+        <div>
+          <label className="text-sm font-medium">Låssystem</label>
+          <SearchDropdown
+            preSuggestions={[]}
+            searchFn={searchKeySystems}
+            minSearchLength={1}
+            formatItem={(item: KeySystem) => ({
+              primaryText: item.systemCode,
+              secondaryText: item.name || undefined,
+              searchableText: `${item.systemCode} ${item.name || ''}`,
+            })}
+            getKey={(item: KeySystem) => item.id}
+            value={keySystemSearch}
+            onChange={setKeySystemSearch}
+            onSelect={setSelectedKeySystem}
+            selectedValue={selectedKeySystem}
+            placeholder="Filtrera på låssystem..."
+            disabled={disabled}
+          />
+        </div>
+
+        {/* Key Search */}
+        <div>
+          <label className="text-sm font-medium">Sök nyckel</label>
+          <SearchDropdown
+            preSuggestions={[]}
+            searchFn={searchKeysFiltered}
+            minSearchLength={3}
+            debounceMs={300}
+            formatItem={(key) => ({
+              primaryText: key.keyName,
+              secondaryText: [
+                KeyTypeLabels[key.keyType],
+                key.rentalObjectCode,
+                key.keySequenceNumber
+                  ? `Löpnr: ${key.keySequenceNumber}`
+                  : null,
+                key.flexNumber ? `Flex: ${key.flexNumber}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · '),
+              searchableText: `${key.keyName} ${key.rentalObjectCode || ''} ${key.keySequenceNumber || ''} ${key.flexNumber || ''}`,
+            })}
+            getKey={(key) => key.id}
+            value={searchValue}
+            onChange={setSearchValue}
+            onSelect={handleSelect}
+            selectedValue={null}
+            placeholder="Sök nyckelnamn eller hyresobjekt..."
+            emptyMessage={
+              selectedKeyIds.size > 0
+                ? 'Alla hittade nycklar är redan valda'
+                : 'Inga nycklar hittades'
+            }
+            loadingMessage="Söker nycklar..."
+            disabled={disabled}
+            showClearButton={false}
+          />
+        </div>
+      </div>
 
       <p className="text-xs text-muted-foreground">
         Sök på nyckelnamn (t.ex. "FS-001") eller hyresobjekt (t.ex. "705-011")

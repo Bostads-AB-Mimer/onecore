@@ -41,6 +41,7 @@ interface SearchDropdownProps<T> {
   disabled?: boolean
   showClearButton?: boolean // Default: true when selectedValue exists
   className?: string
+  showSelectedInInput?: boolean // Show selected value's text in input (default: true)
 }
 
 /**
@@ -73,6 +74,7 @@ export function SearchDropdown<T>({
   disabled = false,
   showClearButton = true,
   className = '',
+  showSelectedInInput = true,
 }: SearchDropdownProps<T>) {
   // Internal state
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -248,18 +250,38 @@ export function SearchDropdown<T>({
     ? formattedItems.slice(preSuggestionsCount)
     : formattedItems
 
+  // Get display value for the input
+  const displayValue = useMemo(() => {
+    if (selectedValue && showSelectedInInput) {
+      const formatted = formatItem(selectedValue)
+      // Show both primary and secondary text if available
+      return formatted.secondaryText
+        ? `${formatted.primaryText} - ${formatted.secondaryText}`
+        : formatted.primaryText
+    }
+    return value
+  }, [selectedValue, showSelectedInInput, formatItem, value])
+
+  // Determine if filter is active (has selection)
+  const isFilterActive = !!selectedValue
+
   return (
     <div className={`relative ${className}`}>
       {/* Input */}
       <div className="relative">
         <Input
-          value={value}
+          value={displayValue}
           onChange={(e) => onChange(e.target.value)}
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
+          className={
+            isFilterActive
+              ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+              : ''
+          }
         />
         {/* Clear button */}
         {showClearButton && selectedValue && !disabled && (
