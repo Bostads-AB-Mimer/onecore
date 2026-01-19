@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Lease, KeyDetails, CardDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ToastAction } from '@/components/ui/toast'
@@ -311,139 +310,135 @@ export function LeaseKeyStatusList({
 
   if (visibleKeys.length === 0) {
     return (
-      <Card className="mt-2">
-        <CardContent className="p-3 space-y-3">
-          <div className="text-sm text-muted-foreground">
-            Inga nycklar hittades för detta hyresobjekt.
-          </div>
-          <div className="flex gap-2">
-            {!showAddKeyForm && (
-              <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
-            )}
-          </div>
-          {showAddKeyForm && (
-            <AddKeyForm
-              keys={keys}
-              selectedKeyIds={selectedKeys}
-              rentalObjectCode={lease.rentalPropertyId}
-              onKeyCreated={handleKeyCreated}
-              onCancel={() => setShowAddKeyForm(false)}
-            />
+      <div className="space-y-3">
+        <div className="text-sm text-muted-foreground">
+          Inga nycklar hittades för detta hyresobjekt.
+        </div>
+        <div className="flex gap-2">
+          {!showAddKeyForm && (
+            <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
           )}
-        </CardContent>
-      </Card>
+        </div>
+        {showAddKeyForm && (
+          <AddKeyForm
+            keys={keys}
+            selectedKeyIds={selectedKeys}
+            rentalObjectCode={lease.rentalPropertyId}
+            onKeyCreated={handleKeyCreated}
+            onCancel={() => setShowAddKeyForm(false)}
+          />
+        )}
+      </div>
     )
   }
 
   return (
     <>
-      <Card className="mt-2">
-        <CardContent className="space-y-4 p-3">
-          {/* Summary badges */}
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(KeyTypeLabels).map(([t, label]) => {
-              const n = countsByType.get(t) ?? 0
-              if (!n) return null
-              return (
-                <Badge key={t} variant="secondary" className="text-xs">
-                  {label}: {n}
-                </Badge>
-              )
-            })}
-            {visibleKeys.length > 0 && visibleKeys[0].flexNumber && (
-              <Badge variant="outline" className="text-xs">
-                Flex: {visibleKeys[0].flexNumber}
+      <div className="space-y-4">
+        {/* Summary badges */}
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(KeyTypeLabels).map(([t, label]) => {
+            const n = countsByType.get(t) ?? 0
+            if (!n) return null
+            return (
+              <Badge key={t} variant="secondary" className="text-xs">
+                {label}: {n}
               </Badge>
-            )}
-          </div>
+            )
+          })}
+          {visibleKeys.length > 0 && visibleKeys[0].flexNumber && (
+            <Badge variant="outline" className="text-xs">
+              Flex: {visibleKeys[0].flexNumber}
+            </Badge>
+          )}
+        </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-2">
-            {/* Select all / Deselect all button */}
-            {visibleKeys.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (selectedKeys.length === visibleKeys.length) {
-                    setSelectedKeys([])
-                  } else {
-                    setSelectedKeys(visibleKeys.map((k) => k.id))
-                  }
-                }}
-                disabled={isProcessing}
-              >
-                {selectedKeys.length === visibleKeys.length
-                  ? 'Avmarkera alla'
-                  : 'Markera alla'}
-              </Button>
-            )}
-            <KeyActionButtons
-              selectedKeys={selectedKeys}
-              selectedCards={selectedCards}
-              keysWithStatus={visibleKeys}
-              cardsWithStatus={cards}
-              leaseIsNotPast={leaseIsNotPast}
-              isProcessing={isProcessing}
-              onRent={onRent}
-              onReturn={onReturn}
-              onDispose={onDispose}
-              onRefresh={async () => {
-                // Refresh keys and statuses after flex keys are created
-                await refreshStatuses()
+        {/* Action buttons */}
+        <div className="flex flex-wrap gap-2">
+          {/* Select all / Deselect all button */}
+          {visibleKeys.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (selectedKeys.length === visibleKeys.length) {
+                  setSelectedKeys([])
+                } else {
+                  setSelectedKeys(visibleKeys.map((k) => k.id))
+                }
               }}
-              tenantContactCodes={tenantContactCodes}
-            />
-            {!showAddKeyForm && (
-              <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
-            )}
-          </div>
-
-          {/* Add key form */}
-          {showAddKeyForm && (
-            <AddKeyForm
-              keys={keys}
-              selectedKeyIds={selectedKeys}
-              rentalObjectCode={lease.rentalPropertyId}
-              onKeyCreated={handleKeyCreated}
-              onCancel={() => setShowAddKeyForm(false)}
-            />
+              disabled={isProcessing}
+            >
+              {selectedKeys.length === visibleKeys.length
+                ? 'Avmarkera alla'
+                : 'Markera alla'}
+            </Button>
           )}
-
-          {/* Keys table */}
-          <LeaseKeyTableList
-            keys={visibleKeys}
-            tenantContactCodes={tenantContactCodes}
-            selectable={true}
+          <KeyActionButtons
             selectedKeys={selectedKeys}
-            onKeySelectionChange={(keyId, checked) => {
-              setSelectedKeys((prev) =>
-                checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
-              )
+            selectedCards={selectedCards}
+            keysWithStatus={visibleKeys}
+            cardsWithStatus={cards}
+            leaseIsNotPast={leaseIsNotPast}
+            isProcessing={isProcessing}
+            onRent={onRent}
+            onReturn={onReturn}
+            onDispose={onDispose}
+            onRefresh={async () => {
+              // Refresh keys and statuses after flex keys are created
+              await refreshStatuses()
             }}
+            tenantContactCodes={tenantContactCodes}
           />
-
-          {/* Cards table */}
-          {cards.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium mb-2">Droppar</h3>
-              <LeaseCardTableList
-                cards={cards}
-                tenantContactCodes={tenantContactCodes}
-                selectable={true}
-                selectedCards={selectedCards}
-                onCardSelectionChange={(cardId, checked) => {
-                  setSelectedCards((prev) =>
-                    checked
-                      ? [...prev, cardId]
-                      : prev.filter((id) => id !== cardId)
-                  )
-                }}
-              />
-            </div>
+          {!showAddKeyForm && (
+            <AddKeyButton onClick={() => setShowAddKeyForm(true)} />
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Add key form */}
+        {showAddKeyForm && (
+          <AddKeyForm
+            keys={keys}
+            selectedKeyIds={selectedKeys}
+            rentalObjectCode={lease.rentalPropertyId}
+            onKeyCreated={handleKeyCreated}
+            onCancel={() => setShowAddKeyForm(false)}
+          />
+        )}
+
+        {/* Keys table */}
+        <LeaseKeyTableList
+          keys={visibleKeys}
+          tenantContactCodes={tenantContactCodes}
+          selectable={true}
+          selectedKeys={selectedKeys}
+          onKeySelectionChange={(keyId, checked) => {
+            setSelectedKeys((prev) =>
+              checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
+            )
+          }}
+        />
+
+        {/* Cards table */}
+        {cards.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-sm font-medium mb-2">Droppar</h3>
+            <LeaseCardTableList
+              cards={cards}
+              tenantContactCodes={tenantContactCodes}
+              selectable={true}
+              selectedCards={selectedCards}
+              onCardSelectionChange={(cardId, checked) => {
+                setSelectedCards((prev) =>
+                  checked
+                    ? [...prev, cardId]
+                    : prev.filter((id) => id !== cardId)
+                )
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       <ReceiptDialog
         isOpen={showReceiptDialog}
