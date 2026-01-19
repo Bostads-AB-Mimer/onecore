@@ -147,7 +147,7 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
   const order: KeyType[] = ['LGH', 'PB', 'FS', 'HN']
 
   return (
-    <Card className="relative border rounded-xl">
+    <Card className="relative border rounded-xl overflow-hidden">
       <CardHeader className="py-3">
         <CardTitle className="flex items-center justify-between text-[13px] font-medium">
           <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="pt-0 pb-3">
+      <CardContent className="pt-0 pb-3 bg-background">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 text-[13px]">
           <div className="md:col-span-6 min-h-[1rem]">
             <div className="text-muted-foreground">
