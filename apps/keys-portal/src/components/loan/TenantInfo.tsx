@@ -2,12 +2,6 @@ import { X, User, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
 import type { Tenant, Lease, TenantAddress as Address } from '@/services/types'
 import { useMemo } from 'react'
 import { ContractCard } from './ContractCard'
@@ -223,82 +217,42 @@ export function TenantInfo({
 
       <div className="space-y-4">
         {activeContracts.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-green-600">
-                Aktiva kontrakt ({activeContracts.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-green-600 mb-3">
+              Aktiva kontrakt ({activeContracts.length})
+            </h3>
+            <div className="space-y-4">
               {activeContracts.map((lease) => (
                 <ContractCard key={lease.leaseId} lease={lease} />
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {upcomingContracts.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-blue-600">
-                Kommande kontrakt ({upcomingContracts.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-blue-600 mb-3">
+              Kommande kontrakt ({upcomingContracts.length})
+            </h3>
+            <div className="space-y-4">
               {upcomingContracts.map((lease) => (
                 <ContractCard key={lease.leaseId} lease={lease} />
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {totalEnded > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-muted-foreground">
-                Avslutade kontrakt ({totalEnded})
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {endedRecentContracts.length > 0 && (
-                <div className="space-y-4">
-                  {endedRecentContracts.map((lease) => (
-                    <ContractCard key={lease.leaseId} lease={lease} />
-                  ))}
-                </div>
-              )}
-
-              {endedOlderContracts.length > 0 && (
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="older-ended">
-                    <AccordionTrigger
-                      className="
-                        w-full h-14 px-6 text-lg font-semibold
-                        rounded-lg border shadow-sm justify-between
-                        hover:bg-muted transition-colors
-                        data-[state=open]:bg-muted
-                        [&>svg]:h-6 [&>svg]:w-6
-                      "
-                    >
-                      <span>Äldre avslutade kontrakt</span>
-                      <span className="inline-flex items-center gap-3">
-                        <span className="inline-flex items-center justify-center rounded-full bg-muted px-2.5 py-0.5 text-sm"></span>
-                      </span>
-                    </AccordionTrigger>
-
-                    <AccordionContent>
-                      <div className="space-y-4 pt-3">
-                        {endedOlderContracts.map((lease) => (
-                          <ContractCard key={lease.leaseId} lease={lease} />
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              )}
-            </CardContent>
-          </Card> // ← and this Card was never closed
+          <div>
+            <h3 className="text-lg font-semibold text-muted-foreground mb-3">
+              Avslutade kontrakt ({totalEnded})
+            </h3>
+            <div className="space-y-4">
+              {[...endedRecentContracts, ...endedOlderContracts].map((lease) => (
+                <ContractCard key={lease.leaseId} lease={lease} />
+              ))}
+            </div>
+          </div>
         )}
 
         {activeContracts.length === 0 &&
