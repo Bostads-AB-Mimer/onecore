@@ -4937,7 +4937,7 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /api/documents/upload:
    *   post:
-   *     summary: Upload a document for a component or model
+   *     summary: Upload a document for a component instance
    *     tags:
    *       - Property-base/Components
    *     requestBody:
@@ -4950,6 +4950,7 @@ export const routes = (router: KoaRouter) => {
    *               - fileData
    *               - fileName
    *               - contentType
+   *               - componentInstanceId
    *             properties:
    *               fileData:
    *                 type: string
@@ -4959,13 +4960,11 @@ export const routes = (router: KoaRouter) => {
    *                 description: Original file name
    *               contentType:
    *                 type: string
-   *                 description: MIME type of the file
+   *                 description: MIME type of the file (e.g., image/png, image/webp, application/pdf)
    *               componentInstanceId:
    *                 type: string
    *                 format: uuid
-   *               componentModelId:
-   *                 type: string
-   *                 format: uuid
+   *                 description: ID of the component instance to attach the document to
    *               caption:
    *                 type: string
    *     responses:
@@ -4987,7 +4986,6 @@ export const routes = (router: KoaRouter) => {
         fileName?: string
         contentType?: string
         componentInstanceId?: string
-        componentModelId?: string
         caption?: string
       }
 
@@ -4997,10 +4995,10 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      if (!body.componentInstanceId && !body.componentModelId) {
+      if (!body.componentInstanceId) {
         ctx.status = 400
         ctx.body = {
-          error: 'Either componentInstanceId or componentModelId required',
+          error: 'componentInstanceId is required',
           ...metadata,
         }
         return
@@ -5008,23 +5006,13 @@ export const routes = (router: KoaRouter) => {
 
       const fileBuffer = Buffer.from(body.fileData, 'base64')
 
-      let result
-      if (body.componentInstanceId) {
-        result = await propertyBaseAdapter.uploadComponentFile(
-          body.componentInstanceId,
-          fileBuffer,
-          body.fileName,
-          body.contentType,
-          body.caption
-        )
-      } else {
-        result = await propertyBaseAdapter.uploadComponentModelDocument(
-          body.componentModelId!,
-          fileBuffer,
-          body.fileName,
-          body.contentType
-        )
-      }
+      const result = await propertyBaseAdapter.uploadComponentFile(
+        body.componentInstanceId,
+        fileBuffer,
+        body.fileName,
+        body.contentType,
+        body.caption
+      )
 
       if (!result.ok) {
         ctx.status = result.err === 'bad_request' ? 400 : 500

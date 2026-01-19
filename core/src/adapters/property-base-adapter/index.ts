@@ -1524,9 +1524,9 @@ export async function uploadComponentFile(
 > {
   try {
     // Step 1: Upload file to file-storage service
-    const timestamp = Date.now()
-    const extension = fileName.split('.').pop() || ''
-    const storageFileName = `component-instance-${componentId}-${timestamp}.${extension}`
+    // Use folder structure: component-instance/{componentId}/{fileName}
+    // This matches the frontend ContextType.ComponentInstance = 'component-instance'
+    const storageFileName = `component-instance/${componentId}/${fileName}`
 
     const uploadResult = await fileStorageAdapter.uploadFile(
       storageFileName,
@@ -1709,9 +1709,9 @@ export async function uploadComponentModelDocument(
 > {
   try {
     // Step 1: Upload file to file-storage service
-    const timestamp = Date.now()
-    const extension = fileName.split('.').pop() || ''
-    const storageFileName = `component-model-${modelId}-${timestamp}.${extension}`
+    // Use folder structure: ComponentModel/{modelId}/{fileName}
+    // This matches the frontend pattern in useDocuments.ts
+    const storageFileName = `ComponentModel/${modelId}/${fileName}`
 
     const uploadResult = await fileStorageAdapter.uploadFile(
       storageFileName,
