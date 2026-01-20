@@ -1161,7 +1161,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     expect(result.err).toBe('could-not-find-rental-objects')
   })
 
-  it('should throw and return error "could-not-find-rental-objects" if schema parsing fails', async () => {
+  it('should throw and return error "could-not-parse-rental-objects" if schema parsing fails', async () => {
     // Arrange
     const rentalObjectCodes = ['R1001']
     // Return invalid data for the schema
@@ -1221,7 +1221,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     expect(result.data[1000].rentalObjectCode).toBe('R1001')
   })
 
-  it('should return error "could-not-find-rental-objects" when request throws an exception', async () => {
+  it('should return error "unknown" when request throws an exception', async () => {
     // Arrange
     const rentalObjectCodes = ['R1001', 'R1002']
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
