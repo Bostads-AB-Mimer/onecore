@@ -1212,7 +1212,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/documents/component-models/{id}:
+   * /documents/component-models/{id}:
    *   get:
    *     summary: Get all documents for a component model
    *     tags:
@@ -2270,7 +2270,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/components/{id}/upload:
+   * /components/{id}/upload:
    *   post:
    *     summary: Upload a file to a component
    *     description: Attach photos or documents to a specific component (e.g., installation photos, receipts).
@@ -2370,7 +2370,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/documents/component-instances/{id}:
+   * /documents/component-instances/{id}:
    *   get:
    *     summary: Get all documents for a component
    *     tags:
@@ -2434,113 +2434,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/documents:
-   *   post:
-   *     summary: Create a document record
-   *     description: Creates a document metadata record linking a file (already uploaded to file-storage service) to either a component model or component instance.
-   *     tags:
-   *       - Property-base/Components
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - fileId
-   *             properties:
-   *               fileId:
-   *                 type: string
-   *                 description: The file ID from the file-storage service
-   *               componentModelId:
-   *                 type: string
-   *                 format: uuid
-   *                 description: The ID of the component model to attach the document to
-   *               componentInstanceId:
-   *                 type: string
-   *                 format: uuid
-   *                 description: The ID of the component instance to attach the document to
-   *     responses:
-   *       200:
-   *         description: Document record created successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       format: uuid
-   *                     fileId:
-   *                       type: string
-   *                     createdAt:
-   *                       type: string
-   *                       format: date-time
-   *       400:
-   *         description: Bad request - fileId not provided or neither componentModelId nor componentInstanceId provided
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('(.*)/documents', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const body = ctx.request.body as {
-      fileId?: string
-      componentModelId?: string
-      componentInstanceId?: string
-    }
-
-    if (!body.fileId) {
-      ctx.status = 400
-      ctx.body = { error: 'fileId is required', ...metadata }
-      return
-    }
-
-    if (!body.componentModelId && !body.componentInstanceId) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Either componentModelId or componentInstanceId required',
-        ...metadata,
-      }
-      return
-    }
-
-    try {
-      const result = await propertyBaseAdapter.createDocument({
-        fileId: body.fileId,
-        componentModelId: body.componentModelId,
-        componentInstanceId: body.componentInstanceId,
-      })
-
-      if (!result.ok) {
-        ctx.status = result.err === 'bad_request' ? 400 : 500
-        ctx.body = {
-          error:
-            result.err === 'bad_request'
-              ? 'Invalid request'
-              : 'Internal server error',
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Failed to create document record')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /api/documents/{id}:
+   * /documents/{id}:
    *   delete:
    *     summary: Delete a document by ID
    *     tags:
@@ -2600,7 +2494,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /api/component-models/{id}/upload:
+   * /component-models/{id}/upload:
    *   post:
    *     summary: Upload a document to a component model
    *     description: Attach product documentation, manuals, or spec sheets to a model for reference.
@@ -2705,110 +2599,6 @@ export const routes = (router: KoaRouter) => {
         { error, metadata },
         'Failed to upload component model document'
       )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /api/documents/upload:
-   *   post:
-   *     summary: Upload a document for a component instance
-   *     tags:
-   *       - Property-base/Components
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - fileData
-   *               - fileName
-   *               - contentType
-   *               - componentInstanceId
-   *             properties:
-   *               fileData:
-   *                 type: string
-   *                 description: Base64 encoded file data
-   *               fileName:
-   *                 type: string
-   *                 description: Original file name
-   *               contentType:
-   *                 type: string
-   *                 description: MIME type of the file (e.g., image/png, image/webp, application/pdf)
-   *               componentInstanceId:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the component instance to attach the document to
-   *               caption:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Document uploaded successfully
-   *       400:
-   *         description: Bad request
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('(.*)/documents/upload', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      const body = ctx.request.body as {
-        fileData?: string
-        fileName?: string
-        contentType?: string
-        componentInstanceId?: string
-        caption?: string
-      }
-
-      if (!body.fileData || !body.fileName || !body.contentType) {
-        ctx.status = 400
-        ctx.body = {
-          error: 'fileData, fileName, and contentType are required',
-          ...metadata,
-        }
-        return
-      }
-
-      if (!body.componentInstanceId) {
-        ctx.status = 400
-        ctx.body = {
-          error: 'componentInstanceId is required',
-          ...metadata,
-        }
-        return
-      }
-
-      const fileBuffer = Buffer.from(body.fileData, 'base64')
-
-      const result = await propertyBaseAdapter.uploadComponentFile(
-        body.componentInstanceId,
-        fileBuffer,
-        body.fileName,
-        body.contentType,
-        body.caption
-      )
-
-      if (!result.ok) {
-        ctx.status = result.err === 'bad_request' ? 400 : 500
-        ctx.body = {
-          error:
-            result.err === 'bad_request'
-              ? 'Invalid upload request'
-              : 'Internal server error',
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.body = result.data
-    } catch (error) {
-      logger.error({ error, metadata }, 'Failed to upload document')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
