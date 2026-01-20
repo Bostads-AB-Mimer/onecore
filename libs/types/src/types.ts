@@ -324,7 +324,7 @@ interface ParkingSpace {
 interface RentalObject {
   rentalObjectCode: string
   address: string
-  monthlyRent: number
+  rent?: RentalObjectRent
   districtCaption?: string
   districtCode?: string
   propertyCaption?: string
@@ -339,6 +339,22 @@ interface RentalObject {
   boaArea?: number
   isSpecialResidentialArea?: boolean
   isSpecialProperty?: boolean
+}
+
+interface RentalObjectRent {
+  rentalObjectCode: string
+  amount: number
+  vat: number
+  rows: Array<RentalObjectRentRow>
+}
+
+interface RentalObjectRentRow {
+  code: string
+  description: string
+  amount: number
+  vatPercentage: number
+  fromDate?: Date
+  toDate?: Date
 }
 
 interface MaintenanceUnitInfo {
@@ -382,6 +398,8 @@ export type {
   InvoiceRow,
   InvoicePaymentEvent,
   RentalObject,
+  RentalObjectRent,
+  RentalObjectRentRow as RentRow,
   ParkingSpace,
   Email,
   Sms,
