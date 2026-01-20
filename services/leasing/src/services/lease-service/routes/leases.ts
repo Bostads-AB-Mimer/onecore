@@ -14,6 +14,8 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
+import config from '../../../common/config'
+import { toYearMonthString } from '../adapters/tenfast/schemas'
 
 /**
  * @swagger
@@ -507,17 +509,14 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    // TODO: Get article ID and amount from config or database
-    const homeInsuranceArticleId = 'HOME_INSURANCE_ARTICLE_ID'
-    const homeInsuranceAmount = 0 // TODO: Determine amount
-
     const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: ctx.params.leaseId,
       invoiceRow: {
-        amount: homeInsuranceAmount,
-        article: homeInsuranceArticleId,
-        label: 'Hemförsäkring',
-        vat: 0, // No VAT on insurance
+        amount: config.tenfast.leaseRentRows.homeInsurance.amount,
+        article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+        label: 'Hemförsäkring', // TODO: Where should label be decided?
+        vat: 0, // TODO: No VAT on insurance?
+        from: toYearMonthString(new Date()), // TODO: From when?
       },
     })
 
