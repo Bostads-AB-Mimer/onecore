@@ -6,8 +6,12 @@ import {
   KeyTypeLabels,
   KeyEventTypeLabels,
   KeyEventStatusLabels,
+  LoanTypeLabels,
+  KeySystemTypeLabels,
   type KeyEventType,
   type KeyEventStatus,
+  type LoanType,
+  type KeySystemType,
 } from '@/services/types'
 import { getActiveLoan, getPreviousLoan } from '@/utils/loanHelpers'
 
@@ -63,16 +67,63 @@ export function LoanStatusBadge({ loan, showNone = false }: LoanStatusBadgeProps
 // Key Type Badge
 // ============================================
 
-interface KeyTypeBadgeProps {
+function getKeyTypeVariant(
   keyType: string
+): 'default' | 'secondary' | 'outline' | 'destructive' {
+  switch (keyType) {
+    case 'LGH':
+    case 'MV':
+    case 'FÖR':
+      return 'default'
+    case 'PB':
+    case 'GAR':
+    case 'HL':
+    case 'ÖVR':
+      return 'secondary'
+    case 'FS':
+    case 'LOK':
+    case 'SOP':
+      return 'outline'
+    case 'HN':
+      return 'destructive'
+    default:
+      return 'default'
+  }
 }
 
-/**
- * Badge showing the type of key (Lägenhetsnyckel, Passerbricksnyckel, etc.)
- */
-export function KeyTypeBadge({ keyType }: KeyTypeBadgeProps) {
+interface KeyTypeBadgeProps {
+  keyType: string
+  /** Use variant based on key type. Default: false (uses secondary) */
+  withVariant?: boolean
+  className?: string
+}
+
+/** Badge showing the type of key (Lägenhetsnyckel, Passerbricksnyckel, etc.) */
+export function KeyTypeBadge({
+  keyType,
+  withVariant = false,
+  className,
+}: KeyTypeBadgeProps) {
   const label = KeyTypeLabels[keyType as keyof typeof KeyTypeLabels] || keyType
-  return <Badge variant="secondary">{label}</Badge>
+  const variant = withVariant ? getKeyTypeVariant(keyType) : 'secondary'
+  return (
+    <Badge variant={variant} className={className}>
+      {label}
+    </Badge>
+  )
+}
+
+// ============================================
+// Loan Type Badge
+// ============================================
+
+interface LoanTypeBadgeProps {
+  loanType: LoanType
+}
+
+/** Badge showing the type of loan (Hyresgäst, Underhåll) */
+export function LoanTypeBadge({ loanType }: LoanTypeBadgeProps) {
+  return <Badge variant="outline">{LoanTypeLabels[loanType]}</Badge>
 }
 
 // ============================================
@@ -337,4 +388,36 @@ export function CardStatusBadge({ disabled }: CardStatusBadgeProps) {
     return <Badge variant="destructive">Inaktiv</Badge>
   }
   return <Badge variant="secondary">Aktiv</Badge>
+}
+
+// ============================================
+// Key System Type Badge
+// ============================================
+
+function getKeySystemTypeVariant(
+  type: KeySystemType
+): 'default' | 'secondary' | 'outline' {
+  switch (type) {
+    case 'ELECTRONIC':
+      return 'default'
+    case 'MECHANICAL':
+      return 'secondary'
+    case 'HYBRID':
+      return 'outline'
+    default:
+      return 'secondary'
+  }
+}
+
+interface KeySystemTypeBadgeProps {
+  type: KeySystemType
+}
+
+/**
+ * Badge showing the type of key system (Mekaniskt, Elektroniskt, Hybrid)
+ */
+export function KeySystemTypeBadge({ type }: KeySystemTypeBadgeProps) {
+  const label = KeySystemTypeLabels[type] || type
+  const variant = getKeySystemTypeVariant(type)
+  return <Badge variant={variant}>{label}</Badge>
 }

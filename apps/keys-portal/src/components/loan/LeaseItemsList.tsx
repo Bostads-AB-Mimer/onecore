@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { TableCell, TableHead, TableRow } from '@/components/ui/table'
+import { TableCell, TableHead, TableRow, TableLink } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
@@ -108,10 +107,10 @@ export function LeaseItemsList({
                 <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} />
               </TableCell>
             )}
-            <TableCell className={`font-medium w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}>
-              <Link to={getKeyUrl(item.data)} className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            <TableCell className={`w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}>
+              <TableLink to={getKeyUrl(item.data)}>
                 {item.data.keyName}
-              </Link>
+              </TableLink>
             </TableCell>
             <TableCell className="w-[6%]">{item.data.keySequenceNumber ?? '-'}</TableCell>
             <TableCell className="w-[6%]">{item.data.flexNumber ?? '-'}</TableCell>
@@ -158,14 +157,14 @@ function CardRow({ card, isSelected, onToggleSelect, indent, selectable, columnC
             <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} />
           </TableCell>
         )}
-        <TableCell className={`font-medium w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}>
+        <TableCell className={`w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}>
           <div className="flex items-center gap-2">
             {hasCodes && (expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
             {ownerLink ? (
-              <a href={ownerLink} target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline" onClick={(e) => e.stopPropagation()}>
+              <a href={ownerLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline" onClick={(e) => e.stopPropagation()}>
                 {card.name || card.cardId}
               </a>
-            ) : <span className="font-medium text-sm">{card.name || card.cardId}</span>}
+            ) : <span>{card.name || card.cardId}</span>}
           </div>
         </TableCell>
         <TableCell className="w-[6%]">-</TableCell>

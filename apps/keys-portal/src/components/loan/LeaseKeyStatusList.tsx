@@ -4,6 +4,7 @@ import { KeyTypeLabels } from '@/services/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ToastAction } from '@/components/ui/toast'
+import { Loader2 } from 'lucide-react'
 import { keyService } from '@/services/api/keyService'
 import { cardService } from '@/services/api/cardService'
 import { useToast } from '@/hooks/use-toast'
@@ -254,7 +255,9 @@ export function LeaseKeyStatusList({
 
   if (loading) {
     return (
-      <div className="text-sm text-muted-foreground">Laddar nycklar...</div>
+      <div className="flex items-center justify-center h-24 text-muted-foreground">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
     )
   }
 

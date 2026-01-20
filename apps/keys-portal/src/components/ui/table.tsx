@@ -1,6 +1,23 @@
 import * as React from 'react'
+import { Link, type LinkProps } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+
+// Link styling for table cells - combines react-router Link with consistent styling
+const TableLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
+  ({ className, ...props }, ref) => (
+    <Link
+      ref={ref}
+      className={cn(
+        'text-blue-600 hover:text-blue-800 hover:underline',
+        className
+      )}
+      {...props}
+    />
+  )
+)
+TableLink.displayName = 'TableLink'
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -73,7 +90,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      'h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+      'h-10 px-2 text-left align-middle font-medium [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
       className
     )}
     {...props}
@@ -108,6 +125,32 @@ const TableCaption = React.forwardRef<
 ))
 TableCaption.displayName = 'TableCaption'
 
+interface TableEmptyStateProps {
+  colSpan: number
+  message?: string
+  isLoading?: boolean
+}
+
+function TableEmptyState({
+  colSpan,
+  message = 'Inga resultat hittades',
+  isLoading = false,
+}: TableEmptyStateProps) {
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan} className="h-24 text-center text-muted-foreground">
+        {isLoading ? (
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          message
+        )}
+      </TableCell>
+    </TableRow>
+  )
+}
+
 export {
   Table,
   TableHeader,
@@ -117,4 +160,6 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableLink,
+  TableEmptyState,
 }

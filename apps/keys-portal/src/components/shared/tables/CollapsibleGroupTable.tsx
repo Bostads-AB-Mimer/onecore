@@ -41,6 +41,8 @@ export interface CollapsibleGroupTableProps<T> {
   onSelectionChange?: (id: string, checked: boolean) => void
   columnCount?: number // For colspan calculations
   className?: string
+  /** Initial expanded state: 'all' = all expanded, 'none' = all collapsed. Default: 'all' */
+  initialExpanded?: 'all' | 'none'
 }
 
 /** Composition-based table with collapsible groups and sections */
@@ -59,8 +61,9 @@ export function CollapsibleGroupTable<T>({
   onSelectionChange,
   columnCount = 10,
   className,
+  initialExpanded = 'all',
 }: CollapsibleGroupTableProps<T>) {
-  const sections = useCollapsibleSections({ initialExpanded: 'all' })
+  const sections = useCollapsibleSections({ initialExpanded })
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
 
@@ -141,7 +144,7 @@ export function CollapsibleGroupTable<T>({
       <React.Fragment key={groupSectionKey}>
         {renderGroupHeader && (
           <TableRow
-            className="bg-muted/50 hover:bg-muted/70 cursor-pointer"
+            className="bg-muted/50 hover:bg-muted/70 cursor-pointer border-t"
             onClick={() => sections.toggle(groupSectionKey, allCollapsibleIds)}
           >
             <TableCell colSpan={columnCount} className="font-medium py-3 pl-8">
