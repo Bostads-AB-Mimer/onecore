@@ -216,6 +216,7 @@ export const getRentalObjectRents = async (
     | 'could-not-find-rental-objects'
     | 'could-not-parse-rental-objects'
     | 'get-rental-objects-bad-request'
+    | 'unknown'
   >
 > => {
   try {
@@ -257,9 +258,8 @@ export const getRentalObjectRents = async (
         (rentalObjectData: any) => {
           const parsedRentalObject =
             TenfastRentalObjectSchema.safeParse(rentalObjectData)
-          if (!parsedRentalObject.success) {
-            throw new Error(parsedRentalObject.error.message)
-          }
+          if (!parsedRentalObject.success) throw parsedRentalObject.error
+
           return parseRentalObjectRentFromTenfastRentalObject(
             includeVAT,
             parsedRentalObject.data
@@ -275,7 +275,11 @@ export const getRentalObjectRents = async (
       data: allParsedRentalObjects,
     }
   } catch (err: any) {
-    return handleTenfastError(err, 'could-not-find-rental-objects')
+    if (err instanceof ZodError) {
+      return handleTenfastError(err, 'could-not-parse-rental-objects')
+    }
+
+    return handleTenfastError(err, 'unknown')
   }
 }
 

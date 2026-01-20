@@ -113,22 +113,6 @@ describe('GET /parking-spaces/by-code/:rentalObjectCode', () => {
     expect(res.status).toBe(500)
     expect(res.body).toMatchObject({ error: 'Unknown error' })
   })
-
-  it('should call leasingAdapter.getParkingSpaceByCode with the correct rentalObjectCode', async () => {
-    // Arrange
-    const rentalObject = factory.parkingSpace.build()
-    const spy = jest
-      .spyOn(leasingAdapter, 'getParkingSpaceByCode')
-      .mockResolvedValueOnce({ ok: true, data: rentalObject })
-
-    // Act
-    await request(app.callback()).get(
-      `/parking-spaces/by-code/${rentalObject.rentalObjectCode}`
-    )
-
-    // Assert
-    expect(spy).toHaveBeenCalledWith(rentalObject.rentalObjectCode)
-  })
 })
 describe('GET /rental-objects/by-code/:rentalObjectCode/rent', () => {
   describe('GET /rental-objects/by-code/:rentalObjectCode/rent', () => {

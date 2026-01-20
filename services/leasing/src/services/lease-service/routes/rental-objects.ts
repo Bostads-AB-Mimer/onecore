@@ -3,6 +3,8 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as xpandAdapter from '../adapters/xpand/rental-object-adapter'
 
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import z from 'zod'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -300,7 +302,7 @@ export const routes = (router: KoaRouter) => {
    *                 rent:
    *                   type: number
    *       '500':
-   *         description: Internal server error. Failed to fetch vacant parking spaces.
+   *         description: Internal server error. Failed to fetch rental object rent.
    *         content:
    *           application/json:
    *             schema:
@@ -405,36 +407,40 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/rental-objects/rent', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const requestBody = ctx.request.body as
-      | { rentalObjectCodes?: string[] }
-      | undefined
-    const rentalObjectCodes =
-      requestBody?.rentalObjectCodes?.filter(Boolean) ?? []
-
-    const result = await tenfastAdapter.getRentalObjectRents(
-      rentalObjectCodes,
-      false
-    )
-
-    if (!result.ok && result.err === 'could-not-find-rental-objects') {
-      ctx.status = 404
-      ctx.body = { error: 'Rents not found', ...metadata }
-      return
-    } else if (!result.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error:
-          'Unexpected error when getting rent for ' +
-          rentalObjectCodes.join(', '),
-        ...metadata,
-      }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+  const RentalObjectsRentRequestSchema = z.object({
+    rentalObjectCodes: z.array(z.string()).optional(),
   })
+  router.post(
+    '/rental-objects/rent',
+    parseRequestBody(RentalObjectsRentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const body = ctx.request
+        .body as typeof RentalObjectsRentRequestSchema._type
+
+      const result = await tenfastAdapter.getRentalObjectRents(
+        body.rentalObjectCodes ?? [],
+        false
+      )
+
+      if (!result.ok && result.err === 'could-not-find-rental-objects') {
+        ctx.status = 404
+        ctx.body = { error: 'Rents not found', ...metadata }
+        return
+      } else if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'Unexpected error when getting rent for ' +
+            (body.rentalObjectCodes ?? []).join(', '),
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 }

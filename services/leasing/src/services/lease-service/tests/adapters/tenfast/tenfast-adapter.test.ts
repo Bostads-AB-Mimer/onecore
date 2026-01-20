@@ -1141,11 +1141,11 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     expect(result.err).toBe('get-rental-objects-bad-request')
   })
 
-  it('should return error "could-not-find-rental-objects" when status is not 200, 201, or 400', async () => {
+  it('should return error "could-not-find-rental-objects" when status is 404', async () => {
     // Arrange
     const rentalObjectCodes = ['R1001', 'R1002']
     const mockResponse = {
-      status: 500,
+      status: 404,
       data: { error: 'Internal server error' },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
@@ -1179,7 +1179,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
 
     // Assert
     assert(!result.ok)
-    expect(result.err).toBe('could-not-find-rental-objects')
+    expect(result.err).toBe('could-not-parse-rental-objects')
   })
 
   it('should handle batching if more than 500 rentalObjectCodes are provided', async () => {
@@ -1234,6 +1234,6 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
 
     // Assert
     assert(!result.ok)
-    expect(result.err).toBe('could-not-find-rental-objects')
+    expect(result.err).toBe('unknown')
   })
 })

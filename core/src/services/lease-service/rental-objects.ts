@@ -9,6 +9,8 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
+import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -299,33 +301,39 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/rental-objects/rent', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    const requestBody = ctx.request.body as
-      | { rentalObjectCodes?: string[] }
-      | undefined
-    const rentalObjectCodes =
-      requestBody?.rentalObjectCodes?.filter(Boolean) ?? []
-
-    const result = await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
-
-    if (!result.ok && result.err === 'rents-not-found') {
-      ctx.status = 404
-      ctx.body = { error: 'Rents not found', ...metadata }
-      return
-    } else if (!result.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error:
-          'Unexpected error when getting rent for ' +
-          rentalObjectCodes.join(', '),
-        ...metadata,
-      }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+  const RentalObjectsRentRequestSchema = z.object({
+    rentalObjectCodes: z.array(z.string()).optional(),
   })
+  router.post(
+    '/rental-objects/rent',
+    parseRequestBody(RentalObjectsRentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const body = ctx.request
+        .body as typeof RentalObjectsRentRequestSchema._type
+
+      const result = await leasingAdapter.getRentalObjectRents(
+        body.rentalObjectCodes ?? []
+      )
+
+      if (!result.ok && result.err === 'rents-not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Rents not found', ...metadata }
+        return
+      } else if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'Unexpected error when getting rent for ' +
+            (body.rentalObjectCodes?.join(', ') ?? ''),
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 }
