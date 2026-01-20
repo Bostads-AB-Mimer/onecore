@@ -9,7 +9,12 @@ import {
   TableLink,
   TableEmptyState,
 } from '@/components/ui/table'
-import { Key, KeyLoan, KeyBundle, getKeyTypeFilterOptions } from '@/services/types'
+import {
+  Key,
+  KeyLoan,
+  KeyBundle,
+  getKeyTypeFilterOptions,
+} from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
@@ -20,7 +25,10 @@ import { useExpandableRows } from '@/hooks/useExpandableRows'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
-import { KeyTypeBadge, DisposedBadge } from '@/components/shared/tables/StatusBadges'
+import {
+  KeyTypeBadge,
+  DisposedBadge,
+} from '@/components/shared/tables/StatusBadges'
 import { KeyLoansList } from '@/components/shared/tables/KeyLoansList'
 import { KeyBundlesList } from '@/components/shared/tables/KeyBundlesList'
 import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
@@ -176,7 +184,8 @@ export function KeysTable({
           ) : (
             keys.map((key) => {
               const isExpanded = expansion.isExpanded(key.id)
-              const isLoadingThis = expansion.isLoading && expansion.expandedId === key.id
+              const isLoadingThis =
+                expansion.isLoading && expansion.expandedId === key.id
               return (
                 <React.Fragment key={key.id}>
                   <TableRow className="hover:bg-muted/50">
@@ -190,7 +199,9 @@ export function KeysTable({
                     <TableCell className="font-medium">{key.keyName}</TableCell>
                     <TableCell>
                       {key.rentalObjectCode ? (
-                        <TableLink to={`/KeyLoan?object=${key.rentalObjectCode}`}>
+                        <TableLink
+                          to={`/KeyLoan?object=${key.rentalObjectCode}`}
+                        >
                           {key.rentalObjectCode}
                         </TableLink>
                       ) : (
@@ -198,13 +209,22 @@ export function KeysTable({
                       )}
                     </TableCell>
                     <TableCell>
-                      <KeyTypeBadge keyType={key.keyType} withVariant className="text-xs" />
+                      <KeyTypeBadge
+                        keyType={key.keyType}
+                        withVariant
+                        className="text-xs"
+                      />
                     </TableCell>
-                    <TableCell>{keySystemMap[key.keySystemId || ''] || '-'}</TableCell>
+                    <TableCell>
+                      {keySystemMap[key.keySystemId || ''] || '-'}
+                    </TableCell>
                     <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                     <TableCell>{key.flexNumber || '-'}</TableCell>
                     <TableCell>
-                      <DisposedBadge disposed={key.disposed ?? false} showActive />
+                      <DisposedBadge
+                        disposed={key.disposed ?? false}
+                        showActive
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDate(key.createdAt)}
@@ -227,7 +247,9 @@ export function KeysTable({
                       <div className="space-y-6">
                         {expansion.loadedData?.loans.length > 0 && (
                           <div>
-                            <h3 className="text-lg font-semibold mb-3">Nyckellån</h3>
+                            <h3 className="text-lg font-semibold mb-3">
+                              Nyckellån
+                            </h3>
                             <div className="rounded-lg border bg-card overflow-hidden">
                               <KeyLoansList
                                 loans={expansion.loadedData.loans}
@@ -239,9 +261,13 @@ export function KeysTable({
 
                         {expansion.loadedData?.bundles.length > 0 && (
                           <div>
-                            <h3 className="text-lg font-semibold mb-3">Nyckelsamlingar</h3>
+                            <h3 className="text-lg font-semibold mb-3">
+                              Nyckelsamlingar
+                            </h3>
                             <div className="rounded-lg border bg-card overflow-hidden">
-                              <KeyBundlesList bundles={expansion.loadedData.bundles} />
+                              <KeyBundlesList
+                                bundles={expansion.loadedData.bundles}
+                              />
                             </div>
                           </div>
                         )}
@@ -249,7 +275,8 @@ export function KeysTable({
                         {expansion.loadedData?.loans.length === 0 &&
                           expansion.loadedData?.bundles.length === 0 && (
                             <div className="text-center text-muted-foreground py-8">
-                              Denna nyckel ingår inte i några lån eller samlingar
+                              Denna nyckel ingår inte i några lån eller
+                              samlingar
                             </div>
                           )}
                       </div>

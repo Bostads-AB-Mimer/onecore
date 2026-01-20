@@ -1,4 +1,9 @@
-import { TableCell, TableHead, TableRow, TableLink } from '@/components/ui/table'
+import {
+  TableCell,
+  TableHead,
+  TableRow,
+  TableLink,
+} from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CollapsibleGroupTable } from './tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from './tables/DefaultLoanHeader'
@@ -95,13 +100,15 @@ export function KeyBundleKeysList({
           <TableCell
             className={`w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}
           >
-            <TableLink to={getKeyUrl(key)}>
-              {key.keyName}
-            </TableLink>
+            <TableLink to={getKeyUrl(key)}>{key.keyName}</TableLink>
           </TableCell>
-          <TableCell className="w-[6%]">{key.keySequenceNumber ?? '-'}</TableCell>
+          <TableCell className="w-[6%]">
+            {key.keySequenceNumber ?? '-'}
+          </TableCell>
           <TableCell className="w-[6%]">{key.flexNumber ?? '-'}</TableCell>
-          <TableCell className="w-[10%]">{key.keySystem?.systemCode || '-'}</TableCell>
+          <TableCell className="w-[10%]">
+            {key.keySystem?.systemCode || '-'}
+          </TableCell>
           <TableCell className="w-[12%]">
             <KeyTypeBadge keyType={key.keyType} />
           </TableCell>
@@ -115,13 +122,19 @@ export function KeyBundleKeysList({
           <TableCell className="w-[18%]">
             <PickupAvailabilityBadge itemData={key} />
           </TableCell>
-          <TableCell className="w-[18%]">{key.rentalObjectCode ?? '-'}</TableCell>
+          <TableCell className="w-[18%]">
+            {key.rentalObjectCode ?? '-'}
+          </TableCell>
         </TableRow>
       )}
       renderGroupHeader={(contactCode, items) => {
         // Handle keys that have never been loaned
         if (contactCode === '__never_loaned__') {
-          return <span className="font-semibold text-muted-foreground">Aldrig utlånad</span>
+          return (
+            <span className="font-semibold text-muted-foreground">
+              Aldrig utlånad
+            </span>
+          )
         }
 
         // Show the contact name and latest loan details

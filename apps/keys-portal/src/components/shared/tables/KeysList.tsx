@@ -19,9 +19,7 @@ interface KeysListProps {
 export function KeysList({ keys, keySystemMap = {} }: KeysListProps) {
   if (keys.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-4">
-        Inga nycklar
-      </div>
+      <div className="text-center text-muted-foreground py-4">Inga nycklar</div>
     )
   }
 

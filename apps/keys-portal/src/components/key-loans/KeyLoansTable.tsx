@@ -341,7 +341,8 @@ export function KeyLoansTable({
             ) : (
               keyLoans.map((loan) => {
                 const isExpanded = expansion.isExpanded(loan.id)
-                const isLoadingThis = expansion.isLoading && expansion.expandedId === loan.id
+                const isLoadingThis =
+                  expansion.isLoading && expansion.expandedId === loan.id
                 const keyCount = getKeyCount(loan.keys)
                 const isPickedUp = !!loan.pickedUpAt
                 const isReturned = !!loan.returnedAt
@@ -382,7 +383,9 @@ export function KeyLoansTable({
                       <TableCell>
                         <ActionMenu
                           onEdit={() => onEdit?.(loan)}
-                          onDelete={isActive ? undefined : () => onDelete?.(loan)}
+                          onDelete={
+                            isActive ? undefined : () => onDelete?.(loan)
+                          }
                         />
                       </TableCell>
                     </TableRow>
@@ -401,18 +404,28 @@ export function KeyLoansTable({
                           <div className="flex items-start justify-between gap-4">
                             {/* Left: Contact Person and Description */}
                             <div className="flex-1 space-y-1.5">
-                              {expansion.loadedData?.loanDetails.contactPerson && (
+                              {expansion.loadedData?.loanDetails
+                                .contactPerson && (
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-muted-foreground" />
                                   <span className="font-medium">
-                                    {expansion.loadedData.loanDetails.contactPerson}
+                                    {
+                                      expansion.loadedData.loanDetails
+                                        .contactPerson
+                                    }
                                   </span>
                                 </div>
                               )}
-                              {expansion.loadedData?.loanDetails.description && (
+                              {expansion.loadedData?.loanDetails
+                                .description && (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <FileText className="h-4 w-4" />
-                                  <span>{expansion.loadedData.loanDetails.description}</span>
+                                  <span>
+                                    {
+                                      expansion.loadedData.loanDetails
+                                        .description
+                                    }
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -435,7 +448,9 @@ export function KeyLoansTable({
 
                           {/* Keys table */}
                           <KeysList
-                            keys={expansion.loadedData?.loanDetails.keysArray || []}
+                            keys={
+                              expansion.loadedData?.loanDetails.keysArray || []
+                            }
                             keySystemMap={keySystemMap}
                           />
                         </div>

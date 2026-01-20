@@ -164,7 +164,12 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('/key-bundles/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'page', 'limit'])
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'page',
+      'limit',
+    ])
 
     try {
       const query = keyBundlesAdapter.getKeyBundlesSearchQuery(db)
@@ -183,10 +188,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const paginatedResult = await paginate(
-        query.orderBy('name', 'asc'),
-        ctx
-      )
+      const paginatedResult = await paginate(query.orderBy('name', 'asc'), ctx)
 
       ctx.status = 200
       ctx.body = { ...metadata, ...paginatedResult }

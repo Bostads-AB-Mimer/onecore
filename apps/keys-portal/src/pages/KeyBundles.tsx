@@ -59,7 +59,13 @@ export default function KeyBundles() {
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery, pagination.currentPage, pagination.currentLimit, pagination.setPaginationMeta, toast])
+  }, [
+    searchQuery,
+    pagination.currentPage,
+    pagination.currentLimit,
+    pagination.setPaginationMeta,
+    toast,
+  ])
 
   // Sync local search input with URL query
   useEffect(() => {

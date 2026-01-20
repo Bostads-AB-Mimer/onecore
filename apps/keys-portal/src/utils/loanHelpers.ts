@@ -31,8 +31,13 @@ export function getPreviousLoan(item: Loanable): KeyLoan | null {
  */
 export function getLatestLoan(item: Loanable): KeyLoan | null {
   if (!item.loans || item.loans.length === 0) return null
-  return item.loans.reduce((latest, loan) => {
-    if (!latest) return loan
-    return new Date(loan.createdAt) > new Date(latest.createdAt) ? loan : latest
-  }, null as KeyLoan | null)
+  return item.loans.reduce(
+    (latest, loan) => {
+      if (!latest) return loan
+      return new Date(loan.createdAt) > new Date(latest.createdAt)
+        ? loan
+        : latest
+    },
+    null as KeyLoan | null
+  )
 }
