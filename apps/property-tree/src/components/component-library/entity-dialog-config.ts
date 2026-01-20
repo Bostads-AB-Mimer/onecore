@@ -35,7 +35,7 @@ export const entityDialogConfig: Record<
         name: 'description',
         label: 'Beskrivning',
         type: 'text',
-        required: false,
+        required: true,
         placeholder: 'Beskriv kategorin',
       },
     ],
