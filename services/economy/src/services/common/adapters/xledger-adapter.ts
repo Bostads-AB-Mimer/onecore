@@ -443,7 +443,7 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
     type: event.type,
     invoiceId: event.invoiceNumber,
     matchId: event.matchId,
-    amount: event.amount,
+    amount: parseFloat(event.amount),
     paymentDate: event.transactionHeader.postedDate
       ? new Date(event.transactionHeader.postedDate)
       : new Date(event.paymentDate),
@@ -524,22 +524,24 @@ export const getInvoices = async (from?: Date, to?: Date) => {
   return result.data?.arTransactions?.edges.map(transformToInvoice) ?? []
 }
 
-export const getAllInvoicesWithMatchIds = async (
-  from: Date,
-  to: Date,
+export const getAllInvoicesWithMatchIds = async ({
+  from,
+  to,
+  after,
+  remainingAmountGreaterThan,
+}: {
+  from?: Date
+  to?: Date
   after?: string
-): Promise<InvoiceWithMatchId[]> => {
+  remainingAmountGreaterThan?: number
+}): Promise<InvoiceWithMatchId[]> => {
   const query = {
     query: gql`
-      query($from: String, $to: String, $after: String, $transactionSourceDbIds: [Int!]) {
+      query($after: String, $filter: ARTransaction_Filter) {
         arTransactions(
-          first: 10000,
+          first: 1000
           after: $after
-          filter: {
-            invoiceDate_gte: $from
-            invoiceDate_lte: $to
-            headerTransactionSourceDbId_in: $transactionSourceDbIds
-          }
+          filter: $filter
         ) {
           edges {
             node {
@@ -555,13 +557,16 @@ export const getAllInvoicesWithMatchIds = async (
       }
     `,
     variables: {
-      from: dateToGraphQlDateString(from),
-      to: dateToGraphQlDateString(to),
       after: after ?? null,
-      transactionSourceDbIds: [
-        TransactionSourceDbId.AR,
-        TransactionSourceDbId.OS,
-      ],
+      filter: {
+        invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+        invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
+        headerTransactionSourceDbId_in: [
+          TransactionSourceDbId.AR,
+          TransactionSourceDbId.OS,
+        ],
+        invoiceRemaining_gt: remainingAmountGreaterThan,
+      },
     },
   }
   const result = await makeXledgerRequest(query)
@@ -580,11 +585,12 @@ export const getAllInvoicesWithMatchIds = async (
 
   if (result.data.arTransactions.pageInfo.hasNextPage) {
     const lastEdge = result.data.arTransactions.edges.at(-1)
-    const nextInvoices = await getAllInvoicesWithMatchIds(
+    const nextInvoices = await getAllInvoicesWithMatchIds({
       from,
       to,
-      lastEdge.cursor
-    )
+      after: lastEdge.cursor,
+      remainingAmountGreaterThan,
+    })
     invoicesWithMatchIds.push(...nextInvoices)
   }
 
