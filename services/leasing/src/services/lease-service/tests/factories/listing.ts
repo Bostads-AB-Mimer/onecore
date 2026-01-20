@@ -1,5 +1,6 @@
 import { Factory } from 'fishery'
 import { Listing, ListingStatus } from '@onecore/types'
+import { RentalObjectFactory } from './rental-object'
 
 export const ListingFactory = Factory.define<Listing>(({ sequence }) => ({
   id: sequence,
@@ -10,16 +11,7 @@ export const ListingFactory = Factory.define<Listing>(({ sequence }) => ({
   rentalRule: 'SCORED',
   listingCategory: 'PARKING_SPACE',
   applicants: [],
-  rentalObject: {
+  rentalObject: RentalObjectFactory.build({
     rentalObjectCode: `R${sequence + 1000}`,
-    address: 'Flugsnappargatan',
-    monthlyRent: 1000,
-    residentialAreaCode: '61145',
-    residentialAreaCaption: 'Råby',
-    districtCaption: 'Distrikt Väst',
-    districtCode: '4',
-    objectTypeCaption: 'Parkeringsplats utan el',
-    objectTypeCode: 'PPLUEL',
-    vacantFrom: new Date(),
-  },
+  }),
 }))
