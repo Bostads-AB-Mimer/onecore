@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
-import { initializeInspectionData } from '@/inspections/components/initialFormData'
+import { initializeInspectionData } from '@/features/inspections/components/initialFormData'
 
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']

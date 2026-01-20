@@ -8,10 +8,13 @@ import { Badge } from '@/components/ui/v3/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { Separator } from '@/components/ui/v2/Separator'
-import { PhotoGallery } from '@/inspections/components/PhotoGallery'
-import { ActionChecklist } from '@/inspections/components/ActionChecklist'
+import { PhotoGallery } from '@/features/inspections/components/PhotoGallery'
+import { ActionChecklist } from '@/features/inspections/components/ActionChecklist'
 import { Camera, Wrench, MessageSquare, Clock, FileText } from 'lucide-react'
-import { getConditionConfig, type ComponentType } from '@/inspections/constants'
+import {
+  getConditionConfig,
+  type ComponentType,
+} from '@/features/inspections/constants'
 
 interface ComponentDetailSheetProps {
   isOpen: boolean

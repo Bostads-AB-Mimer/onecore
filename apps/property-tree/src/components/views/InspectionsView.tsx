@@ -30,9 +30,9 @@ import {
 import { ChevronsUpDown, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-import { InspectionTable } from '@/inspections/components/InspectionTable'
-import { useInspectionFilters } from '@/hooks/inspections/useInspectionFilters'
-import { useInspectionSorting } from '@/hooks/inspections/useInspectionSorting'
+import { InspectionTable } from '@/features/inspections/components/InspectionTable'
+import { useInspectionFilters } from '@/features/inspections/hooks/useInspectionFilters'
+import { useInspectionSorting } from '@/features/inspections/hooks/useInspectionSorting'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import { useQuery } from '@tanstack/react-query'
 

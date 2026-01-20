@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import type { Room } from '@/services/types'
-import { ComponentInspectionCard } from '@/inspections/components/ComponentInspectionCard'
-import { ComponentDetailSheet } from '@/inspections/components/ComponentDetailSheet'
+import { ComponentInspectionCard } from '@/features/inspections/components/ComponentInspectionCard'
+import { ComponentDetailSheet } from '@/features/inspections/components/ComponentDetailSheet'
 import type { components } from '@/services/api/core/generated/api-types'
-import { ROOM_COMPONENTS } from '@/inspections/constants'
+import { ROOM_COMPONENTS } from '@/features/inspections/constants'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 

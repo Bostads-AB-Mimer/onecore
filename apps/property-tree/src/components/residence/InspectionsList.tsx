@@ -8,8 +8,8 @@ import {
 } from '@/components/ui/v2/Tabs'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
-import { InspectionFormDialog } from '@/inspections/components/InspectionFormDialog'
-import { InspectionTable } from '@/inspections/components/InspectionTable'
+import { InspectionFormDialog } from '@/features/inspections/components/InspectionFormDialog'
+import { InspectionTable } from '@/features/inspections/components/InspectionTable'
 import { roomService } from '@/services/api/core'
 import { Grid } from '@/components/ui/Grid'
 import { components } from '@/services/api/core/generated/api-types'
@@ -21,7 +21,7 @@ import type {
   TenantSnapshot,
 } from '@/types/inspections'
 import { useToast } from '@/components/hooks/useToast'
-import { InspectionProtocol } from '@/inspections/components/InspectionProtocol'
+import { InspectionProtocol } from '@/features/inspections/components/InspectionProtocol'
 
 type Inspection = components['schemas']['Inspection']
 // type InspectionRoom = components['schemas']['InspectionRoom']

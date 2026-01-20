@@ -1,10 +1,10 @@
 import type { Room } from '@/services/types'
 import type { components } from '@/services/api/core/generated/api-types'
-import { useInspectorInfo } from '@/hooks/inspections/useInspectorInfo'
-import { useInspectionFormState } from '@/hooks/inspections/useInspectionFormState'
-import { useComponentInspection } from '@/hooks/inspections/useComponentInspection'
-import { useRoomInspection } from '@/hooks/inspections/useRoomInspection'
-import { useInspectionValidation } from '@/hooks/inspections/useInspectionValidation'
+import { useInspectorInfo } from '@/features/inspections/hooks/useInspectorInfo'
+import { useInspectionFormState } from '@/features/inspections/hooks/useInspectionFormState'
+import { useComponentInspection } from '@/features/inspections/hooks/useComponentInspection'
+import { useRoomInspection } from '@/features/inspections/hooks/useRoomInspection'
+import { useInspectionValidation } from '@/features/inspections/hooks/useInspectionValidation'
 
 type Inspection = components['schemas']['Inspection']
 
@@ -74,8 +74,8 @@ export function useInspectionForm(
 }
 
 // Re-export individual hooks for granular usage
-export { useInspectorInfo } from '@/hooks/inspections/useInspectorInfo'
-export { useInspectionFormState } from '@/hooks/inspections/useInspectionFormState'
-export { useComponentInspection } from '@/hooks/inspections/useComponentInspection'
-export { useRoomInspection } from '@/hooks/inspections/useRoomInspection'
-export { useInspectionValidation } from '@/hooks/inspections/useInspectionValidation'
+export { useInspectorInfo } from '@/features/inspections/hooks/useInspectorInfo'
+export { useInspectionFormState } from '@/features/inspections/hooks/useInspectionFormState'
+export { useComponentInspection } from '@/features/inspections/hooks/useComponentInspection'
+export { useRoomInspection } from '@/features/inspections/hooks/useRoomInspection'
+export { useInspectionValidation } from '@/features/inspections/hooks/useInspectionValidation'

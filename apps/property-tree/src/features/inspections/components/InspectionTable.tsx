@@ -10,8 +10,8 @@ import {
   getCompletedInspectionColumns,
   renderInspectionMobileCard,
   type InspectionTableColumn,
-} from '@/inspections/constants'
-import { INSPECTION_STATUS } from '@/inspections/constants'
+} from '@/features/inspections/constants'
+import { INSPECTION_STATUS } from '@/features/inspections/constants'
 
 type Inspection = components['schemas']['Inspection']
 type DetailedInspection = components['schemas']['DetailedInspection']

@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/v2/Label'
 import {
   ACTION_OPTIONS_BY_TYPE,
   type ComponentType,
-} from '@/inspections/constants'
+} from '@/features/inspections/constants'
 
 interface ActionChecklistProps {
   componentType: ComponentType

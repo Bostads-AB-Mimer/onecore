@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/v2/Button'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 import { InspectorSelectionCard } from './InspectorSelectionCard'
-import { useInspectionForm } from '@/hooks/inspections/useInspectionForm'
+import { useInspectionForm } from '@/features/inspections/hooks/useInspectionForm'
 import type { Room } from '@/services/types'
 import type {
   InspectionSubmitData,
