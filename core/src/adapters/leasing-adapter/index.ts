@@ -602,7 +602,8 @@ export { getCommentThread, addComment, removeComment } from './comments'
 
 export {
   getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
   getParkingSpaceByCode,
   getParkingSpaces,
+  getRentalObjectRentByCode,
+  getRentalObjectRents,
 } from './rental-objects'
