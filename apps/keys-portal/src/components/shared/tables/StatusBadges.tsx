@@ -36,7 +36,10 @@ interface LoanStatusBadgeProps {
 /**
  * Badge showing the status of a loan (Återlämnad, Aktiv, Ej upphämtad)
  */
-export function LoanStatusBadge({ loan, showNone = false }: LoanStatusBadgeProps) {
+export function LoanStatusBadge({
+  loan,
+  showNone = false,
+}: LoanStatusBadgeProps) {
   const status = getLoanStatusType(loan)
 
   switch (status) {
@@ -161,7 +164,10 @@ interface KeyEventBadgeProps {
  * Badge showing the status of a key event (Flex beställd, Extranyckel inkommen, etc.)
  * By default only shows active (non-completed) events.
  */
-export function KeyEventBadge({ event, onlyActive = true }: KeyEventBadgeProps) {
+export function KeyEventBadge({
+  event,
+  onlyActive = true,
+}: KeyEventBadgeProps) {
   if (!event) return null
   if (onlyActive && !isActiveKeyEvent(event)) return null
 
@@ -181,7 +187,10 @@ interface DisposedBadgeProps {
 /**
  * Badge showing if a key/card is disposed (Kasserad) or active
  */
-export function DisposedBadge({ disposed, showActive = false }: DisposedBadgeProps) {
+export function DisposedBadge({
+  disposed,
+  showActive = false,
+}: DisposedBadgeProps) {
   if (disposed) {
     return <Badge variant="destructive">Kasserad</Badge>
   }
@@ -218,7 +227,10 @@ interface KeyStatusBadgeProps {
  * In 'auto' mode, shows key event status if there's an active event,
  * otherwise shows loan status.
  */
-export function KeyStatusBadge({ keyData, type = 'auto' }: KeyStatusBadgeProps) {
+export function KeyStatusBadge({
+  keyData,
+  type = 'auto',
+}: KeyStatusBadgeProps) {
   if (type === 'event') {
     const event = getLatestActiveEvent(keyData)
     return <KeyEventBadge event={event} />
@@ -318,7 +330,9 @@ interface PickupAvailabilityBadgeProps {
  * Badge showing if the key/card can be handed out (Får utlämnas / Får ej utlämnas)
  * Works with both KeyDetails and CardDetails.
  */
-export function PickupAvailabilityBadge({ itemData }: PickupAvailabilityBadgeProps) {
+export function PickupAvailabilityBadge({
+  itemData,
+}: PickupAvailabilityBadgeProps) {
   const status = getPickupAvailability(itemData)
   return <Badge variant={status.variant}>{status.label}</Badge>
 }
@@ -341,7 +355,8 @@ export function ItemTypeBadge({ itemType }: ItemTypeBadgeProps) {
   if (itemType === 'CARD') {
     return <Badge variant="secondary">Droppe</Badge>
   }
-  const label = KeyTypeLabels[itemType as keyof typeof KeyTypeLabels] || itemType
+  const label =
+    KeyTypeLabels[itemType as keyof typeof KeyTypeLabels] || itemType
   return <Badge variant="secondary">{label}</Badge>
 }
 

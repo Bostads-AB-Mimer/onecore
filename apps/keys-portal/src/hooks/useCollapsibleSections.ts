@@ -64,7 +64,9 @@ export function useCollapsibleSections(
       // First interaction in "all expanded" mode: populate set with all except the collapsed one
       if (defaultExpandAll && !hasInteracted && wasExpanded && allSectionIds) {
         setHasInteracted(true)
-        setExpandedSections(new Set(allSectionIds.filter((id) => id !== sectionId)))
+        setExpandedSections(
+          new Set(allSectionIds.filter((id) => id !== sectionId))
+        )
         return
       }
 

@@ -94,7 +94,9 @@ export function KeysListSectioned({
       groupBy={(key) => key.rentalObjectCode || '__no_object__'}
       renderHeader={() => (
         <TableRow className="bg-background border-b">
-          <TableHead className={`w-[30%]${indent ? ' pl-14' : ''}`}>Nyckelnamn</TableHead>
+          <TableHead className={`w-[30%]${indent ? ' pl-14' : ''}`}>
+            Nyckelnamn
+          </TableHead>
           <TableHead className="w-[15%]">Typ</TableHead>
           <TableHead className="w-[15%]">Löpnummer</TableHead>
           <TableHead className="w-[15%]">Flexnummer</TableHead>

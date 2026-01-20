@@ -30,14 +30,8 @@ export function KeyBundleKeysTable({
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Split keys into disposed and non-disposed
-  const nonDisposedKeys = useMemo(
-    () => keys.filter((k) => !k.disposed),
-    [keys]
-  )
-  const disposedKeys = useMemo(
-    () => keys.filter((k) => k.disposed),
-    [keys]
-  )
+  const nonDisposedKeys = useMemo(() => keys.filter((k) => !k.disposed), [keys])
+  const disposedKeys = useMemo(() => keys.filter((k) => k.disposed), [keys])
 
   // Dialog states
   const [showReturnDialog, setShowReturnDialog] = useState(false)
@@ -218,9 +212,7 @@ export function KeyBundleKeysTable({
               selectedKeys={selectedKeys}
               onKeySelectionChange={(keyId, checked) => {
                 setSelectedKeys((prev) =>
-                  checked
-                    ? [...prev, keyId]
-                    : prev.filter((id) => id !== keyId)
+                  checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
                 )
               }}
             />
@@ -240,9 +232,7 @@ export function KeyBundleKeysTable({
               selectedKeys={selectedKeys}
               onKeySelectionChange={(keyId, checked) => {
                 setSelectedKeys((prev) =>
-                  checked
-                    ? [...prev, keyId]
-                    : prev.filter((id) => id !== keyId)
+                  checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
                 )
               }}
             />

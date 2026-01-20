@@ -161,7 +161,9 @@ export function KeySystemsTable({
                     <TableCell>
                       <ExpandButton
                         isExpanded={isExpanded}
-                        isLoading={isLoadingKeys && expandedSystemId === KeySystem.id}
+                        isLoading={
+                          isLoadingKeys && expandedSystemId === KeySystem.id
+                        }
                         onClick={() => onToggleExpand(KeySystem.id)}
                       />
                     </TableCell>

@@ -59,56 +59,59 @@ export function KeyBundlesTable({
             />
           ) : (
             keyBundles.map((bundle) => {
-            const isExpanded = expandedBundleId === bundle.id
-            let keyCount = 0
-            try {
-              const keys = JSON.parse(bundle.keys)
-              keyCount = Array.isArray(keys) ? keys.length : 0
-            } catch (e) {
-              keyCount = 0
-            }
+              const isExpanded = expandedBundleId === bundle.id
+              let keyCount = 0
+              try {
+                const keys = JSON.parse(bundle.keys)
+                keyCount = Array.isArray(keys) ? keys.length : 0
+              } catch (e) {
+                keyCount = 0
+              }
 
-            return (
-              <React.Fragment key={bundle.id}>
-                <TableRow>
-                  <TableCell>
-                    <ExpandButton
-                      isExpanded={isExpanded}
-                      isLoading={isLoadingKeys && expandedBundleId === bundle.id}
-                      onClick={() => onToggleExpand(bundle.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{bundle.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {bundle.description || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{keyCount}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ActionMenu
-                      onEdit={() => onEdit(bundle)}
-                      onDelete={() => onDelete(bundle.id)}
-                    />
-                  </TableCell>
-                </TableRow>
-                {isExpanded && (
-                  <ExpandedRowContent
-                    colSpan={5}
-                    isLoading={isLoadingKeys}
-                    hasData={keysForExpandedBundle.length > 0}
-                    emptyMessage="Inga nycklar i denna samling"
-                  >
-                    <KeyBundleKeysTable
-                      keys={keysForExpandedBundle}
-                      bundleId={bundle.id}
-                      onRefresh={onRefresh}
-                    />
-                  </ExpandedRowContent>
-                )}
-              </React.Fragment>
-            )
-          }))}
+              return (
+                <React.Fragment key={bundle.id}>
+                  <TableRow>
+                    <TableCell>
+                      <ExpandButton
+                        isExpanded={isExpanded}
+                        isLoading={
+                          isLoadingKeys && expandedBundleId === bundle.id
+                        }
+                        onClick={() => onToggleExpand(bundle.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{bundle.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {bundle.description || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{keyCount}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <ActionMenu
+                        onEdit={() => onEdit(bundle)}
+                        onDelete={() => onDelete(bundle.id)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && (
+                    <ExpandedRowContent
+                      colSpan={5}
+                      isLoading={isLoadingKeys}
+                      hasData={keysForExpandedBundle.length > 0}
+                      emptyMessage="Inga nycklar i denna samling"
+                    >
+                      <KeyBundleKeysTable
+                        keys={keysForExpandedBundle}
+                        bundleId={bundle.id}
+                        onRefresh={onRefresh}
+                      />
+                    </ExpandedRowContent>
+                  )}
+                </React.Fragment>
+              )
+            })
+          )}
         </TableBody>
       </Table>
     </div>

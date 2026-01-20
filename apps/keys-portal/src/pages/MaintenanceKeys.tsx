@@ -463,7 +463,8 @@ export default function MaintenanceKeys() {
                                 data.keys
                                   .map((k) => k.keySystemId)
                                   .filter(
-                                    (id): id is string => id != null && id !== ''
+                                    (id): id is string =>
+                                      id != null && id !== ''
                                   )
                               ),
                             ]

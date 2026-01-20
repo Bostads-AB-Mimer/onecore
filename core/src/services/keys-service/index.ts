@@ -5330,7 +5330,12 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-bundles/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'page', 'limit'])
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'page',
+      'limit',
+    ])
 
     const result = await KeyBundlesApi.search(ctx.query)
 
