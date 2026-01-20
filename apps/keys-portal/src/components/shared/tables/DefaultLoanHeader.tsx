@@ -5,21 +5,11 @@ import { sv } from 'date-fns/locale'
 import { KeyLoan } from '@/services/types'
 
 export interface DefaultLoanHeaderProps {
-  /** The loan data to display */
   loan: KeyLoan
-  /** Optional company names lookup for displaying contact names */
   companyNames?: Record<string, string>
 }
 
-/**
- * Default loan header component for displaying loan information in collapsible sections.
- * Shows loan type badge, contact info, and relevant dates.
- *
- * @example
- * ```tsx
- * <DefaultLoanHeader loan={loan} companyNames={companyNames} />
- * ```
- */
+/** Loan header for collapsible sections - shows loan type, contact, and dates */
 export function DefaultLoanHeader({
   loan,
   companyNames = {},

@@ -24,3 +24,15 @@ export function getPreviousLoan(item: Loanable): KeyLoan | null {
   if (returnedLoans.length === 0) return null
   return returnedLoans[returnedLoans.length - 1]
 }
+
+/**
+ * Helper to get the most recent loan by createdAt date
+ * Works with both KeyDetails and CardDetails
+ */
+export function getLatestLoan(item: Loanable): KeyLoan | null {
+  if (!item.loans || item.loans.length === 0) return null
+  return item.loans.reduce((latest, loan) => {
+    if (!latest) return loan
+    return new Date(loan.createdAt) > new Date(latest.createdAt) ? loan : latest
+  }, null as KeyLoan | null)
+}

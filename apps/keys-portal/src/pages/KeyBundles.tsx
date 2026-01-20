@@ -179,7 +179,11 @@ export default function KeyBundles() {
       setExpandedBundleId(bundleId)
       setIsLoadingKeys(true)
       try {
-        const response = await keyBundleService.getKeyBundleDetails(bundleId)
+        const response = await keyBundleService.getKeyBundleDetails(bundleId, {
+          includeLoans: true,
+          includeEvents: true,
+          includeKeySystem: true,
+        })
         if (response) {
           setKeysForExpandedBundle(response.keys)
         } else {
@@ -229,6 +233,7 @@ export default function KeyBundles() {
         keysForExpandedBundle={keysForExpandedBundle}
         isLoadingKeys={isLoadingKeys}
         isLoading={isLoading}
+        onRefresh={loadKeyBundles}
       />
     </div>
   )

@@ -1,13 +1,20 @@
-import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { TableCell, TableHead, TableRow } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
+import { CollapsibleGroupTable } from './tables/CollapsibleGroupTable'
+import { DefaultLoanHeader } from './tables/DefaultLoanHeader'
 import {
-  LoanableKeyTableBase,
-  type LoanableKeyTableConfig,
-} from './LoanableKeyTableBase'
-import type { GroupedKeys } from '@/utils/groupKeys'
+  KeyTypeBadge,
+  KeyEventBadge,
+  PickupAvailabilityBadge,
+  getLatestActiveEvent,
+} from './tables/StatusBadges'
 import type { KeyDetails } from '@/services/types'
+import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
 
 interface KeyBundleKeysListProps {
-  group: GroupedKeys['nonDisposed'] | GroupedKeys['disposed']
+  /** Flat array of keys to display */
+  keys: KeyDetails[]
   companyNames: Record<string, string>
   selectable?: boolean
   selectedKeys?: string[]
@@ -15,55 +22,131 @@ interface KeyBundleKeysListProps {
 }
 
 /**
- * Component for displaying keys in key bundles, grouped by company and loan with collapsible headers.
+ * Component for displaying keys in key bundles, grouped by contact and loan with collapsible headers.
  * Can optionally include checkboxes for key selection.
+ *
+ * Receives a flat array of keys and uses CollapsibleGroupTable to handle
+ * grouping by contact/loan and collapse behavior.
  */
 export function KeyBundleKeysList({
-  group,
+  keys,
   companyNames,
   selectable = false,
   selectedKeys = [],
   onKeySelectionChange,
 }: KeyBundleKeysListProps) {
-  // Flatten the grouped keys into a single array
-  const keys = useMemo(() => {
-    const result: KeyDetails[] = []
-
-    // Add all loaned keys
-    group.loaned.forEach((contactGroup) => {
-      contactGroup.loans.forEach((loan) => {
-        result.push(...loan.keys)
-      })
+  // Build URL for key details page
+  const getKeyUrl = (key: KeyDetails) => {
+    const disposed = key.disposed ? 'true' : 'false'
+    const params = new URLSearchParams({
+      disposed,
+      editKeyId: key.id,
     })
-
-    // Add all unloaned keys
-    result.push(...group.unloaned)
-
-    return result
-  }, [group])
-
-  const config: LoanableKeyTableConfig = {
-    columns: {
-      keyName: true,
-      sequence: true,
-      flex: true,
-      keySystem: true, // Show key system code
-      status: true,
-      type: true,
-      rentalObject: true,
-    },
-    showContactHeaders: true,
-    showLoanHeaders: true,
-    selectable,
+    if (key.rentalObjectCode) {
+      params.set('rentalObjectCode', key.rentalObjectCode)
+    }
+    return `/Keys?${params.toString()}`
   }
 
+  const columnCount = selectable ? 9 : 8
+
   return (
-    <LoanableKeyTableBase
-      keys={keys}
-      companyNames={companyNames}
-      config={config}
-      selectedKeys={selectedKeys}
-      onKeySelectionChange={onKeySelectionChange}
+    <CollapsibleGroupTable
+      items={keys}
+      getItemId={(key) => key.id}
+      columnCount={columnCount}
+      selectable={selectable}
+      selectedIds={selectedKeys}
+      onSelectionChange={onKeySelectionChange}
+      // Group by contact code (from latest loan - active or previous)
+      // Use special marker for never-loaned keys so they get a group header too
+      groupBy={(key) => {
+        const latestLoan = getLatestLoan(key)
+        return latestLoan?.contact || '__never_loaned__'
+      }}
+      // Section by loan status
+      sectionBy={(key) => {
+        const activeLoan = getActiveLoan(key)
+        return activeLoan ? 'loaned' : 'unloaned'
+      }}
+      sectionOrder={['loaned', 'unloaned']}
+      renderHeader={() => (
+        <TableRow className="bg-background">
+          {selectable && <TableHead className="w-[50px]"></TableHead>}
+          <TableHead className="w-[18%]">Nyckelnamn</TableHead>
+          <TableHead className="w-[6%]">Löpnr</TableHead>
+          <TableHead className="w-[6%]">Flex</TableHead>
+          <TableHead className="w-[10%]">Låssystem</TableHead>
+          <TableHead className="w-[12%]">Typ</TableHead>
+          <TableHead className="w-[12%]">Status</TableHead>
+          <TableHead className="w-[18%]">Utlämning</TableHead>
+          <TableHead className="w-[18%]">Hyresobjekt</TableHead>
+        </TableRow>
+      )}
+      renderRow={(key, { isSelected, onToggleSelect, indent }) => (
+        <TableRow key={key.id} className="bg-background h-12">
+          {selectable && (
+            <TableCell className={`w-[50px] ${indent ? 'pl-8' : ''}`}>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect()}
+              />
+            </TableCell>
+          )}
+          <TableCell
+            className={`font-medium w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}
+          >
+            <Link
+              to={getKeyUrl(key)}
+              className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              {key.keyName}
+            </Link>
+          </TableCell>
+          <TableCell className="w-[6%]">{key.keySequenceNumber ?? '-'}</TableCell>
+          <TableCell className="w-[6%]">{key.flexNumber ?? '-'}</TableCell>
+          <TableCell className="w-[10%]">{key.keySystem?.systemCode || '-'}</TableCell>
+          <TableCell className="w-[12%]">
+            <KeyTypeBadge keyType={key.keyType} />
+          </TableCell>
+          <TableCell className="w-[12%]">
+            {getLatestActiveEvent(key) ? (
+              <KeyEventBadge event={getLatestActiveEvent(key)} />
+            ) : (
+              '-'
+            )}
+          </TableCell>
+          <TableCell className="w-[18%]">
+            <PickupAvailabilityBadge itemData={key} />
+          </TableCell>
+          <TableCell className="w-[18%]">{key.rentalObjectCode ?? '-'}</TableCell>
+        </TableRow>
+      )}
+      renderGroupHeader={(contactCode, items) => {
+        // Handle keys that have never been loaned
+        if (contactCode === '__never_loaned__') {
+          return <span className="font-semibold text-muted-foreground">Aldrig utlånad</span>
+        }
+
+        // Show the contact name and latest loan details
+        const firstKey = items[0]
+        const latestLoan = getLatestLoan(firstKey)
+
+        return (
+          <div className="flex items-center gap-3">
+            <span className="font-semibold">
+              {companyNames[contactCode] || contactCode}
+            </span>
+            {latestLoan && <DefaultLoanHeader loan={latestLoan} />}
+          </div>
+        )
+      }}
+      renderSectionHeader={(section) => {
+        if (section === 'loaned') {
+          return null // Loaned items are grouped by contact, no top-level section header needed
+        }
+        return <span className="font-semibold">Ej utlånade</span>
+      }}
     />
   )
 }
