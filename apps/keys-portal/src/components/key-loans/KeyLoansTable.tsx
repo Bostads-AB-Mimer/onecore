@@ -6,41 +6,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableEmptyState,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-  Undo2,
-  User,
-  FileText,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-} from 'lucide-react'
-import {
-  KeyLoan,
-  KeyLoanWithDetails,
-  Key,
-  LoanTypeLabels,
-} from '@/services/types'
+import { Undo2, User, FileText } from 'lucide-react'
+import { KeyLoan, KeyLoanWithDetails, Key } from '@/services/types'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { keyService } from '@/services/api/keyService'
-import { MaintenanceKeysTable } from '@/components/maintenance/MaintenanceKeysTable'
+import { KeysList } from '@/components/shared/tables/KeysList'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter-dropdown'
+import { useExpandableRows } from '@/hooks/useExpandableRows'
+import { ExpandButton } from '@/components/shared/tables/ExpandButton'
+import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
+import { ActionMenu } from '@/components/shared/tables/ActionMenu'
+import {
+  LoanTypeBadge,
+  LoanStatusBadge,
+} from '@/components/shared/tables/StatusBadges'
+import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
 
 interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
@@ -101,14 +90,75 @@ export function KeyLoansTable({
   returnedDateFilter,
   onReturnedDateChange,
 }: KeyLoansTableProps) {
-  const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null)
-  const [loanDetails, setLoanDetails] = useState<KeyLoanWithDetails | null>(
-    null
-  )
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [contactNames, setContactNames] = useState<Record<string, string>>({})
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [returnDialogOpen, setReturnDialogOpen] = useState(false)
+
+  interface LoanExpandedData {
+    loanDetails: KeyLoanWithDetails
+    keySystemMap: Record<string, string>
+  }
+
+  const expansion = useExpandableRows<LoanExpandedData>({
+    onExpand: async (loanId) => {
+      const loan = await keyLoanService.get(loanId)
+
+      // Parse key IDs and fetch key details
+      let keyIds: string[] = []
+      try {
+        keyIds = JSON.parse(loan.keys || '[]')
+      } catch {
+        keyIds = []
+      }
+
+      // Fetch all keys for this loan
+      const keysArray: Key[] = []
+      for (const keyId of keyIds) {
+        try {
+          const key = await keyService.getKey(keyId)
+          keysArray.push(key)
+        } catch (error) {
+          console.error(`Failed to fetch key ${keyId}:`, error)
+        }
+      }
+
+      // Create KeyLoanWithDetails object
+      const loanDetails: KeyLoanWithDetails = {
+        ...loan,
+        keysArray,
+        keyCardsArray: [],
+        receipts: [],
+      }
+
+      // Build key system map for this loan's keys
+      const uniqueKeySystemIds = [
+        ...new Set(
+          keysArray
+            .map((k) => k.keySystemId)
+            .filter((id): id is string => id != null && id !== '')
+        ),
+      ]
+
+      const systemMap: Record<string, string> = {}
+      if (uniqueKeySystemIds.length > 0) {
+        await Promise.all(
+          uniqueKeySystemIds.map(async (id) => {
+            try {
+              const keySystem = await keyService.getKeySystem(id)
+              systemMap[id] = keySystem.systemCode
+            } catch (error) {
+              console.error(`Failed to fetch key system ${id}:`, error)
+            }
+          })
+        )
+      }
+
+      // Update the component-level keySystemMap for MaintenanceKeysTable
+      setKeySystemMap((prev) => ({ ...prev, ...systemMap }))
+
+      return { loanDetails, keySystemMap: systemMap }
+    },
+  })
 
   // Fetch contact names for all loans
   useEffect(() => {
@@ -150,78 +200,6 @@ export function KeyLoansTable({
     }
   }, [keyLoans])
 
-  const handleToggleExpand = async (loanId: string) => {
-    if (expandedLoanId === loanId) {
-      // Collapse if already expanded
-      setExpandedLoanId(null)
-      setLoanDetails(null)
-    } else {
-      // Expand and load loan details with keys
-      setExpandedLoanId(loanId)
-      setIsLoadingDetails(true)
-      try {
-        const loan = await keyLoanService.get(loanId)
-
-        // Parse key IDs and fetch key details
-        let keyIds: string[] = []
-        try {
-          keyIds = JSON.parse(loan.keys || '[]')
-        } catch {
-          keyIds = []
-        }
-
-        // Fetch all keys for this loan
-        const keysArray: Key[] = []
-        for (const keyId of keyIds) {
-          try {
-            const key = await keyService.getKey(keyId)
-            keysArray.push(key)
-          } catch (error) {
-            console.error(`Failed to fetch key ${keyId}:`, error)
-          }
-        }
-
-        // Create KeyLoanWithDetails object
-        const loanWithDetails: KeyLoanWithDetails = {
-          ...loan,
-          keysArray,
-          receipts: [],
-        }
-
-        setLoanDetails(loanWithDetails)
-
-        // Build key system map for this loan's keys
-        const uniqueKeySystemIds = [
-          ...new Set(
-            keysArray
-              .map((k) => k.keySystemId)
-              .filter((id): id is string => id != null && id !== '')
-          ),
-        ]
-
-        if (uniqueKeySystemIds.length > 0) {
-          const systemMap: Record<string, string> = {}
-          await Promise.all(
-            uniqueKeySystemIds.map(async (id) => {
-              try {
-                const keySystem = await keyService.getKeySystem(id)
-                systemMap[id] = keySystem.systemCode
-              } catch (error) {
-                console.error(`Failed to fetch key system ${id}:`, error)
-              }
-            })
-          )
-          setKeySystemMap(systemMap)
-        }
-      } catch (error) {
-        console.error('Failed to load loan details:', error)
-        setLoanDetails(null)
-      } finally {
-        setIsLoadingDetails(false)
-      }
-    }
-  }
-
   const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return '-'
     const d = typeof date === 'string' ? new Date(date) : date
@@ -257,12 +235,12 @@ export function KeyLoansTable({
   return (
     <>
       {/* Return dialog for maintenance loans */}
-      {loanDetails && expandedLoanId && (
+      {expansion.loadedData && expansion.expandedId && (
         <ReturnMaintenanceKeysDialog
           open={returnDialogOpen}
           onOpenChange={setReturnDialogOpen}
-          keyIds={loanDetails.keysArray.map((k) => k.id)}
-          allKeys={loanDetails.keysArray}
+          keyIds={expansion.loadedData.loanDetails.keysArray.map((k) => k.id)}
+          allKeys={expansion.loadedData.loanDetails.keysArray}
           onSuccess={() => {
             setReturnDialogOpen(false)
             onRefresh?.()
@@ -270,272 +248,198 @@ export function KeyLoansTable({
         />
       )}
 
-      <div className="border rounded-lg">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-transparent border-border">
               <TableHead className="w-[50px]"></TableHead>
               <TableHead>Kontakt</TableHead>
-              <TableHead className="font-medium">
-                <div className="flex items-center gap-1">
-                  Lånetyp
-                  <FilterDropdown
-                    options={[
-                      { label: 'Hyresgäst', value: 'TENANT' },
-                      { label: 'Underhåll', value: 'MAINTENANCE' },
-                    ]}
-                    selectedValue={loanTypeFilter}
-                    onSelectionChange={onLoanTypeFilterChange}
-                  />
-                </div>
-              </TableHead>
-              <TableHead className="font-medium">
-                <div className="flex items-center gap-1">
-                  Antal nycklar
-                  <NumberRangeFilterDropdown
-                    minValue={minKeys}
-                    maxValue={maxKeys}
-                    onRangeChange={onKeyCountChange}
-                    minLabel="Minst antal nycklar"
-                    maxLabel="Max antal nycklar"
-                  />
-                </div>
-              </TableHead>
-              <TableHead className="font-medium">
-                <div className="flex items-center gap-1">
-                  Status
-                  <DualNullableFilterDropdown
-                    label1="Upphämtat"
-                    label2="Återlämnat"
-                    value1={{ hasValue: pickedUpDateFilter.hasValue }}
-                    value2={{ hasValue: returnedDateFilter.hasValue }}
-                    onChange1={(value) =>
-                      onPickedUpDateChange({
-                        hasValue: value.hasValue,
-                        after: null,
-                        before: null,
-                      })
-                    }
-                    onChange2={(value) =>
-                      onReturnedDateChange({
-                        hasValue: value.hasValue,
-                        after: null,
-                        before: null,
-                      })
-                    }
-                  />
-                </div>
-              </TableHead>
-              <TableHead className="font-medium">
-                <div className="flex items-center gap-1">
-                  Skapad
-                  <DateRangeFilterDropdown
-                    afterDate={createdAtAfter}
-                    beforeDate={createdAtBefore}
-                    onDatesChange={onCreatedAtDateChange}
-                  />
-                </div>
-              </TableHead>
-              <TableHead className="font-medium">
-                <div className="flex items-center gap-1">
-                  Upphämtat
-                  <DateRangeFilterDropdown
-                    afterDate={pickedUpDateFilter.after}
-                    beforeDate={pickedUpDateFilter.before}
-                    onDatesChange={(after, before) =>
-                      onPickedUpDateChange({
-                        hasValue: pickedUpDateFilter.hasValue,
-                        after,
-                        before,
-                      })
-                    }
-                  />
-                </div>
-              </TableHead>
-              <TableHead className="font-medium">
-                <div className="flex items-center gap-1">
-                  Återlämnat
-                  <DateRangeFilterDropdown
-                    afterDate={returnedDateFilter.after}
-                    beforeDate={returnedDateFilter.before}
-                    onDatesChange={(after, before) =>
-                      onReturnedDateChange({
-                        hasValue: returnedDateFilter.hasValue,
-                        after,
-                        before,
-                      })
-                    }
-                  />
-                </div>
-              </TableHead>
+              <FilterableTableHeader label="Lånetyp">
+                <FilterDropdown
+                  options={[
+                    { label: 'Hyresgäst', value: 'TENANT' },
+                    { label: 'Underhåll', value: 'MAINTENANCE' },
+                  ]}
+                  selectedValue={loanTypeFilter}
+                  onSelectionChange={onLoanTypeFilterChange}
+                />
+              </FilterableTableHeader>
+              <FilterableTableHeader label="Antal nycklar">
+                <NumberRangeFilterDropdown
+                  minValue={minKeys}
+                  maxValue={maxKeys}
+                  onRangeChange={onKeyCountChange}
+                  minLabel="Minst antal nycklar"
+                  maxLabel="Max antal nycklar"
+                />
+              </FilterableTableHeader>
+              <FilterableTableHeader label="Status">
+                <DualNullableFilterDropdown
+                  label1="Upphämtat"
+                  label2="Återlämnat"
+                  value1={{ hasValue: pickedUpDateFilter.hasValue }}
+                  value2={{ hasValue: returnedDateFilter.hasValue }}
+                  onChange1={(value) =>
+                    onPickedUpDateChange({
+                      hasValue: value.hasValue,
+                      after: null,
+                      before: null,
+                    })
+                  }
+                  onChange2={(value) =>
+                    onReturnedDateChange({
+                      hasValue: value.hasValue,
+                      after: null,
+                      before: null,
+                    })
+                  }
+                />
+              </FilterableTableHeader>
+              <FilterableTableHeader label="Skapad">
+                <DateRangeFilterDropdown
+                  afterDate={createdAtAfter}
+                  beforeDate={createdAtBefore}
+                  onDatesChange={onCreatedAtDateChange}
+                />
+              </FilterableTableHeader>
+              <FilterableTableHeader label="Upphämtat">
+                <DateRangeFilterDropdown
+                  afterDate={pickedUpDateFilter.after}
+                  beforeDate={pickedUpDateFilter.before}
+                  onDatesChange={(after, before) =>
+                    onPickedUpDateChange({
+                      hasValue: pickedUpDateFilter.hasValue,
+                      after,
+                      before,
+                    })
+                  }
+                />
+              </FilterableTableHeader>
+              <FilterableTableHeader label="Återlämnat">
+                <DateRangeFilterDropdown
+                  afterDate={returnedDateFilter.after}
+                  beforeDate={returnedDateFilter.before}
+                  onDatesChange={(after, before) =>
+                    onReturnedDateChange({
+                      hasValue: returnedDateFilter.hasValue,
+                      after,
+                      before,
+                    })
+                  }
+                />
+              </FilterableTableHeader>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24">
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : keyLoans.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={9}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Inga nyckellån hittades
-                </TableCell>
-              </TableRow>
+            {isLoading || keyLoans.length === 0 ? (
+              <TableEmptyState
+                colSpan={9}
+                isLoading={isLoading}
+                message="Inga nyckellån hittades"
+              />
             ) : (
               keyLoans.map((loan) => {
-                const isExpanded = expandedLoanId === loan.id
+                const isExpanded = expansion.isExpanded(loan.id)
+                const isLoadingThis = expansion.isLoading && expansion.expandedId === loan.id
                 const keyCount = getKeyCount(loan.keys)
                 const isPickedUp = !!loan.pickedUpAt
                 const isReturned = !!loan.returnedAt
                 const isActive = isPickedUp && !isReturned
 
-                // Determine status
-                let statusBadge
-                if (isReturned) {
-                  statusBadge = <Badge variant="secondary">Återlämnad</Badge>
-                } else if (isPickedUp) {
-                  statusBadge = (
-                    <Badge variant="default" className="bg-green-600">
-                      Aktiv
-                    </Badge>
-                  )
-                } else {
-                  statusBadge = (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      Ej upphämtad
-                    </Badge>
-                  )
-                }
-
                 return (
                   <React.Fragment key={loan.id}>
                     {/* Main loan row */}
-                    <TableRow>
+                    <TableRow className="hover:bg-muted/50">
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleExpand(loan.id)}
-                          className="h-8 w-8 p-0"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <ExpandButton
+                          isExpanded={isExpanded}
+                          isLoading={isLoadingThis}
+                          onClick={() => expansion.toggle(loan.id)}
+                        />
                       </TableCell>
                       <TableCell className="font-medium">
                         {getContactDisplay(loan)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {LoanTypeLabels[loan.loanType]}
-                        </Badge>
+                        <LoanTypeBadge loanType={loan.loanType} />
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{keyCount}</Badge>
                       </TableCell>
-                      <TableCell>{statusBadge}</TableCell>
-                      <TableCell>{formatDate(loan.createdAt)}</TableCell>
-                      <TableCell>{formatDate(loan.pickedUpAt)}</TableCell>
-                      <TableCell>{formatDate(loan.returnedAt)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit?.(loan)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Redigera
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onDelete?.(loan)}
-                              disabled={isActive}
-                              className={
-                                isActive
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : 'text-destructive'
-                              }
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Ta bort
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <LoanStatusBadge loan={loan} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(loan.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(loan.pickedUpAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(loan.returnedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <ActionMenu
+                          onEdit={() => onEdit?.(loan)}
+                          onDelete={isActive ? undefined : () => onDelete?.(loan)}
+                        />
                       </TableCell>
                     </TableRow>
 
                     {/* Expanded keys section */}
                     {isExpanded && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="p-6 bg-muted/30">
-                          {isLoadingDetails ? (
-                            <div className="flex items-center justify-center py-8">
-                              <Loader2 className="h-6 w-6 animate-spin" />
-                            </div>
-                          ) : !loanDetails ? (
-                            <div className="text-center text-muted-foreground py-8">
-                              Inga nycklar i detta lån
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {/* Contact info and Action buttons */}
-                              <div className="flex items-start justify-between gap-4">
-                                {/* Left: Contact Person and Description */}
-                                <div className="flex-1 space-y-1.5">
-                                  {loanDetails.contactPerson && (
-                                    <div className="flex items-center gap-2">
-                                      <User className="h-4 w-4 text-muted-foreground" />
-                                      <span className="font-medium">
-                                        {loanDetails.contactPerson}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {loanDetails.description && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <FileText className="h-4 w-4" />
-                                      <span>{loanDetails.description}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Right: Action buttons */}
+                      <ExpandedRowContent
+                        colSpan={9}
+                        isLoading={expansion.isLoading}
+                        hasData={!!expansion.loadedData}
+                        emptyMessage="Inga nycklar i detta lån"
+                        className="p-0"
+                      >
+                        <div className="space-y-4">
+                          {/* Contact info and Action buttons */}
+                          <div className="flex items-start justify-between gap-4">
+                            {/* Left: Contact Person and Description */}
+                            <div className="flex-1 space-y-1.5">
+                              {expansion.loadedData?.loanDetails.contactPerson && (
                                 <div className="flex items-center gap-2">
-                                  {/* Return button - only show for active loans */}
-                                  {isActive && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setReturnDialogOpen(true)}
-                                    >
-                                      <Undo2 className="h-4 w-4 mr-1" />
-                                      Återlämna
-                                    </Button>
-                                  )}
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">
+                                    {expansion.loadedData.loanDetails.contactPerson}
+                                  </span>
                                 </div>
-                              </div>
-
-                              {/* Keys table */}
-                              <MaintenanceKeysTable
-                                keys={loanDetails.keysArray}
-                                keySystemMap={keySystemMap}
-                              />
+                              )}
+                              {expansion.loadedData?.loanDetails.description && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <FileText className="h-4 w-4" />
+                                  <span>{expansion.loadedData.loanDetails.description}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
+
+                            {/* Right: Action buttons */}
+                            <div className="flex items-center gap-2">
+                              {/* Return button - only show for active loans */}
+                              {isActive && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setReturnDialogOpen(true)}
+                                >
+                                  <Undo2 className="h-4 w-4 mr-1" />
+                                  Återlämna
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Keys table */}
+                          <KeysList
+                            keys={expansion.loadedData?.loanDetails.keysArray || []}
+                            keySystemMap={keySystemMap}
+                          />
+                        </div>
+                      </ExpandedRowContent>
                     )}
                   </React.Fragment>
                 )

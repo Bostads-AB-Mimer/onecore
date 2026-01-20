@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom'
-import { TableCell, TableHead, TableRow } from '@/components/ui/table'
+import { TableCell, TableHead, TableRow, TableLink } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CollapsibleGroupTable } from './tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from './tables/DefaultLoanHeader'
@@ -94,14 +93,11 @@ export function KeyBundleKeysList({
             </TableCell>
           )}
           <TableCell
-            className={`font-medium w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}
+            className={`w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}
           >
-            <Link
-              to={getKeyUrl(key)}
-              className="font-medium text-sm text-blue-600 hover:text-blue-800 hover:underline"
-            >
+            <TableLink to={getKeyUrl(key)}>
               {key.keyName}
-            </Link>
+            </TableLink>
           </TableCell>
           <TableCell className="w-[6%]">{key.keySequenceNumber ?? '-'}</TableCell>
           <TableCell className="w-[6%]">{key.flexNumber ?? '-'}</TableCell>
