@@ -37,3 +37,26 @@ export type { ActionMenuProps } from './ActionMenu'
 
 export { DefaultLoanHeader } from './DefaultLoanHeader'
 export type { DefaultLoanHeaderProps } from './DefaultLoanHeader'
+
+// Status Badges
+export {
+  LoanStatusBadge,
+  KeyTypeBadge,
+  KeyEventBadge,
+  DisposedBadge,
+  KeyStatusBadge,
+  CardStatusBadge,
+  PickupAvailabilityBadge,
+  ItemTypeBadge,
+  ItemDisposedBadge,
+  getLoanStatusType,
+  getKeyEventDisplayLabel,
+  isActiveKeyEvent,
+  getLatestActiveEvent,
+  getPickupAvailability,
+} from './StatusBadges'
+export type {
+  LoanStatusType,
+  PickupAvailabilityType,
+  PickupAvailabilityStatus,
+} from './StatusBadges'

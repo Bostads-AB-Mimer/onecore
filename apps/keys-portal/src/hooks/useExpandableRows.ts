@@ -1,62 +1,22 @@
 import { useState, useCallback } from 'react'
 
 export interface UseExpandableRowsOptions<T> {
-  /**
-   * Async function called when a row is expanded.
-   * The returned data is stored and available via `loadedData`.
-   */
   onExpand?: (id: string) => Promise<T>
-  /**
-   * If true (default), only one row can be expanded at a time.
-   * Expanding a new row will collapse the previous one.
-   */
-  singleExpanded?: boolean
+  singleExpanded?: boolean // default true - only one row expanded at a time
 }
 
 export interface UseExpandableRowsReturn<T> {
-  /** ID of the currently expanded row (single mode) */
   expandedId: string | null
-  /** Set of expanded IDs (multi mode) */
   expandedIds: Set<string>
-  /** Whether data is currently being loaded */
   isLoading: boolean
-  /** The data returned from onExpand for the current expanded row */
   loadedData: T | null
-  /** Toggle expand/collapse for a row */
   toggle: (id: string) => void
-  /** Expand a specific row */
   expand: (id: string) => void
-  /** Collapse a specific row, or all if no id provided */
   collapse: (id?: string) => void
-  /** Check if a row is expanded */
   isExpanded: (id: string) => boolean
 }
 
-/**
- * Hook for managing expandable table rows with async data loading.
- *
- * @example
- * ```tsx
- * const expansion = useExpandableRows({
- *   onExpand: async (keyId) => {
- *     const [loans, bundles] = await Promise.all([
- *       keyLoanService.getByKeyId(keyId),
- *       getKeyBundlesByKeyId(keyId),
- *     ])
- *     return { loans, bundles }
- *   }
- * })
- *
- * // In render:
- * <Button onClick={() => expansion.toggle(key.id)}>
- *   {expansion.isExpanded(key.id) ? <ChevronDown /> : <ChevronRight />}
- * </Button>
- *
- * {expansion.isExpanded(key.id) && (
- *   expansion.isLoading ? <Loader /> : <Details data={expansion.loadedData} />
- * )}
- * ```
- */
+/** Hook for managing expandable table rows with async data loading */
 export function useExpandableRows<T = unknown>(
   options: UseExpandableRowsOptions<T> = {}
 ): UseExpandableRowsReturn<T> {

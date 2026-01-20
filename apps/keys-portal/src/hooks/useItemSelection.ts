@@ -1,58 +1,24 @@
 import { useState, useCallback, useMemo } from 'react'
 
 export interface UseItemSelectionOptions {
-  /** Initial selection state */
   initialSelection?: string[]
-  /** Callback when selection changes */
   onSelectionChange?: (selectedIds: string[]) => void
 }
 
 export interface UseItemSelectionReturn {
-  /** Array of currently selected IDs */
   selectedIds: string[]
-  /** Check if an item is selected */
   isSelected: (id: string) => boolean
-  /** Toggle selection for a single item */
   toggle: (id: string) => void
-  /** Select a single item */
   select: (id: string) => void
-  /** Deselect a single item */
   deselect: (id: string) => void
-  /** Select multiple items at once */
   selectAll: (ids: string[]) => void
-  /** Clear all selections */
   deselectAll: () => void
-  /** Toggle selection for all provided IDs (select if none selected, deselect if all selected) */
   toggleAll: (ids: string[]) => void
-  /** Check if all provided IDs are selected */
   areAllSelected: (ids: string[]) => boolean
-  /** Check if some (but not all) of the provided IDs are selected */
   areSomeSelected: (ids: string[]) => boolean
 }
 
-/**
- * Hook for managing item selection state in tables.
- *
- * @example
- * ```tsx
- * const selection = useItemSelection({
- *   onSelectionChange: (ids) => console.log('Selected:', ids)
- * })
- *
- * // In render:
- * <Checkbox
- *   checked={selection.isSelected(item.id)}
- *   onCheckedChange={() => selection.toggle(item.id)}
- * />
- *
- * // Select all header checkbox:
- * <Checkbox
- *   checked={selection.areAllSelected(allItemIds)}
- *   indeterminate={selection.areSomeSelected(allItemIds)}
- *   onCheckedChange={() => selection.toggleAll(allItemIds)}
- * />
- * ```
- */
+/** Hook for managing item selection state in tables */
 export function useItemSelection(
   options: UseItemSelectionOptions = {}
 ): UseItemSelectionReturn {

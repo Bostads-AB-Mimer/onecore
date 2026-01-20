@@ -1,8 +1,6 @@
 import { useMemo, useEffect, useState } from 'react'
-import type { KeyDetails, Contact } from '@/services/types'
-import { groupAndSortKeys, type GroupedKeys } from '@/utils/groupKeys'
-import { getActiveLoan } from '@/utils/loanHelpers'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { KeyDetails } from '@/services/types'
+import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
@@ -17,22 +15,29 @@ import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
 
 interface KeyBundleKeysTableProps {
   keys: KeyDetails[]
-  bundleName: string
   bundleId: string
   onRefresh: () => void
 }
 
 export function KeyBundleKeysTable({
   keys,
-  bundleName,
   bundleId,
   onRefresh,
 }: KeyBundleKeysTableProps) {
   const { toast } = useToast()
-  const grouped = useMemo(() => groupAndSortKeys(keys), [keys])
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({})
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+
+  // Split keys into disposed and non-disposed
+  const nonDisposedKeys = useMemo(
+    () => keys.filter((k) => !k.disposed),
+    [keys]
+  )
+  const disposedKeys = useMemo(
+    () => keys.filter((k) => k.disposed),
+    [keys]
+  )
 
   // Dialog states
   const [showReturnDialog, setShowReturnDialog] = useState(false)
@@ -45,12 +50,12 @@ export function KeyBundleKeysTable({
     const fetchCompanyNames = async () => {
       const uniqueCompanyCodes = new Set<string>()
 
-      // Collect all unique contact codes from loaned keys
-      grouped.nonDisposed.loaned.forEach((contactGroup) => {
-        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
-      })
-      grouped.disposed.loaned.forEach((contactGroup) => {
-        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
+      // Collect all unique contact codes from keys with any loan (active or previous)
+      keys.forEach((key) => {
+        const latestLoan = getLatestLoan(key)
+        if (latestLoan?.contact) {
+          uniqueCompanyCodes.add(latestLoan.contact)
+        }
       })
 
       // Fetch contact info for each company code
@@ -73,23 +78,18 @@ export function KeyBundleKeysTable({
     }
 
     fetchCompanyNames()
-  }, [grouped])
+  }, [keys])
 
   if (keys.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          Inga nycklar i denna nyckelsamling
-        </CardContent>
-      </Card>
+      <p className="py-8 text-center text-muted-foreground">
+        Inga nycklar i denna nyckelsamling
+      </p>
     )
   }
 
-  const hasNonDisposed =
-    grouped.nonDisposed.loaned.length > 0 ||
-    grouped.nonDisposed.unloaned.length > 0
-  const hasDisposed =
-    grouped.disposed.loaned.length > 0 || grouped.disposed.unloaned.length > 0
+  const hasNonDisposed = nonDisposedKeys.length > 0
+  const hasDisposed = disposedKeys.length > 0
 
   // Get selected keys data
   const selectedKeysData = keys.filter((k) => selectedKeys.includes(k.id))
@@ -161,106 +161,98 @@ export function KeyBundleKeysTable({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Nycklar i {bundleName}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Totalt {keys.length} nycklar
-        </p>
+    <>
+      {/* Action buttons */}
+      <div className="mb-4">
+        <KeyActionButtons
+          selectedCount={selectedKeys.length}
+          isProcessing={isProcessing}
+          loanAction={
+            loanableKeys.length > 0
+              ? {
+                  label: 'Låna ut',
+                  count: loanableKeys.length,
+                  onClick: () => setShowLoanDialog(true),
+                }
+              : undefined
+          }
+          returnAction={
+            returnableKeys.length > 0
+              ? {
+                  label: 'Återlämna',
+                  count: returnableKeys.length,
+                  onClick: () => setShowReturnDialog(true),
+                }
+              : undefined
+          }
+          flexAction={{
+            label: 'Flex',
+            onClick: () => setShowFlexMenu(true),
+          }}
+          disposeAction={{
+            label: 'Kassera',
+            onClick: handleDispose,
+          }}
+          customActions={[
+            {
+              label: 'Ta bort från samling',
+              variant: 'outline',
+              icon: <Minus className="h-3 w-3" />,
+              onClick: handleRemoveFromBundle,
+            },
+          ]}
+        />
+      </div>
 
-        {/* Action buttons */}
-        <div className="pt-3">
-          <KeyActionButtons
-            selectedCount={selectedKeys.length}
-            isProcessing={isProcessing}
-            loanAction={
-              loanableKeys.length > 0
-                ? {
-                    label: 'Låna ut',
-                    count: loanableKeys.length,
-                    onClick: () => setShowLoanDialog(true),
-                  }
-                : undefined
-            }
-            returnAction={
-              returnableKeys.length > 0
-                ? {
-                    label: 'Återlämna',
-                    count: returnableKeys.length,
-                    onClick: () => setShowReturnDialog(true),
-                  }
-                : undefined
-            }
-            flexAction={{
-              label: 'Flex',
-              onClick: () => setShowFlexMenu(true),
-            }}
-            disposeAction={{
-              label: 'Kassera',
-              onClick: handleDispose,
-            }}
-            customActions={[
-              {
-                label: 'Ta bort från samling',
-                variant: 'outline',
-                icon: <Minus className="h-3 w-3" />,
-                onClick: handleRemoveFromBundle,
-              },
-            ]}
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Aktiva nycklar table */}
-          {hasNonDisposed && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-green-600">
-                Aktiva nycklar
-              </h3>
-              <KeyBundleKeysList
-                group={grouped.nonDisposed}
-                companyNames={companyNames}
-                selectable={true}
-                selectedKeys={selectedKeys}
-                onKeySelectionChange={(keyId, checked) => {
-                  setSelectedKeys((prev) =>
-                    checked
-                      ? [...prev, keyId]
-                      : prev.filter((id) => id !== keyId)
-                  )
-                }}
-              />
-            </div>
-          )}
+      <div className="space-y-6">
+        {/* Aktiva nycklar table */}
+        {hasNonDisposed && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-green-600">
+              Aktiva nycklar
+            </h3>
+            <KeyBundleKeysList
+              keys={nonDisposedKeys}
+              companyNames={companyNames}
+              selectable={true}
+              selectedKeys={selectedKeys}
+              onKeySelectionChange={(keyId, checked) => {
+                setSelectedKeys((prev) =>
+                  checked
+                    ? [...prev, keyId]
+                    : prev.filter((id) => id !== keyId)
+                )
+              }}
+            />
+          </div>
+        )}
 
-          {/* Kasserade nycklar table */}
-          {hasDisposed ? (
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
-                Kasserade nycklar
-              </h3>
-              <KeyBundleKeysList
-                group={grouped.disposed}
-                companyNames={companyNames}
-                selectable={true}
-                selectedKeys={selectedKeys}
-                onKeySelectionChange={(keyId, checked) => {
-                  setSelectedKeys((prev) =>
-                    checked
-                      ? [...prev, keyId]
-                      : prev.filter((id) => id !== keyId)
-                  )
-                }}
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground py-4">
-              Inga kasserade nycklar
-            </p>
-          )}
-        </div>
-      </CardContent>
+        {/* Kasserade nycklar table */}
+        {hasDisposed ? (
+          <div>
+            <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
+              Kasserade nycklar
+            </h3>
+            <KeyBundleKeysList
+              keys={disposedKeys}
+              companyNames={companyNames}
+              selectable={true}
+              selectedKeys={selectedKeys}
+              onKeySelectionChange={(keyId, checked) => {
+                setSelectedKeys((prev) =>
+                  checked
+                    ? [...prev, keyId]
+                    : prev.filter((id) => id !== keyId)
+                )
+              }}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground py-4">
+            Inga kasserade nycklar
+          </p>
+        )}
+      </div>
 
       {/* Dialogs */}
       <LoanMaintenanceKeysDialog
@@ -322,6 +314,6 @@ export function KeyBundleKeysTable({
         allKeys={keys}
         onSuccess={onRefresh}
       />
-    </Card>
+    </>
   )
 }

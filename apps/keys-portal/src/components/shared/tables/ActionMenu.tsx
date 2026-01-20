@@ -9,43 +9,15 @@ import {
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-react'
 
 export interface ActionMenuProps {
-  /** Callback when edit action is clicked */
   onEdit?: () => void
-  /** Callback when delete action is clicked */
   onDelete?: () => void
-  /** Custom label for edit action */
   editLabel?: string
-  /** Custom label for delete action */
   deleteLabel?: string
-  /** Additional menu items to render before edit/delete */
   extraItems?: React.ReactNode
-  /** Additional menu items to render after edit/delete */
   extraItemsAfter?: React.ReactNode
 }
 
-/**
- * A dropdown menu for table row actions (Edit, Delete, etc.).
- * Provides a consistent action menu pattern across all tables.
- *
- * @example
- * ```tsx
- * <ActionMenu
- *   onEdit={() => onEdit(item)}
- *   onDelete={() => onDelete(item.id)}
- * />
- *
- * // With extra items:
- * <ActionMenu
- *   onEdit={() => onEdit(item)}
- *   extraItems={
- *     <DropdownMenuItem onClick={() => onDownload(item)}>
- *       <Download className="h-4 w-4 mr-2" />
- *       Ladda ner
- *     </DropdownMenuItem>
- *   }
- * />
- * ```
- */
+/** Dropdown menu for table row actions (Edit, Delete, etc.) */
 export function ActionMenu({
   onEdit,
   onDelete,
@@ -54,7 +26,6 @@ export function ActionMenu({
   extraItems,
   extraItemsAfter,
 }: ActionMenuProps) {
-  // Don't render if no actions are provided
   if (!onEdit && !onDelete && !extraItems && !extraItemsAfter) {
     return null
   }

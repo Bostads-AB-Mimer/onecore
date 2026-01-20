@@ -432,63 +432,72 @@ export default function MaintenanceKeys() {
                   Laddar nycklar...
                 </div>
               ) : (
-                <KeyBundleKeysTable
-                  keys={bundleKeys}
-                  bundleName={searchResult.bundle.name}
-                  bundleId={searchResult.bundle.id}
-                  onRefresh={async () => {
-                    try {
-                      setBundleKeysLoading(true)
-                      const data = await getKeyBundleDetails(
-                        searchResult.bundle!.id,
-                        {
-                          includeLoans: true,
-                          includeEvents: true,
-                          includeKeySystem: true,
-                        }
-                      )
-                      if (data) {
-                        setBundleKeys(data.keys)
-
-                        // Fetch key systems for the keys
-                        const uniqueKeySystemIds = [
-                          ...new Set(
-                            data.keys
-                              .map((k) => k.keySystemId)
-                              .filter(
-                                (id): id is string => id != null && id !== ''
-                              )
-                          ),
-                        ]
-
-                        if (uniqueKeySystemIds.length > 0) {
-                          const systemMap: Record<string, string> = {}
-                          await Promise.all(
-                            uniqueKeySystemIds.map(async (id) => {
-                              try {
-                                const keySystem =
-                                  await keyService.getKeySystem(id)
-                                systemMap[id] = keySystem.systemCode
-                              } catch (error) {
-                                console.error(
-                                  `Failed to fetch key system ${id}:`,
-                                  error
-                                )
-                              }
-                            })
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Nycklar i {searchResult.bundle.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Totalt {bundleKeys.length} nycklar
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <KeyBundleKeysTable
+                      keys={bundleKeys}
+                      bundleId={searchResult.bundle.id}
+                      onRefresh={async () => {
+                        try {
+                          setBundleKeysLoading(true)
+                          const data = await getKeyBundleDetails(
+                            searchResult.bundle!.id,
+                            {
+                              includeLoans: true,
+                              includeEvents: true,
+                              includeKeySystem: true,
+                            }
                           )
-                          setKeySystemMap(systemMap)
-                        } else {
-                          setKeySystemMap({})
+                          if (data) {
+                            setBundleKeys(data.keys)
+
+                            // Fetch key systems for the keys
+                            const uniqueKeySystemIds = [
+                              ...new Set(
+                                data.keys
+                                  .map((k) => k.keySystemId)
+                                  .filter(
+                                    (id): id is string => id != null && id !== ''
+                                  )
+                              ),
+                            ]
+
+                            if (uniqueKeySystemIds.length > 0) {
+                              const systemMap: Record<string, string> = {}
+                              await Promise.all(
+                                uniqueKeySystemIds.map(async (id) => {
+                                  try {
+                                    const keySystem =
+                                      await keyService.getKeySystem(id)
+                                    systemMap[id] = keySystem.systemCode
+                                  } catch (error) {
+                                    console.error(
+                                      `Failed to fetch key system ${id}:`,
+                                      error
+                                    )
+                                  }
+                                })
+                              )
+                              setKeySystemMap(systemMap)
+                            } else {
+                              setKeySystemMap({})
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Error refetching bundle keys:', error)
+                        } finally {
+                          setBundleKeysLoading(false)
                         }
-                      }
-                    } catch (error) {
-                      console.error('Error refetching bundle keys:', error)
-                    } finally {
-                      setBundleKeysLoading(false)
-                    }
-                  }}
-                />
+                      }}
+                    />
+                  </CardContent>
+                </Card>
               ))}
 
             {/* Loading State */}

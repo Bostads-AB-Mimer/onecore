@@ -21,8 +21,7 @@ import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { KeyLoanTransferDialog } from './dialogs/KeyLoanTransferDialog'
 import { ReturnKeysDialog } from './dialogs/ReturnKeysDialog'
-import { LeaseKeyTableList } from './LeaseKeyTableList'
-import { LeaseCardTableList } from './LeaseCardTableList'
+import { LeaseItemsList } from './LeaseItemsList'
 
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
@@ -357,38 +356,24 @@ export function LeaseKeyStatusList({
           />
         )}
 
-        {/* Keys table */}
-        <LeaseKeyTableList
+        {/* Keys and cards table */}
+        <LeaseItemsList
           keys={visibleKeys}
-          tenantContactCodes={tenantContactCodes}
+          cards={cards}
           selectable={true}
           selectedKeys={selectedKeys}
+          selectedCards={selectedCards}
           onKeySelectionChange={(keyId, checked) => {
             setSelectedKeys((prev) =>
               checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
             )
           }}
+          onCardSelectionChange={(cardId, checked) => {
+            setSelectedCards((prev) =>
+              checked ? [...prev, cardId] : prev.filter((id) => id !== cardId)
+            )
+          }}
         />
-
-        {/* Cards table */}
-        {cards.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium mb-2">Droppar</h3>
-            <LeaseCardTableList
-              cards={cards}
-              tenantContactCodes={tenantContactCodes}
-              selectable={true}
-              selectedCards={selectedCards}
-              onCardSelectionChange={(cardId, checked) => {
-                setSelectedCards((prev) =>
-                  checked
-                    ? [...prev, cardId]
-                    : prev.filter((id) => id !== cardId)
-                )
-              }}
-            />
-          </div>
-        )}
       </div>
 
       <ReceiptDialog

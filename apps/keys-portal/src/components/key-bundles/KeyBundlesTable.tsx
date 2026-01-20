@@ -1,4 +1,3 @@
-import React, { useMemo, useEffect, useState } from 'react'
 import {
   Table,
   TableBody,
@@ -24,9 +23,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { KeyBundle, KeyDetails } from '@/services/types'
-import { groupAndSortKeys } from '@/utils/groupKeys'
-import { fetchContactByContactCode } from '@/services/api/contactService'
-import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
+import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 
 interface KeyBundlesTableProps {
   keyBundles: KeyBundle[]
@@ -37,6 +34,7 @@ interface KeyBundlesTableProps {
   keysForExpandedBundle: KeyDetails[]
   isLoadingKeys: boolean
   isLoading: boolean
+  onRefresh: () => void
 }
 
 export function KeyBundlesTable({
@@ -48,58 +46,8 @@ export function KeyBundlesTable({
   keysForExpandedBundle,
   isLoadingKeys,
   isLoading,
+  onRefresh,
 }: KeyBundlesTableProps) {
-  const [companyNames, setCompanyNames] = useState<Record<string, string>>({})
-
-  // Group keys when expanded
-  const grouped = useMemo(
-    () => groupAndSortKeys(keysForExpandedBundle),
-    [keysForExpandedBundle]
-  )
-
-  // Fetch company names for loaned keys
-  useEffect(() => {
-    const fetchCompanyNames = async () => {
-      const uniqueCompanyCodes = new Set<string>()
-
-      // Collect all unique contact codes from loaned keys
-      grouped.nonDisposed.loaned.forEach((contactGroup) => {
-        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
-      })
-      grouped.disposed.loaned.forEach((contactGroup) => {
-        if (contactGroup.contact) uniqueCompanyCodes.add(contactGroup.contact)
-      })
-
-      // Fetch contact info for each company code
-      const names: Record<string, string> = {}
-      await Promise.all(
-        Array.from(uniqueCompanyCodes).map(async (companyCode) => {
-          const contact = await fetchContactByContactCode(companyCode)
-          if (contact) {
-            // Format: Name · Code · NationalRegistrationNumber
-            const parts = [contact.fullName, companyCode]
-            if (contact.nationalRegistrationNumber) {
-              parts.push(contact.nationalRegistrationNumber)
-            }
-            names[companyCode] = parts.join(' · ')
-          }
-        })
-      )
-
-      setCompanyNames(names)
-    }
-
-    if (expandedBundleId && keysForExpandedBundle.length > 0) {
-      fetchCompanyNames()
-    }
-  }, [grouped, expandedBundleId, keysForExpandedBundle])
-
-  const hasNonDisposed =
-    grouped.nonDisposed.loaned.length > 0 ||
-    grouped.nonDisposed.unloaned.length > 0
-  const hasDisposed =
-    grouped.disposed.loaned.length > 0 || grouped.disposed.unloaned.length > 0
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -188,46 +136,20 @@ export function KeyBundlesTable({
                   </TableCell>
                 </TableRow>
 
-                {/* Expanded keys section */}
+                {/* Expanded keys section - delegates to KeyBundleKeysTable */}
                 {isExpanded && (
                   <TableRow>
-                    <TableCell colSpan={5} className="p-6 bg-muted/30">
+                    <TableCell colSpan={5} className="p-4 bg-muted/30">
                       {isLoadingKeys ? (
                         <div className="flex items-center justify-center py-8">
                           <Loader2 className="h-6 w-6 animate-spin" />
                         </div>
-                      ) : keysForExpandedBundle.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-8">
-                          Inga nycklar i denna samling
-                        </div>
                       ) : (
-                        <div className="space-y-6">
-                          {/* Active keys */}
-                          {hasNonDisposed && (
-                            <div>
-                              <h3 className="text-lg font-semibold mb-3 text-green-600">
-                                Aktiva nycklar
-                              </h3>
-                              <KeyBundleKeysList
-                                group={grouped.nonDisposed}
-                                companyNames={companyNames}
-                              />
-                            </div>
-                          )}
-
-                          {/* Disposed keys */}
-                          {hasDisposed && (
-                            <div>
-                              <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
-                                Kasserade nycklar
-                              </h3>
-                              <KeyBundleKeysList
-                                group={grouped.disposed}
-                                companyNames={companyNames}
-                              />
-                            </div>
-                          )}
-                        </div>
+                        <KeyBundleKeysTable
+                          keys={keysForExpandedBundle}
+                          bundleId={bundle.id}
+                          onRefresh={onRefresh}
+                        />
                       )}
                     </TableCell>
                   </TableRow>
