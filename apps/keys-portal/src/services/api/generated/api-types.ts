@@ -228,15 +228,23 @@ export interface paths {
   };
   "/key-bundles": {
     /**
-     * List all key bundles
-     * @description Fetches a list of all key bundles ordered by name.
+     * List key bundles with pagination
+     * @description Fetches a paginated list of all key bundles ordered by name.
      */
     get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
       responses: {
-        /** @description A list of key bundles. */
+        /** @description A paginated list of key bundles. */
         200: {
           content: {
-            "application/json": {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
               content?: components["schemas"]["KeyBundle"][];
             };
           };
@@ -284,8 +292,8 @@ export interface paths {
   };
   "/key-bundles/search": {
     /**
-     * Search key bundles
-     * @description Search key bundles with flexible filtering.
+     * Search key bundles with pagination
+     * @description Search key bundles with flexible filtering and pagination.
      * - **OR search**: Use `q` with `fields` for multiple field search
      * - **AND search**: Use any KeyBundle field parameter for filtering
      * - Only one OR group is supported, but you can combine it with multiple AND filters
@@ -293,16 +301,20 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
           q?: string;
           /** @description Comma-separated list of fields for OR search. Defaults to name and description. */
           fields?: string;
         };
       };
       responses: {
-        /** @description Search results */
+        /** @description Paginated search results */
         200: {
           content: {
-            "application/json": {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
               content?: components["schemas"]["KeyBundle"][];
             };
           };

@@ -5,30 +5,48 @@ import type {
   BundleWithLoanedKeysInfo,
   CreateKeyBundleRequest,
   UpdateKeyBundleRequest,
+  PaginatedResponse,
 } from '../types'
 
 /**
- * Get all key bundles
+ * Get all key bundles with pagination
  */
-export async function getAllKeyBundles(): Promise<KeyBundle[]> {
-  const { data, error } = await GET('/key-bundles', {})
+export async function getAllKeyBundles(
+  page: number = 1,
+  limit: number = 60
+): Promise<PaginatedResponse<KeyBundle>> {
+  const { data, error } = await GET('/key-bundles', {
+    params: {
+      query: { page, limit },
+    },
+  })
 
   if (error) {
     throw new Error('Failed to fetch key bundles')
   }
 
-  return data?.content ?? []
+  return {
+    content: data?.content ?? [],
+    _meta: data?._meta ?? { totalRecords: 0, page: 1, limit: 60, count: 0 },
+    _links: data?._links ?? [],
+  }
 }
 
 /**
- * Search for key bundles by name
+ * Search for key bundles by name with pagination
  */
-export async function searchKeyBundles(query: string): Promise<KeyBundle[]> {
+export async function searchKeyBundles(
+  query: string,
+  page: number = 1,
+  limit: number = 60
+): Promise<PaginatedResponse<KeyBundle>> {
   const { data, error } = await GET('/key-bundles/search', {
     params: {
       query: {
         q: query,
         fields: 'name,description',
+        page,
+        limit,
       },
     },
   })
@@ -37,7 +55,11 @@ export async function searchKeyBundles(query: string): Promise<KeyBundle[]> {
     throw new Error('Failed to search key bundles')
   }
 
-  return data?.content ?? []
+  return {
+    content: data?.content ?? [],
+    _meta: data?._meta ?? { totalRecords: 0, page: 1, limit: 60, count: 0 },
+    _links: data?._links ?? [],
+  }
 }
 
 /**

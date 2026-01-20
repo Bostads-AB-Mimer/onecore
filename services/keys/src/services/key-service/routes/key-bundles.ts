@@ -6,12 +6,16 @@ import * as keyBundlesAdapter from '../adapters/key-bundles-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { buildSearchQuery } from '../../../utils/search-builder'
+import { paginate } from '../../../utils/pagination'
 
 const {
   KeyBundleSchema,
   BundleWithLoanedKeysInfoSchema,
   CreateKeyBundleRequestSchema,
   UpdateKeyBundleRequestSchema,
+  PaginationMetaSchema,
+  PaginationLinksSchema,
+  PaginatedResponseSchema,
 } = keys.v1
 type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
 type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
@@ -37,26 +41,46 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
   registerSchema('KeyBundle', KeyBundleSchema)
   registerSchema('BundleWithLoanedKeysInfo', BundleWithLoanedKeysInfoSchema)
+  registerSchema('PaginationMeta', PaginationMetaSchema)
+  registerSchema('PaginationLinks', PaginationLinksSchema)
+  registerSchema('PaginatedResponse', PaginatedResponseSchema)
 
   /**
    * @swagger
    * /key-bundles:
    *   get:
-   *     summary: List all key bundles
-   *     description: Fetches a list of all key bundles ordered by name.
+   *     summary: List key bundles with pagination
+   *     description: Fetches a paginated list of all key bundles ordered by name.
    *     tags: [Key Bundles]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: A list of key bundles.
+   *         description: A paginated list of key bundles.
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyBundle'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyBundle'
    *       500:
    *         description: An error occurred while listing key bundles.
    *         content:
@@ -71,9 +95,10 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-bundles', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const rows = await keyBundlesAdapter.getAllKeyBundles(db)
+      const query = keyBundlesAdapter.getAllKeyBundlesQuery(db)
+      const paginatedResult = await paginate(query, ctx)
       ctx.status = 200
-      ctx.body = { content: rows satisfies KeyBundleResponse[], ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error listing key bundles')
       ctx.status = 500
@@ -85,14 +110,28 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /key-bundles/search:
    *   get:
-   *     summary: Search key bundles
+   *     summary: Search key bundles with pagination
    *     description: |
-   *       Search key bundles with flexible filtering.
+   *       Search key bundles with flexible filtering and pagination.
    *       - **OR search**: Use `q` with `fields` for multiple field search
    *       - **AND search**: Use any KeyBundle field parameter for filtering
    *       - Only one OR group is supported, but you can combine it with multiple AND filters
    *     tags: [Key Bundles]
    *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *       - in: query
    *         name: q
    *         required: false
@@ -107,29 +146,32 @@ export const routes = (router: KoaRouter) => {
    *         description: Comma-separated list of fields for OR search. Defaults to name and description.
    *     responses:
    *       200:
-   *         description: Search results
+   *         description: Paginated search results
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyBundle'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyBundle'
    *       400:
    *         description: Invalid search parameters
    *       500:
    *         description: Internal server error
    */
   router.get('/key-bundles/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'page', 'limit'])
 
     try {
       const query = keyBundlesAdapter.getKeyBundlesSearchQuery(db)
 
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['name', 'description'],
+        reservedParams: ['q', 'fields', 'page', 'limit'],
       })
 
       if (!searchResult.hasSearchParams) {
@@ -141,10 +183,13 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const rows = await query.orderBy('name', 'asc').limit(10)
+      const paginatedResult = await paginate(
+        query.orderBy('name', 'asc'),
+        ctx
+      )
 
       ctx.status = 200
-      ctx.body = { content: rows satisfies KeyBundleResponse[], ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error searching key bundles')
       ctx.status = 500

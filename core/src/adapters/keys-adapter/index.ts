@@ -905,14 +905,28 @@ export const KeyNotesApi = {
  */
 
 export const KeyBundlesApi = {
-  list: async (): Promise<AdapterResult<KeyBundle[], CommonErr>> => {
-    const r = await getJSON<{ content: KeyBundle[] }>(`${BASE}/key-bundles`)
-    return r.ok ? ok(r.data.content) : r
+  list: async (
+    page?: number,
+    limit?: number
+  ): Promise<AdapterResult<PaginatedResponse<KeyBundle>, CommonErr>> => {
+    const params = new URLSearchParams()
+    if (page) params.append('page', page.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const queryString = params.toString()
+    const url = queryString
+      ? `${BASE}/key-bundles?${queryString}`
+      : `${BASE}/key-bundles`
+
+    const r = await getJSON<PaginatedResponse<KeyBundle>>(url)
+    return r.ok ? ok(r.data) : r
   },
 
   search: async (
     searchParams: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<KeyBundle[], 'bad-request' | CommonErr>> => {
+  ): Promise<
+    AdapterResult<PaginatedResponse<KeyBundle>, 'bad-request' | CommonErr>
+  > => {
     const params = new URLSearchParams()
     for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
@@ -923,10 +937,10 @@ export const KeyBundlesApi = {
         }
       }
     }
-    const r = await getJSON<{ content: KeyBundle[] }>(
+    const r = await getJSON<PaginatedResponse<KeyBundle>>(
       `${BASE}/key-bundles/search?${params.toString()}`
     )
-    return r.ok ? ok(r.data.content) : r
+    return r.ok ? ok(r.data) : r
   },
 
   getByKey: async (
