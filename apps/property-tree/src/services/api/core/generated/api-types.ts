@@ -1060,8 +1060,8 @@ export interface paths {
       };
     };
   };
-  "/leases/{leaseId}/rent-rows": {
-    /** Create a rent row for a lease */
+  "/leases/{leaseId}/rent-rows/home-insurance": {
+    /** Add home insurance rent row to a lease */
     post: {
       parameters: {
         path: {
@@ -1069,26 +1069,9 @@ export interface paths {
           leaseId: string;
         };
       };
-      requestBody: {
-        content: {
-          "application/json": {
-            amount: number;
-            article: string;
-            label: string;
-            /** @description Optional start date. */
-            from?: string;
-            /** @description Optional end date. */
-            to?: string;
-          };
-        };
-      };
       responses: {
-        /** @description Successfully created rent row. */
+        /** @description Successfully added home insurance rent row. */
         201: {
-          content: never;
-        };
-        /** @description Invalid request body. */
-        400: {
           content: never;
         };
         /** @description Internal server error. */
