@@ -205,13 +205,24 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
-        console.error('Error creating component installation:', err)
-        console.error('Request data:', data)
-        ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        const errorStack = err instanceof Error ? err.stack : undefined
-        ctx.body = { error: errorMessage, stack: errorStack, ...metadata }
+        // Check for foreign key constraint violation (Prisma P2003)
+        const isPrismaFKError =
+          err &&
+          typeof err === 'object' &&
+          'code' in err &&
+          (err as { code: string }).code === 'P2003'
+        if (isPrismaFKError) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Invalid componentId: component does not exist',
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { error: errorMessage, ...metadata }
       }
     }
   )
@@ -270,6 +281,20 @@ export const routes = (router: KoaRouter) => {
           ctx.status = 404
           ctx.body = { error: 'Component installation not found', ...metadata }
           return
+        }
+
+        // Validate deinstallation date is not before installation date
+        if (data.deinstallationDate && existing.installationDate) {
+          const deinstallDate = new Date(data.deinstallationDate)
+          const installDate = new Date(existing.installationDate)
+          if (deinstallDate < installDate) {
+            ctx.status = 400
+            ctx.body = {
+              error: 'Deinstallation date cannot be before installation date',
+              ...metadata,
+            }
+            return
+          }
         }
 
         const installation = await updateComponentInstallation(id, data)

@@ -220,6 +220,23 @@ describe('Component Subtypes API', () => {
         ])
       )
     })
+
+    it('should return 400 with helpful message when typeId does not exist', async () => {
+      const nonExistentTypeId = '00000000-0000-0000-0000-000000000000'
+
+      const invalidSubtype = factory.subtype.build({
+        typeId: nonExistentTypeId,
+      })
+
+      const response = await request(app.callback())
+        .post('/component-subtypes')
+        .send(invalidSubtype)
+
+      expect(response.status).toBe(400)
+      expect(response.body.error).toBe(
+        'Invalid typeId: component type does not exist'
+      )
+    })
   })
 
   describe('PUT /component-subtypes/:id', () => {

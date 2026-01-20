@@ -209,13 +209,24 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
-        console.error('Error creating component:', err)
-        console.error('Request data:', data)
-        ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        const errorStack = err instanceof Error ? err.stack : undefined
-        ctx.body = { error: errorMessage, stack: errorStack, ...metadata }
+        // Check for foreign key constraint violation (Prisma P2003)
+        const isPrismaFKError =
+          err &&
+          typeof err === 'object' &&
+          'code' in err &&
+          (err as { code: string }).code === 'P2003'
+        if (isPrismaFKError) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Invalid modelId: component model does not exist',
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { error: errorMessage, ...metadata }
       }
     }
   )

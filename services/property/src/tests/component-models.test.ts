@@ -56,8 +56,20 @@ describe('Component Models API', () => {
         return
       }
 
+      // Find a model name that doesn't start with special chars like % or _
+      const modelWithSafeName = allResponse.body.content.find(
+        (m: { modelName: string }) => /^[a-zA-Z0-9]/.test(m.modelName)
+      )
+
+      if (!modelWithSafeName) {
+        console.log(
+          'No models with alphanumeric names available to test search'
+        )
+        return
+      }
+
       // Get first 3 chars of an existing model name for more specific search
-      const existingName = allResponse.body.content[0].modelName
+      const existingName = modelWithSafeName.modelName
       const searchTerm = existingName.substring(0, 3)
 
       const response = await request(app.callback())
@@ -70,6 +82,13 @@ describe('Component Models API', () => {
       })
       // Search should return results (at least the one we got the name from)
       expect(response.body.content.length).toBeGreaterThan(0)
+
+      // Verify ALL results contain the search term (case-insensitive)
+      response.body.content.forEach((model: { modelName: string }) => {
+        expect(model.modelName.toLowerCase()).toContain(
+          searchTerm.toLowerCase()
+        )
+      })
     })
 
     it('should return empty array when filter matches nothing', async () => {
@@ -200,6 +219,23 @@ describe('Component Models API', () => {
             message: expect.stringMatching(/required|missing/i),
           }),
         ])
+      )
+    })
+
+    it('should return 400 with helpful message when subtypeId does not exist', async () => {
+      const nonExistentSubtypeId = '00000000-0000-0000-0000-000000000000'
+
+      const invalidModel = factory.model.build({
+        componentSubtypeId: nonExistentSubtypeId,
+      })
+
+      const response = await request(app.callback())
+        .post('/component-models')
+        .send(invalidModel)
+
+      expect(response.status).toBe(400)
+      expect(response.body.error).toBe(
+        'Invalid subtypeId: component subtype does not exist'
       )
     })
   })

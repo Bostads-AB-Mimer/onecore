@@ -270,6 +270,150 @@ describe('Component Instances API', () => {
         ])
       )
     })
+
+    it('should reject negative warrantyMonths', async () => {
+      assert(existingModelId, 'Setup failed: no existing model found')
+
+      const invalidComponent = {
+        modelId: existingModelId,
+        serialNumber: `SN-NEG-${Date.now()}`,
+        warrantyMonths: -12, // Negative warranty should be rejected
+      }
+
+      const response = await request(app.callback())
+        .post('/components')
+        .send(invalidComponent)
+
+      expect(response.status).toBe(400)
+    })
+
+    it('should reject negative priceAtPurchase', async () => {
+      assert(existingModelId, 'Setup failed: no existing model found')
+
+      const invalidComponent = {
+        modelId: existingModelId,
+        serialNumber: `SN-NEG-${Date.now()}`,
+        priceAtPurchase: -1000, // Negative price should be rejected
+      }
+
+      const response = await request(app.callback())
+        .post('/components')
+        .send(invalidComponent)
+
+      expect(response.status).toBe(400)
+    })
+
+    it('should reject negative quantity', async () => {
+      assert(existingModelId, 'Setup failed: no existing model found')
+
+      const invalidComponent = {
+        modelId: existingModelId,
+        serialNumber: `SN-NEG-${Date.now()}`,
+        quantity: -1, // Negative quantity should be rejected
+      }
+
+      const response = await request(app.callback())
+        .post('/components')
+        .send(invalidComponent)
+
+      expect(response.status).toBe(400)
+    })
+
+    it('should accept all valid condition enum values', async () => {
+      assert(existingModelId, 'Setup failed: no existing model found')
+
+      const conditions = ['NEW', 'GOOD', 'FAIR', 'POOR', 'DAMAGED']
+
+      for (const condition of conditions) {
+        const newComponent = factory.component.build({
+          modelId: existingModelId,
+          condition: condition as 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED',
+        })
+
+        const response = await request(app.callback())
+          .post('/components')
+          .send(newComponent)
+
+        expect(response.status).toBe(201)
+        expect(response.body.content).toMatchObject({
+          condition,
+        })
+
+        // Cleanup
+        await request(app.callback()).delete(
+          `/components/${response.body.content.id}`
+        )
+      }
+    })
+
+    it('should reject invalid condition enum value', async () => {
+      assert(existingModelId, 'Setup failed: no existing model found')
+
+      const invalidComponent = {
+        modelId: existingModelId,
+        serialNumber: `SN-COND-${Date.now()}`,
+        condition: 'INVALID_CONDITION',
+      }
+
+      const response = await request(app.callback())
+        .post('/components')
+        .send(invalidComponent)
+
+      expect(response.status).toBe(400)
+    })
+
+    it('should return 400 with helpful message when modelId does not exist', async () => {
+      const nonExistentModelId = '00000000-0000-0000-0000-000000000000'
+
+      const invalidComponent = factory.component.build({
+        modelId: nonExistentModelId,
+      })
+
+      const response = await request(app.callback())
+        .post('/components')
+        .send(invalidComponent)
+
+      expect(response.status).toBe(400)
+      expect(response.body.error).toBe(
+        'Invalid modelId: component model does not exist'
+      )
+    })
+  })
+
+  describe('GET /components - Combined Filters', () => {
+    it('should filter by both modelId and status', async () => {
+      assert(existingModelId, 'Setup failed: no existing model found')
+
+      const response = await request(app.callback())
+        .get('/components')
+        .query({ modelId: existingModelId, status: 'ACTIVE' })
+
+      expect(response.status).toBe(200)
+      expect(response.body).toMatchObject({
+        content: expect.any(Array),
+      })
+
+      // All returned components should match BOTH filters
+      response.body.content.forEach(
+        (component: { modelId: string; status: string }) => {
+          expect(component.modelId).toBe(existingModelId)
+          expect(component.status).toBe('ACTIVE')
+        }
+      )
+    })
+
+    it('should apply pagination correctly with filters', async () => {
+      const response = await request(app.callback())
+        .get('/components')
+        .query({ status: 'ACTIVE', page: 1, limit: 5 })
+
+      expect(response.status).toBe(200)
+      expect(response.body.content.length).toBeLessThanOrEqual(5)
+      expect(response.body.pagination).toMatchObject({
+        page: 1,
+        limit: 5,
+      })
+    })
   })
 
   describe('PUT /components/:id', () => {

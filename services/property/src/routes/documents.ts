@@ -2,6 +2,9 @@ import KoaRouter from '@koa/router'
 import { createDocument, deleteDocument } from '../adapters/documents-adapter'
 import { prisma } from '../adapters/db'
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * @swagger
  * tags:
@@ -116,6 +119,12 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('(.*)/documents/component-models/:id', async (ctx) => {
+    if (!UUID_REGEX.test(ctx.params.id)) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format' }
+      return
+    }
+
     const documents = await prisma.componentModels
       .findUnique({
         where: { id: ctx.params.id },
@@ -159,6 +168,12 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get('(.*)/documents/component-instances/:id', async (ctx) => {
+    if (!UUID_REGEX.test(ctx.params.id)) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format' }
+      return
+    }
+
     const documents = await prisma.components
       .findUnique({
         where: { id: ctx.params.id },
@@ -196,7 +211,22 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.delete('(.*)/documents/:id', async (ctx) => {
-    await deleteDocument(ctx.params.id)
-    ctx.status = 204
+    if (!UUID_REGEX.test(ctx.params.id)) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format' }
+      return
+    }
+
+    try {
+      await deleteDocument(ctx.params.id)
+      ctx.status = 204
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Document not found') {
+        ctx.status = 404
+        ctx.body = { error: 'Document not found' }
+        return
+      }
+      throw err
+    }
   })
 }

@@ -399,6 +399,17 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Check for child types before deleting
+      const childTypes = await propertyBaseAdapter.getComponentTypes(id.data)
+      if (childTypes.ok && childTypes.data.length > 0) {
+        ctx.status = 409
+        ctx.body = {
+          error: `Kan inte ta bort: kategorin har ${childTypes.data.length} typer`,
+          ...metadata,
+        }
+        return
+      }
+
       const result = await propertyBaseAdapter.deleteComponentCategory(id.data)
 
       if (!result.ok) {
@@ -728,6 +739,19 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Check for child subtypes before deleting
+      const childSubtypes = await propertyBaseAdapter.getComponentSubtypes(
+        id.data
+      )
+      if (childSubtypes.ok && childSubtypes.data.length > 0) {
+        ctx.status = 409
+        ctx.body = {
+          error: `Kan inte ta bort: typen har ${childSubtypes.data.length} undertyper`,
+          ...metadata,
+        }
+        return
+      }
+
       const result = await propertyBaseAdapter.deleteComponentType(id.data)
 
       if (!result.ok) {
@@ -1085,6 +1109,20 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Check for child models before deleting
+      const childModels = await propertyBaseAdapter.getComponentModels(
+        undefined,
+        id.data
+      )
+      if (childModels.ok && childModels.data.length > 0) {
+        ctx.status = 409
+        ctx.body = {
+          error: `Kan inte ta bort: undertypen har ${childModels.data.length} modeller`,
+          ...metadata,
+        }
+        return
+      }
+
       const result = await propertyBaseAdapter.deleteComponentSubtype(id.data)
 
       if (!result.ok) {
@@ -1514,6 +1552,17 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Check for child components before deleting
+      const childComponents = await propertyBaseAdapter.getComponents(id.data)
+      if (childComponents.ok && childComponents.data.length > 0) {
+        ctx.status = 409
+        ctx.body = {
+          error: `Kan inte ta bort: modellen har ${childComponents.data.length} komponenter`,
+          ...metadata,
+        }
+        return
+      }
+
       const result = await propertyBaseAdapter.deleteComponentModel(id.data)
 
       if (!result.ok) {
@@ -1871,6 +1920,24 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Check for active installations before deleting
+      const installations = await propertyBaseAdapter.getComponentInstallations(
+        id.data
+      )
+      if (installations.ok) {
+        const activeInstallation = installations.data.find(
+          (i) => !i.deinstallationDate
+        )
+        if (activeInstallation) {
+          ctx.status = 409
+          ctx.body = {
+            error: 'Kan inte ta bort: komponenten är installerad',
+            ...metadata,
+          }
+          return
+        }
+      }
+
       const result = await propertyBaseAdapter.deleteComponent(id.data)
 
       if (!result.ok) {
@@ -2098,6 +2165,25 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      // Check for existing active installation before creating new one
+      const existingInstallations =
+        await propertyBaseAdapter.getComponentInstallations(
+          body.data.componentId
+        )
+      if (existingInstallations.ok) {
+        const activeInstallation = existingInstallations.data.find(
+          (i) => !i.deinstallationDate
+        )
+        if (activeInstallation) {
+          ctx.status = 409
+          ctx.body = {
+            error: 'Komponenten har redan en aktiv installation',
+            ...metadata,
+          }
+          return
+        }
+      }
+
       const result = await propertyBaseAdapter.createComponentInstallation({
         ...body.data,
         installationDate: body.data.installationDate.toISOString(),
