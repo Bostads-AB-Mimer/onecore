@@ -35,12 +35,20 @@ export default function KeyBundles() {
       setIsLoading(true)
 
       // Use search if there's a query, otherwise get all bundles
-      const bundles =
+      const response =
         searchQuery.trim().length >= 3
-          ? await keyBundleService.searchKeyBundles(searchQuery.trim())
-          : await keyBundleService.getAllKeyBundles()
+          ? await keyBundleService.searchKeyBundles(
+              searchQuery.trim(),
+              pagination.currentPage,
+              pagination.currentLimit
+            )
+          : await keyBundleService.getAllKeyBundles(
+              pagination.currentPage,
+              pagination.currentLimit
+            )
 
-      setKeyBundles(bundles)
+      setKeyBundles(response.content)
+      pagination.setPaginationMeta(response._meta)
     } catch (error) {
       console.error('Failed to load key bundles:', error)
       toast({
@@ -51,18 +59,18 @@ export default function KeyBundles() {
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery, toast])
+  }, [searchQuery, pagination.currentPage, pagination.currentLimit, pagination.setPaginationMeta, toast])
 
   // Sync local search input with URL query
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
 
-  // Fetch data whenever search query changes
+  // Fetch data whenever search query or pagination changes
   useEffect(() => {
     loadKeyBundles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery])
+  }, [searchQuery, pagination.currentPage, pagination.currentLimit])
 
   const handleSearchChange = useCallback(
     (query: string) => {
@@ -205,12 +213,13 @@ export default function KeyBundles() {
   return (
     <ListPageLayout
       title="Nyckelsamlingar"
-      subtitle={`${keyBundles.length} nyckelsamlingar`}
+      subtitle={`${pagination.paginationMeta.totalRecords} nyckelsamlingar`}
       searchValue={searchInput}
       onSearchChange={handleSearchChange}
       searchPlaceholder="Sök nyckelsamlingar..."
       onAddNew={handleAddNew}
       addButtonLabel="Ny nyckelsamling"
+      pagination={pagination}
     >
       {showAddForm && (
         <AddKeyBundleForm

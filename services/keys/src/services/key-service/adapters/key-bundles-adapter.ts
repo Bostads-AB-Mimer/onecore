@@ -19,10 +19,20 @@ const KEY_LOANS_TABLE = 'key_loans'
  * These functions wrap database calls to make them easier to test.
  */
 
+/**
+ * Returns a query builder for fetching all key bundles.
+ * Use this with the paginate utility for paginated results.
+ */
+export function getAllKeyBundlesQuery(
+  dbConnection: Knex | Knex.Transaction = db
+): Knex.QueryBuilder {
+  return dbConnection(TABLE).select('*').orderBy('name', 'asc')
+}
+
 export async function getAllKeyBundles(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyBundle[]> {
-  return await dbConnection(TABLE).select('*').orderBy('name', 'asc')
+  return await getAllKeyBundlesQuery(dbConnection)
 }
 
 export async function getKeyBundleById(

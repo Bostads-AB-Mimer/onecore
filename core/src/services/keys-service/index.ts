@@ -5212,21 +5212,38 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /key-bundles:
    *   get:
-   *     summary: List all key bundles
-   *     description: Fetches a list of all key bundles ordered by name.
+   *     summary: List key bundles with pagination
+   *     description: Fetches a paginated list of all key bundles ordered by name.
    *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *     responses:
    *       200:
-   *         description: A list of key bundles.
+   *         description: A paginated list of key bundles.
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyBundle'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyBundle'
    *       500:
    *         description: An error occurred while listing key bundles.
    *         content:
@@ -5239,7 +5256,12 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-bundles', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await KeyBundlesApi.list()
+    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
+    const limit = ctx.query.limit
+      ? parseInt(ctx.query.limit as string)
+      : undefined
+
+    const result = await KeyBundlesApi.list(page, limit)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching key bundles')
@@ -5249,17 +5271,31 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { ...metadata, ...result.data }
   })
 
   /**
    * @swagger
    * /key-bundles/search:
    *   get:
-   *     summary: Search key bundles
-   *     description: Search key bundles with flexible filtering.
+   *     summary: Search key bundles with pagination
+   *     description: Search key bundles with flexible filtering and pagination.
    *     tags: [Keys Service]
    *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
    *       - in: query
    *         name: q
    *         required: false
@@ -5274,16 +5310,18 @@ export const routes = (router: KoaRouter) => {
    *         description: Comma-separated list of fields for OR search.
    *     responses:
    *       200:
-   *         description: Search results
+   *         description: Paginated search results
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/KeyBundle'
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeyBundle'
    *       400:
    *         description: Invalid search parameters
    *       500:
@@ -5292,7 +5330,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-bundles/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'fields', 'page', 'limit'])
 
     const result = await KeyBundlesApi.search(ctx.query)
 
@@ -5310,7 +5348,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = { ...metadata, ...result.data }
   })
 
   /**
