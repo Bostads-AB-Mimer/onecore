@@ -10,7 +10,7 @@ import {
 import { AdapterResult } from '../types'
 import config from '../../common/config'
 import { getListingByListingId } from './listings'
-import { getParkingSpaceByCode } from './rental-objects'
+import { getParkingSpaces } from './rental-objects'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -239,24 +239,21 @@ export const getApplicantsAndListingByContactCode = async (
       .map((listing) => listing.rentalObjectCode)
       .filter(Boolean)
 
-    // Fetch all parking spaces in parallel
-    const parkingSpacesPromises = rentalObjectCodes.map((code) =>
-      getParkingSpaceByCode(code)
-    )
-    const parkingSpacesResults = await Promise.all(parkingSpacesPromises)
-
-    // Create a map of rentalObjectCode -> parking space
+    // Fetch all rental objects
     const parkingSpacesMap = new Map()
-    parkingSpacesResults.forEach((result, index) => {
-      if (result.ok && result.data) {
-        parkingSpacesMap.set(rentalObjectCodes[index], result.data)
-      } else {
-        logger.info(
-          { rentalObjectCode: rentalObjectCodes[index] },
-          'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
-        )
-      }
-    })
+    const parkingSpaceResult = await getParkingSpaces(rentalObjectCodes)
+
+    if (!parkingSpaceResult.ok || !parkingSpaceResult.data) {
+      logger.error(
+        { rentalObjectCodes, contactCode },
+        'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
+      )
+    } else {
+      // Create a map of rentalObjectCode -> parking space
+      parkingSpaceResult.data.forEach((rentalObject) => {
+        parkingSpacesMap.set(rentalObject.rentalObjectCode, rentalObject)
+      })
+    }
 
     // Build the final result with applicants, listings, and rental objects
     const applicantsAndListings: ApplicantWithListing[] = []

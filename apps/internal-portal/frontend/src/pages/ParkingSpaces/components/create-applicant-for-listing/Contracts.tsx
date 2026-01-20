@@ -48,7 +48,7 @@ const columns: GridColDef[] = [
     renderCell: () => 'N/A',
   },
   {
-    field: 'monthlyRent',
+    field: 'rent.amount',
     headerName: 'Hyra',
     ...sharedProps,
     renderCell: () => 'N/A',

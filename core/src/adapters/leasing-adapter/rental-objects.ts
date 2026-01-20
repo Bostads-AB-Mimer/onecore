@@ -1,6 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { RentalObject } from '@onecore/types'
-import { HttpStatusCode } from 'axios'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -70,34 +69,59 @@ const getAllVacantParkingSpaces = async (): Promise<
   }
 }
 
-const getParkingSpaceByRentalObjectCode = async (
+const getRentalObjectRentByCode = async (
   rentalObjectCode: string
-): Promise<
-  AdapterResult<
-    RentalObject,
-    'get-rental-object-failed' | 'rental-object-not-found'
-  >
-> => {
+): Promise<AdapterResult<number, 'rent-not-found' | 'unknown'>> => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
+      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/rent`
     )
-    if (response.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'rental-object-not-found' }
+    if (response.status === 404) {
+      logger.error(
+        { rentalObjectCode },
+        'Rental object rent not found for code:'
+      )
+      return { ok: false, err: 'rent-not-found' }
     }
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,
-      'getParkingSpaceByRentalObjectCode. Error fetching rentalobject:'
+      `Error retrieving rental object rent by code: ${rentalObjectCode}`
     )
-    return { ok: false, err: 'get-rental-object-failed' }
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getRentalObjectRents = async (
+  rentalObjectCodes?: string[]
+): Promise<AdapterResult<number[], 'rents-not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/rent`,
+      { rentalObjectCodes }
+    )
+    if (response.status === 404) {
+      logger.error(
+        { rentalObjectCodes },
+        'Rental object rent not found for codes:'
+      )
+      return { ok: false, err: 'rents-not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving rental object rent by codes: ${rentalObjectCodes?.join(', ')}`
+    )
+    return { ok: false, err: 'unknown' }
   }
 }
 
 export {
   getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
   getParkingSpaceByCode,
   getParkingSpaces,
+  getRentalObjectRentByCode,
+  getRentalObjectRents,
 }
