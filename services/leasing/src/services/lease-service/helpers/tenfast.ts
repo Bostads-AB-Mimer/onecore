@@ -1,4 +1,4 @@
-import { Lease, LeaseStatus, RentRow } from '@onecore/types'
+import { Lease, LeaseStatus, LeaseRentRow } from '@onecore/types'
 
 import { TenfastLease, TenfastInvoiceRow } from '../adapters/tenfast/schemas'
 
@@ -53,7 +53,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
   }
 }
 
-export function mapToOnecoreRentRow(row: TenfastInvoiceRow): RentRow {
+export function mapToOnecoreRentRow(row: TenfastInvoiceRow): LeaseRentRow {
   return {
     id: row._id,
     amount: row.amount,
