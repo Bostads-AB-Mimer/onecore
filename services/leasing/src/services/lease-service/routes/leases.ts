@@ -503,13 +503,54 @@ export const routes = (router: KoaRouter) => {
    *         description: Successfully added home insurance rent row.
    *       404:
    *         description: Lease not found.
+   *       422:
+   *         description: Home insurance rent row already exists for this lease.
    *       500:
    *         description: Internal server error.
    */
   router.post('(.*)/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await tenfastAdapter.createLeaseInvoiceRow({
+    const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
+      ctx.params.leaseId
+    )
+
+    if (!getCurrentLease.ok) {
+      if (getCurrentLease.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: getCurrentLease.err,
+          ...metadata,
+        }
+
+        return
+      }
+    }
+
+    const existingHomeInsurance = getCurrentLease.data.hyror.find(
+      (row) =>
+        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    )
+
+    if (existingHomeInsurance) {
+      ctx.status = 422
+      ctx.body = {
+        error: 'Home insurance rent row already exists for this lease',
+        ...metadata,
+      }
+
+      return
+    }
+
+    const addHomeInsuranceResult = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: ctx.params.leaseId,
       invoiceRow: {
         amount: config.tenfast.leaseRentRows.homeInsurance.amount,
@@ -520,17 +561,18 @@ export const routes = (router: KoaRouter) => {
       },
     })
 
-    if (!result.ok) {
+    if (!addHomeInsuranceResult.ok) {
       ctx.status = 500
       ctx.body = {
-        error: result.err,
+        error: addHomeInsuranceResult.err,
         ...metadata,
       }
+
       return
     }
 
     ctx.status = 201
-    ctx.body = makeSuccessResponseBody(result.data, metadata)
+    ctx.body = makeSuccessResponseBody(addHomeInsuranceResult.data, metadata)
   })
 
   /**

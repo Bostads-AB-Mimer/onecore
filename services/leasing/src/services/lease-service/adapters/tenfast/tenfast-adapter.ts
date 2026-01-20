@@ -625,6 +625,47 @@ export async function getLeaseByLeaseId(
   }
 }
 
+export async function getLeaseByExternalId(
+  externalId: string
+): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(externalId)}?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (res.status !== 200) {
+      if (res.status === 404) {
+        logger.error({ error: mapHttpError(res.data) }, 'Lease not found')
+
+        return { ok: false, err: 'not-found' }
+      }
+
+      logger.error({ error: mapHttpError(res.data) }, 'Unknown error')
+      return { ok: false, err: 'unknown' }
+    }
+
+    const lease = TenfastLeaseSchema.safeParse(res.data)
+
+    if (!lease.success) {
+      logger.error(
+        { error: JSON.stringify(lease.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: lease.error } }
+    }
+
+    return {
+      ok: true,
+      data: lease.data,
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByExternalId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function createLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRow: Omit<TenfastInvoiceRow, '_id'>

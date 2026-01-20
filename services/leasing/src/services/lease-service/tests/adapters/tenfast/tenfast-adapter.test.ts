@@ -1238,3 +1238,66 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     expect(result.err).toBe('unknown')
   })
 })
+
+describe(tenfastAdapter.getLeaseByExternalId, () => {
+  it('should return lease when response is valid', async () => {
+    const mockLease = factory.tenfastLease.build()
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: mockLease,
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({
+      ok: true,
+      data: expect.objectContaining({
+        externalId: mockLease.externalId,
+      }),
+    })
+  })
+
+  it('should return not-found when status is 404', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 404,
+      data: { error: 'Not found' },
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('NOT-FOUND')
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('should return unknown when status is not 200 or 404', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: { error: 'Internal server error' },
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('should return schema-error when parsing fails', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { invalid: 'data' },
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({
+      ok: false,
+      err: expect.objectContaining({ tag: 'schema-error' }),
+    })
+  })
+
+  it('should return unknown when request throws an exception', async () => {
+    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})

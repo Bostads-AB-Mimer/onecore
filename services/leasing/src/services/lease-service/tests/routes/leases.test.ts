@@ -10,7 +10,6 @@ import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
 import config from '../../../../common/config'
-import { toYearMonthString } from '../../adapters/tenfast/schemas'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -277,8 +276,64 @@ describe('POST /leases', () => {
 })
 
 describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
-  it('returns 500 on error', async () => {
-    const createInvoiceRowSpy = jest
+  it('returns 404 when lease is not found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await request(app.callback()).post(
+      '/leases/123/rent-rows/home-insurance'
+    )
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('Lease not found')
+  })
+
+  it('returns 500 when fetching lease fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const result = await request(app.callback()).post(
+      '/leases/123/rent-rows/home-insurance'
+    )
+
+    expect(result.status).toBe(500)
+  })
+
+  it('returns 422 when home insurance already exists', async () => {
+    const leaseWithHomeInsurance = factory.tenfastLease.build({
+      hyror: [
+        factory.tenfastInvoiceRow.build({
+          article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+        }),
+      ],
+    })
+
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: leaseWithHomeInsurance })
+
+    const result = await request(app.callback()).post(
+      '/leases/123/rent-rows/home-insurance'
+    )
+
+    expect(result.status).toBe(422)
+    expect(result.body.error).toBe(
+      'Home insurance rent row already exists for this lease'
+    )
+  })
+
+  it('returns 500 when creating rent row fails', async () => {
+    const leaseWithoutHomeInsurance = factory.tenfastLease.build({
+      hyror: [],
+    })
+
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
+
+    jest
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
@@ -287,10 +342,17 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
     )
 
     expect(result.status).toBe(500)
-    expect(createInvoiceRowSpy).toHaveBeenCalled()
   })
 
   it('adds home insurance rent row with correct article, amount and vat', async () => {
+    const leaseWithoutHomeInsurance = factory.tenfastLease.build({
+      hyror: [],
+    })
+
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
+
     const createInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
