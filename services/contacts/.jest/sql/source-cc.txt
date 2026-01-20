@@ -1,0 +1,14 @@
+# Multiple phone numbers
+P170515    ###  P | N FN LN | T(#:3) T:3   E:1   A(#:4  U:1  X:3)
+
+
+# With historical addresses
+P000040    ###  P | N FN LN | T(#:1) T:1   E:-   A(#:3  U:2  X:1)
+
+
+# No national ID
+P002505    ###  P | N -  -  | T(#:1) T:1   E:-   A(#:1  U:1  X:-)
+
+
+# Phone + Email + Adress
+P184660    ###  P | N FN LN | T(#:1) T:1   E:1   A(#:1  U:1  X:-)
