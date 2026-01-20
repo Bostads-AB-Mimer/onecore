@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { KeyBundlesHeader } from '@/components/key-bundles/KeyBundlesHeader'
-import { KeyBundlesToolbar } from '@/components/key-bundles/KeyBundlesToolbar'
+import { ListPageLayout } from '@/components/shared/layout'
 import { KeyBundlesTable } from '@/components/key-bundles/KeyBundlesTable'
 import { AddKeyBundleForm } from '@/components/key-bundles/AddKeyBundleForm'
 
@@ -204,18 +203,15 @@ export default function KeyBundles() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <KeyBundlesHeader
-        totalKeyBundles={keyBundles.length}
-        displayedKeyBundles={keyBundles.length}
-      />
-
-      <KeyBundlesToolbar
-        searchQuery={searchInput}
-        onSearchChange={handleSearchChange}
-        onAddNew={handleAddNew}
-      />
-
+    <ListPageLayout
+      title="Nyckelsamlingar"
+      subtitle={`${keyBundles.length} nyckelsamlingar`}
+      searchValue={searchInput}
+      onSearchChange={handleSearchChange}
+      searchPlaceholder="Sök nyckelsamlingar..."
+      onAddNew={handleAddNew}
+      addButtonLabel="Ny nyckelsamling"
+    >
       {showAddForm && (
         <AddKeyBundleForm
           onSave={handleSave}
@@ -235,6 +231,6 @@ export default function KeyBundles() {
         isLoading={isLoading}
         onRefresh={loadKeyBundles}
       />
-    </div>
+    </ListPageLayout>
   )
 }

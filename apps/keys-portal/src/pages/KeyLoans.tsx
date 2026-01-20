@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { KeyLoansHeader } from '@/components/key-loans/KeyLoansHeader'
+import { ListPageLayout } from '@/components/shared/layout'
+import { Badge } from '@/components/ui/badge'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
 import { EditKeyLoanForm } from '@/components/key-loans/EditKeyLoanForm'
-import { PaginationControls } from '@/components/common/PaginationControls'
-import { Input } from '@/components/ui/input'
 
 import { KeyLoan, UpdateKeyLoanRequest } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
@@ -483,25 +482,24 @@ export default function KeyLoans() {
   const returnedLoanCount = keyLoans.filter((loan) => loan.returnedAt).length
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <KeyLoansHeader
-        totalLoans={pagination.paginationMeta.totalRecords || keyLoans.length}
-        currentPageCount={keyLoans.length}
-        activeLoans={activeLoanCount}
-        returnedLoans={returnedLoanCount}
-      />
-
-      {/* Search input */}
-      <div className="mb-4">
-        <Input
-          placeholder="Sök kundnummer, nyckel eller objekt..."
-          value={searchInput}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="max-w-md"
-        />
-      </div>
-
-      {/* Edit form */}
+    <ListPageLayout
+      title="Nyckellån"
+      subtitle={`${keyLoans.length} av ${pagination.paginationMeta.totalRecords || keyLoans.length} lån`}
+      badges={
+        <>
+          <Badge variant="default" className="text-xs">
+            {activeLoanCount} aktiva
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {returnedLoanCount} återlämnade
+          </Badge>
+        </>
+      }
+      searchValue={searchInput}
+      onSearchChange={handleSearchChange}
+      searchPlaceholder="Sök kundnummer, nyckel eller objekt..."
+      pagination={pagination}
+    >
       {showEditForm && editingKeyLoan && (
         <EditKeyLoanForm
           editingKeyLoan={editingKeyLoan}
@@ -542,18 +540,6 @@ export default function KeyLoans() {
         }}
         onReturnedDateChange={handleReturnedDateChange}
       />
-
-      <PaginationControls
-        paginationMeta={pagination.paginationMeta}
-        pageLimit={pagination.currentLimit}
-        customLimit={pagination.customLimit}
-        isFocused={pagination.isFocused}
-        onPageChange={pagination.handlePageChange}
-        onLimitChange={pagination.handleLimitChange}
-        onCustomLimitChange={pagination.setCustomLimit}
-        onCustomLimitSubmit={pagination.handleCustomLimitSubmit}
-        onFocusChange={pagination.setIsFocused}
-      />
-    </div>
+    </ListPageLayout>
   )
 }
