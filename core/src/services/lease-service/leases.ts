@@ -1,14 +1,10 @@
 import KoaRouter from '@koa/router'
-import {
-  generateRouteMetadata,
-  logger,
-  makeSuccessResponseBody,
-} from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -421,32 +417,5 @@ export const routes = (router: KoaRouter) => {
       content: deleteRentRowResult.data,
       ...metadata,
     }
-  })
-
-  /**
-   * @swagger
-   * /rent-articles:
-   *   get:
-   *     summary: List rent articles articles
-   *     tags:
-   *       - Lease service
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved rent articles
-   *       500:
-   *         description: Internal server error
-   */
-  router.get('/rent-articles', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const res = await leasingAdapter.getRentArticles()
-
-    if (!res.ok) {
-      ctx.status = 500
-      ctx.body = { error: res.err, ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody(res.data, metadata)
   })
 }

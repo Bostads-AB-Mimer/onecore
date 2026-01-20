@@ -3,7 +3,6 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import nock from 'nock'
-import { schemas } from '@onecore/types'
 
 import { routes } from '../../index'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
@@ -385,34 +384,5 @@ describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
     expect(result.status).toBe(500)
 
     expect(deleteInvoiceRowSpy).toHaveBeenCalled()
-  })
-})
-
-describe('GET /rent-articles', () => {
-  it('returns articles', async () => {
-    const articles = factory.tenfastArticle.buildList(2)
-    jest.spyOn(tenfastAdapter, 'getArticles').mockResolvedValue({
-      ok: true,
-      data: articles,
-    })
-
-    const res = await request(app.callback()).get('/rent-articles')
-
-    expect(res.status).toBe(200)
-    expect(() =>
-      schemas.v1.RentArticleSchema.array().parse(res.body.content)
-    ).not.toThrow()
-  })
-
-  it('returns 500 on error', async () => {
-    jest.spyOn(tenfastAdapter, 'getArticles').mockResolvedValue({
-      ok: false,
-      err: 'unknown',
-    })
-
-    const res = await request(app.callback()).get('/rent-articles')
-
-    expect(res.status).toBe(500)
-    expect(res.body.error).toBe('unknown')
   })
 })

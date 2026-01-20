@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact, Rent, RentalObject, RentalObjectRent } from '@onecore/types'
+import { Contact, RentalObjectRent } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -275,7 +275,7 @@ export const getRentalObjectRents = async (
       data: allParsedRentalObjects,
     }
   } catch (err: any) {
-    if (err instanceof ZodError) {
+    if (err instanceof z.ZodError) {
       return handleTenfastError(err, 'could-not-parse-rental-objects')
     }
 
@@ -671,32 +671,6 @@ export async function deleteLeaseInvoiceRow(params: {
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.deleteInvoiceRow')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-export async function getArticles(): Promise<
-  AdapterResult<TenfastArticle[], 'unknown' | SchemaError>
-> {
-  try {
-    const res = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/articles?hyresvard=${tenfastCompanyId}`,
-    })
-
-    if (res.status !== 200) {
-      return { ok: false, err: 'unknown' }
-    }
-
-    const parsed = z.array(TenfastRentArticleSchema).safeParse(res.data)
-    if (!parsed.success) {
-      logger.error(mapHttpError(parsed.error), 'tenfast-adapter.getArticles')
-      return { ok: false, err: { tag: 'schema-error', error: parsed.error } }
-    }
-
-    return { ok: true, data: parsed.data }
-  } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.getArticles')
     return { ok: false, err: 'unknown' }
   }
 }

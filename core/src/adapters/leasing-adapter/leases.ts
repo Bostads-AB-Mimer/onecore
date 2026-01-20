@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { Lease, leasing, RentArticle, schemas } from '@onecore/types'
+import { Lease, leasing } from '@onecore/types'
 import z from 'zod'
 
 import { AdapterResult } from '../types'
@@ -142,37 +142,6 @@ export async function deleteLeaseRentRow(params: {
     logger.error(
       { error: JSON.stringify(result.data) },
       'Unknown error when deleting rent row'
-    )
-
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-export async function getRentArticles(): Promise<
-  AdapterResult<RentArticle[], 'unknown' | 'schema-error'>
-> {
-  const result = await axios.get<{ content: unknown }>(
-    `${tenantsLeasesServiceUrl}/rent-articles`
-  )
-
-  if (result.status === 200) {
-    const parsed = z
-      .array(schemas.v1.RentArticleSchema)
-      .safeParse(result.data.content)
-    if (!parsed.success) {
-      logger.error(
-        { error: JSON.stringify(parsed.error) },
-        'Failed to parse articles'
-      )
-
-      return { ok: false, err: 'schema-error' }
-    }
-
-    return { ok: true, data: parsed.data }
-  } else {
-    logger.error(
-      { error: JSON.stringify(result.data) },
-      'Unknown error when fetching articles'
     )
 
     return { ok: false, err: 'unknown' }

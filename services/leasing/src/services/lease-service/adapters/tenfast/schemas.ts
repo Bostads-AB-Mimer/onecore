@@ -20,10 +20,6 @@ export const TenfastInvoiceRowSchema = z.object({
   _id: z.string(),
 })
 
-export const TenfastRentArticleSchema = z.record(z.string(), z.any())
-
-export type TenfastArticle = z.infer<typeof TenfastRentArticleSchema>
-
 export const TenfastTenantSchema = z.object({
   name: z.object({
     first: z.string(),

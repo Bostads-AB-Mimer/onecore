@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Lease, schemas } from '@onecore/types'
+import { Lease } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
@@ -284,51 +284,6 @@ describe('leases routes', () => {
         rentRowId: 'row-1',
       })
       expect(res.body.content).toBeNull()
-    })
-  })
-
-  describe('GET /rent-articles', () => {
-    it('returns articles', async () => {
-      const articles = [
-        {
-          includeInContract: false,
-          id: 'article-1',
-          title: 'Hyra bostad, konto 3011',
-          defaultLabel: 'Hyra bostad, konto 3011',
-          code: 'HYRAB1',
-          accountNr: '3011',
-          vat: 0.25,
-          description: 'Test description',
-          category: 'article-category',
-          createdAt: new Date('2025-04-01T06:43:01.728Z'),
-          updatedAt: new Date('2025-04-02T06:43:01.728Z'),
-          hyresvard: 'hyresvard-1',
-        },
-      ]
-
-      jest.spyOn(tenantLeaseAdapter, 'getRentArticles').mockResolvedValue({
-        ok: true,
-        data: articles,
-      })
-
-      const res = await request(app.callback()).get('/rent-articles')
-
-      expect(res.status).toBe(200)
-      expect(() =>
-        schemas.v1.RentArticleSchema.array().parse(res.body.content)
-      ).not.toThrow()
-    })
-
-    it('returns 500 on error', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'getRentArticles').mockResolvedValue({
-        ok: false,
-        err: 'unknown',
-      })
-
-      const res = await request(app.callback()).get('/rent-articles')
-
-      expect(res.status).toBe(500)
-      expect(res.body.error).toBe('unknown')
     })
   })
 })

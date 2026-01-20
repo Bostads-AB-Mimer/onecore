@@ -13,7 +13,6 @@ import {
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
-import { mapToOnecoreRentArticle } from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { toYearMonthString } from '../adapters/tenfast/schemas'
@@ -614,35 +613,6 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = makeSuccessResponseBody(null, metadata)
-  })
-
-  /**
-   * @swagger
-   * /rent-articles:
-   *   get:
-   *     summary: List articles
-   *     tags: [Leases]
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved articles.
-   *       500:
-   *         description: Internal server error.
-   */
-  router.get('(.*)/rent-articles', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const articles = await tenfastAdapter.getArticles()
-
-    if (!articles.ok) {
-      ctx.status = 500
-      ctx.body = { error: articles.err, ...metadata }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody(
-      articles.data.map(mapToOnecoreRentArticle),
-      metadata
-    )
   })
 }
 
