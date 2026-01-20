@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact } from '@onecore/types'
+import { Contact, Rent, RentalObject, RentalObjectRent } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import { ZodError } from 'zod'
 
@@ -14,11 +14,13 @@ import {
   TenfastLease,
   TenfastLeaseSchema,
   TenfastInvoiceRow,
+  TenfastRentalObjectSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
+import currency from 'currency.js'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -141,6 +143,143 @@ export const getRentalObject = async (
     }
   } catch (err: any) {
     return handleTenfastError(err, 'could-not-find-rental-object')
+  }
+}
+
+export const getRentForRentalObject = async (
+  rentalObjectCode: string,
+  includeVAT: boolean
+): Promise<
+  AdapterResult<
+    RentalObjectRent,
+    | 'could-not-find-rental-object'
+    | 'could-not-parse-rental-object'
+    | 'get-rental-object-bad-request'
+  >
+> => {
+  const rentalObjectResult = await getRentalObject(rentalObjectCode)
+
+  if (!rentalObjectResult.ok) {
+    return {
+      ok: false,
+      err: rentalObjectResult.err,
+    }
+  }
+
+  if (!rentalObjectResult.data) {
+    return {
+      ok: false,
+      err: 'could-not-find-rental-object',
+    }
+  }
+
+  const rent: RentalObjectRent = parseRentalObjectRentFromTenfastRentalObject(
+    includeVAT,
+    rentalObjectResult.data
+  )
+
+  return {
+    ok: true,
+    data: rent,
+  }
+}
+
+const parseRentalObjectRentFromTenfastRentalObject = (
+  includeVAT: boolean,
+  tenfastRentalObject: TenfastRentalObject
+): RentalObjectRent => {
+  return {
+    rentalObjectCode: tenfastRentalObject.externalId,
+    amount: includeVAT
+      ? tenfastRentalObject.hyra
+      : tenfastRentalObject.hyraExcludingVat,
+    vat: includeVAT ? tenfastRentalObject.hyraVat : 0,
+    rows: tenfastRentalObject.hyror.map((hyra) => ({
+      description: hyra.label || '',
+      amount: includeVAT
+        ? currency(hyra.amount).add(hyra.vat).value
+        : hyra.amount,
+      vatPercentage: includeVAT ? hyra.vat : 0,
+      fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
+      toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
+      code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
+    })),
+  }
+}
+
+export const getRentalObjectRents = async (
+  rentalObjectCodes: Array<string>,
+  includeVAT: boolean
+): Promise<
+  AdapterResult<
+    Array<RentalObjectRent>,
+    | 'could-not-find-rental-objects'
+    | 'could-not-parse-rental-objects'
+    | 'get-rental-objects-bad-request'
+    | 'unknown'
+  >
+> => {
+  try {
+    const batchSize = 500
+    const batches: Array<Array<string>> = []
+    for (let i = 0; i < rentalObjectCodes.length; i += batchSize) {
+      batches.push(rentalObjectCodes.slice(i, i + batchSize))
+    }
+
+    let allParsedRentalObjects: RentalObjectRent[] = []
+
+    for (const batch of batches) {
+      const rentalObjectResponse = await tenfastApi.request({
+        method: 'post',
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}`,
+        data: {
+          externalIds: batch,
+        },
+      })
+
+      if (rentalObjectResponse.status === 400)
+        return handleTenfastError(
+          rentalObjectResponse.data.error,
+          'get-rental-objects-bad-request'
+        )
+      else if (
+        rentalObjectResponse.status !== 200 &&
+        rentalObjectResponse.status !== 201
+      )
+        return handleTenfastError(
+          {
+            error: rentalObjectResponse.data.error,
+            status: rentalObjectResponse.status,
+          },
+          'could-not-find-rental-objects'
+        )
+
+      const parsedRentalObjects = rentalObjectResponse.data.map(
+        (rentalObjectData: any) => {
+          const parsedRentalObject =
+            TenfastRentalObjectSchema.safeParse(rentalObjectData)
+          if (!parsedRentalObject.success) throw parsedRentalObject.error
+
+          return parseRentalObjectRentFromTenfastRentalObject(
+            includeVAT,
+            parsedRentalObject.data
+          )
+        }
+      )
+      allParsedRentalObjects =
+        allParsedRentalObjects.concat(parsedRentalObjects)
+    }
+
+    return {
+      ok: true,
+      data: allParsedRentalObjects,
+    }
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return handleTenfastError(err, 'could-not-parse-rental-objects')
+    }
+
+    return handleTenfastError(err, 'unknown')
   }
 }
 

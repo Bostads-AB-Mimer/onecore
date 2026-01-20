@@ -70,12 +70,12 @@ export const getColumns = (
       flex: 0.7,
     },
     {
-      field: 'monthlyRent',
+      field: 'rent.amount',
       headerName: 'Hyra',
       ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.monthlyRent ?? 0,
+      valueGetter: (params) => params.row.rentalObject?.rent?.amount ?? 0,
       renderCell: (v) => {
-        const rent = v.row.rentalObject?.monthlyRent ?? 0
+        const rent = v.row.rentalObject?.rent?.amount ?? 0
         const showInclVat = v.row.rentalRule === 'NON_SCORED'
         return (
           <span>
