@@ -10,6 +10,7 @@ import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
 import config from '../../../../common/config'
+import { toYearMonthString } from '../../adapters/tenfast/schemas'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -301,15 +302,18 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
     expect(result.status).toBe(201)
     expect(result.body.content).toEqual(null)
     expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
-    expect(createInvoiceRowSpy).toHaveBeenCalledWith({
-      leaseId: '123',
-      invoiceRow: {
-        amount: 0, // TODO: Update when amount is determined
-        article: 'HOME_INSURANCE_ARTICLE_ID',
-        label: 'Hemförsäkring',
-        vat: 0,
-      },
-    })
+    expect(createInvoiceRowSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leaseId: '123',
+        invoiceRow: expect.objectContaining({
+          amount: config.tenfast.leaseRentRows.homeInsurance.amount,
+          article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+          label: 'Hemförsäkring',
+          vat: 0,
+          from: expect.any(String),
+        }),
+      })
+    )
   })
 })
 
