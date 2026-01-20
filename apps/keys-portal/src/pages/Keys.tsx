@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { KeysHeader } from '@/components/keys/KeysHeader'
-import { KeysToolbar } from '@/components/keys/KeysToolbar'
+import { ListPageLayout } from '@/components/shared/layout'
 import { KeysTable } from '@/components/keys/KeysTable'
 import { AddKeyForm } from '@/components/keys/AddKeyForm'
-import { PaginationControls } from '@/components/common/PaginationControls'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { Key, KeySystem, KeyWithSystem } from '@/services/types'
@@ -466,69 +464,53 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <KeysHeader
-          totalKeys={pagination.paginationMeta.totalRecords}
-          displayedKeys={keys.length}
-        />
+    <ListPageLayout
+      title="Nycklar"
+      subtitle={`${keys.length} av ${pagination.paginationMeta.totalRecords} nycklar`}
+      searchValue={searchInput}
+      onSearchChange={handleSearchChange}
+      searchPlaceholder="Sök nycklar..."
+      onAddNew={handleAddNew}
+      addButtonLabel="Ny nyckel"
+      pagination={pagination}
+    >
+      {showAddForm && (
+        <div id="edit-key-form">
+          <AddKeyForm
+            onSave={handleSave}
+            onBatchSave={handleBatchSave}
+            onCancel={handleCancel}
+            editingKey={editingKey}
+          />
+        </div>
+      )}
 
-        <KeysToolbar
-          searchQuery={searchInput}
-          onSearchChange={handleSearchChange}
-          onAddNew={handleAddNew}
-        />
+      {loading && (
+        <div className="text-sm text-muted-foreground py-4">
+          Hämtar nycklar…
+        </div>
+      )}
+      {error && <div className="text-sm text-red-600 py-2">Fel: {error}</div>}
 
-        {showAddForm && (
-          <div id="edit-key-form">
-            <AddKeyForm
-              onSave={handleSave}
-              onBatchSave={handleBatchSave}
-              onCancel={handleCancel}
-              editingKey={editingKey}
-            />
-          </div>
-        )}
-
-        {loading && (
-          <div className="text-sm text-muted-foreground py-4">
-            Hämtar nycklar…
-          </div>
-        )}
-        {error && <div className="text-sm text-red-600 py-2">Fel: {error}</div>}
-
-        <KeysTable
-          keys={keys}
-          keySystemMap={keySystemMap}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          selectedType={selectedTypeFilter}
-          onTypeFilterChange={handleTypeFilterChange}
-          selectedDisposed={selectedDisposedFilter}
-          onDisposedFilterChange={handleDisposedFilterChange}
-          createdAtAfter={createdAtAfter}
-          createdAtBefore={createdAtBefore}
-          onDatesChange={handleDatesChange}
-          keySystemSearch={keySystemSearch}
-          onKeySystemSearchChange={setKeySystemSearch}
-          selectedKeySystem={selectedKeySystem}
-          onKeySystemSelect={handleKeySystemSelect}
-          onKeySystemSearch={searchKeySystems}
-        />
-
-        <PaginationControls
-          paginationMeta={pagination.paginationMeta}
-          pageLimit={pagination.currentLimit}
-          customLimit={pagination.customLimit}
-          isFocused={pagination.isFocused}
-          onPageChange={pagination.handlePageChange}
-          onLimitChange={pagination.handleLimitChange}
-          onCustomLimitChange={pagination.setCustomLimit}
-          onCustomLimitSubmit={pagination.handleCustomLimitSubmit}
-          onFocusChange={pagination.setIsFocused}
-        />
-      </div>
-    </div>
+      <KeysTable
+        keys={keys}
+        keySystemMap={keySystemMap}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        selectedType={selectedTypeFilter}
+        onTypeFilterChange={handleTypeFilterChange}
+        selectedDisposed={selectedDisposedFilter}
+        onDisposedFilterChange={handleDisposedFilterChange}
+        createdAtAfter={createdAtAfter}
+        createdAtBefore={createdAtBefore}
+        onDatesChange={handleDatesChange}
+        keySystemSearch={keySystemSearch}
+        onKeySystemSearchChange={setKeySystemSearch}
+        selectedKeySystem={selectedKeySystem}
+        onKeySystemSelect={handleKeySystemSelect}
+        onKeySystemSearch={searchKeySystems}
+      />
+    </ListPageLayout>
   )
 }
 

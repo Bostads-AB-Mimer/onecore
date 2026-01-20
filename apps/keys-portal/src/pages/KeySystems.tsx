@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { KeySystemsHeader } from '@/components/key-systems/KeySystemsHeader'
-import { KeySystemsToolbar } from '@/components/key-systems/KeySystemsToolbar'
+import { ListPageLayout } from '@/components/shared/layout'
 import { KeySystemsTable } from '@/components/key-systems/KeySystemsTable'
 import { AddKeySystemForm } from '@/components/key-systems/AddKeySystemForm'
-import { PaginationControls } from '@/components/common/PaginationControls'
 
 import { KeySystem, Property, Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
@@ -401,18 +399,16 @@ export default function KeySystems() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <KeySystemsHeader
-        totalKeySystems={pagination.paginationMeta.totalRecords}
-        displayedKeySystems={KeySystems.length}
-      />
-
-      <KeySystemsToolbar
-        searchQuery={searchInput}
-        onSearchChange={handleSearchChange}
-        onAddNew={handleAddNew}
-      />
-
+    <ListPageLayout
+      title="Låssystem"
+      subtitle={`${KeySystems.length} av ${pagination.paginationMeta.totalRecords} låssystem`}
+      searchValue={searchInput}
+      onSearchChange={handleSearchChange}
+      searchPlaceholder="Sök låssystem..."
+      onAddNew={handleAddNew}
+      addButtonLabel="Nytt låssystem"
+      pagination={pagination}
+    >
       {showAddForm && (
         <AddKeySystemForm
           onSave={handleSave}
@@ -429,7 +425,7 @@ export default function KeySystems() {
         propertyMap={propertyMap}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onExplore={() => {}} // No longer used, navigation handled in table
+        onExplore={() => {}}
         expandedSystemId={expandedSystemId}
         onToggleExpand={handleToggleExpand}
         keysForExpandedSystem={keysForExpandedSystem}
@@ -445,18 +441,6 @@ export default function KeySystems() {
         onSchemaDownload={handleSchemaDownload}
         uploadingSchemaId={uploadingSchemaId}
       />
-
-      <PaginationControls
-        paginationMeta={pagination.paginationMeta}
-        pageLimit={pagination.currentLimit}
-        customLimit={pagination.customLimit}
-        isFocused={pagination.isFocused}
-        onPageChange={pagination.handlePageChange}
-        onLimitChange={pagination.handleLimitChange}
-        onCustomLimitChange={pagination.setCustomLimit}
-        onCustomLimitSubmit={pagination.handleCustomLimitSubmit}
-        onFocusChange={pagination.setIsFocused}
-      />
-    </div>
+    </ListPageLayout>
   )
 }
