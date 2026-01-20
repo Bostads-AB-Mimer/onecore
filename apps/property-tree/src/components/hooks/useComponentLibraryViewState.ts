@@ -257,7 +257,7 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
     error: typesError,
   } = useComponentEntity(
     'type',
-    viewState.level !== 'categories' ? viewState.categoryId : ''
+    viewState.level !== 'categories' ? viewState.categoryId : undefined
   )
 
   const {
@@ -268,7 +268,7 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
     'subtype',
     viewState.level === 'subtypes' || viewState.level === 'models'
       ? viewState.typeId
-      : '',
+      : undefined,
     {
       search:
         viewState.level === 'subtypes' && debouncedSearch.trim().length >= 2
@@ -283,7 +283,7 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
     error: modelsError,
   } = useComponentEntity(
     'model',
-    viewState.level === 'models' ? viewState.subtypeId : '',
+    viewState.level === 'models' ? viewState.subtypeId : undefined,
     {
       search:
         viewState.level === 'models' && debouncedSearch.trim().length >= 2
@@ -298,7 +298,7 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
     error: instancesError,
   } = useComponentEntity(
     'instance',
-    viewState.level === 'instances' ? viewState.modelId : '',
+    viewState.level === 'instances' ? viewState.modelId : undefined,
     {
       search:
         viewState.level === 'instances' && debouncedSearch.trim().length >= 2
