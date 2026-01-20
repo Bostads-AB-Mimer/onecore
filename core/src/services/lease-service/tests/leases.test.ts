@@ -175,79 +175,34 @@ describe('leases routes', () => {
     })
   })
 
-  describe('POST /leases/:leaseId/rent-rows', () => {
-    const rentRow = {
-      amount: 115,
-      articleId: '12334567',
-      label: 'Hyra p-plats',
-      from: new Date('2024-01-01'),
-    }
-
-    it('validates request body', async () => {
-      const res = await request(app.callback()).post('/leases/1337/rent-rows')
-
-      expect(res.status).toBe(400)
-    })
-
+  describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
-      const createRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
+      const addHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
-      const res = await request(app.callback())
-        .post('/leases/1337/rent-rows')
-        .send(rentRow)
+      const res = await request(app.callback()).post(
+        '/leases/1337/rent-rows/home-insurance'
+      )
 
       expect(res.status).toBe(500)
-      expect(createRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRow: { ...rentRow, from: new Date(rentRow.from) },
-      })
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
     })
 
-    it('creates rent row even without from/to', async () => {
-      const minimalRentRow = {
-        amount: 200,
-        articleId: 'Rent-001',
-        label: 'Rent',
-      }
-
-      const createRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
+    it('adds home insurance rent row', async () => {
+      const addHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
         .mockResolvedValue({
           ok: true,
           data: null,
         })
 
-      const res = await request(app.callback())
-        .post('/leases/1337/rent-rows')
-        .send(minimalRentRow)
+      const res = await request(app.callback()).post(
+        '/leases/1337/rent-rows/home-insurance'
+      )
 
       expect(res.status).toBe(201)
-      expect(createRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRow: minimalRentRow,
-      })
-      expect(res.body.content).toEqual(null)
-    })
-
-    it('creates rent row', async () => {
-      const createRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'createLeaseRentRow')
-        .mockResolvedValue({
-          ok: true,
-          data: null,
-        })
-
-      const res = await request(app.callback())
-        .post('/leases/1337/rent-rows')
-        .send(rentRow)
-
-      expect(res.status).toBe(201)
-      expect(createRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRow: { ...rentRow, from: new Date(rentRow.from) },
-      })
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
       expect(res.body.content).toEqual(null)
     })
   })

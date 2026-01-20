@@ -102,18 +102,11 @@ export const createLease = async (
   }
 }
 
-export async function createLeaseRentRow(params: {
+export async function addLeaseHomeInsuranceRentRow(
   leaseId: string
-  rentRow: z.infer<typeof leasing.v1.CreateLeaseRentRowRequestBodySchema>
-}): Promise<AdapterResult<null, 'unknown'>> {
-  const result = await axios(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows`,
-    {
-      method: 'POST',
-      data: {
-        ...params.rentRow,
-      },
-    }
+): Promise<AdapterResult<null, 'unknown'>> {
+  const result = await axios.post(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`
   )
 
   if (result.status === 201) {
@@ -121,7 +114,7 @@ export async function createLeaseRentRow(params: {
   } else {
     logger.error(
       { error: JSON.stringify(result.data) },
-      'Unknown error when creating rent row'
+      'Unknown error when adding home insurance rent row'
     )
 
     return { ok: false, err: 'unknown' }

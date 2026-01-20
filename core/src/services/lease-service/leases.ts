@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 
-import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 
@@ -299,9 +298,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows:
+   * /leases/{leaseId}/rent-rows/home-insurance:
    *   post:
-   *     summary: Create a rent row for a lease
+   *     summary: Add home insurance rent row to a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -311,63 +310,33 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               amount:
-   *                 type: number
-   *               article:
-   *                 type: string
-   *               label:
-   *                 type: string
-   *               from:
-   *                 type: string
-   *                 description: Optional start date.
-   *               to:
-   *                 type: string
-   *                 description: Optional end date.
-   *             required:
-   *               - amount
-   *               - article
-   *               - label
    *     responses:
    *       201:
-   *         description: Successfully created rent row.
-   *       400:
-   *         description: Invalid request body.
+   *         description: Successfully added home insurance rent row.
    *       500:
    *         description: Internal server error.
    */
-  router.post(
-    '/leases/:leaseId/rent-rows',
-    parseRequestBody(leasing.v1.CreateLeaseRentRowRequestBodySchema),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const createRentRowResult = await leasingAdapter.createLeaseRentRow({
-        leaseId: ctx.params.leaseId,
-        rentRow: ctx.request.body,
-      })
+  router.post('/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.addLeaseHomeInsuranceRentRow(
+      ctx.params.leaseId
+    )
 
-      if (!createRentRowResult.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: createRentRowResult.err,
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.status = 201
+    if (!result.ok) {
+      ctx.status = 500
       ctx.body = {
-        content: createRentRowResult.data,
+        error: result.err,
         ...metadata,
       }
+      return
     }
-  )
+
+    ctx.status = 201
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
 
   /**
    * @swagger

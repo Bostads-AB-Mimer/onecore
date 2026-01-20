@@ -14,8 +14,6 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
-import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { toYearMonthString } from '../adapters/tenfast/schemas'
 
 /**
  * @swagger
@@ -486,85 +484,55 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-rows:
+   * /leases/{leaseId}/rent-rows/home-insurance:
    *   post:
-   *     summary: Create a invoice row
-   *     description: Create a invoice row.
+   *     summary: Add home insurance rent row to a lease
+   *     description: Add a home insurance rent row. The article, VAT, amount, and label are determined by the service.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: leaseId
    *         required: true
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               amount:
-   *                 type: number
-   *               article:
-   *                 type: string
-   *               label:
-   *                 type: string
-   *               from:
-   *                 type: string
-   *                 description: Optional start date.
-   *               to:
-   *                 type: string
-   *                 description: Optional end date.
-   *             required:
-   *               - amount
-   *               - article
-   *               - label
    *     responses:
    *       201:
-   *         description: Successfully created invoice row.
+   *         description: Successfully added home insurance rent row.
    *       404:
    *         description: Lease not found.
    *       500:
    *         description: Internal server error.
    */
+  router.post('(.*)/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
 
-  router.post(
-    '(.*)/leases/:leaseId/rent-rows',
-    parseRequestBody(leasing.v1.CreateLeaseRentRowRequestBodySchema),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
+    // TODO: Get article ID and amount from config or database
+    const homeInsuranceArticleId = 'HOME_INSURANCE_ARTICLE_ID'
+    const homeInsuranceAmount = 0 // TODO: Determine amount
 
-      const createInvoiceRow = await tenfastAdapter.createLeaseInvoiceRow({
-        leaseId: ctx.params.leaseId,
-        invoiceRow: {
-          amount: ctx.request.body.amount,
-          article: ctx.request.body.articleId,
-          label: ctx.request.body.label,
-          from: ctx.request.body.from
-            ? toYearMonthString(ctx.request.body.from)
-            : undefined,
-          to: ctx.request.body.to
-            ? toYearMonthString(ctx.request.body.to)
-            : undefined,
-          vat: 0.25, // TODO: What to put for VAT?
-        },
-      })
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
+      leaseId: ctx.params.leaseId,
+      invoiceRow: {
+        amount: homeInsuranceAmount,
+        article: homeInsuranceArticleId,
+        label: 'Hemförsäkring',
+        vat: 0, // No VAT on insurance
+      },
+    })
 
-      if (!createInvoiceRow.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: createInvoiceRow.err,
-          ...metadata,
-        }
-        return
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
       }
-
-      ctx.status = 201
-      ctx.body = makeSuccessResponseBody(createInvoiceRow.data, metadata)
+      return
     }
-  )
+
+    ctx.status = 201
+    ctx.body = makeSuccessResponseBody(result.data, metadata)
+  })
 
   /**
    * @swagger

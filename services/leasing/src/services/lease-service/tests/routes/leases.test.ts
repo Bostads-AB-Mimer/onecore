@@ -275,38 +275,28 @@ describe('POST /leases', () => {
   })
 })
 
-describe('POST /leases/:leaseId/rent-rows', () => {
-  it('validates request body', async () => {
-    const result = await request(app.callback())
-      .post('/leases/123/rent-rows')
-      .send({ foo: 'bar' })
-
-    expect(result.status).toBe(400)
-  })
-
+describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
   it('returns 500 on error', async () => {
-    const invoiceRow = factory.tenfastInvoiceRow.build()
     const createInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const result = await request(app.callback())
-      .post('/leases/123/rent-rows')
-      .send({ ...invoiceRow, articleId: invoiceRow.article, vat: undefined })
+    const result = await request(app.callback()).post(
+      '/leases/123/rent-rows/home-insurance'
+    )
 
     expect(result.status).toBe(500)
     expect(createInvoiceRowSpy).toHaveBeenCalled()
   })
 
-  it('creates and returns null', async () => {
-    const invoiceRow = factory.tenfastInvoiceRow.build()
+  it('adds home insurance rent row with correct article, amount and vat', async () => {
     const createInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
 
-    const result = await request(app.callback())
-      .post('/leases/123/rent-rows')
-      .send({ ...invoiceRow, articleId: invoiceRow.article, vat: undefined })
+    const result = await request(app.callback()).post(
+      '/leases/123/rent-rows/home-insurance'
+    )
 
     expect(result.status).toBe(201)
     expect(result.body.content).toEqual(null)
@@ -314,44 +304,10 @@ describe('POST /leases/:leaseId/rent-rows', () => {
     expect(createInvoiceRowSpy).toHaveBeenCalledWith({
       leaseId: '123',
       invoiceRow: {
-        amount: invoiceRow.amount,
-        article: invoiceRow.article,
-        label: invoiceRow.label,
-        from: invoiceRow.from,
-        to: invoiceRow.to,
-        vat: 0.25,
-      },
-    })
-  })
-
-  it('creates rent row without from/to dates', async () => {
-    const invoiceRow = {
-      amount: 115,
-      articleId: '12334567',
-      label: 'Hyra p-plats',
-    }
-    const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
-      .mockResolvedValueOnce({
-        ok: true,
-        data: null,
-      })
-
-    const result = await request(app.callback())
-      .post('/leases/123/rent-rows')
-      .send(invoiceRow)
-
-    expect(result.status).toBe(201)
-    expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
-    expect(createInvoiceRowSpy).toHaveBeenCalledWith({
-      leaseId: '123',
-      invoiceRow: {
-        amount: invoiceRow.amount,
-        article: invoiceRow.articleId,
-        label: invoiceRow.label,
-        vat: 0.25,
-        from: undefined,
-        to: undefined,
+        amount: 0, // TODO: Update when amount is determined
+        article: 'HOME_INSURANCE_ARTICLE_ID',
+        label: 'Hemförsäkring',
+        vat: 0,
       },
     })
   })
