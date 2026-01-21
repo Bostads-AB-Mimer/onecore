@@ -1,5 +1,6 @@
 import { format, parseISO } from 'date-fns'
 import { FileText } from 'lucide-react'
+import { match } from 'ts-pattern'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 
 import { Badge } from '@/components/ui/v3/Badge'
@@ -14,11 +15,11 @@ import {
   CollapsibleTableColumn,
 } from '@/components/ui/CollapsibleTable'
 import { Button } from '@/components/ui/v2/Button'
-import { match } from 'ts-pattern'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
   currency: 'SEK',
+  currencyDisplay: 'code',
   maximumFractionDigits: 2,
 })
 
@@ -46,21 +47,11 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return format(dateObj, 'yyyy-MM-dd')
   }
 
-  const formatSource = (source: string | undefined) => {
-    if (!source) return '-'
-    if (source.toLowerCase() === 'next') return 'XLedger'
-    if (source.toLowerCase() === 'legacy') return 'Xpand'
-    return source
-  }
-
-  // Extract deferment date from description like "Anstånd till 2025-12-31"
-  const getDefermentDate = (description: string | undefined): Date | null => {
-    if (!description) return null
-    const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
-    if (match && match[1]) {
-      return new Date(match[1])
-    }
-    return null
+  const formatSource = (source: Invoice['source']) => {
+    return match(source)
+      .with('next', () => 'XLedger')
+      .with('legacy', () => 'Xpand')
+      .exhaustive()
   }
 
   // Get the effective expiration date (deferment date if applicable, otherwise original)
@@ -73,30 +64,13 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
         : invoice.expirationDate
       : null
 
-    const defermentDate = getDefermentDate(invoice.description)
+    const defermentDate = invoice.defermentDate
 
     if (defermentDate && originalDate && defermentDate > originalDate) {
       return { date: defermentDate, isDeferment: true, originalDate }
     }
 
     return { date: originalDate, isDeferment: false, originalDate: null }
-  }
-
-  const isInvoiceOverdue = (invoice: Invoice): boolean => {
-    // If invoice is already paid, it's not overdue
-    if (invoice.paymentStatus === PaymentStatus.Paid) {
-      return false
-    }
-
-    // Get the effective expiration date (considering deferments)
-    const { date } = getEffectiveExpirationDate(invoice)
-
-    if (!date) {
-      return false
-    }
-
-    const today = new Date()
-    return today > date
   }
 
   const getStatusBadge = (invoice: Invoice): JSX.Element => {

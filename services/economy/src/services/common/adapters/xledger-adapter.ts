@@ -127,6 +127,18 @@ const dateToXledgerDateString = (date: Date): string => {
   return `${year}-${month > 9 ? month : `0${month}`}-${day > 9 ? day : `0${day}`}`
 }
 
+// Extract deferment date from description like "Anstånd till 2025-12-31"
+const getDefermentDate = (
+  description: string | undefined
+): Date | undefined => {
+  if (!description) return undefined
+  const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
+  if (match && match[1]) {
+    return new Date(match[1])
+  }
+  return undefined
+}
+
 const transformToInvoice = (invoiceData: any): Invoice => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
@@ -169,6 +181,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     fromDate: dateFromString(invoiceData.node.period.fromDate),
     toDate: dateFromString(invoiceData.node.period.toDate),
     expirationDate: dateFromString(invoiceData.node.dueDate),
+    defermentDate: getDefermentDate(invoiceData.node.text),
     debitStatus: 0,
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: randomUUID(),
@@ -187,18 +200,18 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
     const now = Date.now()
 
-    console.log(
-      'invoice',
-      invoice.invoiceId,
-      'now',
-      now,
-      'expirationDate',
-      invoice.expirationDate
-    )
+    // If invoice has a defermentDate, use it for overdue check, else use expirationDate
     return match(invoice)
       .with({ remainingAmount: 0 }, () => PaymentStatus.Paid)
       .with(
-        { expirationDate: P.when((date) => now > (date?.getTime() ?? 0)) },
+        { defermentDate: P.when((date) => now > (date?.getTime() ?? 0)) },
+        () => PaymentStatus.Overdue
+      )
+      .with(
+        {
+          defermentDate: undefined,
+          expirationDate: P.when((date) => now > (date?.getTime() ?? 0)),
+        },
         () => PaymentStatus.Overdue
       )
       .with({ remainingAmount: P.number.gt(0) }, () => PaymentStatus.PartlyPaid)
