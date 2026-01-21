@@ -14,6 +14,12 @@ import {
 import { Button } from '@/components/ui/v2/Button'
 import { FileText } from 'lucide-react'
 
+const currencyFormatter = new Intl.NumberFormat('sv-SE', {
+  style: 'currency',
+  currency: 'SEK',
+  maximumFractionDigits: 2,
+})
+
 export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   // Sort invoices by invoice date, latest first
   const sortedInvoices = [...invoices].sort((a, b) => {
@@ -28,9 +34,8 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return dateB.getTime() - dateA.getTime()
   })
 
-  const formatCurrency = (amount: number | string) => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-    return numAmount.toFixed(2).replace('.', ',') + ' SEK'
+  const formatCurrency = (amount: number) => {
+    return currencyFormatter.format(amount)
   }
 
   const formatDate = (date: Date | string | undefined) => {
