@@ -1,6 +1,8 @@
-import { Badge } from '@/components/ui/v3/Badge'
-import { parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { FileText } from 'lucide-react'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
+
+import { Badge } from '@/components/ui/v3/Badge'
 import { useInvoicePaymentEvents } from '@/components/hooks/useInvoicePaymentEvents'
 import {
   Tooltip,
@@ -12,7 +14,6 @@ import {
   CollapsibleTableColumn,
 } from '@/components/ui/CollapsibleTable'
 import { Button } from '@/components/ui/v2/Button'
-import { FileText } from 'lucide-react'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -41,7 +42,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return '-'
     const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toISOString().split('T')[0]
+    return format(dateObj, 'yyyy-MM-dd')
   }
 
   const formatSource = (source: string | undefined) => {
