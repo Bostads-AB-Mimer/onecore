@@ -88,7 +88,7 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendParkingSpaceAcceptOffer(body)
-        ctx.status = 200
+        ctx.status = 204
         ctx.body = { content: result.data, ...metadata }
       } catch (error: any) {
         logger.error(
