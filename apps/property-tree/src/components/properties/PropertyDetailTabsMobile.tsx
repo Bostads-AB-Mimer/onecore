@@ -2,7 +2,7 @@ import { Info, Building, Home, BarChart3, Wrench } from 'lucide-react'
 import { PropertyInfoTab } from './tabs/PropertyInfoTab'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
-import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 import {
   MobileAccordion,
@@ -54,7 +54,12 @@ export const PropertyDetailTabsMobile = ({
       id: 'maintenance',
       icon: Wrench,
       title: 'Underhållsenheter',
-      content: <PropertyMaintenanceUnitsTab propertyDetail={propertyDetail} />,
+      content: (
+        <MaintenanceUnitsTab
+          contextType="property"
+          identifier={propertyDetail.code}
+        />
+      ),
     },
     /*
     features.showPropertyDocuments && {

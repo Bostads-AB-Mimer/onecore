@@ -1,8 +1,12 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 
-import { getRoomById, getRooms } from '@src/adapters/room-adapter'
-import { Room, roomsQueryParamsSchema } from '@src/types/room'
+import {
+  getRoomById,
+  getRooms,
+  getRoomsByFacilityId,
+} from '@src/adapters/room-adapter'
+import { roomsQueryParamsSchema } from '@src/types/room'
 import { generateMetaLinks } from '@src/utils/links'
 import { parseRequest } from '@src/middleware/parse-request'
 
@@ -56,32 +60,8 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const rooms = await getRooms(residenceId)
-        const mapped = rooms.map(
-          (v): Room => ({
-            ...v,
-            deleted: Boolean(v.deleteMark),
-            dates: {
-              availableFrom: v.availableFrom,
-              availableTo: v.availableTo,
-              from: v.fromDate,
-              to: v.toDate,
-              installation: v.installationDate,
-            },
-            features: {
-              hasThermostatValve: Boolean(v.hasThermostatValve),
-              hasToilet: Boolean(v.hasToilet),
-              isHeated: Boolean(v.isHeated),
-              orientation: v.orientation,
-            },
-            usage: {
-              allowPeriodicWorks: Boolean(v.allowPeriodicWorks),
-              shared: Boolean(v.sharedUse),
-              spaceType: v.spaceType,
-            },
-          })
-        )
         ctx.body = {
-          content: mapped,
+          content: rooms,
           ...metadata,
         }
       } catch (err) {
@@ -92,6 +72,53 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /rooms/by-facility-id/{facilityId}:
+   *   get:
+   *     summary: Get rooms by facility id.
+   *     description: Returns all rooms belonging to a facility.
+   *     tags:
+   *       - Rooms
+   *     parameters:
+   *       - in: path
+   *         name: facilityId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The id of the facility.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rooms.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Room'
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/rooms/by-facility-id/:facilityId', async (ctx) => {
+    const { facilityId } = ctx.params
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const rooms = await getRoomsByFacilityId(facilityId)
+      ctx.body = {
+        content: rooms,
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
 
   /**
    * @swagger

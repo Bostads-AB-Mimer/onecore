@@ -209,6 +209,8 @@ export interface paths {
           includeTerminatedLeases?: boolean;
           /** @description Whether to include contact information in the response */
           includeContacts?: boolean;
+          /** @description Whether to include rent information in the response */
+          includeRentInfo?: boolean;
         };
         path: {
           /** @description Rental roperty id of the building/residence to fetch leases for. */
@@ -549,13 +551,13 @@ export interface paths {
   };
   "/contacts/search": {
     /**
-     * Search contacts by PNR or contact code
-     * @description Retrieves contacts based on the provided search query.
+     * Search contacts by name, PNR, contact code, or email
+     * @description Search contacts by contact code, personal registration number, name, or email. Supports searching by full name or partial name (e.g., "john smith" or "smith"). Multiple search terms are matched with AND logic. Email search is triggered when query contains "@".
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query to filter contacts. */
+          /** @description Search query - can be contact code, personal registration number, name, or email (if query contains "@"). */
           q: string;
         };
       };
@@ -2044,6 +2046,42 @@ export interface paths {
       };
     };
   };
+  "/work-orders/by-maintenance-unit-code/{maintenanceUnitCode}": {
+    /**
+     * Get work orders by maintenance unit code
+     * @description Retrieves work orders based on the provided maintenance unit code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The maintenance unit code used to fetch work orders. */
+          maintenanceUnitCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["WorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/work-orders/xpand/by-contact-code/{contactCode}": {
     /**
      * Get work orders by contact code from xpand
@@ -2170,6 +2208,50 @@ export interface paths {
         path: {
           /** @description The building id used to fetch work orders. */
           buildingId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                totalCount?: number;
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/work-orders/xpand/by-maintenance-unit-code/{maintenanceUnitCode}": {
+    /**
+     * Get work orders by maintenance unit code from xpand
+     * @description Retrieves work orders based on the provided maintenance unit code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The number of work orders to skip. */
+          skip?: number;
+          /** @description The number of work orders to fetch. */
+          limit?: number;
+          /** @description Whether to sort the work orders by ascending creation date. */
+          sortAscending?: boolean;
+        };
+        path: {
+          /** @description The maintenance unit code used to fetch work orders. */
+          maintenanceUnitCode: string;
         };
       };
       responses: {
@@ -4018,6 +4100,52 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-blocks/by-rental-id/{rentalId}": {
+    /**
+     * Get rental blocks by rental ID
+     * @description Retrieves rental blocks by rental ID
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
+        path: {
+          /** @description Rental id to fetch rental blocks for */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved rental blocks. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["RentalBlock"][];
+            };
+          };
+        };
+        /** @description Rental ID not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Rental ID not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve rental blocks. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/residences/search": {
     /**
      * Search residences
@@ -4198,6 +4326,34 @@ export interface paths {
         /** @description Invalid query parameters. */
         400: {
           content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/rooms/by-facility-id/{facilityId}": {
+    /**
+     * Get rooms by facility id.
+     * @description Returns all rooms belonging to a facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The id of the facility. */
+          facilityId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"][];
+            };
+          };
         };
         /** @description Internal server error. */
         500: {
@@ -4408,6 +4564,38 @@ export interface paths {
       };
     };
   };
+  "/maintenance-units/search": {
+    /**
+     * Search maintenance units
+     * @description Searches for maintenance units by code.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (maintenance unit code). */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved maintenance units matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/facilities/by-property-code/{propertyCode}": {
     /**
      * Get facilities by property code.
@@ -4539,12 +4727,18 @@ export interface paths {
   "/search": {
     /**
      * Omni-search for different entities
-     * @description Search for properties, buildings, residences, and parking spaces.
+     * @description Search for properties, buildings, residences, parking spaces, and maintenance units.
+     * - Properties: Matches on property name
+     * - Buildings: Matches on building name
+     * - Residences: Matches on rental ID or residence name
+     * - Parking Spaces: Matches on rental ID or parking space name
+     * - Maintenance Units: Matches on code
+     * Returns up to 10 results per entity type (max 50 total results).
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query string. Matches on property name, building name or residence rental object id */
+          /** @description The search query string */
           q: string;
         };
       };
@@ -5354,6 +5548,16 @@ export interface components {
       };
       areaSize: number | null;
     };
+    RentalBlock: {
+      id: string;
+      blockReasonId: string;
+      blockReason: string;
+      /** Format: date-time */
+      fromDate: string;
+      /** Format: date-time */
+      toDate: string | null;
+      amount: number | null;
+    };
     FacilitySearchResult: {
       id: string;
       rentalId: string;
@@ -5966,7 +6170,26 @@ export interface components {
         code: string;
       }) | null;
     };
-    /** @description A search result that can be either a property, building, residence or parking space */
+    MaintenanceUnitSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a maintenance unit result
+       * @enum {string}
+       */
+      type: "maintenance-unit";
+      /** @description Code of the maintenance unit */
+      code: string;
+      /** @description Caption/name of the maintenance unit */
+      caption: string | null;
+      /** @description Type of maintenance unit */
+      maintenanceType: string | null;
+      /** @description Property code */
+      estateCode: string | null;
+      /** @description Property name */
+      estate: string | null;
+    };
+    /** @description A search result that can be either a property, building, residence, parking space or maintenance unit */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -6039,6 +6262,24 @@ export interface components {
         /** @description Name of building associated with the parking space */
         name: string | null;
       };
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a maintenance unit result
+       * @enum {string}
+       */
+      type: "maintenance-unit";
+      /** @description Code of the maintenance unit */
+      code: string;
+      /** @description Caption/name of the maintenance unit */
+      caption: string | null;
+      /** @description Type of maintenance unit */
+      maintenanceType: string | null;
+      /** @description Property code */
+      estateCode: string | null;
+      /** @description Property name */
+      estate: string | null;
     });
     FileListItem: {
       /** @description Full file path/name */

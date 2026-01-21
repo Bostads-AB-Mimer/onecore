@@ -1,19 +1,57 @@
 import { TabLayout } from '@/components/ui/TabLayout'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Button } from '@/components/ui/Button'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/Accordion'
-import { Wrench, FilePlus } from 'lucide-react'
-import type { PropertyDetail } from '@/types/api'
-import { useMaintenanceUnits } from '@/components/hooks/useMaintenanceUnits'
+import { Wrench, ChevronRight, FilePlus } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import {
+  useMaintenanceUnits,
+  type MaintenanceUnitsContextType,
+} from '@/components/hooks/useMaintenanceUnits'
+import { Link } from 'react-router-dom'
+import type { MaintenanceUnit } from '@/services/types'
 
-interface PropertyMaintenanceUnitsTabProps {
-  propertyDetail: PropertyDetail
+interface MaintenanceUnitsTabProps {
+  contextType: MaintenanceUnitsContextType
+  identifier: string | undefined
+  /** If true, shows a flat list of units without category accordions. Default: false */
+  showFlatList?: boolean
 }
+
+// Reusable component for rendering a single maintenance unit item
+const MaintenanceUnitItem = ({ unit }: { unit: MaintenanceUnit }) => (
+  <Link
+    to={`/maintenance-units/${unit.code}`}
+    className="block p-3 bg-background rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+  >
+    <div className="flex justify-between items-start gap-2">
+      <div className="flex-1">
+        <h4 className="font-medium text-sm mb-2">{unit.caption}</h4>
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium">Kod:</span> {unit.code}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled
+          className="opacity-50 cursor-not-allowed"
+          title="Funktionalitet kommer snart"
+          onClick={(e) => e.preventDefault()}
+        >
+          <FilePlus className="h-4 w-4 mr-2" />
+          Skapa ärende
+        </Button>
+        <ChevronRight className="h-5 w-5 text-slate-400" />
+      </div>
+    </div>
+  </Link>
+)
 
 // All maintenance unit types to display (in order)
 const MAINTENANCE_UNIT_TYPES = [
@@ -59,12 +97,15 @@ const TYPE_CONFIG: Record<string, string> = {
   'Lås & passage': 'Lås & passage',
 }
 
-export const PropertyMaintenanceUnitsTab = ({
-  propertyDetail,
-}: PropertyMaintenanceUnitsTabProps) => {
-  const { maintenanceUnits, isLoading, error } = useMaintenanceUnits(
-    propertyDetail.code
-  )
+export const MaintenanceUnitsTab = ({
+  contextType,
+  identifier,
+  showFlatList = false,
+}: MaintenanceUnitsTabProps) => {
+  const { maintenanceUnits, isLoading, error } = useMaintenanceUnits({
+    contextType,
+    identifier,
+  })
 
   if (isLoading) {
     return (
@@ -101,12 +142,31 @@ export const PropertyMaintenanceUnitsTab = ({
         <EmptyState
           icon={Wrench}
           title="Inga underhållsenheter"
-          description="Det finns inga underhållsenheter registrerade för denna fastighet ännu."
+          description="Det finns inga underhållsenheter registrerade ännu."
         />
       </TabLayout>
     )
   }
 
+  // Filter to only mapped units for flat list
+  const mappedUnits = maintenanceUnits.filter(
+    (unit) => unit.type && TYPE_CONFIG[unit.type]
+  )
+
+  // Flat list view - just show units directly without categories
+  if (showFlatList) {
+    return (
+      <TabLayout title="Underhållsenheter" count={mappedCount} showCard={true}>
+        <div className="space-y-2">
+          {mappedUnits.map((unit) => (
+            <MaintenanceUnitItem key={unit.id} unit={unit} />
+          ))}
+        </div>
+      </TabLayout>
+    )
+  }
+
+  // Category accordion view
   return (
     <TabLayout title="Underhållsenheter" count={mappedCount} showCard={true}>
       <Accordion type="single" collapsible className="space-y-3">
@@ -145,40 +205,13 @@ export const PropertyMaintenanceUnitsTab = ({
                   {unitCount > 0 ? (
                     <div className="space-y-2">
                       {units.map((unit) => (
-                        <div
-                          key={unit.id}
-                          className="p-3 bg-background rounded-lg border border-slate-200"
-                        >
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-sm mb-2">
-                                {unit.caption}
-                              </h4>
-                              <div className="text-xs text-muted-foreground space-y-1">
-                                <p>
-                                  <span className="font-medium">Kod:</span>{' '}
-                                  {unit.code}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled
-                              className="opacity-50 cursor-not-allowed shrink-0"
-                              title="Funktionalitet kommer snart"
-                            >
-                              <FilePlus className="h-4 w-4 mr-2" />
-                              Skapa ärende
-                            </Button>
-                          </div>
-                        </div>
+                        <MaintenanceUnitItem key={unit.id} unit={unit} />
                       ))}
                     </div>
                   ) : (
                     <div className="text-center py-4">
                       <p className="text-muted-foreground text-sm">
-                        Innehåll kommer att läggas till senare
+                        Inga underhållsenheter i denna kategori
                       </p>
                     </div>
                   )}

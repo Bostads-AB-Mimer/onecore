@@ -66,12 +66,12 @@ export type RentInvoiceRow = {
 }
 
 export type RentalProperty = {
-  rentalPropertyType: 'Residence' | 'ParkingSpace' | 'Facility'
+  rentalPropertyType: 'Residence' | 'ParkingSpace' | 'Facility' | 'Other'
   rentalId: string
   address: string
   code: string
-  postalCode: string
-  city: string
+  postalCode: string | null
+  city: string | null
   type: string
   areaSize: number | null
 }

@@ -17,6 +17,9 @@ const useWorkOrders = (id: string, contextType: ContextType) => {
       case 'tenant':
         // id = contact code
         return workOrderService.getWorkOrdersByContactCode(id)
+      case 'maintenanceUnit':
+        // id = maintenance unit code
+        return workOrderService.getWorkOrdersForMaintenanceUnit(id)
     }
   }
 
@@ -25,7 +28,8 @@ const useWorkOrders = (id: string, contextType: ContextType) => {
     contextType === 'property' ||
     contextType === 'building' ||
     contextType === 'residence' ||
-    contextType === 'tenant'
+    contextType === 'tenant' ||
+    contextType === 'maintenanceUnit'
 
   const workOrdersQuery = useQuery({
     queryKey: ['workOrders', contextType, id],
