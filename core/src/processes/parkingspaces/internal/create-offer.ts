@@ -189,11 +189,6 @@ export const createOfferForInternalParkingSpace = async (
     })
 
     if (!offer.ok) {
-      sendNotificationToRole(
-        'leasing',
-        `Skapa erbjudande misslyckades - ${offer.err}`,
-        log.join('\n')
-      )
       return endFailingProcess(
         log,
         CreateOfferErrorCodes.CreateOfferFailure,
@@ -204,59 +199,71 @@ export const createOfferForInternalParkingSpace = async (
 
     log.push(`Created offer ${offer.data.id}`)
 
-    try {
-      if (!contact.emailAddress)
-        throw new Error('Recipient has no email address')
-
-      await communicationAdapter.sendParkingSpaceOfferEmail({
-        to: contact.emailAddress,
-        subject: 'Erbjudande om bilplats',
-        text: 'Erbjudande om bilplats',
-        address: listing.rentalObject.address,
-        firstName: eligibleApplicant.name
-          ? extractApplicantFirstName(eligibleApplicant.name)
-          : '',
-        availableFrom: calculateVacantFrom(listing).toISOString(),
-        deadlineDate: new Date(offer.data.expiresAt).toISOString(),
-        rent: String(listing.rentalObject.monthlyRent),
-        type: listing.rentalObject.objectTypeCaption ?? '',
-        parkingSpaceId: listing.rentalObjectCode,
-        objectId: listing.id.toString(),
-        applicationType:
-          eligibleApplicant.applicationType &&
-          eligibleApplicant.applicationType === 'Replace'
-            ? 'Replace'
-            : 'Additional',
-        offerURL: constructOfferURL(offer.data.id),
-      })
-      const updateOfferSentAt = await leasingAdapter.updateOfferSentAt(
-        offer.data.id,
-        new Date()
+    if (!contact.emailAddress) {
+      log.push(`Contact ${contact.contactCode} has no email address`)
+      logger.error(
+        {
+          contactCode: contact.contactCode,
+          listingId: listing.id,
+          rentalObjectCode: listing.rentalObjectCode,
+        },
+        `Contact has no email address - cannot send parking space offer email`
       )
-
-      if (updateOfferSentAt.ok) {
-        log.push(`Updated sent at for offer ${offer.data.id}`)
-      } else {
-        sendNotificationToRole(
-          'dev',
-          `Uppdatera erbjudande - uppdatera SentAt misslyckades - ${updateOfferSentAt.err}`,
-          log.join('\n')
+    } else {
+      const acceptEmailResult =
+        await communicationAdapter.sendParkingSpaceOfferEmail({
+          to: contact.emailAddress,
+          subject: 'Erbjudande om bilplats',
+          text: 'Erbjudande om bilplats',
+          address: listing.rentalObject.address,
+          firstName: eligibleApplicant.name
+            ? extractApplicantFirstName(eligibleApplicant.name)
+            : '',
+          availableFrom: calculateVacantFrom(listing).toISOString(),
+          deadlineDate: new Date(offer.data.expiresAt).toISOString(),
+          rent: String(listing.rentalObject.monthlyRent),
+          type: listing.rentalObject.objectTypeCaption ?? '',
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+          applicationType:
+            eligibleApplicant.applicationType &&
+            eligibleApplicant.applicationType === 'Replace'
+              ? 'Replace'
+              : 'Additional',
+          offerURL: constructOfferURL(offer.data.id),
+        })
+      if (!acceptEmailResult.ok) {
+        log.push(
+          `Send Parking Space Offer Email to ${contact.emailAddress} failed with error: ${acceptEmailResult.err}`
+        )
+        logger.error(
+          {
+            error: acceptEmailResult.err,
+            email: contact.emailAddress,
+            listingId: listing.id,
+            rentalObjectCode: listing.rentalObjectCode,
+          },
+          'Send Parking Space Offer Email to applicant failed'
         )
       }
-    } catch (err) {
-      sendNotificationToRole(
-        'leasing',
-        `Skapa erbjudande - skicka bekräftelse till kund misslyckades - ${err}`,
-        log.join('\n')
-      )
+    }
+
+    const updateOfferSentAt = await leasingAdapter.updateOfferSentAt(
+      offer.data.id,
+      new Date()
+    )
+
+    if (updateOfferSentAt.ok)
+      log.push(`Updated sent at for offer ${offer.data.id}`)
+    else
       return endFailingProcess(
         log,
-        CreateOfferErrorCodes.SendEmailFailure,
+        CreateOfferErrorCodes.UpdateSentAtFailure,
         500,
-        `Send Parking Space Offer Email failed`,
-        err
+        `Update SentAt failed - ${updateOfferSentAt.err}`,
+        updateOfferSentAt.err
       )
-    }
+
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 200,
