@@ -1,7 +1,7 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
 import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 
-import { logger, paginate, PaginatedResponse } from '@onecore/utilities'
+import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { Context } from 'koa'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
@@ -508,7 +508,7 @@ const searchContactsPaginated = async (
           .where('cmemlben', 'like', `${q}%`)
       )
 
-    return paginate(query, ctx)
+    return paginateKnex(query, ctx)
   }
 
   // Split into terms - all must match name (AND), or match contactCode/persorgnr
@@ -533,7 +533,7 @@ const searchContactsPaginated = async (
     })
     .orderBy('cmctc.cmctcben', 'asc')
 
-  return paginate(query, ctx)
+  return paginateKnex(query, ctx)
 }
 
 const getContactByNationalRegistrationNumber = async (
