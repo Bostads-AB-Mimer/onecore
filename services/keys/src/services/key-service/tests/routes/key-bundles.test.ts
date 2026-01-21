@@ -29,13 +29,23 @@ describe('GET /key-bundles', () => {
   it('responds with 200 and list of key bundles', async () => {
     const mockBundles = factory.keyBundle.buildList(3)
 
-    const getAllKeyBundlesSpy = jest
-      .spyOn(keyBundlesAdapter, 'getAllKeyBundles')
-      .mockResolvedValueOnce(mockBundles)
+    // Create mock query builder that supports paginate() chain
+    const mockQueryBuilder = {
+      clone: jest.fn().mockReturnThis(),
+      clearSelect: jest.fn().mockReturnThis(),
+      clearOrder: jest.fn().mockReturnThis(),
+      count: jest.fn().mockResolvedValue([{ count: 3 }]),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockResolvedValue(mockBundles),
+    }
+
+    const getAllKeyBundlesQuerySpy = jest
+      .spyOn(keyBundlesAdapter, 'getAllKeyBundlesQuery')
+      .mockReturnValueOnce(mockQueryBuilder as any)
 
     const res = await request(app.callback()).get('/key-bundles')
 
-    expect(getAllKeyBundlesSpy).toHaveBeenCalledWith(expect.anything())
+    expect(getAllKeyBundlesQuerySpy).toHaveBeenCalledWith(expect.anything())
     expect(res.status).toBe(200)
     expect(res.body.content).toHaveLength(3)
     expect(res.body.content[0]).toHaveProperty('id')
@@ -328,14 +338,22 @@ describe('GET /key-bundles/search', () => {
       name: 'Master Keys Bundle',
     })
 
+    // Create mock query builder that supports buildSearchQuery() AND paginate()
+    const mockQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      orWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      clone: jest.fn().mockReturnThis(),
+      clearSelect: jest.fn().mockReturnThis(),
+      clearOrder: jest.fn().mockReturnThis(),
+      count: jest.fn().mockResolvedValue([{ count: 2 }]),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockResolvedValue(mockBundles),
+    }
+
     const getKeyBundlesSearchQuerySpy = jest
       .spyOn(keyBundlesAdapter, 'getKeyBundlesSearchQuery')
-      .mockReturnValueOnce({
-        where: jest.fn().mockReturnThis(),
-        orWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValueOnce(mockBundles),
-      } as any)
+      .mockReturnValueOnce(mockQueryBuilder as any)
 
     const res = await request(app.callback()).get(
       '/key-bundles/search?q=Master'
