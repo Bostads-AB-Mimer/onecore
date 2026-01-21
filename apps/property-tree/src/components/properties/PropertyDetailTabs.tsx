@@ -47,12 +47,12 @@ export const PropertyDetailTabs = ({
         <PropertyBuildingsTab buildings={propertyDetail.buildings} />
       </TabsContent>
 
-        <TabsContent value="maintenance">
-          <MaintenanceUnitsTab
-            contextType="property"
-            identifier={propertyDetail.code}
-          />
-        </TabsContent>
+      <TabsContent value="maintenance">
+        <MaintenanceUnitsTab
+          contextType="property"
+          identifier={propertyDetail.code}
+        />
+      </TabsContent>
 
       <TabsContent value="orders">
         <PropertyOrdersTab propertyDetail={propertyDetail} />
