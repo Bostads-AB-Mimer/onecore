@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { generateRouteMetadata, logger, paginate } from '@onecore/utilities'
 import { leasing, WaitingListType, RouteErrorResponse } from '@onecore/types'
 import { z } from 'zod'
 
@@ -81,6 +81,70 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /contacts/search-paginated:
+   *   get:
+   *     summary: Search contacts with pagination (proof of concept)
+   *     description: Paginated version of contact search. Supports page and limit query params.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Search query - can be contact code, personal registration number, name, or email.
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved paginated contacts data.
+   *       400:
+   *         description: Bad request. The query parameter 'q' must be a string.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/contacts/search-paginated', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q', 'page', 'limit'])
+
+    if (typeof ctx.query.q !== 'string') {
+      ctx.status = 400
+      ctx.body = { reason: 'Invalid query parameter', ...metadata }
+      return
+    }
+
+    try {
+      const query = tenantLeaseAdapter.getContactsPaginatedSearchQuery(
+        ctx.query.q
+      )
+
+      const result = await paginate<{ contactCode: string; fullName: string }>(
+        query.orderBy('cmctc.cmctcben', 'asc'),
+        ctx
+      )
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...result }
+    } catch (err) {
+      logger.error({ err }, 'contacts.search-paginated')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
   })
 
   //todo: rename singular routes to plural
