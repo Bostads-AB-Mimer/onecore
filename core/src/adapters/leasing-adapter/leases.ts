@@ -101,3 +101,42 @@ export const createLease = async (
     return { ok: false, err: 'unknown' }
   }
 }
+
+export async function addLeaseHomeInsuranceRentRow(
+  leaseId: string
+): Promise<AdapterResult<null, 'unknown'>> {
+  const result = await axios.post(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`
+  )
+
+  if (result.status === 201) {
+    return { ok: true, data: result.data.content }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when adding home insurance rent row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteLeaseRentRow(params: {
+  leaseId: string
+  rentRowId: string
+}): Promise<AdapterResult<null, 'unknown'>> {
+  const result = await axios.delete(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows/${params.rentRowId}`
+  )
+
+  if (result.status === 200) {
+    return { ok: true, data: null }
+  } else {
+    logger.error(
+      { error: JSON.stringify(result.data) },
+      'Unknown error when deleting rent row'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
