@@ -9,6 +9,7 @@ import {
   PaymentStatus,
 } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
+import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
@@ -159,7 +160,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     }
   }
 
-  const invoice: Invoice = {
+  const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
     leaseId: 'missing',
     reference: invoiceData.node.subledger.code,
@@ -169,7 +170,6 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     toDate: dateFromString(invoiceData.node.period.toDate),
     expirationDate: dateFromString(invoiceData.node.dueDate),
     debitStatus: 0,
-    paymentStatus: PaymentStatus.Unpaid,
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: randomUUID(),
     paidAmount:
@@ -184,11 +184,28 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     invoiceFileUrl: invoiceData.node.invoiceFile?.url,
   }
 
-  if (invoice.paidAmount === invoice.amount) {
-    invoice.paymentStatus = PaymentStatus.Paid
+  function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
+    const now = Date.now()
+
+    console.log(
+      'invoice',
+      invoice.invoiceId,
+      'now',
+      now,
+      'expirationDate',
+      invoice.expirationDate
+    )
+    return match(invoice)
+      .with({ remainingAmount: 0 }, () => PaymentStatus.Paid)
+      .with(
+        { expirationDate: P.when((date) => now > (date?.getTime() ?? 0)) },
+        () => PaymentStatus.Overdue
+      )
+      .with({ remainingAmount: P.number.gt(0) }, () => PaymentStatus.PartlyPaid)
+      .otherwise(() => PaymentStatus.Unpaid)
   }
 
-  return invoice
+  return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
 }
 
 const getContact = async (contactCode: string) => {

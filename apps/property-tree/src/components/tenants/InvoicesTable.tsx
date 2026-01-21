@@ -14,6 +14,7 @@ import {
   CollapsibleTableColumn,
 } from '@/components/ui/CollapsibleTable'
 import { Button } from '@/components/ui/v2/Button'
+import { match } from 'ts-pattern'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -99,18 +100,20 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   }
 
   const getStatusBadge = (invoice: Invoice): JSX.Element => {
-    switch (invoice.paymentStatus) {
-      case PaymentStatus.Paid:
-        return <Badge variant={'success'}>Betald</Badge>
-      case PaymentStatus.Unpaid:
-        if (isInvoiceOverdue(invoice)) {
-          return <Badge variant={'destructive'}>Förfallen</Badge>
-        } else {
-          return <Badge variant={'secondary'}>Obetald</Badge>
-        }
-      default:
-        return <Badge variant={'secondary'}>Obetald</Badge>
-    }
+    return match(invoice.paymentStatus)
+      .with(PaymentStatus.Paid, () => <Badge variant="success">Betald</Badge>)
+      .with(PaymentStatus.PartlyPaid, () => (
+        <Badge variant="secondary">Delvis betald</Badge>
+      ))
+      .with(PaymentStatus.Unpaid, () => (
+        <Badge variant="secondary">Obetald</Badge>
+      ))
+      .with(PaymentStatus.Overdue, () => (
+        <Badge variant="destructive">Förfallen</Badge>
+      ))
+      .otherwise((status) => (
+        <Badge variant="secondary">Okänd betalstatus: {status}</Badge>
+      ))
   }
 
   const getInvoiceType = (invoice: Invoice): string => {
