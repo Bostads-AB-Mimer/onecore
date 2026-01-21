@@ -6,6 +6,7 @@ enum CreateOfferErrorCodes {
   UpdateListingStatusFailure = 'update-listing-status-failure',
   NoContact = 'no-contact',
   UpdateApplicantStatusFailure = 'update-applicant-status-failure',
+  UpdateSentAtFailure = 'update-sent-at-failure',
   CreateOfferFailure = 'create-offer-failure',
   SendEmailFailure = 'send-email-failure',
   Unknown = 'unknown',
