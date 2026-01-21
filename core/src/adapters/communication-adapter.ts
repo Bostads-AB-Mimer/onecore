@@ -3,6 +3,7 @@ import config from '../common/config'
 import {
   Contact,
   ParkingSpaceOfferEmail,
+  ParkingSpaceAcceptOfferEmail,
   WorkOrderEmail,
   WorkOrderSms,
 } from '@onecore/types'
@@ -92,7 +93,7 @@ export const sendNotificationToRole = async (
 
 export const sendParkingSpaceOfferEmail = async (
   parkingSpaceDetails: ParkingSpaceOfferEmail
-) => {
+): Promise<AdapterResult<null, 'unknown'>> => {
   try {
     const axiosOptions = {
       method: 'POST',
@@ -111,15 +112,58 @@ export const sendParkingSpaceOfferEmail = async (
     )
 
     if (result.status !== 204) {
-      throw new Error('Error sending parking space offer')
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
     }
 
-    return result.data.content
+    return { ok: true, data: result.data.content }
   } catch (error) {
     logger.error(
       error,
       `Error sending parking space offer to ${parkingSpaceDetails.to}`
     )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendParkingSpaceAcceptOfferEmail = async (
+  parkingSpaceDetails: ParkingSpaceAcceptOfferEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: parkingSpaceDetails,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      parkingSpaceDetails.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendParkingSpaceAcceptOffer`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending parking space accept offer to ${parkingSpaceDetails.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 

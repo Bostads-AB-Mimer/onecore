@@ -199,10 +199,13 @@ describe('createOfferForInternalParkingSpace', () => {
       .mockResolvedValueOnce(null)
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ok: true, data: null })
     jest
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
+    jest
+      .spyOn(leasingAdapter, 'updateOfferSentAt')
+      .mockResolvedValue({ ok: true, data: null })
 
     const result = await createOfferForInternalParkingSpace(123)
 
@@ -372,7 +375,7 @@ describe('createOfferForInternalParkingSpace', () => {
 
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ok: true, data: null })
 
     jest
       .spyOn(leasingAdapter, 'createOffer')
@@ -427,7 +430,7 @@ describe('createOfferForInternalParkingSpace', () => {
 
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ok: true, data: null })
 
     const createOfferSpy = jest
       .spyOn(leasingAdapter, 'createOffer')
@@ -480,7 +483,7 @@ describe('createOfferForInternalParkingSpace', () => {
 
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ok: true, data: null })
 
     const createOfferSpy = jest
       .spyOn(leasingAdapter, 'createOffer')

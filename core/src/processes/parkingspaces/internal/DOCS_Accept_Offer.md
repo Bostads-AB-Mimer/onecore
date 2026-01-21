@@ -4,25 +4,16 @@
 
 ```mermaid
 flowchart LR
-A[Start] -->B(Later: Check that the Applicant is Still Eligable for Contract)
-B --> C(Later:Perform Credit Check)
-C --> D{Later:Is the Applicant Eligable for Contract?}
-D --> |Later:No| P(Later:Set Applicant Status to Rejected)
-P --> Q(Later:Update Offer Status to Closed)
-Q --> R(Later:Notify Applicant)
-R --> S(Later:Initiate Create Offer Process)
-S --> O
-D --> |Yes| E(Create Contract)
-E --> F(Reset Waiting Parking Space Waiting List)
-F --> G{Does the Applicant Have Other Offers?}
+A[Start] --> E(Create Contract)
+E --> F(Close Offer By Accept)
+F --> H(Reset Waiting Parking Space Waiting)
+H --> G{Does the Applicant Have Other Offers?}
+
 G --> |Yes| I(Initiate Process to Decline All Other Active Offers)
-G --> |No| J{Should Contract Be Replaced?}
+G --> |No| J(Notify Leasing Team)
 I --> J
-J --> |Yes| K(Later:End Contract To Be Replaced)
-J --> |No| L(Close Offer Round)
-K --> L
-L --> M(Later: Notify all Losing or Not Eligible Applicants by email)
-M --> O(End)
+J --> K(Notify Contact)
+K --> O(End)
 
 ```
 
@@ -41,6 +32,7 @@ sequenceDiagram
     participant OneCore DB as OneCore Database
     participant XPand DB as XPand SOAP Database
     participant XPand SOAP as XPand SOAP Service
+    participant Tenfast API
 
     User ->> Core: Accept Offer
     Core ->>Leasing: Get Offer
@@ -52,5 +44,50 @@ sequenceDiagram
         Leasing ->>OneCore DB: Get Listing
         OneCore DB --> Leasing: Listing
         Leasing -->> Core: Listing
+
+    Core ->>Leasing: Get Parking Space
+        Leasing ->>XPand DB: Get Parking Space
+        XPand DB --> Leasing: Parking Space
+        Leasing -->> Core: Parking Space
+
+    Core ->>Leasing: Create Lease
+        Leasing ->>XPand SOAP: Create Lease
+        XPand SOAP --> Leasing:
+        Leasing ->>Tenfast API: Create Lease
+        Tenfast API --> Leasing:
+        Leasing -->> Core: Lease
+
+    Core ->>Leasing: Close Offer
+        Leasing ->>OneCore DB: Close Offer
+        OneCore DB --> Leasing:
+        Leasing -->> Core:
+
+    Core ->>Leasing: Reset Waiting List
+        Leasing ->>XPand SOAP: Reset Waiting List
+        XPand SOAP --> Leasing:
+        Leasing -->> Core:
+
+    Core ->>Leasing: Get Other Offers
+        Leasing ->>OneCore DB: Get Other Offers
+        OneCore DB --> Leasing: Other Offers
+        Leasing -->> Core: Other Offers
+
+    loop For each Other Offer
+        Core ->>Core: Deny Offer
+    end
+
+    Core ->>Leasing: Get Contact
+        Leasing ->>XPand DB: Get Contact
+        XPand DB --> Leasing: Contact
+        Leasing -->> Core: Contact
+
+    Core ->>Communication: Send Accept Confirmation to the Contact
+        Communication -->> Core:
+
+    Core ->>Communication: Send Notification to the Leasing team
+        Communication -->> Core:
+
+
+    Core ->> User: Accept Offer success!
 
 ```
