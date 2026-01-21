@@ -1,7 +1,7 @@
 import { logger } from '@onecore/utilities'
-import { Contact, Rent, RentalObject, RentalObjectRent } from '@onecore/types'
+import { Contact, RentalObjectRent } from '@onecore/types'
 import { isAxiosError } from 'axios'
-import { ZodError } from 'zod'
+import z from 'zod'
 
 import {
   TenfastTenantByContactCodeResponseSchema,
@@ -25,7 +25,7 @@ import currency from 'currency.js'
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
 
-type SchemaError = { tag: 'schema-error'; error: ZodError }
+type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 
 export const createLease = async (
   contact: Contact,
@@ -275,7 +275,7 @@ export const getRentalObjectRents = async (
       data: allParsedRentalObjects,
     }
   } catch (err: any) {
-    if (err instanceof ZodError) {
+    if (err instanceof z.ZodError) {
       return handleTenfastError(err, 'could-not-parse-rental-objects')
     }
 
@@ -625,10 +625,51 @@ export async function getLeaseByLeaseId(
   }
 }
 
-export async function createInvoiceRow(params: {
+export async function getLeaseByExternalId(
+  externalId: string
+): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(externalId)}?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (res.status !== 200) {
+      if (res.status === 404) {
+        logger.error({ error: mapHttpError(res.data) }, 'Lease not found')
+
+        return { ok: false, err: 'not-found' }
+      }
+
+      logger.error({ error: mapHttpError(res.data) }, 'Unknown error')
+      return { ok: false, err: 'unknown' }
+    }
+
+    const lease = TenfastLeaseSchema.safeParse(res.data)
+
+    if (!lease.success) {
+      logger.error(
+        { error: JSON.stringify(lease.error, null, 2) },
+        'Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: lease.error } }
+    }
+
+    return {
+      ok: true,
+      data: lease.data,
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByExternalId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function createLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRow: Omit<TenfastInvoiceRow, '_id'>
-}): Promise<AdapterResult<TenfastInvoiceRow, 'unknown'>> {
+}): Promise<AdapterResult<null, 'unknown'>> {
   try {
     const res = await tenfastApi.request({
       method: 'patch',
@@ -641,17 +682,17 @@ export async function createInvoiceRow(params: {
     })
 
     if (res.status === 200) {
-      return { ok: true, data: res.data }
+      return { ok: true, data: null }
     } else {
       throw { status: res.status, data: res.data }
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.createInvoiceRow')
+    logger.error(mapHttpError(err), 'tenfast-adapter.createLeaseInvoiceRow')
     return { ok: false, err: 'unknown' }
   }
 }
 
-export async function deleteInvoiceRow(params: {
+export async function deleteLeaseInvoiceRow(params: {
   leaseId: string
   invoiceRowId: string
 }): Promise<AdapterResult<null, 'unknown'>> {

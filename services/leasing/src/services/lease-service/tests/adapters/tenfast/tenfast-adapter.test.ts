@@ -6,6 +6,7 @@ import assert from 'node:assert'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
+import { toYearMonthString } from '../../../adapters/tenfast/schemas'
 
 describe(tenfastAdapter.getLeaseTemplate, () => {
   it('should return template when response is valid and status is 200', async () => {
@@ -898,8 +899,8 @@ describe(tenfastAdapter.createLease, () => {
   })
 })
 
-describe(tenfastAdapter.createInvoiceRow, () => {
-  it('creates and returns invoice row', async () => {
+describe(tenfastAdapter.createLeaseInvoiceRow, () => {
+  it('creates and returns null', async () => {
     const invoiceRow = factory.tenfastInvoiceRow.build()
 
     ;(request as jest.Mock).mockResolvedValue({
@@ -907,12 +908,12 @@ describe(tenfastAdapter.createInvoiceRow, () => {
       data: invoiceRow,
     })
 
-    const result = await tenfastAdapter.createInvoiceRow({
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRow: invoiceRow,
     })
 
-    expect(result).toEqual({ ok: true, data: invoiceRow })
+    expect(result).toEqual({ ok: true, data: null })
   })
 
   it('returns ok false on error', async () => {
@@ -923,7 +924,7 @@ describe(tenfastAdapter.createInvoiceRow, () => {
       data: invoiceRow,
     })
 
-    const result = await tenfastAdapter.createInvoiceRow({
+    const result = await tenfastAdapter.createLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRow: invoiceRow,
     })
@@ -932,13 +933,13 @@ describe(tenfastAdapter.createInvoiceRow, () => {
   })
 })
 
-describe(tenfastAdapter.deleteInvoiceRow, () => {
+describe(tenfastAdapter.deleteLeaseInvoiceRow, () => {
   it('deletes and returns null', async () => {
     ;(request as jest.Mock).mockResolvedValue({
       status: 200,
     })
 
-    const result = await tenfastAdapter.deleteInvoiceRow({
+    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRowId: 'invoice-row-id',
     })
@@ -952,7 +953,7 @@ describe(tenfastAdapter.deleteInvoiceRow, () => {
       data: null,
     })
 
-    const result = await tenfastAdapter.deleteInvoiceRow({
+    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: 'lease-id',
       invoiceRowId: 'invoice-row-id',
     })
@@ -1028,8 +1029,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: '2023-01-01',
-          to: '2023-12-31',
+          from: toYearMonthString(new Date('2023-01-01')),
+          to: toYearMonthString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1066,8 +1067,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: '2023-01-01',
-          to: '2023-12-31',
+          from: toYearMonthString(new Date('2023-01-01')),
+          to: toYearMonthString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1235,5 +1236,68 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     // Assert
     assert(!result.ok)
     expect(result.err).toBe('unknown')
+  })
+})
+
+describe(tenfastAdapter.getLeaseByExternalId, () => {
+  it('should return lease when response is valid', async () => {
+    const mockLease = factory.tenfastLease.build()
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: mockLease,
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({
+      ok: true,
+      data: expect.objectContaining({
+        externalId: mockLease.externalId,
+      }),
+    })
+  })
+
+  it('should return not-found when status is 404', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 404,
+      data: { error: 'Not found' },
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('NOT-FOUND')
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('should return unknown when status is not 200 or 404', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: { error: 'Internal server error' },
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('should return schema-error when parsing fails', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { invalid: 'data' },
+    })
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({
+      ok: false,
+      err: expect.objectContaining({ tag: 'schema-error' }),
+    })
+  })
+
+  it('should return unknown when request throws an exception', async () => {
+    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+    const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
