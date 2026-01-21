@@ -36,6 +36,12 @@ export interface Config {
     leaseTemplates: {
       parkingSpace: string
     }
+    leaseRentRows: {
+      homeInsurance: {
+        articleId: string
+        amount: number
+      }
+    }
   }
   health: {
     leasingDatabase: {

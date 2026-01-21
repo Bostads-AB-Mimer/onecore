@@ -141,7 +141,7 @@ describe('leases routes', () => {
 
   describe('GET /leases/by-pnr/:pnr', () => {
     it('responds with a list of leases', async () => {
-      const getContactForPnrSpy = jest
+      jest
         .spyOn(tenantLeaseAdapter, 'getContactForPnr')
         .mockResolvedValue(factory.contact.build())
       const getLeasesSpy = jest
@@ -172,6 +172,73 @@ describe('leases routes', () => {
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(leaseMock)
       )
+    })
+  })
+
+  describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
+    it('returns 500 when adapter returns error', async () => {
+      const addHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).post(
+        '/leases/1337/rent-rows/home-insurance'
+      )
+
+      expect(res.status).toBe(500)
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+    })
+
+    it('adds home insurance rent row', async () => {
+      const addHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
+        .mockResolvedValue({
+          ok: true,
+          data: null,
+        })
+
+      const res = await request(app.callback()).post(
+        '/leases/1337/rent-rows/home-insurance'
+      )
+
+      expect(res.status).toBe(201)
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(res.body.content).toEqual(null)
+    })
+  })
+
+  describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
+    it('returns 500 when adapter returns error', async () => {
+      const deleteRentRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).delete(
+        '/leases/1337/rent-rows/row-1'
+      )
+
+      expect(res.status).toBe(500)
+      expect(deleteRentRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        rentRowId: 'row-1',
+      })
+    })
+
+    it('deletes rent row', async () => {
+      const deleteRentRowSpy = jest
+        .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback()).delete(
+        '/leases/1337/rent-rows/row-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(deleteRentRowSpy).toHaveBeenCalledWith({
+        leaseId: '1337',
+        rentRowId: 'row-1',
+      })
+      expect(res.body.content).toBeNull()
     })
   })
 })
