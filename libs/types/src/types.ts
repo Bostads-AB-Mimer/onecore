@@ -20,6 +20,7 @@ import {
   InvoiceSchema,
   XledgerContactSchema,
   RentInvoiceRowSchema,
+  LeaseRentRowSchema,
 } from './schemas/v1'
 import { MiscellaneousInvoicePayload, MiscellaneousInvoiceRow } from './economy'
 import { XledgerProjectSchema } from './schemas/v1/project'
@@ -393,6 +394,7 @@ type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
 type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
 type XledgerContact = z.infer<typeof XledgerContactSchema>
 type XledgerProject = z.infer<typeof XledgerProjectSchema>
+type LeaseRentRow = z.infer<typeof LeaseRentRowSchema>
 
 export type {
   Contact,
@@ -442,4 +444,5 @@ export type {
   Comment,
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
+  LeaseRentRow,
 }

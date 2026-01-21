@@ -3,6 +3,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponse,
+  toYearMonthString,
 } from '../../adapters/tenfast/schemas'
 
 export const TenfastRentalObjectByRentalObjectCodeResponseFactory =
@@ -39,7 +40,7 @@ export const TenfastInvoiceRowFactory = Factory.define<TenfastInvoiceRow>(
   ({ sequence }) => ({
     amount: 115,
     vat: 0.25,
-    from: '2013-03',
+    from: toYearMonthString(new Date('2013-03')),
     article: '12334567' + sequence,
     label: 'Hyra p-plats',
     _id: sequence.toString(),
