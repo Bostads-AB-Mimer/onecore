@@ -3,6 +3,7 @@ export enum ContextType {
   Building = 'building',
   Residence = 'residence',
   Tenant = 'tenant',
+  MaintenanceUnit = 'maintenanceUnit',
   ComponentInstance = 'component-instance',
   ComponentModel = 'component-model',
 }

@@ -11,6 +11,7 @@ export function useLeasesByRentalProperty(
         includeContacts: true,
         includeUpcomingLeases: true,
         includeTerminatedLeases: true,
+        includeRentInfo: false,
       }),
     enabled: !!rentalPropertyId,
   })

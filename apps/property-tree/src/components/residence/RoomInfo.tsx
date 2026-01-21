@@ -17,9 +17,9 @@ import { Button } from '../ui/v2/Button'
 import { Plus } from 'lucide-react'
 import { ManageComponentsDialog } from './ManageRoomComponentsDialog'
 
-interface RoomInfoProps {
-  residenceId: string
-}
+type RoomInfoProps =
+  | { residenceId: string; facilityId?: never }
+  | { residenceId?: never; facilityId: string }
 
 interface RoomComponentsProps {
   propertyObjectId: string
@@ -105,10 +105,14 @@ export const RoomInfo = (props: RoomInfoProps) => {
   const roomCodeFromUrl = searchParams.get('room')
   const [openRoomId, setOpenRoomId] = useState<string | undefined>(undefined)
   const roomRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const id = props.residenceId ?? props.facilityId
+  const queryFn = props.residenceId
+    ? () => roomService.getByResidenceId(props.residenceId)
+    : () => roomService.getByFacilityId(props.facilityId!)
 
   const roomsQuery = useQuery({
-    queryKey: ['rooms', props.residenceId],
-    queryFn: () => roomService.getByResidenceId(props.residenceId),
+    queryKey: ['rooms', id],
+    queryFn,
   })
 
   const isMobile = useIsMobile()

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import {
   MobileAccordion,
   MobileAccordionItem,
@@ -56,6 +57,17 @@ export const BuildingDetailTabsMobile = ({
         >
           <div />
         </FeatureGatedContent>
+      ),
+    },
+    {
+      id: 'maintenance',
+      icon: Wrench,
+      title: 'Underhållsenheter',
+      content: (
+        <MaintenanceUnitsTab
+          contextType="building"
+          identifier={building.code}
+        />
       ),
     },
     {

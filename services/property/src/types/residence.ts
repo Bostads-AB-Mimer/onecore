@@ -224,10 +224,26 @@ export const GetResidenceByRentalIdResponseSchema = createGenericResponseSchema(
   ResidenceByRentalIdSchema
 )
 
+export const RentalBlockSchema = z.object({
+  id: z.string(),
+  blockReasonId: z.string(),
+  blockReason: z.string(),
+  fromDate: z.date(),
+  toDate: z.date().nullable(),
+  amount: z.number().nullable(),
+})
+
+export const GetRentalBlocksByRentalIdResponseSchema =
+  createGenericResponseSchema(z.array(RentalBlockSchema))
+
 export type ExternalResidence = z.infer<typeof ResidenceSchema>
 export type Residence = ExternalResidence
 export type ResidenceSearchResult = z.infer<typeof ResidenceSearchResultSchema>
 export type ResidenceSummary = z.infer<typeof ResidenceSummarySchema>
 export type GetResidenceByRentalIdResponse = z.infer<
   typeof GetResidenceByRentalIdResponseSchema
+>
+export type RentalBlock = z.infer<typeof RentalBlockSchema>
+export type GetRentalBlocksByRentalIdResponse = z.infer<
+  typeof GetRentalBlocksByRentalIdResponseSchema
 >

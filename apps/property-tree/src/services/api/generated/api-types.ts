@@ -1030,12 +1030,12 @@ export interface paths {
   "/residences/search": {
     /**
      * Search residences
-     * @description Retrieves a list of all real estate residences by rental object id.
+     * @description Searches for residences by rental ID or name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
      */
     get: {
       parameters: {
         query?: {
-          /** @description The search query. */
+          /** @description The search query. Matches against rental ID or residence name. */
           q?: string;
         };
       };
@@ -1079,6 +1079,42 @@ export interface paths {
           };
         };
         /** @description Residence not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/residences/rental-id/{rentalId}/rental-blocks": {
+    /**
+     * Get rental blocks by rental ID
+     * @description Returns all rental blocks for the specified rental ID
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+        };
+        path: {
+          /** @description The rental ID */
+          rentalId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental blocks */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["RentalBlock"][];
+            };
+          };
+        };
+        /** @description Rental ID not found */
         404: {
           content: never;
         };
@@ -1162,14 +1198,14 @@ export interface paths {
   "/buildings/search": {
     /**
      * Search buildings
-     * @description Retrieves all buildings associated with a given name.
+     * @description Searches for buildings by name. The search query is matched against the building name using a case-insensitive contains operation.
      * Returns detailed information about each building including its code, name,
-     * construction details, and associated property information.
+     * construction details, and associated property information. Returns up to 10 results.
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query. */
+          /** @description The search query. Matches against building name. */
           q: string;
         };
       };
@@ -1366,12 +1402,12 @@ export interface paths {
   "/parking-spaces/search": {
     /**
      * Search parking spaces
-     * @description Searches for parking spaces by rental id.
+     * @description Searches for parking spaces by rental ID or parking space name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query (rental id). */
+          /** @description The search query. Matches against rental ID or parking space name. */
           q: string;
         };
       };
@@ -1487,6 +1523,34 @@ export interface paths {
         /** @description Invalid query parameters. */
         400: {
           content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/rooms/by-facility-id/{facilityId}": {
+    /**
+     * Get rooms by facility id.
+     * @description Returns all rooms belonging to a facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The id of the facility. */
+          facilityId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"][];
+            };
+          };
         };
         /** @description Internal server error. */
         500: {
@@ -1708,15 +1772,47 @@ export interface paths {
       };
     };
   };
-  "/facilities/search": {
+  "/maintenance-units/search": {
     /**
-     * Search facilities
-     * @description Searches for facilities by rental id.
+     * Search maintenance units
+     * @description Searches for maintenance units by code. The search query is matched against the code using a case-insensitive contains operation. Returns up to 10 results.
      */
     get: {
       parameters: {
         query: {
-          /** @description The search query (rental id). */
+          /** @description The search query. Matches against maintenance unit code. */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved maintenance units matching the search query. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["MaintenanceUnit"][];
+            };
+          };
+        };
+        /** @description Invalid query provided */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/facilities/search": {
+    /**
+     * Search facilities
+     * @description Searches for facilities by rental ID or name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query. Matches against rental ID or facility name. */
           q: string;
         };
       };
@@ -2715,6 +2811,16 @@ export interface components {
           templated: boolean;
         };
       };
+    };
+    RentalBlock: {
+      id: string;
+      blockReasonId: string;
+      blockReason: string;
+      /** Format: date-time */
+      fromDate: string;
+      /** Format: date-time */
+      toDate: string | null;
+      amount: number | null;
     };
     ComponentCategory: {
       /** Format: uuid */

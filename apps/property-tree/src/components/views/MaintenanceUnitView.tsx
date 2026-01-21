@@ -46,7 +46,7 @@ export function MaintenanceUnitView() {
       </div>
 
       <ObjectPageTabs
-        defaultTab="components"
+        defaultTab="workorders"
         tabs={[
           {
             value: 'components',
@@ -71,14 +71,12 @@ export function MaintenanceUnitView() {
             value: 'workorders',
             label: 'Ärenden',
             icon: MessageSquare,
-            disabled: true,
-            // TODO: Add MaintenanceUnit to ContextType enum in WorkOrdersManagement
-            // content: (
-            //   <WorkOrdersManagement
-            //     contextType={ContextType.MaintenanceUnit}
-            //     id={maintenanceUnit.rentalPropertyId!}
-            //   />
-            // ),
+            content: (
+              <WorkOrdersManagement
+                contextType={ContextType.MaintenanceUnit}
+                id={maintenanceUnit.code}
+              />
+            ),
           },
         ]}
       />

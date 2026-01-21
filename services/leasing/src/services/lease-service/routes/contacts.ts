@@ -33,7 +33,7 @@ export const routes = (router: KoaRouter) => {
    * /contacts/search:
    *   get:
    *     summary: Search contact based by query
-   *     description: Search contacts based on a query string.
+   *     description: Search contacts by contact code, personal registration number, name, or email. Supports searching by full name or partial name (e.g., "john smith" or "smith"). Multiple search terms are matched with AND logic. Email search is triggered when query contains "@".
    *     tags: [Contacts]
    *     parameters:
    *       - in: query
@@ -41,7 +41,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query string.
+   *         description: Search query - can be contact code, personal registration number, name, or email (if query contains "@").
    *     responses:
    *       200:
    *         description: Successfully retrieved contacts data.

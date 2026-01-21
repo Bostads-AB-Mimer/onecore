@@ -117,6 +117,12 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
+   *       - in: query
+   *         name: includeRentInfo
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include rent information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -724,17 +730,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /contacts/search:
    *   get:
-   *     summary: Search contacts by PNR or contact code
+   *     summary: Search contacts by name, PNR, contact code, or email
    *     tags:
    *       - Lease service
-   *     description: Retrieves contacts based on the provided search query.
+   *     description: Search contacts by contact code, personal registration number, name, or email. Supports searching by full name or partial name (e.g., "john smith" or "smith"). Multiple search terms are matched with AND logic. Email search is triggered when query contains "@".
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query to filter contacts.
+   *         description: Search query - can be contact code, personal registration number, name, or email (if query contains "@").
    *     responses:
    *       '200':
    *         description: Successful response with search results

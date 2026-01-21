@@ -408,13 +408,20 @@ export const getResidenceSizeByRentalId = async (rentalId: string) => {
 }
 
 export const searchResidences = async (
-  q: string
+  q: string,
+  searchFields: string[]
 ): Promise<Array<ResidenceSearchResult>> => {
   try {
     const result = await prisma.residence.findMany({
       where: {
         propertyObject: {
-          propertyStructures: { every: { rentalId: { contains: q } } },
+          propertyStructures: {
+            every: {
+              OR: searchFields.map((field) => ({
+                [field]: { contains: q },
+              })),
+            },
+          },
         },
       },
       include: {
@@ -446,6 +453,63 @@ export const searchResidences = async (
     return trimStrings(result)
   } catch (err) {
     logger.error({ err }, 'residence-adapter.searchResidences')
+    throw err
+  }
+}
+
+export const getRentalBlocksByRentalId = async (
+  rentalId: string,
+  options?: { includeActiveBlocksOnly?: boolean }
+) => {
+  try {
+    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+
+    // First find the propertyObjectId from the rentalId
+    const propertyStructure = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+      },
+      select: {
+        propertyObjectId: true,
+      },
+    })
+
+    if (!propertyStructure) {
+      return null
+    }
+
+    // Get rental blocks for this property object
+    const rentalBlocks = await prisma.rentalBlock.findMany({
+      where: {
+        propertyObjectId: propertyStructure.propertyObjectId,
+        ...(includeActiveBlocksOnly && {
+          fromDate: {
+            lte: new Date(),
+          },
+          OR: [
+            {
+              toDate: {
+                gte: new Date(),
+              },
+            },
+            {
+              toDate: null as any,
+            },
+          ],
+        }),
+      },
+      include: {
+        blockReason: true,
+      },
+      orderBy: {
+        fromDate: 'desc',
+      },
+    })
+
+    return trimStrings(rentalBlocks)
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getRentalBlocksByRentalId')
     throw err
   }
 }

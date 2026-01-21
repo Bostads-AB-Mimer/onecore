@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
-import { PropertyMaintenanceUnitsTab } from './tabs/PropertyMaintenanceUnitsTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 import { PropertyDetailTabsMobile } from './PropertyDetailTabsMobile'
 import { useIsMobile } from '@/components/hooks/useMobile'
@@ -47,9 +47,12 @@ export const PropertyDetailTabs = ({
         <PropertyBuildingsTab buildings={propertyDetail.buildings} />
       </TabsContent>
 
-      <TabsContent value="maintenance">
-        <PropertyMaintenanceUnitsTab propertyDetail={propertyDetail} />
-      </TabsContent>
+        <TabsContent value="maintenance">
+          <MaintenanceUnitsTab
+            contextType="property"
+            identifier={propertyDetail.code}
+          />
+        </TabsContent>
 
       <TabsContent value="orders">
         <PropertyOrdersTab propertyDetail={propertyDetail} />

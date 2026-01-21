@@ -97,16 +97,20 @@ const getPeriodInfo = (procurementInvoice: any) => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number) => {
+const getTaxRule = (
+  totalAmount: number,
+  totalVat: number,
+  invoiceType: ProcurementInvoiceType
+) => {
   const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
 
   switch (vatRate) {
     case 25:
-      return '1'
+      return invoiceType === ProcurementInvoiceType.solar ? '2' : '1'
     case 12:
-      return '11'
+      return invoiceType === ProcurementInvoiceType.solar ? '21' : '11'
     case 6:
-      return '12'
+      return invoiceType === ProcurementInvoiceType.solar ? '22' : '12'
     default:
       return ''
   }
@@ -134,6 +138,7 @@ const transformXmlToInvoiceRows = (
     // Reimbursment for solar production, reverse amounts
     invoiceType = ProcurementInvoiceType.solar
     isCredit = true
+    console.log('SOLAR!', procurementInvoice['ID'])
   } else if (procurementInvoice['ID'].toString().startsWith('3')) {
     // Credit invoice, reverse amounts
     isCredit = true
@@ -196,7 +201,7 @@ const transformXmlToInvoiceRows = (
       invoiceNumber,
       account: accountMap[invoiceType].costAccount,
       totalAmount: invoiceAmount,
-      vatCode: getTaxRule(invoiceAmount, vatAmount),
+      vatCode: getTaxRule(invoiceAmount, vatAmount, invoiceType),
       facilityId,
       invoiceDate: procurementInvoice.IssueDate,
       dueDate: procurementInvoice.PaymentMeans.DuePaymentDate,

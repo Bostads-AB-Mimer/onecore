@@ -17,7 +17,12 @@ interface PropertyFilteredResultsProps {
   showSearchResults: boolean
   filteredSearchResults: SearchResult[]
   filteredProperties: Property[]
-  searchTypeFilter: 'property' | 'residence' | 'parking-space' | 'facility'
+  searchTypeFilter:
+    | 'property'
+    | 'residence'
+    | 'parking-space'
+    | 'facility'
+    | 'maintenance-unit'
   activeFilterCount?: number
   isFiltering?: boolean
   filterChips?: FilterChip[]
@@ -32,12 +37,14 @@ export const PropertyFilteredResults = ({
   isFiltering = false,
   filterChips = [],
 }: PropertyFilteredResultsProps) => {
-  const contentType =
-    searchTypeFilter === 'property'
-      ? 'Fastigheter'
-      : searchTypeFilter === 'residence'
-        ? 'Lägenheter'
-        : 'Parkeringar'
+  const contentTypeMap = {
+    property: 'Fastigheter',
+    residence: 'Lägenheter',
+    'parking-space': 'Parkeringar',
+    facility: 'Lokaler',
+    'maintenance-unit': 'Underhållsenheter',
+  } as const
+  const contentType = contentTypeMap[searchTypeFilter]
 
   // Show loading state
   if (isFiltering) {

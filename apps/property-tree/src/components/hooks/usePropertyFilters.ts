@@ -4,7 +4,12 @@ import { GET } from '@/services/api/core/base-api'
 import type { Property, ResidenceSearchResult } from '@/services/types'
 import type { SearchResult } from '@/components/properties/v2/SearchResultsTable'
 
-type SearchTypeFilter = 'property' | 'residence' | 'parking-space' | 'facility'
+type SearchTypeFilter =
+  | 'property'
+  | 'residence'
+  | 'parking-space'
+  | 'facility'
+  | 'maintenance-unit'
 
 export const usePropertyFilters = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -64,6 +69,20 @@ export const usePropertyFilters = () => {
     enabled: searchTypeFilter === 'facility' && searchQuery.trim().length >= 3,
   })
 
+  // Fetch maintenance units search results
+  const maintenanceUnitsSearchQuery = useQuery({
+    queryKey: ['maintenance-units-search', searchQuery],
+    queryFn: async () => {
+      const { data, error } = await GET('/maintenance-units/search', {
+        params: { query: { q: searchQuery } },
+      })
+      if (error) throw error
+      return data?.content || []
+    },
+    enabled:
+      searchTypeFilter === 'maintenance-unit' && searchQuery.trim().length >= 3,
+  })
+
   // Convert API results to SearchResult format
   const filteredSearchResults = useMemo((): SearchResult[] => {
     if (searchTypeFilter === 'property' && propertiesSearchQuery.data) {
@@ -109,6 +128,23 @@ export const usePropertyFilters = () => {
       }))
     }
 
+    if (
+      searchTypeFilter === 'maintenance-unit' &&
+      maintenanceUnitsSearchQuery.data
+    ) {
+      return maintenanceUnitsSearchQuery.data.map((unit: any) => ({
+        type: 'maintenance-unit' as const,
+        id: unit.id,
+        code: unit.code,
+        caption: unit.caption,
+        maintenanceType: unit.type,
+        property: {
+          code: unit.estateCode,
+          name: unit.estate,
+        },
+      }))
+    }
+
     return []
   }, [
     searchTypeFilter,
@@ -116,6 +152,7 @@ export const usePropertyFilters = () => {
     residencesSearchQuery.data,
     parkingSpacesSearchQuery.data,
     facilitiesSearchQuery.data,
+    maintenanceUnitsSearchQuery.data,
   ])
 
   const showSearchResults = searchQuery.trim().length >= 3
@@ -125,7 +162,9 @@ export const usePropertyFilters = () => {
     (searchTypeFilter === 'residence' && residencesSearchQuery.isLoading) ||
     (searchTypeFilter === 'parking-space' &&
       parkingSpacesSearchQuery.isLoading) ||
-    (searchTypeFilter === 'facility' && facilitiesSearchQuery.isLoading)
+    (searchTypeFilter === 'facility' && facilitiesSearchQuery.isLoading) ||
+    (searchTypeFilter === 'maintenance-unit' &&
+      maintenanceUnitsSearchQuery.isLoading)
 
   return {
     searchQuery,
