@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger, paginate } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { leasing, WaitingListType, RouteErrorResponse } from '@onecore/types'
 import { z } from 'zod'
 
@@ -129,12 +129,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const query = tenantLeaseAdapter.getContactsPaginatedSearchQuery(
-        ctx.query.q
-      )
-
-      const result = await paginate<{ contactCode: string; fullName: string }>(
-        query.orderBy('cmctc.cmctcben', 'asc'),
+      const result = await tenantLeaseAdapter.searchContactsPaginated(
+        ctx.query.q,
         ctx
       )
 

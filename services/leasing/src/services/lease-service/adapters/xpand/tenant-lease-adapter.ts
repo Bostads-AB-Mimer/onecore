@@ -1,7 +1,8 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
 import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 
-import { logger } from '@onecore/utilities'
+import { logger, paginate, PaginatedResponse } from '@onecore/utilities'
+import { Context } from 'koa'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
@@ -483,15 +484,19 @@ const getContactsDataBySearchQuery = async (
 }
 
 /**
- * Returns a Knex query builder for paginated contact search
+ * Paginated contact search
  * @param q - Search query string
- * @returns Knex query builder that can be passed to paginate()
+ * @param ctx - Koa context for pagination params
+ * @returns Paginated response with contacts
  */
-const getContactsPaginatedSearchQuery = (q: string) => {
+const searchContactsPaginated = async (
+  q: string,
+  ctx: Context
+): Promise<PaginatedResponse<{ contactCode: string; fullName: string }>> => {
   const isEmailSearch = q.includes('@')
 
   if (isEmailSearch) {
-    return xpandDb
+    const query = xpandDb
       .from('cmctc')
       .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
       .where(
@@ -502,6 +507,8 @@ const getContactsPaginatedSearchQuery = (q: string) => {
           .from('cmeml')
           .where('cmemlben', 'like', `${q}%`)
       )
+
+    return paginate(query, ctx)
   }
 
   // Split into terms - all must match name (AND), or match contactCode/persorgnr
@@ -510,7 +517,7 @@ const getContactsPaginatedSearchQuery = (q: string) => {
     .split(/\s+/)
     .filter((word) => word.length > 0)
 
-  return xpandDb
+  const query = xpandDb
     .from('cmctc')
     .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
     .where('cmctc.deletemark', '=', '0')
@@ -524,6 +531,9 @@ const getContactsPaginatedSearchQuery = (q: string) => {
         }
       })
     })
+    .orderBy('cmctc.cmctcben', 'asc')
+
+  return paginate(query, ctx)
 }
 
 const getContactByNationalRegistrationNumber = async (
@@ -849,6 +859,6 @@ export {
   isLeaseTerminated,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
-  getContactsPaginatedSearchQuery,
+  searchContactsPaginated,
   transformFromDbContact,
 }
