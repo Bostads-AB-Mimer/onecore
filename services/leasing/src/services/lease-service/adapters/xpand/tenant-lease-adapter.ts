@@ -482,6 +482,50 @@ const getContactsDataBySearchQuery = async (
   }
 }
 
+/**
+ * Returns a Knex query builder for paginated contact search
+ * @param q - Search query string
+ * @returns Knex query builder that can be passed to paginate()
+ */
+const getContactsPaginatedSearchQuery = (q: string) => {
+  const isEmailSearch = q.includes('@')
+
+  if (isEmailSearch) {
+    return xpandDb
+      .from('cmctc')
+      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .where(
+        'cmctc.keycmobj',
+        'in',
+        xpandDb
+          .select('keycmobj')
+          .from('cmeml')
+          .where('cmemlben', 'like', `${q}%`)
+      )
+  }
+
+  // Split into terms - all must match name (AND), or match contactCode/persorgnr
+  const searchTerms = q
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+
+  return xpandDb
+    .from('cmctc')
+    .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+    .where('cmctc.deletemark', '=', '0')
+    .where((builder) => {
+      builder.where('cmctc.cmctckod', 'like', `${q}%`)
+      builder.orWhere('cmctc.persorgnr', 'like', `${q}%`)
+      // Name search - all terms must match
+      builder.orWhere((builder) => {
+        for (const term of searchTerms) {
+          builder.where('cmctc.cmctcben', 'like', `%${term}%`)
+        }
+      })
+    })
+}
+
 const getContactByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
   includeTerminatedLeases: boolean
@@ -805,5 +849,6 @@ export {
   isLeaseTerminated,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
+  getContactsPaginatedSearchQuery,
   transformFromDbContact,
 }
