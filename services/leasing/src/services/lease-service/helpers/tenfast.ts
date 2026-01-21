@@ -1,5 +1,6 @@
-import { Lease, LeaseStatus } from '@onecore/types'
-import { TenfastLease } from '../adapters/tenfast/schemas'
+import { Lease, LeaseStatus, LeaseRentRow } from '@onecore/types'
+
+import { TenfastLease, TenfastInvoiceRow } from '../adapters/tenfast/schemas'
 
 const calculateLeaseStatus = (
   startDate: Date,
@@ -49,5 +50,17 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
     tenants: undefined,
     rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
     type: 'missing',
+  }
+}
+
+export function mapToOnecoreRentRow(row: TenfastInvoiceRow): LeaseRentRow {
+  return {
+    id: row._id,
+    amount: row.amount,
+    articleId: row.article ?? '',
+    label: row.label ?? '',
+    vat: row.vat,
+    from: row.from ?? undefined,
+    to: row.to ?? undefined,
   }
 }
