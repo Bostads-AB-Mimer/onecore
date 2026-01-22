@@ -31,12 +31,12 @@ export const createLease = async (
   contact: Contact,
   rentalObjectCode: string,
   fromDate: Date,
-  listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE',
   includeVAT: boolean
 ): Promise<
   AdapterResult<
     any,
     | 'could-not-find-template'
+    | 'rental-object-has-no-template'
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -46,10 +46,6 @@ export const createLease = async (
     | 'unknown'
   >
 > => {
-  const templateResponse = await getLeaseTemplate(listingCategory)
-  if (!templateResponse.ok || !templateResponse.data)
-    return { ok: false, err: 'could-not-find-template' }
-
   const tenantResult = await getOrCreateTenant(contact)
   if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
   else if (!tenantResult.data)
@@ -58,10 +54,16 @@ export const createLease = async (
   const rentalObjectResponse = await getRentalObject(rentalObjectCode)
   if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
     return { ok: false, err: 'could-not-find-rental-object' }
-
-  if (rentalObjectResponse.data.hyror.length === 0) {
+  if (rentalObjectResponse.data.hyror.length === 0)
     return { ok: false, err: 'rent-article-is-missing' }
-  }
+  if (!rentalObjectResponse.data.contractTemplate)
+    return { ok: false, err: 'rental-object-has-no-template' }
+
+  const templateResponse = await getLeaseTemplate(
+    rentalObjectResponse.data.contractTemplate
+  )
+  if (!templateResponse.ok || !templateResponse.data)
+    return { ok: false, err: 'could-not-find-template' }
 
   try {
     const createLeaseRequestData = buildLeaseRequestData(
@@ -283,32 +285,17 @@ export const getRentalObjectRents = async (
   }
 }
 
-//TODO: Choose a different template depending on bilplatstyp alt poängfri eller ej?
 export const getLeaseTemplate = async (
-  listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+  templateId: string
 ): Promise<
   AdapterResult<
     TenfastLeaseTemplate | undefined,
-    | 'could-not-find-template-for-category'
     | 'could-not-get-template'
     | 'get-template-bad-request'
     | 'response-could-not-be-parsed'
     | 'unknown'
   >
 > => {
-  let templateId
-
-  switch (listingCategory) {
-    case 'PARKING_SPACE':
-      templateId = config.tenfast.leaseTemplates.parkingSpace
-      break
-    default:
-      return handleTenfastError(
-        listingCategory,
-        'could-not-find-template-for-category'
-      )
-  }
-
   try {
     const templateResponse = await tenfastApi.request({
       method: 'get',
@@ -535,7 +522,7 @@ export async function getLeasesByTenantId(
     if (!leases.success) {
       logger.error(
         { error: JSON.stringify(leases.error, null, 2) },
-        'Failed to parse Tenfast response'
+        'getLeasesByTenantId: Failed to parse Tenfast response'
       )
 
       return { ok: false, err: { tag: 'schema-error', error: leases.error } }
@@ -567,7 +554,7 @@ export async function getLeasesByRentalPropertyId(
     if (!leases.success) {
       logger.error(
         { error: JSON.stringify(leases.error, null, 2) },
-        'Failed to parse Tenfast response'
+        'getLeasesByRentalPropertyId: Failed to parse Tenfast response'
       )
 
       return { ok: false, err: { tag: 'schema-error', error: leases.error } }
@@ -609,7 +596,7 @@ export async function getLeaseByLeaseId(
     if (!lease.success) {
       logger.error(
         { error: JSON.stringify(lease.error, null, 2) },
-        'Failed to parse Tenfast response'
+        'getLeaseByLeaseId: Failed to parse Tenfast response'
       )
 
       return { ok: false, err: { tag: 'schema-error', error: lease.error } }
@@ -650,7 +637,7 @@ export async function getLeaseByExternalId(
     if (!lease.success) {
       logger.error(
         { error: JSON.stringify(lease.error, null, 2) },
-        'Failed to parse Tenfast response'
+        'getLeaseByExternalId: Failed to parse Tenfast response'
       )
 
       return { ok: false, err: { tag: 'schema-error', error: lease.error } }
