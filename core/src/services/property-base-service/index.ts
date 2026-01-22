@@ -1109,6 +1109,105 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-blocks/search:
+   *   get:
+   *     summary: Search rental blocks with server-side filtering
+   *     tags:
+   *       - Property base Service
+   *     description: Search and filter rental blocks. Searches by rentalId and address.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term (searches rentalId, address)
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *         description: Filter by category (Bostad, Bilplats, Lokal, Förråd)
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *         description: Filter by district
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *         description: Filter by block reason
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 50
+   *     responses:
+   *       200:
+   *         description: Successfully searched rental blocks
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-blocks/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const q = ctx.query.q as string | undefined
+    const fields = ctx.query.fields as string | undefined
+    const kategori = ctx.query.kategori as string | undefined
+    const distrikt = ctx.query.distrikt as string | undefined
+    const blockReason = ctx.query.blockReason as string | undefined
+    const fastighet = ctx.query.fastighet as string | undefined
+    const fromDateGte = ctx.query.fromDateGte as string | undefined
+    const toDateLte = ctx.query.toDateLte as string | undefined
+    const includeActiveBlocksOnly = ctx.query.includeActiveBlocksOnly === 'true'
+    const page = parseInt(ctx.query.page as string) || 1
+    const limit = parseInt(ctx.query.limit as string) || 50
+
+    try {
+      const result = await propertyBaseAdapter.searchRentalBlocks({
+        q,
+        fields,
+        kategori,
+        distrikt,
+        blockReason,
+        fastighet,
+        fromDateGte,
+        toDateLte,
+        includeActiveBlocksOnly,
+        page,
+        limit,
+      })
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        ...result.data,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences/rental-blocks/all:
    *   get:
    *     summary: Get all rental blocks (paginated)

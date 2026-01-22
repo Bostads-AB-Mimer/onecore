@@ -636,61 +636,57 @@ export const getAllRentalBlocks = async (options?: {
       }),
     }
 
-    // Get total count for pagination
-    const totalCount = await prisma.rentalBlock.count({
-      where: whereClause,
-    })
-
-    // Optimized query using direct relation to PropertyStructure (3 tables instead of 6)
-    // Tables: RentalBlock (hyspt) -> BlockReason (hyspa) -> PropertyStructure (babuf)
-    // Added join to Residence -> ResidenceType for "Typ" field
-    const rentalBlocks = await prisma.rentalBlock.findMany({
-      where: whereClause,
-      include: {
-        blockReason: true,
-        propertyStructure: {
-          select: {
-            name: true, // Address
-            rentalId: true, // Rental object code (Hyresobjekt)
-            propertyCode: true, // Property code (Fastighet)
-            propertyName: true, // Property name
-            buildingCode: true, // Building code
-            buildingName: true, // Building name
-            residenceCode: true, // Residence code (for Bostad)
-            residenceName: true, // Residence name
-            parkingSpaceCode: true, // Parking space code (for Bilplats)
-            parkingSpaceName: true, // Parking space name
-            localeCode: true, // Locale code (for Lokal)
-            localeName: true, // Locale name
-            rentalObjectCode: true, // Rental object code (for Förråd)
-            rentalObjectName: true, // Rental object name
-            // Join to AdministrativeUnit (bafen) for distrikt
-            administrativeUnit: {
-              select: {
-                district: true,
+    // Run count and data queries in parallel for better performance
+    const [totalCount, rentalBlocks] = await Promise.all([
+      prisma.rentalBlock.count({ where: whereClause }),
+      prisma.rentalBlock.findMany({
+        where: whereClause,
+        include: {
+          blockReason: true,
+          propertyStructure: {
+            select: {
+              name: true, // Address
+              rentalId: true, // Rental object code (Hyresobjekt)
+              propertyCode: true, // Property code (Fastighet)
+              propertyName: true, // Property name
+              buildingCode: true, // Building code
+              buildingName: true, // Building name
+              residenceCode: true, // Residence code (for Bostad)
+              residenceName: true, // Residence name
+              parkingSpaceCode: true, // Parking space code (for Bilplats)
+              parkingSpaceName: true, // Parking space name
+              localeCode: true, // Locale code (for Lokal)
+              localeName: true, // Locale name
+              rentalObjectCode: true, // Rental object code (for Förråd)
+              rentalObjectName: true, // Rental object name
+              // Join to AdministrativeUnit (bafen) for distrikt
+              administrativeUnit: {
+                select: {
+                  district: true,
+                },
               },
-            },
-            // Join to Residence -> ResidenceType for residence type info
-            residence: {
-              select: {
-                residenceType: {
-                  select: {
-                    code: true,
-                    name: true, // e.g., "3 rum och kök"
-                    roomCount: true,
+              // Join to Residence -> ResidenceType for residence type info
+              residence: {
+                select: {
+                  residenceType: {
+                    select: {
+                      code: true,
+                      name: true, // e.g., "3 rum och kök"
+                      roomCount: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-      orderBy: {
-        fromDate: 'desc',
-      },
-      ...(limit && { take: limit }),
-      ...(offset && { skip: offset }),
-    })
+        orderBy: {
+          fromDate: 'desc',
+        },
+        ...(limit && { take: limit }),
+        ...(offset && { skip: offset }),
+      }),
+    ])
 
     // Get unique rental IDs for fetching rent data
     const uniqueRentalIds = [
@@ -754,6 +750,269 @@ export const getAllRentalBlocks = async (options?: {
     }
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getAllRentalBlocks')
+    throw err
+  }
+}
+
+export interface SearchRentalBlocksOptions {
+  q?: string
+  fields?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  includeActiveBlocksOnly?: boolean
+  limit?: number
+  offset?: number
+}
+
+export const searchRentalBlocks = async (
+  options: SearchRentalBlocksOptions
+) => {
+  try {
+    const {
+      q,
+      fields = 'rentalId,address,blockReason',
+      kategori,
+      distrikt,
+      blockReason,
+      fastighet,
+      fromDateGte,
+      toDateLte,
+      includeActiveBlocksOnly = false,
+      limit,
+      offset,
+    } = options
+
+    // Build AND conditions array for proper query composition
+    const andConditions: Prisma.RentalBlockWhereInput[] = []
+
+    // Base filter: must have a rentalId
+    andConditions.push({
+      propertyStructure: {
+        rentalId: { not: '' },
+      },
+    })
+
+    // Active blocks filter
+    if (includeActiveBlocksOnly) {
+      andConditions.push({
+        fromDate: { lte: new Date() },
+        OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
+      })
+    }
+
+    // General search (q param) - OR across fields
+    if (q && q.trim().length >= 2) {
+      const searchTerm = q.trim()
+      const searchFields = fields.split(',').map((f) => f.trim())
+
+      const orConditions: Prisma.RentalBlockWhereInput[] = []
+
+      for (const field of searchFields) {
+        if (field === 'rentalId') {
+          orConditions.push({
+            propertyStructure: { rentalId: { contains: searchTerm } },
+          })
+        } else if (field === 'address') {
+          orConditions.push({
+            propertyStructure: { name: { contains: searchTerm } },
+          })
+        } else if (field === 'blockReason') {
+          orConditions.push({
+            blockReason: { caption: { contains: searchTerm } },
+          })
+        }
+      }
+
+      if (orConditions.length > 0) {
+        andConditions.push({ OR: orConditions })
+      }
+    }
+
+    // Distrikt filter (AND)
+    if (distrikt) {
+      andConditions.push({
+        propertyStructure: {
+          administrativeUnit: { district: distrikt },
+        },
+      })
+    }
+
+    // Fastighet (property) filter (AND)
+    if (fastighet) {
+      andConditions.push({
+        propertyStructure: {
+          propertyName: fastighet,
+        },
+      })
+    }
+
+    // Block reason filter (AND)
+    if (blockReason) {
+      andConditions.push({
+        blockReason: { caption: blockReason },
+      })
+    }
+
+    // Date range filters
+    if (fromDateGte) {
+      andConditions.push({
+        fromDate: { gte: new Date(fromDateGte) },
+      })
+    }
+    if (toDateLte) {
+      andConditions.push({
+        toDate: { lte: new Date(toDateLte) },
+      })
+    }
+
+    // Kategori filter (derived from which code field is populated)
+    if (kategori) {
+      if (kategori === 'Bostad') {
+        andConditions.push({
+          propertyStructure: { residenceCode: { not: null } },
+        })
+      } else if (kategori === 'Bilplats') {
+        andConditions.push({
+          propertyStructure: { parkingSpaceCode: { not: null } },
+        })
+      } else if (kategori === 'Lokal') {
+        andConditions.push({
+          propertyStructure: { localeCode: { not: null } },
+        })
+      } else if (kategori === 'Förråd') {
+        andConditions.push({
+          propertyStructure: { rentalObjectCode: { not: null } },
+        })
+      } else if (kategori === 'Övrigt') {
+        andConditions.push({
+          propertyStructure: {
+            residenceCode: null,
+            parkingSpaceCode: null,
+            localeCode: null,
+            rentalObjectCode: null,
+          },
+        })
+      }
+    }
+
+    // Build final whereClause from AND conditions
+    const whereClause: Prisma.RentalBlockWhereInput =
+      andConditions.length > 1 ? { AND: andConditions } : andConditions[0] || {}
+
+    // Run count and data queries in parallel for better performance
+    const [totalCount, rentalBlocks] = await Promise.all([
+      prisma.rentalBlock.count({ where: whereClause }),
+      prisma.rentalBlock.findMany({
+        where: whereClause,
+        include: {
+          blockReason: true,
+          propertyStructure: {
+            select: {
+              name: true,
+              rentalId: true,
+              propertyCode: true,
+              propertyName: true,
+              buildingCode: true,
+              buildingName: true,
+              residenceCode: true,
+              residenceName: true,
+              parkingSpaceCode: true,
+              parkingSpaceName: true,
+              localeCode: true,
+              localeName: true,
+              rentalObjectCode: true,
+              rentalObjectName: true,
+              administrativeUnit: {
+                select: {
+                  district: true,
+                },
+              },
+              residence: {
+                select: {
+                  residenceType: {
+                    select: {
+                      code: true,
+                      name: true,
+                      roomCount: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          fromDate: 'desc',
+        },
+        ...(limit && { take: limit }),
+        ...(offset && { skip: offset }),
+      }),
+    ])
+
+    // Get unique rental IDs for fetching rent data
+    const uniqueRentalIds = [
+      ...new Set(
+        rentalBlocks
+          .map((rb) => rb.propertyStructure?.rentalId?.trim())
+          .filter((id): id is string => !!id)
+      ),
+    ]
+
+    // Fetch rent data for all rental IDs
+    let rentByRentalId = new Map<
+      string,
+      Array<{
+        yearRent: number | null
+        debitFromDate: Date | null
+        debitToDate: Date | null
+      }>
+    >()
+
+    if (uniqueRentalIds.length > 0) {
+      const rentData = await prisma.$queryRaw<
+        Array<{
+          rentalpropertyid: string
+          yearrent: number | null
+          debitfdate: Date | null
+          debittodate: Date | null
+        }>
+      >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
+         FROM hy_debitrowrentalproperty_xpand_api
+         WHERE rentalpropertyid IN (${Prisma.join(uniqueRentalIds)})`
+
+      for (const row of rentData) {
+        const id = row.rentalpropertyid.trim()
+        if (!rentByRentalId.has(id)) {
+          rentByRentalId.set(id, [])
+        }
+        rentByRentalId.get(id)!.push({
+          yearRent: row.yearrent,
+          debitFromDate: row.debitfdate,
+          debitToDate: row.debittodate,
+        })
+      }
+    }
+
+    // Attach rent data to rental blocks
+    const rentalBlocksWithRent = rentalBlocks.map((rb) => {
+      const rentalId = rb.propertyStructure?.rentalId?.trim()
+      return {
+        ...rb,
+        rentRows: rentalId ? rentByRentalId.get(rentalId) || [] : [],
+      }
+    })
+
+    const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    return {
+      data: transformedBlocks,
+      totalCount,
+    }
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.searchRentalBlocks')
     throw err
   }
 }

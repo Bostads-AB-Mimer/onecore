@@ -845,6 +845,73 @@ export async function getAllRentalBlocks(options?: {
   }
 }
 
+export async function searchRentalBlocks(options: {
+  q?: string
+  fields?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  includeActiveBlocksOnly?: boolean
+  page?: number
+  limit?: number
+}): Promise<AdapterResult<PaginatedRentalBlocksResponse, 'unknown'>> {
+  try {
+    const {
+      q,
+      fields,
+      kategori,
+      distrikt,
+      blockReason,
+      fastighet,
+      fromDateGte,
+      toDateLte,
+      includeActiveBlocksOnly = false,
+      page = 1,
+      limit = 50,
+    } = options
+
+    // Call property service's search endpoint
+    // Note: Using type assertion since OpenAPI types may not be regenerated yet
+    const fetchResponse = await client().GET(
+      '/residences/rental-blocks/search' as '/residences/rental-blocks/all',
+      {
+        params: {
+          query: {
+            q,
+            fields,
+            kategori,
+            distrikt,
+            blockReason,
+            fastighet,
+            fromDateGte,
+            toDateLte,
+            includeActiveBlocksOnly,
+            page,
+            limit,
+          } as never,
+        },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data as PaginatedRentalBlocksResponse,
+      }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.searchRentalBlocks')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

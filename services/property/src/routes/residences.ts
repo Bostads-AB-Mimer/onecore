@@ -16,6 +16,7 @@ import {
   getResidenceSummariesByBuildingCodeAndStaircaseCode,
   getRentalBlocksByRentalId,
   getAllRentalBlocks,
+  searchRentalBlocks,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -26,6 +27,7 @@ import {
   ResidenceSummarySchema,
   RentalBlock,
   getAllRentalBlocksQueryParamsSchema,
+  searchRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -481,7 +483,7 @@ export const routes = (router: KoaRouter) => {
         const mappedRentalBlocks: RentalBlock[] = rentalBlocks.map((rb) => ({
           id: rb.id,
           blockReasonId: rb.blockReasonId,
-          blockReason: rb.blockReason.caption,
+          blockReason: rb.blockReason?.caption ?? null,
           fromDate: rb.fromDate,
           toDate: rb.toDate,
           amount: rb.amount,
@@ -494,6 +496,136 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (err) {
         logger.error(err, 'Error fetching rental blocks by rental ID')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/search:
+   *   get:
+   *     summary: Search rental blocks with server-side filtering
+   *     description: Search and filter rental blocks with pagination. Supports free-text search and field filters.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason
+   *       - in: query
+   *         name: fields
+   *         schema:
+   *           type: string
+   *         description: Comma-separated fields to search (default rentalId,address,propertyName,blockReason)
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *         description: Filter by category
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *         description: Filter by district
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *         description: Filter by block reason
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter blocks starting on or after this date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter blocks ending on or before this date
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: If true, only include active rental blocks
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 1000
+   *           default: 50
+   *     responses:
+   *       200:
+   *         description: Successfully searched rental blocks
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/search',
+    parseRequest({ query: searchRentalBlocksQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { page, limit, includeActiveBlocksOnly, ...searchParams } =
+        ctx.request.parsedQuery
+      const offset = (page - 1) * limit
+
+      try {
+        const { data: rentalBlocks, totalCount } = await searchRentalBlocks({
+          ...searchParams,
+          includeActiveBlocksOnly,
+          limit,
+          offset,
+        })
+
+        // Build additional params for pagination links
+        const additionalParams: Record<string, string> = {}
+        if (includeActiveBlocksOnly) {
+          additionalParams.includeActiveBlocksOnly = 'true'
+        }
+        if (searchParams.q) additionalParams.q = searchParams.q
+        if (searchParams.fields) additionalParams.fields = searchParams.fields
+        if (searchParams.kategori)
+          additionalParams.kategori = searchParams.kategori
+        if (searchParams.distrikt)
+          additionalParams.distrikt = searchParams.distrikt
+        if (searchParams.blockReason)
+          additionalParams.blockReason = searchParams.blockReason
+        if (searchParams.fastighet)
+          additionalParams.fastighet = searchParams.fastighet
+        if (searchParams.fromDateGte)
+          additionalParams.fromDateGte = searchParams.fromDateGte
+        if (searchParams.toDateLte)
+          additionalParams.toDateLte = searchParams.toDateLte
+
+        ctx.status = 200
+        ctx.body = {
+          ...buildPaginatedResponse({
+            content: rentalBlocks,
+            totalRecords: totalCount,
+            ctx,
+            additionalParams,
+            defaultLimit: 50,
+          }),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(err, 'Error searching rental blocks')
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'unknown error'
@@ -790,7 +922,7 @@ export const routes = (router: KoaRouter) => {
               return {
                 id: rb.id,
                 blockReasonId: rb.blockReasonId,
-                blockReason: rb.blockReason.caption,
+                blockReason: rb.blockReason?.caption ?? null,
                 fromDate: rb.fromDate,
                 toDate: rb.toDate,
                 amount: rb.amount,
