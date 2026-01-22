@@ -12,8 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import type { Contact } from '@/services/types'
-import type { KeyBundle } from '@/services/api/keyBundleService'
+import type { Contact, KeyBundle } from '@/services/types'
 
 type SearchResult =
   | { type: 'contact'; data: Contact }
@@ -59,9 +58,12 @@ export function UnifiedMaintenanceSearch({
     { minLength: 3 }
   )
 
-  // Search key bundles
+  // Search key bundles - wrap to return just the content array
   const bundlesQuery = useSearch(
-    (query: string) => searchKeyBundles(query),
+    async (query: string) => {
+      const response = await searchKeyBundles(query)
+      return response.content
+    },
     'search-bundles-maintenance',
     debouncedQuery,
     { minLength: 3 }
