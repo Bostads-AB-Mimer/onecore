@@ -1,10 +1,12 @@
-#!/usr/bin/env -S node -r ts-node/register
+#!/usr/bin/env -S node -r ts-node/register -r tsconfig-paths/register
+// -*- mode: typescript-ts; -*-
 
 /**
  * Usage:
- *
- * ./scripts/import-test-contacts.ts <keycmobj> <keycmobj> ...
+ * ./scripts/import-test-contacts.ts <contactCode> <contactCode> ...
  * ./scripts/import-test-contacts.ts -f <filename>
+ *
+ * Pass flag -c to remove all current rows from seed.sql
  */
 import fs from 'node:fs/promises'
 import { readFileSync, existsSync } from 'node:fs'
@@ -28,16 +30,23 @@ const readInputFile = (filePath: string) => {
       .split('\n')
       .map((r) => r.trim().split(' ')[0])
       .filter(Boolean)
-      .filter((l) => l.startsWith('#'))
+      .filter((l) => !l.startsWith('#'))
   }
   return []
 }
 
-const keycmobjs = args[0] === '-f' ? readInputFile(args[1]) : args
+const inputFile = args.includes('-f') ? args[args.indexOf('-f') + 1] : null
+const cleanSeedFile = args.includes('-c')
 
-if (keycmobjs.length === 0) {
+const contactCodes = inputFile
+  ? readInputFile(args[1])
+  : args.filter((a) => !a.startsWith('-'))
+
+if (contactCodes.length === 0 && !cleanSeedFile) {
   console.log('Usage:')
-  console.log('./scripts/import-test-contacts.ts <keycmobj> <keycmobj> ...')
+  console.log(
+    './scripts/import-test-contacts.ts <contactCode> <contactCode> ...'
+  )
   console.log('./scripts/import-test-contacts.ts -f <filename>')
 }
 
@@ -59,8 +68,8 @@ const TABLES: Record<TableName, string> = {
 const sanitizeColumns = {
   cmctc: (row: any) => {
     row.cmctcben = sanitizeName(row.cmctcben)
-    row.fnamn = sanitizeFirstName(row.fname)
-    row.lnamn = sanitizeLastName(row.fname)
+    row.fnamn = sanitizeFirstName(row.fnamn)
+    row.enamn = sanitizeLastName(row.enamn)
     row.birthdate = sanitizeBirthDate(row.birthdate)
     row.persorgnr = sanitizePersOrgNr(row.persorgnr)
     return row
@@ -72,7 +81,7 @@ const sanitizeColumns = {
     }
   },
   cmeml: (row: any) => {
-    row.emlben = sanitizeEmail(row.emlben)
+    row.cmemlben = sanitizeEmail(row.cmemlben)
     return row
   },
   cmtel: (row: any) => {
@@ -110,6 +119,14 @@ const columnOrder = (seedFileRows: string[], table: string) => {
   return seedFileRows
     .slice(begin + 1, end)
     .map((l) => l.trim().replaceAll(',', ''))
+}
+
+const beginRowsIndex = (seedFile: string[], table: string) => {
+  return seedFile.findIndex((l) => l.trim() === `-- BEGIN ${table} ROWS`)
+}
+
+const endRowsIndex = (seedFile: string[], table: string) => {
+  return seedFile.findIndex((l) => l.trim() === `-- END ${table} ROWS`)
 }
 
 /**
@@ -153,15 +170,14 @@ const spliceValues = (
   table: string,
   valueRows: string[]
 ) => {
-  const position = seedFile.findIndex(
-    (l) => l.trim() === `-- END OF ${table} ROWS`
-  )
+  const position = endRowsIndex(seedFile, table)
   seedFile.splice(position, 0, ...valueRows.map((r) => `  ${r}`))
 
   for (let i = position - 1; i < position + valueRows.length - 1; i++) {
     if (
       seedFile[i].trim() &&
       seedFile[i].trim() !== 'VALUES' &&
+      !seedFile[i].trim().startsWith('-- BEGIN ') &&
       !seedFile[i].trim().endsWith(',')
     ) {
       seedFile[i] = seedFile[i] + ','
@@ -169,46 +185,71 @@ const spliceValues = (
   }
 }
 
+const removeFileValues = (seedFile: string[]) => {
+  Object.keys(TABLES).forEach((table) => {
+    const beginIndex = beginRowsIndex(seedFile, table)
+    const endIndex = endRowsIndex(seedFile, table)
+
+    seedFile.splice(beginIndex + 1, endIndex - beginIndex - 1)
+  })
+}
+
 const SEED_FILE_PATH = './.jest/sql/seed.sql'
 
 const run = async () => {
-  // 1. Load the existing seed.sql and split into lines
+  // 1. Load the existing seed.sql, split into lines and clean if requested
   const seedFile = (await fs.readFile(SEED_FILE_PATH, 'utf8')).split('\n')
-
-  // 2. Read the column order for each table from seedFile.
-  const columnOrderMap: Record<string, string[]> = {
-    cmctc: columnOrder(seedFile, 'cmctc'),
-    cmtel: columnOrder(seedFile, 'cmtel'),
-    cmeml: columnOrder(seedFile, 'cmeml'),
-    cmadr: columnOrder(seedFile, 'cmadr'),
+  if (cleanSeedFile) {
+    console.log('- Clean seed file')
+    removeFileValues(seedFile)
   }
 
-  // 3. Connect to the remote test or production Xpand DB.
-  const pool = await connect()
+  // Exit if there is no input
+  if (contactCodes.length > 0) {
+    // 2. Read the column order for each table from seedFile.
+    const columnOrderMap: Record<string, string[]> = {
+      cmctc: columnOrder(seedFile, 'cmctc'),
+      cmtel: columnOrder(seedFile, 'cmtel'),
+      cmeml: columnOrder(seedFile, 'cmeml'),
+      cmadr: columnOrder(seedFile, 'cmadr'),
+    }
 
-  // 4. Read the rows for the input `keycmobj` IDs
-  for (const table of Object.keys(TABLES) as TableName[]) {
-    console.log(`Importing "${table}" rows...`)
-    const resultset = await pool.query(
-      `SELECT * FROM ${table} WHERE ${TABLES[table]} IN (${keycmobjs.map((o) => `'${o}'`).join(', ')})`
-    )
+    // 3. Connect to the remote test or production Xpand DB.
+    const pool = await connect()
 
-    const valueRows = resultset.recordset.map((row) =>
-      toValues(sanitizeColumns[table](row), columnOrderMap[table])
-    )
+    // 4. Get keycmobj's for contact code inputs:
+    const keycmobjs = (
+      await pool.query(
+        `SELECT keycmobj FROM cmctc WHERE cmctckod IN (${contactCodes.map((o) => `'${o}'`).join(', ')})`
+      )
+    ).recordset.map((cmr) => cmr.keycmobj)
 
-    spliceValues(seedFile, table, valueRows)
+    // 4. Read the rows for the input `keycmobj` IDs
+    for (const table of Object.keys(TABLES) as TableName[]) {
+      console.log(`Importing "${table}" rows...`)
+      const resultset = await pool.query(
+        `SELECT * FROM ${table} WHERE ${TABLES[table]} IN (${keycmobjs.map((o) => `'${o}'`).join(', ')})`
+      )
+      console.log(`- Selected ${resultset.recordset.length} rows`)
 
-    console.log(`- Added ${valueRows.length} rows.`)
+      const valueRows = resultset.recordset.map((row) =>
+        toValues(sanitizeColumns[table](row), columnOrderMap[table])
+      )
+
+      spliceValues(seedFile, table, valueRows)
+
+      console.log(`- Added ${valueRows.length} rows.`)
+    }
+
+    await pool.close()
+  } else {
+    console.log('- No contacts to import')
   }
 
   // 5. Write the modified seed file lines back to disk
   await fs.writeFile(SEED_FILE_PATH, seedFile.join('\n'), 'utf8')
 
   console.log('Wrote result to', SEED_FILE_PATH)
-
-  // 6. The End, happily ever after, etc, etc
-  await pool.close()
 }
 
 run()
