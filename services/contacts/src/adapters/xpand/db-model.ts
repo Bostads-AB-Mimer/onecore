@@ -19,14 +19,15 @@ export type DbPhoneNumber = {
   ownerObjectKey: string
   phoneNumber: string
   phoneType: string
-  isPrimaryPhone: boolean
+  isPrimaryPhone: number
 }
 
 export type DbEmailAddress = {
   emailId: string
   ownerObjectKey: string
   emailAddress: string
-  isPrimaryEmail: boolean
+  emailType: string
+  isPrimaryEmail: number
 }
 
 export type DbAddress = {
@@ -41,6 +42,7 @@ export type DbAddress = {
   adress8?: string
   adress9?: string
   adress10?: string
+  region?: string
 }
 
 export type DbContactRow = DbContact &
