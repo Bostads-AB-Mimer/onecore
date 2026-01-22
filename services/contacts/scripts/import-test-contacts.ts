@@ -1,4 +1,4 @@
-#!/usr/bin/env -S pnpx ts-node
+#!/usr/bin/env -S node -r ts-node/register
 
 /**
  * Usage:
