@@ -57,6 +57,10 @@ export const routes = (router: KoaRouter) => {
   )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
   registerSchema('RentalBlock', schemas.RentalBlockSchema)
+  registerSchema(
+    'RentalBlockWithResidence',
+    schemas.RentalBlockWithResidenceSchema
+  )
   registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
   registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
   registerSchema(
@@ -1102,6 +1106,129 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/all:
+   *   get:
+   *     summary: Get all rental blocks (paginated)
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves all rental blocks for residences across the system with pagination support
+   *     parameters:
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *       - in: query
+   *         name: page
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (1-indexed)
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 20
+   *         description: Number of items per page
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved all rental blocks.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithResidence'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/residences/rental-blocks/all', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = schemas.GetAllRentalBlocksQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.errors, ...metadata }
+      return
+    }
+
+    const { includeActiveBlocksOnly, page, limit } = queryParams.data
+
+    try {
+      const getAllRentalBlocksResult =
+        await propertyBaseAdapter.getAllRentalBlocks({
+          includeActiveBlocksOnly,
+          page,
+          limit,
+        })
+
+      if (!getAllRentalBlocksResult.ok) {
+        logger.error(
+          { err: getAllRentalBlocksResult.err, metadata },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        ...getAllRentalBlocksResult.data,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 
   /**
    * @swagger

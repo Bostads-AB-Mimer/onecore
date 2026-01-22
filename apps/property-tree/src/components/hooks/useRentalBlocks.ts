@@ -17,3 +17,16 @@ export function useRentalBlocks(rentalId: string | undefined) {
     error,
   }
 }
+
+export function useAllRentalBlocks(includeActiveBlocksOnly = false) {
+  const allRentalBlocksQuery = useQuery({
+    queryKey: ['allRentalBlocks', includeActiveBlocksOnly],
+    queryFn: () => residenceService.getAllRentalBlocks(includeActiveBlocksOnly),
+  })
+
+  return {
+    data: allRentalBlocksQuery.data,
+    isLoading: allRentalBlocksQuery.isLoading,
+    error: allRentalBlocksQuery.error,
+  }
+}

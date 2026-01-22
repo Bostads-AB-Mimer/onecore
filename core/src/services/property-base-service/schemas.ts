@@ -574,6 +574,66 @@ export const GetRentalBlocksByRentalIdQueryParamsSchema = z.object({
     .default('false'),
 })
 
+export const RentalBlockWithRentalObjectSchema = z.object({
+  id: z.string(),
+  blockReasonId: z.string().nullable(),
+  blockReason: z.string().nullable(),
+  fromDate: z.coerce.date(),
+  toDate: z.coerce.date().nullable(),
+  amount: z.number().nullable(),
+  distrikt: z.string().nullable(),
+  rentalObject: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    category: z.enum(['Bostad', 'Bilplats', 'Lokal', 'Förråd', 'Övrigt']),
+    address: z.string().nullable(),
+    rentalId: z.string().nullable(),
+    monthlyRent: z.number(),
+    // Residence type (e.g., "3 rum och kök") - only available for Bostad, null for Bilplats
+    type: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
+// Keep old schema for backwards compatibility during transition
+export const RentalBlockWithResidenceSchema = RentalBlockWithRentalObjectSchema
+
+export const GetAllRentalBlocksQueryParamsSchema = z.object({
+  includeActiveBlocksOnly: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .default('false'),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+// Pagination schemas for HATEOAS-style responses
+export const PaginationMetaSchema = z.object({
+  totalRecords: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  count: z.number(),
+})
+
+export const PaginationLinkSchema = z.object({
+  href: z.string(),
+  rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
+})
+
+export const PaginatedRentalBlocksResponseSchema = z.object({
+  content: z.array(RentalBlockWithRentalObjectSchema),
+  _meta: PaginationMetaSchema,
+  _links: z.array(PaginationLinkSchema),
+})
+
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
@@ -591,6 +651,15 @@ export type ParkingSpace = z.infer<typeof ParkingSpaceSchema>
 export type MaintenanceUnit = z.infer<typeof MaintenanceUnitSchema>
 export type FacilityDetails = z.infer<typeof FacilityDetailsSchema>
 export type RentalBlock = z.infer<typeof RentalBlockSchema>
+export type RentalBlockWithRentalObject = z.infer<
+  typeof RentalBlockWithRentalObjectSchema
+>
+export type RentalBlockWithResidence = RentalBlockWithRentalObject
+export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
+export type PaginationLink = z.infer<typeof PaginationLinkSchema>
+export type PaginatedRentalBlocksResponse = z.infer<
+  typeof PaginatedRentalBlocksResponseSchema
+>
 
 // ==================== COMPONENTS NEW ====================
 

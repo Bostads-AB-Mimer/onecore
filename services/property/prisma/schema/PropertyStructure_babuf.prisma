@@ -69,10 +69,12 @@ model PropertyStructure {
   maintenanceUnit MaintenanceUnit? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
   staircase       Staircase?       @relation(fields: [staircaseId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
   residence       Residence?       @relation(fields: [residenceId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
+  rentalBlocks    RentalBlock[]
 
   // Ny relation baserad på maintenanceUnitCode
   maintenanceUnitByCode MaintenanceUnit? @relation("MaintenanceUnitCodeRelation", fields: [maintenanceUnitCode], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])  
+  component             Component?       @relation("ComponentToPropertyStructure", fields: [componentId], references: [id])
+  administrativeUnit    AdministrativeUnit? @relation(fields: [managementUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)  
 
   // Indexes
   @@index([leaseObjectId], map: "fkbabufobjaob")

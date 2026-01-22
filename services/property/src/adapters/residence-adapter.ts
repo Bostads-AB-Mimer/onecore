@@ -4,6 +4,10 @@ import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import {
+  calculateMonthlyRentFromYearRentRows,
+  calculateEstimatedHyresbortfall,
+} from '../utils/rent-calculation'
 
 import { prisma } from './db'
 //todo: add types
@@ -510,6 +514,246 @@ export const getRentalBlocksByRentalId = async (
     return trimStrings(rentalBlocks)
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getRentalBlocksByRentalId')
+    throw err
+  }
+}
+
+// Transform raw rental block data to API response format
+// Moved from routes to keep transformation logic in adapter
+function transformRentalBlock(rb: {
+  id: string
+  blockReasonId: string | null
+  blockReason: { caption: string | null } | null
+  fromDate: Date
+  toDate: Date | null
+  amount: number | null
+  propertyStructure: {
+    name: string | null
+    rentalId: string | null
+    propertyCode: string | null
+    propertyName: string | null
+    buildingCode: string | null
+    buildingName: string | null
+    residenceCode: string | null
+    residenceName: string | null
+    parkingSpaceCode: string | null
+    parkingSpaceName: string | null
+    localeCode: string | null
+    localeName: string | null
+    rentalObjectCode: string | null
+    rentalObjectName: string | null
+    administrativeUnit: {
+      district: string | null
+    } | null
+    residence: {
+      residenceType: {
+        code: string | null
+        name: string | null
+        roomCount: number | null
+      } | null
+    } | null
+  } | null
+  rentRows: Array<{
+    yearRent: number | null
+    debitFromDate: Date | null
+    debitToDate: Date | null
+  }>
+}) {
+  const ps = rb.propertyStructure
+
+  // Determine category based on which code field is populated (priority order)
+  const getCategory = () => {
+    if (ps?.residenceCode) return 'Bostad' as const
+    if (ps?.parkingSpaceCode) return 'Bilplats' as const
+    if (ps?.localeCode) return 'Lokal' as const
+    if (ps?.rentalObjectCode) return 'Förråd' as const
+    return 'Övrigt' as const
+  }
+  const category = getCategory()
+
+  const monthlyRent = calculateMonthlyRentFromYearRentRows(rb.rentRows || [])
+  const residenceType = ps?.residence?.residenceType
+
+  return {
+    id: rb.id,
+    blockReasonId: rb.blockReasonId,
+    blockReason: rb.blockReason?.caption || null,
+    fromDate: rb.fromDate,
+    toDate: rb.toDate,
+    amount:
+      rb.amount ??
+      calculateEstimatedHyresbortfall(monthlyRent, rb.fromDate, rb.toDate),
+    rentalObject: {
+      code:
+        ps?.residenceCode ||
+        ps?.parkingSpaceCode ||
+        ps?.localeCode ||
+        ps?.rentalObjectCode ||
+        null,
+      name:
+        ps?.residenceName ||
+        ps?.parkingSpaceName ||
+        ps?.localeName ||
+        ps?.rentalObjectName ||
+        null,
+      category,
+      address: ps?.name || null,
+      rentalId: ps?.rentalId || null,
+      monthlyRent,
+      type: residenceType?.name || null,
+    },
+    building: {
+      code: ps?.buildingCode || null,
+      name: ps?.buildingName || null,
+    },
+    property: {
+      code: ps?.propertyCode || null,
+      name: ps?.propertyName || null,
+    },
+    distrikt: ps?.administrativeUnit?.district || null,
+  }
+}
+
+export const getAllRentalBlocks = async (options?: {
+  includeActiveBlocksOnly?: boolean
+  limit?: number
+  offset?: number
+}) => {
+  try {
+    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+    const limit = options?.limit
+    const offset = options?.offset
+
+    // Build where clause
+    const whereClause = {
+      // Filter for valid rental IDs at DB level
+      propertyStructure: {
+        rentalId: { not: '' },
+      },
+      ...(includeActiveBlocksOnly && {
+        fromDate: { lte: new Date() },
+        OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
+      }),
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.rentalBlock.count({
+      where: whereClause,
+    })
+
+    // Optimized query using direct relation to PropertyStructure (3 tables instead of 6)
+    // Tables: RentalBlock (hyspt) -> BlockReason (hyspa) -> PropertyStructure (babuf)
+    // Added join to Residence -> ResidenceType for "Typ" field
+    const rentalBlocks = await prisma.rentalBlock.findMany({
+      where: whereClause,
+      include: {
+        blockReason: true,
+        propertyStructure: {
+          select: {
+            name: true, // Address
+            rentalId: true, // Rental object code (Hyresobjekt)
+            propertyCode: true, // Property code (Fastighet)
+            propertyName: true, // Property name
+            buildingCode: true, // Building code
+            buildingName: true, // Building name
+            residenceCode: true, // Residence code (for Bostad)
+            residenceName: true, // Residence name
+            parkingSpaceCode: true, // Parking space code (for Bilplats)
+            parkingSpaceName: true, // Parking space name
+            localeCode: true, // Locale code (for Lokal)
+            localeName: true, // Locale name
+            rentalObjectCode: true, // Rental object code (for Förråd)
+            rentalObjectName: true, // Rental object name
+            // Join to AdministrativeUnit (bafen) for distrikt
+            administrativeUnit: {
+              select: {
+                district: true,
+              },
+            },
+            // Join to Residence -> ResidenceType for residence type info
+            residence: {
+              select: {
+                residenceType: {
+                  select: {
+                    code: true,
+                    name: true, // e.g., "3 rum och kök"
+                    roomCount: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        fromDate: 'desc',
+      },
+      ...(limit && { take: limit }),
+      ...(offset && { skip: offset }),
+    })
+
+    // Get unique rental IDs for fetching rent data
+    const uniqueRentalIds = [
+      ...new Set(
+        rentalBlocks
+          .map((rb) => rb.propertyStructure?.rentalId?.trim())
+          .filter((id): id is string => !!id)
+      ),
+    ]
+
+    // Fetch rent data for all rental IDs
+    let rentByRentalId = new Map<
+      string,
+      Array<{
+        yearRent: number | null
+        debitFromDate: Date | null
+        debitToDate: Date | null
+      }>
+    >()
+
+    if (uniqueRentalIds.length > 0) {
+      // Use parameterized query to prevent SQL injection
+      const rentData = await prisma.$queryRaw<
+        Array<{
+          rentalpropertyid: string
+          yearrent: number | null
+          debitfdate: Date | null
+          debittodate: Date | null
+        }>
+      >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
+         FROM hy_debitrowrentalproperty_xpand_api
+         WHERE rentalpropertyid IN (${Prisma.join(uniqueRentalIds)})`
+
+      // Group rent rows by rental property ID
+      for (const row of rentData) {
+        const id = row.rentalpropertyid.trim()
+        if (!rentByRentalId.has(id)) {
+          rentByRentalId.set(id, [])
+        }
+        rentByRentalId.get(id)!.push({
+          yearRent: row.yearrent,
+          debitFromDate: row.debitfdate,
+          debitToDate: row.debittodate,
+        })
+      }
+    }
+
+    // Attach rent data to rental blocks
+    const rentalBlocksWithRent = rentalBlocks.map((rb) => {
+      const rentalId = rb.propertyStructure?.rentalId?.trim()
+      return {
+        ...rb,
+        rentRows: rentalId ? rentByRentalId.get(rentalId) || [] : [],
+      }
+    })
+
+    const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    return {
+      data: transformedBlocks,
+      totalCount,
+    }
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getAllRentalBlocks')
     throw err
   }
 }

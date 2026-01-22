@@ -135,7 +135,7 @@ export function DashboardView() {
       description: 'Hantera spärrar och begränsningar',
       path: '/barriers',
       isExternal: false,
-      isDisabled: true,
+      isDisabled: false,
     },
     {
       id: 'turnover',
