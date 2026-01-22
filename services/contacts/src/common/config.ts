@@ -3,15 +3,20 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+export interface DatabaseConfig {
+  host: string
+  user: string
+  password: string
+  port: number
+  database: string
+}
+
 export interface Config {
   port: number
   applicationName: string
-  xpandDatabase: {
-    host: string
-    user: string
-    password: string
-    port: number
-    database: string
+  xpandDatabase: DatabaseConfig
+  logging: {
+    enabled: boolean
   }
   health: {
     xpandDatabase: {
@@ -29,6 +34,9 @@ const config = configPackage({
     xpandDatabase: {
       systemName: 'xpand database',
     },
+    logging: {
+      enabled: false,
+    },
     health: {
       xpandDatabase: {
         systemName: 'xpand database',
@@ -40,6 +48,7 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
+  logging: config.get('logging'),
   applicationName: config.get('applicationName'),
   xpandDatabase: config.get('xpandDatabase'),
   health: config.get('health'),
