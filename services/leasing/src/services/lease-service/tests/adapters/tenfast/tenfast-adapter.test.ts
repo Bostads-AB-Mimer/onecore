@@ -607,8 +607,46 @@ describe(tenfastAdapter.createLease, () => {
     })
   })
 
+  it('should return error "rental-object-has-no-template" when rental object has no lease template set', async () => {
+    // Arrange
+    const mockRentalObject = factory.tenfastRentalObject.build({
+      contractTemplate: undefined,
+    })
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
+    const contact = factory.contact.build()
+    const fromDate = new Date()
+
+    // Act
+    const result = await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      fromDate,
+      true
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'rental-object-has-no-template',
+    })
+  })
+
   it('should return error "could-not-find-template" when getLeaseTemplate fails or returns no data', async () => {
     // Arrange
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObject')
+      .mockResolvedValue({ ok: true, data: mockRentalObject })
+
     jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
       ok: false,
       err: 'could-not-get-template',

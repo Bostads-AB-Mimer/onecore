@@ -36,6 +36,7 @@ export const createLease = async (
   AdapterResult<
     any,
     | 'could-not-find-template'
+    | 'rental-object-has-no-template'
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -56,7 +57,7 @@ export const createLease = async (
   if (rentalObjectResponse.data.hyror.length === 0)
     return { ok: false, err: 'rent-article-is-missing' }
   if (!rentalObjectResponse.data.contractTemplate)
-    return { ok: false, err: 'could-not-find-template' }
+    return { ok: false, err: 'rental-object-has-no-template' }
 
   const templateResponse = await getLeaseTemplate(
     rentalObjectResponse.data.contractTemplate
