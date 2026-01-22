@@ -1,10 +1,9 @@
 import sql, { ConnectionPool } from 'mssql'
 import config from '../src/common/config'
-import { Knex } from 'knex'
 
-export const connect = (): Promise<ConnectionPool> => {
+export const connect = async (): Promise<ConnectionPool> => {
   const { user, password, host, port, database } = config.xpandDatabase
-  return sql.connect({
+  const pool: ConnectionPool = await sql.connect({
     server: host,
     port: Number(port),
     user,
@@ -15,4 +14,6 @@ export const connect = (): Promise<ConnectionPool> => {
       trustServerCertificate: true,
     },
   })
+  console.log(`Connected to ${host}:${port}`)
+  return pool
 }
