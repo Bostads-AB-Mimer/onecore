@@ -19,23 +19,10 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
+    const result = await tenfastAdapter.getLeaseTemplate('templateID')
 
     // Assert
     expect(result).toEqual({ ok: true, data: mockTemplate })
-  })
-
-  it('should return error "could-not-find-template-for-category" for unknown listingCategory', async () => {
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate(
-      'UNKNOWN_CATEGORY' as any
-    )
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'could-not-find-template-for-category',
-    })
   })
 
   it('should return error "get-template-bad-request" when status is 400', async () => {
@@ -501,7 +488,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -538,13 +524,7 @@ describe(tenfastAdapter.createLease, () => {
     // Act
     const contact = factory.contact.build()
     const fromDate = new Date()
-    await tenfastAdapter.createLease(
-      contact,
-      'RENTAL_CODE',
-      fromDate,
-      'PARKING_SPACE',
-      true
-    )
+    await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
 
     // Assert
     expect(leaseRequestData.hyror[0].vat).toBe(0.25)
@@ -577,13 +557,7 @@ describe(tenfastAdapter.createLease, () => {
     // Act
     const contact = factory.contact.build()
     const fromDate = new Date()
-    await tenfastAdapter.createLease(
-      contact,
-      'RENTAL_CODE',
-      fromDate,
-      'PARKING_SPACE',
-      false
-    )
+    await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, false)
 
     // Assert
     expect(leaseRequestData.hyror[0].vat).toBe(0)
@@ -623,7 +597,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -634,11 +607,14 @@ describe(tenfastAdapter.createLease, () => {
     })
   })
 
-  it('should return error "could-not-find-template" when getLeaseTemplate fails or returns no data', async () => {
+  it('should return error "rental-object-has-no-template" when rental object has no lease template set', async () => {
     // Arrange
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: false,
-      err: 'could-not-find-template-for-category',
+    const mockRentalObject = factory.tenfastRentalObject.build({
+      contractTemplate: undefined,
+    })
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
     })
 
     const contact = factory.contact.build()
@@ -649,7 +625,41 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
+      true
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'rental-object-has-no-template',
+    })
+  })
+
+  it('should return error "could-not-find-template" when getLeaseTemplate fails or returns no data', async () => {
+    // Arrange
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObject')
+      .mockResolvedValue({ ok: true, data: mockRentalObject })
+
+    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
+      ok: false,
+      err: 'could-not-get-template',
+    })
+
+    const contact = factory.contact.build()
+    const fromDate = new Date()
+
+    // Act
+    const result = await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      fromDate,
       true
     )
 
@@ -681,7 +691,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -719,7 +728,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -760,7 +768,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -804,7 +811,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -848,7 +854,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
@@ -887,7 +892,6 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      'PARKING_SPACE',
       true
     )
 
