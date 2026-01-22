@@ -70,9 +70,7 @@ export function DateRangeFilterDropdown({
   }
 
   const handleSelect = (range: DateRange | undefined) => {
-    const newStartDate = range?.from
-      ? format(range.from, 'yyyy-MM-dd')
-      : null
+    const newStartDate = range?.from ? format(range.from, 'yyyy-MM-dd') : null
     const newEndDate = range?.to ? format(range.to, 'yyyy-MM-dd') : null
 
     onDateChange(newStartDate, newEndDate)

@@ -329,7 +329,7 @@ const RentalBlocksPage = () => {
         <CardContent>
           <div className="flex flex-col gap-4 mb-6">
             {/* Search input with icon */}
-            <div className="relative">
+            <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Sök på hyresobjekt, adress eller orsak..."
