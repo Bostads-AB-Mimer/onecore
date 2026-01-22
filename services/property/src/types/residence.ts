@@ -156,8 +156,8 @@ export const ResidenceDetailedSchema = z.object({
     rentalBlocks: z.array(
       z.object({
         id: z.string(),
-        blockReasonId: z.string(),
-        blockReason: z.string(),
+        blockReasonId: z.string().nullable(),
+        blockReason: z.string().nullable(),
         fromDate: z.date(),
         toDate: z.date().nullable(),
         amount: z.number().nullable(),
@@ -226,8 +226,8 @@ export const GetResidenceByRentalIdResponseSchema = createGenericResponseSchema(
 
 export const RentalBlockSchema = z.object({
   id: z.string(),
-  blockReasonId: z.string(),
-  blockReason: z.string(),
+  blockReasonId: z.string().nullable(),
+  blockReason: z.string().nullable(),
   fromDate: z.date(),
   toDate: z.date().nullable(),
   amount: z.number().nullable(),
@@ -239,8 +239,29 @@ export const getAllRentalBlocksQueryParamsSchema = z.object({
     .optional()
     .transform((val) => val === 'true'),
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(1000).optional().default(100),
 })
+
+export const searchRentalBlocksQueryParamsSchema = z.object({
+  q: z.string().optional(),
+  fields: z.string().optional(),
+  kategori: z.string().optional(),
+  distrikt: z.string().optional(),
+  blockReason: z.string().optional(),
+  fastighet: z.string().optional(),
+  fromDateGte: z.string().optional(),
+  toDateLte: z.string().optional(),
+  includeActiveBlocksOnly: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
+})
+
+export type SearchRentalBlocksQueryParams = z.infer<
+  typeof searchRentalBlocksQueryParamsSchema
+>
 
 export const GetRentalBlocksByRentalIdResponseSchema =
   createGenericResponseSchema(z.array(RentalBlockSchema))

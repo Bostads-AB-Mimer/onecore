@@ -4186,6 +4186,39 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-blocks/search": {
+    /**
+     * Search rental blocks with server-side filtering
+     * @description Search and filter rental blocks. Searches by rentalId and address.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Search term (searches rentalId, address) */
+          q?: string;
+          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) */
+          kategori?: string;
+          /** @description Filter by district */
+          distrikt?: string;
+          /** @description Filter by block reason */
+          blockReason?: string;
+          includeActiveBlocksOnly?: boolean;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Successfully searched rental blocks */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/rental-blocks/all": {
     /**
      * Get all rental blocks (paginated)

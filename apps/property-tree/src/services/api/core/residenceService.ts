@@ -60,12 +60,71 @@ export const residenceService = {
   },
 
   async getAllRentalBlocks(
-    includeActiveBlocksOnly = false
-  ): Promise<RentalBlockWithResidence[]> {
+    includeActiveBlocksOnly = false,
+    page = 1,
+    limit = 100
+  ): Promise<{
+    content: RentalBlockWithResidence[]
+    _meta: { totalRecords: number; page: number; limit: number; count: number }
+  }> {
     const { data, error } = await GET('/residences/rental-blocks/all', {
-      params: { query: { includeActiveBlocksOnly } },
+      params: { query: { includeActiveBlocksOnly, page, limit } },
     })
     if (error) throw error
-    return data.content || []
+    return {
+      content: data.content || [],
+      _meta: {
+        totalRecords: data._meta?.totalRecords ?? 0,
+        page: data._meta?.page ?? page,
+        limit: data._meta?.limit ?? limit,
+        count: data._meta?.count ?? data.content?.length ?? 0,
+      },
+    }
+  },
+
+  async searchRentalBlocks(
+    params: {
+      q?: string
+      fields?: string
+      kategori?: string
+      distrikt?: string
+      blockReason?: string
+      fastighet?: string
+      fromDateGte?: string
+      toDateLte?: string
+      includeActiveBlocksOnly?: boolean
+    },
+    page = 1,
+    limit = 50
+  ): Promise<{
+    content: RentalBlockWithResidence[]
+    _meta: { totalRecords: number; page: number; limit: number; count: number }
+  }> {
+    // Note: Using type assertion until OpenAPI types are regenerated
+    const { data, error } = await GET(
+      '/residences/rental-blocks/search' as '/residences/rental-blocks/all',
+      {
+        params: { query: { ...params, page, limit } as never },
+      }
+    )
+    if (error) throw error
+    const typedData = data as {
+      content?: RentalBlockWithResidence[]
+      _meta?: {
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+      }
+    }
+    return {
+      content: typedData.content || [],
+      _meta: {
+        totalRecords: typedData._meta?.totalRecords ?? 0,
+        page: typedData._meta?.page ?? page,
+        limit: typedData._meta?.limit ?? limit,
+        count: typedData._meta?.count ?? typedData.content?.length ?? 0,
+      },
+    }
   },
 }

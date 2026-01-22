@@ -1125,6 +1125,46 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-blocks/search": {
+    /**
+     * Search rental blocks with server-side filtering
+     * @description Search and filter rental blocks with pagination. Supports free-text search and field filters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason */
+          q?: string;
+          /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
+          fields?: string;
+          /** @description Filter by category */
+          kategori?: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
+          /** @description Filter by district */
+          distrikt?: string;
+          /** @description Filter by block reason */
+          blockReason?: string;
+          /** @description Filter blocks starting on or after this date */
+          fromDateGte?: string;
+          /** @description Filter blocks ending on or before this date */
+          toDateLte?: string;
+          /** @description If true, only include active rental blocks */
+          includeActiveBlocksOnly?: boolean;
+          page?: number;
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Successfully searched rental blocks */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/rental-blocks/all": {
     /**
      * Get all rental blocks (paginated)
