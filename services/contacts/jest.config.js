@@ -3,10 +3,10 @@ import tsConfig from './tsconfig.json' with { type: 'json' }
 
 export default {
   preset: 'ts-jest',
+  forceExit: true,
   testEnvironment: 'node',
   moduleNameMapper: pathsToModuleNameMapper(tsConfig.compilerOptions.paths, {
     prefix: '<rootDir>/',
   }),
-  globalSetup: '<rootDir>/.jest/start-test-instance.ts',
-  globalTeardown: '<rootDir>/.jest/stop-test-instance.ts',
+  setupFiles: ['<rootDir>/.jest/common.ts'],
 }
