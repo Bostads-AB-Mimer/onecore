@@ -925,6 +925,18 @@ importers:
         specifier: 8.42.0
         version: 8.42.0(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2)
 
+  libs/dax-client:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.5
+        version: 20.19.14
+      tsup:
+        specifier: ^8.0.1
+        version: 8.5.0(jiti@1.21.7)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)(yaml@2.8.1)
+      typescript:
+        specifier: ^5.6.2
+        version: 5.9.2
+
   libs/types:
     dependencies:
       release-please:
@@ -1342,6 +1354,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      dax-client:
+        specifier: workspace:*
+        version: link:../../libs/dax-client
       dedent:
         specifier: ^1.5.1
         version: 1.7.0(babel-plugin-macros@3.1.0)

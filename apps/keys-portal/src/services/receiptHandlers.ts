@@ -1,10 +1,11 @@
 import { generateReturnReceiptBlob } from '@/lib/pdf-receipts'
 import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
 
+import { cardService } from './api/cardService'
 import { keyLoanService } from './api/keyLoanService'
 import { keyService } from './api/keyService'
 import { receiptService } from './api/receiptService'
-import type { ReceiptData, Lease, Key } from './types'
+import type { ReceiptData, Lease, Key, Card } from './types'
 
 /**
  * Fetches all data needed for a receipt and constructs ReceiptData
@@ -37,10 +38,29 @@ export async function fetchReceiptData(
     keyIds = keyLoan.keys ? keyLoan.keys.split(',').map((id) => id.trim()) : []
   }
 
+  // Parse card IDs from the loan
+  let cardIds: string[] = []
+  try {
+    cardIds = JSON.parse(keyLoan.keyCards || '[]')
+  } catch {
+    cardIds = keyLoan.keyCards
+      ? keyLoan.keyCards.split(',').map((id) => id.trim())
+      : []
+  }
+
   // Fetch all keys
   const keys = await Promise.all(
     keyIds.map((keyId) => keyService.getKey(keyId))
   )
+
+  // Fetch all cards
+  let cards: Card[] = []
+  if (cardIds.length > 0) {
+    const cardResults = await Promise.all(
+      cardIds.map((cardId) => cardService.getCard(cardId))
+    )
+    cards = cardResults.filter((card): card is Card => card !== null)
+  }
 
   // Determine operation date based on receipt type
   const operationDate =
@@ -59,6 +79,7 @@ export async function fetchReceiptData(
     keys,
     receiptType: receipt.receiptType,
     operationDate,
+    cards: cards.length > 0 ? cards : undefined,
   }
 }
 
@@ -81,12 +102,16 @@ export async function generateAndOpenReceipt(
  * @param loanKeys - All key objects in this specific loan
  * @param selectedKeyIds - Key IDs that were checked in the dialog
  * @param lease - The lease associated with the receipt
+ * @param loanCards - All card objects in this specific loan (optional)
+ * @param selectedCardIds - Card IDs that were checked in the dialog (optional)
  */
 export async function generateAndUploadReturnReceipt(
   receiptId: string,
   loanKeys: Key[],
   selectedKeyIds: Set<string>,
-  lease: Lease
+  lease: Lease,
+  loanCards: Card[] = [],
+  selectedCardIds: Set<string> = new Set()
 ): Promise<void> {
   // Categorize keys into returned/missing/disposed
   const returned: Key[] = []
@@ -103,6 +128,18 @@ export async function generateAndUploadReturnReceipt(
     }
   })
 
+  // Categorize cards into returned/missing
+  const returnedCards: Card[] = []
+  const missingCards: Card[] = []
+
+  loanCards.forEach((card) => {
+    if (selectedCardIds.has(card.cardId)) {
+      returnedCards.push(card)
+    } else {
+      missingCards.push(card)
+    }
+  })
+
   // Build receipt data
   const receiptData: ReceiptData = {
     lease,
@@ -112,6 +149,8 @@ export async function generateAndUploadReturnReceipt(
     operationDate: new Date(),
     missingKeys: missing.length > 0 ? missing : undefined,
     disposedKeys: disposed.length > 0 ? disposed : undefined,
+    cards: returnedCards.length > 0 ? returnedCards : undefined,
+    missingCards: missingCards.length > 0 ? missingCards : undefined,
   }
 
   // Generate PDF blob

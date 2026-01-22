@@ -24,6 +24,15 @@ export interface Config {
     webhookUrl: string
     webhookSecret: string
   }
+  alliera: {
+    apiUrl: string
+    username: string
+    password: string
+    clientId: string
+    pemKey: string
+    partnerId: string
+    owningInstanceId: string
+  }
 }
 
 const config = configPackage({
@@ -50,6 +59,15 @@ const config = configPackage({
       webhookUrl: '',
       webhookSecret: '',
     },
+    alliera: {
+      apiUrl: '',
+      username: '',
+      password: '',
+      clientId: '',
+      pemKey: '',
+      partnerId: '',
+      owningInstanceId: '',
+    },
   },
 })
 
@@ -58,4 +76,5 @@ export default {
   keysDatabase: config.get('keysDatabase'),
   minio: config.get('minio'),
   simpleSign: config.get('simplesign'),
+  alliera: config.get('alliera'),
 } as Config

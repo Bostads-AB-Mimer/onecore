@@ -24,6 +24,11 @@ export type KeyNote = components['schemas']['KeyNote']
 export type Receipt = components['schemas']['Receipt']
 export type KeyEvent = components['schemas']['KeyEvent']
 
+// DAX types (access control cards)
+export type Card = components['schemas']['Card']
+export type CardDetails = components['schemas']['CardDetails']
+export type CardOwner = components['schemas']['CardOwner']
+
 // Tables/respopnse types from core API generated schemas
 export type Property = components['schemas']['Property']
 export type Lease = components['schemas']['Lease']
@@ -247,6 +252,8 @@ export interface ReceiptData {
   operationDate?: Date
   missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
   disposedKeys?: Key[] // For RETURN: keys that were disposed
+  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
+  missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
 }
 
 export interface MaintenanceReceiptData {
@@ -258,4 +265,6 @@ export interface MaintenanceReceiptData {
   operationDate?: Date
   missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
   disposedKeys?: Key[] // For RETURN: keys that were disposed
+  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
+  missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
 }

@@ -52,6 +52,13 @@ import {
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
+  // DAX schemas
+  CardSchema,
+  CardDetailsSchema,
+  CardOwnerSchema,
+  GetCardOwnerResponseSchema,
+  GetCardOwnersResponseSchema,
+  QueryCardOwnersParamsSchema,
 } from './schema'
 
 // Enum types
@@ -154,3 +161,11 @@ export type PaginatedResponse<T> = {
   _meta: PaginationMeta
   _links: PaginationLinks[]
 }
+
+// DAX types (for Amido DAX access control integration)
+export type Card = z.infer<typeof CardSchema>
+export type CardDetails = z.infer<typeof CardDetailsSchema>
+export type CardOwner = z.infer<typeof CardOwnerSchema>
+export type GetCardOwnerResponse = z.infer<typeof GetCardOwnerResponseSchema>
+export type GetCardOwnersResponse = z.infer<typeof GetCardOwnersResponseSchema>
+export type QueryCardOwnersParams = z.infer<typeof QueryCardOwnersParamsSchema>

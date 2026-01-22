@@ -3013,6 +3013,31 @@ export interface paths {
       };
     };
   };
+  "/key-loans/by-card/{cardId}": {
+    /**
+     * Get all loans for a specific card
+     * @description Returns all loan records for the specified card ID, ordered by creation date DESC
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID to fetch loans for */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans for this card */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        500: components["responses"]["InternalServerError"];
+      };
+    };
+  };
   "/key-loans/by-rental-object/{rentalObjectCode}": {
     /**
      * Get key loans by rental object code
@@ -3379,6 +3404,61 @@ export interface paths {
           };
         };
         /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/cards/by-rental-object/{rentalObjectCode}": {
+    /** Get cards by rental object code */
+    get: {
+      parameters: {
+        query?: {
+          includeLoans?: boolean;
+        };
+        path: {
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Cards for the rental object */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CardDetails"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/cards/{cardId}": {
+    /** Get card by ID */
+    get: {
+      parameters: {
+        path: {
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
         500: {
           content: {
             "application/json": components["schemas"]["ErrorResponse"];
@@ -5256,6 +5336,132 @@ export interface paths {
       };
     };
   };
+  "/dax/card-owners": {
+    /**
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by name (rental object ID / object code) */
+          nameFilter?: string;
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+          /** @description Filter by ID */
+          idfilter?: string;
+          /** @description Filter by attribute */
+          attributeFilter?: string;
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string;
+          /** @description Filter by folder */
+          folderFilter?: string;
+          /** @description Filter by organisation */
+          organisationFilter?: string;
+          /** @description Pagination offset */
+          offset?: number;
+          /** @description Maximum number of results */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Card owners retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwners?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Failed to fetch card owners */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/card-owners/{cardOwnerId}": {
+    /**
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string;
+        };
+      };
+      responses: {
+        /** @description Card owner retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwner?: components["schemas"]["CardOwner"];
+            };
+          };
+        };
+        /** @description Card owner not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Failed to fetch card owner */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/cards/{cardId}": {
+    /**
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              card?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Failed to fetch card */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -5812,6 +6018,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       keys: string;
+      keyCards: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -5870,6 +6077,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       keys: string;
+      keyCards: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -5905,6 +6113,21 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
+        })[];
+      keyCardsArray: ({
+          cardId: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
         })[];
       receipts: ({
           /** Format: uuid */
@@ -6017,7 +6240,8 @@ export interface components {
       flexNumber: number;
     };
     CreateKeyLoanRequest: {
-      keys: string;
+      keys?: string;
+      keyCards?: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -6034,6 +6258,7 @@ export interface components {
     };
     UpdateKeyLoanRequest: {
       keys?: string;
+      keyCards?: string;
       /** @enum {string} */
       loanType?: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -6269,6 +6494,105 @@ export interface components {
     SchemaDownloadUrlResponse: {
       url: string;
       expiresIn: number;
+    };
+    CardOwner: {
+      cardOwnerId: string;
+      cardOwnerType?: string | null;
+      familyName?: string | null;
+      specificName?: string | null;
+      primaryOrganization?: unknown;
+      cards?: (({
+          cardId: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
+        })[]) | null;
+      comment?: string | null;
+      folderId?: number | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      pinCode?: string | null;
+      attributes?: {
+        [key: string]: string;
+      } | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      createTime?: string;
+    };
+    Card: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+    };
+    CardDetails: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+      loans?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          keyCards: string;
+          /** @enum {string} */
+          loanType: "TENANT" | "MAINTENANCE";
+          contact?: string;
+          contact2?: string;
+          contactPerson?: string | null;
+          description?: string | null;
+          /** Format: date-time */
+          returnedAt?: string | null;
+          /** Format: date-time */
+          availableToNextTenantFrom?: string | null;
+          /** Format: date-time */
+          pickedUpAt?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          createdBy?: string | null;
+          updatedBy?: string | null;
+        })[]) | null;
+    };
+    QueryCardOwnersParams: {
+      nameFilter?: string;
+      expand?: string;
+      idfilter?: string;
+      attributeFilter?: string;
+      selectedAttributes?: string;
+      folderFilter?: string;
+      organisationFilter?: string;
+      offset?: number;
+      limit?: number;
     };
     PaginationMeta: {
       totalRecords: number;

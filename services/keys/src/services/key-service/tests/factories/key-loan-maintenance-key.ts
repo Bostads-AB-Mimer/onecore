@@ -27,6 +27,7 @@ export const KeyLoanMaintenanceKeyFactory = Factory.define<KeyLoan>(
     return {
       id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
       keys: JSON.stringify([`key-${sequence}`]), // JSON string array with single key by default
+      keyCards: JSON.stringify([]), // JSON string array of card IDs
       loanType: 'MAINTENANCE',
       contact: `Company ${sequence}`, // company field is now contact
       contact2: undefined,

@@ -389,6 +389,59 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-loans/by-card/{cardId}:
+   *   get:
+   *     summary: Get all loans for a specific card
+   *     description: Returns all loan records for the specified card ID, ordered by creation date DESC
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: path
+   *         name: cardId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The card ID to fetch loans for
+   *     responses:
+   *       200:
+   *         description: Array of loans for this card
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeyLoan'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
+  router.get('/key-loans/by-card/:cardId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const { cardId } = ctx.params
+
+      const loans = await keyLoansAdapter.getKeyLoansByCardId(cardId, db)
+
+      ctx.status = 200
+      ctx.body = { content: loans satisfies KeyLoanResponse[], ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching loans by card')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /key-loans/by-rental-object/{rentalObjectCode}:
    *   get:
    *     summary: Get key loans with enriched keys and receipts
@@ -788,40 +841,52 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyLoanRequest = ctx.request.body
 
-        // Validate keys using service layer
-        const validationResult = await keyLoanService.validateKeyLoanCreation(
-          payload.keys,
-          db
-        )
+        // Validate that at least keys or keyCards is provided
+        if (!payload.keys && !payload.keyCards) {
+          ctx.status = 400
+          ctx.body = {
+            reason: 'At least one of keys or keyCards must be provided',
+            ...metadata,
+          }
+          return
+        }
 
-        if (!validationResult.ok) {
-          // Map service errors to HTTP responses
-          if (validationResult.err === 'active-loan-conflict') {
-            ctx.status = 409
+        // Validate keys if provided
+        if (payload.keys) {
+          const validationResult = await keyLoanService.validateKeyLoanCreation(
+            payload.keys,
+            db
+          )
+
+          if (!validationResult.ok) {
+            // Map service errors to HTTP responses
+            if (validationResult.err === 'active-loan-conflict') {
+              ctx.status = 409
+              ctx.body = {
+                reason:
+                  'Cannot create loan. One or more keys already have active loans.',
+                conflictingKeys: validationResult.details?.conflictingKeys,
+                ...metadata,
+              }
+              return
+            }
+
+            // All other errors are 400 Bad Request
+            const errorMessages = {
+              'invalid-keys-format':
+                'Invalid keys format. Must be a valid JSON array.',
+              'keys-not-array': 'Keys must be a JSON array',
+              'empty-keys-array': 'Keys array cannot be empty',
+            }
+
+            ctx.status = 400
             ctx.body = {
               reason:
-                'Cannot create loan. One or more keys already have active loans.',
-              conflictingKeys: validationResult.details?.conflictingKeys,
+                errorMessages[validationResult.err] || 'Invalid keys format',
               ...metadata,
             }
             return
           }
-
-          // All other errors are 400 Bad Request
-          const errorMessages = {
-            'invalid-keys-format':
-              'Invalid keys format. Must be a valid JSON array.',
-            'keys-not-array': 'Keys must be a JSON array',
-            'empty-keys-array': 'Keys array cannot be empty',
-          }
-
-          ctx.status = 400
-          ctx.body = {
-            reason:
-              errorMessages[validationResult.err] || 'Invalid keys format',
-            ...metadata,
-          }
-          return
         }
 
         const row = await keyLoansAdapter.createKeyLoan(payload, db)

@@ -58,6 +58,7 @@ export const KeySchema = z.object({
 export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
   keys: z.string(),
+  keyCards: z.string(),
   loanType: LoanTypeSchema,
   contact: z.string().optional(),
   contact2: z.string().optional(),
@@ -210,7 +211,8 @@ export const UpdateKeySystemRequestSchema = z.object({
 // Request schemas for key loans
 
 export const CreateKeyLoanRequestSchema = z.object({
-  keys: z.string(),
+  keys: z.string().optional(),
+  keyCards: z.string().optional(),
   loanType: LoanTypeSchema,
   contact: z.string().optional(),
   contact2: z.string().optional(),
@@ -224,6 +226,7 @@ export const CreateKeyLoanRequestSchema = z.object({
 
 export const UpdateKeyLoanRequestSchema = z.object({
   keys: z.string().optional(),
+  keyCards: z.string().optional(),
   loanType: LoanTypeSchema.optional(),
   contact: z.string().optional(),
   contact2: z.string().optional(),
@@ -382,14 +385,6 @@ export const BulkUpdateFlexRequestSchema = z.object({
   flexNumber: z.number().int().min(1).max(3),
 })
 
-// Key loan with enriched keys and receipts data (for optimized endpoint)
-export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
-  // Array of full key objects instead of just IDs
-  keysArray: z.array(KeySchema),
-  // Array of receipts for this loan
-  receipts: z.array(ReceiptSchema),
-})
-
 // Signature schemas (polymorphic - supports any document type)
 
 export const SignatureResourceTypeSchema = z.enum([
@@ -440,4 +435,77 @@ export const SimpleSignWebhookPayloadSchema = z.object({
   status: z.string(),
   status_updated_at: z.string(),
   // Other fields can be added as needed
+})
+
+// DAX API schemas (for Amido DAX access control integration)
+// These schemas match the types from dax-client library
+
+export const CardSchema = z.object({
+  cardId: z.string(),
+  name: z.string().nullable().optional(),
+  owner: z.any().optional(),
+  appearanceCode: z.string().nullable().optional(),
+  classification: z.string().nullable().optional(),
+  disabled: z.boolean().optional(),
+  startTime: z.string().nullable().optional(),
+  stopTime: z.string().nullable().optional(),
+  createTime: z.string(),
+  pinCode: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  archivedAt: z.string().nullable().optional(),
+  codes: z.array(z.any()).nullable().optional(),
+})
+
+export const CardOwnerSchema = z.object({
+  cardOwnerId: z.string(),
+  cardOwnerType: z.string().nullable().optional(),
+  familyName: z.string().nullable().optional(),
+  specificName: z.string().nullable().optional(),
+  primaryOrganization: z.any().optional(),
+  cards: z.array(CardSchema).nullable().optional(),
+  comment: z.string().nullable().optional(),
+  folderId: z.number().nullable().optional(),
+  disabled: z.boolean().optional(),
+  startTime: z.string().nullable().optional(),
+  stopTime: z.string().nullable().optional(),
+  pinCode: z.string().nullable().optional(),
+  attributes: z.record(z.string()).nullable().optional(),
+  state: z.string().nullable().optional(),
+  archivedAt: z.string().nullable().optional(),
+  createTime: z.string().optional(),
+})
+
+// Card with loan information (for API responses with loan tracking)
+export const CardDetailsSchema = CardSchema.extend({
+  loans: z.array(KeyLoanSchema).optional().nullable(),
+})
+
+export const GetCardOwnerResponseSchema = z.object({
+  cardOwner: CardOwnerSchema,
+})
+
+export const GetCardOwnersResponseSchema = z.object({
+  cardOwners: z.array(CardOwnerSchema),
+})
+
+export const QueryCardOwnersParamsSchema = z.object({
+  nameFilter: z.string().optional(),
+  expand: z.string().optional(),
+  idfilter: z.string().optional(),
+  attributeFilter: z.string().optional(),
+  selectedAttributes: z.string().optional(),
+  folderFilter: z.string().optional(),
+  organisationFilter: z.string().optional(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+})
+
+// Key loan with enriched keys and receipts data (for optimized endpoint)
+export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
+  // Array of full key objects instead of just IDs
+  keysArray: z.array(KeySchema),
+  // Array of full card objects from DAX
+  keyCardsArray: z.array(CardSchema),
+  // Array of receipts for this loan
+  receipts: z.array(ReceiptSchema),
 })

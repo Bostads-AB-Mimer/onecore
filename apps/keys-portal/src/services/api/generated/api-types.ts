@@ -5,6 +5,227 @@
 
 
 export interface paths {
+  "/cards/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get cards by rental object code
+     * @description Fetch all access control cards from DAX for a specific rental object.
+     * Cards can optionally be enriched with loan information.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include loan information for cards */
+          includeLoans?: boolean;
+        };
+        path: {
+          /** @description The rental object code to fetch cards for */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description An array of cards (with optional loan details) */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CardDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/cards/{cardId}": {
+    /**
+     * Get a card by ID
+     * @description Fetch a single access control card from DAX by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/contracts": {
+    /**
+     * Get all contracts from DAX
+     * @description Retrieve all contracts from the Amido DAX API
+     */
+    get: {
+      responses: {
+        /** @description List of contracts retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              contracts?: {
+                  contractId?: string;
+                  promisee?: Record<string, never>;
+                  promisor?: Record<string, never>;
+                  accessControlInstance?: Record<string, never>;
+                  state?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Failed to fetch contracts */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/dax/card-owners/{cardOwnerId}": {
+    /**
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the Amido DAX API
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The owning partner ID (defaults to configured partner) */
+          partnerId?: string;
+          /** @description The owning instance ID (defaults to configured instance) */
+          instanceId?: string;
+        };
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string;
+        };
+      };
+      responses: {
+        /** @description Card owner retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwner?: components["schemas"]["CardOwner"];
+            };
+          };
+        };
+        /** @description Missing required parameters */
+        400: {
+          content: never;
+        };
+        /** @description Card owner not found */
+        404: {
+          content: never;
+        };
+        /** @description Failed to fetch card owner */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/dax/card-owners": {
+    /**
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by name (rental object ID / object code) */
+          nameFilter?: string;
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+          /** @description Filter by ID */
+          idfilter?: string;
+          /** @description Filter by attribute */
+          attributeFilter?: string;
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string;
+          /** @description Filter by folder */
+          folderFilter?: string;
+          /** @description Filter by organisation */
+          organisationFilter?: string;
+          /** @description Pagination offset */
+          offset?: number;
+          /** @description Maximum number of results */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Card owners retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwners?: components["schemas"]["CardOwner"][];
+            };
+          };
+        };
+        /** @description Failed to fetch card owners */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/dax/cards/{cardId}": {
+    /**
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the Amido DAX API
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              card?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: never;
+        };
+        /** @description Failed to fetch card */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-bundles": {
     /**
      * List all key bundles
@@ -613,6 +834,39 @@ export interface paths {
       };
       responses: {
         /** @description Array of loans for this key */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/by-card/{cardId}": {
+    /**
+     * Get all loans for a specific card
+     * @description Returns all loan records for the specified card ID, ordered by creation date DESC
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID to fetch loans for */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans for this card */
         200: {
           content: {
             "application/json": {
@@ -2346,6 +2600,60 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    Card: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+    };
+    CardDetails: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+      loans?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          keyCards: string;
+          /** @enum {string} */
+          loanType: "TENANT" | "MAINTENANCE";
+          contact?: string;
+          contact2?: string;
+          contactPerson?: string | null;
+          description?: string | null;
+          /** Format: date-time */
+          returnedAt?: string | null;
+          /** Format: date-time */
+          availableToNextTenantFrom?: string | null;
+          /** Format: date-time */
+          pickedUpAt?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          createdBy?: string | null;
+          updatedBy?: string | null;
+        })[]) | null;
+    };
     CreateKeyRequest: components["schemas"]["CreateKeyRequest"];
     UpdateKeyRequest: components["schemas"]["UpdateKeyRequest"];
     BulkUpdateFlexRequest: {
@@ -2527,6 +2835,40 @@ export interface components {
       id: number;
       status: string;
       status_updated_at: string;
+    };
+    CardOwner: {
+      cardOwnerId: string;
+      cardOwnerType?: string | null;
+      familyName?: string | null;
+      specificName?: string | null;
+      primaryOrganization?: unknown;
+      cards?: (({
+          cardId: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
+        })[]) | null;
+      comment?: string | null;
+      folderId?: number | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      pinCode?: string | null;
+      attributes?: {
+        [key: string]: string;
+      } | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      createTime?: string;
     };
   };
   responses: never;
