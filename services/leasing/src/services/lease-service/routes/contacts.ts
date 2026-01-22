@@ -143,6 +143,85 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /contacts/for-identity-check:
+   *   get:
+   *     summary: Get contacts for deceased/protected identity check
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved contacts for identity check.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       contactCode:
+   *                         type: string
+   *                         description: Contact code starting with P
+   *                       nationalRegistrationNumber:
+   *                         type: string
+   *                         description: Swedish personal identity number (personnummer)
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/contacts/for-identity-check', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['page', 'limit'])
+
+    try {
+      const result = await tenantLeaseAdapter.getContactsForIdentityCheck(ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...result }
+    } catch (err) {
+      logger.error({ err }, 'contacts.for-identity-check')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   //todo: rename singular routes to plural
 
   /**

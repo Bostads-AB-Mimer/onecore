@@ -536,6 +536,39 @@ const searchContactsPaginated = async (
   return paginateKnex(query, ctx)
 }
 
+/**
+ * Get contacts eligible for deceased/protected identity checks (paginated)
+ * Returns person contacts that:
+ * - Are not deleted
+ * - Have contact code starting with 'P' (persons, not organizations)
+ * - Have valid national registration numbers (not organizations, not test numbers, no letters)
+ * - Are not already marked as deceased
+ *
+ * @param ctx - Koa context for pagination params
+ * @returns Paginated response with identity check contacts
+ */
+const getContactsForIdentityCheck = async (
+  ctx: Context
+): Promise<
+  PaginatedResponse<{ contactCode: string; nationalRegistrationNumber: string }>
+> => {
+  const query = xpandDb
+    .from('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.persorgnr as nationalRegistrationNumber'
+    )
+    .where('cmctc.deletemark', '=', 0)
+    .where('cmctc.cmctckod', 'like', 'P%')
+    .whereNot('cmctc.persorgnr', 'like', '55%')
+    .whereNot('cmctc.persorgnr', 'like', '1900%')
+    .whereRaw("cmctc.persorgnr NOT LIKE '%[A-Za-z]%'")
+    .whereNull('cmctc.avliden')
+    .orderBy('cmctc.cmctckod', 'asc')
+
+  return paginateKnex(query, ctx)
+}
+
 const getContactByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
   includeTerminatedLeases: boolean
@@ -860,5 +893,6 @@ export {
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
   searchContactsPaginated,
+  getContactsForIdentityCheck,
   transformFromDbContact,
 }
