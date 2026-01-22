@@ -17,6 +17,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseFactory =
           hyraExcludingVat: 287.17, // hyran exklusive moms
           hyror: TenfastInvoiceRowFactory.buildList(3),
           externalId: `externalId-${sequence}`,
+          contractTemplate: 'template-001',
         },
       ],
       prev: null,
@@ -33,6 +34,7 @@ export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
     hyraExcludingVat: 287.17,
     hyror: [TenfastInvoiceRowFactory.build()],
     externalId: 'externalId-1',
+    contractTemplate: 'template-001',
   })
 )
 

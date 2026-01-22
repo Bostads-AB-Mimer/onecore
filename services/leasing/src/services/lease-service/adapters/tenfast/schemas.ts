@@ -51,6 +51,7 @@ export const TenfastRentalObjectSchema = z.object({
   hyraVat: z.number(), // total moms pa hyran
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
+  contractTemplate: z.string().optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
@@ -113,11 +114,9 @@ export const TenfastLeaseTemplateSchema = z.object({
   category: z.string(),
   addons: z.array(z.any()),
   name: z.string(),
-  createdBy: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   __v: z.number(),
-  updatedBy: z.string().nullable(),
   type: z.string(),
   id: z.string(),
 })
@@ -208,8 +207,8 @@ export const TenfastLeaseSchema = z.object({
   versions: z.unknown(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  startInvoicingFrom: z.coerce.date(),
-  signedAt: z.coerce.date().nullable(), // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
+  startInvoicingFrom: z.coerce.date().optional(),
+  signedAt: z.coerce.date().optional().nullable(), // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
   tags: z.array(z.unknown()),
 })
 
