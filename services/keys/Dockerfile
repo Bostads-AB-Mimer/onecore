@@ -16,6 +16,7 @@ COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Copy relevant packages
 COPY libs/types ./libs/types
 COPY libs/utilities ./libs/utilities
+COPY libs/dax-client ./libs/dax-client
 COPY services/keys ./services/keys
 
 RUN pnpm install
