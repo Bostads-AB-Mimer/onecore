@@ -4,14 +4,44 @@
  * Usage:
  *
  * ./scripts/import-test-contacts.ts <keycmobj> <keycmobj> ...
+ * ./scripts/import-test-contacts.ts -f <filename>
  */
 import fs from 'node:fs/promises'
-import sql from 'mssql'
-import config from '../src/common/config'
+import { readFileSync, existsSync } from 'node:fs'
+import { connect } from './db'
+import {
+  sanitizeAddress,
+  sanitizeBirthDate,
+  sanitizeEmail,
+  sanitizeFirstName,
+  sanitizeLastName,
+  sanitizeName,
+  sanitizePersOrgNr,
+  sanitizePhoneNumber,
+} from './sanitize'
 
-const keycmobjs = process.argv.slice(2)
+const args = process.argv.slice(2)
 
-const { user, password, host, port, database } = config.xpandDatabase
+const readInputFile = (filePath: string) => {
+  if (existsSync(filePath)) {
+    return readFileSync(filePath, 'utf8')
+      .split('\n')
+      .map((r) => r.trim().split(' ')[0])
+      .filter(Boolean)
+      .filter((l) => l.startsWith('#'))
+  }
+  return []
+}
+
+const keycmobjs = args[0] === '-f' ? readInputFile(args[1]) : args
+
+if (keycmobjs.length === 0) {
+  console.log('Usage:')
+  console.log('./scripts/import-test-contacts.ts <keycmobj> <keycmobj> ...')
+  console.log('./scripts/import-test-contacts.ts -f <filename>')
+}
+
+type TableName = 'cmctc' | 'cmtel' | 'cmeml' | 'cmadr'
 
 /**
  * Mapping of table names to key column names.
@@ -19,11 +49,36 @@ const { user, password, host, port, database } = config.xpandDatabase
  * All tables are connected via `keycmobj`, but cmadr calls this
  * `keycode` we cannot have nice things.
  */
-const TABLES: Record<string, string> = {
+const TABLES: Record<TableName, string> = {
   cmctc: 'keycmobj',
   cmtel: 'keycmobj',
   cmeml: 'keycmobj',
   cmadr: 'keycode',
+}
+
+const sanitizeColumns = {
+  cmctc: (row: any) => {
+    row.cmctcben = sanitizeName(row.cmctcben)
+    row.fnamn = sanitizeFirstName(row.fname)
+    row.lnamn = sanitizeLastName(row.fname)
+    row.birthdate = sanitizeBirthDate(row.birthdate)
+    row.persorgnr = sanitizePersOrgNr(row.persorgnr)
+    return row
+  },
+  cmadr: (row: any) => {
+    return {
+      ...row,
+      ...sanitizeAddress(row),
+    }
+  },
+  cmeml: (row: any) => {
+    row.emlben = sanitizeEmail(row.emlben)
+    return row
+  },
+  cmtel: (row: any) => {
+    row.cmtelben = sanitizePhoneNumber(row.cmtelben)
+    return row
+  },
 }
 
 /**
@@ -129,27 +184,17 @@ const run = async () => {
   }
 
   // 3. Connect to the remote test or production Xpand DB.
-  const pool = await sql.connect({
-    server: host,
-    port: Number(port),
-    user,
-    password,
-    database,
-    options: {
-      encrypt: true,
-      trustServerCertificate: true,
-    },
-  })
+  const pool = await connect()
 
   // 4. Read the rows for the input `keycmobj` IDs
-  for (const table of Object.keys(TABLES)) {
+  for (const table of Object.keys(TABLES) as TableName[]) {
     console.log(`Importing "${table}" rows...`)
     const resultset = await pool.query(
       `SELECT * FROM ${table} WHERE ${TABLES[table]} IN (${keycmobjs.map((o) => `'${o}'`).join(', ')})`
     )
 
     const valueRows = resultset.recordset.map((row) =>
-      toValues(row, columnOrderMap[table])
+      toValues(sanitizeColumns[table](row), columnOrderMap[table])
     )
 
     spliceValues(seedFile, table, valueRows)
