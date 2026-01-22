@@ -7,7 +7,7 @@ export const transformEmailAddresses = (
   emails.map(transformEmailAddress).filter((em) => em !== undefined)
 
 export const transformEmailAddress = (email: DbEmailAddress): EmailAddress => ({
-  emailAddress: email.emailAddress,
+  emailAddress: email.emailAddress.trim(),
   type: 'unspecified',
-  isPrimary: email.isPrimaryEmail,
+  isPrimary: email.isPrimaryEmail ? true : false,
 })
