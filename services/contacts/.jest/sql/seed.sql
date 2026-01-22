@@ -100,11 +100,11 @@ INSERT INTO cmctc (
 -- END cmctc COLUMNS
 )
 VALUES
-
   -- END OF cmctc ROWS
 ;
 
 INSERT INTO cmtel (
+-- BEGIN cmtel COLUMNS
   keycmtel,
   keycmtet,
   keycmobj,
@@ -113,12 +113,14 @@ INSERT INTO cmtel (
   fdate,
   tdate,
   timestamp
+-- END cmtel COLUMNS
 )
 VALUES
   -- END OF cmtel ROWS
 ;
 
 INSERT INTO cmeml (
+-- BEGIN cmeml COLUMNS
   keycmeml,
   keycmemt,
   keycmobj,
@@ -127,13 +129,14 @@ INSERT INTO cmeml (
   fdate,
   tdate,
   timestamp
+-- END cmeml COLUMNS
 )
 VALUES
-
   -- END OF cmeml ROWS
 ;
 
 INSERT INTO cmadr (
+-- BEGIN cmadr COLUMNS
   keycmadr,
   keycmtyp,
   keydbtbl,
@@ -152,6 +155,7 @@ INSERT INTO cmadr (
   fdate,
   tdate,
   timestamp
+-- END cmadr COLUMNS
 )
 VALUES
   -- END OF cmadr ROWS
