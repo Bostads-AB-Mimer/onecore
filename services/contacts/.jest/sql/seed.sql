@@ -100,7 +100,8 @@ INSERT INTO cmctc (
 -- END cmctc COLUMNS
 )
 VALUES
-  -- END OF cmctc ROWS
+  -- BEGIN cmctc ROWS
+  -- END cmctc ROWS
 ;
 
 INSERT INTO cmtel (
@@ -116,7 +117,8 @@ INSERT INTO cmtel (
 -- END cmtel COLUMNS
 )
 VALUES
-  -- END OF cmtel ROWS
+  -- BEGIN cmtel ROWS
+  -- END cmtel ROWS
 ;
 
 INSERT INTO cmeml (
@@ -132,7 +134,8 @@ INSERT INTO cmeml (
 -- END cmeml COLUMNS
 )
 VALUES
-  -- END OF cmeml ROWS
+  -- BEGIN cmeml ROWS
+  -- END cmeml ROWS
 ;
 
 INSERT INTO cmadr (
@@ -158,5 +161,6 @@ INSERT INTO cmadr (
 -- END cmadr COLUMNS
 )
 VALUES
-  -- END OF cmadr ROWS
+  -- BEGIN cmadr ROWS
+  -- END cmadr ROWS
 ;
