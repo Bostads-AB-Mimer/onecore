@@ -1,14 +1,127 @@
-# Multiple phone numbers
-P170515    ###  P | N FN LN | T(#:3) T:3   E:1   A(#:4  U:1  X:3)
+# -------------------------------------------------------------------------
+# Individuals - P
+# -------------------------------------------------------------------------
 
 
-# With historical addresses
-P000040    ###  P | N FN LN | T(#:1) T:1   E:-   A(#:3  U:2  X:1)
+# -- Multiple phone numbers
+P170515    ###  P | N FN LN ID | T(#:3) E(#:1) A(#:4  U:1  X:3)
 
 
-# No national ID
-P002505    ###  P | N -  -  | T(#:1) T:1   E:-   A(#:1  U:1  X:-)
+# -- With historical addresses
+P000040    ###  P | N FN LN ID | T(#:1) E      A(#:3  U:2  X:1)
+P104662    ###  P | N FN LN ID | T(#:3) E(#:1) A(#:4  U:1  X:3)
+P007378    ###  P | N FN LN ID | T(#:1) E(#:1) A(#:8  U:2  X:6)
+P013702    ###  P | N FN LN ID | T(#:2) E(#:1) A(#:5  U:2  X:3)
 
 
-# Phone + Email + Adress
-P184660    ###  P | N FN LN | T(#:1) T:1   E:1   A(#:1  U:1  X:-)
+# -- No national ID
+P002505    ###  P | N -  -  -  | T(#:1) E      A(#:1  U:1  X:-)
+P002643    ###  P | N -  -  -  | T(#:3) E      A(#:1  U:1  X:-)
+P002949    ###  P | N -  -  -  | T(#:1) E      A(#:1  U:1  X:-)
+
+# -- Phone + Email + Address
+P184660    ###  P | N FN LN ID | T(#:1) E(#:1) A(#:1  U:1  X:-)
+
+
+# -- Multiple Email Addresses
+P062949    ###  P | N -  -  -  | T(#:5) E(#:5) A(#:1  U:1  X:-)
+P041117    ###  P | N -  -  -  | T(#:8) E(#:5) A(#:1  U:1  X:-)
+
+# -- Large amounts of phone numbers
+P003855    ###  P | N FN LN ID | T(#:19) E(#:1) A(#:3  U:2  X:1)
+P061055    ###  P | N -  -  -  | T(#:13) E(#:1) A(#:1  U:1  X:-)
+
+# -- C/O address
+P000338    ###  P | N FN LN ID | T(#:2) E      A(#:2  U:2  X:-)
+P000851    ###  P | N -  -  -  | T(#:1) E      A(#:1  U:1  X:-)
+P001130    ###  P | N -  -  -  | T(#:1) E      A(#:1  U:1  X:-)
+
+# -- Non-standard phone number formatting
+P002951    ###  P | N FN LN ID | T(#:1) E      A(#:4  U:2  X:2)
+P003492    ###  P | N -  -  -  | T(#:2) E      A(#:1  U:1  X:-)
+P017262    ###  P | N FN LN ID | T(#:1) E(#:1) A(#:3  U:1  X:2)
+P047622    ###  P | N -  -  -  | T(#:3) E      A(#:1  U:1  X:-)
+P070062    ###  P | N -  -  -  | T(#:1) E(#:1) A(#:1  U:1  X:-)
+P071294    ###  P | N FN LN ID | T(#:2) E(#:1) A(#:2  U:1  X:1)
+P077105    ###  P | N -  -  -  | T(#:2) E(#:1) A(#:1  U:1  X:-)
+P181642    ###  P | N FN LN ID | T(#:2) E(#:1) A(#:2  U:1  X:1)
+P058261    ###  P | N -  -  -  | T(#:1) E      A(#:1  U:1  X:-)
+P058437    ###  P | N -  -  -  | T(#:2) E(#:1) A(#:1  U:1  X:-)
+P061368    ###  P | N FN LN ID | T(#:1) E(#:1) A(#:7  U:1  X:6)
+P066005    ###  P | N -  -  -  | T(#:3) E(#:1) A(#:1  U:1  X:-)
+
+
+# ---------------------------------
+# Individuals - No leading letter
+# ---------------------------------
+00180981   ###  - | N -  -  -  | T(#:2) E(#:1) A               
+00082220   ###  - | N -  -  -  | T      E      A               
+
+
+
+# -------------------------------------------------------------------------
+# Organisations - F
+# -------------------------------------------------------------------------
+
+# -- No Phone/Email/Address
+F055527    ###  F | N -  -  -  | T      E      A               
+
+# -- Address Only
+F048277    ###  F | N -  -  ID | T      E      A(#:1  U:1  X:-)
+F009850    ###  F | N -  -  ID | T      E      A(#:2  U:2  X:-)
+F006673    ###  F | N -  -  ID | T      E      A(#:2  U:2  X:-)
+F055428    ###  F | N -  -  ID | T      E      A(#:1  U:1  X:-)
+
+# -- Phone + Address
+F006667    ###  F | N -  -  ID | T(#:2) E      A(#:2  U:2  X:-)
+F006671    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F006688    ###  F | N -  -  ID | T(#:3) E      A(#:2  U:2  X:-)
+F006690    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F027243    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F029530    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F006629    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F066461    ###  F | N -  -  ID | T(#:2) E      A(#:4  U:2  X:2)
+
+# -- Non-standard Phone Number Formats
+F020420    ###  F | N -  -  ID | T(#:3) E(#:1) A(#:2  U:2  X:-)
+F022412    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F024181    ###  F | N -  -  ID | T(#:2) E(#:1) A(#:1  U:1  X:-)
+F024647    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+F025290    ###  F | N -  -  ID | T(#:1) E      A(#:2  U:2  X:-)
+
+# -- With historical addresses
+F023327    ###  F | N -  -  ID | T(#:3) E      A(#:4  U:2  X:2)
+F027459    ###  F | N -  -  ID | T(#:1) E      A(#:3  U:2  X:1)
+F043876    ###  F | N -  -  ID | T(#:2) E      A(#:2  U:1  X:1)
+
+
+# -- No orgnr
+F055405    ###  F | N -  -  -  | T      E      A(#:1  U:1  X:-)
+
+# -- Multiple emails
+F072791    ###  F | N -  -  ID | T(#:2) E(#:4) A(#:2  U:2  X:-)
+
+
+# ---------------------------------
+# Organisations - K
+# ---------------------------------
+
+K082412    ###  K | N -  -  ID | T      E      A(#:2  U:1  X:1)
+K082415    ###  K | N -  -  ID | T      E      A(#:2  U:1  X:1)
+K082417    ###  K | N -  -  ID | T      E      A(#:1  U:1  X:-)
+
+
+
+# ---------------------------------
+# Organisations - No leading letter
+# ---------------------------------
+
+# -- No Phone/Email
+00085366   ###  - | N -  -  ID | T      E      A(#:1  U:1  X:-)
+00085369   ###  - | N -  -  ID | T      E      A(#:1  U:1  X:-)
+
+
+# -- Phone + Email + Address
+00085367   ###  - | N -  -  ID | T(#:1) E(#:1) A(#:1  U:1  X:-)
+
+
