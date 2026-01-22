@@ -98,6 +98,7 @@ export const extractAddress = (
         zipCode: '',
         city: '',
         country: '',
+        region: dbAddr.region,
         full: lines
           .filter((l): l is string => typeof l === 'string' && l.trim() !== '')
           .map((l) => l.trim())
