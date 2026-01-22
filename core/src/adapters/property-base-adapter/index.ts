@@ -772,6 +772,79 @@ export async function getRentalBlocksByRentalId(
   }
 }
 
+type RentalBlockWithRentalObject = {
+  id: string
+  blockReasonId: string | null
+  blockReason: string | null
+  fromDate: string
+  toDate: string | null
+  amount: number | null
+  rentalObject: {
+    code: string | null
+    name: string | null
+    category: 'Bostad' | 'Bilplats'
+    address: string | null
+    rentalId: string | null
+    monthlyRent: number
+    // Residence type (e.g., "3 rum och kök") - only available for Bostad, null for Bilplats
+    type: string | null
+  }
+  building: {
+    code: string | null
+    name: string | null
+  }
+  property: {
+    code: string | null
+    name: string | null
+  }
+}
+
+type PaginatedRentalBlocksResponse = {
+  content: RentalBlockWithRentalObject[]
+  _meta: {
+    totalRecords: number
+    page: number
+    limit: number
+    count: number
+  }
+  _links: Array<{
+    href: string
+    rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+  }>
+}
+
+export async function getAllRentalBlocks(options?: {
+  includeActiveBlocksOnly?: boolean
+  page?: number
+  limit?: number
+}): Promise<AdapterResult<PaginatedRentalBlocksResponse, 'unknown'>> {
+  try {
+    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+    const page = options?.page ?? 1
+    const limit = options?.limit ?? 20
+
+    const fetchResponse = await client().GET('/residences/rental-blocks/all', {
+      params: {
+        query: { includeActiveBlocksOnly, page, limit },
+      },
+    })
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data as PaginatedRentalBlocksResponse,
+      }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getAllRentalBlocks')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

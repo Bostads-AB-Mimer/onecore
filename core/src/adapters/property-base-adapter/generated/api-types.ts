@@ -1125,6 +1125,65 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-blocks/all": {
+    /**
+     * Get all rental blocks (paginated)
+     * @description Returns paginated rental blocks for residences across the system with HATEOAS links
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+          /** @description Page number (1-indexed) */
+          page?: number;
+          /** @description Number of results per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved all rental blocks */
+        200: {
+          content: {
+            "application/json": {
+              content?: ({
+                  id?: string;
+                  blockReasonId?: string;
+                  blockReason?: string;
+                  /** Format: date-time */
+                  fromDate?: string;
+                  /** Format: date-time */
+                  toDate?: string | null;
+                  amount?: number | null;
+                  residence?: {
+                    id?: string;
+                    code?: string;
+                    name?: string | null;
+                    /** @description Residence type (e.g., "3 rum och kök", "Bostad", "Bilplats") */
+                    type?: string | null;
+                    /** @description Full address (e.g., "Karlavagnsgatan 1") */
+                    address?: string | null;
+                    rentalId?: string | null;
+                  };
+                  building?: {
+                    code?: string | null;
+                    name?: string | null;
+                  };
+                  property?: {
+                    code?: string | null;
+                    name?: string | null;
+                  };
+                })[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/{id}": {
     /**
      * Get a residence by ID

@@ -106,7 +106,7 @@ const DEFAULT_FEATURES: FeatureToggles = {
   showBuildingParking: false,
   showBuildingDocuments: true,
   // Barriers (Spärrar)
-  showBarriers: false,
+  showBarriers: true,
   // Turnover (In- och utflytt)
   showTurnover: false,
   // Global inspections view

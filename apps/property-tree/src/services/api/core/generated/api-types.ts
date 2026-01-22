@@ -4186,6 +4186,54 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-blocks/all": {
+    /**
+     * Get all rental blocks (paginated)
+     * @description Retrieves all rental blocks for residences across the system with pagination support
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
+          includeActiveBlocksOnly?: boolean;
+          /** @description Page number (1-indexed) */
+          page?: number;
+          /** @description Number of items per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved all rental blocks. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["RentalBlockWithResidence"][];
+              _meta?: {
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
+              _links?: ({
+                  href?: string;
+                  /** @enum {string} */
+                  rel?: "self" | "first" | "last" | "prev" | "next";
+                })[];
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/residences/search": {
     /**
      * Search residences
@@ -5601,6 +5649,35 @@ export interface components {
       /** Format: date-time */
       toDate: string | null;
       amount: number | null;
+    };
+    RentalBlockWithResidence: {
+      id: string;
+      blockReasonId: string | null;
+      blockReason: string | null;
+      /** Format: date-time */
+      fromDate: string;
+      /** Format: date-time */
+      toDate: string | null;
+      amount: number | null;
+      distrikt: string | null;
+      rentalObject: {
+        code: string | null;
+        name: string | null;
+        /** @enum {string} */
+        category: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
+        address: string | null;
+        rentalId: string | null;
+        monthlyRent: number;
+        type: string | null;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
+      };
+      property: {
+        code: string | null;
+        name: string | null;
+      };
     };
     FacilitySearchResult: {
       id: string;

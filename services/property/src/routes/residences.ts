@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  buildPaginatedResponse,
+} from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
@@ -11,6 +15,7 @@ import {
   getResidenceByRentalId,
   getResidenceSummariesByBuildingCodeAndStaircaseCode,
   getRentalBlocksByRentalId,
+  getAllRentalBlocks,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -20,6 +25,7 @@ import {
   GetResidenceByRentalIdResponse,
   ResidenceSummarySchema,
   RentalBlock,
+  getAllRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -488,6 +494,152 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (err) {
         logger.error(err, 'Error fetching rental blocks by rental ID')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/all:
+   *   get:
+   *     summary: Get all rental blocks (paginated)
+   *     description: Returns paginated rental blocks for residences across the system with HATEOAS links
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *       - in: query
+   *         name: page
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (1-indexed)
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 1000
+   *           default: 20
+   *         description: Number of results per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved all rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                       blockReasonId:
+   *                         type: string
+   *                       blockReason:
+   *                         type: string
+   *                       fromDate:
+   *                         type: string
+   *                         format: date-time
+   *                       toDate:
+   *                         type: string
+   *                         format: date-time
+   *                         nullable: true
+   *                       amount:
+   *                         type: number
+   *                         nullable: true
+   *                       residence:
+   *                         type: object
+   *                         properties:
+   *                           id:
+   *                             type: string
+   *                           code:
+   *                             type: string
+   *                           name:
+   *                             type: string
+   *                             nullable: true
+   *                           type:
+   *                             type: string
+   *                             nullable: true
+   *                             description: Residence type (e.g., "3 rum och kök", "Bostad", "Bilplats")
+   *                           address:
+   *                             type: string
+   *                             nullable: true
+   *                             description: Full address (e.g., "Karlavagnsgatan 1")
+   *                           rentalId:
+   *                             type: string
+   *                             nullable: true
+   *                       building:
+   *                         type: object
+   *                         properties:
+   *                           code:
+   *                             type: string
+   *                             nullable: true
+   *                           name:
+   *                             type: string
+   *                             nullable: true
+   *                       property:
+   *                         type: object
+   *                         properties:
+   *                           code:
+   *                             type: string
+   *                             nullable: true
+   *                           name:
+   *                             type: string
+   *                             nullable: true
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/all',
+    parseRequest({ query: getAllRentalBlocksQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { includeActiveBlocksOnly, page, limit } = ctx.request.parsedQuery
+      const offset = (page - 1) * limit
+
+      try {
+        const { data: rentalBlocks, totalCount } = await getAllRentalBlocks({
+          includeActiveBlocksOnly,
+          limit,
+          offset,
+        })
+
+        // Build paginated response with HATEOAS links
+        const additionalParams: Record<string, string> = {}
+        if (includeActiveBlocksOnly) {
+          additionalParams.includeActiveBlocksOnly = 'true'
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          ...buildPaginatedResponse({
+            content: rentalBlocks,
+            totalRecords: totalCount,
+            ctx,
+            additionalParams,
+            defaultLimit: 20,
+          }),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(err, 'Error fetching all rental blocks')
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'unknown error'

@@ -5,6 +5,9 @@ type Residence = components['schemas']['Residence']
 type ResidenceDetails = components['schemas']['ResidenceDetails']
 type ResidenceSummary = components['schemas']['ResidenceSummary']
 
+export type RentalBlockWithResidence =
+  components['schemas']['RentalBlockWithResidence']
+
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
     const { data, error } = await GET('/residences', {
@@ -52,6 +55,16 @@ export const residenceService = {
         params: { path: { rentalId }, query: { includeActiveBlocksOnly } },
       }
     )
+    if (error) throw error
+    return data.content || []
+  },
+
+  async getAllRentalBlocks(
+    includeActiveBlocksOnly = false
+  ): Promise<RentalBlockWithResidence[]> {
+    const { data, error } = await GET('/residences/rental-blocks/all', {
+      params: { query: { includeActiveBlocksOnly } },
+    })
     if (error) throw error
     return data.content || []
   },
