@@ -811,7 +811,6 @@ export const routes = (router: KoaRouter) => {
           contactResult.data,
           request.parkingSpaceId,
           new Date(request.fromDate),
-          'PARKING_SPACE',
           request.includeVAT
         )
 
