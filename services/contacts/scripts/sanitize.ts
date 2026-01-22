@@ -1,4 +1,4 @@
-#!/usr/bin/env -S pnpx node -r ts-node/register -r tsconfig-paths/register
+#!/usr/bin/env -S node -r ts-node/register -r tsconfig-paths/register
 
 import crypto from 'node:crypto'
 import { DbAddress } from '@src/adapters/xpand/db-model'
@@ -141,7 +141,6 @@ const hash = (input: string) => {
 const hashDigits = (input: string) => {
   return parseInt(hash(input).slice(0, 12), 16)
     .toString()
-    .padStart(input.length, '0')
     .slice(0, input.length)
 }
 
@@ -150,7 +149,7 @@ const hashNum = (num: any, min: number, max: number) => {
 }
 
 const hashNumString = (str: string, min: number, max: number) => {
-  return String((parseInt(hash(input).slice(0, 12), 16) % (max - min)) + min)
+  return String((parseInt(hash(str).slice(0, 12), 16) % (max - min)) + min)
 }
 
 const pickElement = (input: string, candidates: string[]) =>
@@ -162,19 +161,24 @@ const pickElement = (input: string, candidates: string[]) =>
  */
 export const sanitizePhoneNumber = (input: string | undefined) => {
   if (!input || !input.trim()) return
-
   const digits = hashDigits(input)
   let sanitized = ''
+  const countryCode = /\+[1-9][0-9]/.exec(input)
   const areaCode = /(?:^|[^0-9])(0[0-9]{2})/.exec(input)
 
   for (let i = 0; i < input.length; i++) {
     if (
-      (!areaCode || !(i >= areaCode.index && i < areaCode.index + 4)) &&
-      input.charAt(i).match(/[0-9]/)
+      (countryCode &&
+        i >= countryCode.index &&
+        i < countryCode.index + countryCode[0].length) ||
+      (areaCode &&
+        i >= areaCode.index &&
+        i < areaCode.index + areaCode[0].length) ||
+      !input.charAt(i).match(/[0-9]/)
     ) {
-      sanitized += digits.charAt(i % digits.length)
-    } else {
       sanitized += input.charAt(i)
+    } else {
+      sanitized += digits.charAt(i % digits.length)
     }
   }
   return sanitized
@@ -390,38 +394,52 @@ export const sanitizeEmail = (input: string | undefined) => {
   return [sanitizedLocal, '@', sanitizedDomain].join('')
 }
 
-const [_, file, cmd, input, ...rest] = process.argv
-if (file?.endsWith('sanitize.ts')) {
+const exec = (cmd: string, input: string, rest: string[]) => {
   switch (cmd) {
     case 'p':
     case 'phone':
-      console.log(sanitizePhoneNumber(input))
-      break
+      return sanitizePhoneNumber(input)
     case 'e':
     case 'email':
-      console.log(sanitizeEmail(input))
-      break
+      return sanitizeEmail(input)
     case 'n':
     case 'name':
-      console.log(sanitizeName(input))
-      break
+      return sanitizeName(input)
     case 'a':
     case 'address':
-      console.log(
-        sanitizeAddress(
-          [input, ...rest].reduce((addr, part, i) => {
-            addr[`adress${i + 1}`] = part
-            return addr
-          }, {} as any) as DbAddress
-        )
+      return sanitizeAddress(
+        [input, ...rest].reduce((addr, part, i) => {
+          addr[`adress${i + 1}`] = part
+          return addr
+        }, {} as any) as DbAddress
       )
-      break
+
     case 'pn':
     case 'persorgnr':
-      console.log(sanitizePersOrgNr(input))
-      break
+      return sanitizePersOrgNr(input)
     case 'bd':
     case 'birthdate':
-      console.log(sanitizeBirthDate(dateFromDigits(input)))
+      return sanitizeBirthDate(dateFromDigits(input))
+  }
+}
+
+const [_, file, cmd, ...rest] = process.argv
+if (file?.endsWith('sanitize.ts')) {
+  const [flags, args] = rest.reduce(
+    (r, arg) => {
+      r[arg.startsWith('-') ? 0 : 1].push(arg)
+      return r
+    },
+    [[], []] as [string[], string[]]
+  )
+
+  const [input, ...restInput] = args
+
+  const output = exec(cmd, input, restInput)
+
+  if (flags.includes('-w')) {
+    console.dir(output, { depth: null })
+  } else {
+    console.log(output)
   }
 }
