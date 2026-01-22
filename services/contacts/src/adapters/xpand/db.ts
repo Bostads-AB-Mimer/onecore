@@ -1,20 +1,20 @@
 import knex from 'knex'
 
 import { makeResource } from '@src/common/resource'
-import config from '@src/common/config'
+import { DatabaseConfig } from '@src/common/config'
 
-export const xpandDbClient = () => {
+export const xpandDbClient = (config: DatabaseConfig) => {
   return makeResource<knex.Knex>({
     name: 'xpand-db',
     initialize: async () => {
       return knex({
         client: 'mssql',
         connection: {
-          host: config.xpandDatabase.host,
-          user: config.xpandDatabase.user,
-          password: config.xpandDatabase.password,
-          port: Number(config.xpandDatabase.port),
-          database: config.xpandDatabase.database,
+          host: config.host,
+          user: config.user,
+          password: config.password,
+          port: Number(config.port),
+          database: config.database,
         },
         pool: {
           min: 0,
