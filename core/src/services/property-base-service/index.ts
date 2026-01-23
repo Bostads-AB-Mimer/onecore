@@ -1019,7 +1019,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: boolean
-   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
+   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
    *     responses:
    *       '200':
    *         description: Successfully retrieved rental blocks.
@@ -1154,7 +1154,7 @@ export const routes = (router: KoaRouter) => {
    *         name: active
    *         schema:
    *           type: boolean
-   *         description: Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks.
+   *         description: Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks.
    *     produces:
    *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
@@ -1175,7 +1175,11 @@ export const routes = (router: KoaRouter) => {
     const toDateLte = ctx.query.toDateLte as string | undefined
     const activeParam = ctx.query.active as string | undefined
     const active =
-      activeParam === undefined ? undefined : activeParam === 'true'
+      activeParam === 'true'
+        ? true
+        : activeParam === 'false'
+          ? false
+          : undefined
 
     try {
       const result = await propertyBaseAdapter.exportRentalBlocksToExcel({
@@ -1247,7 +1251,7 @@ export const routes = (router: KoaRouter) => {
    *         name: active
    *         schema:
    *           type: boolean
-   *         description: Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks.
+   *         description: Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks.
    *       - in: query
    *         name: page
    *         schema:
@@ -1307,7 +1311,11 @@ export const routes = (router: KoaRouter) => {
     const toDateLte = ctx.query.toDateLte as string | undefined
     const activeParam = ctx.query.active as string | undefined
     const active =
-      activeParam === undefined ? undefined : activeParam === 'true'
+      activeParam === 'true'
+        ? true
+        : activeParam === 'false'
+          ? false
+          : undefined
     const page = parseInt(ctx.query.page as string) || 1
     const limit = parseInt(ctx.query.limit as string) || 50
 
@@ -1359,7 +1367,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: boolean
-   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
+   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
    *       - in: query
    *         name: page
    *         required: false
@@ -1560,7 +1568,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: boolean
-   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
+   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved residence.
@@ -1607,12 +1615,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { active } = queryParams.data
+    const { active: rentalBlockActive } = queryParams.data
 
     try {
       const getResidence = await propertyBaseAdapter.getResidenceDetails(
         residenceId,
-        { active }
+        { active: rentalBlockActive }
       )
 
       if (!getResidence.ok) {

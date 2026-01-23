@@ -12,6 +12,55 @@ import {
 import { prisma } from './db'
 //todo: add types
 
+/**
+ * Builds a Prisma where clause for filtering rental blocks by active status.
+ * - active=true: Not yet ended (toDate >= today OR toDate is null) - includes current and future blocks
+ * - active=false: Already ended (toDate < today)
+ * - active=undefined: No filter (all blocks)
+ */
+function buildActiveFilter(active?: boolean): Prisma.RentalBlockWhereInput {
+  const now = new Date()
+
+  if (active === true) {
+    // Active: toDate >= today OR toDate is null (includes current and future blocks)
+    return {
+      OR: [{ toDate: { gte: now } }, { toDate: null }],
+    }
+  } else if (active === false) {
+    // Inactive: toDate < today (already ended)
+    return { toDate: { lt: now } }
+  }
+  return {}
+}
+
+/**
+ * Sorts rental blocks: future blocks first (sorted by fromDate descending),
+ * then current/active blocks (also sorted by fromDate descending).
+ */
+function sortRentalBlocksByFutureThenActive<
+  T extends { fromDate: Date | string },
+>(blocks: T[]): T[] {
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+
+  return [...blocks].sort((a, b) => {
+    const fromA = new Date(a.fromDate)
+    const fromB = new Date(b.fromDate)
+    fromA.setHours(0, 0, 0, 0)
+    fromB.setHours(0, 0, 0, 0)
+
+    const aIsFuture = fromA > now
+    const bIsFuture = fromB > now
+
+    // Future blocks come first
+    if (aIsFuture && !bIsFuture) return -1
+    if (!aIsFuture && bIsFuture) return 1
+
+    // Within same category, sort by fromDate descending (most recent/future first)
+    return fromB.getTime() - fromA.getTime()
+  })
+}
+
 export type Residence = Prisma.ResidenceGetPayload<{
   select: {
     id: true
@@ -159,22 +208,8 @@ export const getResidenceById = async (
   id: string,
   options?: { active?: boolean }
 ): Promise<ResidenceWithRelations | null> => {
-  const active = options?.active
-
-  // Build rental blocks filter based on active parameter
-  const rentalBlocksWhere =
-    active === true
-      ? {
-          // Active blocks: started and not ended
-          fromDate: { lte: new Date() },
-          OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
-        }
-      : active === false
-        ? {
-            // Inactive blocks: ended
-            toDate: { lt: new Date() },
-          }
-        : undefined // All blocks
+  const activeFilter = buildActiveFilter(options?.active)
+  const hasActiveFilter = Object.keys(activeFilter).length > 0
 
   const response = await prisma.residence
     .findFirst({
@@ -187,7 +222,7 @@ export const getResidenceById = async (
           include: {
             rentalInformation: { include: { rentalInformationType: true } },
             rentalBlocks: {
-              ...(rentalBlocksWhere && { where: rentalBlocksWhere }),
+              ...(hasActiveFilter && { where: activeFilter }),
               include: {
                 blockReason: true,
               },
@@ -465,8 +500,6 @@ export const getRentalBlocksByRentalId = async (
   options?: { active?: boolean }
 ) => {
   try {
-    const active = options?.active
-
     // First find the propertyObjectId from the rentalId
     const propertyStructure = await prisma.propertyStructure.findFirst({
       where: {
@@ -482,20 +515,7 @@ export const getRentalBlocksByRentalId = async (
       return null
     }
 
-    // Build filter based on active parameter
-    const activeFilter =
-      active === true
-        ? {
-            // Active blocks: started and not ended
-            fromDate: { lte: new Date() },
-            OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
-          }
-        : active === false
-          ? {
-              // Inactive blocks: ended
-              toDate: { lt: new Date() },
-            }
-          : {} // All blocks
+    const activeFilter = buildActiveFilter(options?.active)
 
     // Get rental blocks for this property object
     const rentalBlocks = await prisma.rentalBlock.findMany({
@@ -620,20 +640,9 @@ export const getAllRentalBlocks = async (options?: {
   offset?: number
 }) => {
   try {
-    const active = options?.active
     const limit = options?.limit
     const offset = options?.offset
-
-    // Build active filter based on active parameter
-    const activeFilter =
-      active === true
-        ? {
-            fromDate: { lte: new Date() },
-            OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
-          }
-        : active === false
-          ? { toDate: { lt: new Date() } }
-          : {}
+    const activeFilter = buildActiveFilter(options?.active)
 
     // Build where clause
     const whereClause = {
@@ -752,8 +761,9 @@ export const getAllRentalBlocks = async (options?: {
     })
 
     const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
     return {
-      data: transformedBlocks,
+      data: sortedBlocks,
       totalCount,
     }
   } catch (err) {
@@ -802,16 +812,10 @@ function buildRentalBlockWhereClause(
     },
   })
 
-  // Active blocks filter
-  if (active === true) {
-    andConditions.push({
-      fromDate: { lte: new Date() },
-      OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
-    })
-  } else if (active === false) {
-    andConditions.push({
-      toDate: { lt: new Date() },
-    })
+  // Active filter
+  const activeFilter = buildActiveFilter(active)
+  if (Object.keys(activeFilter).length > 0) {
+    andConditions.push(activeFilter)
   }
 
   // General search (q param) - OR across fields
@@ -1040,8 +1044,9 @@ export const searchRentalBlocks = async (
     })
 
     const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
     return {
-      data: transformedBlocks,
+      data: sortedBlocks,
       totalCount,
     }
   } catch (err) {
@@ -1156,7 +1161,8 @@ export const getAllRentalBlocksForExport = async (
       }
     })
 
-    return rentalBlocksWithRent.map(transformRentalBlock)
+    const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    return sortRentalBlocksByFutureThenActive(transformedBlocks)
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
     throw err

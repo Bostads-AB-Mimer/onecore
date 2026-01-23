@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 
-interface RentalBlocksPaginationProps {
+interface PaginationProps {
   currentPage: number
   totalPages: number
   totalRecords: number
@@ -16,14 +16,14 @@ interface RentalBlocksPaginationProps {
   isFetching?: boolean
 }
 
-export const RentalBlocksPagination = ({
+export const Pagination = ({
   currentPage,
   totalPages,
   totalRecords,
   pageSize,
   onPageChange,
   isFetching,
-}: RentalBlocksPaginationProps) => {
+}: PaginationProps) => {
   if (totalPages <= 1) return null
 
   const startRecord = (currentPage - 1) * pageSize + 1

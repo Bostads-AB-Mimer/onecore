@@ -1097,8 +1097,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks. */
-          active?: boolean;
+          /** @description Filter rental blocks by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, include all blocks. */
+          status?: "active" | "expired" | "upcoming";
         };
         path: {
           /** @description The rental ID */
@@ -1141,8 +1141,8 @@ export interface paths {
           fastighet?: string;
           fromDateGte?: string;
           toDateLte?: string;
-          /** @description Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks. */
-          active?: boolean;
+          /** @description Filter by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, all blocks. */
+          status?: "active" | "expired" | "upcoming";
         };
       };
       responses: {
@@ -1181,8 +1181,8 @@ export interface paths {
           fromDateGte?: string;
           /** @description Filter blocks ending on or before this date */
           toDateLte?: string;
-          /** @description Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks. */
-          active?: boolean;
+          /** @description Filter by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, all blocks. */
+          status?: "active" | "expired" | "upcoming";
           page?: number;
           limit?: number;
         };
@@ -1222,8 +1222,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks. */
-          active?: boolean;
+          /** @description Filter rental blocks by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, include all blocks. */
+          status?: "active" | "expired" | "upcoming";
           /** @description Page number (1-indexed) */
           page?: number;
           /** @description Number of results per page */
@@ -1281,8 +1281,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks. */
-          active?: boolean;
+          /** @description Filter rental blocks by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, include all blocks. */
+          status?: "active" | "expired" | "upcoming";
         };
         path: {
           /** @description The ID of the residence */

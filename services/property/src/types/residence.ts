@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { createGenericResponseSchema } from './response'
 import { StaircaseSchema } from './staircase'
 
+// Boolean schema for rental block active filtering
+const booleanStringSchema = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((val) => val === true || val === 'true')
+
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
     .string({
@@ -261,12 +266,7 @@ export const RentalBlockWithRentalObjectSchema = z.object({
 })
 
 export const getAllRentalBlocksQueryParamsSchema = z.object({
-  active: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((val) =>
-      val === undefined ? undefined : val === 'true' ? true : false
-    ),
+  active: booleanStringSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(1000).optional().default(100),
 })
@@ -280,12 +280,7 @@ export const searchRentalBlocksQueryParamsSchema = z.object({
   fastighet: z.string().optional(),
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
-  active: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((val) =>
-      val === undefined ? undefined : val === 'true' ? true : false
-    ),
+  active: booleanStringSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
 })
@@ -303,12 +298,7 @@ export const exportRentalBlocksQueryParamsSchema = z.object({
   fastighet: z.string().optional(),
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
-  active: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((val) =>
-      val === undefined ? undefined : val === 'true' ? true : false
-    ),
+  active: booleanStringSchema.optional(),
 })
 
 export type ExportRentalBlocksQueryParams = z.infer<

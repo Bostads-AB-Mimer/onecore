@@ -440,11 +440,12 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The rental ID
    *       - in: query
-   *         name: active
+   *         name: status
    *         required: false
    *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
+   *           type: string
+   *           enum: [active, expired, upcoming]
+   *         description: Filter rental blocks by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, include all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved the rental blocks
@@ -469,7 +470,11 @@ export const routes = (router: KoaRouter) => {
       const rentalId = ctx.params.rentalId
       const activeParam = ctx.query.active as string | undefined
       const active =
-        activeParam === undefined ? undefined : activeParam === 'true'
+        activeParam === 'true'
+          ? true
+          : activeParam === 'false'
+            ? false
+            : undefined
 
       try {
         const rentalBlocks = await getRentalBlocksByRentalId(rentalId, {
@@ -548,10 +553,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: date
    *       - in: query
-   *         name: active
+   *         name: status
    *         schema:
-   *           type: boolean
-   *         description: Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks.
+   *           type: string
+   *           enum: [active, expired, upcoming]
+   *         description: Filter by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, all blocks.
    *     produces:
    *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
@@ -700,10 +706,11 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Filter blocks ending on or before this date
    *       - in: query
-   *         name: active
+   *         name: status
    *         schema:
-   *           type: boolean
-   *         description: Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks.
+   *           type: string
+   *           enum: [active, expired, upcoming]
+   *         description: Filter by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, all blocks.
    *       - in: query
    *         name: page
    *         schema:
@@ -820,11 +827,12 @@ export const routes = (router: KoaRouter) => {
    *       - Residences
    *     parameters:
    *       - in: query
-   *         name: active
+   *         name: status
    *         required: false
    *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
+   *           type: string
+   *           enum: [active, expired, upcoming]
+   *         description: Filter rental blocks by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, include all blocks.
    *       - in: query
    *         name: page
    *         required: false
@@ -971,11 +979,12 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the residence
    *       - in: query
-   *         name: active
+   *         name: status
    *         required: false
    *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
+   *           type: string
+   *           enum: [active, expired, upcoming]
+   *         description: Filter rental blocks by status. 'active' = currently in effect, 'expired' = already ended, 'upcoming' = not yet started. If omitted, include all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved the residence
@@ -996,7 +1005,11 @@ export const routes = (router: KoaRouter) => {
     const id = ctx.params.id
     const activeParam = ctx.query.active as string | undefined
     const active =
-      activeParam === undefined ? undefined : activeParam === 'true'
+      activeParam === 'true'
+        ? true
+        : activeParam === 'false'
+          ? false
+          : undefined
 
     try {
       const residence = await getResidenceById(id, { active })
