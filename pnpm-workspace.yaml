@@ -6,4 +6,3 @@ packages:
  - services/*
 
 minimumReleaseAge: 5760
-injectWorkspacePackages: true
