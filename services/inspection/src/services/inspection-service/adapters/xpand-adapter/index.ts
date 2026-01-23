@@ -33,6 +33,7 @@ export interface XpandDbDetailedInspection {
   endedAt: Date | null
   inspector: string
   type: string
+  residenceId: string
   address: string
   apartmentCode: string
   leaseId: string

@@ -167,7 +167,9 @@ describe('inspection-service', () => {
 
       expect(getInspectionByIdSpy).toHaveBeenCalledWith(inspectionId)
       expect(res.status).toBe(404)
-      expect(res.body.error).toBe(`Inspection with ID ${inspectionId} not found`)
+      expect(res.body.error).toBe(
+        `Inspection with ID ${inspectionId} not found`
+      )
     })
 
     it('handles other adapter errors with 500 status', async () => {

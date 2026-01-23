@@ -31,6 +31,7 @@ export const DetailedXpandInspectionFactory = Factory.define<
   endedAt: new Date('2023-01-01T11:00:00Z').toISOString(),
   inspector: 'INSPECTOR001',
   type: 'Type A',
+  residenceId: 'RESIDENCE001',
   address: '123 Main St',
   apartmentCode: 'APT001',
   leaseId: 'LEASE001',
