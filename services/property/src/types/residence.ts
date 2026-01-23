@@ -233,6 +233,33 @@ export const RentalBlockSchema = z.object({
   amount: z.number().nullable(),
 })
 
+export const RentalBlockWithResidenceSchema = z.object({
+  id: z.string(),
+  blockReasonId: z.string().nullable(),
+  blockReason: z.string().nullable(),
+  fromDate: z.date(),
+  toDate: z.date().nullable(),
+  amount: z.number().nullable(),
+  distrikt: z.string().nullable(),
+  rentalObject: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    category: z.enum(['Bostad', 'Bilplats', 'Lokal', 'Förråd', 'Övrigt']),
+    address: z.string().nullable(),
+    rentalId: z.string().nullable(),
+    monthlyRent: z.number(),
+    type: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
 export const getAllRentalBlocksQueryParamsSchema = z.object({
   includeActiveBlocksOnly: z
     .enum(['true', 'false'])
@@ -293,6 +320,9 @@ export type GetResidenceByRentalIdResponse = z.infer<
   typeof GetResidenceByRentalIdResponseSchema
 >
 export type RentalBlock = z.infer<typeof RentalBlockSchema>
+export type RentalBlockWithResidence = z.infer<
+  typeof RentalBlockWithResidenceSchema
+>
 export type GetRentalBlocksByRentalIdResponse = z.infer<
   typeof GetRentalBlocksByRentalIdResponseSchema
 >

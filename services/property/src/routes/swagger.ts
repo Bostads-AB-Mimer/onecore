@@ -94,6 +94,10 @@ const schemas = {
     name: 'RentalBlock',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.RentalBlockWithResidenceSchema, {
+    name: 'RentalBlockWithResidence',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(types.ComponentCategorySchema, {
     name: 'ComponentCategory',
     target: 'openApi3',
