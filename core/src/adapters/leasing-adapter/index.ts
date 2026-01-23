@@ -1,4 +1,8 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  loggedAxios as axios,
+  logger,
+  PaginatedResponse,
+} from '@onecore/utilities'
 import { AxiosError } from 'axios'
 import {
   ConsumerReport,
@@ -33,19 +37,9 @@ interface GetLeasesOptions {
   includeRentInfo?: boolean // defaults to true
 }
 
-interface PaginatedIdentityCheckContactsResponse {
-  content: Array<z.infer<typeof leasing.v1.IdentityCheckContactSchema>>
-  _meta: {
-    totalRecords: number
-    page: number
-    limit: number
-    count: number
-  }
-  _links: Array<{
-    href: string
-    rel: 'self' | 'first' | 'last' | 'prev' | 'next'
-  }>
-}
+type IdentityCheckContact = z.infer<
+  typeof leasing.v1.IdentityCheckContactSchema
+>
 
 const getLease = async (
   leaseId: string,
@@ -148,10 +142,10 @@ const getContactsForIdentityCheck = async (
   page: number,
   limit: number
 ): Promise<
-  AdapterResult<PaginatedIdentityCheckContactsResponse, 'unknown'>
+  AdapterResult<PaginatedResponse<IdentityCheckContact>, 'unknown'>
 > => {
   try {
-    const response = await axios.get<PaginatedIdentityCheckContactsResponse>(
+    const response = await axios.get<PaginatedResponse<IdentityCheckContact>>(
       `${tenantsLeasesServiceUrl}/contacts/for-identity-check`,
       { params: { page, limit } }
     )
