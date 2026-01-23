@@ -1109,6 +1109,112 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-blocks/export:
+   *   get:
+   *     summary: Export rental blocks to Excel
+   *     tags:
+   *       - Property base Service
+   *     description: Generates and downloads an Excel file with all rental blocks matching the filters
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *         description: Filter by category
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *         description: Filter by district
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *         description: Filter by block reason
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *         description: Filter by property
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *         description: Filter by start date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *         description: Filter by end date
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-blocks/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const q = ctx.query.q as string | undefined
+    const kategori = ctx.query.kategori as string | undefined
+    const distrikt = ctx.query.distrikt as string | undefined
+    const blockReason = ctx.query.blockReason as string | undefined
+    const fastighet = ctx.query.fastighet as string | undefined
+    const fromDateGte = ctx.query.fromDateGte as string | undefined
+    const toDateLte = ctx.query.toDateLte as string | undefined
+    const includeActiveBlocksOnly = ctx.query.includeActiveBlocksOnly === 'true'
+
+    try {
+      const result = await propertyBaseAdapter.exportRentalBlocksToExcel({
+        q,
+        kategori,
+        distrikt,
+        blockReason,
+        fastighet,
+        fromDateGte,
+        toDateLte,
+        includeActiveBlocksOnly,
+      })
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Export failed')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      ctx.set(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      )
+      ctx.set(
+        'Content-Disposition',
+        `attachment; filename="sparrlista-${timestamp}.xlsx"`
+      )
+      ctx.status = 200
+      ctx.body = Buffer.from(result.data)
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences/rental-blocks/search:
    *   get:
    *     summary: Search rental blocks with server-side filtering
@@ -1154,6 +1260,36 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Successfully searched rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithResidence'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
    *       500:
    *         description: Internal server error
    */

@@ -17,6 +17,7 @@ import {
   getRentalBlocksByRentalId,
   getAllRentalBlocks,
   searchRentalBlocks,
+  getAllRentalBlocksForExport,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -28,6 +29,7 @@ import {
   RentalBlock,
   getAllRentalBlocksQueryParamsSchema,
   searchRentalBlocksQueryParamsSchema,
+  exportRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -506,6 +508,152 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-blocks/export:
+   *   get:
+   *     summary: Export all rental blocks to Excel
+   *     description: Generates and downloads an Excel file with all rental blocks matching the filters
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term (min 2 chars)
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: includeActiveBlocksOnly
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/export',
+    parseRequest({ query: exportRentalBlocksQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const allBlocks = await getAllRentalBlocksForExport(
+          ctx.request.parsedQuery
+        )
+
+        // Dynamic import of ExcelJS to avoid loading it on every request
+        const ExcelJS = await import('exceljs')
+        const workbook = new ExcelJS.default.Workbook()
+        const worksheet = workbook.addWorksheet('Spärrlista')
+
+        // Add columns
+        worksheet.columns = [
+          { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
+          { header: 'Kategori', key: 'kategori', width: 12 },
+          { header: 'Typ', key: 'typ', width: 15 },
+          { header: 'Adress', key: 'adress', width: 30 },
+          { header: 'Fastighet', key: 'fastighet', width: 15 },
+          { header: 'Distrikt', key: 'distrikt', width: 15 },
+          { header: 'Orsak', key: 'orsak', width: 35 },
+          { header: 'Startdatum', key: 'startdatum', width: 12 },
+          { header: 'Slutdatum', key: 'slutdatum', width: 12 },
+          { header: 'Hyra (kr/mån)', key: 'hyra', width: 15 },
+          {
+            header: 'Estimerat Hyresbortfall (kr)',
+            key: 'hyresbortfall',
+            width: 22,
+          },
+        ]
+
+        // Style header row
+        worksheet.getRow(1).font = { bold: true }
+
+        // Add rows
+        for (const block of allBlocks) {
+          worksheet.addRow({
+            hyresobjekt:
+              block.rentalObject?.rentalId || block.rentalObject?.code || '',
+            kategori: block.rentalObject?.category || '',
+            typ: block.rentalObject?.type || '',
+            adress: block.rentalObject?.address || '',
+            fastighet: block.property?.name || '',
+            distrikt: block.distrikt || '',
+            orsak: block.blockReason || '',
+            startdatum: block.fromDate
+              ? new Date(block.fromDate).toLocaleDateString('sv-SE')
+              : '',
+            slutdatum: block.toDate
+              ? new Date(block.toDate).toLocaleDateString('sv-SE')
+              : '',
+            hyra: block.rentalObject?.monthlyRent
+              ? Math.round(block.rentalObject.monthlyRent)
+              : null,
+            hyresbortfall: block.amount ?? null,
+          })
+        }
+
+        // Generate buffer
+        const buffer = await workbook.xlsx.writeBuffer()
+
+        // Set response headers for file download
+        const timestamp = new Date().toISOString().split('T')[0]
+        ctx.set(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        ctx.set(
+          'Content-Disposition',
+          `attachment; filename="sparrlista-${timestamp}.xlsx"`
+        )
+        ctx.status = 200
+        ctx.body = buffer
+      } catch (err) {
+        logger.error(err, 'Error exporting rental blocks to Excel')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /residences/rental-blocks/search:
    *   get:
    *     summary: Search rental blocks with server-side filtering
@@ -573,6 +721,36 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Successfully searched rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithResidence'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
    *       500:
    *         description: Internal server error
    */

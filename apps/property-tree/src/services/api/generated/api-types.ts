@@ -1125,6 +1125,39 @@ export interface paths {
       };
     };
   };
+  "/residences/rental-blocks/export": {
+    /**
+     * Export all rental blocks to Excel
+     * @description Generates and downloads an Excel file with all rental blocks matching the filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Search term (min 2 chars) */
+          q?: string;
+          kategori?: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
+          distrikt?: string;
+          blockReason?: string;
+          fastighet?: string;
+          fromDateGte?: string;
+          toDateLte?: string;
+          includeActiveBlocksOnly?: boolean;
+        };
+      };
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/rental-blocks/search": {
     /**
      * Search rental blocks with server-side filtering
@@ -1156,7 +1189,22 @@ export interface paths {
       responses: {
         /** @description Successfully searched rental blocks */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: components["schemas"]["RentalBlockWithResidence"][];
+              _meta?: {
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
+              _links?: ({
+                  href?: string;
+                  /** @enum {string} */
+                  rel?: "self" | "first" | "last" | "prev" | "next";
+                })[];
+            };
+          };
         };
         /** @description Internal server error */
         500: {

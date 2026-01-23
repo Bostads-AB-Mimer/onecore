@@ -52,7 +52,8 @@
     "zod": "^3.25.67",
     "zod-prisma-types": "^3.2.1",
     "zod-to-json-schema": "^3.24.5",
-    "fishery": "^2.4.0"
+    "fishery": "^2.4.0",
+    "exceljs": "^4.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

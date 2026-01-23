@@ -1,5 +1,6 @@
 import { logger } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
+import axios from 'axios'
 
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
@@ -873,16 +874,20 @@ export async function searchRentalBlocks(options: {
       limit = 50,
     } = options
 
-    // Call property service's search endpoint
-    // Note: Using type assertion since OpenAPI types may not be regenerated yet
     const fetchResponse = await client().GET(
-      '/residences/rental-blocks/search' as '/residences/rental-blocks/all',
+      '/residences/rental-blocks/search',
       {
         params: {
           query: {
             q,
             fields,
-            kategori,
+            kategori: kategori as
+              | 'Bostad'
+              | 'Bilplats'
+              | 'Lokal'
+              | 'Förråd'
+              | 'Övrigt'
+              | undefined,
             distrikt,
             blockReason,
             fastighet,
@@ -891,7 +896,7 @@ export async function searchRentalBlocks(options: {
             includeActiveBlocksOnly,
             page,
             limit,
-          } as never,
+          },
         },
       }
     )
@@ -908,6 +913,39 @@ export async function searchRentalBlocks(options: {
     )
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.searchRentalBlocks')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function exportRentalBlocksToExcel(options: {
+  q?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  includeActiveBlocksOnly?: boolean
+}): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
+  try {
+    const params: Record<string, string> = {}
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params[key] = String(value)
+      }
+    })
+
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/residences/rental-blocks/export`,
+      {
+        params,
+        responseType: 'arraybuffer',
+      }
+    )
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.exportRentalBlocksToExcel')
     return { ok: false, err: 'unknown' }
   }
 }

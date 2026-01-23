@@ -51,12 +51,24 @@ export type {
 export type Company = components['schemas']['Company']
 export type CompanyDetails = components['schemas']['CompanyDetails']
 export type Property = components['schemas']['Property']
+
+// Custom type - the generated PropertySearchResult doesn't match the actual API response
+export interface PropertySearchResult {
+  id: string
+  code: string
+  designation: string
+  tract: string
+}
 export type Building = components['schemas']['Building']
 export type Staircase = components['schemas']['Staircase']
 export type Residence = components['schemas']['Residence']
+export type ResidenceDetails = components['schemas']['ResidenceDetails']
 export type ResidenceSearchResult =
   components['schemas']['ResidenceSearchResult']
 export type ResidenceSummary = components['schemas']['ResidenceSummary']
+export type RentalBlock = components['schemas']['RentalBlock']
+export type RentalBlockWithResidence =
+  components['schemas']['RentalBlockWithResidence']
 export type Room = components['schemas']['Room']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
 export type Component = components['schemas']['Component']

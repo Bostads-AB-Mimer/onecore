@@ -1,14 +1,24 @@
 import { components } from '@/services/api/generated/api-types'
 import { ResponsiveTable } from '../ui/ResponsiveTable'
 import { TabLayout } from '../ui/TabLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useState } from 'react'
 import { Button } from '../ui/v2/Button'
-import { useQuery } from '@tanstack/react-query'
 import { useRentalBlocks } from '../hooks/useRentalBlocks'
 import { Badge } from '../ui/v3/Badge'
 
 const INITIAL_DISPLAY_COUNT = 5
+
+const formatISODate = (isoDateString: string | null | undefined) => {
+  if (!isoDateString) return '-'
+  const date = new Date(isoDateString)
+  return date.toLocaleDateString('sv-SE')
+}
+
+const isExpired = (toDate: string | null | undefined) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return toDate && new Date(toDate) < today
+}
 
 function RentalBlocksTab({ rentalId }: { rentalId: string }) {
   const [showAll, setShowAll] = useState(false)
@@ -39,20 +49,6 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
     ? rentalBlocks
     : rentalBlocks.slice(0, INITIAL_DISPLAY_COUNT)
   const hasMoreRentalBlocks = rentalBlocks.length > INITIAL_DISPLAY_COUNT
-
-  const formatISODate = (isoDateString: string | null | undefined) => {
-    if (!isoDateString) return '-'
-
-    const date = new Date(isoDateString)
-    return date.toLocaleDateString('sv-SE')
-  }
-
-  const isExpired = (toDate: string | null | undefined) => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const isExpired = toDate && new Date(toDate) < today
-    return isExpired
-  }
 
   return (
     <TabLayout title="Spärrar" showCard={true}>
