@@ -26,7 +26,7 @@ import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown
 import { useAllRentalBlocks } from '@/components/hooks/useRentalBlocks'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
-import { RentalBlocksPagination } from './RentalBlocksPagination'
+import { Pagination } from '@/components/ui/Pagination'
 import { residenceService } from '@/services/api/core/residenceService'
 import { propertyService } from '@/services/api/core/propertyService'
 import type { RentalBlockWithRentalObject } from '@/services/types'
@@ -112,11 +112,14 @@ const RentalBlocksPage = () => {
   })
 
   // Read filters from URL params
-  const statusFilter = useMemo(() => {
-    const val = searchParams.get('status')
-    return val === 'active' || val === 'expired' || val === 'all'
-      ? val
-      : 'active'
+  // 'active' filter: true = active blocks, false = expired blocks, undefined = all blocks
+  const activeFilter = useMemo(() => {
+    const val = searchParams.get('active')
+    if (val === 'true') return true
+    if (val === 'false') return false
+    if (val === 'all') return undefined
+    // Default to showing active blocks (toDate >= today or toDate is null)
+    return true
   }, [searchParams])
 
   const selectedKategori = useMemo(
@@ -170,9 +173,13 @@ const RentalBlocksPage = () => {
   }, [searchParams])
 
   // Filter update handlers
-  const setStatusFilter = (val: 'active' | 'expired' | 'all') => {
+  const setActiveFilter = (val: 'active' | 'expired' | 'all') => {
+    // active → active: true (default, so omit from URL)
+    // expired → active: false
+    // all → active: 'all' (special case for showing all)
     updateUrlParams({
-      status: val === 'active' ? undefined : val,
+      active:
+        val === 'active' ? undefined : val === 'expired' ? 'false' : 'all',
       page: undefined,
     })
   }
@@ -201,14 +208,8 @@ const RentalBlocksPage = () => {
     })
   }
 
-  // Map status filter to API parameter
-  // 'active' → active: true, 'expired' → active: false, 'all' → active: undefined
-  const active =
-    statusFilter === 'active'
-      ? true
-      : statusFilter === 'expired'
-        ? false
-        : undefined
+  // Map active filter to API parameter
+  // activeFilter is already boolean | undefined from the useMemo
 
   const {
     data: rentalBlocks,
@@ -225,13 +226,15 @@ const RentalBlocksPage = () => {
       fastighet: selectedFastighet || undefined,
       fromDateGte: startDatum || undefined,
       toDateLte: slutDatum || undefined,
-      active,
+      active: activeFilter,
     },
     page,
     PAGE_SIZE
   )
 
-  const totalPages = meta ? Math.ceil(meta.totalRecords / PAGE_SIZE) : 1
+  const totalPages = meta?.totalRecords
+    ? Math.ceil(meta.totalRecords / PAGE_SIZE)
+    : 1
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
@@ -257,7 +260,7 @@ const RentalBlocksPage = () => {
         fastighet: selectedFastighet || undefined,
         fromDateGte: startDatum || undefined,
         toDateLte: slutDatum || undefined,
-        active,
+        active: activeFilter,
       })
 
       // Trigger download
@@ -292,7 +295,7 @@ const RentalBlocksPage = () => {
     setSearchInput('')
     updateUrlParams({
       search: undefined,
-      status: undefined,
+      active: undefined,
       kategori: undefined,
       fastighet: undefined,
       distrikt: undefined,
@@ -303,10 +306,10 @@ const RentalBlocksPage = () => {
     })
   }
 
-  // Check if any filters are active
+  // Check if any filters are active (not default values)
   const hasActiveFilters =
     debouncedSearch ||
-    statusFilter !== 'active' ||
+    activeFilter !== true || // Default is active=true
     selectedKategori ||
     selectedFastighet ||
     selectedDistrikt ||
@@ -357,9 +360,15 @@ const RentalBlocksPage = () => {
             {/* Filter row */}
             <div className="flex flex-wrap gap-2">
               <Select
-                value={statusFilter}
+                value={
+                  activeFilter === true
+                    ? 'active'
+                    : activeFilter === false
+                      ? 'expired'
+                      : 'all'
+                }
                 onValueChange={(val) =>
-                  setStatusFilter(val as 'active' | 'expired' | 'all')
+                  setActiveFilter(val as 'active' | 'expired' | 'all')
                 }
               >
                 <SelectTrigger className="w-[140px] font-semibold">
@@ -562,7 +571,7 @@ const RentalBlocksPage = () => {
             />
           )}
 
-          <RentalBlocksPagination
+          <Pagination
             currentPage={page}
             totalPages={totalPages}
             totalRecords={meta?.totalRecords ?? 0}

@@ -518,13 +518,13 @@ export const ResidenceSummaryQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
 })
 
+// Boolean schema for rental block active filtering
+const booleanStringSchema = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((val) => val === true || val === 'true')
+
 export const GetResidenceDetailsQueryParamsSchema = z.object({
-  active: z
-    .string()
-    .optional()
-    .transform((val) =>
-      val === undefined ? undefined : val === 'true' ? true : false
-    ),
+  active: booleanStringSchema.optional(),
 })
 
 export const ResidenceSummarySchema = z.object({
@@ -573,12 +573,7 @@ export const RentalBlockSchema = z.object({
 })
 
 export const GetRentalBlocksByRentalIdQueryParamsSchema = z.object({
-  active: z
-    .string()
-    .optional()
-    .transform((val) =>
-      val === undefined ? undefined : val === 'true' ? true : false
-    ),
+  active: booleanStringSchema.optional(),
 })
 
 export const RentalBlockWithRentalObjectSchema = z.object({
@@ -610,12 +605,7 @@ export const RentalBlockWithRentalObjectSchema = z.object({
 })
 
 export const GetAllRentalBlocksQueryParamsSchema = z.object({
-  active: z
-    .string()
-    .optional()
-    .transform((val) =>
-      val === undefined ? undefined : val === 'true' ? true : false
-    ),
+  active: booleanStringSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })

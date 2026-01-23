@@ -5,7 +5,6 @@ import type {
   ResidenceDetails,
   ResidenceSummary,
   RentalBlock,
-  RentalBlockWithRentalObject,
 } from '../../types'
 
 const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
@@ -37,7 +36,8 @@ export const residenceService = {
     const { data, error } = await GET(`/residences/{residenceId}`, {
       params: {
         path: { residenceId },
-        query: { active: true },
+        // Note: Using 'as any' until API types are regenerated with active boolean
+        query: { active: true } as any,
       },
     })
 
@@ -54,34 +54,21 @@ export const residenceService = {
     const { data, error } = await GET(
       '/residences/rental-blocks/by-rental-id/{rentalId}',
       {
-        params: { path: { rentalId }, query: { active } },
+        // Note: Using 'as any' until API types are regenerated with active boolean
+        params: { path: { rentalId }, query: { active } } as any,
       }
     )
     if (error) throw error
     return data.content || []
   },
 
-  async getAllRentalBlocks(
-    active?: boolean,
-    page = 1,
-    limit = 100
-  ): Promise<{
-    content: RentalBlockWithRentalObject[]
-    _meta: { totalRecords: number; page: number; limit: number; count: number }
-  }> {
+  async getAllRentalBlocks(active?: boolean, page = 1, limit = 100) {
     const { data, error } = await GET('/residences/rental-blocks/all', {
-      params: { query: { active, page, limit } },
+      // Note: Using 'as any' until API types are regenerated with active boolean
+      params: { query: { active, page, limit } } as any,
     })
     if (error) throw error
-    return {
-      content: data.content || [],
-      _meta: {
-        totalRecords: data._meta?.totalRecords ?? 0,
-        page: data._meta?.page ?? page,
-        limit: data._meta?.limit ?? limit,
-        count: data._meta?.count ?? data.content?.length ?? 0,
-      },
-    }
+    return data
   },
 
   async searchRentalBlocks(
@@ -98,23 +85,13 @@ export const residenceService = {
     },
     page = 1,
     limit = 50
-  ): Promise<{
-    content: RentalBlockWithRentalObject[]
-    _meta: { totalRecords: number; page: number; limit: number; count: number }
-  }> {
+  ) {
     const { data, error } = await GET('/residences/rental-blocks/search', {
-      params: { query: { ...params, page, limit } },
+      // Note: Using 'as any' until API types are regenerated with active boolean
+      params: { query: { ...params, page, limit } } as any,
     })
     if (error) throw error
-    return {
-      content: data.content || [],
-      _meta: {
-        totalRecords: data._meta?.totalRecords ?? 0,
-        page: data._meta?.page ?? page,
-        limit: data._meta?.limit ?? limit,
-        count: data._meta?.count ?? data.content?.length ?? 0,
-      },
-    }
+    return data
   },
 
   // Note: Using raw fetch instead of GET wrapper because this endpoint
