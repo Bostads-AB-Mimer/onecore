@@ -1,5 +1,13 @@
-import type { Company, PropertySearchResult } from '../../types'
+import type { Company } from '../../types'
 import { GET } from './base-api'
+
+/** Display-only type for property search results */
+interface PropertySearchResult {
+  id: string
+  code: string
+  designation: string
+  tract: string
+}
 
 export const propertyService = {
   // Get all properties

@@ -233,7 +233,7 @@ export const RentalBlockSchema = z.object({
   amount: z.number().nullable(),
 })
 
-export const RentalBlockWithResidenceSchema = z.object({
+export const RentalBlockWithRentalObjectSchema = z.object({
   id: z.string(),
   blockReasonId: z.string().nullable(),
   blockReason: z.string().nullable(),
@@ -261,10 +261,12 @@ export const RentalBlockWithResidenceSchema = z.object({
 })
 
 export const getAllRentalBlocksQueryParamsSchema = z.object({
-  includeActiveBlocksOnly: z
+  active: z
     .enum(['true', 'false'])
     .optional()
-    .transform((val) => val === 'true'),
+    .transform((val) =>
+      val === undefined ? undefined : val === 'true' ? true : false
+    ),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(1000).optional().default(100),
 })
@@ -278,10 +280,12 @@ export const searchRentalBlocksQueryParamsSchema = z.object({
   fastighet: z.string().optional(),
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
-  includeActiveBlocksOnly: z
+  active: z
     .enum(['true', 'false'])
     .optional()
-    .transform((val) => val === 'true'),
+    .transform((val) =>
+      val === undefined ? undefined : val === 'true' ? true : false
+    ),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
 })
@@ -299,10 +303,12 @@ export const exportRentalBlocksQueryParamsSchema = z.object({
   fastighet: z.string().optional(),
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
-  includeActiveBlocksOnly: z
+  active: z
     .enum(['true', 'false'])
     .optional()
-    .transform((val) => val === 'true'),
+    .transform((val) =>
+      val === undefined ? undefined : val === 'true' ? true : false
+    ),
 })
 
 export type ExportRentalBlocksQueryParams = z.infer<
@@ -320,8 +326,8 @@ export type GetResidenceByRentalIdResponse = z.infer<
   typeof GetResidenceByRentalIdResponseSchema
 >
 export type RentalBlock = z.infer<typeof RentalBlockSchema>
-export type RentalBlockWithResidence = z.infer<
-  typeof RentalBlockWithResidenceSchema
+export type RentalBlockWithRentalObject = z.infer<
+  typeof RentalBlockWithRentalObjectSchema
 >
 export type GetRentalBlocksByRentalIdResponse = z.infer<
   typeof GetRentalBlocksByRentalIdResponseSchema

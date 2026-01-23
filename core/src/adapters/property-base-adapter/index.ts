@@ -1,4 +1,4 @@
-import { logger } from '@onecore/utilities'
+import { logger, PaginatedResponse } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 import axios from 'axios'
 
@@ -275,7 +275,7 @@ type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
 
 export async function getResidenceDetails(
   residenceId: string,
-  options?: { includeActiveBlocksOnly?: boolean }
+  options?: { active?: boolean }
 ): Promise<
   AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
 > {
@@ -284,8 +284,7 @@ export async function getResidenceDetails(
       params: {
         path: { id: residenceId },
         query: {
-          includeActiveBlocksOnly:
-            options?.includeActiveBlocksOnly === true ? true : false,
+          active: options?.active,
         },
       },
     })
@@ -739,19 +738,17 @@ type GetRentalBlocksByRentalIdResponse = components['schemas']['RentalBlock'][]
 
 export async function getRentalBlocksByRentalId(
   rentalId: string,
-  options?: { includeActiveBlocksOnly?: boolean }
+  options?: { active?: boolean }
 ): Promise<
   AdapterResult<GetRentalBlocksByRentalIdResponse, 'not-found' | 'unknown'>
 > {
   try {
-    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
-
     const fetchResponse = await client().GET(
       '/residences/rental-id/{rentalId}/rental-blocks',
       {
         params: {
           path: { rentalId },
-          query: { includeActiveBlocksOnly },
+          query: { active: options?.active },
         },
       }
     )
@@ -773,6 +770,17 @@ export async function getRentalBlocksByRentalId(
   }
 }
 
+type BlockRentalObjectInfo = {
+  code: string | null
+  name: string | null
+  category: 'Bostad' | 'Bilplats'
+  address: string | null
+  rentalId: string | null
+  monthlyRent: number
+  // Residence type (e.g., "3 rum och kök") - only available for Bostad, null for Bilplats
+  type: string | null
+}
+
 type RentalBlockWithRentalObject = {
   id: string
   blockReasonId: string | null
@@ -780,16 +788,7 @@ type RentalBlockWithRentalObject = {
   fromDate: string
   toDate: string | null
   amount: number | null
-  rentalObject: {
-    code: string | null
-    name: string | null
-    category: 'Bostad' | 'Bilplats'
-    address: string | null
-    rentalId: string | null
-    monthlyRent: number
-    // Residence type (e.g., "3 rum och kök") - only available for Bostad, null for Bilplats
-    type: string | null
-  }
+  rentalObject: BlockRentalObjectInfo
   building: {
     code: string | null
     name: string | null
@@ -800,40 +799,27 @@ type RentalBlockWithRentalObject = {
   }
 }
 
-type PaginatedRentalBlocksResponse = {
-  content: RentalBlockWithRentalObject[]
-  _meta: {
-    totalRecords: number
-    page: number
-    limit: number
-    count: number
-  }
-  _links: Array<{
-    href: string
-    rel: 'self' | 'first' | 'last' | 'prev' | 'next'
-  }>
-}
-
 export async function getAllRentalBlocks(options?: {
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
   page?: number
   limit?: number
-}): Promise<AdapterResult<PaginatedRentalBlocksResponse, 'unknown'>> {
+}): Promise<
+  AdapterResult<PaginatedResponse<RentalBlockWithRentalObject>, 'unknown'>
+> {
   try {
-    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
     const page = options?.page ?? 1
     const limit = options?.limit ?? 20
 
     const fetchResponse = await client().GET('/residences/rental-blocks/all', {
       params: {
-        query: { includeActiveBlocksOnly, page, limit },
+        query: { active: options?.active, page, limit },
       },
     })
 
     if (fetchResponse.data?.content) {
       return {
         ok: true,
-        data: fetchResponse.data as PaginatedRentalBlocksResponse,
+        data: fetchResponse.data as PaginatedResponse<RentalBlockWithRentalObject>,
       }
     }
 
@@ -855,10 +841,12 @@ export async function searchRentalBlocks(options: {
   fastighet?: string
   fromDateGte?: string
   toDateLte?: string
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
   page?: number
   limit?: number
-}): Promise<AdapterResult<PaginatedRentalBlocksResponse, 'unknown'>> {
+}): Promise<
+  AdapterResult<PaginatedResponse<RentalBlockWithRentalObject>, 'unknown'>
+> {
   try {
     const {
       q,
@@ -869,7 +857,7 @@ export async function searchRentalBlocks(options: {
       fastighet,
       fromDateGte,
       toDateLte,
-      includeActiveBlocksOnly = false,
+      active,
       page = 1,
       limit = 50,
     } = options
@@ -893,7 +881,7 @@ export async function searchRentalBlocks(options: {
             fastighet,
             fromDateGte,
             toDateLte,
-            includeActiveBlocksOnly,
+            active,
             page,
             limit,
           },
@@ -904,7 +892,7 @@ export async function searchRentalBlocks(options: {
     if (fetchResponse.data?.content) {
       return {
         ok: true,
-        data: fetchResponse.data as PaginatedRentalBlocksResponse,
+        data: fetchResponse.data as PaginatedResponse<RentalBlockWithRentalObject>,
       }
     }
 
@@ -925,7 +913,7 @@ export async function exportRentalBlocksToExcel(options: {
   fastighet?: string
   fromDateGte?: string
   toDateLte?: string
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
 }): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
   try {
     const params: Record<string, string> = {}

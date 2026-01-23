@@ -29,7 +29,7 @@ import { useDebounce } from '@/components/hooks/useDebounce'
 import { RentalBlocksPagination } from './RentalBlocksPagination'
 import { residenceService } from '@/services/api/core/residenceService'
 import { propertyService } from '@/services/api/core/propertyService'
-import type { RentalBlockWithResidence } from '@/services/types'
+import type { RentalBlockWithRentalObject } from '@/services/types'
 
 // Category options matching backend enum
 const kategoriOptions = [
@@ -202,7 +202,13 @@ const RentalBlocksPage = () => {
   }
 
   // Map status filter to API parameter
-  const includeActiveBlocksOnly = statusFilter === 'active'
+  // 'active' → active: true, 'expired' → active: false, 'all' → active: undefined
+  const active =
+    statusFilter === 'active'
+      ? true
+      : statusFilter === 'expired'
+        ? false
+        : undefined
 
   const {
     data: rentalBlocks,
@@ -219,7 +225,7 @@ const RentalBlocksPage = () => {
       fastighet: selectedFastighet || undefined,
       fromDateGte: startDatum || undefined,
       toDateLte: slutDatum || undefined,
-      includeActiveBlocksOnly,
+      active,
     },
     page,
     PAGE_SIZE
@@ -251,7 +257,7 @@ const RentalBlocksPage = () => {
         fastighet: selectedFastighet || undefined,
         fromDateGte: startDatum || undefined,
         toDateLte: slutDatum || undefined,
-        includeActiveBlocksOnly,
+        active,
       })
 
       // Trigger download
@@ -434,7 +440,7 @@ const RentalBlocksPage = () => {
                 {
                   key: 'hyresobjekt',
                   label: 'Hyresobjekt',
-                  render: (block: RentalBlockWithResidence) => (
+                  render: (block: RentalBlockWithRentalObject) => (
                     <span className="font-medium">
                       {block.rentalObject?.rentalId ||
                         block.rentalObject?.code ||
@@ -445,7 +451,7 @@ const RentalBlocksPage = () => {
                 {
                   key: 'kategori',
                   label: 'Kategori',
-                  render: (block: RentalBlockWithResidence) => (
+                  render: (block: RentalBlockWithRentalObject) => (
                     <Badge variant="secondary">
                       {block.rentalObject?.category || '-'}
                     </Badge>
@@ -455,55 +461,55 @@ const RentalBlocksPage = () => {
                 {
                   key: 'typ',
                   label: 'Typ',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.rentalObject?.type || '-',
                   hideOnMobile: true,
                 },
                 {
                   key: 'adress',
                   label: 'Adress',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.rentalObject?.address || '-',
                   hideOnMobile: true,
                 },
                 {
                   key: 'fastighet',
                   label: 'Fastighet',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.property?.name || '-',
                   hideOnMobile: true,
                 },
                 {
                   key: 'distrikt',
                   label: 'Distrikt',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.distrikt || '-',
                   hideOnMobile: true,
                 },
                 {
                   key: 'orsak',
                   label: 'Orsak',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.blockReason,
                 },
                 {
                   key: 'startdatum',
                   label: 'Startdatum',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     formatISODate(block.fromDate),
                   hideOnMobile: true,
                 },
                 {
                   key: 'slutdatum',
                   label: 'Slutdatum',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     formatISODate(block.toDate),
                   hideOnMobile: true,
                 },
                 {
                   key: 'hyra',
                   label: 'Hyra',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.rentalObject?.monthlyRent
                       ? `${Math.round(block.rentalObject.monthlyRent).toLocaleString('sv-SE')} kr/mån`
                       : '-',
@@ -512,7 +518,7 @@ const RentalBlocksPage = () => {
                 {
                   key: 'hyresbortfall',
                   label: 'Estimerat Hyresbortfall',
-                  render: (block: RentalBlockWithResidence) =>
+                  render: (block: RentalBlockWithRentalObject) =>
                     block.amount
                       ? `${block.amount.toLocaleString('sv-SE')} kr`
                       : '-',
@@ -520,7 +526,7 @@ const RentalBlocksPage = () => {
                 },
               ]}
               keyExtractor={(block) => block.id}
-              mobileCardRenderer={(block: RentalBlockWithResidence) => (
+              mobileCardRenderer={(block: RentalBlockWithRentalObject) => (
                 <div className="space-y-2 w-full">
                   <div className="flex justify-between items-start">
                     <div>

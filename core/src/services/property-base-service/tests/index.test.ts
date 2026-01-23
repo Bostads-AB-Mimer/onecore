@@ -808,7 +808,7 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(200)
       expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
-        includeActiveBlocksOnly: false,
+        active: undefined,
       })
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(rentalBlocksMock)
@@ -818,19 +818,19 @@ describe('@onecore/property-service', () => {
       ).not.toThrow()
     })
 
-    it('returns 200 and filtered rental blocks when includeActiveBlocksOnly is true', async () => {
+    it('returns 200 and filtered rental blocks when active is true', async () => {
       const rentalBlocksMock = factory.rentalBlock.buildList(2)
       const getRentalBlocksSpy = jest
         .spyOn(propertyBaseAdapter, 'getRentalBlocksByRentalId')
         .mockResolvedValueOnce({ ok: true, data: rentalBlocksMock })
 
       const res = await request(app.callback()).get(
-        '/property/residences/rental-blocks/by-rental-id/1234?includeActiveBlocksOnly=true'
+        '/property/residences/rental-blocks/by-rental-id/1234?active=true'
       )
 
       expect(res.status).toBe(200)
       expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
-        includeActiveBlocksOnly: true,
+        active: true,
       })
       expect(JSON.stringify(res.body.content)).toEqual(
         JSON.stringify(rentalBlocksMock)
@@ -851,7 +851,7 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(404)
       expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
-        includeActiveBlocksOnly: false,
+        active: undefined,
       })
     })
 
@@ -866,7 +866,7 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(500)
       expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
-        includeActiveBlocksOnly: false,
+        active: undefined,
       })
     })
   })
