@@ -75,6 +75,7 @@ const getLeasesWithRelatedEntitiesForPnr = async (
 
 export const routes = (router: KoaRouter) => {
   registerSchema('Lease', Lease)
+  registerSchema('IdentityCheckContact', leasing.v1.IdentityCheckContactSchema)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -771,6 +772,86 @@ export const routes = (router: KoaRouter) => {
     } else {
       ctx.status = 200
       ctx.body = { content: res.data, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/for-identity-check:
+   *   get:
+   *     summary: Get contacts for deceased/protected identity check
+   *     tags:
+   *       - Lease service
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved contacts for identity check.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/IdentityCheckContact'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/contacts/for-identity-check', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['page', 'limit'])
+    const page = Number(ctx.query.page) || 1
+    const limit = Number(ctx.query.limit) || 20
+
+    const result = await leasingAdapter.getContactsForIdentityCheck(page, limit)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      ...result.data,
+      ...metadata,
     }
   })
 

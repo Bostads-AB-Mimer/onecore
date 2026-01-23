@@ -579,6 +579,46 @@ export interface paths {
       };
     };
   };
+  "/contacts/for-identity-check": {
+    /**
+     * Get contacts for deceased/protected identity check
+     * @description Returns paginated list of person contacts eligible for deceased/protected identity verification.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved contacts for identity check. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["IdentityCheckContact"][];
+              _meta?: {
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
+              _links?: {
+                  href?: string;
+                  rel?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/contacts/{contactCode}": {
     /**
      * Get contact by contact code
@@ -5042,6 +5082,10 @@ export interface components {
           };
           specialAttention?: boolean;
         }[];
+    };
+    IdentityCheckContact: {
+      contactCode: string;
+      nationalRegistrationNumber: string;
     };
     WorkOrder: {
       accessCaption: string;

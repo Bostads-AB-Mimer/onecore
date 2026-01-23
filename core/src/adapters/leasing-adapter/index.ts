@@ -33,6 +33,20 @@ interface GetLeasesOptions {
   includeRentInfo?: boolean // defaults to true
 }
 
+interface PaginatedIdentityCheckContactsResponse {
+  content: Array<z.infer<typeof leasing.v1.IdentityCheckContactSchema>>
+  _meta: {
+    totalRecords: number
+    page: number
+    limit: number
+    count: number
+  }
+  _links: Array<{
+    href: string
+    rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+  }>
+}
+
 const getLease = async (
   leaseId: string,
   includeContacts: string | string[] | undefined
@@ -127,6 +141,29 @@ const getContactsDataBySearchQuery = async (
   } catch (err) {
     logger.error({ err }, 'leasingAdapter.getContactsBySearchQuery')
     return { ok: false, err }
+  }
+}
+
+const getContactsForIdentityCheck = async (
+  page: number,
+  limit: number
+): Promise<
+  AdapterResult<PaginatedIdentityCheckContactsResponse, 'unknown'>
+> => {
+  try {
+    const response = await axios.get<PaginatedIdentityCheckContactsResponse>(
+      `${tenantsLeasesServiceUrl}/contacts/for-identity-check`,
+      { params: { page, limit } }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactsForIdentityCheck')
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -727,6 +764,7 @@ export {
   getContactCommentsByContactCode,
   getContactForPnr,
   getContactsDataBySearchQuery,
+  getContactsForIdentityCheck,
   getCreditInformation,
   getLease,
   getLeasesForPnr,
