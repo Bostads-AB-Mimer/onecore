@@ -283,8 +283,7 @@ export async function getResidenceDetails(
     const fetchResponse = await client().GET('/residences/{id}', {
       params: {
         path: { id: residenceId },
-        // Note: Using 'as any' until API types are regenerated with active boolean
-        query: { active: options?.active } as any,
+        query: { active: options?.active },
       },
     })
 
@@ -747,8 +746,7 @@ export async function getRentalBlocksByRentalId(
       {
         params: {
           path: { rentalId },
-          // Note: Using 'as any' until API types are regenerated with active boolean
-          query: { active: options?.active } as any,
+          query: { active: options?.active },
         },
       }
     )
@@ -812,8 +810,7 @@ export async function getAllRentalBlocks(options?: {
 
     const fetchResponse = await client().GET('/residences/rental-blocks/all', {
       params: {
-        // Note: Using 'as any' until API types are regenerated with active boolean
-        query: { active: options?.active, page, limit } as any,
+        query: { active: options?.active, page, limit },
       },
     })
 
@@ -867,7 +864,6 @@ export async function searchRentalBlocks(options: {
       '/residences/rental-blocks/search',
       {
         params: {
-          // Note: Using 'as any' until API types are regenerated with active boolean
           query: {
             q,
             fields,
@@ -886,7 +882,7 @@ export async function searchRentalBlocks(options: {
             active,
             page,
             limit,
-          } as any,
+          },
         },
       }
     )

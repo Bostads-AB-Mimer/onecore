@@ -36,8 +36,7 @@ export const residenceService = {
     const { data, error } = await GET(`/residences/{residenceId}`, {
       params: {
         path: { residenceId },
-        // Note: Using 'as any' until API types are regenerated with active boolean
-        query: { active: true } as any,
+        query: { active: true },
       },
     })
 
@@ -54,8 +53,7 @@ export const residenceService = {
     const { data, error } = await GET(
       '/residences/rental-blocks/by-rental-id/{rentalId}',
       {
-        // Note: Using 'as any' until API types are regenerated with active boolean
-        params: { path: { rentalId }, query: { active } } as any,
+        params: { path: { rentalId }, query: { active } },
       }
     )
     if (error) throw error
@@ -64,8 +62,7 @@ export const residenceService = {
 
   async getAllRentalBlocks(active?: boolean, page = 1, limit = 100) {
     const { data, error } = await GET('/residences/rental-blocks/all', {
-      // Note: Using 'as any' until API types are regenerated with active boolean
-      params: { query: { active, page, limit } } as any,
+      params: { query: { active, page, limit } },
     })
     if (error) throw error
     return data
@@ -87,8 +84,7 @@ export const residenceService = {
     limit = 50
   ) {
     const { data, error } = await GET('/residences/rental-blocks/search', {
-      // Note: Using 'as any' until API types are regenerated with active boolean
-      params: { query: { ...params, page, limit } } as any,
+      params: { query: { ...params, page, limit } },
     })
     if (error) throw error
     return data
