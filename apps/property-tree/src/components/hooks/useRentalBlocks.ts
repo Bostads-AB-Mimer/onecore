@@ -32,7 +32,7 @@ export interface RentalBlocksSearchParams {
   fastighet?: string
   fromDateGte?: string
   toDateLte?: string
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
 }
 
 const hasSearchFilters = (params: RentalBlocksSearchParams) =>
@@ -53,11 +53,7 @@ const fetchRentalBlocks = (
 ) =>
   hasSearchFilters(params)
     ? residenceService.searchRentalBlocks(params, page, limit)
-    : residenceService.getAllRentalBlocks(
-        params.includeActiveBlocksOnly ?? false,
-        page,
-        limit
-      )
+    : residenceService.getAllRentalBlocks(params.active, page, limit)
 
 export function useAllRentalBlocks(
   params: RentalBlocksSearchParams,

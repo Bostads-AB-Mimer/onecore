@@ -157,9 +157,24 @@ export const getResidenceByRentalId = async (rentalId: string) => {
 
 export const getResidenceById = async (
   id: string,
-  options?: { includeActiveBlocksOnly?: boolean }
+  options?: { active?: boolean }
 ): Promise<ResidenceWithRelations | null> => {
-  const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+  const active = options?.active
+
+  // Build rental blocks filter based on active parameter
+  const rentalBlocksWhere =
+    active === true
+      ? {
+          // Active blocks: started and not ended
+          fromDate: { lte: new Date() },
+          OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
+        }
+      : active === false
+        ? {
+            // Inactive blocks: ended
+            toDate: { lt: new Date() },
+          }
+        : undefined // All blocks
 
   const response = await prisma.residence
     .findFirst({
@@ -172,23 +187,7 @@ export const getResidenceById = async (
           include: {
             rentalInformation: { include: { rentalInformationType: true } },
             rentalBlocks: {
-              ...(includeActiveBlocksOnly && {
-                where: {
-                  fromDate: {
-                    lte: new Date(),
-                  },
-                  OR: [
-                    {
-                      toDate: {
-                        gte: new Date(),
-                      },
-                    },
-                    {
-                      toDate: null,
-                    },
-                  ],
-                },
-              }),
+              ...(rentalBlocksWhere && { where: rentalBlocksWhere }),
               include: {
                 blockReason: true,
               },
@@ -463,10 +462,10 @@ export const searchResidences = async (
 
 export const getRentalBlocksByRentalId = async (
   rentalId: string,
-  options?: { includeActiveBlocksOnly?: boolean }
+  options?: { active?: boolean }
 ) => {
   try {
-    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+    const active = options?.active
 
     // First find the propertyObjectId from the rentalId
     const propertyStructure = await prisma.propertyStructure.findFirst({
@@ -483,25 +482,26 @@ export const getRentalBlocksByRentalId = async (
       return null
     }
 
+    // Build filter based on active parameter
+    const activeFilter =
+      active === true
+        ? {
+            // Active blocks: started and not ended
+            fromDate: { lte: new Date() },
+            OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
+          }
+        : active === false
+          ? {
+              // Inactive blocks: ended
+              toDate: { lt: new Date() },
+            }
+          : {} // All blocks
+
     // Get rental blocks for this property object
     const rentalBlocks = await prisma.rentalBlock.findMany({
       where: {
         propertyObjectId: propertyStructure.propertyObjectId,
-        ...(includeActiveBlocksOnly && {
-          fromDate: {
-            lte: new Date(),
-          },
-          OR: [
-            {
-              toDate: {
-                gte: new Date(),
-              },
-            },
-            {
-              toDate: null,
-            },
-          ],
-        }),
+        ...activeFilter,
       },
       include: {
         blockReason: true,
@@ -615,14 +615,25 @@ function transformRentalBlock(rb: {
 }
 
 export const getAllRentalBlocks = async (options?: {
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
   limit?: number
   offset?: number
 }) => {
   try {
-    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
+    const active = options?.active
     const limit = options?.limit
     const offset = options?.offset
+
+    // Build active filter based on active parameter
+    const activeFilter =
+      active === true
+        ? {
+            fromDate: { lte: new Date() },
+            OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
+          }
+        : active === false
+          ? { toDate: { lt: new Date() } }
+          : {}
 
     // Build where clause
     const whereClause = {
@@ -630,10 +641,7 @@ export const getAllRentalBlocks = async (options?: {
       propertyStructure: {
         rentalId: { not: '' },
       },
-      ...(includeActiveBlocksOnly && {
-        fromDate: { lte: new Date() },
-        OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
-      }),
+      ...activeFilter,
     }
 
     // Run count and data queries in parallel for better performance
@@ -763,7 +771,7 @@ interface RentalBlockFilterOptions {
   fastighet?: string
   fromDateGte?: string
   toDateLte?: string
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
 }
 
 /**
@@ -782,7 +790,7 @@ function buildRentalBlockWhereClause(
     fastighet,
     fromDateGte,
     toDateLte,
-    includeActiveBlocksOnly = false,
+    active,
   } = options
 
   const andConditions: Prisma.RentalBlockWhereInput[] = []
@@ -795,10 +803,14 @@ function buildRentalBlockWhereClause(
   })
 
   // Active blocks filter
-  if (includeActiveBlocksOnly) {
+  if (active === true) {
     andConditions.push({
       fromDate: { lte: new Date() },
       OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
+    })
+  } else if (active === false) {
+    andConditions.push({
+      toDate: { lt: new Date() },
     })
   }
 
@@ -911,7 +923,7 @@ export interface SearchRentalBlocksOptions {
   fastighet?: string
   fromDateGte?: string
   toDateLte?: string
-  includeActiveBlocksOnly?: boolean
+  active?: boolean
   limit?: number
   offset?: number
 }

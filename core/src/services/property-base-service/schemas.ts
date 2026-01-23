@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import {
+  PaginatedResponse,
+  PaginationMeta as UtilityPaginationMeta,
+  PaginationLinks,
+} from '@onecore/utilities'
 
 // Xpand ID validation - variable length IDs (max 15 chars) from legacy system
 const xpandIdSchema = z.string().max(15)
@@ -514,11 +519,12 @@ export const ResidenceSummaryQueryParamsSchema = z.object({
 })
 
 export const GetResidenceDetailsQueryParamsSchema = z.object({
-  includeActiveBlocksOnly: z
+  active: z
     .string()
     .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
+    .transform((val) =>
+      val === undefined ? undefined : val === 'true' ? true : false
+    ),
 })
 
 export const ResidenceSummarySchema = z.object({
@@ -567,11 +573,12 @@ export const RentalBlockSchema = z.object({
 })
 
 export const GetRentalBlocksByRentalIdQueryParamsSchema = z.object({
-  includeActiveBlocksOnly: z
+  active: z
     .string()
     .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
+    .transform((val) =>
+      val === undefined ? undefined : val === 'true' ? true : false
+    ),
 })
 
 export const RentalBlockWithRentalObjectSchema = z.object({
@@ -602,31 +609,30 @@ export const RentalBlockWithRentalObjectSchema = z.object({
   }),
 })
 
-// Keep old schema for backwards compatibility during transition
-export const RentalBlockWithResidenceSchema = RentalBlockWithRentalObjectSchema
-
 export const GetAllRentalBlocksQueryParamsSchema = z.object({
-  includeActiveBlocksOnly: z
+  active: z
     .string()
     .optional()
-    .transform((val) => val === 'true')
-    .default('false'),
+    .transform((val) =>
+      val === undefined ? undefined : val === 'true' ? true : false
+    ),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
-// Pagination schemas for HATEOAS-style responses
+// Pagination schemas for HATEOAS-style responses (Zod validation)
+// Types are imported from @onecore/utilities
 export const PaginationMetaSchema = z.object({
   totalRecords: z.number(),
   page: z.number(),
   limit: z.number(),
   count: z.number(),
-})
+}) satisfies z.ZodType<UtilityPaginationMeta>
 
 export const PaginationLinkSchema = z.object({
   href: z.string(),
   rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
-})
+}) satisfies z.ZodType<PaginationLinks>
 
 export const PaginatedRentalBlocksResponseSchema = z.object({
   content: z.array(RentalBlockWithRentalObjectSchema),
@@ -654,12 +660,11 @@ export type RentalBlock = z.infer<typeof RentalBlockSchema>
 export type RentalBlockWithRentalObject = z.infer<
   typeof RentalBlockWithRentalObjectSchema
 >
-export type RentalBlockWithResidence = RentalBlockWithRentalObject
-export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
-export type PaginationLink = z.infer<typeof PaginationLinkSchema>
-export type PaginatedRentalBlocksResponse = z.infer<
-  typeof PaginatedRentalBlocksResponseSchema
->
+// Re-export pagination types from utilities
+export type PaginationMeta = UtilityPaginationMeta
+export type PaginationLink = PaginationLinks
+export type PaginatedRentalBlocksResponse =
+  PaginatedResponse<RentalBlockWithRentalObject>
 
 // ==================== COMPONENTS NEW ====================
 

@@ -440,12 +440,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The rental ID
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         required: false
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved the rental blocks
@@ -468,12 +467,13 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const rentalId = ctx.params.rentalId
-      const includeActiveBlocksOnly =
-        ctx.query.includeActiveBlocksOnly === 'true'
+      const activeParam = ctx.query.active as string | undefined
+      const active =
+        activeParam === undefined ? undefined : activeParam === 'true'
 
       try {
         const rentalBlocks = await getRentalBlocksByRentalId(rentalId, {
-          includeActiveBlocksOnly,
+          active,
         })
 
         if (rentalBlocks === null) {
@@ -548,10 +548,10 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: date
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         schema:
    *           type: boolean
-   *           default: false
+   *         description: Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks.
    *     produces:
    *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
@@ -700,11 +700,10 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Filter blocks ending on or before this date
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks
+   *         description: Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks.
    *       - in: query
    *         name: page
    *         schema:
@@ -729,7 +728,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/RentalBlockWithResidence'
+   *                     $ref: '#/components/schemas/RentalBlockWithRentalObject'
    *                 _meta:
    *                   type: object
    *                   properties:
@@ -759,22 +758,21 @@ export const routes = (router: KoaRouter) => {
     parseRequest({ query: searchRentalBlocksQueryParamsSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { page, limit, includeActiveBlocksOnly, ...searchParams } =
-        ctx.request.parsedQuery
+      const { page, limit, active, ...searchParams } = ctx.request.parsedQuery
       const offset = (page - 1) * limit
 
       try {
         const { data: rentalBlocks, totalCount } = await searchRentalBlocks({
           ...searchParams,
-          includeActiveBlocksOnly,
+          active,
           limit,
           offset,
         })
 
         // Build additional params for pagination links
         const additionalParams: Record<string, string> = {}
-        if (includeActiveBlocksOnly) {
-          additionalParams.includeActiveBlocksOnly = 'true'
+        if (active !== undefined) {
+          additionalParams.active = String(active)
         }
         if (searchParams.q) additionalParams.q = searchParams.q
         if (searchParams.fields) additionalParams.fields = searchParams.fields
@@ -822,12 +820,11 @@ export const routes = (router: KoaRouter) => {
    *       - Residences
    *     parameters:
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         required: false
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
    *       - in: query
    *         name: page
    *         required: false
@@ -921,20 +918,20 @@ export const routes = (router: KoaRouter) => {
     parseRequest({ query: getAllRentalBlocksQueryParamsSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { includeActiveBlocksOnly, page, limit } = ctx.request.parsedQuery
+      const { active, page, limit } = ctx.request.parsedQuery
       const offset = (page - 1) * limit
 
       try {
         const { data: rentalBlocks, totalCount } = await getAllRentalBlocks({
-          includeActiveBlocksOnly,
+          active,
           limit,
           offset,
         })
 
         // Build paginated response with HATEOAS links
         const additionalParams: Record<string, string> = {}
-        if (includeActiveBlocksOnly) {
-          additionalParams.includeActiveBlocksOnly = 'true'
+        if (active !== undefined) {
+          additionalParams.active = String(active)
         }
 
         ctx.status = 200
@@ -974,12 +971,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the residence
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         required: false
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *         description: Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved the residence
@@ -998,10 +994,12 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    const includeActiveBlocksOnly = ctx.query.includeActiveBlocksOnly === 'true'
+    const activeParam = ctx.query.active as string | undefined
+    const active =
+      activeParam === undefined ? undefined : activeParam === 'true'
 
     try {
-      const residence = await getResidenceById(id, { includeActiveBlocksOnly })
+      const residence = await getResidenceById(id, { active })
       if (!residence) {
         ctx.status = 404
         return

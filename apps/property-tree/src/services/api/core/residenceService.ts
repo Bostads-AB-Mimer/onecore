@@ -5,7 +5,7 @@ import type {
   ResidenceDetails,
   ResidenceSummary,
   RentalBlock,
-  RentalBlockWithResidence,
+  RentalBlockWithRentalObject,
 } from '../../types'
 
 const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
@@ -37,7 +37,7 @@ export const residenceService = {
     const { data, error } = await GET(`/residences/{residenceId}`, {
       params: {
         path: { residenceId },
-        query: { includeActiveBlocksOnly: true },
+        query: { active: true },
       },
     })
 
@@ -49,12 +49,12 @@ export const residenceService = {
 
   async getRentalBlocksByRentalId(
     rentalId: string,
-    includeActiveBlocksOnly = false
+    active?: boolean
   ): Promise<RentalBlock[]> {
     const { data, error } = await GET(
       '/residences/rental-blocks/by-rental-id/{rentalId}',
       {
-        params: { path: { rentalId }, query: { includeActiveBlocksOnly } },
+        params: { path: { rentalId }, query: { active } },
       }
     )
     if (error) throw error
@@ -62,15 +62,15 @@ export const residenceService = {
   },
 
   async getAllRentalBlocks(
-    includeActiveBlocksOnly = false,
+    active?: boolean,
     page = 1,
     limit = 100
   ): Promise<{
-    content: RentalBlockWithResidence[]
+    content: RentalBlockWithRentalObject[]
     _meta: { totalRecords: number; page: number; limit: number; count: number }
   }> {
     const { data, error } = await GET('/residences/rental-blocks/all', {
-      params: { query: { includeActiveBlocksOnly, page, limit } },
+      params: { query: { active, page, limit } },
     })
     if (error) throw error
     return {
@@ -94,12 +94,12 @@ export const residenceService = {
       fastighet?: string
       fromDateGte?: string
       toDateLte?: string
-      includeActiveBlocksOnly?: boolean
+      active?: boolean
     },
     page = 1,
     limit = 50
   ): Promise<{
-    content: RentalBlockWithResidence[]
+    content: RentalBlockWithRentalObject[]
     _meta: { totalRecords: number; page: number; limit: number; count: number }
   }> {
     const { data, error } = await GET('/residences/rental-blocks/search', {
@@ -127,7 +127,7 @@ export const residenceService = {
     fastighet?: string
     fromDateGte?: string
     toDateLte?: string
-    includeActiveBlocksOnly?: boolean
+    active?: boolean
   }): Promise<Blob> {
     const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {

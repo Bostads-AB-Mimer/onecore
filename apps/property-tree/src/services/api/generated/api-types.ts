@@ -1097,8 +1097,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
-          includeActiveBlocksOnly?: boolean;
+          /** @description Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks. */
+          active?: boolean;
         };
         path: {
           /** @description The rental ID */
@@ -1141,7 +1141,8 @@ export interface paths {
           fastighet?: string;
           fromDateGte?: string;
           toDateLte?: string;
-          includeActiveBlocksOnly?: boolean;
+          /** @description Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks. */
+          active?: boolean;
         };
       };
       responses: {
@@ -1180,8 +1181,8 @@ export interface paths {
           fromDateGte?: string;
           /** @description Filter blocks ending on or before this date */
           toDateLte?: string;
-          /** @description If true, only include active rental blocks */
-          includeActiveBlocksOnly?: boolean;
+          /** @description Filter by active status. If true, only active blocks. If false, only inactive blocks. If omitted, all blocks. */
+          active?: boolean;
           page?: number;
           limit?: number;
         };
@@ -1191,7 +1192,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["RentalBlockWithResidence"][];
+              content?: components["schemas"]["RentalBlockWithRentalObject"][];
               _meta?: {
                 totalRecords?: number;
                 page?: number;
@@ -1221,8 +1222,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
-          includeActiveBlocksOnly?: boolean;
+          /** @description Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks. */
+          active?: boolean;
           /** @description Page number (1-indexed) */
           page?: number;
           /** @description Number of results per page */
@@ -1280,8 +1281,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description If true, only include active rental blocks (started and not ended). If false, include all rental blocks. */
-          includeActiveBlocksOnly?: boolean;
+          /** @description Filter rental blocks by active status. If true, only include active blocks (started and not ended). If false, only include inactive blocks (ended). If omitted, include all blocks. */
+          active?: boolean;
         };
         path: {
           /** @description The ID of the residence */
@@ -2969,7 +2970,7 @@ export interface components {
       toDate: string | null;
       amount: number | null;
     };
-    RentalBlockWithResidence: {
+    RentalBlockWithRentalObject: {
       id: string;
       blockReasonId: string | null;
       blockReason: string | null;
