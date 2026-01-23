@@ -8,8 +8,8 @@ import {
 } from '@/components/ui/v2/Tabs'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
-import { InspectionFormDialog } from '@/components/residence/inspection/InspectionFormDialog'
-import { InspectionTable } from '@/components/inspections/InspectionTable'
+import { InspectionFormDialog } from '@/features/inspections/components/InspectionFormDialog'
+import { InspectionTable } from '@/features/inspections/components/InspectionTable'
 import { roomService } from '@/services/api/core'
 import { Grid } from '@/components/ui/Grid'
 import { components } from '@/services/api/core/generated/api-types'
@@ -19,12 +19,12 @@ import type {
   InspectionSubmitData,
   ResidenceInfo,
   TenantSnapshot,
-} from '@/components/inspections/types'
+} from '@/types/inspections'
 import { useToast } from '@/components/hooks/useToast'
-import { InspectionReadOnly } from './InspectionReadOnly'
+import { InspectionProtocol } from '@/features/inspections/components/InspectionProtocol'
 
 type Inspection = components['schemas']['Inspection']
-type InspectionRoom = components['schemas']['InspectionRoom']
+// type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface InspectionsListProps {
   residenceId: string
@@ -36,34 +36,34 @@ interface InspectionsListProps {
 
 // Generera besiktningsnummer
 // TODO: is this something the frontend should do? This is copied from Lovable.
-const generateInspectionNumber = (): string => {
-  const year = new Date().getFullYear()
-  const randomNum = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, '0')
-  return `B-${year}-${randomNum}`
-}
+// const generateInspectionNumber = (): string => {
+//   const year = new Date().getFullYear()
+//   const randomNum = Math.floor(Math.random() * 1000)
+//     .toString()
+//     .padStart(3, '0')
+//   return `B-${year}-${randomNum}`
+// }
 
 // Skapa ResidenceInfo från Residence
-const createResidenceInfo = (residence?: ResidenceDetails): ResidenceInfo => {
-  if (!residence) {
-    return {
-      id: '',
-      objectNumber: '',
-      address: 'Okänd adress',
-      apartmentType: null,
-      size: null,
-    }
-  }
-  return {
-    id: residence.id,
-    objectNumber: residence.code,
-    address: residence.name ?? '',
-    apartmentType:
-      residence.propertyObject.rentalInformation?.type.code ?? null,
-    size: residence.size,
-  }
-}
+// const createResidenceInfo = (residence?: ResidenceDetails): ResidenceInfo => {
+//   if (!residence) {
+//     return {
+//       id: '',
+//       objectNumber: '',
+//       address: 'Okänd adress',
+//       apartmentType: null,
+//       size: null,
+//     }
+//   }
+//   return {
+//     id: residence.id,
+//     objectNumber: residence.code,
+//     address: residence.name ?? '',
+//     apartmentType:
+//       residence.propertyObject.rentalInformation?.type.code ?? null,
+//     size: residence.size,
+//   }
+// }
 
 export function InspectionsList({
   residenceId,
@@ -72,32 +72,29 @@ export function InspectionsList({
   tenant,
   residence,
 }: InspectionsListProps) {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [selectedInspection, setSelectedInspection] =
-    useState<Inspection | null>(null)
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
-  const { toast } = useToast()
+  // const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  // const { toast } = useToast()
 
-  const roomsQuery = useQuery({
-    queryKey: ['rooms', residenceId],
-    queryFn: () => roomService.getByResidenceId(residenceId),
-  })
+  // const roomsQuery = useQuery({
+  //   queryKey: ['rooms', residenceId],
+  //   queryFn: () => roomService.getByResidenceId(residenceId),
+  // })
 
-  if (roomsQuery.isLoading) {
-    return <LoadingSkeleton />
-  }
+  // if (roomsQuery.isLoading) {
+  //   return <LoadingSkeleton />
+  // }
 
-  if (roomsQuery.error || !roomsQuery.data) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Rum hittades inte
-        </h2>
-      </div>
-    )
-  }
+  // if (roomsQuery.error || !roomsQuery.data) {
+  //   return (
+  //     <div className="p-8 text-center">
+  //       <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+  //         Rum hittades inte
+  //       </h2>
+  //     </div>
+  //   )
+  // }
 
-  const rooms = roomsQuery.data ?? []
+  // const rooms = roomsQuery.data ?? []
 
   // Filter inspections by status (API-based inspections)
   const activeInspection = inspections.find(
@@ -107,11 +104,6 @@ export function InspectionsList({
   const completedInspections = inspections.filter(
     (inspection) => inspection.status === 'Genomförd'
   )
-
-  const handleOpenInspection = (inspection: Inspection) => {
-    setSelectedInspection(inspection)
-    setIsViewDialogOpen(true)
-  }
 
   // const handleSubmit = (
   //   inspectorName: string,
@@ -166,7 +158,6 @@ export function InspectionsList({
     return (
       <InspectionTable
         inspections={inspectionsData}
-        onInspectionClick={handleOpenInspection}
         hiddenColumns={['address']}
       />
     )
@@ -174,7 +165,7 @@ export function InspectionsList({
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex gap-2">
+      {/* <div className="flex gap-2">
         <Button
           size="sm"
           onClick={() => setIsCreateDialogOpen(true)}
@@ -195,7 +186,7 @@ export function InspectionsList({
             Rensa alla
           </Button>
         )}
-      </div>
+      </div> */}
 
       <Tabs defaultValue="active" className="space-y-6">
         <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
@@ -223,25 +214,6 @@ export function InspectionsList({
           )}
         </TabsContent>
       </Tabs>
-
-      {isCreateDialogOpen && (
-        <InspectionFormDialog
-          isOpen={isCreateDialogOpen}
-          onClose={() => setIsCreateDialogOpen(false)}
-          onSubmit={() => {}}
-          rooms={rooms}
-          tenant={tenant}
-        />
-      )}
-
-      {/* TODO: Handle viewing API-based inspections */}
-      {selectedInspection && (
-        <InspectionReadOnly
-          inspection={selectedInspection}
-          isOpen={isViewDialogOpen}
-          onClose={() => setIsViewDialogOpen(false)}
-        />
-      )}
     </div>
   )
 }

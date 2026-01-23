@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
 import { Textarea } from '@/components/ui/Textarea'
-import { Badge } from '@/components/ui/v3/Badge'
 import { ChevronRight, Camera, Wrench, MessageSquare } from 'lucide-react'
-import { PhotoCapture } from '@/components/residence/inspection/PhotoCapture'
+import { PhotoCapture } from '@/features/inspections/components/PhotoCapture'
+import { CONDITION_OPTIONS } from '@/features/inspections/constants'
 
 interface ComponentInspectionCardProps {
   componentKey: string
@@ -18,25 +17,6 @@ interface ComponentInspectionCardProps {
   onPhotoCapture: (photoDataUrl: string) => void
   onOpenDetail: () => void
 }
-
-const CONDITION_OPTIONS = [
-  {
-    value: 'God',
-    label: 'God',
-    className: 'bg-green-500 hover:bg-green-600 text-white border-green-600',
-  },
-  {
-    value: 'Acceptabel',
-    label: 'Acceptabel',
-    className: 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600',
-  },
-  {
-    value: 'Skadad',
-    label: 'Skadad',
-    className:
-      'bg-destructive hover:bg-destructive/90 text-destructive-foreground border-destructive',
-  },
-]
 
 export function ComponentInspectionCard({
   label,
@@ -100,7 +80,7 @@ export function ComponentInspectionCard({
             type="button"
             variant={condition === option.value ? 'default' : 'outline'}
             size="default"
-            className={`h-10 text-sm font-medium ${condition === option.value ? option.className : ''}`}
+            className={`h-10 text-sm font-medium ${condition === option.value ? option.buttonClassName : ''}`}
             onClick={() => onConditionChange(option.value)}
           >
             {option.label}

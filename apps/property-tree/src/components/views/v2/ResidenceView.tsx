@@ -25,7 +25,7 @@ import {
 import { Lease, inspectionService } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
-import { InspectionsList } from '@/components/residence/inspection/InspectionsList'
+import { InspectionsList } from '@/components/residence/InspectionsList'
 import { useToast } from '@/components/hooks/useToast'
 import { components } from '@/services/api/core/generated/api-types'
 type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]

@@ -10,14 +10,14 @@ import { Button } from '@/components/ui/v2/Button'
 import { PlayCircle, RotateCcw } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
-import { DesktopInspectionForm } from './desktop/DesktopInspectionForm'
+import { DesktopInspectionForm } from './InspectionForm'
 
 import { components } from '@/services/api/core/generated/api-types'
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 import type { Room } from '@/services/types'
-import type { InspectionSubmitData } from '@/components/inspections/types'
+import type { InspectionSubmitData } from '@/types/inspections/index'
 
 interface InspectionFormDialogProps {
   isOpen: boolean

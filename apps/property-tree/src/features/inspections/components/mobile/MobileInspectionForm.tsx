@@ -8,11 +8,11 @@ import type { Room } from '@/services/types'
 import type {
   InspectionSubmitData,
   TenantSnapshot,
-} from '@/components/inspections/types'
-import { useInspectionForm } from '@/components/hooks/useInspectionForm'
+} from '@/types/inspections/index'
+import { useInspectionForm } from '@/features/inspections/hooks/useInspectionForm'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
-import { RoomInspectionMobile } from './RoomInspectionMobile'
-import { InspectorSelectionCard } from './InspectorSelectionCard'
+import { RoomInspectionEditor } from '../RoomInspectionEditor'
+import { InspectorSelectionCard } from '../InspectorSelectionCard'
 
 import type { components } from '@/services/api/core/generated/api-types'
 type Inspection = components['schemas']['Inspection']
@@ -238,7 +238,7 @@ export function MobileInspectionForm({
       <div className="flex-1 min-h-0">
         <ScrollArea ref={scrollAreaRef} className="h-full">
           <div className="px-4 pb-4">
-            <RoomInspectionMobile
+            <RoomInspectionEditor
               room={currentRoom}
               inspectionData={inspectionData[currentRoom.id]}
               onConditionUpdate={(field, value) =>

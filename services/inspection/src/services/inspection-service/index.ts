@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { registerSchema } from '../../middlewares/swagger-middleware'
 import {
+  DetailedXpandInspectionSchema,
   GetInspectionsFromXpandQuerySchema,
   XpandInspectionSchema,
 } from './schemas'
@@ -17,6 +18,9 @@ import * as xpandAdapter from './adapters/xpand-adapter'
 
 export const routes = (router: KoaRouter) => {
   registerSchema('XpandInspection', XpandInspectionSchema)
+  registerSchema('DetailedXpandInspection', DetailedXpandInspectionSchema)
+  registerSchema('DetailedXpandInspectionRoom', DetailedXpandInspectionSchema)
+  registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
 
   /**
    * @swagger
@@ -198,6 +202,97 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         error,
         `Error fetching inspections from Xpand for residenceId: ${residenceId}`
+      )
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/{inspectionId}:
+   *   get:
+   *     tags:
+   *       - Inspection
+   *     summary: Get a detailed inspection from Xpand by inspection ID
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to fetch
+   *     responses:
+   *       200:
+   *         description: The inspection details from Xpand
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/DetailedXpandInspection'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       500:
+   *         description: Internal Server Error - Failed to fetch inspections from Xpand
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   */
+  router.get('(.*)/inspections/xpand/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const xpandInspection = await xpandAdapter.getInspectionById(inspectionId)
+
+      if (!xpandInspection.ok) {
+        if (xpandInspection.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: `Inspection with ID ${inspectionId} not found`,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch inspection from Xpand: ${xpandInspection.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspection: xpandInspection.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        error,
+        `Error fetching inspection from Xpand for inspectionId: ${inspectionId}`
       )
       ctx.status = 500
 

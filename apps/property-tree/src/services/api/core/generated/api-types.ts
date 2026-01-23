@@ -3440,6 +3440,48 @@ export interface paths {
       };
     };
   };
+  "/inspections/xpand/{inspectionId}": {
+    /**
+     * Retrieve an inspection by ID from Xpand
+     * @description Retrieves a specific inspection by its ID from Xpand.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to retrieve. */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the inspection. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["DetailedInspection"];
+            };
+          };
+        };
+        /** @description Inspection not found for the specified ID. */
+        404: {
+          content: {
+            "application/json": {
+              /** @example not-found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve the inspection. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -4426,6 +4468,609 @@ export interface components {
       photos: string[];
       isApproved: boolean;
       isHandled: boolean;
+    };
+    DetailedInspection: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              /** Format: date-time */
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+      lease: ({
+        leaseId: string;
+        leaseNumber: string;
+        /** Format: date-time */
+        leaseStartDate: string;
+        /** Format: date-time */
+        leaseEndDate?: string;
+        /** @enum {string} */
+        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+        tenantContactIds?: string[];
+        rentalPropertyId: string;
+        rentalProperty?: {
+          rentalPropertyId: string;
+          apartmentNumber: number;
+          size: number;
+          type: string;
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          rentalPropertyType: string;
+          additionsIncludedInRent: string;
+          otherInfo?: string;
+          roomTypes?: {
+              roomTypeId: string;
+              name: string;
+            }[];
+          /** Format: date-time */
+          lastUpdated?: string;
+        };
+        type: string;
+        rentInfo?: {
+          currentRent: {
+            rentId?: string;
+            leaseId?: string;
+            currentRent: number;
+            vat: number;
+            additionalChargeDescription?: string;
+            additionalChargeAmount?: number;
+            /** Format: date-time */
+            rentStartDate?: string;
+            /** Format: date-time */
+            rentEndDate?: string;
+          };
+        };
+        address?: definitions["DetailedInspection"]["lease"]["rentalProperty"]["address"];
+        noticeGivenBy?: string;
+        /** Format: date-time */
+        noticeDate?: string;
+        noticeTimeTenant?: string;
+        /** Format: date-time */
+        preferredMoveOutDate?: string;
+        /** Format: date-time */
+        terminationDate?: string;
+        /** Format: date-time */
+        contractDate?: string;
+        /** Format: date-time */
+        lastDebitDate?: string;
+        /** Format: date-time */
+        approvalDate?: string;
+        residentialArea?: {
+          code: string;
+          caption: string;
+        };
+        tenants?: {
+            contactCode: string;
+            contactKey: string;
+            leaseIds?: string[];
+            firstName: string;
+            lastName: string;
+            fullName: string;
+            nationalRegistrationNumber: string;
+            /** Format: date-time */
+            birthDate: string;
+            address?: definitions["DetailedInspection"]["lease"]["rentalProperty"]["address"];
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: boolean;
+              }[];
+            emailAddress?: string;
+            isTenant: boolean;
+            parkingSpaceWaitingList?: {
+              /** Format: date-time */
+              queueTime: string;
+              queuePoints: number;
+              type: number;
+            };
+            specialAttention?: boolean;
+          }[];
+      }) | null;
+      residence: ({
+        id: string;
+        code: string;
+        name: string | null;
+        accessibility: {
+          wheelchairAccessible: boolean;
+          elevator: boolean;
+        };
+        features: {
+          hygieneFacility: string | null;
+        };
+        entrance: string | null;
+        floor: string | null;
+        deleted: boolean;
+        type: {
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+        };
+        rentalInformation: ({
+          apartmentNumber: string | null;
+          rentalId: string | null;
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
+        property: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        building: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        staircase: ({
+          id: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          property?: {
+            propertyId: string | null;
+            propertyName: string | null;
+            propertyCode: string | null;
+          };
+          building?: {
+            buildingId: string | null;
+            buildingName: string | null;
+            buildingCode: string | null;
+          };
+          deleted: boolean;
+          /** Format: date-time */
+          timestamp: string;
+        }) | null;
+        areaSize: number | null;
+      }) | null;
+    };
+    DetailedInspectionRoom: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              /** Format: date-time */
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+      lease: ({
+        leaseId: string;
+        leaseNumber: string;
+        /** Format: date-time */
+        leaseStartDate: string;
+        /** Format: date-time */
+        leaseEndDate?: string;
+        /** @enum {string} */
+        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+        tenantContactIds?: string[];
+        rentalPropertyId: string;
+        rentalProperty?: {
+          rentalPropertyId: string;
+          apartmentNumber: number;
+          size: number;
+          type: string;
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          rentalPropertyType: string;
+          additionsIncludedInRent: string;
+          otherInfo?: string;
+          roomTypes?: {
+              roomTypeId: string;
+              name: string;
+            }[];
+          /** Format: date-time */
+          lastUpdated?: string;
+        };
+        type: string;
+        rentInfo?: {
+          currentRent: {
+            rentId?: string;
+            leaseId?: string;
+            currentRent: number;
+            vat: number;
+            additionalChargeDescription?: string;
+            additionalChargeAmount?: number;
+            /** Format: date-time */
+            rentStartDate?: string;
+            /** Format: date-time */
+            rentEndDate?: string;
+          };
+        };
+        address?: definitions["DetailedInspectionRoom"]["lease"]["rentalProperty"]["address"];
+        noticeGivenBy?: string;
+        /** Format: date-time */
+        noticeDate?: string;
+        noticeTimeTenant?: string;
+        /** Format: date-time */
+        preferredMoveOutDate?: string;
+        /** Format: date-time */
+        terminationDate?: string;
+        /** Format: date-time */
+        contractDate?: string;
+        /** Format: date-time */
+        lastDebitDate?: string;
+        /** Format: date-time */
+        approvalDate?: string;
+        residentialArea?: {
+          code: string;
+          caption: string;
+        };
+        tenants?: {
+            contactCode: string;
+            contactKey: string;
+            leaseIds?: string[];
+            firstName: string;
+            lastName: string;
+            fullName: string;
+            nationalRegistrationNumber: string;
+            /** Format: date-time */
+            birthDate: string;
+            address?: definitions["DetailedInspectionRoom"]["lease"]["rentalProperty"]["address"];
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: boolean;
+              }[];
+            emailAddress?: string;
+            isTenant: boolean;
+            parkingSpaceWaitingList?: {
+              /** Format: date-time */
+              queueTime: string;
+              queuePoints: number;
+              type: number;
+            };
+            specialAttention?: boolean;
+          }[];
+      }) | null;
+      residence: ({
+        id: string;
+        code: string;
+        name: string | null;
+        accessibility: {
+          wheelchairAccessible: boolean;
+          elevator: boolean;
+        };
+        features: {
+          hygieneFacility: string | null;
+        };
+        entrance: string | null;
+        floor: string | null;
+        deleted: boolean;
+        type: {
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+        };
+        rentalInformation: ({
+          apartmentNumber: string | null;
+          rentalId: string | null;
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
+        property: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        building: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        staircase: ({
+          id: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          property?: {
+            propertyId: string | null;
+            propertyName: string | null;
+            propertyCode: string | null;
+          };
+          building?: {
+            buildingId: string | null;
+            buildingName: string | null;
+            buildingCode: string | null;
+          };
+          deleted: boolean;
+          /** Format: date-time */
+          timestamp: string;
+        }) | null;
+        areaSize: number | null;
+      }) | null;
+    };
+    DetailedInspectionRemark: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              /** Format: date-time */
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+      lease: ({
+        leaseId: string;
+        leaseNumber: string;
+        /** Format: date-time */
+        leaseStartDate: string;
+        /** Format: date-time */
+        leaseEndDate?: string;
+        /** @enum {string} */
+        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+        tenantContactIds?: string[];
+        rentalPropertyId: string;
+        rentalProperty?: {
+          rentalPropertyId: string;
+          apartmentNumber: number;
+          size: number;
+          type: string;
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          rentalPropertyType: string;
+          additionsIncludedInRent: string;
+          otherInfo?: string;
+          roomTypes?: {
+              roomTypeId: string;
+              name: string;
+            }[];
+          /** Format: date-time */
+          lastUpdated?: string;
+        };
+        type: string;
+        rentInfo?: {
+          currentRent: {
+            rentId?: string;
+            leaseId?: string;
+            currentRent: number;
+            vat: number;
+            additionalChargeDescription?: string;
+            additionalChargeAmount?: number;
+            /** Format: date-time */
+            rentStartDate?: string;
+            /** Format: date-time */
+            rentEndDate?: string;
+          };
+        };
+        address?: definitions["DetailedInspectionRemark"]["lease"]["rentalProperty"]["address"];
+        noticeGivenBy?: string;
+        /** Format: date-time */
+        noticeDate?: string;
+        noticeTimeTenant?: string;
+        /** Format: date-time */
+        preferredMoveOutDate?: string;
+        /** Format: date-time */
+        terminationDate?: string;
+        /** Format: date-time */
+        contractDate?: string;
+        /** Format: date-time */
+        lastDebitDate?: string;
+        /** Format: date-time */
+        approvalDate?: string;
+        residentialArea?: {
+          code: string;
+          caption: string;
+        };
+        tenants?: {
+            contactCode: string;
+            contactKey: string;
+            leaseIds?: string[];
+            firstName: string;
+            lastName: string;
+            fullName: string;
+            nationalRegistrationNumber: string;
+            /** Format: date-time */
+            birthDate: string;
+            address?: definitions["DetailedInspectionRemark"]["lease"]["rentalProperty"]["address"];
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: boolean;
+              }[];
+            emailAddress?: string;
+            isTenant: boolean;
+            parkingSpaceWaitingList?: {
+              /** Format: date-time */
+              queueTime: string;
+              queuePoints: number;
+              type: number;
+            };
+            specialAttention?: boolean;
+          }[];
+      }) | null;
+      residence: ({
+        id: string;
+        code: string;
+        name: string | null;
+        accessibility: {
+          wheelchairAccessible: boolean;
+          elevator: boolean;
+        };
+        features: {
+          hygieneFacility: string | null;
+        };
+        entrance: string | null;
+        floor: string | null;
+        deleted: boolean;
+        type: {
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+        };
+        rentalInformation: ({
+          apartmentNumber: string | null;
+          rentalId: string | null;
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
+        property: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        building: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        staircase: ({
+          id: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          property?: {
+            propertyId: string | null;
+            propertyName: string | null;
+            propertyCode: string | null;
+          };
+          building?: {
+            buildingId: string | null;
+            buildingName: string | null;
+            buildingCode: string | null;
+          };
+          deleted: boolean;
+          /** Format: date-time */
+          timestamp: string;
+        }) | null;
+        areaSize: number | null;
+      }) | null;
     };
   };
   responses: never;

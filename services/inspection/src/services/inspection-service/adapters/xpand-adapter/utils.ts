@@ -37,3 +37,20 @@ export function trimStrings<T>(data: T): T {
 
   return data
 }
+
+/**
+ * Converts numeric boolean fields (0/1) to actual booleans.
+ * Specify which fields should be converted using the fields parameter.
+ */
+export function convertNumericBooleans<T extends Record<string, any>>(
+  data: T,
+  fields: (keyof T)[]
+): T {
+  const converted = { ...data }
+  for (const field of fields) {
+    if (field in converted) {
+      converted[field] = Boolean(converted[field]) as any
+    }
+  }
+  return converted
+}

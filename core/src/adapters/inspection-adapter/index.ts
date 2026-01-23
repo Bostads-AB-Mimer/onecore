@@ -5,6 +5,8 @@ import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
 
 export type XpandInspection = components['schemas']['XpandInspection']
+export type DetailedXpandInspection =
+  components['schemas']['DetailedXpandInspection']
 
 const client = () =>
   createClient<paths>({
@@ -74,6 +76,39 @@ export const getXpandInspectionsByResidenceId = async (
     logger.error(
       { error, residenceId },
       'inspection-adapter.getXpandInspectionsByResidenceId'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getXpandInspectionById = async (
+  inspectionId: string
+): Promise<AdapterResult<DetailedXpandInspection, 'unknown' | 'not-found'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/inspections/xpand/{inspectionId}',
+      {
+        params: { path: { inspectionId: inspectionId } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.inspection) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data?.content.inspection,
+    }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId },
+      'inspection-adapter.getXpandInspectionById'
     )
 
     return { ok: false, err: 'unknown' }

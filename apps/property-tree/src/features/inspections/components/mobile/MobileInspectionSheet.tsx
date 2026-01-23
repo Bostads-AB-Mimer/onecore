@@ -1,7 +1,7 @@
 import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { MobileInspectionForm } from './MobileInspectionForm'
 import type { Room } from '@/services/types'
-import type { InspectionSubmitData } from '@/components/inspections/types'
+import type { InspectionSubmitData } from '@/types/inspections/index'
 import type { components } from '@/services/api/core/generated/api-types'
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
