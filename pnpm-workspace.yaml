@@ -6,3 +6,4 @@ packages:
  - services/*
 
 minimumReleaseAge: 5760
+forceLegacyDeploy: true
