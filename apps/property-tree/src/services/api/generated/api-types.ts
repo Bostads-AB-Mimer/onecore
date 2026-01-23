@@ -2969,6 +2969,35 @@ export interface components {
       toDate: string | null;
       amount: number | null;
     };
+    RentalBlockWithResidence: {
+      id: string;
+      blockReasonId: string | null;
+      blockReason: string | null;
+      /** Format: date-time */
+      fromDate: string;
+      /** Format: date-time */
+      toDate: string | null;
+      amount: number | null;
+      distrikt: string | null;
+      rentalObject: {
+        code: string | null;
+        name: string | null;
+        /** @enum {string} */
+        category: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
+        address: string | null;
+        rentalId: string | null;
+        monthlyRent: number;
+        type: string | null;
+      };
+      building: {
+        code: string | null;
+        name: string | null;
+      };
+      property: {
+        code: string | null;
+        name: string | null;
+      };
+    };
     ComponentCategory: {
       /** Format: uuid */
       id: string;
