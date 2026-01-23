@@ -27,9 +27,9 @@ import { useAllRentalBlocks } from '@/components/hooks/useRentalBlocks'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
 import { RentalBlocksPagination } from './RentalBlocksPagination'
-import { RentalBlockWithResidence } from '@/services/api/core/residenceService'
+import { residenceService } from '@/services/api/core/residenceService'
 import { propertyService } from '@/services/api/core/propertyService'
-import { exportRentalBlocksToExcel } from '@/utils/rentalBlocksExport'
+import type { RentalBlockWithResidence } from '@/services/types'
 
 // Category options matching backend enum
 const kategoriOptions = [
@@ -239,11 +239,28 @@ const RentalBlocksPage = () => {
   }
 
   const handleExport = async () => {
-    if (displayBlocks.length === 0) return
+    if (!meta?.totalRecords || meta.totalRecords === 0) return
 
     setIsExporting(true)
     try {
-      await exportRentalBlocksToExcel(displayBlocks)
+      const blob = await residenceService.exportRentalBlocksToExcel({
+        q: debouncedSearch || undefined,
+        kategori: selectedKategori || undefined,
+        distrikt: selectedDistrikt || undefined,
+        blockReason: selectedOrsak || undefined,
+        fastighet: selectedFastighet || undefined,
+        fromDateGte: startDatum || undefined,
+        toDateLte: slutDatum || undefined,
+        includeActiveBlocksOnly,
+      })
+
+      // Trigger download
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `sparrlista-${new Date().toISOString().split('T')[0]}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Export failed:', error)
     } finally {
@@ -263,15 +280,7 @@ const RentalBlocksPage = () => {
     []
   )
 
-  // Data is now server-side filtered, use directly
-  // Filter out any malformed blocks that lack rentalObject (defensive)
-  const displayBlocks = (rentalBlocks || []).filter((block) => {
-    if (!block.rentalObject) {
-      console.warn('RentalBlocksPage: Found block without rentalObject:', block)
-      return false
-    }
-    return true
-  })
+  const displayBlocks = rentalBlocks || []
 
   const clearFilters = () => {
     setSearchInput('')

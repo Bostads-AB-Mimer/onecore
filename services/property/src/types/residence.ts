@@ -263,6 +263,25 @@ export type SearchRentalBlocksQueryParams = z.infer<
   typeof searchRentalBlocksQueryParamsSchema
 >
 
+export const exportRentalBlocksQueryParamsSchema = z.object({
+  q: z.string().optional(),
+  fields: z.string().optional(),
+  kategori: z.string().optional(),
+  distrikt: z.string().optional(),
+  blockReason: z.string().optional(),
+  fastighet: z.string().optional(),
+  fromDateGte: z.string().optional(),
+  toDateLte: z.string().optional(),
+  includeActiveBlocksOnly: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
+})
+
+export type ExportRentalBlocksQueryParams = z.infer<
+  typeof exportRentalBlocksQueryParamsSchema
+>
+
 export const GetRentalBlocksByRentalIdResponseSchema =
   createGenericResponseSchema(z.array(RentalBlockSchema))
 

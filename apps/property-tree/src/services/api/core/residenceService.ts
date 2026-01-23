@@ -1,12 +1,14 @@
 import { GET } from './base-api'
-import { components } from './generated/api-types'
+import { resolve } from '@/utils/env'
+import type {
+  Residence,
+  ResidenceDetails,
+  ResidenceSummary,
+  RentalBlock,
+  RentalBlockWithResidence,
+} from '../../types'
 
-type Residence = components['schemas']['Residence']
-type ResidenceDetails = components['schemas']['ResidenceDetails']
-type ResidenceSummary = components['schemas']['ResidenceSummary']
-
-export type RentalBlockWithResidence =
-  components['schemas']['RentalBlockWithResidence']
+const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
 
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
@@ -48,7 +50,7 @@ export const residenceService = {
   async getRentalBlocksByRentalId(
     rentalId: string,
     includeActiveBlocksOnly = false
-  ): Promise<components['schemas']['RentalBlock'][]> {
+  ): Promise<RentalBlock[]> {
     const { data, error } = await GET(
       '/residences/rental-blocks/by-rental-id/{rentalId}',
       {
@@ -100,31 +102,49 @@ export const residenceService = {
     content: RentalBlockWithResidence[]
     _meta: { totalRecords: number; page: number; limit: number; count: number }
   }> {
-    // Note: Using type assertion until OpenAPI types are regenerated
-    const { data, error } = await GET(
-      '/residences/rental-blocks/search' as '/residences/rental-blocks/all',
-      {
-        params: { query: { ...params, page, limit } as never },
-      }
-    )
+    const { data, error } = await GET('/residences/rental-blocks/search', {
+      params: { query: { ...params, page, limit } },
+    })
     if (error) throw error
-    const typedData = data as {
-      content?: RentalBlockWithResidence[]
-      _meta?: {
-        totalRecords: number
-        page: number
-        limit: number
-        count: number
-      }
-    }
     return {
-      content: typedData.content || [],
+      content: data.content || [],
       _meta: {
-        totalRecords: typedData._meta?.totalRecords ?? 0,
-        page: typedData._meta?.page ?? page,
-        limit: typedData._meta?.limit ?? limit,
-        count: typedData._meta?.count ?? typedData.content?.length ?? 0,
+        totalRecords: data._meta?.totalRecords ?? 0,
+        page: data._meta?.page ?? page,
+        limit: data._meta?.limit ?? limit,
+        count: data._meta?.count ?? data.content?.length ?? 0,
       },
     }
+  },
+
+  // Note: Using raw fetch instead of GET wrapper because this endpoint
+  // returns a binary Excel file (Blob), not JSON
+  async exportRentalBlocksToExcel(params: {
+    q?: string
+    kategori?: string
+    distrikt?: string
+    blockReason?: string
+    fastighet?: string
+    fromDateGte?: string
+    toDateLte?: string
+    includeActiveBlocksOnly?: boolean
+  }): Promise<Blob> {
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.set(key, String(value))
+      }
+    })
+
+    const response = await fetch(
+      `${CORE_API_URL}/residences/rental-blocks/export?${searchParams}`,
+      { credentials: 'include' }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`)
+    }
+
+    return response.blob()
   },
 }

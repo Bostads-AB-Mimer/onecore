@@ -35,15 +35,8 @@ export interface RentalBlocksSearchParams {
   includeActiveBlocksOnly?: boolean
 }
 
-export function useAllRentalBlocks(
-  params: RentalBlocksSearchParams,
-  page = 1,
-  limit = 50
-) {
-  const queryClient = useQueryClient()
-
-  // Check if any search filters are active (beyond includeActiveBlocksOnly)
-  const hasSearchFilters = Boolean(
+const hasSearchFilters = (params: RentalBlocksSearchParams) =>
+  Boolean(
     params.q ||
       params.kategori ||
       params.distrikt ||
@@ -53,16 +46,29 @@ export function useAllRentalBlocks(
       params.toDateLte
   )
 
+const fetchRentalBlocks = (
+  params: RentalBlocksSearchParams,
+  page: number,
+  limit: number
+) =>
+  hasSearchFilters(params)
+    ? residenceService.searchRentalBlocks(params, page, limit)
+    : residenceService.getAllRentalBlocks(
+        params.includeActiveBlocksOnly ?? false,
+        page,
+        limit
+      )
+
+export function useAllRentalBlocks(
+  params: RentalBlocksSearchParams,
+  page = 1,
+  limit = 50
+) {
+  const queryClient = useQueryClient()
+
   const allRentalBlocksQuery = useQuery({
     queryKey: ['allRentalBlocks', params, page, limit],
-    queryFn: () =>
-      hasSearchFilters
-        ? residenceService.searchRentalBlocks(params, page, limit)
-        : residenceService.getAllRentalBlocks(
-            params.includeActiveBlocksOnly ?? false,
-            page,
-            limit
-          ),
+    queryFn: () => fetchRentalBlocks(params, page, limit),
     placeholderData: keepPreviousData,
   })
 
@@ -74,14 +80,7 @@ export function useAllRentalBlocks(
     if (page < totalPages) {
       queryClient.prefetchQuery({
         queryKey: ['allRentalBlocks', params, page + 1, limit],
-        queryFn: () =>
-          hasSearchFilters
-            ? residenceService.searchRentalBlocks(params, page + 1, limit)
-            : residenceService.getAllRentalBlocks(
-                params.includeActiveBlocksOnly ?? false,
-                page + 1,
-                limit
-              ),
+        queryFn: () => fetchRentalBlocks(params, page + 1, limit),
       })
     }
   }, [
@@ -90,7 +89,6 @@ export function useAllRentalBlocks(
     params,
     queryClient,
     allRentalBlocksQuery.data?._meta?.totalRecords,
-    hasSearchFilters,
   ])
 
   return {
