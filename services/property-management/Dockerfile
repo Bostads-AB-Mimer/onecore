@@ -20,6 +20,7 @@ COPY services/property-management ./services/property-management
 
 RUN pnpm install
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run --filter @onecore/property-management build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/property-management --prod /out

@@ -19,6 +19,7 @@ COPY core ./core
 
 RUN pnpm install
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run --filter @onecore/core build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/core --prod /out

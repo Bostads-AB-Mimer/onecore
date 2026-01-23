@@ -19,6 +19,7 @@ COPY apps/property-tree ./apps/property-tree
 
 RUN pnpm install
 RUN pnpm build:types
+RUN pnpm install
 RUN pnpm run --filter @onecore/property-tree build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/property-tree --prod /out
