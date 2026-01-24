@@ -101,36 +101,53 @@ export const routes = (
   router.get(
     '/contacts/by-phone-number/:phoneNumber',
     {
-      summary: 'Get a single contact by phone number',
-      description: `Get a single contact by their phone number.
-      Phone numbers are not necessarily unique.
-      If no match is found this endpoint will respond with 404.`,
+      summary: 'List contacts by phone number',
+      description: `List all contacts associated with a phone number`,
       tags: ['Contacts'],
       params: {
         phoneNumber: z.string(),
       },
       response: {
         200: GetContactsResponseBodySchema,
-        404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
       const result = await contactsRepository.getByPhoneNumber(
-        ctx.params?.phoneNumber as string
+        ctx.params.phoneNumber
       )
 
-      if (!result) {
-        ctx.status = 404
-        ctx.body = {
-          ...metadata,
-        }
-      } else {
-        ctx.body = {
-          ...metadata,
-          content: { contacts: result },
-        }
+      ctx.body = {
+        ...metadata,
+        content: { contacts: result },
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/by-email-address/:emailAddress',
+    {
+      summary: 'List contacts by email address',
+      description: `List all contacts associated with an email address`,
+      tags: ['Contacts'],
+      params: {
+        emailAddress: z.string(),
+      },
+      response: {
+        200: GetContactsResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const result = await contactsRepository.getByEmailAddress(
+        decodeURIComponent(ctx.params.emailAddress)
+      )
+
+      ctx.body = {
+        ...metadata,
+        content: { contacts: result },
       }
     }
   )

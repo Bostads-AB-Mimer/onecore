@@ -10,7 +10,11 @@ import {
   ContactCode,
   NationalIdNumber,
 } from '@src/domain'
-import { contactObjectKeysForPhoneNumber, contactsQuery } from './query'
+import {
+  contactObjectKeysForEmailAddress,
+  contactObjectKeysForPhoneNumber,
+  contactsQuery,
+} from './query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
 
@@ -83,24 +87,57 @@ export const xpandContactsRepository = (
     },
 
     /**
-     * Retrieves a contact by their phone number.
+     * Retrieves contacts filtered by their phone number.
      *
      * Phone numbers are not normalized in the Xpand database and is
      * just as likely to be a well-formatted phone number as it is
      * to be "Same as their neighbour Olle, who sometimes walks their
      * dog."
      *
+     * This means that phone numbers are not unique, and moreover may
+     * occur multiple times in multiple formats.
+     *
      * @param phoneNumber - The phone number to search for.
-     * @returns A promise that resolves to the Contact object if found,
-     *          or null if no contact is found.
+     * @returns A promise that resolves to a list of Contact objects if found,
+     *          or empty list if no contact is found.
      */
-    getByPhoneNumber: async (
-      phoneNumber: PhoneNumber
-    ): Promise<Contact[] | null> => {
+    getByPhoneNumber: async (phoneNumber: PhoneNumber): Promise<Contact[]> => {
       const contactObjectKeys = await contactObjectKeysForPhoneNumber(
         db.get(),
         phoneNumber.replaceAll(/[^0-9]/g, '')
       )
+      if (contactObjectKeys.length) {
+        const rows: DbContactRow[] = await contactsQuery()
+          .withObjectKeyIn(contactObjectKeys)
+          .getPage(db.get())
+
+        return transformDbContactRows(rows)
+      }
+
+      return []
+    },
+
+    /**
+     * Retrieves contacts filtered by their email addresses.
+     *
+     * Email adresses, just like phone numbers, are not normalized in the
+     * database - but the data quality is generally higher than for
+     * phone numbers.
+     *
+     * This means that email addresses are not unique, and may occur
+     * multiple times.
+     *
+     * @param emailAddress - The email address to search for.
+     * @returns A promise that resolves to a list of Contact objects if found,
+     *          or empty list if no contact is found.
+     */
+    getByEmailAddress: async (emailAddress: string): Promise<Contact[]> => {
+      console.log(emailAddress)
+      const contactObjectKeys = await contactObjectKeysForEmailAddress(
+        db.get(),
+        emailAddress.trim()
+      )
+      console.log(contactObjectKeys)
       if (contactObjectKeys.length) {
         const rows: DbContactRow[] = await contactsQuery()
           .withObjectKeyIn(contactObjectKeys)
