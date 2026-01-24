@@ -46,11 +46,13 @@ const trimInCriteria = (
 ]
 
 /**
+ * Trims `cmtelben` for equal-comparison in queries.
+ *
  * This allows lookup by phone number despite the poor data quality
  * of `cmtel`.`cmtelben`.
  *
- * It is non-indexable and will require a full-table scan with a
- * transformatio applied to each row for every query, but the assumption
+ * This can never use indices and will require a full-table scan with a
+ * transformation applied to each row for every query, but the assumption
  * is that we can live with this evil during the transitional period
  * until the contacts master data is moved to a ONECore database,
  * and preferrably one not designed by crack-smoking aardvarks.
@@ -90,6 +92,16 @@ REPLACE(
 )`
 
 /**
+ * Trims `cmemlben` for equal-comparison in queries.
+ *
+ * Like the phone number counterpart, this will make the comparison
+ * unable to use indices and force a full table scan, but unlike
+ * phone numbers, this is thankfully fairly quick.
+ */
+const EMAIL_ADDRESS_TRANSFORMATION_SQL =
+  'TRIM(cmemlben) COLLATE SQL_Latin1_General_CP1_CI_AS'
+
+/**
  * Constructs a base query for selecting rows from `cmtel`
  * in the shape of DbPhoneNumber.
  */
@@ -126,6 +138,42 @@ export const contactObjectKeysForPhoneNumber = async (
     await phoneNumbersQuery(db).whereRaw(
       `${PHONE_NUMBER_TRANSFORMATION_SQL} = ?`,
       [phoneNumber]
+    )
+  ).map(({ ownerObjectKey }) => ownerObjectKey)
+}
+
+/**
+ * Constructs a base query for selecting rows from `cmeml`
+ * in the shape of DbEmailAddress.
+ */
+const emailAddressesQuery = (db: knex.Knex) =>
+  db
+    .from('cmeml')
+    .select(
+      'keycmobj as ownerObjectKey',
+      'cmemlben as emailAddress',
+      'keycmemt as type',
+      'main as isPrimary'
+    )
+
+/**
+ * Finds contact object keys for contacts that have the given
+ * email address.
+ *
+ * @see EMAIL_ADDRESS_TRANSFORMATION_SQL
+ *
+ * @param db - The Knex database connection to use
+ * @param phoneNumber - The email address to search for
+ * @returns A promise that resolves to an array of ObjectKeys
+ */
+export const contactObjectKeysForEmailAddress = async (
+  db: knex.Knex,
+  emailAddress: string
+): Promise<ObjectKey[]> => {
+  return (
+    await emailAddressesQuery(db).whereRaw(
+      `${EMAIL_ADDRESS_TRANSFORMATION_SQL} = ?`,
+      [emailAddress.toLocaleLowerCase()]
     )
   ).map(({ ownerObjectKey }) => ownerObjectKey)
 }
