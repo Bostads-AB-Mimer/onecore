@@ -3,6 +3,8 @@
   "compilerOptions": {
     "noEmit": false,
     "composite": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "rootDir": "./src",
     "outDir": "./build",
     "baseUrl": ".",
