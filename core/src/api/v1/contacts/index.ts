@@ -163,6 +163,31 @@ export const routes = (router: OkapiRouter, config: Config) => {
   )
 
   router.get(
+    '/v1/contacts/by-email-address/:emailAddress',
+    {
+      summary: 'List contacts by email address',
+      tags: ['Contacts'],
+      params: {
+        emailAddress: {
+          description: 'Email Address',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { emailAddress } = ctx.params
+
+      const response = await contactsAdapter.listByEmailAddress(emailAddress)
+
+      encodeListResponse(ctx, response)
+    }
+  )
+
+  router.get(
     '/v1/contacts/by-national-id/:nid',
     {
       summary: 'List contacts by national id (Personnummer / Org.nr)',
