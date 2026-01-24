@@ -3,9 +3,9 @@ import { OkapiRouter } from 'koa-okapi-router'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import {
-  GetContactResponseBody,
-  GetContactsResponseBody,
-  OneCOREHateOASResponseBody,
+  GetContactResponseBodySchema,
+  GetContactsResponseBodySchema,
+  ONECoreHateOASResponseBodySchema,
 } from './schema'
 
 export const routes = (
@@ -25,7 +25,7 @@ export const routes = (
         },
         type: {
           description: 'Filter on contact type',
-          schema: z.optional(z.enum(['any', 'individual', 'organisation'])),
+          schema: z.optional(z.enum(['individual', 'organisation'])),
         },
         page: {
           description: 'Page number for paginated results',
@@ -37,8 +37,8 @@ export const routes = (
         },
       },
       response: {
-        200: GetContactsResponseBody,
-        404: z.null(),
+        200: GetContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
@@ -77,8 +77,8 @@ export const routes = (
         contactCode: z.string(),
       },
       response: {
-        200: GetContactResponseBody,
-        404: OneCOREHateOASResponseBody,
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
@@ -110,14 +110,12 @@ export const routes = (
         phoneNumber: z.string(),
       },
       response: {
-        200: GetContactsResponseBody,
-        404: OneCOREHateOASResponseBody,
+        200: GetContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-
-      console.log(ctx.params)
 
       const result = await contactsRepository.getByPhoneNumber(
         ctx.params?.phoneNumber as string
@@ -140,56 +138,22 @@ export const routes = (
   router.get(
     '/contacts/by-nid/:nid',
     {
-      summary: 'Get a single contact by their National ID (personnummer)',
+      summary:
+        'Get a single contact by their National ID (personnummer / orgnr)',
       tags: ['Contacts'],
-      body: z.null(),
       params: {
         nid: z.string(),
       },
       response: {
-        200: GetContactResponseBody,
-        404: OneCOREHateOASResponseBody,
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
-      console.log(ctx.params)
       const result = await contactsRepository.getByNationalIdNumber(
         ctx.params.nid
       )
-
-      if (!result) {
-        ctx.status = 404
-        ctx.body = {
-          ...metadata,
-        }
-      } else {
-        ctx.body = {
-          ...metadata,
-          content: result,
-        }
-      }
-    }
-  )
-
-  router.get(
-    '/contacts/by-contact-code/:code',
-    {
-      summary: 'Get a single contact by their National ID (personnummer)',
-      tags: ['Contacts'],
-      params: {
-        code: z.string(),
-      },
-      response: {
-        200: GetContactResponseBody,
-        404: OneCOREHateOASResponseBody,
-      },
-    },
-    async (ctx) => {
-      console.log(ctx.params)
-      const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
-
-      const result = await contactsRepository.getByContactCode(ctx.params.code)
 
       if (!result) {
         ctx.status = 404

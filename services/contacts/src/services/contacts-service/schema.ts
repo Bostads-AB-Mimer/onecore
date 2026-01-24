@@ -76,16 +76,18 @@ export const ContactSchema = z.discriminatedUnion('type', [
   ContactOrganisationSchema,
 ])
 
-export const OneCOREHateOASResponseBody = z.object({
+export const ONECoreHateOASResponseBodySchema = z.object({
   _links: z.any(),
 })
 
-export const GetContactResponseBody = OneCOREHateOASResponseBody.extend({
-  content: ContactSchema,
-})
+export const GetContactResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: ContactSchema,
+  })
 
-export const GetContactsResponseBody = OneCOREHateOASResponseBody.extend({
-  content: z.object({
-    contacts: z.array(ContactSchema),
-  }),
-})
+export const GetContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      contacts: z.array(ContactSchema),
+    }),
+  })
