@@ -138,6 +138,32 @@ export const routes = (router: OkapiRouter, config: Config) => {
   )
 
   router.get(
+    '/v1/contacts/:contactCode/trustee',
+    {
+      summary: 'Get the trustee of a contact',
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { contactCode } = ctx.params
+
+      const response =
+        await contactsAdapter.getByTrusteeOfContactCode(contactCode)
+
+      encodeSingleResponse(ctx, response)
+    }
+  )
+
+  router.get(
     '/v1/contacts/by-phone-number/:phoneNumber',
     {
       summary: 'List contacts by phone number',

@@ -8,6 +8,7 @@ export const transformContact = (contact: Contact): Contact_APIv1 => {
     ...(contact.type === 'individual'
       ? { personal: contact.personal }
       : { organisation: contact.organisation }),
+    ...(contact.trustee ? { trustee: contact.trustee } : {}),
     communication: contact.communication,
     addresses: contact.addresses,
   }
