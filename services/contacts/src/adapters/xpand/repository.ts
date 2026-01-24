@@ -76,7 +76,7 @@ export const xpandContactsRepository = (
      */
     getByNationalIdNumber: async (nid: NationalIdNumber) => {
       const dbContactRows = await contactsQuery()
-        .hasNationalId(nid)
+        .hasNationalId(nid.replaceAll(/[^0-9]/g, ''))
         .getOne(db.get())
 
       return transformDbContactRows(dbContactRows)[0]
