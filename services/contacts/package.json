@@ -9,12 +9,21 @@
   "engines": {
     "node": ">=20"
   },
+  "main": "./src/index.ts",
   "exports": {
     ".": {
-      "swagger.json": "dist/swagger.json"
+      "import": "./build/index.ts",
+      "types": "./build/index.d.ts"
+    },
+    "./swagger.json": "./build/swagger.json",
+    "./domain": {
+      "types": "./build/domain/index.d.ts"
+    },
+    "./schema": {
+      "import": "./build/schema.js",
+      "types": "./build/schema.d.ts"
     }
   },
-  "main": "./src/index.ts",
   "scripts": {
     "build": "tsc -P tsconfig.build.json",
     "dev": "NODE_ENV=production node -r dotenv/config --import tsx --watch src/index",
