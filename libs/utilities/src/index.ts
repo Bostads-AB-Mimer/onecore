@@ -9,6 +9,7 @@ import {
 import * as axiosTypes from 'axios'
 
 export * from './health-check'
+export * from './resource'
 
 export {
   logger,
