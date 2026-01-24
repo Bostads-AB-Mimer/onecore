@@ -1,10 +1,13 @@
-import { makeResource, Resource } from '@/resource'
+import { makeResource, Resource, ResourceNotReady, Logger } from '@/resource'
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 describe('Resource', () => {
   let resource: Resource<any> | null = null
+  // Used for all test instances, switch to 'console' if logging is
+  // required during trouble-shooting
+  let logger: Logger | 'off' = 'off'
 
   afterEach(async () => {
     if (resource !== null && resource.status !== 'closed') {
@@ -18,6 +21,7 @@ describe('Resource', () => {
       // Given
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => 42,
         healthcheck: { check: async () => true },
       })
@@ -35,6 +39,7 @@ describe('Resource', () => {
       // Given
       resource = makeResource({
         name: 'test',
+        logger,
         autoInit: true,
         initialize: async () => 42,
         healthcheck: {
@@ -56,6 +61,7 @@ describe('Resource', () => {
       // Given
       resource = makeResource({
         name: 'test',
+        logger,
         autoInit: false,
         initialize: async () => 42,
         healthcheck: { check: async () => true },
@@ -74,6 +80,7 @@ describe('Resource', () => {
       const error = new Error('boom')
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => {
           throw error
         },
@@ -92,6 +99,7 @@ describe('Resource', () => {
 
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: init,
         healthcheck: { check: async () => true },
       })
@@ -109,6 +117,7 @@ describe('Resource', () => {
       // Given - a non-initialized resource
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => 42,
         healthcheck: {
           check: async () => true,
@@ -116,13 +125,14 @@ describe('Resource', () => {
       })
 
       // Then
-      expect(() => resource!.get()).toThrow(/not ready/)
+      expect(() => resource!.get()).toThrow(ResourceNotReady)
     })
 
     it('Returns resource on get() when ready', async () => {
       // Given - an initialized resource
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => 42,
         healthcheck: {
           check: async () => true,
@@ -144,6 +154,7 @@ describe('Resource', () => {
 
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => ({}),
         healthcheck: { check: async () => healthy },
       })
@@ -165,6 +176,7 @@ describe('Resource', () => {
 
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => {
           if (healthy) return {}
           else throw new Error('boom! boom! boom! everybody say wayo!')
@@ -204,6 +216,7 @@ describe('Resource', () => {
 
       resource = makeResource({
         name: 'test',
+        logger,
         initialize: async () => ({}),
         healthcheck: { check: async () => true },
         teardown,
