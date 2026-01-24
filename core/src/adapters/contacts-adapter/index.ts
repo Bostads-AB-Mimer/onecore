@@ -1,25 +1,77 @@
-import { loggedAxios as axios } from '@onecore/utilities'
+import { loggedAxios } from '@onecore/utilities'
+import type {
+  Contact,
+  GetContactResponseBody,
+  GetContactsResponseBody,
+} from '@onecore/contacts/schema'
 
-import config from '../../common/config'
-import { AdapterResult } from '../types'
-import z from 'zod'
-import { ContactSchema } from '@/api/v1/contacts/schema'
-const contactsServiceUrl = config.contactsService.url
+import { AdapterResult } from '@/adapters/types'
+import { AxiosResponse } from 'axios'
 
-type Contact = z.infer<typeof ContactSchema>
-
-export const listContacts = async (
-  q: string[],
-  page?: number,
-  pageSize?: number
-): Promise<AdapterResult<Contact[], 'unknown'>> => {
-  const response = await axios(`${contactsServiceUrl}/contacts`, {
-    params: { q, page, pageSize },
+export const makeContactsAdapter = (contactsServiceUrl: string) => {
+  const axios = loggedAxios.create({
+    baseURL: contactsServiceUrl,
   })
 
-  if (response.status === 200) {
-    return { ok: true, data: response.data.content }
+  const listResponse = (
+    response: AxiosResponse<GetContactsResponseBody, any>
+  ): AdapterResult<Contact[], 'unknown'> => {
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content.contacts }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
   }
 
-  return { ok: false, err: 'unknown', statusCode: response.status }
+  const singleResponse = (
+    response: AxiosResponse<GetContactResponseBody, any>
+  ): AdapterResult<Contact, 'unknown'> => {
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  }
+
+  return {
+    async listContacts(
+      q: string[],
+      type?: 'individual' | 'organisation',
+      page?: number,
+      pageSize?: number
+    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+      const response = await axios<GetContactsResponseBody>(`/contacts`, {
+        params: { type, q, page, pageSize },
+      })
+
+      return listResponse(response)
+    },
+
+    async getByContactCode(
+      contactCode: string
+    ): Promise<AdapterResult<Contact, 'unknown'>> {
+      const response = await axios<GetContactResponseBody>(
+        `/contacts/${contactCode}`
+      )
+      return singleResponse(response)
+    },
+
+    async getByNationalId(
+      nid: string
+    ): Promise<AdapterResult<Contact, 'unknown'>> {
+      const response = await axios<GetContactResponseBody>(
+        `/contacts/by-nid/${nid}`
+      )
+      return singleResponse(response)
+    },
+
+    async listByPhoneNumber(
+      phoneNumber: string
+    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+      const response = await axios<GetContactsResponseBody>(
+        `/contacts/by-phone-number/${phoneNumber}`
+      )
+      return listResponse(response)
+    },
+  }
 }
