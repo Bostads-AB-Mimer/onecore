@@ -1,5 +1,6 @@
 import { msInterval, type Unit } from './interval'
 import { makeHealStrategy, type HealOptions } from './heal-strategy'
+import { ResourceError, ResourceNotReady } from './error'
 
 /**
  * The status of a Resource.
@@ -44,7 +45,7 @@ export interface Resource<T> {
    * The last error observed while the resource is in a non-ready
    * state. Blanked out whenever the Resource reaches status 'ready'.
    */
-  readonly lastError: Error | null
+  readonly lastError: Error | undefined
   /**
    * The time and date at which the Resource entered its current status
    * or when the current status was last re-affirmed.
@@ -258,7 +259,7 @@ export function makeResource<T>({
   /**
    * The last error encountered during initialization or health checking, if any.
    */
-  let lastError: Error | null = null
+  let lastError: Error | undefined
   /**
    * Timestamp of the last state transition
    */
@@ -279,7 +280,15 @@ export function makeResource<T>({
    * Logger instance
    */
   const _logger = logger === 'off' ? NoOpLogger : !logger ? console : logger
+  /**
+   * Reference to the returned Resource instance
+   */
+  let resourceInstance: Resource<T>
 
+  /**
+   * Internal log function, formatting the log message and delegating to the
+   * configured logger `_logger`.
+   */
   function log(level: 'info' | 'error', message: string) {
     _logger[level](`Resource "${name}": ${message}`)
   }
@@ -492,7 +501,7 @@ export function makeResource<T>({
         const ok = await check(true)
         if (ok) {
           statusTransition('ready')
-          lastError = null
+          lastError = undefined
         }
       } catch (err) {
         statusTransition('failed')
@@ -520,7 +529,11 @@ export function makeResource<T>({
    */
   function get(): T {
     if (status !== 'ready' || !instance) {
-      throw new Error(`Resource ${name} is not ready (${status})`)
+      throw new ResourceNotReady(
+        `Resource ${name} is not ready (${status})`,
+        resourceInstance,
+        lastError
+      )
     }
     return instance
   }
@@ -543,16 +556,11 @@ export function makeResource<T>({
     if (transition) statusTransition('closed')
   }
 
-  if (autoInit) {
-    init()
-      .then(() => {})
-      .catch(() => {})
-  }
-
   /**
-   * Construct a Resource instance from the defined public members above.
+   * Construct a Resource instance from the defined public members above, making
+   * it available for inclusion in thrown ResourceError.
    */
-  return {
+  resourceInstance = {
     get,
     check,
     init,
@@ -575,4 +583,12 @@ export function makeResource<T>({
       return lastStateTransition
     },
   }
+
+  if (autoInit) {
+    init()
+      .then(() => {})
+      .catch(() => {})
+  }
+
+  return resourceInstance
 }
