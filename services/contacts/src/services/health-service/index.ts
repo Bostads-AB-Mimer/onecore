@@ -6,7 +6,7 @@ import {
   pollSystemHealth,
   probeResource,
 } from '@onecore/utilities'
-import config from '@src/common/config'
+
 import { OkapiRouter } from 'koa-okapi-router'
 import { AppInfrastructure } from '@src/context'
 
