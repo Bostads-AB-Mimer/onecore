@@ -1,6 +1,6 @@
 import { Context as KoaContext } from 'koa'
 
-interface RouteMetadata {
+export interface RouteMetadata {
   _links: {
     self: {
       href: string
