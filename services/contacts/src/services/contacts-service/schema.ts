@@ -19,6 +19,11 @@ export const PhoneNumberSchema = z.object({
   isPrimary: z.boolean(),
 })
 
+export const TrusteeSchema = z.object({
+  contactCode: z.string(),
+  fullName: z.optional(z.string()),
+})
+
 export const EmailAddressSchema = z.object({
   emailAddress: z.string(),
   type: EmailTypeSchema,
@@ -64,6 +69,7 @@ export const ContactBaseSchema = z.object({
 export const ContactIndividualSchema = ContactBaseSchema.extend({
   type: z.literal('individual'),
   personal: ContactPersonalDetailsSchema,
+  trustee: z.optional(TrusteeSchema),
 })
 
 export const ContactOrganisationSchema = ContactBaseSchema.extend({
