@@ -1,12 +1,73 @@
 import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
 
-import { GetContactsResponseBody, OneCOREHateOASResponseBody } from './schema'
-import { generateRouteMetadata } from '@onecore/utilities'
+import {
+  GetContactResponseBodySchema,
+  GetContactsResponseBodySchema,
+  ONECoreHateOASResponseBodySchema,
+} from './schema'
+import { generateRouteMetadata, RouteMetadata } from '@onecore/utilities'
 
-import * as contactsAdapter from '../../../adapters/contacts-adapter'
+import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import { transformContact, transformContacts } from './transform'
+import { Config } from '@/common/config'
+import { AdapterResult } from '@/adapters/types'
+import { Contact } from '@onecore/contacts/domain'
+import { ParameterizedContext } from 'koa'
 
-export const routes = (router: OkapiRouter) => {
+export const routes = (router: OkapiRouter, config: Config) => {
+  const contactsServiceUrl = config.contactsService.url
+
+  const contactsAdapter = makeContactsAdapter(contactsServiceUrl)
+
+  const encodeError = (
+    ctx: ParameterizedContext,
+    result: AdapterResult<any, any>,
+    metadata: RouteMetadata
+  ) => {
+    ctx.status =
+      result.statusCode == 404 || result.statusCode === 500
+        ? result.statusCode
+        : 500
+    ctx.body = { ...metadata }
+  }
+
+  const encodeSingleResponse = (
+    ctx: ParameterizedContext,
+    result: AdapterResult<Contact, 'unknown'>
+  ) => {
+    const metadata = generateRouteMetadata(ctx)
+    console.log(result)
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: transformContact(result.data),
+        ...metadata,
+      }
+    } else {
+      encodeError(ctx, result, metadata)
+    }
+  }
+
+  const encodeListResponse = (
+    ctx: ParameterizedContext,
+    result: AdapterResult<Contact[], 'unknown'>
+  ) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          contacts: transformContacts(result.data),
+        },
+        ...metadata,
+      }
+    } else {
+      encodeError(ctx, result, metadata)
+    }
+  }
+
   router.get(
     '/v1/contacts',
     {
@@ -18,6 +79,10 @@ export const routes = (router: OkapiRouter) => {
           description: 'Wildcard search string',
           schema: z.optional(z.array(z.string())),
         },
+        type: {
+          description: 'Filter on contact type',
+          schema: z.optional(z.enum(['individual', 'organisation'])),
+        },
         page: {
           description: 'Page number for paginated results',
           schema: z.optional(z.number()),
@@ -28,36 +93,97 @@ export const routes = (router: OkapiRouter) => {
         },
       },
       response: {
-        200: GetContactsResponseBody,
-        404: OneCOREHateOASResponseBody,
-        500: OneCOREHateOASResponseBody,
+        200: GetContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+        500: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-
-      const { q, page, pageSize } = ctx.query
+      const { q, type, page, pageSize } = ctx.query
 
       const response = await contactsAdapter.listContacts(
         q ?? [],
+        type,
         page,
         pageSize
       )
 
-      if (response.ok) {
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            contacts: response.data,
-          },
-          ...metadata,
-        }
-      } else {
-        ctx.status =
-          response.statusCode == 404 || response.statusCode === 500
-            ? response.statusCode
-            : 500
-      }
+      encodeListResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/:contactCode',
+    {
+      summary: 'Get a single contact by canonical id (contact code)',
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { contactCode } = ctx.params
+
+      const response = await contactsAdapter.getByContactCode(contactCode)
+
+      encodeSingleResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-phone-number/:phoneNumber',
+    {
+      summary: 'List contacts by phone number',
+      tags: ['Contacts'],
+      params: {
+        phoneNumber: {
+          description: 'Phone Number',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { phoneNumber } = ctx.params
+
+      const response = await contactsAdapter.listByPhoneNumber(phoneNumber)
+
+      encodeListResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-national-id/:nid',
+    {
+      summary: 'List contacts by national id (Personnummer / Org.nr)',
+      tags: ['Contacts'],
+      params: {
+        nid: {
+          description: 'National ID',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { nid } = ctx.params
+
+      const response = await contactsAdapter.getByNationalId(nid)
+
+      encodeSingleResponse(ctx, response)
     }
   )
 }

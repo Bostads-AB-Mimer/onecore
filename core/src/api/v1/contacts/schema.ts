@@ -44,24 +44,52 @@ export const ContactAddressSchema = z.object({
   city: z.string(),
 })
 
-export const ContactSchema = z.object({
+export const ContactBaseSchema = z.object({
   contactCode: z.string(),
-  contactKey: z.string(),
-  identity: ContactIdentitySchema,
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
 })
 
-export const OneCOREHateOASResponseBody = z.object({
+export const ContactPersonalDetailsSchema = z.object({
+  nationalRegistrationNumber: z.string(),
+  birthDate: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  fullName: z.string(),
+})
+
+export const ContactOrganisationDetailsSchema = z.object({
+  organisationNumber: z.string(),
+  name: z.string(),
+})
+
+export const ContactIndividualSchema = ContactBaseSchema.extend({
+  type: z.literal('individual'),
+  personal: ContactPersonalDetailsSchema,
+})
+
+export const ContactOrganisationSchema = ContactBaseSchema.extend({
+  type: z.literal('organisation'),
+  organisation: ContactOrganisationDetailsSchema,
+})
+
+export const ContactSchema = z.discriminatedUnion('type', [
+  ContactIndividualSchema,
+  ContactOrganisationSchema,
+])
+
+export const ONECoreHateOASResponseBodySchema = z.object({
   _links: z.any(),
 })
 
-export const GetContactResponseBody = OneCOREHateOASResponseBody.extend({
-  content: ContactSchema,
-})
+export const GetContactResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: ContactSchema,
+  })
 
-export const GetContactsResponseBody = OneCOREHateOASResponseBody.extend({
-  content: z.object({
-    contacts: z.array(ContactSchema),
-  }),
-})
+export const GetContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      contacts: z.array(ContactSchema),
+    }),
+  })
