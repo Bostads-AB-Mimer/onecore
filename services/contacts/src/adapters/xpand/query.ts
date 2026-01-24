@@ -363,9 +363,18 @@ export const contactsQuery = () => {
           qb.andWhereRaw(...trimInCriteria('cmctc.keycmobj', objectKeyFilter))
         }
 
-        if (Object.keys(wheres).length) {
-          qb.andWhere(wheres)
-        }
+        Object.keys(wheres).forEach((key) => {
+          if (key === NATIONAL_ID_NUMBER) {
+            qb.andWhere((b) => {
+              b.where(key, wheres[key]).orWhereRaw(
+                `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
+                [wheres[key]]
+              )
+            })
+          } else {
+            qb.andWhere(key, wheres[key])
+          }
+        })
       }
 
       /**
