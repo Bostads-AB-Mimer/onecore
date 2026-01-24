@@ -56,6 +56,15 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return singleResponse(response)
     },
 
+    async getByTrusteeOfContactCode(
+      contactCode: string
+    ): Promise<AdapterResult<Contact, 'unknown'>> {
+      const response = await axios<GetContactResponseBody>(
+        `/contacts/${contactCode}/trustee`
+      )
+      return singleResponse(response)
+    },
+
     async getByNationalId(
       nid: string
     ): Promise<AdapterResult<Contact, 'unknown'>> {

@@ -63,9 +63,15 @@ export const ContactOrganisationDetailsSchema = z.object({
   name: z.string(),
 })
 
+export const TrusteeSchema = z.object({
+  contactCode: z.string(),
+  fullName: z.optional(z.string()),
+})
+
 export const ContactIndividualSchema = ContactBaseSchema.extend({
   type: z.literal('individual'),
   personal: ContactPersonalDetailsSchema,
+  trustee: z.optional(TrusteeSchema),
 })
 
 export const ContactOrganisationSchema = ContactBaseSchema.extend({
