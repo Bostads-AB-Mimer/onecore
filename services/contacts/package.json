@@ -30,7 +30,7 @@
     "test:ci": "DOTENV_CONFIG_PATH=.env.ci jest",
     "test:watch": "DOTENV_CONFIG_PATH=.env.test jest --watch",
     "ts:watch": "tsc --watch --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -p ./tsconfig.build.json --noEmit"
   },
   "dependencies": {
     "@iteam/config": "^12.1.2",

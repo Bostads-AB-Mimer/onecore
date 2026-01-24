@@ -1,4 +1,4 @@
-import { Resource } from '@src/common/resource'
+import { type Resource } from '@onecore/utilities'
 import knex from 'knex'
 import {
   ContactListParams,

@@ -1,32 +1,14 @@
-import knex from 'knex'
+import { KnexConnectionParameters, makeKnexResource } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 
-import { makeResource } from '@src/common/resource'
-import { DatabaseConfig } from '@src/common/config'
-
-export const xpandDbClient = (config: DatabaseConfig) => {
-  return makeResource<knex.Knex>({
+/**
+ * Creates a Knex database client resource for Xpand database, using the
+ * defaults for pool, healthcheck and heal settings from @onecore/utilities.
+ */
+export const xpandDbClient = (config: KnexConnectionParameters) => {
+  return makeKnexResource({
     name: 'xpand-db',
-    initialize: async () => {
-      return knex({
-        client: 'mssql',
-        connection: {
-          host: config.host,
-          user: config.user,
-          password: config.password,
-          port: Number(config.port),
-          database: config.database,
-        },
-        pool: {
-          min: 0,
-          max: 20,
-          idleTimeoutMillis: 30000,
-          destroyTimeoutMillis: 5000,
-        },
-      })
-    },
-    healthcheck: async (knex: knex.Knex) => {
-      return true
-    },
-    teardown: async () => {},
+    logger: logger,
+    config,
   })
 }
