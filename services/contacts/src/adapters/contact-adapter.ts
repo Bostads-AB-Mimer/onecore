@@ -2,6 +2,7 @@ import {
   Contact,
   ContactCode,
   ContactTypeFilter,
+  EmailAddress,
   NationalIdNumber,
   PhoneNumber,
 } from '@src/domain/contact'
@@ -76,7 +77,18 @@ export interface ContactsRepository {
    *
    * @param phoneNumber - The phone number to search for.
    *
-   * @returns A promise that resolves to the Contact object if found,
+   * @returns A promise that resolves to an array of Contact objects
    */
-  getByPhoneNumber: (phoneNumber: PhoneNumber) => Promise<Contact[] | null>
+  getByPhoneNumber: (phoneNumber: PhoneNumber) => Promise<Contact[]>
+
+  /**
+   * Retrieves contacts by their email address.
+   *
+   * Email addresses are not unique, and may result in multiple matches.
+   *
+   * @param emailAddress - The email address to search for.
+   *
+   * @returns A promise that resolves to an array of Contact objects
+   */
+  getByEmailAddress: (emailAddress: string) => Promise<Contact[]>
 }
