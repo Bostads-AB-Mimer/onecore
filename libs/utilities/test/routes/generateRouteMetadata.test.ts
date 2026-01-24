@@ -1,4 +1,4 @@
-import { generateRouteMetadata } from '../routes/generateRouteMetadata'
+import { generateRouteMetadata } from '@/routes/generateRouteMetadata'
 import { Context as KoaContext } from 'koa'
 
 describe('generateRouteMetadata', () => {
