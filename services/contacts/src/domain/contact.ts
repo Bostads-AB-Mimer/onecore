@@ -9,6 +9,7 @@ import {
   EmailAddressSchema,
   PhoneNumberSchema,
   PhoneNumberTypeSchema,
+  TrusteeSchema,
 } from '@src/services/contacts-service/schema'
 import { ContactAddressSchema } from '../services/contacts-service/schema'
 
@@ -21,6 +22,7 @@ export type ContactCode = string
 export type ObjectKey = string
 export type PhoneNumber = string
 export type NationalIdNumber = string
+export type Trustee = z.infer<typeof TrusteeSchema>
 
 export type ContactCommunication = z.infer<typeof ContactCommunicationSchema>
 export type PhoneNumberDetails = z.infer<typeof PhoneNumberSchema>
