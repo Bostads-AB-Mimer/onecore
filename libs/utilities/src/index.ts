@@ -5,6 +5,7 @@ import { storage, getCorrelationId } from './logging/loggingStorage'
 import {
   generateRouteMetadata,
   makeSuccessResponseBody,
+  type RouteMetadata,
 } from './routes/generateRouteMetadata'
 import * as axiosTypes from 'axios'
 
@@ -15,6 +16,7 @@ export {
   logger,
   loggedAxios,
   generateRouteMetadata,
+  RouteMetadata,
   makeSuccessResponseBody,
   axiosTypes,
   setExclusionFilters as setAxiosExclusionFilters,
