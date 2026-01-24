@@ -73,5 +73,14 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       )
       return listResponse(response)
     },
+
+    async listByEmailAddress(
+      emailAddress: string
+    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+      const response = await axios<GetContactsResponseBody>(
+        `/contacts/by-email-address/${emailAddress}`
+      )
+      return listResponse(response)
+    },
   }
 }
