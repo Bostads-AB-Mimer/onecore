@@ -99,6 +99,45 @@ export const routes = (
   )
 
   router.get(
+    '/contacts/:contactCode/trustee',
+    {
+      summary: 'Get the trustee of a contact identifier by their Contact Code',
+      description: `Get the trustee of a contact.`,
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCode } = ctx.params
+      const contact = await contactsRepository.getByContactCode(contactCode)
+
+      if (contact && contact.type === 'individual' && contact.trustee) {
+        const trustee = await contactsRepository.getByContactCode(
+          contact.trustee.contactCode
+        )
+
+        if (trustee) {
+          ctx.status = 200
+          ctx.body = {
+            content: trustee,
+            ...metadata,
+          }
+        } else {
+          ctx.status = 404
+        }
+      } else {
+        ctx.status = 404
+      }
+    }
+  )
+
+  router.get(
     '/contacts/by-phone-number/:phoneNumber',
     {
       summary: 'List contacts by phone number',
