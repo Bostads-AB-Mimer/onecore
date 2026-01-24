@@ -1,28 +1,15 @@
 import configPackage from '@iteam/config'
+import { type KnexConnectionParameters } from '@onecore/utilities'
 import dotenv from 'dotenv'
 
 dotenv.config()
 
-export interface DatabaseConfig {
-  host: string
-  user: string
-  password: string
-  port: number
-  database: string
-}
-
 export interface Config {
   port: number
   applicationName: string
-  xpandDatabase: DatabaseConfig
+  xpandDatabase: KnexConnectionParameters
   logging: {
     enabled: boolean
-  }
-  health: {
-    xpandDatabase: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
   }
 }
 
@@ -32,16 +19,11 @@ const config = configPackage({
     port: 5090,
     applicationName: 'contacts',
     xpandDatabase: {
-      systemName: 'xpand database',
+      healthCheckInterval: 1,
+      healthCheckTimeUnit: 'm',
     },
     logging: {
-      enabled: false,
-    },
-    health: {
-      xpandDatabase: {
-        systemName: 'xpand database',
-        minimumMinutesBetweenRequests: 1,
-      },
+      enabled: true,
     },
   },
 })
@@ -51,5 +33,4 @@ export default {
   logging: config.get('logging'),
   applicationName: config.get('applicationName'),
   xpandDatabase: config.get('xpandDatabase'),
-  health: config.get('health'),
 } satisfies Config

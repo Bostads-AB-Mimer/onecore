@@ -1,10 +1,10 @@
 import {
-  DbConnection,
+  DbResource,
   collectDbPoolMetrics,
   HealthCheckTarget,
   SystemHealth,
   pollSystemHealth,
-  probe,
+  probeResource,
 } from '@onecore/utilities'
 import config from '@src/common/config'
 import { OkapiRouter } from 'koa-okapi-router'
@@ -18,33 +18,21 @@ export const routes = (router: OkapiRouter, infra: AppInfrastructure) => {
   /**
    * Round-up of DB connections used by this service
    */
-  // const CONNECTIONS: DbConnection[] = [
-  //   {
-  //     name: 'xpand',
-  //     connection: xpandDb.get(),
-  //   },
-  // ]
+  const CONNECTIONS: DbResource[] = [xpandDb]
 
   const subsystems: HealthCheckTarget[] = [
     {
       probe: async (): Promise<SystemHealth> => {
-        return await probe(
-          config.health.xpandDatabase.systemName,
-          healthChecks,
-          config.health.xpandDatabase.minimumMinutesBetweenRequests,
-          async () => {
-            await xpandDb.get().table('cmctc').limit(1)
-          }
-        )
+        return probeResource(xpandDb, healthChecks)
       },
     },
   ]
 
-  router.get('(.*)/health', {}, async (ctx) => {
-    ctx.body = await pollSystemHealth('leasing', subsystems)
+  router.get('/health', {}, async (ctx) => {
+    ctx.body = await pollSystemHealth('contacts', subsystems)
   })
 
-  // router.get('(.*)/health/db', {}, async (ctx) => {
-  //   ctx.body = collectDbPoolMetrics(CONNECTIONS)
-  // })
+  router.get('/health/db', {}, async (ctx) => {
+    ctx.body = collectDbPoolMetrics(CONNECTIONS)
+  })
 }
