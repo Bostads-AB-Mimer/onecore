@@ -11,6 +11,7 @@ import * as axiosTypes from 'axios'
 export * from './health-check'
 export * from './pagination'
 export * from './search'
+export * from './resource'
 
 export {
   logger,
