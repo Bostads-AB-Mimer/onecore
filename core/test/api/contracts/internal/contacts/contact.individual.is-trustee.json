@@ -1,0 +1,52 @@
+{
+  "type": "individual",
+  "contactCode": "P004810",
+  "contactKey": "_0J415815F",
+  "personal": {
+    "firstName": "Maggan",
+    "lastName": "Korvistoppitalo",
+    "fullName": "Korvistoppitalo Maggan",
+    "nationalRegistrationNumber": "420729162742",
+    "birthDate": "1951-09-14T00:00:00.000Z"
+  },
+  "communication": {
+    "phoneNumbers": [
+      {
+        "phoneNumber": "0739983438",
+        "type": "unspecified",
+        "isPrimary": false
+      },
+      {
+        "phoneNumber": "0739983438",
+        "type": "unspecified",
+        "isPrimary": false
+      }
+    ],
+    "emailAddresses": [
+      {
+        "emailAddress": "maggan.korvistoppitalo@tratt.nobody-lives-here.com",
+        "type": "unspecified",
+        "isPrimary": true
+      }
+    ],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Mumindalsvägen 2",
+      "zipCode": "72480",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Mumindalsvägen 2, 72480, VÄSTERÅS, SVERIGE"
+    },
+    {
+      "street": "Muffinstigen 6B",
+      "zipCode": "72214",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Muffinstigen 6B, 72214, VÄSTERÅS, SVERIGE"
+    }
+  ]
+}
