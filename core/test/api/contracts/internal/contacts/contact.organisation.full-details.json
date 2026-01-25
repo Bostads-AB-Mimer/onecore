@@ -1,0 +1,54 @@
+{
+  "type": "organisation",
+  "contactCode": "F020420",
+  "contactKey": "_0J41591U6",
+  "organisation": {
+    "organisationNumber": "040126 662",
+    "name": "Julaftonsson Klasse Klodvig"
+  },
+  "communication": {
+    "phoneNumbers": [
+      {
+        "phoneNumber": "021-042391",
+        "type": "unspecified",
+        "isPrimary": false
+      },
+      {
+        "phoneNumber": "070-4 03 97 50",
+        "type": "unspecified",
+        "isPrimary": false
+      },
+      {
+        "phoneNumber": "070-4 03 97 50",
+        "type": "unspecified",
+        "isPrimary": false
+      }
+    ],
+    "emailAddresses": [
+      {
+        "emailAddress": "ola@korv.dummy.se",
+        "type": "unspecified",
+        "isPrimary": true
+      }
+    ],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Muffinstigen 16",
+      "zipCode": "723 51",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Muffinstigen 16, 723 51, VÄSTERÅS, SVERIGE"
+    },
+    {
+      "street": "Muffinstigen 16",
+      "zipCode": "723 51",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Muffinstigen 16, 723 51, VÄSTERÅS, SVERIGE"
+    }
+  ]
+}
