@@ -1,6 +1,6 @@
 import z from 'zod'
 
-export const PhoneNumberType = z.enum([
+export const PhoneNumberTypeSchema = z.enum([
   'work',
   'home',
   'mobile',
@@ -12,15 +12,15 @@ export const PhoneNumberType = z.enum([
 
 export const PhoneNumberSchema = z.object({
   phoneNumber: z.string(),
-  type: PhoneNumberType,
+  type: PhoneNumberTypeSchema,
   comment: z.string().optional(),
-  isMain: z.boolean(),
+  isPrimary: z.boolean(),
 })
 
 export const EmailAddressSchema = z.object({
   emailAddress: z.string(),
   type: z.string(),
-  isMain: z.boolean(),
+  isPrimary: z.boolean(),
 })
 
 export const ContactIdentitySchema = z.object({
@@ -38,10 +38,12 @@ export const ContactCommunicationSchema = z.object({
 })
 
 export const ContactAddressSchema = z.object({
+  careOf: z.string().optional(),
   street: z.string(),
-  number: z.string(),
   zipCode: z.string(),
   city: z.string(),
+  region: z.string(),
+  country: z.string(),
 })
 
 export const ContactBaseSchema = z.object({
