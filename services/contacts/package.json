@@ -6,26 +6,29 @@
   "license": "MIT",
   "author": "",
   "packageManager": "pnpm@10.6.1",
+  "type": "module",
   "engines": {
     "node": ">=20"
   },
   "main": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./build/index.js",
-      "types": "./build/index.d.ts"
+      "types": "./build/esm/index.d.ts",
+      "require": "./build/cjs/index.cjs",
+      "import": "./build/esm/index.js"
     },
     "./swagger.json": "./build/swagger.json",
     "./domain": {
-      "types": "./build/domain/index.d.ts"
+      "types": "./build/esm/domain/index.d.ts"
     },
     "./schema": {
-      "import": "./build/schema.js",
-      "types": "./build/schema.d.ts"
+      "types": "./build/esm/schema.d.ts",
+      "require": "./build/cjs/schema.js",
+      "import": "./build/esm/schema.js"
     }
   },
   "scripts": {
-    "build": "tsc -P tsconfig.build.json",
+    "build": "tsup",
     "dev": "NODE_ENV=production node -r dotenv/config --import tsx --watch src/index",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
@@ -33,7 +36,7 @@
     "prepare:dotenv": "if not exist .env copy .env.template .env",
     "prettier": "prettier --check ./src",
     "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
-    "start": "node -r dotenv/config build/index",
+    "start": "node -r dotenv/config build/esm/index",
     "test": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.test jest --detectOpenHandles",
     "test:create-db": "./scripts/create-test-db.sh",
     "test:ci": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.ci jest",
@@ -106,6 +109,7 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.5.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.2"
   }

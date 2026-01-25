@@ -2,9 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
-    "composite": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "EsNext",
+    "moduleResolution": "bundler",
     "rootDir": "./src",
     "outDir": "./build",
     "baseUrl": ".",
@@ -13,5 +12,5 @@
       "@xpand/*": ["./src/adapters/xpand/*"]
     }
   },
-  "include": ["./src"]
+  "include": ["./src/**/*.ts"]
 }
