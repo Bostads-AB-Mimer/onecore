@@ -1,6 +1,7 @@
 import z from 'zod'
 import {
   ContactSchema,
+  ContactAddressSchema,
   ContactCommunicationSchema,
   ContactIndividualSchema,
   ContactOrganisationSchema,
@@ -11,7 +12,6 @@ import {
   PhoneNumberTypeSchema,
   TrusteeSchema,
 } from '@src/services/contacts-service/schema'
-import { ContactAddressSchema } from '../services/contacts-service/schema'
 
 export type PhoneNumberType = z.infer<typeof PhoneNumberTypeSchema>
 
@@ -28,6 +28,7 @@ export type ContactCommunication = z.infer<typeof ContactCommunicationSchema>
 export type PhoneNumberDetails = z.infer<typeof PhoneNumberSchema>
 export type EmailAddress = z.infer<typeof EmailAddressSchema>
 export type ContactAddress = z.infer<typeof ContactAddressSchema>
+
 export type PersonalDetails = z.infer<typeof ContactPersonalDetailsSchema>
 export type OrganisationDetails = z.infer<
   typeof ContactOrganisationDetailsSchema
