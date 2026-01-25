@@ -31,6 +31,8 @@ const readInputFile = (filePath: string) => {
       .map((r) => r.trim().split(' ')[0])
       .filter(Boolean)
       .filter((l) => !l.startsWith('#'))
+  } else {
+    console.log(`File "${filePath}" does not exist.`)
   }
   return []
 }
@@ -39,16 +41,8 @@ const inputFile = args.includes('-f') ? args[args.indexOf('-f') + 1] : null
 const cleanSeedFile = args.includes('-c')
 
 const contactCodes = inputFile
-  ? readInputFile(args[1])
+  ? readInputFile(inputFile)
   : args.filter((a) => !a.startsWith('-'))
-
-if (contactCodes.length === 0 && !cleanSeedFile) {
-  console.log('Usage:')
-  console.log(
-    './scripts/import-test-contacts.ts <contactCode> <contactCode> ...'
-  )
-  console.log('./scripts/import-test-contacts.ts -f <filename>')
-}
 
 type TableName = 'cmctc' | 'cmtel' | 'cmeml' | 'cmadr'
 
@@ -252,11 +246,22 @@ const run = async () => {
   console.log('Wrote result to', SEED_FILE_PATH)
 }
 
-run()
-  .then(() => {
-    console.log('Done!')
-  })
-  .catch((err) => {
-    console.error('TERROR! ERROR! RUN! ALIEN INVASION! RUN! RUN!')
-    console.log(err)
-  })
+if (contactCodes.length === 0 && !cleanSeedFile && !inputFile) {
+  console.log('Usage:')
+  console.log('\n')
+  console.log('Flag -c removes all rows from seed.sql')
+  console.log('\n')
+  console.log('script:import-seed-contact -c')
+  console.log('script:import-seed-contact [-c] -f <seed-source-file>')
+  console.log('script:import-seed-contact [-c] <contactCode> <contactCode> ...')
+  console.log('\n')
+} else {
+  run()
+    .then(() => {
+      console.log('Done!')
+    })
+    .catch((err) => {
+      console.error('TERROR! ERROR! RUN! ALIEN INVASION! RUN! RUN!')
+      console.log(err)
+    })
+}

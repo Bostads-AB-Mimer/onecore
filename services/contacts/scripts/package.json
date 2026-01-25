@@ -1,0 +1,7 @@
+{
+  "name": "contacts-data-data-scripts",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  }
+}
