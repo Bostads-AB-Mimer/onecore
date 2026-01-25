@@ -12,7 +12,7 @@ import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
 import { transformContact, transformContacts } from './transform'
 import { Config } from '@/common/config'
 import { AdapterResult } from '@/adapters/types'
-import { Contact } from '@onecore/contacts/domain'
+import type { Contact } from '@onecore/contacts/domain'
 import { ParameterizedContext } from 'koa'
 
 export const routes = (router: OkapiRouter, config: Config) => {
