@@ -1,9 +1,7 @@
 import configPackage from '@iteam/config'
 import { type KnexConnectionParameters } from '@onecore/utilities'
 import dotenv from 'dotenv'
-import { getDirname } from './dirname'
-
-const __dirname = getDirname(import.meta.url)
+import { projectRoot } from './dirname'
 
 dotenv.config()
 
@@ -17,7 +15,7 @@ export interface Config {
 }
 
 const config = configPackage({
-  file: `${__dirname}/../config.json`,
+  file: `${projectRoot()}/config.json`,
   defaults: {
     port: 5090,
     applicationName: 'contacts',
