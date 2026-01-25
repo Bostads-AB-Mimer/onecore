@@ -7,11 +7,11 @@ ENV CI=true
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
-
 # Copy package files for dependency installation
 COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install pnpm using version from package.json
+RUN corepack enable && corepack prepare --activate
 
 # Copy relevant packages
 COPY libs/types ./libs/types
@@ -30,12 +30,12 @@ RUN pnpm deploy --filter @onecore/internal-portal-backend --prod /out
 # ==========================
 FROM node:23-slim AS runner
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
-
 WORKDIR /app
 
 COPY --from=builder /out ./
+
+# Install pnpm using version from package.json
+RUN corepack enable && corepack prepare --activate
 
 ENV PORT=80
 EXPOSE 80

@@ -27,16 +27,16 @@ name: pnpm-setup
 description: Setup Node 20 and restore pnpm caches
 inputs:
   run-generate-static:
-    description: "Whether to run pnpm generate:static"
+    description: 'Whether to run pnpm generate:static'
     required: false
-    default: "false"
+    default: 'false'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 10.28.0
+        version: 10.28.1
 
     - uses: actions/setup-node@v4
       with:
