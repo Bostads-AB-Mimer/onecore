@@ -1,6 +1,7 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 import ms from 'ms'
+
 dotenv.config()
 
 interface Account {

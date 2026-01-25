@@ -1,4 +1,3 @@
-import { OkapiRouter } from 'koa-okapi-router'
 import { schemaRegistry } from './utils/openapi'
 
 const basePath = __dirname
