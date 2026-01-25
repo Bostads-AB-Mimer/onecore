@@ -34,4 +34,4 @@ COPY --from=builder /out ./
 ENV PORT=80
 EXPOSE 80
 
-CMD ["node", "build/index.js"]
+CMD ["node", "build/esm/index.js"]

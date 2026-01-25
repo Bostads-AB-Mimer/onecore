@@ -1,6 +1,9 @@
 import configPackage from '@iteam/config'
 import { type KnexConnectionParameters } from '@onecore/utilities'
 import dotenv from 'dotenv'
+import { getDirname } from './dirname'
+
+const __dirname = getDirname(import.meta.url)
 
 dotenv.config()
 
