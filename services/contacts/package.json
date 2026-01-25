@@ -12,7 +12,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./build/index.ts",
+      "import": "./build/index.js",
       "types": "./build/index.d.ts"
     },
     "./swagger.json": "./build/swagger.json",
@@ -33,10 +33,10 @@
     "prepare:dotenv": "if not exist .env copy .env.template .env",
     "prettier": "prettier --check ./src",
     "script:expire-listings": "ts-node src/scripts/expire-listings.ts",
-    "start": "pnpm migrate:up && node -r dotenv/config build/index",
+    "start": "node -r dotenv/config build/index",
     "test": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.test jest --detectOpenHandles",
     "test:create-db": "./scripts/create-test-db.sh",
-    "test:ci": "DOTENV_CONFIG_PATH=.env.ci jest",
+    "test:ci": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.ci jest",
     "test:watch": "DOTENV_CONFIG_PATH=.env.test jest --watch",
     "ts:watch": "tsc --watch --noEmit",
     "typecheck": "tsc -p ./tsconfig.build.json --noEmit"
