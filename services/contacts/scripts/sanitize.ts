@@ -1,8 +1,6 @@
-#!/usr/bin/env -S node -r ts-node/register -r tsconfig-paths/register
-
 import crypto from 'node:crypto'
-import { DbAddress } from '@src/adapters/xpand/db-model'
-import { extractAddress } from '@src/adapters/xpand/transform'
+import { DbAddress } from '../src/adapters/xpand/db-model'
+import { extractAddress } from '../src/adapters/xpand/transform'
 
 /**
  * Salt used to hash input. Do not change if there is any intention
@@ -22,6 +20,38 @@ const WORDS = [
   'sork',
   'TRATT',
   'BOLL',
+]
+
+const RELATION_WORDS = [
+  'dotter',
+  'dottern',
+  'son',
+  'sonen',
+  'mamma',
+  'pappa',
+  'mor',
+  'far',
+  'make',
+  'maka',
+  'fru',
+  'herr',
+  'partner',
+  'väninna',
+  'vän',
+  'anh',
+  'tolk',
+]
+
+const SAFE_WORDS = [
+  'mimer',
+  'efter',
+  'av',
+  'visn',
+  'visas',
+  'fullmakt',
+  'från',
+  'v',
+  'ås',
 ]
 
 const DOMAINS = [
@@ -126,6 +156,65 @@ const STREETS = [
   'Muffinstigen',
 ]
 
+const sanitizeComment = (input: string): string => {
+  let nc = 0
+  const rewrap = (token: string, result: string) =>
+    [
+      token.startsWith('(') ? '(' : '',
+      result,
+      token.endsWith(')') ? ')' : '',
+    ].join('')
+
+  const unwrap = (token: string) =>
+    token.slice(
+      token.startsWith('(') ? 1 : 0,
+      token.endsWith(')') ? -1 : token.length
+    )
+
+  return input.replace(
+    /\(?([A-Za-zÅÄÖåäö]+(?:-[A-Za-zÅÄÖåäö]+)*)\)?/g,
+    (token) => {
+      if (token.length <= 2) return token
+      const unwrapped = unwrap(token)
+
+      if (SAFE_WORDS.includes(unwrapped.toLowerCase())) {
+        return token
+      }
+      if (RELATION_WORDS.includes(unwrapped.toLowerCase())) {
+        return rewrap(
+          token,
+          keepCase(unwrapped, pickElement(input, RELATION_WORDS))
+        )
+      }
+      nc++
+      return rewrap(
+        token,
+        pickElement(input, nc == 1 ? FIRST_NAMES : LAST_NAMES)
+      )
+    }
+  )
+}
+
+const keepCase = (source: string, replacement: string): string => {
+  if (source === source.toUpperCase()) {
+    return replacement.toUpperCase()
+  }
+
+  if (source === source.toLowerCase()) {
+    return replacement.toLowerCase()
+  }
+
+  if (
+    source[0] === source[0].toUpperCase() &&
+    source.slice(1) === source.slice(1).toLowerCase()
+  ) {
+    return replacement[0].toUpperCase() + replacement.slice(1).toLowerCase()
+  }
+
+  // Mixed / weird casing → return replacement as-is
+  return replacement
+}
+
 const capitalize = (str: string, ucase: boolean = false) =>
   ucase
     ? str.charAt(0).toUpperCase() + str.slice(1)
@@ -181,7 +270,7 @@ export const sanitizePhoneNumber = (input: string | undefined) => {
       sanitized += digits.charAt(i % digits.length)
     }
   }
-  return sanitized
+  return sanitizeComment(sanitized).slice(0, 30)
 }
 
 export const sanitizeName = (input: string | undefined) => {
@@ -363,11 +452,9 @@ export const sanitizeEmail = (input: string | undefined) => {
 
   if (nameParts.length >= 1 && nameParts.length <= 3) {
     const sanitizedNames = nameParts.map((part, i) => {
-      const ucasep = part.at(0)?.toLocaleUpperCase() === part.at(0)
-      if (i === 0) return capitalize(sanitizeFirstName(part) ?? part, ucasep)
-      if (i === nameParts.length - 1)
-        return capitalize(sanitizeLastName(part) ?? part, ucasep)
-      return capitalize(sanitizeFirstName(part) ?? part)
+      if (i === 0 || i !== nameParts.length - 1)
+        return keepCase(part, sanitizeFirstName(part)!)
+      return keepCase(part, sanitizeLastName(part)!)
     })
 
     sanitizedLocal = base.replace(
@@ -391,7 +478,7 @@ export const sanitizeEmail = (input: string | undefined) => {
     tld ? '.' + tld : '',
   ].join('')
 
-  return [sanitizedLocal, '@', sanitizedDomain].join('')
+  return [sanitizedLocal, '@', sanitizedDomain].join('').slice(0, 80)
 }
 
 const exec = (cmd: string, input: string, rest: string[]) => {
@@ -424,7 +511,7 @@ const exec = (cmd: string, input: string, rest: string[]) => {
 }
 
 const [_, file, cmd, ...rest] = process.argv
-if (file?.endsWith('sanitize.ts')) {
+if (file?.endsWith('sanitize.js')) {
   const [flags, args] = rest.reduce(
     (r, arg) => {
       r[arg.startsWith('-') ? 0 : 1].push(arg)
@@ -435,11 +522,22 @@ if (file?.endsWith('sanitize.ts')) {
 
   const [input, ...restInput] = args
 
-  const output = exec(cmd, input, restInput)
-
-  if (flags.includes('-w')) {
-    console.dir(output, { depth: null })
+  if (!input) {
+    console.log('Usage:\n')
+    console.log('script:sanitize p <cmtelben/phone number input>')
+    console.log('script:sanitize e <cmemlben/email address input>')
+    console.log('script:sanitize n <name input>')
+    console.log('script:sanitize a <address-line> <address-line> ...')
+    console.log('script:sanitize pn <persorgnr>')
+    console.log('script:sanitize bd <birthdate>')
+    console.log('')
   } else {
-    console.log(output)
+    const output = exec(cmd, input, restInput)
+
+    if (flags.includes('-w')) {
+      console.dir(output, { depth: null })
+    } else {
+      console.log(output)
+    }
   }
 }
