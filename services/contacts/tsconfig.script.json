@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./scripts/build",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "moduleDetection": "legacy",
+    "verbatimModuleSyntax": false,
+    "target": "es2022",
+    "lib": ["es2022"],
+    "noEmitOnError": true,
+    "sourceMap": false
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": []
+}
