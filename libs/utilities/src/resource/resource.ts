@@ -321,8 +321,8 @@ export function makeResource<T>({
     } catch (e) {
       error = e
     } finally {
-      statusTransition(ok ? 'ready' : 'failed')
       if (error) captureError(error)
+      statusTransition(ok ? 'ready' : 'failed')
     }
 
     return ok
@@ -459,10 +459,20 @@ export function makeResource<T>({
    */
   function statusTransition(next: ResourceStatus) {
     if (status !== next && status !== 'uninitialized') {
-      log(
-        next === 'failed' ? 'error' : 'info',
-        `Transitioned from "${status}" to "${next}".`
-      )
+      if (next === 'failed') {
+        const errorMsg =
+          lastError instanceof Error
+            ? `error message: "${lastError?.message}"`
+            : lastError
+              ? `error ${lastError}`
+              : 'no error details.'
+        log(
+          'error',
+          `Transitioned from "${status}" to "${next}" with ${errorMsg}`
+        )
+      } else {
+        log('info', `Transitioned from "${status}" to "${next}".`)
+      }
     }
     status = next
     lastStateTransition = new Date()
@@ -500,13 +510,13 @@ export function makeResource<T>({
         instance = await initialize()
         const ok = await check(true)
         if (ok) {
-          statusTransition('ready')
           lastError = undefined
+          statusTransition('ready')
         }
       } catch (err) {
-        statusTransition('failed')
         captureError(err)
-        log('error', `Initialization failed - ${lastError?.message}`)
+        statusTransition('failed')
+        log('error', `Initialization failed: "${lastError?.message}"`)
         throw err
       } finally {
         initInProgress = null
