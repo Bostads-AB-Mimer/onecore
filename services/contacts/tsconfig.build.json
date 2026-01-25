@@ -3,8 +3,8 @@
   "compilerOptions": {
     "noEmit": false,
     "composite": true,
-    "module": "preserve",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "rootDir": "./src",
     "outDir": "./build",
     "baseUrl": ".",
