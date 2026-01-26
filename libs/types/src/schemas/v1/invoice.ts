@@ -63,4 +63,6 @@ export const InvoiceSchema = z.object({
   invoiceRows: z.array(InvoiceRowSchema),
   invoiceFileUrl: z.string().optional(),
   remainingAmount: z.number().optional(),
+  accountCode: z.string().optional(),
+  expectedLoss: z.boolean().optional(),
 })
