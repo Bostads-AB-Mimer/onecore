@@ -45,6 +45,7 @@ export const TenfastTenantSchema = z.object({
 })
 
 export const TenfastRentalObjectSchema = z.object({
+  // Required fields
   _id: z.string(),
   externalId: z.string(),
   hyra: z.number(), //total hyra inklusive moms
@@ -52,6 +53,44 @@ export const TenfastRentalObjectSchema = z.object({
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
   contractTemplate: z.string().optional(),
+
+  // Reference fields (can be IDs or populated objects)
+  hyresvard: z.union([z.string(), z.any()]).optional(),
+  fastighet: z.union([z.string(), z.any()]).nullish(),
+
+  // Address and location
+  nummer: z.union([z.string(), z.number()]).nullish(),
+  postadress: z.string().nullish(),
+  postnummer: z.string().nullish(),
+  stad: z.string().nullish(),
+  stadsdel: z.string().nullish(),
+  skvNummer: z.union([z.string(), z.number()]).nullish(),
+  district: z.string().nullish(),
+
+  // Display and type information
+  displayName: z.string().optional(),
+  typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
+  subType: z.string().optional(),
+  lokalType: z.string().nullish(),
+  bostadType: z.string().nullish(),
+  parkeringType: z.string().nullish(),
+  category: z.string().optional(),
+
+  // Measurements
+  kvm: z.number().nullish(),
+  roomCount: z.number().nullish(),
+
+  // State and metadata
+  avtalStates: z.array(z.string()).optional(),
+  lastStateChanged: z.string().optional(),
+  states: z.array(z.any()).optional(),
+  comments: z.array(z.any()).optional(),
+  files: z.array(z.any()).optional(),
+  images: z.array(z.any()).optional(),
+  tags: z.array(z.any()).optional(),
+  useCounter: z.number().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
@@ -134,6 +173,15 @@ export const NotificationTypeSchema = z.enum([
   'none',
 ])
 
+// Helper to handle optional date fields that might be empty strings, null, or undefined
+const optionalDateField = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((val) => {
+    if (!val || val === '') return null
+    return val
+  })
+  .pipe(z.coerce.date().nullable())
+
 /**
  * This schema is a combination of what was found here:
  * https://tenfast-test-api.mimer.nu/docs -> schema "Avtal"
@@ -150,7 +198,7 @@ export const TenfastLeaseSchema = z.object({
   hyror: z.array(TenfastInvoiceRowSchema),
   simpleHyra: z.boolean(),
   startDate: z.coerce.date(),
-  endDate: z.coerce.date().nullable(),
+  endDate: optionalDateField,
   aviseringsTyp: NotificationTypeSchema,
   uppsagningstid: z.string(),
   aviseringsFrekvens: z.string(),
@@ -172,15 +220,25 @@ export const TenfastLeaseSchema = z.object({
   cancellation: z.object({
     cancelled: z.boolean(),
     doneAutomatically: z.boolean(),
-    receivedCancellationAt: z.coerce.date().optional().nullable(), // When TenFAST received the cancellation
-    notifiedAt: z.coerce.date().optional().nullable(), // When TenFAST notified the tenant about the cancellation
-    handledAt: z.coerce.date().optional().nullable(), // When TenFAST handled the cancellation i.e termination date
+    receivedCancellationAt: optionalDateField, // When TenFAST received the cancellation
+    notifiedAt: optionalDateField, // When TenFAST notified the tenant about the cancellation
+    handledAt: optionalDateField, // When TenFAST handled the cancellation i.e termination date
     handledBy: z.string().optional().nullable(), // Which TenFAST user handled the cancellation
-    preferredMoveOutDate: z.coerce.date().optional().nullable(), // When the tenant prefers to move out
+    preferredMoveOutDate: optionalDateField, // When the tenant prefers to move out
+    cancelledByType: z.string().optional().nullable(), // Who cancelled the lease, tenant or landlord
   }),
   deposit: z.object({
     ekoNotifications: z.array(z.any()),
   }),
+  simplesignTermination: z
+    .object({
+      signatures: z.array(z.any()),
+      allSigned: z.boolean().optional(),
+      docId: z.string().optional(),
+      sentAt: optionalDateField,
+      signedAt: optionalDateField,
+    })
+    .optional(),
   id: z.string(),
   _id: z.string(),
   hyresvard: z.string(),
@@ -207,8 +265,8 @@ export const TenfastLeaseSchema = z.object({
   versions: z.unknown(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  startInvoicingFrom: z.coerce.date().optional(),
-  signedAt: z.coerce.date().optional().nullable(), // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
+  startInvoicingFrom: optionalDateField,
+  signedAt: optionalDateField, // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
   tags: z.array(z.unknown()),
 })
 

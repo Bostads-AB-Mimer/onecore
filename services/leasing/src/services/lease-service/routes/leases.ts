@@ -314,6 +314,11 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Include contact information in the result.
+   *       - in: query
+   *         name: includeRentalObject
+   *         schema:
+   *           type: boolean
+   *         description: Include rental object information in the result.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -331,7 +336,11 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
+    const metadata = generateRouteMetadata(ctx, [
+      'status',
+      'includeContacts',
+      'includeRentalObject',
+    ])
 
     const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
@@ -382,7 +391,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const onecoreLeases = getLeases.data.map(tenfastHelpers.mapToOnecoreLease)
+    const onecoreLeases = getLeases.data.map((lease) =>
+      tenfastHelpers.mapToOnecoreLease(
+        lease,
+        queryParams.data.includeRentalObject
+      )
+    )
 
     // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
     if (!queryParams.data.includeContacts) {
@@ -454,7 +468,11 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/leases/by-rental-object-code/:rentalObjectCode',
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
+      const metadata = generateRouteMetadata(ctx, [
+        'status',
+        'includeContacts',
+        'includeRentalObject',
+      ])
 
       const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
@@ -515,7 +533,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const onecoreLeases = getLeases.data.map(tenfastHelpers.mapToOnecoreLease)
+      const onecoreLeases = getLeases.data.map((lease) =>
+        tenfastHelpers.mapToOnecoreLease(
+          lease,
+          queryParams.data.includeRentalObject
+        )
+      )
 
       // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
       if (!queryParams.data.includeContacts) {
@@ -670,7 +693,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve lease details.
    */
   router.get('(.*)/leases/:leaseId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeContacts',
+      'includeRentalObject',
+    ])
     const queryParams = leasing.v1.GetLeaseOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
@@ -704,7 +730,10 @@ export const routes = (router: KoaRouter) => {
         }
       }
 
-      const onecoreLease = tenfastHelpers.mapToOnecoreLease(getLease.data)
+      const onecoreLease = tenfastHelpers.mapToOnecoreLease(
+        getLease.data,
+        queryParams.data.includeRentalObject
+      )
 
       if (queryParams.data.includeContacts) {
         const contacts = await getContactsByLeaseId(onecoreLease.leaseId)
