@@ -134,7 +134,7 @@ export function KeyActionButtons({
   const getItemLabel = (keyCount: number, cardCount: number): string => {
     const parts = []
     if (keyCount > 0)
-      parts.push(`${keyCount} nyckel${keyCount > 1 ? 'ar' : ''}`)
+      parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
     if (cardCount > 0)
       parts.push(`${cardCount} dropp${cardCount > 1 ? 'ar' : 'e'}`)
     return parts.join(' + ')
