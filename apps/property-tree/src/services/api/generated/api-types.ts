@@ -1235,34 +1235,40 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: ({
-                  id?: string;
-                  blockReasonId?: string;
-                  blockReason?: string;
-                  /** Format: date-time */
-                  fromDate?: string;
-                  /** Format: date-time */
-                  toDate?: string | null;
-                  amount?: number | null;
-                  residence?: {
-                    id?: string;
-                    code?: string;
-                    name?: string | null;
-                    /** @description Residence type (e.g., "3 rum och kök", "Bostad", "Bilplats") */
-                    type?: string | null;
-                    /** @description Full address (e.g., "Karlavagnsgatan 1") */
-                    address?: string | null;
-                    rentalId?: string | null;
-                  };
-                  building?: {
-                    code?: string | null;
-                    name?: string | null;
-                  };
-                  property?: {
-                    code?: string | null;
-                    name?: string | null;
-                  };
+              content?: components["schemas"]["RentalBlockWithRentalObject"][];
+              _meta?: {
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
+              _links?: ({
+                  href?: string;
+                  /** @enum {string} */
+                  rel?: "self" | "first" | "last" | "prev" | "next";
                 })[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/residences/block-reasons": {
+    /**
+     * Get all block reasons
+     * @description Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved block reasons */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BlockReason"][];
             };
           };
         };
@@ -2998,6 +3004,10 @@ export interface components {
         code: string | null;
         name: string | null;
       };
+    };
+    BlockReason: {
+      id: string;
+      caption: string;
     };
     ComponentCategory: {
       /** Format: uuid */

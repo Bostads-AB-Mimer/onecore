@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/SearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
 import { useAllRentalBlocks } from '@/components/hooks/useRentalBlocks'
+import { useBlockReasons } from '@/components/hooks/useBlockReasons'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
 import { Pagination } from '@/components/ui/Pagination'
@@ -49,53 +50,6 @@ const distriktOptions = [
   'Mimer Student',
 ] as const
 
-// Hardcoded block reason options
-const orsakOptions = [
-  'ÄNDRAT INFLYTTNINGSDATUM',
-  'ANNULLERAT OBJEKT',
-  'ANVÄNDS EJ - EJ GODKÄND ....',
-  'ANVÄNDS EJ - SPÄRRAD',
-  'ANVÄNDS EJ STÄNGT PROJ 86371',
-  'ANVÄNDS EJ STÄNGT PROJ 86420',
-  'ANVÄNDS EJ STÄNGT PROJ 86430',
-  'AVHYSNING',
-  'BLOCKAVTAL',
-  'BRANDSKADA',
-  'BRANDSKADA, 86510 VÄLLJÄRNET 3, 12701',
-  'DIREKTFLYTT OMBYGGATION',
-  'EJ BESIKTNINGSBAR',
-  'EJ KLART FÖR UTHYRNING',
-  'EJ VISNINGSBAR - ÅTGÄRDER BESTÄLLDA',
-  'ESKALERAD BESIKTNING',
-  'EVAKUERING, BILPLATS',
-  'EVAKUERING, LGH',
-  'INGÅR I ANNAT OBJEKT',
-  'INVÄNTAR BESIKTNING',
-  'INVÄNTAR SVAR FRÅN KVARTERSVÄRD',
-  'LÄGENHET TILL SAMVERKANSAVTAL',
-  'OMBESIKTNING',
-  'P-PLATS - ALLMÄN HANDIKAPPS',
-  'P-PLATS - BESÖKSPARKERING',
-  'P-PLATS - CENTRUMPARKERING',
-  'PROJ 86370 EVAK.LGH KOLAREN 1',
-  'PROJ 86380 EVAK.LGH BERGATROLLET 1',
-  'PROJ 86450 EVAK.LGH STENRIKET 5',
-  'REPARATION, RENOVERAS EFTER INFLYTT, LGH',
-  'REPARATION, RENOVERAS INNAN INFLYTT, LGH',
-  'ROTRENOVERING -DISTRIKT',
-  'ROTRENOVERING VAKANTA LGH',
-  'SÅLD',
-  'SERVITUT',
-  'SKA SÄLJAS',
-  'SKA STYCKERENOVERAS - STYCKRENOVERING',
-  'SKADEDJUR',
-  'SMITNING',
-  'UPPDATERA OBJEKT',
-  'VATTENSKADA',
-  'VLU TILL FLU',
-  'VLU TILL FLU KONTROLL EKONOMI',
-] as const
-
 const formatISODate = (isoDateString: string | null | undefined) => {
   if (!isoDateString) return '-'
   const date = new Date(isoDateString)
@@ -106,6 +60,7 @@ const PAGE_SIZE = 50
 
 const RentalBlocksPage = () => {
   const [isExporting, setIsExporting] = useState(false)
+  const { data: blockReasons } = useBlockReasons()
 
   const { page, setPage, searchParams, updateUrlParams } = useUrlPagination({
     defaultLimit: PAGE_SIZE,
@@ -404,7 +359,12 @@ const RentalBlocksPage = () => {
               />
 
               <FilterDropdown
-                options={orsakOptions.map((o) => ({ label: o, value: o }))}
+                options={
+                  blockReasons?.map((br) => ({
+                    label: br.caption,
+                    value: br.caption,
+                  })) || []
+                }
                 selectedValue={selectedOrsak || null}
                 onSelectionChange={setSelectedOrsak}
                 placeholder="Orsak..."

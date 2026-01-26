@@ -90,6 +90,17 @@ export const residenceService = {
     return data
   },
 
+  async getBlockReasons(): Promise<{ id: string; caption: string }[]> {
+    const response = await fetch(`${CORE_API_URL}/residences/block-reasons`, {
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      throw new Error(`Failed to fetch block reasons: ${response.statusText}`)
+    }
+    const data = await response.json()
+    return data.content || []
+  },
+
   // Note: Using raw fetch instead of GET wrapper because this endpoint
   // returns a binary Excel file (Blob), not JSON
   async exportRentalBlocksToExcel(params: {

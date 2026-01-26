@@ -1168,3 +1168,15 @@ export const getAllRentalBlocksForExport = async (
     throw err
   }
 }
+
+export const getAllBlockReasons = async () => {
+  try {
+    const blockReasons = await prisma.blockReason.findMany({
+      orderBy: { caption: 'asc' },
+    })
+    return blockReasons.map(trimStrings)
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getAllBlockReasons')
+    throw err
+  }
+}
