@@ -182,6 +182,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     source: 'next',
     invoiceRows: [],
     invoiceFileUrl: invoiceData.node.invoiceFile?.url,
+    accountCode: invoiceData.node.account?.code,
   }
 
   if (invoice.paidAmount === invoice.amount) {
@@ -320,6 +321,9 @@ const invoiceNodeFragment = `
   period {
     fromDate
     toDate
+  }
+  account {
+    code
   }
   slTransactionType {
     name
