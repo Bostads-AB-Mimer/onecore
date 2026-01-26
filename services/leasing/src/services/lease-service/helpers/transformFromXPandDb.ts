@@ -59,3 +59,4 @@ const toLease = (
 }
 
 export default { toLease }
+export { calculateStatus }
