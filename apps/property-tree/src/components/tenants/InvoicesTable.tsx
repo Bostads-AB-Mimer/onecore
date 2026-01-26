@@ -162,6 +162,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return <span>{formatDate(date)}</span>
   }
 
+  // TODO(AL): Move to backend
   // Calculate payment date from payment events (when invoice was fully paid)
   const calculatePaymentDate = (
     events: InvoicePaymentEvent[] | undefined,
