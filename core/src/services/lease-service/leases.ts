@@ -14,7 +14,6 @@ import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 export const routes = (router: KoaRouter) => {
-
   /**
    * @swagger
    * /leases/search:
@@ -402,7 +401,13 @@ export const routes = (router: KoaRouter) => {
    *           default: false
    *         description: Whether to include upcoming leases in the response
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: includeRentalObject
+   *         schema:
+   *           type: boolean
+   *         required: false
+   *         description: Whether to include rental object information in the response.
+   *       - in: query
+   *         name: status
    *         schema:
    *           type: boolean
    *           default: false
@@ -446,7 +451,6 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
-=======
 
   /**
    * @swagger
@@ -870,4 +874,3 @@ export const routes = (router: KoaRouter) => {
     }
   )
 }
-
