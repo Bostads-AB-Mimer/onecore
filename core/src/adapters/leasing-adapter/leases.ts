@@ -7,15 +7,16 @@ import config from '../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
-type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
-type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
+type GetLeaseOptions = leasing.v1.GetLeaseOptions
+type GetLeasesOptions = leasing.v1.GetLeasesOptions
 
 export const getLease = async (
   leaseId: string,
   options: GetLeaseOptions
 ): Promise<Lease> => {
   const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
+    includeContacts: (options.includeContacts ?? false).toString(),
+    includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
   const leaseResponse = await axios(
@@ -30,7 +31,8 @@ export const getLeasesByContactCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
+    includeContacts: (options.includeContacts ?? false).toString(),
+    includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
   if (options.status) {
@@ -49,7 +51,8 @@ export const getLeasesByRentalObjectCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
+    includeContacts: (options.includeContacts ?? false).toString(),
+    includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
   if (options.status) {
