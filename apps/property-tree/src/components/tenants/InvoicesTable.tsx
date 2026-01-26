@@ -59,9 +59,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     invoice: Invoice
   ): { date: Date | null; isDeferment: boolean; originalDate: Date | null } => {
     const originalDate = invoice.expirationDate
-      ? typeof invoice.expirationDate === 'string'
-        ? new Date(invoice.expirationDate)
-        : invoice.expirationDate
+      ? new Date(invoice.expirationDate)
       : null
 
     const defermentDate = invoice.defermentDate
