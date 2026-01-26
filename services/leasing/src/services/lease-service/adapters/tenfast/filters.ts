@@ -3,7 +3,13 @@ import { match } from 'ts-pattern'
 import { TenfastLease } from './schemas'
 
 export type GetLeasesFilters = {
-  status: ('current' | 'upcoming' | 'about-to-end' | 'ended')[]
+  status: (
+    | 'current'
+    | 'upcoming'
+    | 'about-to-end'
+    | 'ended'
+    | 'preliminary-terminated'
+  )[]
 }
 
 export function filterByStatus(
@@ -21,6 +27,7 @@ export function filterByStatus(
             .with('upcoming', () => isUpcomingLease(l, now))
             .with('about-to-end', () => isAboutToEndLease(l, now))
             .with('ended', () => isEndedLease(l, now))
+            .with('preliminary-terminated', () => isPreliminaryTerminated(l))
             .exhaustive()
         )
       ),
@@ -41,9 +48,13 @@ function isUpcomingLease(l: TenfastLease, now: Date) {
 }
 
 function isAboutToEndLease(l: TenfastLease, now: Date) {
-  return l.endDate && l.endDate >= now && l.cancellation.cancelled
+  return l.endDate && l.endDate >= now && !!l.cancellation.handledAt
 }
 
 function isEndedLease(l: TenfastLease, now: Date) {
   return l.endDate && l.endDate < now
+}
+
+export const isPreliminaryTerminated = (lease: TenfastLease): boolean => {
+  return !!lease.simplesignTermination?.sentAt && !lease.cancellation.handledAt
 }
