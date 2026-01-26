@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns'
 import { FileText } from 'lucide-react'
-import { match } from 'ts-pattern'
+import { match, P } from 'ts-pattern'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 
 import { Badge } from '@/components/ui/v3/Badge'
@@ -74,19 +74,24 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   }
 
   const getStatusBadge = (invoice: Invoice): JSX.Element => {
-    return match(invoice.paymentStatus)
-      .with(PaymentStatus.Paid, () => <Badge variant="success">Betald</Badge>)
-      .with(PaymentStatus.PartlyPaid, () => (
+    return match(invoice)
+      .with({ credit: { originalInvoiceId: P.string } }, () => (
+        <Badge variant="success">Kredit</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Paid }, () => (
+        <Badge variant="success">Betald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.PartlyPaid }, () => (
         <Badge variant="secondary">Delvis betald</Badge>
       ))
-      .with(PaymentStatus.Unpaid, () => (
+      .with({ paymentStatus: PaymentStatus.Unpaid }, () => (
         <Badge variant="secondary">Obetald</Badge>
       ))
-      .with(PaymentStatus.Overdue, () => (
+      .with({ paymentStatus: PaymentStatus.Overdue }, () => (
         <Badge variant="destructive">Förfallen</Badge>
       ))
-      .otherwise((status) => (
-        <Badge variant="secondary">Okänd betalstatus: {status}</Badge>
+      .otherwise((v) => (
+        <Badge variant="secondary">Okänd betalstatus: {v.paymentStatus}</Badge>
       ))
   }
 
@@ -104,6 +109,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return row?.rowType === 3
   }
 
+  // TODO(AL): Move to backend
   // Calculate subtotals for rows under each header
   const calculateSubtotals = (rows: any[]) => {
     const subtotals: Record<
@@ -424,6 +430,12 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
         {invoice.description && (
           <div className="mb-3 text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Text:</span> {invoice.description}
+          </div>
+        )}
+        {invoice.credit && (
+          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Krediterar faktura:</span>{' '}
+            {invoice.credit.originalInvoiceId}
           </div>
         )}
         {invoice.invoiceFileUrl && (

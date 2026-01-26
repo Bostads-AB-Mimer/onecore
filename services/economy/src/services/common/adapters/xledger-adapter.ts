@@ -139,6 +139,17 @@ const getDefermentDate = (
   return undefined
 }
 
+function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
+  return match(invoiceNode)
+    .with({ paymentReference: P.string }, (data) => ({
+      originalInvoiceId: data.paymentReference,
+    }))
+    .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
+      originalInvoiceId: v.invoiceNumber.replace('K', ''),
+    }))
+    .otherwise(() => null)
+}
+
 const transformToInvoice = (invoiceData: any): Invoice => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
@@ -172,18 +183,6 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     }
   }
 
-  function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
-    return match(invoiceNode)
-      .with({ paymentReference: P.string }, (data) => ({
-        originalInvoiceId: data.paymentReference,
-      }))
-      .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
-        originalInvoiceId: v.invoiceNumber.replace('K', ''),
-      }))
-      .otherwise(() => null)
-  }
-
-  console.log('invoiceData.node', invoiceData.node)
   const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
     leaseId: 'missing',
