@@ -217,7 +217,7 @@ export function LoanCard({
                 <AlertCircle className="h-3.5 w-3.5 text-yellow-600 flex-shrink-0" />
                 <span className="text-xs text-yellow-800 dark:text-yellow-200">
                   <span className="font-semibold">Kvittens saknas.</span> Lånet
-                  har skapats men inget kvittens har laddats upp ännu.
+                  har skapats men ingen kvittens har laddats upp ännu.
                 </span>
               </div>
             ) : (

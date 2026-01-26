@@ -73,8 +73,8 @@ export function ReceiptDialog({
 
   const descriptionText =
     receiptData?.receiptType === 'LOAN'
-      ? 'Ett utlåningskvittens har skapats. Skriv ut och låt hyresgästen signera.'
-      : 'Ett återlämningskvittens har skapats. Du kan skriva ut det.'
+      ? 'En utlåningskvittens har skapats. Skriv ut och låt hyresgästen signera.'
+      : 'En återlämningskvittens har skapats. Du kan skriva ut den.'
 
   // Don't show dialog for return receipts - they're auto-generated for records only
   if (receiptData?.receiptType === 'RETURN') {
