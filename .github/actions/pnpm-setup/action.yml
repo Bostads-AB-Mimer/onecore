@@ -36,7 +36,7 @@ runs:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 10.16.1
+        version: 10.28.0
 
     - uses: actions/setup-node@v4
       with:
@@ -54,9 +54,9 @@ runs:
           ~/.local/share/pnpm/store
           libs/**/dist
         key: ${{ runner.os }}-node-20-pnpm-${{ hashFiles(
-            '**/pnpm-lock.yaml',
-            'libs/**/src/**',
-            '**/tsconfig*.json')
+          '**/pnpm-lock.yaml',
+          'libs/**/src/**',
+          '**/tsconfig*.json')
           }}
         restore-keys: |
           ${{ runner.os }}-node-20-pnpm-
@@ -77,4 +77,3 @@ runs:
       if: steps.pnpm-store.outputs.cache-hit != 'true'
       shell: bash
       run: pnpm run build:libs
-
