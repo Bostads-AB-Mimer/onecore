@@ -172,6 +172,18 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     }
   }
 
+  function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
+    return match(invoiceNode)
+      .with({ paymentReference: P.string }, (data) => ({
+        originalInvoiceId: data.paymentReference,
+      }))
+      .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
+        originalInvoiceId: v.invoiceNumber.replace('K', ''),
+      }))
+      .otherwise(() => null)
+  }
+
+  console.log('invoiceData.node', invoiceData.node)
   const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
     leaseId: 'missing',
@@ -195,6 +207,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     source: 'next',
     invoiceRows: [],
     invoiceFileUrl: invoiceData.node.invoiceFile?.url,
+    credit: getInvoiceCredit(invoiceData.node),
   }
 
   function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
@@ -343,6 +356,7 @@ const invoiceNodeFragment = `
   text
   matchId
   headerTransactionSourceDbId
+  paymentReference
   subledger {
     code
     description
@@ -513,6 +527,12 @@ export const getInvoicesByContactCode = async (
         edges {
           node {
             ${invoiceNodeFragment}
+              transactionHeader {
+                postedDate
+                transactionSource {
+                  code
+                }
+              }
           }
         }
       }

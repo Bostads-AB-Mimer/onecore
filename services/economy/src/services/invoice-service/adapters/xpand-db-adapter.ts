@@ -17,6 +17,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
+import { match, P } from 'ts-pattern'
 
 type RentalSpecificRule = {
   costCode: string
@@ -443,6 +444,14 @@ export const getContacts = async (
   return contacts
 }
 
+function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
+  return match(invoiceNode)
+    .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
+      originalInvoiceId: v.invoiceNumber.replace('K', ''),
+    }))
+    .otherwise(() => null)
+}
+
 function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
     (sum, value) => sum + value,
@@ -465,6 +474,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: getInvoiceCredit(row),
   }
 }
 
