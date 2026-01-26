@@ -265,6 +265,11 @@ export const RentalBlockWithRentalObjectSchema = z.object({
   }),
 })
 
+export const BlockReasonSchema = z.object({
+  id: z.string(),
+  caption: z.string(),
+})
+
 export const getAllRentalBlocksQueryParamsSchema = z.object({
   active: booleanStringSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -319,6 +324,7 @@ export type RentalBlock = z.infer<typeof RentalBlockSchema>
 export type RentalBlockWithRentalObject = z.infer<
   typeof RentalBlockWithRentalObjectSchema
 >
+export type BlockReason = z.infer<typeof BlockReasonSchema>
 export type GetRentalBlocksByRentalIdResponse = z.infer<
   typeof GetRentalBlocksByRentalIdResponseSchema
 >

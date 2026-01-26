@@ -18,6 +18,7 @@ import {
   getAllRentalBlocks,
   searchRentalBlocks,
   getAllRentalBlocksForExport,
+  getAllBlockReasons,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -857,63 +858,28 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithRentalObject'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
    *                     type: object
    *                     properties:
-   *                       id:
+   *                       href:
    *                         type: string
-   *                       blockReasonId:
+   *                       rel:
    *                         type: string
-   *                       blockReason:
-   *                         type: string
-   *                       fromDate:
-   *                         type: string
-   *                         format: date-time
-   *                       toDate:
-   *                         type: string
-   *                         format: date-time
-   *                         nullable: true
-   *                       amount:
-   *                         type: number
-   *                         nullable: true
-   *                       residence:
-   *                         type: object
-   *                         properties:
-   *                           id:
-   *                             type: string
-   *                           code:
-   *                             type: string
-   *                           name:
-   *                             type: string
-   *                             nullable: true
-   *                           type:
-   *                             type: string
-   *                             nullable: true
-   *                             description: Residence type (e.g., "3 rum och kök", "Bostad", "Bilplats")
-   *                           address:
-   *                             type: string
-   *                             nullable: true
-   *                             description: Full address (e.g., "Karlavagnsgatan 1")
-   *                           rentalId:
-   *                             type: string
-   *                             nullable: true
-   *                       building:
-   *                         type: object
-   *                         properties:
-   *                           code:
-   *                             type: string
-   *                             nullable: true
-   *                           name:
-   *                             type: string
-   *                             nullable: true
-   *                       property:
-   *                         type: object
-   *                         properties:
-   *                           code:
-   *                             type: string
-   *                             nullable: true
-   *                           name:
-   *                             type: string
-   *                             nullable: true
+   *                         enum: [self, first, last, prev, next]
    *       500:
    *         description: Internal server error
    */
@@ -958,6 +924,51 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /residences/block-reasons:
+   *   get:
+   *     summary: Get all block reasons
+   *     description: Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+   *     tags:
+   *       - Residences
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved block reasons
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/BlockReason'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/block-reasons', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const blockReasons = await getAllBlockReasons()
+
+      ctx.status = 200
+      ctx.body = {
+        content: blockReasons.map((br: { id: string; caption: string }) => ({
+          id: br.id,
+          caption: br.caption,
+        })),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error(err, 'Error fetching block reasons')
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
 
   /**
    * @swagger

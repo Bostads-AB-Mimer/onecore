@@ -1,9 +1,4 @@
 import { z } from 'zod'
-import {
-  PaginatedResponse,
-  PaginationMeta as UtilityPaginationMeta,
-  PaginationLinks,
-} from '@onecore/utilities'
 
 // Xpand ID validation - variable length IDs (max 15 chars) from legacy system
 const xpandIdSchema = z.string().max(15)
@@ -610,26 +605,6 @@ export const GetAllRentalBlocksQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
-// Pagination schemas for HATEOAS-style responses (Zod validation)
-// Types are imported from @onecore/utilities
-export const PaginationMetaSchema = z.object({
-  totalRecords: z.number(),
-  page: z.number(),
-  limit: z.number(),
-  count: z.number(),
-}) satisfies z.ZodType<UtilityPaginationMeta>
-
-export const PaginationLinkSchema = z.object({
-  href: z.string(),
-  rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
-}) satisfies z.ZodType<PaginationLinks>
-
-export const PaginatedRentalBlocksResponseSchema = z.object({
-  content: z.array(RentalBlockWithRentalObjectSchema),
-  _meta: PaginationMetaSchema,
-  _links: z.array(PaginationLinkSchema),
-})
-
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
@@ -650,11 +625,6 @@ export type RentalBlock = z.infer<typeof RentalBlockSchema>
 export type RentalBlockWithRentalObject = z.infer<
   typeof RentalBlockWithRentalObjectSchema
 >
-// Re-export pagination types from utilities
-export type PaginationMeta = UtilityPaginationMeta
-export type PaginationLink = PaginationLinks
-export type PaginatedRentalBlocksResponse =
-  PaginatedResponse<RentalBlockWithRentalObject>
 
 // ==================== COMPONENTS NEW ====================
 

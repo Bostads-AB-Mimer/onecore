@@ -7,6 +7,9 @@ import { components, paths } from './generated/api-types'
 
 import config from '../../common/config'
 
+type RentalBlockWithRentalObject =
+  components['schemas']['RentalBlockWithRentalObject']
+
 const client = () =>
   createClient<paths>({
     baseUrl: config.propertyBaseService.url,
@@ -765,35 +768,6 @@ export async function getRentalBlocksByRentalId(
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getRentalBlocksByRentalId')
     return { ok: false, err: 'unknown' }
-  }
-}
-
-type BlockRentalObjectInfo = {
-  code: string | null
-  name: string | null
-  category: 'Bostad' | 'Bilplats'
-  address: string | null
-  rentalId: string | null
-  monthlyRent: number
-  // Residence type (e.g., "3 rum och kök") - only available for Bostad, null for Bilplats
-  type: string | null
-}
-
-type RentalBlockWithRentalObject = {
-  id: string
-  blockReasonId: string | null
-  blockReason: string | null
-  fromDate: string
-  toDate: string | null
-  amount: number | null
-  rentalObject: BlockRentalObjectInfo
-  building: {
-    code: string | null
-    name: string | null
-  }
-  property: {
-    code: string | null
-    name: string | null
   }
 }
 
