@@ -2,7 +2,8 @@ enum LeaseStatus {
   Current = 0, // Gällande
   Upcoming = 1, // Kommande
   AboutToEnd = 2, // Uppsagt, kommer att upphöra
-  Ended = 3, //Upphört
+  Ended = 3, // Upphört
+  PreliminaryTerminated = 4, // Preliminärt uppsagt
 }
 
 enum ParkingSpaceType {
