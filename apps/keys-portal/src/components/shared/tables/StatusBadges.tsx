@@ -384,7 +384,7 @@ export function ItemDisposedBadge({
       <Badge variant="destructive">{isCard ? 'Inaktiv' : 'Kasserad'}</Badge>
     )
   }
-  return <Badge variant="outline">Aktiv</Badge>
+  return <span className="text-muted-foreground">-</span>
 }
 
 // ============================================
