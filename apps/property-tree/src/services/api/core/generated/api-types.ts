@@ -195,6 +195,66 @@ export interface paths {
   };
   "security": {
   };
+  "/leases/search": {
+    /**
+     * Search and filter leases
+     * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string;
+          /** @description Object type codes (balgh, babps, balok, bahyr) */
+          objectType?: string[];
+          /** @description Contract status filter */
+          status?: ("current" | "upcoming" | "terminated")[];
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string;
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string;
+          /** @description Property/estate codes */
+          propertyCodes?: string[];
+          /** @description Building codes */
+          buildingCodes?: string[];
+          /** @description Area codes (Område) */
+          areaCodes?: string[];
+          /** @description District names */
+          districtNames?: string[];
+          /** @description Building manager codes (Kvartersvärd) */
+          buildingManagerCodes?: string[];
+          /** @description Page number */
+          page?: number;
+          /** @description Items per page */
+          limit?: number;
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "tenantName";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved lease search results with pagination */
+        200: {
+          content: {
+            "application/json": {
+              content?: Record<string, never>[];
+              _meta?: Record<string, never>;
+              _links?: unknown[];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id

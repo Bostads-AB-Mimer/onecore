@@ -6,7 +6,9 @@ import {
   getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
+import { searchLeases } from '../adapters/xpand/lease-search-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { leasing } from '@onecore/types'
 import z from 'zod'
 
 /**
@@ -16,6 +18,242 @@ import z from 'zod'
  *     description: Endpoints related to lease operations
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /leases/search:
+   *   get:
+   *     summary: Search and filter leases
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes (balgh, babps, balok)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
+   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum last debit date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum last debit date (YYYY-MM-DD)
+   *       - in: query
+   *         name: propertyCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property/estate codes
+   *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: buildingManagerCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building manager codes (Kvartersvärd)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: desc
+   *         description: Sort direction
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       leaseId:
+   *                         type: string
+   *                       objectTypeCode:
+   *                         type: string
+   *                       leaseType:
+   *                         type: string
+   *                       contacts:
+   *                         type: array
+   *                         items:
+   *                           type: object
+   *                           properties:
+   *                             name:
+   *                               type: string
+   *                             contactCode:
+   *                               type: string
+   *                             email:
+   *                               type: string
+   *                               nullable: true
+   *                             phone:
+   *                               type: string
+   *                               nullable: true
+   *                       address:
+   *                         type: string
+   *                         nullable: true
+   *                       startDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       lastDebitDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       status:
+   *                         type: integer
+   *                         enum: [0, 1, 2, 3]
+   *                         description: "LeaseStatus: 0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended"
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'objectType',
+      'status',
+      'startDateFrom',
+      'startDateTo',
+      'endDateFrom',
+      'endDateTo',
+      'propertyCodes',
+      'buildingCodes',
+      'areaCodes',
+      'districtNames',
+      'buildingManagerCodes',
+      'page',
+      'limit',
+      'sortBy',
+      'sortOrder',
+    ])
+
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await searchLeases(queryParams.data, ctx)
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          error: 'Unknown error occurred during lease search',
+          ...metadata,
+        }
+      }
+    }
+  })
+
   /**
    * @swagger
    * /leases/for/nationalRegistrationNumber/{pnr}:
