@@ -65,6 +65,8 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
       : null
 
     const defermentDate = invoice.defermentDate
+      ? new Date(invoice.defermentDate)
+      : null
 
     if (defermentDate && originalDate && defermentDate > originalDate) {
       return { date: defermentDate, isDeferment: true, originalDate }
