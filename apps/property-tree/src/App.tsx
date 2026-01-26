@@ -1,12 +1,8 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CommandPaletteProvider } from './components/hooks/useCommandPalette'
 import { AuthCallback } from './auth/AuthCallback'
+import { NuqsAdapter } from 'nuqs/adapters/react-router/v6'
 
 import { CompanyView } from './components/views/CompanyView'
 import SearchView from './components/views/SearchView'
@@ -40,54 +36,62 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CommandPaletteProvider>
-        <Router>
-          <Routes>
-            <Route path="/callback" element={<AuthCallback />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<DashboardView />} />
-              {/* Legacy route ----------------------------*/}
-              <Route path="sv" element={<DashboardView />} />
-              {/*------------------------------------------*/}
-              <Route path="companies/:companyId" element={<CompanyView />} />
-              <Route path="properties" element={<SearchView />} />
-              <Route path="properties/:propertyId" element={<PropertyView />} />
-              <Route path="buildings/:buildingId" element={<BuildingView />} />
-              <Route path="components" element={<ComponentLibraryView />} />
+        <NuqsAdapter>
+          <Router>
+            <Routes>
+              <Route path="/callback" element={<AuthCallback />} />
               <Route
-                path="staircases/:buildingId/:staircaseId"
-                element={<StaircaseView />}
-              />
-              <Route
-                path="residences/:residenceId"
-                element={<ResidenceView />}
-              />
-              <Route
-                path="residences/:residenceId/rooms/:roomId"
-                element={<RoomView />}
-              />
-              <Route
-                path="parking-spaces/:rentalId"
-                element={<ParkingSpaceView />}
-              />
-              <Route
-                path="maintenance-units/:code"
-                element={<MaintenanceUnitView />}
-              />
-              <Route path="facilities/:rentalId" element={<FacilityView />} />
-              <Route path="tenants" element={<AllTenantsPage />} />
-              <Route path="tenants/:contactCode" element={<TenantView />} />
-              <Route path="rental-blocks" element={<RentalBlocksPage />} />
-              <Route path="leases" element={<LeasesPage />} />
-            </Route>
-          </Routes>
-        </Router>
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<DashboardView />} />
+                {/* Legacy route ----------------------------*/}
+                <Route path="sv" element={<DashboardView />} />
+                {/*------------------------------------------*/}
+                <Route path="companies/:companyId" element={<CompanyView />} />
+                <Route path="properties" element={<SearchView />} />
+                <Route
+                  path="properties/:propertyId"
+                  element={<PropertyView />}
+                />
+                <Route
+                  path="buildings/:buildingId"
+                  element={<BuildingView />}
+                />
+                <Route path="components" element={<ComponentLibraryView />} />
+                <Route
+                  path="staircases/:buildingId/:staircaseId"
+                  element={<StaircaseView />}
+                />
+                <Route
+                  path="residences/:residenceId"
+                  element={<ResidenceView />}
+                />
+                <Route
+                  path="residences/:residenceId/rooms/:roomId"
+                  element={<RoomView />}
+                />
+                <Route
+                  path="parking-spaces/:rentalId"
+                  element={<ParkingSpaceView />}
+                />
+                <Route
+                  path="maintenance-units/:code"
+                  element={<MaintenanceUnitView />}
+                />
+                <Route path="facilities/:rentalId" element={<FacilityView />} />
+                <Route path="tenants" element={<AllTenantsPage />} />
+                <Route path="tenants/:contactCode" element={<TenantView />} />
+                <Route path="rental-blocks" element={<RentalBlocksPage />} />
+                <Route path="leases" element={<LeasesPage />} />
+              </Route>
+            </Routes>
+          </Router>
+        </NuqsAdapter>
       </CommandPaletteProvider>
     </QueryClientProvider>
   )

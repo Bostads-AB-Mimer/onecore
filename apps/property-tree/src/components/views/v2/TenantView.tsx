@@ -98,7 +98,7 @@ function TenantTabsSection({
   }
 
   return (
-    <TenantDetailTabs defaultValue="contracts">
+    <TenantDetailTabs>
       <TenantDetailTabsContent
         leases={leases ?? []}
         rentalProperties={rentalProperties ?? {}}

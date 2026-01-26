@@ -23,9 +23,15 @@ const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   maximumFractionDigits: 2,
 })
 
-export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
+type Props = {
+  invoices: Invoice[]
+  onInvoiceRowClick: (invoiceId: string) => void
+  expandedInvoiceId: string | null
+}
+
+export const InvoicesTable = (props: Props) => {
   // Sort invoices by invoice date, latest first
-  const sortedInvoices = [...invoices].sort((a, b) => {
+  const sortedInvoices = [...props.invoices].sort((a, b) => {
     const dateA =
       typeof a.invoiceDate === 'string'
         ? parseISO(a.invoiceDate)
@@ -560,6 +566,10 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   return (
     <CollapsibleTable
       data={sortedInvoices}
+      expandedKeys={props.expandedInvoiceId ? [props.expandedInvoiceId] : []}
+      onExpandedChange={(expandedKeys) =>
+        props.onInvoiceRowClick(expandedKeys[0] ?? null)
+      }
       columns={invoiceColumns}
       keyExtractor={(invoice) => invoice.invoiceId}
       expandedContentRenderer={renderExpandedInvoiceContent}
