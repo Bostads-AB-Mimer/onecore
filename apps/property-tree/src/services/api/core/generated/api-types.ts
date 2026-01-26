@@ -3371,7 +3371,7 @@ export interface components {
         size: number;
         type: string;
         address?: {
-          street?: string;
+          street: string;
           number: string;
           postalCode: string;
           city: string;
@@ -3401,7 +3401,12 @@ export interface components {
           rentEndDate?: string;
         };
       };
-      address?: definitions["Lease"]["rentalProperty"]["address"];
+      address?: {
+        street: string;
+        number: string;
+        postalCode: string;
+        city: string;
+      };
       noticeGivenBy?: string;
       /** Format: date-time */
       noticeDate?: string;
@@ -3430,7 +3435,12 @@ export interface components {
           nationalRegistrationNumber: string;
           /** Format: date-time */
           birthDate: string;
-          address?: definitions["Lease"]["rentalProperty"]["address"];
+          address?: {
+            street: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
           phoneNumbers?: {
               phoneNumber: string;
               type: string;
