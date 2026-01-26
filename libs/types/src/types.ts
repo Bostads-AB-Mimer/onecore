@@ -70,6 +70,7 @@ interface Lease {
   tenantContactIds: string[] | undefined
   tenants: Contact[] | undefined
   rentalPropertyId: string
+  rentalObject?: RentalObject
   type: string
   noticeGivenBy: string | undefined
   noticeDate: Date | undefined
