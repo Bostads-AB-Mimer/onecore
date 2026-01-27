@@ -3,6 +3,7 @@ import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
   Invoice,
   InvoicePaymentEvent,
+  RentInvoiceRow,
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
@@ -125,11 +126,54 @@ export async function submitMiscellaneousInvoice(
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-
     return { ok: false, err: 'unknown' }
   } catch (err: unknown) {
     logger.error(err, 'Error submitting miscellaneous invoice')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getInvoices(
+  from?: Date,
+  to?: Date,
+  remainingAmountGreaterThan?: number
+): Promise<AdapterResult<Invoice[], 'unknown'>> {
+  try {
+    const response = await axios.get(`${config.economyService.url}/invoices`, {
+      params: { from, to, remainingAmountGreaterThan },
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+    logger.error(response.data, 'economy-adapter.getInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getRentInvoiceRows(
+  invoiceIds: string[]
+): Promise<AdapterResult<RentInvoiceRow[], 'unknown'>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/rent-invoice-rows/batch`,
+      {
+        invoiceIds,
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getRentInvoiceRows')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getRentInvoiceRows')
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 

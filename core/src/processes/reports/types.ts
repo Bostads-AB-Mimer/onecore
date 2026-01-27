@@ -1,9 +1,5 @@
 import { Invoice } from '@onecore/types'
 
-export type InvoiceWithMatchId = Invoice & {
-  matchId: number
-}
-
 export type InvoicePaymentSummary = Invoice & {
   fractionPaid: number
   hemforTotal: number

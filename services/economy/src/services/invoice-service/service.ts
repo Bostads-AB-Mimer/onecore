@@ -36,8 +36,9 @@ import {
   transformContact,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
-import { Contact } from '@onecore/types'
+import { Contact, RentInvoiceRow } from '@onecore/types'
 import { logger } from '@onecore/utilities'
+import { getInvoiceRows } from '../common/adapters/xpand-db-adapter'
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -808,4 +809,18 @@ const verifyAccountTotals = (
   }
 
   return true
+}
+
+export const fetchInvoiceRows = async (invoiceIds: string[]) => {
+  const chunkSize = 1000
+  const invoiceRows: RentInvoiceRow[] = []
+
+  for (let start = 0; start < invoiceIds.length; start += chunkSize) {
+    const rowsInChunk = await getInvoiceRows(
+      invoiceIds.slice(start, start + chunkSize)
+    )
+    invoiceRows.push(...rowsInChunk)
+  }
+
+  return invoiceRows
 }

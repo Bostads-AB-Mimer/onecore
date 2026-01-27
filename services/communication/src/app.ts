@@ -1,5 +1,5 @@
 import Koa from 'koa'
-import bodyParser from 'koa-bodyparser'
+import koaBody from 'koa-body'
 import cors from '@koa/cors'
 
 import api from './api'
@@ -19,7 +19,12 @@ app.use(loggerMiddlewares.post)
 
 app.use(errorHandler())
 
-app.use(bodyParser({ jsonLimit: '50mb' }))
+app.use(
+  koaBody({
+    multipart: true,
+    jsonLimit: '50mb',
+  })
+)
 app.use(api.routes())
 
 export default app
