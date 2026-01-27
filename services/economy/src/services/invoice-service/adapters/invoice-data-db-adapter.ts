@@ -28,7 +28,7 @@ export const closeDb = () => {
   db.destroy()
 }
 
-export const createBatch = async (batchTotal: number) => {
+export const createBatch = async (batchTotal: number = 0) => {
   const batchResult = await db('invoice_batch')
     .insert({ BatchTotalAmount: batchTotal })
     .returning('Id')
