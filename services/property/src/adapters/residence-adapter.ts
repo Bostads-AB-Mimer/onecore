@@ -566,6 +566,7 @@ function transformRentalBlock(rb: {
       district: string | null
     } | null
     residence: {
+      id: string
       residenceType: {
         code: string | null
         name: string | null
@@ -619,6 +620,7 @@ function transformRentalBlock(rb: {
       category,
       address: ps?.name || null,
       rentalId: ps?.rentalId || null,
+      residenceId: ps?.residence?.id || null,
       monthlyRent,
       type: residenceType?.name || null,
     },
@@ -963,6 +965,7 @@ export const getAllRentalBlocks = async (options?: {
               // Join to Residence -> ResidenceType for residence type info
               residence: {
                 select: {
+                  id: true,
                   residenceType: {
                     select: {
                       code: true,
@@ -1214,6 +1217,7 @@ export const searchRentalBlocks = async (
               },
               residence: {
                 select: {
+                  id: true,
                   residenceType: {
                     select: {
                       code: true,

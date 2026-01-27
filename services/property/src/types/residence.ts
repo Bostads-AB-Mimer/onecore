@@ -252,6 +252,7 @@ export const RentalBlockWithRentalObjectSchema = z.object({
     category: z.enum(['Bostad', 'Bilplats', 'Lokal', 'Förråd', 'Övrigt']),
     address: z.string().nullable(),
     rentalId: z.string().nullable(),
+    residenceId: z.string().nullable(),
     monthlyRent: z.number(),
     type: z.string().nullable(),
   }),

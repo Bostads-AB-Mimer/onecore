@@ -2995,6 +2995,7 @@ export interface components {
         category: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
         address: string | null;
         rentalId: string | null;
+        residenceId: string | null;
         monthlyRent: number;
         type: string | null;
       };

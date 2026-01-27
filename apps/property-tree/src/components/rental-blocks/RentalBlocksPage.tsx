@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, Download } from 'lucide-react'
 import {
   Card,
@@ -8,7 +9,6 @@ import {
 } from '@/components/ui/v2/Card'
 import { Input } from '@/components/ui/Input'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
-import { Badge } from '@/components/ui/v3/Badge'
 import { Button } from '@/components/ui/Button'
 import {
   Select,
@@ -409,27 +409,55 @@ const RentalBlocksPage = () => {
                 {
                   key: 'hyresobjekt',
                   label: 'Hyresobjekt',
-                  render: (block: RentalBlockWithRentalObject) => (
-                    <span className="font-medium">
-                      {block.rentalObject?.rentalId ||
-                        block.rentalObject?.code ||
-                        '-'}
-                    </span>
-                  ),
+                  className: 'px-2',
+                  render: (block: RentalBlockWithRentalObject) => {
+                    const displayText =
+                      block.rentalObject?.rentalId ||
+                      block.rentalObject?.code ||
+                      '-'
+                    const category = block.rentalObject?.category
+                    const rentalId = block.rentalObject?.rentalId
+                    const residenceId = block.rentalObject?.residenceId
+
+                    // Determine link based on category
+                    let href: string | null = null
+                    if (category === 'Bostad' && residenceId) {
+                      href = `/residences/${residenceId}`
+                    } else if (category === 'Bilplats' && rentalId) {
+                      href = `/parking-spaces/${rentalId}`
+                    } else if (
+                      (category === 'Lokal' || category === 'Förråd') &&
+                      rentalId
+                    ) {
+                      href = `/facilities/${rentalId}`
+                    }
+
+                    if (href) {
+                      return (
+                        <Link
+                          to={href}
+                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {displayText}
+                        </Link>
+                      )
+                    }
+
+                    return <span className="font-medium">{displayText}</span>
+                  },
                 },
                 {
                   key: 'kategori',
                   label: 'Kategori',
-                  render: (block: RentalBlockWithRentalObject) => (
-                    <Badge variant="secondary">
-                      {block.rentalObject?.category || '-'}
-                    </Badge>
-                  ),
+                  className: 'px-2',
+                  render: (block: RentalBlockWithRentalObject) =>
+                    block.rentalObject?.category || '-',
                   hideOnMobile: true,
                 },
                 {
                   key: 'typ',
                   label: 'Typ',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     block.rentalObject?.type || '-',
                   hideOnMobile: true,
@@ -437,6 +465,7 @@ const RentalBlocksPage = () => {
                 {
                   key: 'adress',
                   label: 'Adress',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     block.rentalObject?.address || '-',
                   hideOnMobile: true,
@@ -444,6 +473,7 @@ const RentalBlocksPage = () => {
                 {
                   key: 'fastighet',
                   label: 'Fastighet',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     block.property?.name || '-',
                   hideOnMobile: true,
@@ -451,6 +481,7 @@ const RentalBlocksPage = () => {
                 {
                   key: 'distrikt',
                   label: 'Distrikt',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     block.distrikt || '-',
                   hideOnMobile: true,
@@ -458,12 +489,14 @@ const RentalBlocksPage = () => {
                 {
                   key: 'orsak',
                   label: 'Orsak',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     block.blockReason,
                 },
                 {
                   key: 'startdatum',
                   label: 'Startdatum',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     formatISODate(block.fromDate),
                   hideOnMobile: true,
@@ -471,25 +504,18 @@ const RentalBlocksPage = () => {
                 {
                   key: 'slutdatum',
                   label: 'Slutdatum',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
-                    formatISODate(block.toDate),
+                    block.toDate ? formatISODate(block.toDate) : 'Pågående',
                   hideOnMobile: true,
                 },
                 {
                   key: 'hyra',
                   label: 'Hyra',
+                  className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
                     block.rentalObject?.monthlyRent
                       ? `${Math.round(block.rentalObject.monthlyRent).toLocaleString('sv-SE')} kr/mån`
-                      : '-',
-                  hideOnMobile: true,
-                },
-                {
-                  key: 'hyresbortfall',
-                  label: 'Estimerat Hyresbortfall',
-                  render: (block: RentalBlockWithRentalObject) =>
-                    block.amount
-                      ? `${block.amount.toLocaleString('sv-SE')} kr`
                       : '-',
                   hideOnMobile: true,
                 },
@@ -515,16 +541,10 @@ const RentalBlocksPage = () => {
                         {formatISODate(block.fromDate)} -{' '}
                         {formatISODate(block.toDate)}
                       </div>
-                      {block.amount && (
-                        <div className="text-sm">
-                          Hyresbortfall: {block.amount.toLocaleString('sv-SE')}{' '}
-                          kr
-                        </div>
-                      )}
                     </div>
-                    <Badge variant="secondary">
+                    <span className="text-sm text-muted-foreground">
                       {block.rentalObject?.category || '-'}
-                    </Badge>
+                    </span>
                   </div>
                 </div>
               )}

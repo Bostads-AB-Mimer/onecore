@@ -27,13 +27,13 @@ function Calendar({
         nav: 'flex items-center gap-1',
         button_previous: cn(
           buttonVariants({ variant: 'outline' }),
-          'absolute left-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'
+          'absolute -left-2 h-8 w-8 p-0 opacity-70 hover:opacity-100 z-10'
         ),
         button_next: cn(
           buttonVariants({ variant: 'outline' }),
-          'absolute right-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'
+          'absolute -right-2 h-8 w-8 p-0 opacity-70 hover:opacity-100 z-10'
         ),
-        month_grid: 'w-full border-collapse space-x-1',
+        month_grid: 'w-full border-collapse space-x-1 min-h-[240px]',
         weekdays: 'flex',
         weekday:
           'text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]',
@@ -66,7 +66,7 @@ function Calendar({
       components={{
         Chevron: ({ orientation }) => {
           const Icon = orientation === 'left' ? ChevronLeft : ChevronRight
-          return <Icon className="h-4 w-4" />
+          return <Icon className="h-5 w-5" />
         },
       }}
       {...props}
