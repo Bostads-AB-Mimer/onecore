@@ -619,10 +619,11 @@ export const RentalBlocksFilterQuerySchema = z.object({
 })
 
 // Search adds pagination
-export const SearchRentalBlocksQuerySchema = RentalBlocksFilterQuerySchema.extend({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
-})
+export const SearchRentalBlocksQuerySchema =
+  RentalBlocksFilterQuerySchema.extend({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
+  })
 
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
