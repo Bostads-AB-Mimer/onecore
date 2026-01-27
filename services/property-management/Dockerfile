@@ -8,7 +8,7 @@ ENV CI=true
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 # Copy package files for dependency installation
 COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -30,7 +30,7 @@ RUN pnpm deploy --filter @onecore/property-management --prod /out
 FROM node:23-slim AS runner
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 WORKDIR /app
 
