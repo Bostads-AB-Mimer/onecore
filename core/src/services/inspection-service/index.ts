@@ -5,8 +5,10 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
+import { mapLease } from '../lease-service/schemas/lease'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
 
 /**
  * @swagger
@@ -330,30 +332,41 @@ export const routes = (router: KoaRouter) => {
         await inspectionAdapter.getXpandInspectionById(inspectionId)
 
       if (result.ok) {
-        const inspection = result.data
+        const rawInspection = result.data
 
         let lease = null
-        if (inspection.leaseId) {
-          lease = await leasingAdapter.getLease(inspection.leaseId, 'true')
+        if (rawInspection.leaseId) {
+          const rawLease = await leasingAdapter.getLease(
+            rawInspection.leaseId,
+            'true'
+          )
+          lease = mapLease(rawLease)
         }
 
         let residence = null
-        if (inspection.residenceId) {
+        if (rawInspection.residenceId) {
           const res = await propertyBaseAdapter.getResidenceByRentalId(
-            inspection.residenceId
+            rawInspection.residenceId
           )
           if (res.ok) {
             residence = res.data
           }
         }
 
+        // Validate only the inspection data from Xpand
+        const validatedInspection =
+          schemas.DetailedXpandInspectionSchema.parse(rawInspection)
+
+        // Attach lease and residence without validation
+        const inspection = {
+          ...validatedInspection,
+          lease,
+          residence,
+        }
+
         ctx.status = 200
         ctx.body = {
-          content: {
-            ...inspection,
-            lease,
-            residence,
-          },
+          content: inspection,
           ...metadata,
         }
       } else {
@@ -372,6 +385,147 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         { error, inspectionId },
         'Error getting inspection by id from xpand'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/{inspectionId}/pdf:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Generate PDF protocol for an inspection
+   *     description: Generates and returns a PDF protocol for a specific inspection by its ID.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to generate a PDF for.
+   *     responses:
+   *       '200':
+   *         description: Successfully generated PDF protocol.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     pdfBase64:
+   *                       type: string
+   *                       description: Base64 encoded PDF document
+   *       '404':
+   *         description: Inspection not found for the specified ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: not-found
+   *       '500':
+   *         description: Internal server error. Failed to generate PDF.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand/:inspectionId/pdf', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
+
+      if (result.ok) {
+        const rawInspection = result.data
+
+        let lease = null
+        if (rawInspection.leaseId) {
+          const rawLease = await leasingAdapter.getLease(
+            rawInspection.leaseId,
+            'true'
+          )
+          lease = mapLease(rawLease)
+        }
+
+        let residence = null
+        if (rawInspection.residenceId) {
+          const res = await propertyBaseAdapter.getResidenceByRentalId(
+            rawInspection.residenceId
+          )
+          if (res.ok) {
+            residence = res.data
+          }
+        }
+
+        // Validate only the inspection data from Xpand
+        const validatedInspection =
+          schemas.DetailedXpandInspectionSchema.parse(rawInspection)
+
+        // Attach lease and residence without validation
+        const inspection = {
+          ...validatedInspection,
+          lease,
+          residence,
+        }
+
+        let protocol
+        try {
+          protocol = await generateInspectionProtocolPdf(inspection)
+        } catch (pdfError) {
+          logger.error(
+            {
+              pdfError,
+              errorMessage:
+                pdfError instanceof Error ? pdfError.message : String(pdfError),
+              errorStack:
+                pdfError instanceof Error ? pdfError.stack : undefined,
+              inspectionId,
+            },
+            'Error generating PDF protocol'
+          )
+          throw pdfError
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            pdfBase64: protocol.toString('base64'),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            inspectionId,
+            metadata,
+          },
+          'Error getting inspection by id from xpand for PDF generation'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error generating PDF protocol for inspection'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }

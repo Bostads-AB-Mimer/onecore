@@ -36,7 +36,10 @@ export interface XpandDbDetailedInspection {
   residenceId: string
   address: string
   apartmentCode: string
+  isFurnished: number | null
   leaseId: string
+  isTenantPresent: number | null
+  isNewTenantPresent: number | null
   masterKeyAccess: string | null
   hasRemarks: boolean
   notes: string | null
@@ -189,7 +192,10 @@ export async function getInspectionById(
         'babuf.hyresid AS residenceId',
         'babuf.caption AS address',
         'babuf.lghcode AS apartmentCode',
+        'lbbes.moblerad AS isFurnished',
         'hyobj.hyobjben AS leaseId',
+        'lbbes.hgnarvar AS isTenantPresent',
+        'lbbes.nyhgnarvar AS isNewTenantPresent',
         'aotlt.caption AS masterKeyAccess',
         'lbbes.anmexists AS hasRemarks',
         'lbbes.text AS notes',
@@ -214,6 +220,9 @@ export async function getInspectionById(
     const trimmedInspection = trimStrings(dbInspection)
     const rawInspection = convertNumericBooleans(trimmedInspection, [
       'hasRemarks',
+      'isTenantPresent',
+      'isNewTenantPresent',
+      'isFurnished',
     ])
 
     const remarks = await getInspectionRemarks(inspectionId)

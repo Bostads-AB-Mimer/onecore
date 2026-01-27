@@ -53,8 +53,41 @@ export const inspectionService = {
     if (!inspectionResponse.data.content)
       throw new Error('No data returned from API')
 
-    return {
-      ...inspectionResponse.data.content,
+    return inspectionResponse.data.content
+  },
+
+  async getInspectionPdfBase64(inspectionId: string): Promise<string> {
+    const pdfResponse = await GET(
+      '/inspections/xpand/{inspectionId}/pdf' as any,
+      {
+        params: { path: { inspectionId } },
+      }
+    )
+    if (pdfResponse.error) throw pdfResponse.error
+    if (!(pdfResponse.data as any).content?.pdfBase64)
+      throw new Error('No PDF data returned from API')
+
+    return (pdfResponse.data as any).content.pdfBase64
+  },
+
+  downloadPdfFromBase64(pdfBase64: string, filename: string): void {
+    // Convert base64 to blob
+    const byteCharacters = atob(pdfBase64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
     }
+    const byteArray = new Uint8Array(byteNumbers)
+    const blob = new Blob([byteArray], { type: 'application/pdf' })
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
   },
 }

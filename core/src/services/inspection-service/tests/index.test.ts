@@ -3,10 +3,17 @@ import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import * as inspectionAdapter from '../../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
+import * as pdfGenerator from '../helpers/pdf-generator'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import * as schemas from '../schemas'
-import { XpandInspectionFactory } from '../../../../test/factories/inspection'
+import {
+  DetailedXpandInspectionFactory,
+  XpandInspectionFactory,
+} from '../../../../test/factories/inspection'
+import { LeaseFactory } from '../../../../test/factories/lease'
+import { ResidenceByRentalIdDetailsFactory } from '../../../../test/factories/residence-details'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -303,6 +310,199 @@ describe('inspection-service index', () => {
       expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
         'residence-abc-123'
       )
+    })
+  })
+
+  describe('GET /inspections/xpand/:inspectionId', () => {
+    const mockDetailedInspection = DetailedXpandInspectionFactory.build()
+    const mockLease = LeaseFactory.build()
+    const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    it('should return inspection for a specific inspection ID', async () => {
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: mockDetailedInspection,
+        })
+
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockResidence,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveProperty('id')
+      expect(res.body.content).toHaveProperty('lease')
+      expect(res.body.content).toHaveProperty('residence')
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalledWith('inspection-123')
+    })
+
+    it('should return 404 when inspection not found for inspection ID', async () => {
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: false,
+          err: 'not-found',
+          statusCode: 404,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123'
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('not-found')
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalledWith('inspection-123')
+    })
+
+    it('should return 500 if adapter returns error', async () => {
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: false,
+          err: 'unknown',
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalled()
+    })
+
+    it('should return 500 if adapter throws error', async () => {
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockRejectedValue(new Error('Network error'))
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalled()
+    })
+
+    it('should validate response schema matches XpandInspectionSchema', async () => {
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: mockDetailedInspection,
+        })
+
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockResidence,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.DetailedXpandInspectionSchema.parse(res.body.content)
+      ).not.toThrow()
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /inspections/xpand/:inspectionId/pdf', () => {
+    it('should return PDF buffer for a specific inspection ID', async () => {
+      const mockDetailedInspection = DetailedXpandInspectionFactory.build()
+      const mockLease = LeaseFactory.build()
+      const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+      const mockPdfBuffer = Buffer.from('%PDF-1.4...')
+
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: mockDetailedInspection,
+        })
+
+      const getLeaseSpy = jest
+        .spyOn(leasingAdapter, 'getLease')
+        .mockResolvedValue(mockLease)
+
+      const getResidenceByRentalIdSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockResidence,
+        })
+
+      const generateInspectionProtocolPdfSpy = jest
+        .spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
+        .mockResolvedValue(mockPdfBuffer)
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123/pdf'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toContain('application/json')
+      expect(res.body.content).toHaveProperty('pdfBase64')
+      expect(res.body.content.pdfBase64).toBe(mockPdfBuffer.toString('base64'))
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalledWith('inspection-123')
+      expect(generateInspectionProtocolPdfSpy).toHaveBeenCalled()
+    })
+
+    it('should return 500 if PDF generation fails', async () => {
+      const mockDetailedInspection = DetailedXpandInspectionFactory.build()
+      const mockLease = LeaseFactory.build()
+      const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+      const getXpandInspectionByIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: mockDetailedInspection,
+        })
+
+      const getLeaseSpy = jest
+        .spyOn(leasingAdapter, 'getLease')
+        .mockResolvedValue(mockLease)
+
+      const getResidenceByRentalIdSpy = jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockResidence,
+        })
+
+      const generateInspectionProtocolPdfSpy = jest
+        .spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
+        .mockRejectedValue(new Error('PDF generation error'))
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123/pdf'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('Internal server error')
+      expect(getXpandInspectionByIdSpy).toHaveBeenCalledWith('inspection-123')
+      expect(generateInspectionProtocolPdfSpy).toHaveBeenCalled()
     })
   })
 })
