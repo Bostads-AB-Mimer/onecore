@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
 import { useComponentEntity } from '@/components/hooks/useComponentEntity'
@@ -210,8 +210,17 @@ export function useComponentLibraryViewState(): UseComponentLibraryViewStateRetu
   // Debounced search for API calls
   const debouncedSearch = useDebounce(searchInput, 300)
 
+  // Track previous level to detect navigation
+  const prevLevelRef = useRef(viewState.level)
+
   // Update URL when debounced search changes (only for levels that support search)
   useEffect(() => {
+    // Skip if level just changed - search should be reset
+    if (prevLevelRef.current !== viewState.level) {
+      prevLevelRef.current = viewState.level
+      return
+    }
+
     if (
       viewState.level === 'subtypes' ||
       viewState.level === 'models' ||

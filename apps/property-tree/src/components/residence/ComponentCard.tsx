@@ -142,10 +142,15 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {component.model?.manufacturer && component.model.manufacturer !== 'Unknown'
-                    ? `${component.model.manufacturer} `
+                    ? `${component.model.manufacturer} | `
                     : ''}
-                  {component.serialNumber}
+                  {component.model?.modelName}
                 </p>
+                {component.serialNumber && (
+                  <p className="text-xs text-muted-foreground">
+                    SN: {component.serialNumber}
+                  </p>
+                )}
               </div>
             </div>
 
