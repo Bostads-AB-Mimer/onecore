@@ -16,8 +16,26 @@ import {
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
 import { getInvoiceDetails } from './service'
+import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
+import {
+  createAggregateAccounting,
+  exportRentalInvoicesAccounting,
+} from './servicev2'
 
 export const routes = (router: KoaRouter) => {
+  router.get('(.*)/invoices/import', async (ctx) => {
+    try {
+      const invoices = await exportRentalInvoicesAccounting('001')
+      const exportInvoiceRows = await createAggregateAccounting(invoices)
+
+      ctx.status = 200
+      ctx.body = exportInvoiceRows
+    } catch (error) {
+      ctx.status = 500
+      ctx.body = 'Could not export invoices ' + (error as any).message
+    }
+  })
+
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
