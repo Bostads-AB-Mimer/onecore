@@ -605,6 +605,25 @@ export const GetAllRentalBlocksQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+// Base filter schema for rental blocks (shared between search and export)
+export const RentalBlocksFilterQuerySchema = z.object({
+  q: z.string().optional(),
+  fields: z.string().optional(),
+  kategori: z.string().optional(),
+  distrikt: z.string().optional(),
+  blockReason: z.string().optional(),
+  fastighet: z.string().optional(),
+  fromDateGte: z.string().optional(),
+  toDateLte: z.string().optional(),
+  active: booleanStringSchema.optional(),
+})
+
+// Search adds pagination
+export const SearchRentalBlocksQuerySchema = RentalBlocksFilterQuerySchema.extend({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
+})
+
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>

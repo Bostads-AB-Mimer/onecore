@@ -693,6 +693,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Filter by block reason
    *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *         description: Filter by property code/name
+   *       - in: query
    *         name: fromDateGte
    *         schema:
    *           type: string

@@ -10,6 +10,24 @@ import config from '../../common/config'
 type RentalBlockWithRentalObject =
   components['schemas']['RentalBlockWithRentalObject']
 
+// Shared filter options for rental blocks (used by search and export)
+interface RentalBlocksFilterOptions {
+  q?: string
+  fields?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  active?: boolean
+}
+
+interface SearchRentalBlocksOptions extends RentalBlocksFilterOptions {
+  page?: number
+  limit?: number
+}
+
 const client = () =>
   createClient<paths>({
     baseUrl: config.propertyBaseService.url,
@@ -804,19 +822,9 @@ export async function getAllRentalBlocks(options?: {
   }
 }
 
-export async function searchRentalBlocks(options: {
-  q?: string
-  fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
-  fromDateGte?: string
-  toDateLte?: string
-  active?: boolean
-  page?: number
-  limit?: number
-}): Promise<
+export async function searchRentalBlocks(
+  options: SearchRentalBlocksOptions
+): Promise<
   AdapterResult<PaginatedResponse<RentalBlockWithRentalObject>, 'unknown'>
 > {
   try {
@@ -877,16 +885,9 @@ export async function searchRentalBlocks(options: {
   }
 }
 
-export async function exportRentalBlocksToExcel(options: {
-  q?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
-  fromDateGte?: string
-  toDateLte?: string
-  active?: boolean
-}): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
+export async function exportRentalBlocksToExcel(
+  options: RentalBlocksFilterOptions
+): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
   try {
     const params: Record<string, string> = {}
     Object.entries(options).forEach(([key, value]) => {

@@ -1165,33 +1165,18 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const params = schemas.RentalBlocksFilterQuerySchema.safeParse(ctx.query)
 
-    const q = ctx.query.q as string | undefined
-    const kategori = ctx.query.kategori as string | undefined
-    const distrikt = ctx.query.distrikt as string | undefined
-    const blockReason = ctx.query.blockReason as string | undefined
-    const fastighet = ctx.query.fastighet as string | undefined
-    const fromDateGte = ctx.query.fromDateGte as string | undefined
-    const toDateLte = ctx.query.toDateLte as string | undefined
-    const activeParam = ctx.query.active as string | undefined
-    const active =
-      activeParam === 'true'
-        ? true
-        : activeParam === 'false'
-          ? false
-          : undefined
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
 
     try {
-      const result = await propertyBaseAdapter.exportRentalBlocksToExcel({
-        q,
-        kategori,
-        distrikt,
-        blockReason,
-        fastighet,
-        fromDateGte,
-        toDateLte,
-        active,
-      })
+      const result = await propertyBaseAdapter.exportRentalBlocksToExcel(
+        params.data
+      )
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Export failed')
@@ -1233,6 +1218,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Search term (searches rentalId, address)
    *       - in: query
+   *         name: fields
+   *         schema:
+   *           type: string
+   *         description: Comma-separated fields to search (default rentalId,address,propertyName,blockReason)
+   *       - in: query
    *         name: kategori
    *         schema:
    *           type: string
@@ -1247,6 +1237,21 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Filter by block reason
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *         description: Filter by property code/name
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *         description: Filter blocks starting on or after this date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *         description: Filter blocks ending on or before this date
    *       - in: query
    *         name: active
    *         schema:
@@ -1300,39 +1305,16 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const params = schemas.SearchRentalBlocksQuerySchema.safeParse(ctx.query)
 
-    const q = ctx.query.q as string | undefined
-    const fields = ctx.query.fields as string | undefined
-    const kategori = ctx.query.kategori as string | undefined
-    const distrikt = ctx.query.distrikt as string | undefined
-    const blockReason = ctx.query.blockReason as string | undefined
-    const fastighet = ctx.query.fastighet as string | undefined
-    const fromDateGte = ctx.query.fromDateGte as string | undefined
-    const toDateLte = ctx.query.toDateLte as string | undefined
-    const activeParam = ctx.query.active as string | undefined
-    const active =
-      activeParam === 'true'
-        ? true
-        : activeParam === 'false'
-          ? false
-          : undefined
-    const page = parseInt(ctx.query.page as string) || 1
-    const limit = parseInt(ctx.query.limit as string) || 50
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
 
     try {
-      const result = await propertyBaseAdapter.searchRentalBlocks({
-        q,
-        fields,
-        kategori,
-        distrikt,
-        blockReason,
-        fastighet,
-        fromDateGte,
-        toDateLte,
-        active,
-        page,
-        limit,
-      })
+      const result = await propertyBaseAdapter.searchRentalBlocks(params.data)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Internal server error')

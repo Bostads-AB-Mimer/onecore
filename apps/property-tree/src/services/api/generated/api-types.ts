@@ -1177,6 +1177,8 @@ export interface paths {
           distrikt?: string;
           /** @description Filter by block reason */
           blockReason?: string;
+          /** @description Filter by property code/name */
+          fastighet?: string;
           /** @description Filter blocks starting on or after this date */
           fromDateGte?: string;
           /** @description Filter blocks ending on or before this date */
