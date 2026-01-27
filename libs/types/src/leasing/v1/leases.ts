@@ -10,7 +10,14 @@ export const GetLeasesStatusSchema = z.enum([
 export const IncludeContactsQueryParamSchema = z.object({
   includeContacts: z
     .enum(['true', 'false'])
-    .optional()
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
+export const IncludeRentalObjectQueryParamSchema = z.object({
+  includeRentalObject: z
+    .enum(['true', 'false'])
+    .default('false')
     .transform((value) => value === 'true'),
 })
 
@@ -40,6 +47,20 @@ export const FilterLeasesQueryParamsSchema = z.object({
 
 export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
   IncludeContactsQueryParamSchema
+).merge(IncludeRentalObjectQueryParamSchema)
+
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema.merge(
+  IncludeRentalObjectQueryParamSchema
 )
 
-export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
+// TypeScript types for function parameters (not query string parsing)
+export type GetLeasesOptions = {
+  includeContacts?: boolean
+  includeRentalObject?: boolean
+  status?: Array<z.infer<typeof GetLeasesStatusSchema>>
+}
+
+export type GetLeaseOptions = {
+  includeContacts?: boolean
+  includeRentalObject?: boolean
+}
