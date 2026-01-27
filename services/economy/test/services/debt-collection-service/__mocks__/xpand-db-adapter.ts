@@ -1,9 +1,5 @@
-import { Contact } from '@onecore/types'
-import {
-  RentInvoice,
-  RentalProperty,
-  RentInvoiceRow,
-} from '@src/services/common/types'
+import { Contact, RentInvoiceRow } from '@onecore/types'
+import { RentInvoice, RentalProperty } from '@src/services/common/types'
 
 // Mock data factories
 export const createMockContact = (

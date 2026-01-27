@@ -1,36 +1,41 @@
 import assert from 'node:assert'
-import { getAllInvoicesWithMatchIds } from '../common/adapters/xledger-adapter'
-import { getInvoiceRows } from '../common/adapters/xpand-db-adapter'
 import { InvoicePaymentSummary } from './types'
-import { RentInvoiceRow } from '../common/types'
+
 import { logger } from '@onecore/utilities'
+import * as economyAdapter from '../../adapters/economy-adapter'
+import { RentInvoiceRow } from '@onecore/types'
 
 export const getUnpaidInvoicePaymentSummaries = async (
   from?: Date,
   to?: Date
 ) => {
-  logger.info('Getting unpaid invoices from Xledger')
-  const xledgerInvoices = await getAllInvoicesWithMatchIds({
-    from,
-    to,
-    remainingAmountGreaterThan: 0,
-  })
-  logger.info(`Got ${xledgerInvoices.length} invoices`)
+  logger.info('Getting unpaid invoices')
+  const unpaidInvoices = await economyAdapter.getInvoices(from, to, 0)
 
-  const rentInvoices = xledgerInvoices.filter(
+  if (!unpaidInvoices.ok) {
+    throw new Error('Failed to fetch unpaid invoices')
+  }
+
+  logger.info(`Got ${unpaidInvoices.data.length} invoices`)
+
+  const unpaidRentInvoices = unpaidInvoices.data.filter(
     (i) => i.invoiceId.startsWith('55') // Rent invoice numbers start with 55
   )
-  logger.info(`${rentInvoices.length} unpaid rent invoices`)
+  logger.info(`${unpaidRentInvoices.length} unpaid rent invoices`)
 
   logger.info('Getting invoice rows')
 
-  const allInvoiceRows = await fetchInvoiceRowsChunked(
-    rentInvoices.map((i) => i.invoiceId)
+  const allInvoiceRows = await economyAdapter.getRentInvoiceRows(
+    unpaidRentInvoices.map((i) => i.invoiceId)
   )
 
-  logger.info(`Got ${allInvoiceRows.length} invoice rows`)
+  if (!allInvoiceRows.ok) {
+    throw new Error('Failed to fetch invoice rows')
+  }
 
-  const filteredInvoiceRows = allInvoiceRows.filter(
+  logger.info(`Got ${allInvoiceRows.data.length} invoice rows`)
+
+  const filteredInvoiceRows = allInvoiceRows.data.filter(
     (r) =>
       r.code?.startsWith('HEMFÖR') ||
       r.code?.startsWith('HYRSÄT') ||
@@ -39,7 +44,7 @@ export const getUnpaidInvoicePaymentSummaries = async (
 
   const invoicePaymentSummaries: InvoicePaymentSummary[] = []
 
-  rentInvoices.forEach((i) => {
+  unpaidRentInvoices.forEach((i) => {
     assert(
       i.paidAmount !== undefined,
       `Invoice ${i.invoiceId} is missing paidAmount`
@@ -96,20 +101,6 @@ export const getUnpaidInvoicePaymentSummaries = async (
   })
 
   return invoicePaymentSummaries
-}
-
-const fetchInvoiceRowsChunked = async (invoiceIds: string[]) => {
-  const chunkSize = 1000
-  const invoiceRows: RentInvoiceRow[] = []
-
-  for (let start = 0; start < invoiceIds.length; start += chunkSize) {
-    const rowsInChunk = await getInvoiceRows(
-      invoiceIds.slice(start, start + chunkSize)
-    )
-    invoiceRows.push(...rowsInChunk)
-  }
-
-  return invoiceRows
 }
 
 const getVerksamhetskostnadTotal = (rows: RentInvoiceRow[], code: string) => {

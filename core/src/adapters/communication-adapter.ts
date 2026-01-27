@@ -350,3 +350,46 @@ export const sendBulkEmail = async ({
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }
+
+export const sendEmail = async ({
+  to,
+  subject,
+  body,
+  attachments,
+}: {
+  to: string
+  subject: string
+  body: string
+  attachments?: { data: Buffer; name: string }[]
+}) => {
+  try {
+    // TODO update node version to get rid of this warning
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const form = new FormData()
+
+    form.append('to', to)
+    form.append('subject', subject)
+    form.append('body', body)
+
+    if (attachments) {
+      attachments.forEach((a) => {
+        // TODO update node version to get rid of this warning
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins
+        form.append('attachments', new Blob([a.data]), a.name)
+      })
+    }
+
+    const result = await axios.postForm(
+      `${config.communicationService.url}/send-email`,
+      form
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (e) {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}

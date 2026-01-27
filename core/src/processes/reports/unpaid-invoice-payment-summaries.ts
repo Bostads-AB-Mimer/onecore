@@ -1,8 +1,8 @@
 import { logger } from '@onecore/utilities'
-import config from '../common/config'
-import { sendEmail } from '../common/adapters/infobip-adapter'
-import { getUnpaidInvoicePaymentSummaries } from '../services/report-service/service'
-import { convertInvoicePaymentSummariesToXlsx } from '../services/report-service/converters/excelConverter'
+import config from '../../common/config'
+import { sendEmail } from '../../adapters/communication-adapter'
+import { getUnpaidInvoicePaymentSummaries } from './service'
+import { convertInvoicePaymentSummariesToXlsx } from './converters/excelConverter'
 
 export const handleUnpaidInvoicePaymentSummaries = async () => {
   const now = new Date()
@@ -10,7 +10,7 @@ export const handleUnpaidInvoicePaymentSummaries = async () => {
   const notification: string[] = [
     `Körning startad: ${now.toLocaleString('sv').replace('T', ' ')}\n`,
   ]
-  const resultFiles: { data: any; name: string }[] = []
+  const resultFiles: { data: Buffer; name: string }[] = []
 
   try {
     const invoicePaymentSummaries = await getUnpaidInvoicePaymentSummaries()
@@ -25,14 +25,14 @@ export const handleUnpaidInvoicePaymentSummaries = async () => {
       `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
     )
 
-    if (config.scriptNotificationEmailAddresses) {
+    if (config.emailAddresses.economy) {
       try {
-        await sendEmail(
-          config.scriptNotificationEmailAddresses,
-          'Körning: rapport av obetalda hyresavier',
-          notification.join('\n'),
-          resultFiles
-        )
+        await sendEmail({
+          to: config.emailAddresses.economy,
+          subject: 'Körning: rapport av obetalda hyresavier',
+          body: notification.join('\n'),
+          attachments: resultFiles,
+        })
       } catch (error: any) {
         logger.error(error, 'Error sending notification email')
       }

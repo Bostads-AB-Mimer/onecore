@@ -1,41 +1,37 @@
-import { getUnpaidInvoicePaymentSummaries } from '@src/services/report-service/service'
-import { RentInvoiceRow } from '@src/services/common/types'
-import { InvoiceWithMatchId } from '@src/services/report-service/types'
+import { getUnpaidInvoicePaymentSummaries } from '../service'
 import { Factory } from 'fishery'
 
-jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
-  getAllInvoicesWithMatchIds: jest.fn(),
+jest.mock('../../../adapters/economy-adapter', () => ({
+  getInvoices: jest.fn(),
+  getRentInvoiceRows: jest.fn(),
 }))
 
-jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
-  getInvoiceRows: jest.fn(),
+import {
+  getInvoices,
+  getRentInvoiceRows,
+} from '../../../adapters/economy-adapter'
+import { Invoice, RentInvoiceRow } from '@onecore/types'
+
+const xledgerInvoiceFactory = Factory.define<Invoice>(({ sequence }) => ({
+  invoiceId: sequence.toString(),
+  matchId: sequence,
+  leaseId: 'TEST-LEASE-001',
+  amount: 0,
+  paidAmount: 0,
+  reference: 'REF123',
+  fromDate: new Date('2025-01-01'),
+  toDate: new Date('2025-01-31'),
+  invoiceDate: new Date('2025-01-15'),
+  expirationDate: new Date('2025-02-15'),
+  debitStatus: 1,
+  paymentStatus: 1,
+  transactionType: 1,
+  transactionTypeName: 'HYRA',
+  type: 'Regular',
+  source: 'legacy',
+  invoiceRows: [],
+  credit: null,
 }))
-
-import { getAllInvoicesWithMatchIds } from '@src/services/common/adapters/xledger-adapter'
-import { getInvoiceRows } from '@src/services/common/adapters/xpand-db-adapter'
-
-const xledgerInvoiceFactory = Factory.define<InvoiceWithMatchId>(
-  ({ sequence }) => ({
-    invoiceId: sequence.toString(),
-    matchId: sequence,
-    leaseId: 'TEST-LEASE-001',
-    amount: 0,
-    paidAmount: 0,
-    reference: 'REF123',
-    fromDate: new Date('2025-01-01'),
-    toDate: new Date('2025-01-31'),
-    invoiceDate: new Date('2025-01-15'),
-    expirationDate: new Date('2025-02-15'),
-    debitStatus: 1,
-    paymentStatus: 1,
-    transactionType: 1,
-    transactionTypeName: 'HYRA',
-    type: 'Regular',
-    source: 'legacy',
-    invoiceRows: [],
-    credit: null,
-  })
-)
 
 const invoiceRowFactory = Factory.define<RentInvoiceRow>(({ sequence }) => ({
   invoiceNumber: sequence.toString(),
@@ -51,12 +47,9 @@ const invoiceRowFactory = Factory.define<RentInvoiceRow>(({ sequence }) => ({
 }))
 
 describe('Report Service', () => {
-  const mockGetAllInvoicesWithMatchIds =
-    getAllInvoicesWithMatchIds as jest.MockedFunction<
-      typeof getAllInvoicesWithMatchIds
-    >
-  const mockGetInvoiceRows = getInvoiceRows as jest.MockedFunction<
-    typeof getInvoiceRows
+  const mockGetInvoices = getInvoices as jest.MockedFunction<typeof getInvoices>
+  const mockGetInvoiceRows = getRentInvoiceRows as jest.MockedFunction<
+    typeof getRentInvoiceRows
   >
 
   beforeEach(() => {
@@ -101,8 +94,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue(invoiceRows)
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
 
       const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
@@ -130,8 +123,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue([])
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: [] })
 
       await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
@@ -161,8 +154,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue(invoiceRows)
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
 
       const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
@@ -218,8 +211,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue(invoiceRows)
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
 
       const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
@@ -255,8 +248,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue(invoiceRows)
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
 
       const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
@@ -287,8 +280,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue(invoiceRows)
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
 
       const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
 
@@ -333,8 +326,8 @@ describe('Report Service', () => {
         }),
       ]
 
-      mockGetAllInvoicesWithMatchIds.mockResolvedValue(xledgerInvoices)
-      mockGetInvoiceRows.mockResolvedValue(invoiceRows)
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
 
       const result = await getUnpaidInvoicePaymentSummaries()
 

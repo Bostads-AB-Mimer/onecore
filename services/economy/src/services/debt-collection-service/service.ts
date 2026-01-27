@@ -16,7 +16,6 @@ import {
   Invoice,
   EnrichedXledgerRentCase,
   OtherInvoice,
-  RentInvoiceRow,
   XledgerBalanceCorrection,
   XledgerBalanceCorrectionColumnIndexes,
   XledgerRentCase,
@@ -26,6 +25,7 @@ import {
   EnrichedXledgerBalanceCorrection,
 } from '../common/types'
 import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
+import { RentInvoiceRow } from '@onecore/types'
 
 export const importInvoicesFromCsv = (
   csv: string,
