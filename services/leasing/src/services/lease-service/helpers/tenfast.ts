@@ -1,5 +1,9 @@
-import { Lease, LeaseStatus, RentalObject } from '@onecore/types'
-import { TenfastLease, TenfastRentalObject } from '../adapters/tenfast/schemas'
+import { Lease, LeaseStatus, RentalObject, LeaseRentRow } from '@onecore/types'
+import {
+  TenfastLease,
+  TenfastRentalObject,
+  TenfastInvoiceRow,
+} from '../adapters/tenfast/schemas'
 import { isPreliminaryTerminated } from '../adapters/tenfast/filters'
 
 const calculateLeaseStatus = (
@@ -81,5 +85,17 @@ export function mapToOnecoreLease(
       ? mapToOnecoreRentalObject(lease.hyresobjekt[0])
       : undefined,
     type: lease.hyresobjekt[0]?.typ ?? 'missing', // TODO: Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+  }
+}
+
+export function mapToOnecoreRentRow(row: TenfastInvoiceRow): LeaseRentRow {
+  return {
+    id: row._id,
+    amount: row.amount,
+    articleId: row.article ?? '',
+    label: row.label ?? '',
+    vat: row.vat,
+    from: row.from ?? undefined,
+    to: row.to ?? undefined,
   }
 }

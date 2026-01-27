@@ -1060,6 +1060,50 @@ export interface paths {
       };
     };
   };
+  "/leases/{leaseId}/rent-rows/home-insurance": {
+    /** Add home insurance rent row to a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully added home insurance rent row. */
+        201: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/rent-rows/{rentRowId}": {
+    /** Delete a rent row for a lease */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+          /** @description The ID of the rent row. */
+          rentRowId: string;
+        };
+      };
+      responses: {
+        /** @description Rent row deleted. */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/listings": {
     /**
      * Get listings
@@ -1318,7 +1362,9 @@ export interface paths {
               content?: {
                   rentalObjectCode?: string;
                   address?: string;
-                  monthlyRent?: number;
+                  rent?: {
+                    amount?: number;
+                  };
                   propertyCaption?: string;
                   propertyCode?: string;
                   residentialAreaCode?: string;
@@ -1366,7 +1412,9 @@ export interface paths {
               content?: {
                   rentalObjectCode?: string;
                   address?: string;
-                  monthlyRent?: number;
+                  rent?: {
+                    amount?: number;
+                  };
                   propertyCaption?: string;
                   propertyCode?: string;
                   residentialAreaCode?: string;
@@ -1379,6 +1427,99 @@ export interface paths {
                   districtCode?: string;
                   braArea?: number;
                 }[];
+            };
+          };
+        };
+        /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/rental-objects/by-code/{rentalObjectCode}/rent": {
+    /**
+     * Get rent for a rental object
+     * @description Fetches rent for a rental object by Rental Object Code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the rent to fetch. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental object. */
+        200: {
+          content: {
+            "application/json": {
+              rent?: number;
+            };
+          };
+        };
+        /** @description Not found. The rent of the specified rental object was not found. */
+        404: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/rental-objects/rent": {
+    /**
+     * Get rent for rental objects
+     * @description Fetches rent for rental objects by Rental Object Codes.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          "application/json": {
+            /**
+             * @description Array of rental object codes to include.
+             * @example [
+             *   "ABC123",
+             *   "DEF456",
+             *   "GHI789"
+             * ]
+             */
+            rentalObjectCodes?: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental object. */
+        200: {
+          content: {
+            "application/json": {
+              rent?: number;
+            };
+          };
+        };
+        /** @description Not found. The rent of the specified rental object was not found. */
+        404: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
             };
           };
         };

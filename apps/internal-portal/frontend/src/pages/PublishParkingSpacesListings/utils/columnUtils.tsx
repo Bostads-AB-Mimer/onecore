@@ -75,9 +75,10 @@ export const getParkingSpaceColumns = (
       headerName: 'Bilplatstyp',
     },
     {
-      field: 'monthlyRent',
+      field: 'rent.amount',
       flex: 1,
       headerName: 'Hyra',
+      valueGetter: (params) => params.row.rent?.amount ?? 0,
       valueFormatter: ({ value }) => `${numberFormatter.format(value)}/mån`,
     },
     {
