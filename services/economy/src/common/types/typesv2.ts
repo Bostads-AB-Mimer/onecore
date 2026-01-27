@@ -102,4 +102,5 @@ export type AggregatedRow = {
   property?: string
   projectCode?: string
   freeCode?: string
+  totalAccount: string
 }
