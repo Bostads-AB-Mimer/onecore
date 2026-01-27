@@ -38,8 +38,9 @@ export function filterByStatus(
 function isCurrentLease(l: TenfastLease, now: Date) {
   return (
     l.startDate < now &&
-    !l.cancellation.cancelled &&
-    (!l.endDate || (l.endDate && l.endDate > now))
+    (!l.endDate || l.endDate > now) &&
+    !isPreliminaryTerminated(l) &&
+    !l.cancellation.handledAt
   )
 }
 
