@@ -1057,13 +1057,26 @@ export const searchRentalBlocks = async (
 
 export type ExportRentalBlocksOptions = RentalBlockFilterOptions
 
+export interface ExportTimings {
+  fetchBlocksMs: number
+  fetchRentMs: number
+  transformMs: number
+}
+
 export const getAllRentalBlocksForExport = async (
   options: ExportRentalBlocksOptions
 ) => {
+  const timings: ExportTimings = {
+    fetchBlocksMs: 0,
+    fetchRentMs: 0,
+    transformMs: 0,
+  }
+
   try {
     const whereClause = buildRentalBlockWhereClause(options)
 
     // Fetch ALL matching records (no pagination)
+    const startFetchBlocks = performance.now()
     const rentalBlocks = await prisma.rentalBlock.findMany({
       where: whereClause,
       include: {
@@ -1107,8 +1120,10 @@ export const getAllRentalBlocksForExport = async (
         fromDate: 'desc',
       },
     })
+    timings.fetchBlocksMs = Math.round(performance.now() - startFetchBlocks)
 
     // Get unique rental IDs for fetching rent data
+    const startFetchRent = performance.now()
     const uniqueRentalIds = [
       ...new Set(
         rentalBlocks
@@ -1117,7 +1132,8 @@ export const getAllRentalBlocksForExport = async (
       ),
     ]
 
-    // Fetch rent data for all rental IDs
+    // Fetch rent data for all rental IDs (batched to avoid SQL Server 2100 param limit)
+    const BATCH_SIZE = 2000
     let rentByRentalId = new Map<
       string,
       Array<{
@@ -1128,31 +1144,37 @@ export const getAllRentalBlocksForExport = async (
     >()
 
     if (uniqueRentalIds.length > 0) {
-      const rentData = await prisma.$queryRaw<
-        Array<{
-          rentalpropertyid: string
-          yearrent: number | null
-          debitfdate: Date | null
-          debittodate: Date | null
-        }>
-      >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
-         FROM hy_debitrowrentalproperty_xpand_api
-         WHERE rentalpropertyid IN (${Prisma.join(uniqueRentalIds)})`
+      // Process in batches to avoid SQL Server parameter limit
+      for (let i = 0; i < uniqueRentalIds.length; i += BATCH_SIZE) {
+        const batch = uniqueRentalIds.slice(i, i + BATCH_SIZE)
+        const rentData = await prisma.$queryRaw<
+          Array<{
+            rentalpropertyid: string
+            yearrent: number | null
+            debitfdate: Date | null
+            debittodate: Date | null
+          }>
+        >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
+           FROM hy_debitrowrentalproperty_xpand_api
+           WHERE rentalpropertyid IN (${Prisma.join(batch)})`
 
-      for (const row of rentData) {
-        const id = row.rentalpropertyid.trim()
-        if (!rentByRentalId.has(id)) {
-          rentByRentalId.set(id, [])
+        for (const row of rentData) {
+          const id = row.rentalpropertyid.trim()
+          if (!rentByRentalId.has(id)) {
+            rentByRentalId.set(id, [])
+          }
+          rentByRentalId.get(id)!.push({
+            yearRent: row.yearrent,
+            debitFromDate: row.debitfdate,
+            debitToDate: row.debittodate,
+          })
         }
-        rentByRentalId.get(id)!.push({
-          yearRent: row.yearrent,
-          debitFromDate: row.debitfdate,
-          debitToDate: row.debittodate,
-        })
       }
     }
+    timings.fetchRentMs = Math.round(performance.now() - startFetchRent)
 
-    // Attach rent data to rental blocks
+    // Attach rent data to rental blocks and transform
+    const startTransform = performance.now()
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
       const rentalId = rb.propertyStructure?.rentalId?.trim()
       return {
@@ -1162,7 +1184,10 @@ export const getAllRentalBlocksForExport = async (
     })
 
     const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
-    return sortRentalBlocksByFutureThenActive(transformedBlocks)
+    const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
+    timings.transformMs = Math.round(performance.now() - startTransform)
+
+    return { data: sortedBlocks, timings }
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
     throw err
