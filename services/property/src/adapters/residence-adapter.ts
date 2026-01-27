@@ -641,7 +641,7 @@ type RentRow = {
   debitToDate: Date | null
 }
 
-async function fetchRentDataAggregated(
+async function fetchRentDataBatched(
   rentalIds: string[]
 ): Promise<Map<string, RentRow[]>> {
   if (rentalIds.length === 0) {
@@ -658,42 +658,258 @@ async function fetchRentDataAggregated(
     const rentData = await prisma.$queryRaw<
       Array<{
         rentalpropertyid: string
-        rentRows: string | null
+        yearrent: number | null
+        debitfdate: Date | null
+        debittodate: Date | null
       }>
-    >`
-      SELECT
-        rentalpropertyid,
-        (
-          SELECT yearrent, debitfdate, debittodate
-          FROM hy_debitrowrentalproperty_xpand_api x2
-          WHERE x2.rentalpropertyid = x1.rentalpropertyid
-          FOR JSON PATH
-        ) AS rentRows
-      FROM hy_debitrowrentalproperty_xpand_api x1
-      WHERE rentalpropertyid IN (${Prisma.join(batch)})
-      GROUP BY rentalpropertyid
-    `
+    >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
+       FROM hy_debitrowrentalproperty_xpand_api
+       WHERE rentalpropertyid IN (${Prisma.join(batch)})`
 
     for (const row of rentData) {
       const id = row.rentalpropertyid.trim()
-      const parsedRows: RentRow[] = row.rentRows
-        ? JSON.parse(row.rentRows).map(
-            (r: {
-              yearrent: number | null
-              debitfdate: string | null
-              debittodate: string | null
-            }) => ({
-              yearRent: r.yearrent,
-              debitFromDate: r.debitfdate ? new Date(r.debitfdate) : null,
-              debitToDate: r.debittodate ? new Date(r.debittodate) : null,
-            })
-          )
-        : []
-      rentByRentalId.set(id, parsedRows)
+      if (!rentByRentalId.has(id)) {
+        rentByRentalId.set(id, [])
+      }
+      rentByRentalId.get(id)!.push({
+        yearRent: row.yearrent,
+        debitFromDate: row.debitfdate,
+        debitToDate: row.debittodate,
+      })
     }
   }
 
   return rentByRentalId
+}
+
+/** Raw rental block row from SQL query with explicit JOINs */
+interface RawRentalBlockRow {
+  id: string
+  blockReasonId: string | null
+  blockReasonCaption: string | null
+  fromDate: Date
+  toDate: Date | null
+  amount: number | null
+  // PropertyStructure fields
+  address: string | null
+  rentalId: string | null
+  propertyCode: string | null
+  propertyName: string | null
+  buildingCode: string | null
+  buildingName: string | null
+  residenceCode: string | null
+  residenceName: string | null
+  parkingSpaceCode: string | null
+  parkingSpaceName: string | null
+  localeCode: string | null
+  localeName: string | null
+  rentalObjectCode: string | null
+  rentalObjectName: string | null
+  // Joined fields
+  district: string | null
+  residenceTypeName: string | null
+}
+
+/**
+ * Fetches rental blocks using raw SQL with explicit JOINs for better performance.
+ * Used by export function only - paginated functions use Prisma ORM.
+ */
+async function fetchRentalBlocksRaw(
+  options: RentalBlockFilterOptions
+): Promise<RawRentalBlockRow[]> {
+  const {
+    q,
+    fields = 'rentalId,address,blockReason',
+    kategori,
+    distrikt,
+    blockReason,
+    fastighet,
+    fromDateGte,
+    toDateLte,
+    active,
+  } = options
+
+  // Build WHERE conditions
+  const conditions: string[] = []
+
+  // Base filter: must have a rentalId
+  conditions.push("babuf.hyresid IS NOT NULL AND babuf.hyresid <> ''")
+
+  // Active filter
+  if (active === true) {
+    conditions.push('(hyspt.tdate >= GETDATE() OR hyspt.tdate IS NULL)')
+  } else if (active === false) {
+    conditions.push('hyspt.tdate < GETDATE()')
+  }
+
+  // Distrikt filter
+  if (distrikt) {
+    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
+  }
+
+  // Fastighet (property) filter
+  if (fastighet) {
+    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
+  }
+
+  // Block reason filter
+  if (blockReason) {
+    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
+  }
+
+  // Date range filters
+  if (fromDateGte) {
+    conditions.push(`hyspt.fdate >= ${escapeSqlString(fromDateGte)}`)
+  }
+  if (toDateLte) {
+    conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
+  }
+
+  // Kategori filter
+  if (kategori === 'Bostad') {
+    conditions.push('babuf.lghcode IS NOT NULL')
+  } else if (kategori === 'Bilplats') {
+    conditions.push('babuf.bpscode IS NOT NULL')
+  } else if (kategori === 'Lokal') {
+    conditions.push('babuf.lokcode IS NOT NULL')
+  } else if (kategori === 'Förråd') {
+    conditions.push('babuf.hyrcode IS NOT NULL')
+  } else if (kategori === 'Övrigt') {
+    conditions.push(
+      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
+    )
+  }
+
+  // Search filter (q param) - OR across fields
+  if (q && q.trim().length >= 2) {
+    const searchTerm = q.trim()
+    const searchFields = fields.split(',').map((f) => f.trim())
+    const orClauses: string[] = []
+
+    if (searchFields.includes('rentalId')) {
+      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
+    }
+    if (searchFields.includes('address')) {
+      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    }
+    if (searchFields.includes('blockReason')) {
+      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    }
+
+    if (orClauses.length > 0) {
+      conditions.push(`(${orClauses.join(' OR ')})`)
+    }
+  }
+
+  const whereClause = conditions.join(' AND ')
+
+  const rows = await prisma.$queryRawUnsafe<RawRentalBlockRow[]>(`
+    SELECT
+      hyspt.keyhyspt AS id,
+      hyspt.keyhyspa AS blockReasonId,
+      hyspa.caption AS blockReasonCaption,
+      hyspt.fdate AS fromDate,
+      hyspt.tdate AS toDate,
+      hyspt.amount,
+      babuf.caption AS address,
+      babuf.hyresid AS rentalId,
+      babuf.fstcode AS propertyCode,
+      babuf.fstcaption AS propertyName,
+      babuf.bygcode AS buildingCode,
+      babuf.bygcaption AS buildingName,
+      babuf.lghcode AS residenceCode,
+      babuf.lghcaption AS residenceName,
+      babuf.bpscode AS parkingSpaceCode,
+      babuf.bpscaption AS parkingSpaceName,
+      babuf.lokcode AS localeCode,
+      babuf.lokcaption AS localeName,
+      babuf.hyrcode AS rentalObjectCode,
+      babuf.hyrcaption AS rentalObjectName,
+      bafen.distrikt AS district,
+      balgt.caption AS residenceTypeName
+    FROM hyspt
+    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+    LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
+    LEFT JOIN balgh ON babuf.keyobjlgh = balgh.keybalgh
+    LEFT JOIN balgt ON balgh.keybalgt = balgt.keybalgt
+    WHERE ${whereClause}
+    ORDER BY hyspt.fdate DESC
+  `)
+
+  return rows
+}
+
+/** Escape a string value for safe SQL interpolation */
+function escapeSqlString(value: string): string {
+  // Escape single quotes by doubling them
+  const escaped = value.replace(/'/g, "''")
+  return `'${escaped}'`
+}
+
+/** Escape a string value for LIKE pattern with wildcards */
+function escapeSqlLike(value: string): string {
+  // Escape special LIKE characters and single quotes
+  const escaped = value
+    .replace(/'/g, "''")
+    .replace(/%/g, '[%]')
+    .replace(/_/g, '[_]')
+  return `'%${escaped}%'`
+}
+
+/** Transform raw SQL row to API response format */
+function transformRawRentalBlockRow(
+  row: RawRentalBlockRow,
+  rentRows: RentRow[]
+) {
+  const monthlyRent = calculateMonthlyRentFromYearRentRows(rentRows)
+
+  const getCategory = () => {
+    if (row.residenceCode) return 'Bostad' as const
+    if (row.parkingSpaceCode) return 'Bilplats' as const
+    if (row.localeCode) return 'Lokal' as const
+    if (row.rentalObjectCode) return 'Förråd' as const
+    return 'Övrigt' as const
+  }
+
+  return {
+    id: row.id?.trim() || '',
+    blockReasonId: row.blockReasonId?.trim() || null,
+    blockReason: row.blockReasonCaption?.trim() || null,
+    fromDate: row.fromDate,
+    toDate: row.toDate,
+    amount:
+      row.amount ??
+      calculateEstimatedHyresbortfall(monthlyRent, row.fromDate, row.toDate),
+    rentalObject: {
+      code:
+        row.residenceCode?.trim() ||
+        row.parkingSpaceCode?.trim() ||
+        row.localeCode?.trim() ||
+        row.rentalObjectCode?.trim() ||
+        null,
+      name:
+        row.residenceName?.trim() ||
+        row.parkingSpaceName?.trim() ||
+        row.localeName?.trim() ||
+        row.rentalObjectName?.trim() ||
+        null,
+      category: getCategory(),
+      address: row.address?.trim() || null,
+      rentalId: row.rentalId?.trim() || null,
+      monthlyRent,
+      type: row.residenceTypeName?.trim() || null,
+    },
+    building: {
+      code: row.buildingCode?.trim() || null,
+      name: row.buildingName?.trim() || null,
+    },
+    property: {
+      code: row.propertyCode?.trim() || null,
+      name: row.propertyName?.trim() || null,
+    },
+    distrikt: row.district?.trim() || null,
+  }
 }
 
 export const getAllRentalBlocks = async (options?: {
@@ -776,8 +992,8 @@ export const getAllRentalBlocks = async (options?: {
       ),
     ]
 
-    // Fetch rent data using optimized FOR JSON PATH aggregation
-    const rentByRentalId = await fetchRentDataAggregated(uniqueRentalIds)
+    // Fetch rent data using batched queries
+    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
 
     // Attach rent data to rental blocks
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
@@ -1027,8 +1243,8 @@ export const searchRentalBlocks = async (
       ),
     ]
 
-    // Fetch rent data using optimized FOR JSON PATH aggregation
-    const rentByRentalId = await fetchRentDataAggregated(uniqueRentalIds)
+    // Fetch rent data using batched queries
+    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
 
     // Attach rent data to rental blocks
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
@@ -1069,80 +1285,32 @@ export const getAllRentalBlocksForExport = async (
   }
 
   try {
-    const whereClause = buildRentalBlockWhereClause(options)
-
-    // Fetch ALL matching records (no pagination)
+    // Fetch rental blocks using raw SQL with explicit JOINs
     const startFetchBlocks = performance.now()
-    const rentalBlocks = await prisma.rentalBlock.findMany({
-      where: whereClause,
-      include: {
-        blockReason: true,
-        propertyStructure: {
-          select: {
-            name: true,
-            rentalId: true,
-            propertyCode: true,
-            propertyName: true,
-            buildingCode: true,
-            buildingName: true,
-            residenceCode: true,
-            residenceName: true,
-            parkingSpaceCode: true,
-            parkingSpaceName: true,
-            localeCode: true,
-            localeName: true,
-            rentalObjectCode: true,
-            rentalObjectName: true,
-            administrativeUnit: {
-              select: {
-                district: true,
-              },
-            },
-            residence: {
-              select: {
-                residenceType: {
-                  select: {
-                    code: true,
-                    name: true,
-                    roomCount: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        fromDate: 'desc',
-      },
-    })
+    const rawBlocks = await fetchRentalBlocksRaw(options)
     timings.fetchBlocksMs = Math.round(performance.now() - startFetchBlocks)
 
     // Get unique rental IDs for fetching rent data
     const startFetchRent = performance.now()
     const uniqueRentalIds = [
       ...new Set(
-        rentalBlocks
-          .map((rb) => rb.propertyStructure?.rentalId?.trim())
+        rawBlocks
+          .map((rb) => rb.rentalId?.trim())
           .filter((id): id is string => !!id)
       ),
     ]
 
-    // Fetch rent data using optimized FOR JSON PATH aggregation
-    const rentByRentalId = await fetchRentDataAggregated(uniqueRentalIds)
+    // Fetch rent data using batched queries
+    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
     timings.fetchRentMs = Math.round(performance.now() - startFetchRent)
 
-    // Attach rent data to rental blocks and transform
+    // Transform raw rows to API response format
     const startTransform = performance.now()
-    const rentalBlocksWithRent = rentalBlocks.map((rb) => {
-      const rentalId = rb.propertyStructure?.rentalId?.trim()
-      return {
-        ...rb,
-        rentRows: rentalId ? rentByRentalId.get(rentalId) || [] : [],
-      }
+    const transformedBlocks = rawBlocks.map((row) => {
+      const rentalId = row.rentalId?.trim()
+      const rentRows = rentalId ? rentByRentalId.get(rentalId) || [] : []
+      return transformRawRentalBlockRow(row, rentRows)
     })
-
-    const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
     const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
     timings.transformMs = Math.round(performance.now() - startTransform)
 
