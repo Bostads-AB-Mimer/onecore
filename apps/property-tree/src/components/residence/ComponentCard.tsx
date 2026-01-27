@@ -141,7 +141,8 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                   {component.model?.subtype?.subTypeName || '-'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {component.model?.manufacturer && component.model.manufacturer !== 'Unknown'
+                  {component.model?.manufacturer &&
+                  component.model.manufacturer !== 'Unknown'
                     ? `${component.model.manufacturer} | `
                     : ''}
                   {component.model?.modelName}

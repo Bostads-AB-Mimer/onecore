@@ -1492,7 +1492,10 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.getBlockReasons()
 
       if (!result.ok) {
-        logger.error({ err: result.err, metadata }, 'Error fetching block reasons')
+        logger.error(
+          { err: result.err, metadata },
+          'Error fetching block reasons'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return
