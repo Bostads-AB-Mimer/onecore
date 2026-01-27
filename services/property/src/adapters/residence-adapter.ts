@@ -1269,29 +1269,14 @@ export const searchRentalBlocks = async (
 
 export type ExportRentalBlocksOptions = RentalBlockFilterOptions
 
-export interface ExportTimings {
-  fetchBlocksMs: number
-  fetchRentMs: number
-  transformMs: number
-}
-
 export const getAllRentalBlocksForExport = async (
   options: ExportRentalBlocksOptions
 ) => {
-  const timings: ExportTimings = {
-    fetchBlocksMs: 0,
-    fetchRentMs: 0,
-    transformMs: 0,
-  }
-
   try {
     // Fetch rental blocks using raw SQL with explicit JOINs
-    const startFetchBlocks = performance.now()
     const rawBlocks = await fetchRentalBlocksRaw(options)
-    timings.fetchBlocksMs = Math.round(performance.now() - startFetchBlocks)
 
     // Get unique rental IDs for fetching rent data
-    const startFetchRent = performance.now()
     const uniqueRentalIds = [
       ...new Set(
         rawBlocks
@@ -1302,19 +1287,15 @@ export const getAllRentalBlocksForExport = async (
 
     // Fetch rent data using batched queries
     const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
-    timings.fetchRentMs = Math.round(performance.now() - startFetchRent)
 
     // Transform raw rows to API response format
-    const startTransform = performance.now()
     const transformedBlocks = rawBlocks.map((row) => {
       const rentalId = row.rentalId?.trim()
       const rentRows = rentalId ? rentByRentalId.get(rentalId) || [] : []
       return transformRawRentalBlockRow(row, rentRows)
     })
-    const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
-    timings.transformMs = Math.round(performance.now() - startTransform)
 
-    return { data: sortedBlocks, timings }
+    return sortRentalBlocksByFutureThenActive(transformedBlocks)
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
     throw err

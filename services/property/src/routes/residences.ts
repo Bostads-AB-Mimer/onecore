@@ -575,15 +575,13 @@ export const routes = (router: KoaRouter) => {
     parseRequest({ query: exportRentalBlocksQueryParamsSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const startTotal = performance.now()
 
       try {
-        const { data: allBlocks, timings } = await getAllRentalBlocksForExport(
+        const allBlocks = await getAllRentalBlocksForExport(
           ctx.request.parsedQuery
         )
 
         // Dynamic import of ExcelJS to avoid loading it on every request
-        const startExcel = performance.now()
         const ExcelJS = await import('exceljs')
         const workbook = new ExcelJS.default.Workbook()
         const worksheet = workbook.addWorksheet('Spärrlista')
@@ -636,8 +634,6 @@ export const routes = (router: KoaRouter) => {
 
         // Generate buffer
         const buffer = await workbook.xlsx.writeBuffer()
-        const excelMs = Math.round(performance.now() - startExcel)
-        const totalMs = Math.round(performance.now() - startTotal)
 
         // Set response headers for file download
         const timestamp = new Date().toISOString().split('T')[0]
@@ -648,26 +644,6 @@ export const routes = (router: KoaRouter) => {
         ctx.set(
           'Content-Disposition',
           `attachment; filename="sparrlista-${timestamp}.xlsx"`
-        )
-
-        // Timing headers for performance analysis
-        ctx.set('X-Timing-Total', `${totalMs}ms`)
-        ctx.set('X-Timing-FetchBlocks', `${timings.fetchBlocksMs}ms`)
-        ctx.set('X-Timing-FetchRent', `${timings.fetchRentMs}ms`)
-        ctx.set('X-Timing-Transform', `${timings.transformMs}ms`)
-        ctx.set('X-Timing-Excel', `${excelMs}ms`)
-        ctx.set('X-Record-Count', `${allBlocks.length}`)
-
-        logger.info(
-          {
-            totalMs,
-            fetchBlocksMs: timings.fetchBlocksMs,
-            fetchRentMs: timings.fetchRentMs,
-            transformMs: timings.transformMs,
-            excelMs,
-            recordCount: allBlocks.length,
-          },
-          'rental-blocks-export-timing'
         )
 
         ctx.status = 200

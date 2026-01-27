@@ -141,7 +141,9 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                   {component.model?.subtype?.subTypeName || '-'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {component.model?.manufacturer || '-'}{' '}
+                  {component.model?.manufacturer && component.model.manufacturer !== 'Unknown'
+                    ? `${component.model.manufacturer} `
+                    : ''}
                   {component.serialNumber}
                 </p>
               </div>
@@ -526,10 +528,10 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
             className="w-full mt-4"
             variant="outline"
             disabled
-            title="Kommer snart: Öppna felanmälan"
+            title="Kommer snart: Öppna serviceanmälan"
           >
             <Ticket className="h-4 w-4 mr-2" />
-            Öppna Felanmälan
+            Öppna Serviceanmälan
           </Button>
         </CardContent>
       </Card>
