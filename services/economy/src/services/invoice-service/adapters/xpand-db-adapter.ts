@@ -17,6 +17,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
+import { InvoiceWithAccounting } from '@src/common/types/typesv2'
 
 type RentalSpecificRule = {
   costCode: string
@@ -47,6 +48,29 @@ const db = knex({
 
 export const closeDb = () => {
   db.destroy()
+}
+
+export const enrichInvoiceWithAccounting = async (
+  invoice: InvoiceWithAccounting
+): Promise<InvoiceWithAccounting> => {
+  const rentalId = invoice.leaseId.split('/')[0]
+  const year = invoice.invoiceDate.getFullYear()
+  const rentalSpecificRules = await getRentalSpecificRules(
+    [rentalId],
+    year.toString()
+  )
+
+  const rentalSpecificRule = rentalSpecificRules[rentalId]
+
+  invoice.invoiceRows.forEach((row) => {
+    console.log('row', row)
+    row.projectCode = rentalSpecificRule.projectCode
+    row.costCode = rentalSpecificRule.costCode
+    row.property = rentalSpecificRule.property
+    row.freeCode = rentalSpecificRule.freeCode
+  })
+
+  return invoice
 }
 
 let roundOffInformation: RoundOffInformation | undefined = undefined
@@ -456,6 +480,8 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
     fromDate: row.fromDate,
     toDate: row.toDate,
+    recipientContactCode: contactCode,
+    recipientName: '',
     invoiceDate: row.invoiceDate,
     expirationDate: row.expirationDate,
     debitStatus: row.debitStatus,

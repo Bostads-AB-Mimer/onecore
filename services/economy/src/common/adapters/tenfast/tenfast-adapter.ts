@@ -18,6 +18,10 @@ import {
   InvoiceTransactionType,
   PaymentStatus,
 } from '@onecore/types'
+import {
+  InvoiceRowWithAccounting,
+  InvoiceWithAccounting,
+} from '@src/common/types/typesv2'
 
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
@@ -122,13 +126,22 @@ export const getInvoiceByOcr = async (
       },
     })
     if (result.status !== 200) {
+      logger.error(
+        { error: result.statusText },
+        'Error getting invoices from Tenfast'
+      )
       return { ok: false, err: result.statusText }
     }
 
     const parsedResponse = TenfastInvoicesByOcrResponseSchema.safeParse(
       result.data
     )
+
     if (!parsedResponse.success) {
+      logger.error(
+        { error: parsedResponse.error },
+        'Error parsing Tenfast invoice'
+      )
       return { ok: false, err: 'schema-error' }
     }
 
@@ -181,8 +194,11 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     expirationDate: new Date(tenfastInvoice.due),
     paidAmount: tenfastInvoice.amountPaid,
     remainingAmount,
+    roundoff: tenfastInvoice.roundingAmount,
     invoiceId: tenfastInvoice.ocrNumber,
-    leaseId: '',
+    leaseId: tenfastInvoice.contractCode!!,
+    recipientContactCode: tenfastInvoice.recipientContactCode!!,
+    recipientName: tenfastInvoice.recipientName!!,
     paymentStatus:
       remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
     type: 'Regular',
@@ -216,5 +232,48 @@ const transformToInvoiceRow = (
     invoiceDate: '',
     invoiceDueDate: '',
     invoiceNumber: '',
+  }
+}
+
+export const convertToDate = (tenfastDate: string) => {
+  return new Date(tenfastDate)
+}
+
+export const getInvoicesNotExported = async (
+  maxCount: number
+): Promise<AdapterResult<InvoiceWithAccounting[], string>> => {
+  // Dummy implementation awaiting exported flag in Tenfast
+  const tenfastInvoicesResult = await getInvoiceByOcr('2002125123137')
+  const invoices: InvoiceWithAccounting[] = []
+  //const rentArticles = await getRentArticles()
+
+  if (tenfastInvoicesResult.ok && tenfastInvoicesResult.data) {
+    const invoice = tenfastInvoicesResult.data
+    const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
+
+    for (const invoiceRow of invoice.invoiceRows) {
+      const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
+        ...invoiceRow,
+      }
+      if (invoiceRow.rentArticle) {
+        const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+        if (articleResult.ok) {
+          const article = articleResult.data
+          invoiceRowWithAccounting.account = article.accountNr ?? undefined
+          invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+        }
+      }
+
+      invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
+    }
+    const invoiceWithAccounting = {
+      ...invoice,
+      invoiceRows: invoiceRowsWithAccounting,
+    }
+
+    invoices.push(invoiceWithAccounting)
+    return { ok: true, data: invoices }
+  } else {
+    return { ok: false, err: 'error-getting-invoices' }
   }
 }

@@ -23,6 +23,7 @@
     "seed": "knex seed:run --env dev",
     "script:import-rental-invoices": "node build/scripts/import-rental-invoices",
     "dev:script:import-rental-invoices": "ts-node -r tsconfig-paths/register src/scripts/import-rental-invoices",
+    "dev:script:export-rental-invoices-accounting": "ts-node -r tsconfig-paths/register src/scripts/export-rental-invoices-accounting",
     "script:import-procurement-invoices": "node build/scripts/import-procurement-invoices",
     "dev:script:import-procurement-invoices": "ts-node -r tsconfig-paths/register src/scripts/import-procurement-invoices",
     "dev:script:import-debt-collection": "ts-node -r tsconfig-paths/register src/scripts/import-debt-collection",

@@ -159,6 +159,8 @@ const transformToInvoice = (invoiceData: any[]): Invoice[] => {
       paymentStatus: PaymentStatus.Unpaid,
       transactionType: InvoiceTransactionType.Rent,
       transactionTypeName: randomUUID(),
+      recipientContactCode: invoiceData.node.subledger.code,
+      recipientName: invoiceData.node.subledger.description,
       paidAmount:
         parseFloat(invoiceData.node.amount) -
         parseFloat(invoiceData.node.invoiceRemaining),

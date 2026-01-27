@@ -18,7 +18,7 @@ export const TenfastLeaseSchema = z.object({
       _id: z.string(),
       nummer: z.string(),
       postadress: z.string(),
-      skvNummer: z.string().nullable(),
+      skvNummer: z.number().nullable(),
       displayName: z.string(),
       subType: z.string(),
       states: z.array(z.any()),
@@ -59,6 +59,7 @@ export const TenfastInvoiceSchema = z.object({
   simpleHyra: z.boolean(),
   amount: z.number(),
   amountPaid: z.number(),
+  roundingAmount: z.number(),
   acceptDiff: z.boolean(),
   aviseringsTyp: z.string(),
   expectedInvoiceDate: z.string(),
@@ -77,7 +78,67 @@ export const TenfastInvoiceSchema = z.object({
   ocrNumber: z.string(),
   late: z.boolean(),
   state: z.string(),
-  id: z.string(),
+  recipientContactCode: z.string().optional(),
+  recipientName: z.string().optional(),
+  contractCode: z.string().optional(),
+  //id: z.string(),
+})
+
+export const TenfastInvoiceSnapshotSchema = z.object({
+  hyresvard: z.object({
+    originalId: z.string(),
+    displayName: z.string(),
+    idbeteckning: z.string(),
+    isCompany: z.boolean(),
+    postadress: z.string(),
+    postnummer: z.string(),
+    stad: z.string(),
+    phone: z.string(),
+    momsnummer: z.string(),
+    paymentMethods: z.any(),
+    logo: z.any(),
+  }),
+  hyresgaster: z.array(
+    z.object({
+      originalId: z.string(),
+      displayName: z.string(),
+      idbeteckning: z.string(),
+      isCompany: z.boolean(),
+      fakturaMottagare: z.object({
+        name: z.string().nullable(),
+        idbeteckning: z.string().nullable(),
+        email: z.string().nullable(),
+        phone: z.string().nullable(),
+        postadress: z.string().nullable(),
+        postnummer: z.string().nullable(),
+        godMan: z.boolean(),
+      }),
+      postadress: z.string(),
+      postnummer: z.string(),
+      stad: z.string(),
+      phone: z.string(),
+    })
+  ),
+  avtal: z.array(
+    z.object({
+      originalId: z.string(),
+      externalId: z.string(),
+      version: z.number(),
+      reference: z.number(),
+    })
+  ),
+  hyresobjekt: z.array(
+    z.object({
+      avtalId: z.string(),
+      originalId: z.string(),
+      externalId: z.string(),
+      postadress: z.string(),
+      postnummer: z.string(),
+      skvNummer: z.number().nullable(),
+      nummer: z.string(),
+      stad: z.string(),
+    })
+  ),
 })
 
 // Getting invoices by OCR from Tenfast returns a list of full Lease objects,
@@ -85,9 +146,15 @@ export const TenfastInvoicesByOcrResponseSchema = z.object({
   records: z.array(
     TenfastInvoiceSchema.extend({
       avtal: z.array(TenfastLeaseSchema),
+      snapshot: TenfastInvoiceSnapshotSchema.optional(),
     }).transform((data) => ({
       ...data,
       avtal: data.avtal.map((x) => x.id),
+      contractCode: data.snapshot?.avtal[0]?.externalId,
+      recipientContactCode: '', // TODO: Add
+      recipientName:
+        data.snapshot?.hyresgaster[0]?.displayName ??
+        data.avtal[0]?.hyresgaster[0]?.displayName,
     }))
   ),
 })
