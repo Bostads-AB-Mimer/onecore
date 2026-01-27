@@ -1,15 +1,9 @@
 import knex from 'knex'
 import config from '../../../common/config'
-import { RentInvoiceRow, RentInvoice, RentalProperty } from '../types'
+import { RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import {
-  Address,
-  Invoice,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  paymentStatusTranslation,
-} from '@onecore/types'
+import { Address, RentInvoiceRow } from '@onecore/types'
 
 const db = knex({
   connection: {

@@ -13,7 +13,6 @@ import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
-import { InvoiceWithMatchId } from '@src/services/report-service/types'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -665,7 +664,7 @@ export const getAllInvoicesWithMatchIds = async ({
   to?: Date
   after?: string
   remainingAmountGreaterThan?: number
-}): Promise<InvoiceWithMatchId[]> => {
+}): Promise<Invoice[]> => {
   const query = {
     query: gql`
       query($after: String, $filter: ARTransaction_Filter) {
@@ -706,13 +705,14 @@ export const getAllInvoicesWithMatchIds = async ({
     return []
   }
 
-  const invoicesWithMatchIds: InvoiceWithMatchId[] =
-    result.data.arTransactions.edges.map((e: any): InvoiceWithMatchId => {
+  const invoicesWithMatchIds: Invoice[] = result.data.arTransactions.edges.map(
+    (e: any): Invoice => {
       return {
         ...transformToInvoice(e),
         matchId: e.node.matchId,
       }
-    })
+    }
+  )
 
   if (result.data.arTransactions.pageInfo.hasNextPage) {
     const lastEdge = result.data.arTransactions.edges.at(-1)
