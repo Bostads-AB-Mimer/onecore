@@ -391,10 +391,10 @@ export const contactsQuery = () => {
 
         if (contactType === 'organisation') {
           qb.andWhere((b) => {
-            b.orWhereLike('cmctc.cmctckod', 'F%').orWhere((edge) =>
+            b.orWhereLike('cmctc.cmctckod', '[FIKLOSÖ]%').orWhere((edge) =>
               edge
                 .whereRaw("LEFT(cmctc.cmctckod, 1) LIKE '[0-9]'")
-                .andWhere('fnamn', null)
+                .andWhere('cmctc.fnamn', null)
             )
           })
         } else if (contactType == 'individual') {

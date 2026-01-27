@@ -120,9 +120,9 @@ export const toOrganisation = (
  * Determine the contact type of a DbContact row.
  *
  * The "law" that individuals have contact codes that begin with 'P' and
- * organisations with 'I' is not universal. There are hundreds of rows
+ * organisations with 'F' is not universal. There are hundreds of rows
  * in the Mimer database that have no leading character at all, and
- * a few hundred with a leading 'I', which seems to be internal.
+ * a few hundred with a leading 'I', 'K', 'L', 'S', 'O' or 'Ö'.
  *
  * FIXME: In all likelihood the non-character prefixed contact codes are legacy
  * but this is where we could make a best-effort attempt to identify the
@@ -139,8 +139,13 @@ export const resolveContactType = (dbContact: DbContact): ContactType => {
   switch (contactCode.charAt(0)) {
     case 'P':
       return 'individual'
-    case 'I':
     case 'F':
+    case 'I':
+    case 'K':
+    case 'L':
+    case 'O':
+    case 'S':
+    case 'Ö':
       return 'organisation'
     default:
       if (contactCode.match(/^[0-9]/) && !dbContact.firstName) {
