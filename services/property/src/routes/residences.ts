@@ -18,7 +18,7 @@ import {
   getAllRentalBlocks,
   searchRentalBlocks,
   getAllRentalBlocksForExport,
-  getAllBlockReasons,
+  getDistinctBlockReasons,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -982,7 +982,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const blockReasons = await getAllBlockReasons()
+      const blockReasons = await getDistinctBlockReasons()
 
       ctx.status = 200
       ctx.body = {

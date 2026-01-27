@@ -100,6 +100,7 @@ export function FilterDropdown({
               ref={inputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
               placeholder={searchPlaceholder}
               className="h-8 text-sm"
             />

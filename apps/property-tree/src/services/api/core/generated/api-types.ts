@@ -4329,6 +4329,31 @@ export interface paths {
       };
     };
   };
+  "/residences/block-reasons": {
+    /**
+     * Get all block reasons
+     * @description Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved block reasons */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  id?: string;
+                  caption?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/search": {
     /**
      * Search residences

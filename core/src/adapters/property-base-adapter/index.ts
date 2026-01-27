@@ -911,6 +911,27 @@ export async function exportRentalBlocksToExcel(
   }
 }
 
+type BlockReason = { id: string; caption: string }
+
+export async function getBlockReasons(): Promise<
+  AdapterResult<BlockReason[], 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/residences/block-reasons`
+    )
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getBlockReasons')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

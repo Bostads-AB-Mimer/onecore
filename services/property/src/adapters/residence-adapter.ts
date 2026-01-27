@@ -634,6 +634,68 @@ function transformRentalBlock(rb: {
   }
 }
 
+/** Type for rent row data */
+type RentRow = {
+  yearRent: number | null
+  debitFromDate: Date | null
+  debitToDate: Date | null
+}
+
+async function fetchRentDataAggregated(
+  rentalIds: string[]
+): Promise<Map<string, RentRow[]>> {
+  if (rentalIds.length === 0) {
+    return new Map()
+  }
+
+  const BATCH_SIZE = 2000
+  const rentByRentalId = new Map<string, RentRow[]>()
+
+  // Process in batches to avoid SQL Server 2100 parameter limit
+  for (let i = 0; i < rentalIds.length; i += BATCH_SIZE) {
+    const batch = rentalIds.slice(i, i + BATCH_SIZE)
+
+    const rentData = await prisma.$queryRaw<
+      Array<{
+        rentalpropertyid: string
+        rentRows: string | null
+      }>
+    >`
+      SELECT
+        rentalpropertyid,
+        (
+          SELECT yearrent, debitfdate, debittodate
+          FROM hy_debitrowrentalproperty_xpand_api x2
+          WHERE x2.rentalpropertyid = x1.rentalpropertyid
+          FOR JSON PATH
+        ) AS rentRows
+      FROM hy_debitrowrentalproperty_xpand_api x1
+      WHERE rentalpropertyid IN (${Prisma.join(batch)})
+      GROUP BY rentalpropertyid
+    `
+
+    for (const row of rentData) {
+      const id = row.rentalpropertyid.trim()
+      const parsedRows: RentRow[] = row.rentRows
+        ? JSON.parse(row.rentRows).map(
+            (r: {
+              yearrent: number | null
+              debitfdate: string | null
+              debittodate: string | null
+            }) => ({
+              yearRent: r.yearrent,
+              debitFromDate: r.debitfdate ? new Date(r.debitfdate) : null,
+              debitToDate: r.debittodate ? new Date(r.debittodate) : null,
+            })
+          )
+        : []
+      rentByRentalId.set(id, parsedRows)
+    }
+  }
+
+  return rentByRentalId
+}
+
 export const getAllRentalBlocks = async (options?: {
   active?: boolean
   limit?: number
@@ -714,42 +776,8 @@ export const getAllRentalBlocks = async (options?: {
       ),
     ]
 
-    // Fetch rent data for all rental IDs
-    let rentByRentalId = new Map<
-      string,
-      Array<{
-        yearRent: number | null
-        debitFromDate: Date | null
-        debitToDate: Date | null
-      }>
-    >()
-
-    if (uniqueRentalIds.length > 0) {
-      // Use parameterized query to prevent SQL injection
-      const rentData = await prisma.$queryRaw<
-        Array<{
-          rentalpropertyid: string
-          yearrent: number | null
-          debitfdate: Date | null
-          debittodate: Date | null
-        }>
-      >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
-         FROM hy_debitrowrentalproperty_xpand_api
-         WHERE rentalpropertyid IN (${Prisma.join(uniqueRentalIds)})`
-
-      // Group rent rows by rental property ID
-      for (const row of rentData) {
-        const id = row.rentalpropertyid.trim()
-        if (!rentByRentalId.has(id)) {
-          rentByRentalId.set(id, [])
-        }
-        rentByRentalId.get(id)!.push({
-          yearRent: row.yearrent,
-          debitFromDate: row.debitfdate,
-          debitToDate: row.debittodate,
-        })
-      }
-    }
+    // Fetch rent data using optimized FOR JSON PATH aggregation
+    const rentByRentalId = await fetchRentDataAggregated(uniqueRentalIds)
 
     // Attach rent data to rental blocks
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
@@ -999,40 +1027,8 @@ export const searchRentalBlocks = async (
       ),
     ]
 
-    // Fetch rent data for all rental IDs
-    let rentByRentalId = new Map<
-      string,
-      Array<{
-        yearRent: number | null
-        debitFromDate: Date | null
-        debitToDate: Date | null
-      }>
-    >()
-
-    if (uniqueRentalIds.length > 0) {
-      const rentData = await prisma.$queryRaw<
-        Array<{
-          rentalpropertyid: string
-          yearrent: number | null
-          debitfdate: Date | null
-          debittodate: Date | null
-        }>
-      >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
-         FROM hy_debitrowrentalproperty_xpand_api
-         WHERE rentalpropertyid IN (${Prisma.join(uniqueRentalIds)})`
-
-      for (const row of rentData) {
-        const id = row.rentalpropertyid.trim()
-        if (!rentByRentalId.has(id)) {
-          rentByRentalId.set(id, [])
-        }
-        rentByRentalId.get(id)!.push({
-          yearRent: row.yearrent,
-          debitFromDate: row.debitfdate,
-          debitToDate: row.debittodate,
-        })
-      }
-    }
+    // Fetch rent data using optimized FOR JSON PATH aggregation
+    const rentByRentalId = await fetchRentDataAggregated(uniqueRentalIds)
 
     // Attach rent data to rental blocks
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
@@ -1132,45 +1128,8 @@ export const getAllRentalBlocksForExport = async (
       ),
     ]
 
-    // Fetch rent data for all rental IDs (batched to avoid SQL Server 2100 param limit)
-    const BATCH_SIZE = 2000
-    let rentByRentalId = new Map<
-      string,
-      Array<{
-        yearRent: number | null
-        debitFromDate: Date | null
-        debitToDate: Date | null
-      }>
-    >()
-
-    if (uniqueRentalIds.length > 0) {
-      // Process in batches to avoid SQL Server parameter limit
-      for (let i = 0; i < uniqueRentalIds.length; i += BATCH_SIZE) {
-        const batch = uniqueRentalIds.slice(i, i + BATCH_SIZE)
-        const rentData = await prisma.$queryRaw<
-          Array<{
-            rentalpropertyid: string
-            yearrent: number | null
-            debitfdate: Date | null
-            debittodate: Date | null
-          }>
-        >`SELECT rentalpropertyid, yearrent, debitfdate, debittodate
-           FROM hy_debitrowrentalproperty_xpand_api
-           WHERE rentalpropertyid IN (${Prisma.join(batch)})`
-
-        for (const row of rentData) {
-          const id = row.rentalpropertyid.trim()
-          if (!rentByRentalId.has(id)) {
-            rentByRentalId.set(id, [])
-          }
-          rentByRentalId.get(id)!.push({
-            yearRent: row.yearrent,
-            debitFromDate: row.debitfdate,
-            debitToDate: row.debittodate,
-          })
-        }
-      }
-    }
+    // Fetch rent data using optimized FOR JSON PATH aggregation
+    const rentByRentalId = await fetchRentDataAggregated(uniqueRentalIds)
     timings.fetchRentMs = Math.round(performance.now() - startFetchRent)
 
     // Attach rent data to rental blocks and transform
@@ -1202,6 +1161,51 @@ export const getAllBlockReasons = async () => {
     return blockReasons.map(trimStrings)
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getAllBlockReasons')
+    throw err
+  }
+}
+
+/**
+ * Get distinct block reasons from actual rental blocks data.
+ * This is more reliable than the lookup table as it only returns
+ * block reasons that are actually in use.
+ */
+export const getDistinctBlockReasons = async () => {
+  try {
+    // Get distinct blockReasonIds from rental blocks
+    const distinctIds = await prisma.rentalBlock.findMany({
+      where: {
+        blockReasonId: { not: null },
+      },
+      distinct: ['blockReasonId'],
+      select: {
+        blockReasonId: true,
+      },
+    })
+
+    const blockReasonIds = distinctIds
+      .map((r) => r.blockReasonId)
+      .filter((id): id is string => id !== null)
+
+    if (blockReasonIds.length === 0) {
+      return []
+    }
+
+    // Fetch the actual block reason records
+    const blockReasons = await prisma.blockReason.findMany({
+      where: {
+        id: { in: blockReasonIds },
+      },
+      orderBy: { caption: 'asc' },
+      select: {
+        id: true,
+        caption: true,
+      },
+    })
+
+    return blockReasons.map(trimStrings)
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getDistinctBlockReasons')
     throw err
   }
 }

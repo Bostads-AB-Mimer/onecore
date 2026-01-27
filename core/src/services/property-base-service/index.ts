@@ -1459,6 +1459,59 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/block-reasons:
+   *   get:
+   *     summary: Get all block reasons
+   *     tags:
+   *       - Property base Service
+   *     description: Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved block reasons
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/block-reasons', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await propertyBaseAdapter.getBlockReasons()
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Error fetching block reasons')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences/search:
    *   get:
    *     summary: Search residences
