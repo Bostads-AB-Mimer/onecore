@@ -526,12 +526,6 @@ export const getInvoicesByContactCode = async (
         edges {
           node {
             ${invoiceNodeFragment}
-              transactionHeader {
-                postedDate
-                transactionSource {
-                  code
-                }
-              }
           }
         }
       }

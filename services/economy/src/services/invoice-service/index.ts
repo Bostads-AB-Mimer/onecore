@@ -35,7 +35,6 @@ export const routes = (router: KoaRouter) => {
       const xledgerInvoices =
         (await getXledgerInvoicesByContactCode(contactCode, { from: from })) ??
         []
-      console.log('xledgerInvoices', xledgerInvoices)
       const xpandInvoices =
         (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
 
