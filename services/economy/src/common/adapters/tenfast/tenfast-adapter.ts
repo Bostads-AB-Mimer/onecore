@@ -243,37 +243,59 @@ export const getInvoicesNotExported = async (
   maxCount: number
 ): Promise<AdapterResult<InvoiceWithAccounting[], string>> => {
   // Dummy implementation awaiting exported flag in Tenfast
-  const tenfastInvoicesResult = await getInvoiceByOcr('2002125123137')
   const invoices: InvoiceWithAccounting[] = []
-  //const rentArticles = await getRentArticles()
+  const ocrNumbers = [
+    '2002125123137',
+    '2007725123130',
+    '2007725123130',
+    '2007925123138',
+    '2007625123131',
+    '2007225123135',
+    '2007225123136',
+    '2004225123132',
+    '2004125123133',
+    '2004025123134',
+    '2003925123137',
+    '2003825123138',
+    '2003725123139',
+    '2007225123143',
+    '2007225123144',
+    '2007225123145',
+    '2007225123146',
+    '2007225123147',
+    '2007225123148',
+    '2007225123149',
+  ]
 
-  if (tenfastInvoicesResult.ok && tenfastInvoicesResult.data) {
-    const invoice = tenfastInvoicesResult.data
-    const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
+  for (const ocrNumber of ocrNumbers) {
+    const tenfastInvoicesResult = await getInvoiceByOcr(ocrNumber)
+    if (tenfastInvoicesResult.ok && tenfastInvoicesResult.data) {
+      const invoice = tenfastInvoicesResult.data
+      const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
 
-    for (const invoiceRow of invoice.invoiceRows) {
-      const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
-        ...invoiceRow,
-      }
-      if (invoiceRow.rentArticle) {
-        const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
-        if (articleResult.ok) {
-          const article = articleResult.data
-          invoiceRowWithAccounting.account = article.accountNr ?? undefined
-          invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+      for (const invoiceRow of invoice.invoiceRows) {
+        const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
+          ...invoiceRow,
         }
+        if (invoiceRow.rentArticle) {
+          const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+          if (articleResult.ok) {
+            const article = articleResult.data
+            invoiceRowWithAccounting.account = article.accountNr ?? undefined
+            invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+          }
+        }
+
+        invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
+      }
+      const invoiceWithAccounting = {
+        ...invoice,
+        invoiceRows: invoiceRowsWithAccounting,
       }
 
-      invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
+      invoices.push(invoiceWithAccounting)
     }
-    const invoiceWithAccounting = {
-      ...invoice,
-      invoiceRows: invoiceRowsWithAccounting,
-    }
-
-    invoices.push(invoiceWithAccounting)
-    return { ok: true, data: invoices }
-  } else {
-    return { ok: false, err: 'error-getting-invoices' }
   }
+
+  return { ok: true, data: invoices }
 }

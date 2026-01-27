@@ -30,6 +30,7 @@ import {
   ExportedInvoiceRow,
   TOTAL_ACCOUNT,
   CUSTOMER_LEDGER_ACCOUNT,
+  AggregatedRow,
 } from '../../common/types/typesv2'
 import {
   createCustomerLedgerRow,
@@ -184,39 +185,63 @@ const createAggregateCsv = async (invoiceRows: ExportedInvoiceRow[]) => {
   //const aggregateTotal
 }
 
-export const createAggregateRows = async (
-  invoiceRows: ExportedInvoiceRow[]
-) => {
-  let currentStartDate = invoiceRows[0].fromDate
-  let currentEndDate = invoiceRows[0].toDate
+const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
+  let currentStartDate = dateString(invoiceRows[0].fromDate)
+  let currentEndDate = dateString(invoiceRows[0].toDate)
   let currentTotalAccount = invoiceRows[0].totalAccount
   let currentRows: ExportedInvoiceRow[] = []
-  let aggregatedRows: ExportedInvoiceRow[] = []
+  let aggregatedRows: AggregatedRow[] = []
+  let voucherIndex = 0
+
+  // Sort rows to get fewer chunks.
+  invoiceRows.sort((a, b) => {
+    return (
+      a.ledgerAccount?.localeCompare(b.ledgerAccount ?? '') ||
+      a.totalAccount?.localeCompare(b.totalAccount ?? '') ||
+      dateString(a.fromDate)?.localeCompare(dateString(b.fromDate) ?? '') ||
+      dateString(a.toDate)?.localeCompare(dateString(b.toDate) ?? '') ||
+      a.invoiceNumber?.localeCompare(b.invoiceNumber ?? '') ||
+      0
+    )
+  })
 
   invoiceRows.forEach((invoiceRow) => {
     if (
-      invoiceRow.fromDate == currentStartDate &&
-      invoiceRow.toDate == currentEndDate &&
+      dateString(invoiceRow.fromDate) == currentStartDate &&
+      dateString(invoiceRow.toDate) == currentEndDate &&
       invoiceRow.totalAccount == currentTotalAccount
     ) {
       // Add row to current batch
       currentRows.push(invoiceRow)
     } else {
+      const voucherNumber =
+        '1' +
+        '123'.toString().padStart(5, '0') +
+        voucherIndex.toString().padStart(3, '0')
+      voucherIndex++
       // create aggregate rows, reset current values, add row as first new batch
-      const chunkRows = aggregateRows(currentRows)
-      //aggregatedRows.push(chunkRows)
-      //const chunkTotalRow = createAggregatedTotalRow(chunkRows)
-      //aggregatedRows.push(chunkTotalRow)
+      const chunkRows = aggregateRows(currentRows, voucherNumber)
+      aggregatedRows.push(...chunkRows)
+      const chunkTotalRow = createAggregatedTotalRow(chunkRows, voucherNumber)
+      aggregatedRows.push(chunkTotalRow)
 
-      currentStartDate = invoiceRow.fromDate
-      currentEndDate = invoiceRow.toDate
+      currentStartDate = dateString(invoiceRow.fromDate)
+      currentEndDate = dateString(invoiceRow.toDate)
       currentTotalAccount = invoiceRow.totalAccount
       currentRows = [invoiceRow]
     }
   })
 
-  const chunkRows = aggregateRows(currentRows)
+  const voucherNumber =
+    '1' +
+    '123'.toString().padStart(5, '0') +
+    voucherIndex.toString().padStart(3, '0')
+  const chunkRows = aggregateRows(currentRows, voucherNumber)
+  aggregatedRows.push(...chunkRows)
+  const chunkTotalRow = createAggregatedTotalRow(chunkRows, voucherNumber)
+  aggregatedRows.push(chunkTotalRow)
 
+  console.table(aggregatedRows)
   return aggregatedRows
 }
 
@@ -224,21 +249,26 @@ const dateString = (date: Date | undefined) => {
   return date ? date.toISOString().split('T')[0] : undefined
 }
 
+const safeAdd = (
+  term1: number | undefined,
+  term2: number | undefined
+): number => {
+  return Math.round(((term1 ?? 0) + (term2 ?? 0) + Number.EPSILON) * 100) / 100
+}
+
 /**
  * Aggregates invoice rows into groups based on the following fields (i.e. into
- * vouchers):
- * 
- * 'RentArticle', 'Account', 'CostCode', 'Property', 'ProjectCode', 'FreeCode',
-      'InvoiceDate',
-      'InvoiceDueDate',
-      'InvoiceFromDate',
-      'InvoiceToDate',
-      'BatchId',
-      'TotalAccount'
- * 
- * @param invoiceRows 
+ * rows that can exist in the same voucher):
+ *
+ * 'Account', 'CostCode', 'Property', 'ProjectCode', 'FreeCode', 'InvoiceDate', 'InvoiceFromDate',
+ * 'InvoiceToDate', 'TotalAccount'
+ *
+ * @param invoiceRows
  */
-const aggregateRows = (invoiceRows: ExportedInvoiceRow[]) => {
+const aggregateRows = (
+  invoiceRows: ExportedInvoiceRow[],
+  voucherNumber: string
+): AggregatedRow[] => {
   const groupedRows = [
     ...invoiceRows
       .reduce((r, o) => {
@@ -255,8 +285,6 @@ const aggregateRows = (invoiceRows: ExportedInvoiceRow[]) => {
           '||' +
           dateString(o.invoiceDate) +
           '||' +
-          dateString(o.invoiceDueDate) +
-          '||' +
           dateString(o.fromDate) +
           '||' +
           dateString(o.toDate) +
@@ -271,73 +299,51 @@ const aggregateRows = (invoiceRows: ExportedInvoiceRow[]) => {
           projectCode: o.projectCode,
           freeCode: o.freeCode,
           property: o.property,
-          voucherDate: dateString(o.invoiceDate) ?? '',
+          voucherDate: dateString(o.fromDate) ?? '',
           fromDate: dateString(o.fromDate) ?? '',
           toDate: dateString(o.toDate) ?? '',
+          totalAccount: o.totalAccount,
+          voucherNumber,
           amount: 0,
           vat: 0,
         }
 
-        aggregatedRow.amount += o.amount
-        aggregatedRow.vat += o.vat ?? 0
+        aggregatedRow.amount = safeAdd(aggregatedRow.amount, o.amount)
+        aggregatedRow.vat = safeAdd(aggregatedRow.vat, o.vat)
 
         return r.set(key, aggregatedRow)
       }, new Map())
       .values(),
   ]
 
-  console.log('aggregated', groupedRows)
   return groupedRows
 }
 
-/*      'RentArticle',
-      'Account',
-      'CostCode',
-      'Property',
-      'ProjectCode',
-      'FreeCode',
-      'InvoiceDate',
-      'InvoiceDueDate',
-      'InvoiceFromDate',
-      'InvoiceToDate',
-      'BatchId',
-      'TotalAccount'*/
+export const createAggregatedTotalRow = (
+  aggregatedRows: AggregatedRow[],
+  voucherNumber: string
+): AggregatedRow => {
+  const accumulator: AggregatedRow = {
+    voucherDate: aggregatedRows[0].fromDate,
+    account: aggregatedRows[0].totalAccount,
+    fromDate: aggregatedRows[0].fromDate,
+    toDate: aggregatedRows[0].toDate,
+    totalAccount: aggregatedRows[0].totalAccount,
+    voucherNumber,
+    amount: 0,
+    vat: 0,
+  }
 
-// export const createAggregateTotalRow = (
-//   aggregatedRows: InvoiceDataRow[]
-// ): InvoiceDataRow => {
-//   const accumulator = {
-//     voucherType: 'AR',
-//     voucherNo: aggregatedRows[0].voucherNo,
-//     voucherDate: aggregatedRows[0].voucherDate,
-//     account: aggregatedRows[0].totalAccount,
-//     posting1: '',
-//     posting2: '',
-//     posting3: '',
-//     posting4: '',
-//     posting5: '',
-//     periodStart: aggregatedRows[0].periodStart,
-//     noOfPeriods: aggregatedRows[0].noOfPeriods,
-//     subledgerNo: '',
-//     invoiceDate: '',
-//     invoiceNo: '',
-//     ocr: '',
-//     dueDate: '',
-//     text: '',
-//     taxRule: '',
-//     amount: 0,
-//   }
+  const totalRow = aggregatedRows.reduce((acc: AggregatedRow, row) => {
+    acc.amount = (acc.amount as number) - (row.amount as number)
+    return acc
+  }, accumulator)
 
-//   const totalRow = aggregatedRows.reduce((acc: InvoiceDataRow, row) => {
-//     acc.amount = (acc.amount as number) - (row.amount as number)
-//     return acc
-//   }, accumulator)
+  totalRow.amount =
+    Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
-//   totalRow.amount =
-//     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
-
-//   return totalRow
-// }
+  return totalRow
+}
 
 // export const createAggregateRows = async (batchId: string) => {
 //   const transactionRows: InvoiceDataRow[] = []
