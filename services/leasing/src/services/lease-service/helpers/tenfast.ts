@@ -32,7 +32,19 @@ function mapToOnecoreRentalObject(
   return {
     rentalObjectCode: rentalObject.externalId,
     address: rentalObject.postadress,
-    monthlyRent: rentalObject.hyraExcludingVat,
+    rent: {
+      rentalObjectCode: rentalObject.externalId,
+      amount: rentalObject.hyraExcludingVat,
+      vat: rentalObject.hyraVat,
+      rows: rentalObject.hyror.map((row) => ({
+        code: row.article ?? '',
+        description: row.label ?? '',
+        amount: row.amount,
+        vatPercentage: row.vat,
+        fromDate: row.from ? new Date(row.from) : undefined,
+        toDate: row.to ? new Date(row.to) : undefined,
+      })),
+    },
     residentialAreaCaption: rentalObject.stadsdel ?? '',
     residentialAreaCode: rentalObject.stadsdel ?? '',
     objectTypeCaption: rentalObject.subType ?? rentalObject.typ ?? '',
