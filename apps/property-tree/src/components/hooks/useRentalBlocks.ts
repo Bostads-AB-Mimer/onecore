@@ -5,6 +5,9 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query'
+import type { RentalBlocksSearchParams } from '@/services/types'
+
+export type { RentalBlocksSearchParams }
 
 export function useRentalBlocks(rentalId: string | undefined) {
   const rentalBlocksQuery = useQuery({
@@ -21,18 +24,6 @@ export function useRentalBlocks(rentalId: string | undefined) {
     isLoading,
     error,
   }
-}
-
-export interface RentalBlocksSearchParams {
-  q?: string
-  fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
-  fromDateGte?: string
-  toDateLte?: string
-  active?: boolean
 }
 
 const hasSearchFilters = (params: RentalBlocksSearchParams) =>

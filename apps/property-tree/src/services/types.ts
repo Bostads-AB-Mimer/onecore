@@ -61,6 +61,18 @@ export type ResidenceSummary = components['schemas']['ResidenceSummary']
 export type RentalBlock = components['schemas']['RentalBlock']
 export type RentalBlockWithRentalObject =
   components['schemas']['RentalBlockWithRentalObject']
+// Query params for /residences/rental-blocks/search endpoint
+export interface RentalBlocksSearchParams {
+  q?: string
+  fields?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  active?: boolean
+}
 export type Room = components['schemas']['Room']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
 export type Component = components['schemas']['Component']

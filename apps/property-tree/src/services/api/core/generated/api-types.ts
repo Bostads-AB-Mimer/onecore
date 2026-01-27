@@ -4234,12 +4234,20 @@ export interface paths {
         query?: {
           /** @description Search term (searches rentalId, address) */
           q?: string;
+          /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
+          fields?: string;
           /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) */
           kategori?: string;
           /** @description Filter by district */
           distrikt?: string;
           /** @description Filter by block reason */
           blockReason?: string;
+          /** @description Filter by property code/name */
+          fastighet?: string;
+          /** @description Filter blocks starting on or after this date */
+          fromDateGte?: string;
+          /** @description Filter blocks ending on or before this date */
+          toDateLte?: string;
           /** @description Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks. */
           active?: boolean;
           page?: number;

@@ -5,6 +5,7 @@ import type {
   ResidenceDetails,
   ResidenceSummary,
   RentalBlock,
+  RentalBlocksSearchParams,
 } from '../../types'
 
 const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
@@ -69,17 +70,7 @@ export const residenceService = {
   },
 
   async searchRentalBlocks(
-    params: {
-      q?: string
-      fields?: string
-      kategori?: string
-      distrikt?: string
-      blockReason?: string
-      fastighet?: string
-      fromDateGte?: string
-      toDateLte?: string
-      active?: boolean
-    },
+    params: RentalBlocksSearchParams,
     page = 1,
     limit = 50
   ) {
@@ -103,16 +94,9 @@ export const residenceService = {
 
   // Note: Using raw fetch instead of GET wrapper because this endpoint
   // returns a binary Excel file (Blob), not JSON
-  async exportRentalBlocksToExcel(params: {
-    q?: string
-    kategori?: string
-    distrikt?: string
-    blockReason?: string
-    fastighet?: string
-    fromDateGte?: string
-    toDateLte?: string
-    active?: boolean
-  }): Promise<Blob> {
+  async exportRentalBlocksToExcel(
+    params: RentalBlocksSearchParams
+  ): Promise<Blob> {
     const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
