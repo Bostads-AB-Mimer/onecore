@@ -137,7 +137,6 @@ export const routes = (router: KoaRouter) => {
           if (result.err === 'lease-not-found') {
             ctx.status = 404
             ctx.body = {
-              error: result.err,
               message: 'Lease not found',
               ...metadata,
             }
@@ -147,7 +146,6 @@ export const routes = (router: KoaRouter) => {
           if (result.err === 'tenant-email-missing') {
             ctx.status = 400
             ctx.body = {
-              error: result.err,
               message: 'Tenant missing valid email address',
               ...metadata,
             }
@@ -156,8 +154,7 @@ export const routes = (router: KoaRouter) => {
 
           ctx.status = 500
           ctx.body = {
-            error: result.err,
-            message: 'Failed to preliminary terminate lease',
+            error: 'Failed to preliminary terminate lease',
             ...metadata,
           }
           return
