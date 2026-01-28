@@ -1055,20 +1055,17 @@ export const routes = (router: KoaRouter) => {
           message: 'Failed to terminate lease',
           ...metadata,
         }
-        return
-      }
 
-      if (result.err === 'tenant-email-missing') {
-        ctx.status = 400
+        ctx.status = 500
         ctx.body = {
           error: result.err,
-          message: 'Tenant missing valid email address',
+          message: 'Failed to terminate lease',
           ...metadata,
         }
         return
       }
 
-      ctx.status = 500
+      ctx.status = 200
       ctx.body = {
         content: result.data,
         ...metadata,
