@@ -606,14 +606,21 @@ export const GetAllRentalBlocksQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+// Helper for array-or-string params (supports multi-select filters)
+// Normalizes to array (matches lease search pattern in libs/types)
+const stringOrArraySchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((val) => (Array.isArray(val) ? val : [val]))
+  .optional()
+
 // Base filter schema for rental blocks (shared between search and export)
 export const RentalBlocksFilterQuerySchema = z.object({
   q: z.string().optional(),
   fields: z.string().optional(),
-  kategori: z.string().optional(),
-  distrikt: z.string().optional(),
-  blockReason: z.string().optional(),
-  fastighet: z.string().optional(),
+  kategori: stringOrArraySchema,
+  distrikt: stringOrArraySchema,
+  blockReason: stringOrArraySchema,
+  fastighet: stringOrArraySchema,
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
   active: booleanStringSchema.optional(),

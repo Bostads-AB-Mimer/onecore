@@ -100,7 +100,12 @@ export const residenceService = {
     const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        searchParams.set(key, String(value))
+        if (Array.isArray(value)) {
+          // For arrays, append each value with the same key
+          value.forEach((v) => searchParams.append(key, v))
+        } else {
+          searchParams.set(key, String(value))
+        }
       }
     })
 
