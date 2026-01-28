@@ -157,8 +157,12 @@ class LeaseSearchQueryBuilder {
       const targets = analyzeSearchTerm(this.params.q)
 
       // Separate targets into contact columns (need EXISTS) and direct columns
-      const contactTargets = targets.filter((t) => t.column.startsWith('cmctc.'))
-      const directTargets = targets.filter((t) => !t.column.startsWith('cmctc.'))
+      const contactTargets = targets.filter((t) =>
+        t.column.startsWith('cmctc.')
+      )
+      const directTargets = targets.filter(
+        (t) => !t.column.startsWith('cmctc.')
+      )
 
       // Ensure address join if we're searching address
       if (directTargets.some((t) => t.column.startsWith('cmadr.'))) {
@@ -447,7 +451,9 @@ const getContactsForLeases = async (
     )
     .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
     .whereIn('hyavk.keyhyobj', leaseKeys)
-  console.log(`  Contact names query: ${Date.now() - startContacts}ms (${rows.length} contacts)`)
+  console.log(
+    `  Contact names query: ${Date.now() - startContacts}ms (${rows.length} contacts)`
+  )
 
   if (rows.length === 0) {
     const result = new Map<string, leasing.v1.ContactInfo[]>()
@@ -456,7 +462,9 @@ const getContactsForLeases = async (
   }
 
   const keycmobjs = [...new Set(rows.map((r) => r.keycmobj as string))]
-  console.log(`  Fetching emails/phones for ${keycmobjs.length} unique contacts`)
+  console.log(
+    `  Fetching emails/phones for ${keycmobjs.length} unique contacts`
+  )
 
   // Batch fetch emails and phones in parallel
   const startEmailPhone = Date.now()
@@ -467,7 +475,9 @@ const getContactsForLeases = async (
       .whereIn('keycmobj', keycmobjs)
       .where('main', 1)
       .then((result) => {
-        console.log(`    Email query: ${Date.now() - startEmailPhone}ms (${result.length} emails)`)
+        console.log(
+          `    Email query: ${Date.now() - startEmailPhone}ms (${result.length} emails)`
+        )
         return result
       }),
     xpandDb
@@ -476,7 +486,9 @@ const getContactsForLeases = async (
       .whereIn('keycmobj', keycmobjs)
       .where('main', 1)
       .then((result) => {
-        console.log(`    Phone query: ${Date.now() - startEmailPhone}ms (${result.length} phones)`)
+        console.log(
+          `    Phone query: ${Date.now() - startEmailPhone}ms (${result.length} phones)`
+        )
         return result
       }),
   ])
@@ -586,12 +598,7 @@ export const searchLeases = async (
 
   const startQuery = Date.now()
   // Use pagination utility
-  const paginatedResult = await paginateKnex<any>(
-    query,
-    ctx,
-    {},
-    params.limit
-  )
+  const paginatedResult = await paginateKnex<any>(query, ctx, {}, params.limit)
   const queryTime = Date.now() - startQuery
   console.log(`Main query time (with contacts): ${queryTime}ms`)
 

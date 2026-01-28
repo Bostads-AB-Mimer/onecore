@@ -5,7 +5,14 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, LayoutGrid, Contact, ShieldX, FileText, ChevronRight } from 'lucide-react'
+import {
+  Home,
+  LayoutGrid,
+  Contact,
+  ShieldX,
+  FileText,
+  ChevronRight,
+} from 'lucide-react'
 import { CompanyList } from './CompanyList'
 import {
   Sidebar,

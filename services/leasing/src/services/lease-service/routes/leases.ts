@@ -220,7 +220,9 @@ export const routes = (router: KoaRouter) => {
       'sortOrder',
     ])
 
-    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
 
     if (!queryParams.success) {
       ctx.status = 400
