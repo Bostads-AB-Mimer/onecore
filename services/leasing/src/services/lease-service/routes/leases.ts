@@ -9,8 +9,8 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
-  exportLeasesToExcel,
 } from '../adapters/xpand/lease-search-adapter'
+import { exportLeasesToExcel } from '../adapters/xpand/lease-export-adapter'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 import z from 'zod'
