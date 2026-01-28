@@ -368,7 +368,6 @@ const preliminaryTerminateLease = async (
       return { ok: true, data: response.data.content }
     }
 
-    // Handle error responses that don't throw (status < 500)
     const errorType = response.data?.error
 
     if (response.status === 404) {

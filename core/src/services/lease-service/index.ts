@@ -122,26 +122,12 @@ export const routes = (router: KoaRouter) => {
 
   router.post(
     '/leases/by-lease-id/:leaseId/preliminary-termination',
+    parseRequestBody(leasing.v1.PreliminaryTerminateLeaseRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const bodyValidation =
-        leasing.v1.PreliminaryTerminateLeaseRequestSchema.safeParse(
-          ctx.request.body
-        )
-
-      if (!bodyValidation.success) {
-        ctx.status = 400
-        ctx.body = {
-          error: 'Invalid request body',
-          details: bodyValidation.error,
-          ...metadata,
-        }
-        return
-      }
-
-      const { contactCode, lastDebitDate, desiredMoveDate } =
-        bodyValidation.data
+      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
+        .body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
 
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
