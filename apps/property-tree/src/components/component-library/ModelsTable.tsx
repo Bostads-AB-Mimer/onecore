@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Eye, FileText } from 'lucide-react'
+import { useQueries } from '@tanstack/react-query'
+import { Eye, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
 import { ComponentModelDocuments } from './dialogs/ComponentModelDocuments'
+import { fileStorageService } from '@/services/api/core'
 import type { ComponentModel } from '@/services/types'
 
 interface ModelsTableProps {
@@ -23,6 +25,25 @@ export const ModelsTable = ({
   onCreateInstance,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
+
+  const documentQueries = useQueries({
+    queries: models.map((model) => ({
+      queryKey: ['documents', 'component-model', model.id],
+      queryFn: () =>
+        fileStorageService.listFiles(`component-model/${model.id}/`),
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+
+  const documentCountMap = new Map(
+    models.map((model, index) => [
+      model.id,
+      {
+        count: documentQueries[index]?.data?.length ?? 0,
+        isLoading: documentQueries[index]?.isLoading ?? false,
+      },
+    ])
+  )
 
   const columns: Column<ComponentModel>[] = [
     {
@@ -97,20 +118,38 @@ export const ModelsTable = ({
     {
       key: 'documents',
       label: 'Dok.',
-      render: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            setDocumentsModelId(item.id)
-          }}
-          title="Visa dokument"
-        >
-          <FileText className="h-4 w-4" />
-        </Button>
-      ),
+      render: (item) => {
+        const { count, isLoading } = documentCountMap.get(item.id) ?? {
+          count: 0,
+          isLoading: false,
+        }
+        const hasDocuments = count > 0
+
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDocumentsModelId(item.id)
+            }}
+            title={hasDocuments ? 'Visa dokument' : 'Inga dokument'}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              <FileText
+                className={
+                  hasDocuments
+                    ? 'h-4 w-4 text-primary'
+                    : 'h-4 w-4 text-muted-foreground'
+                }
+              />
+            )}
+          </Button>
+        )
+      },
     },
   ]
 

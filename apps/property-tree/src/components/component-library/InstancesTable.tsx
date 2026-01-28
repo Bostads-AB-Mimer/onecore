@@ -1,7 +1,9 @@
-import { History, Unplug, ImageIcon } from 'lucide-react'
+import { useQueries } from '@tanstack/react-query'
+import { History, Unplug, ImageIcon, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
+import { fileStorageService } from '@/services/api/core'
 import type { Component } from '@/services/types'
 
 interface InstancesTableProps {
@@ -23,6 +25,25 @@ export const InstancesTable = ({
   onUninstall,
   onViewImages,
 }: InstancesTableProps) => {
+  const imageQueries = useQueries({
+    queries: instances.map((instance) => ({
+      queryKey: ['documents', 'component-instance', instance.id],
+      queryFn: () =>
+        fileStorageService.listFiles(`component-instance/${instance.id}/`),
+      staleTime: 5 * 60 * 1000,
+    })),
+  })
+
+  const imageCountMap = new Map(
+    instances.map((instance, index) => [
+      instance.id,
+      {
+        count: imageQueries[index]?.data?.length ?? 0,
+        isLoading: imageQueries[index]?.isLoading ?? false,
+      },
+    ])
+  )
+
   const formatCurrency = (value: number) =>
     value.toLocaleString('sv-SE', {
       style: 'currency',
@@ -253,20 +274,38 @@ export const InstancesTable = ({
     {
       key: 'images',
       label: 'Bilder',
-      render: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            onViewImages(item)
-          }}
-          title="Visa bilder"
-        >
-          <ImageIcon className="h-4 w-4" />
-        </Button>
-      ),
+      render: (item) => {
+        const { count, isLoading } = imageCountMap.get(item.id) ?? {
+          count: 0,
+          isLoading: false,
+        }
+        const hasImages = count > 0
+
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewImages(item)
+            }}
+            title={hasImages ? 'Visa bilder' : 'Inga bilder'}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              <ImageIcon
+                className={
+                  hasImages
+                    ? 'h-4 w-4 text-primary'
+                    : 'h-4 w-4 text-muted-foreground'
+                }
+              />
+            )}
+          </Button>
+        )
+      },
     },
   ]
 

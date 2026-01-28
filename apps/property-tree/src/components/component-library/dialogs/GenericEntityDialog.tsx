@@ -15,7 +15,24 @@ import {
   type HierarchyData,
 } from './ParentHierarchySelector'
 import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
+import { useComponentEntity } from '@/components/hooks/useComponentEntity'
 import type { EntityType } from '@/services/types'
+
+// Mapping from entity type to the name field used for duplicate checking
+const entityNameFieldMap: Partial<Record<EntityType, string>> = {
+  category: 'categoryName',
+  type: 'typeName',
+  subtype: 'subTypeName',
+  model: 'modelName',
+}
+
+// Swedish labels for error messages
+const entityLabels: Partial<Record<EntityType, string>> = {
+  category: 'kategori',
+  type: 'typ',
+  subtype: 'undertyp',
+  model: 'modell',
+}
 
 interface GenericEntityDialogProps<T extends Record<string, any>> {
   isOpen: boolean
@@ -42,11 +59,29 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const mutation = useComponentEntityMutation(
     entityType,
     mode === 'create' ? 'create' : 'update',
     entity?.id
+  )
+
+  // Fetch existing entities for duplicate checking (skip for instances)
+  const shouldCheckDuplicates = entityType !== 'instance'
+  const { data: existingEntities = [] } = useComponentEntity(
+    entityType,
+    parentId,
+    undefined,
+    { enabled: shouldCheckDuplicates && isOpen }
+  )
+
+  // Fetch entities from the NEW parent when moving (for duplicate checking in target)
+  const { data: targetParentEntities = [] } = useComponentEntity(
+    entityType,
+    newParentId,
+    undefined,
+    { enabled: shouldCheckDuplicates && isOpen && !!newParentId }
   )
 
   // Initialize form data
@@ -109,6 +144,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       }
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens
+      setSubmitError(null) // Clear any previous submit errors
     }
   }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
 
@@ -121,6 +157,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         delete newErrors[name]
         return newErrors
       })
+    }
+    // Clear submit error when user makes changes
+    if (submitError) {
+      setSubmitError(null)
     }
   }
 
@@ -135,6 +175,61 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         }
       }
     })
+
+    // Check for duplicate name (skip for instances)
+    // In edit mode, only check if the name has actually changed
+    if (entityType !== 'instance') {
+      const nameField = entityNameFieldMap[entityType]
+      if (nameField) {
+        const nameValue = formData[nameField]?.toString().trim().toLowerCase()
+        const originalName = entity?.[nameField]
+          ?.toString()
+          .trim()
+          .toLowerCase()
+
+        // Only check for duplicates if:
+        // 1. Creating a new entity, OR
+        // 2. Editing and the name has changed
+        const nameHasChanged = mode === 'create' || nameValue !== originalName
+
+        if (nameValue && nameHasChanged) {
+          const isDuplicate = existingEntities.some((existing: any) => {
+            // Skip current entity in edit mode
+            if (mode === 'edit' && existing.id === entity?.id) return false
+
+            const existingName = existing[nameField]
+              ?.toString()
+              .trim()
+              .toLowerCase()
+            return existingName === nameValue
+          })
+
+          if (isDuplicate) {
+            const label = entityLabels[entityType] || entityType
+            newErrors[nameField] = `Det finns redan en ${label} med detta namn`
+          }
+        }
+
+        // When moving to a new parent, check for duplicates in the TARGET parent
+        if (nameValue && newParentId) {
+          const isDuplicateInTarget = targetParentEntities.some(
+            (existing: any) => {
+              const existingName = existing[nameField]
+                ?.toString()
+                .trim()
+                .toLowerCase()
+              return existingName === nameValue
+            }
+          )
+
+          if (isDuplicateInTarget) {
+            const label = entityLabels[entityType] || entityType
+            newErrors[nameField] =
+              `Det finns redan en ${label} med detta namn i den valda kategorin`
+          }
+        }
+      }
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -160,6 +255,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError(null) // Clear previous submit error
 
     if (!validateForm()) {
       return
@@ -190,12 +286,50 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
       await mutation.mutateAsync(mutationData as any)
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         `Error ${mode === 'create' ? 'creating' : 'updating'} ${entityType}:`,
         error
       )
+
+      // Extract error message from the API response
+      let errorMessage = 'Ett oväntat fel uppstod. Försök igen.'
+
+      if (error?.error) {
+        // Backend error format: { error: "message" }
+        errorMessage = translateBackendError(error.error)
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+
+      setSubmitError(errorMessage)
     }
+  }
+
+  // Translate common backend error messages to Swedish
+  const translateBackendError = (error: string): string => {
+    const translations: Record<string, string> = {
+      'Invalid categoryId: category does not exist':
+        'Den valda kategorin finns inte längre. Vänligen uppdatera sidan och försök igen.',
+      'Invalid typeId: type does not exist':
+        'Den valda typen finns inte längre. Vänligen uppdatera sidan och försök igen.',
+      'Invalid componentSubtypeId: subtype does not exist':
+        'Den valda undertypen finns inte längre. Vänligen uppdatera sidan och försök igen.',
+      'Invalid modelId: model does not exist':
+        'Den valda modellen finns inte längre. Vänligen uppdatera sidan och försök igen.',
+      'Component type not found':
+        'Typen kunde inte hittas. Den kan ha tagits bort.',
+      'Component subtype not found':
+        'Undertypen kunde inte hittas. Den kan ha tagits bort.',
+      'Component model not found':
+        'Modellen kunde inte hittas. Den kan ha tagits bort.',
+      'Component category not found':
+        'Kategorin kunde inte hittas. Den kan ha tagits bort.',
+      'Invalid UUID format':
+        'Ogiltigt ID-format. Vänligen uppdatera sidan och försök igen.',
+    }
+
+    return translations[error] || error
   }
 
   return (
@@ -213,7 +347,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             <ParentHierarchySelector
               entityType={entityType}
               initialHierarchy={hierarchyData}
-              onParentChange={setNewParentId}
+              onParentChange={(id) => {
+                setNewParentId(id)
+                setSubmitError(null) // Clear error when parent changes
+              }}
             />
           )}
 
@@ -242,10 +379,8 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             </Button>
           </DialogFooter>
 
-          {mutation.isError && (
-            <p className="text-sm text-destructive">
-              Ett fel uppstod. Försök igen.
-            </p>
+          {submitError && (
+            <p className="text-sm text-destructive">{submitError}</p>
           )}
         </form>
       </DialogContent>
