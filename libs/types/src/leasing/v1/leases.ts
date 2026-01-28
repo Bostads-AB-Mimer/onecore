@@ -43,3 +43,13 @@ export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
 )
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
+
+export const PreliminaryTerminateLeaseRequestSchema = z.object({
+  contactCode: z.string(),
+  lastDebitDate: z.string().datetime(),
+  desiredMoveDate: z.string().datetime(),
+})
+
+export const PreliminaryTerminateLeaseResponseSchema = z.object({
+  message: z.string(),
+})

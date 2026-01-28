@@ -645,18 +645,13 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to terminate lease.
    */
 
-  const preliminaryTerminationSchema = z.object({
-    contactCode: z.string(),
-    lastDebitDate: z.string().datetime(),
-    desiredMoveDate: z.string().datetime(),
-  })
-
   router.post('(.*)/leases/:leaseId/preliminary-termination', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const bodyValidation = preliminaryTerminationSchema.safeParse(
-      ctx.request.body
-    )
+    const bodyValidation =
+      leasing.v1.PreliminaryTerminateLeaseRequestSchema.safeParse(
+        ctx.request.body
+      )
 
     if (!bodyValidation.success) {
       ctx.status = 400
