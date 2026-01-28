@@ -597,12 +597,7 @@ export const routes = (router: KoaRouter) => {
           { header: 'Orsak', key: 'orsak', width: 35 },
           { header: 'Startdatum', key: 'startdatum', width: 12 },
           { header: 'Slutdatum', key: 'slutdatum', width: 12 },
-          { header: 'Hyra (kr/mån)', key: 'hyra', width: 15 },
-          {
-            header: 'Estimerat Hyresbortfall (kr)',
-            key: 'hyresbortfall',
-            width: 22,
-          },
+          { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
         ]
 
         // Style header row
@@ -628,7 +623,6 @@ export const routes = (router: KoaRouter) => {
             hyra: block.rentalObject?.yearlyRent
               ? Math.round(block.rentalObject.yearlyRent)
               : null,
-            hyresbortfall: block.amount ?? null,
           })
         }
 
