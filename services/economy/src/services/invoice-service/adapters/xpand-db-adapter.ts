@@ -64,7 +64,6 @@ export const enrichInvoiceWithAccounting = async (
   const rentalSpecificRule = rentalSpecificRules[rentalId]
 
   invoice.invoiceRows.forEach((row) => {
-    console.log('row', row)
     row.projectCode = rentalSpecificRule.projectCode
     row.costCode = rentalSpecificRule.costCode
     row.property = rentalSpecificRule.property

@@ -62,4 +62,8 @@ export const InvoiceSchema = z.object({
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),
   expectedLoss: z.boolean().optional(),
+  totalVat6: z.number().optional(),
+  totalVat12: z.number().optional(),
+  totalVat25: z.number().optional(),
+  totalVat: z.number().optional(),
 })
