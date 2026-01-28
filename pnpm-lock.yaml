@@ -777,7 +777,7 @@ importers:
         version: 12.0.2
       '@onecore/contacts':
         specifier: workspace:*
-        version: file:services/contacts(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(@types/koa@2.15.0)(babel-plugin-macros@3.1.0)(openapi-types@12.1.3)
+        version: file:services/contacts(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(@types/koa@2.15.0)
       '@onecore/types':
         specifier: workspace:*
         version: link:../libs/types
@@ -1074,13 +1074,13 @@ importers:
         version: 11.1.0(eslint@9.34.0(jiti@1.21.7))
       jest:
         specifier: ^29.7.0
-        version: 29.7.0(babel-plugin-macros@3.1.0)
+        version: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
       knex:
         specifier: ^3.1.0
         version: 3.1.0(tedious@18.6.1)
       ts-jest:
         specifier: ^29.2.5
-        version: 29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(babel-plugin-macros@3.1.0))(typescript@5.9.2)
+        version: 29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0))(typescript@5.9.2)
       tsup:
         specifier: ^8.0.2
         version: 8.5.0(jiti@1.21.7)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)(yaml@2.8.1)
@@ -1208,45 +1208,18 @@ importers:
       '@koa/router':
         specifier: ^12.0.1
         version: 12.0.2
-      '@onecore/types':
-        specifier: workspace:*
-        version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
         version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))
-      '@types/easy-soap-request':
-        specifier: ^5.6.0
-        version: 5.6.0
-      '@types/swagger-jsdoc':
-        specifier: ^6.0.4
-        version: 6.0.4
       '@types/swagger-ui':
         specifier: ^3.52.4
         version: 3.52.4
-      axios:
-        specifier: ^1.9.0
-        version: 1.11.0
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
-      dedent:
-        specifier: ^1.5.1
-        version: 1.6.0(babel-plugin-macros@3.1.0)
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
       easy-soap-request:
         specifier: ^5.6.1
         version: 5.7.0
-      fast-xml-parser:
-        specifier: ^4.4.0
-        version: 4.5.3
-      fishery:
-        specifier: ^2.2.2
-        version: 2.3.1
-      http-errors:
-        specifier: ^2.0.0
-        version: 2.0.0
       knex:
         specifier: ^3.1.0
         version: 3.1.0(tedious@18.6.1)
@@ -1271,39 +1244,12 @@ importers:
       mssql:
         specifier: ^11.0.1
         version: 11.0.1
-      personnummer:
-        specifier: ^3.2.1
-        version: 3.2.1
-      pino:
-        specifier: ^9.1.0
-        version: 9.9.1
-      pino-elasticsearch:
-        specifier: ^8.0.0
-        version: 8.1.0
-      pino-multi-stream:
-        specifier: ^6.0.0
-        version: 6.0.0
-      pino-pretty:
-        specifier: ^11.1.0
-        version: 11.3.0
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
-      randexp:
-        specifier: ^0.5.3
-        version: 0.5.3
-      strong-soap:
-        specifier: ^4.1.4
-        version: 4.1.14
-      swagger-jsdoc:
-        specifier: ^6.2.8
-        version: 6.2.8(openapi-types@12.1.3)
       tedious:
         specifier: ^18.6.1
         version: 18.6.1
-      ts-pattern:
-        specifier: ^5.7.0
-        version: 5.8.0
       zod:
         specifier: ^3.25.67
         version: 3.25.76
@@ -1317,24 +1263,12 @@ importers:
       '@eslint/js':
         specifier: 9.32.0
         version: 9.32.0
-      '@types/apidoc':
-        specifier: ^0.50.3
-        version: 0.50.3
-      '@types/http-errors':
-        specifier: ^2.0.0
-        version: 2.0.5
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
       '@types/koa':
         specifier: ^2.15.0
         version: 2.15.0
-      '@types/koa-bodyparser':
-        specifier: ^4.3.12
-        version: 4.3.12
-      '@types/koa-pino-logger':
-        specifier: 3.0.4
-        version: 3.0.4
       '@types/koa__cors':
         specifier: ^5.0.0
         version: 5.0.0
@@ -1356,6 +1290,9 @@ importers:
       '@typescript-eslint/typescript-estree':
         specifier: ^8.6.0
         version: 8.42.0(typescript@5.9.2)
+      axios:
+        specifier: ^1.9.0
+        version: 1.11.0
       eslint:
         specifier: ^9.31.0
         version: 9.34.0(jiti@1.21.7)
@@ -1368,9 +1305,6 @@ importers:
       nodemon:
         specifier: ^3.1.7
         version: 3.1.10
-      supertest:
-        specifier: ^7.0.0
-        version: 7.1.4
       ts-jest:
         specifier: ^29.2.5
         version: 29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2)))(typescript@5.9.2)
@@ -20007,24 +19941,15 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 18.1.1
 
-  '@onecore/contacts@file:services/contacts(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(@types/koa@2.15.0)(babel-plugin-macros@3.1.0)(openapi-types@12.1.3)':
+  '@onecore/contacts@file:services/contacts(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(@types/koa@2.15.0)':
     dependencies:
       '@iteam/config': 12.1.2
       '@koa/cors': 5.0.0
       '@koa/router': 12.0.2
-      '@onecore/types': file:libs/types(zod@3.25.76)
       '@onecore/utilities': file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))
-      '@types/easy-soap-request': 5.6.0
-      '@types/swagger-jsdoc': 6.0.4
       '@types/swagger-ui': 3.52.4
-      axios: 1.11.0
-      date-fns: 4.1.0
-      dedent: 1.6.0(babel-plugin-macros@3.1.0)
       dotenv: 16.6.1
       easy-soap-request: 5.7.0
-      fast-xml-parser: 4.5.3
-      fishery: 2.3.1
-      http-errors: 2.0.0
       knex: 3.1.0(tedious@18.6.1)
       koa: 2.16.2
       koa-body: 6.0.1
@@ -20033,41 +19958,22 @@ snapshots:
       koa-pino-logger: 4.0.0
       koa2-swagger-ui: 5.11.0(@types/koa@2.15.0)
       mssql: 11.0.1
-      personnummer: 3.2.1
-      pino: 9.9.1
-      pino-elasticsearch: 8.1.0
-      pino-multi-stream: 6.0.0
-      pino-pretty: 11.3.0
       prettier: 3.6.2
-      randexp: 0.5.3
-      strong-soap: 4.1.14
-      swagger-jsdoc: 6.2.8(openapi-types@12.1.3)
       tedious: 18.6.1
-      ts-pattern: 5.8.0
       zod: 3.25.76
     transitivePeerDependencies:
       - '@75lb/nature'
       - '@elastic/elasticsearch'
       - '@elastic/transport'
       - '@types/koa'
-      - babel-plugin-macros
       - better-sqlite3
       - debug
       - encoding
       - mysql
       - mysql2
-      - openapi-types
       - pg
       - pg-native
       - sqlite3
-      - supports-color
-
-  '@onecore/types@file:libs/types(zod@3.25.76)':
-    dependencies:
-      release-please: 16.18.0
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - encoding
       - supports-color
 
   '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))':
@@ -25078,9 +24984,9 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
+  jest-cli@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       chalk: 4.1.2
@@ -25097,9 +25003,9 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest-cli@29.7.0(babel-plugin-macros@3.1.0):
+  jest-cli@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       chalk: 4.1.2
@@ -25436,24 +25342,24 @@ snapshots:
       - supports-color
       - ts-node
 
-  jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
+  jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
       '@jest/types': 29.6.3
       import-local: 3.2.0
-      jest-cli: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
+      jest-cli: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
       - supports-color
       - ts-node
 
-  jest@29.7.0(babel-plugin-macros@3.1.0):
+  jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2)):
     dependencies:
-      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
+      '@jest/core': 29.7.0(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
       '@jest/types': 29.6.3
       import-local: 3.2.0
-      jest-cli: 29.7.0(babel-plugin-macros@3.1.0)
+      jest-cli: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@24.3.0)(typescript@5.9.2))
     transitivePeerDependencies:
       - '@types/node'
       - babel-plugin-macros
@@ -28003,12 +27909,12 @@ snapshots:
       babel-jest: 29.7.0(@babel/core@7.28.3)
       jest-util: 29.7.0
 
-  ts-jest@29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(babel-plugin-macros@3.1.0))(typescript@5.9.2):
+  ts-jest@29.4.1(@babel/core@7.28.3)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.3))(jest-util@29.7.0)(jest@29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0))(typescript@5.9.2):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
       handlebars: 4.7.8
-      jest: 29.7.0(babel-plugin-macros@3.1.0)
+      jest: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
       json5: 2.2.3
       lodash.memoize: 4.1.2
       make-error: 1.3.6
