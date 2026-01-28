@@ -645,69 +645,61 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to terminate lease.
    */
 
-  router.post('(.*)/leases/:leaseId/preliminary-termination', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+  router.post(
+    '(.*)/leases/:leaseId/preliminary-termination',
+    parseRequestBody(leasing.v1.PreliminaryTerminateLeaseRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
 
-    const bodyValidation =
-      leasing.v1.PreliminaryTerminateLeaseRequestSchema.safeParse(
-        ctx.request.body
+      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
+        .body as z.infer<
+        typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+      >
+
+      const result = await tenfastAdapter.preliminaryTerminateLease(
+        ctx.params.leaseId,
+        contactCode,
+        new Date(lastDebitDate),
+        new Date(desiredMoveDate)
       )
 
-    if (!bodyValidation.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid request body',
-        details: bodyValidation.error,
-        ...metadata,
-      }
-      return
-    }
+      if (!result.ok) {
+        if (result.err === 'lease-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: result.err,
+            message: 'Lease not found',
+            ...metadata,
+          }
+          return
+        }
 
-    const { contactCode, lastDebitDate, desiredMoveDate } = bodyValidation.data
+        if (result.err === 'tenant-email-missing') {
+          ctx.status = 400
+          ctx.body = {
+            error: result.err,
+            message: 'Tenant missing valid email address',
+            ...metadata,
+          }
+          return
+        }
 
-    const result = await tenfastAdapter.preliminaryTerminateLease(
-      ctx.params.leaseId,
-      contactCode,
-      new Date(lastDebitDate),
-      new Date(desiredMoveDate)
-    )
-
-    if (!result.ok) {
-      if (result.err === 'lease-not-found') {
-        ctx.status = 404
+        ctx.status = 500
         ctx.body = {
           error: result.err,
-          message: 'Lease not found',
+          message: 'Failed to terminate lease',
           ...metadata,
         }
         return
       }
 
-      if (result.err === 'tenant-email-missing') {
-        ctx.status = 400
-        ctx.body = {
-          error: result.err,
-          message: 'Tenant missing valid email address',
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.status = 500
+      ctx.status = 200
       ctx.body = {
-        error: result.err,
-        message: 'Failed to terminate lease',
+        content: result.data,
         ...metadata,
       }
-      return
     }
-
-    ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
-  })
+  )
 }
 
 async function patchLeasesWithContacts(
