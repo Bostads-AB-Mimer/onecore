@@ -338,14 +338,20 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
+export type PreliminaryTerminateLeaseRequestParams = z.infer<
+  typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+>
+
+export type PreliminaryTerminateLeaseResponseData = z.infer<
+  typeof leasing.v1.PreliminaryTerminateLeaseResponseSchema
+>
+
 const preliminaryTerminateLease = async (
   leaseId: string,
-  contactCode: string,
-  lastDebitDate: Date,
-  desiredMoveDate: Date
+  params: PreliminaryTerminateLeaseRequestParams
 ): Promise<
   AdapterResult<
-    any,
+    PreliminaryTerminateLeaseResponseData,
     | 'lease-not-found'
     | 'tenant-email-missing'
     | 'termination-failed'
@@ -355,11 +361,7 @@ const preliminaryTerminateLease = async (
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
-      {
-        contactCode,
-        lastDebitDate: lastDebitDate.toISOString(),
-        desiredMoveDate: desiredMoveDate.toISOString(),
-      }
+      params
     )
 
     if (response.status === 200) {
