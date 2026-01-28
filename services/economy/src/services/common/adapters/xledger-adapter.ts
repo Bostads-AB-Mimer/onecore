@@ -139,6 +139,12 @@ const getDefermentDate = (
   return undefined
 }
 
+/*
+ * If invoice is "ströfaktura", then the field "paymentReference"
+ * will be present and point to the original invoice.
+ * If invoice number ends with "K" we get the original invoice by simply
+ * removing the "K" from the invoice number.
+ */
 function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
   return match(invoiceNode)
     .with({ paymentReference: P.string }, (data) => ({

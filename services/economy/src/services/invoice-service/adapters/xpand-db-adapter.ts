@@ -444,6 +444,10 @@ export const getContacts = async (
   return contacts
 }
 
+/*
+ * If invoice number ends with "K" we get the original invoice by simply
+ * removing the "K" from the invoice number.
+ */
 function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
   return match(invoiceNode)
     .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
