@@ -132,7 +132,7 @@ jobs:
           run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Build
-        run: pnpm run --filter ${{ matrix.package }} build
+        run: pnpm run --filter ${{ matrix.package }}... build
 
 
   test:
