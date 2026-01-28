@@ -121,20 +121,16 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  const preliminaryTerminationSchema = z.object({
-    contactCode: z.string(),
-    lastDebitDate: z.string().datetime(),
-    desiredMoveDate: z.string().datetime(),
-  })
 
   router.post(
     '/leases/by-lease-id/:leaseId/preliminary-termination',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const bodyValidation = preliminaryTerminationSchema.safeParse(
-        ctx.request.body
-      )
+      const bodyValidation =
+        leasing.v1.PreliminaryTerminateLeaseRequestSchema.safeParse(
+          ctx.request.body
+        )
 
       if (!bodyValidation.success) {
         ctx.status = 400
@@ -152,9 +148,11 @@ export const routes = (router: KoaRouter) => {
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
           ctx.params.leaseId,
-          contactCode,
-          new Date(lastDebitDate),
-          new Date(desiredMoveDate)
+          {
+            contactCode,
+            lastDebitDate,
+            desiredMoveDate,
+          }
         )
 
         if (!result.ok) {
