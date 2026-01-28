@@ -5,7 +5,7 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, LayoutGrid, Contact, ShieldX, ChevronRight } from 'lucide-react'
+import { Home, LayoutGrid, Contact, ShieldX, FileText, ChevronRight } from 'lucide-react'
 import { CompanyList } from './CompanyList'
 import {
   Sidebar,
@@ -46,6 +46,7 @@ function SidebarNavigationContent() {
   const isPropertiesActive = location.pathname === '/properties'
   const isTenantsActive = location.pathname === '/tenants'
   const isRentalBlocksActive = location.pathname === '/rental-blocks'
+  const isLeasesActive = location.pathname === '/leases'
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -170,6 +171,22 @@ function SidebarNavigationContent() {
               >
                 <ShieldX />
                 <span>Spärrar</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* UTFLYTTNINGSLISTA - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate('/leases')}
+                isActive={isLeasesActive}
+                tooltip="Utflyttningslista"
+              >
+                <FileText />
+                <span>Utflyttningslista</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
