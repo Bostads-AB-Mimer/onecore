@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, Download } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/MultiSelectSearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
 import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
+import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
 import { useBulkMessaging } from '@/components/hooks/useBulkMessaging'
@@ -65,6 +66,7 @@ const formatDate = (date: Date | string | null | undefined) => {
 const PAGE_SIZE = 50
 
 const LeasesPage = () => {
+  const [isExporting, setIsExporting] = useState(false)
   const { page, setPage, searchParams, setSearchParams, updateUrlParams } =
     useUrlPagination({
       defaultLimit: PAGE_SIZE,
@@ -229,6 +231,39 @@ const LeasesPage = () => {
       mainContent.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleExport = async () => {
+    if (!meta?.totalRecords || meta.totalRecords === 0) return
+
+    setIsExporting(true)
+    try {
+      const blob = await leaseSearchService.exportLeasesToExcel({
+        q: debouncedSearch || undefined,
+        objectType:
+          selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
+        status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+        property:
+          selectedProperties.length > 0 ? selectedProperties : undefined,
+        districtNames:
+          selectedDistricts.length > 0 ? selectedDistricts : undefined,
+        startDateFrom: startDateFrom || undefined,
+        startDateTo: startDateTo || undefined,
+        endDateFrom: endDateFrom || undefined,
+        endDateTo: endDateTo || undefined,
+      })
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -397,6 +432,15 @@ const LeasesPage = () => {
             <span className="text-sm text-muted-foreground">
               {displayLeases.length} av {meta?.totalRecords ?? 0} resultat
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={isExporting || displayLeases.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? 'Exporterar...' : 'Exportera Excel'}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

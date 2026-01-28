@@ -45,6 +45,7 @@
   "peerDependencies": {
     "@elastic/transport": "^8.0.0",
     "@elastic/elasticsearch": "^8.0.0",
+    "exceljs": "^4.4.0",
     "knex": "^3.1.0"
   },
   "dependencies": {
@@ -61,6 +62,7 @@
     "@eslint/js": "9.32.0",
     "@types/jest": "^29.5.14",
     "@types/koa": "^2.15.0",
+    "exceljs": "^4.4.0",
     "knex": "^3.1.0",
     "@types/pino-multi-stream": "^5.1.6",
     "eslint": "^9.31.0",
