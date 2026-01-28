@@ -1459,7 +1459,9 @@ export const searchRentalBlocks = async (
     let totalCount: number
     let rentalBlocks: Awaited<
       ReturnType<
-        typeof prisma.rentalBlock.findMany<{ include: typeof rentalBlockInclude }>
+        typeof prisma.rentalBlock.findMany<{
+          include: typeof rentalBlockInclude
+        }>
       >
     >
 
