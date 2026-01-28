@@ -1,12 +1,7 @@
 import { Knex } from 'knex'
 import { Context } from 'koa'
 import { leasing, LeaseStatus } from '@onecore/types'
-import {
-  paginateKnex,
-  PaginatedResponse,
-  createExcelExport,
-  formatDateForExcel,
-} from '@onecore/utilities'
+import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
@@ -53,7 +48,7 @@ const normalizeObjectType = (type: string): string =>
  * Modular query builder for lease search
  * Only joins tables when filters require them
  */
-class LeaseSearchQueryBuilder {
+export class LeaseSearchQueryBuilder {
   private query: Knex.QueryBuilder
   private joinedTables: Set<string>
   private params: leasing.v1.LeaseSearchQueryParams
@@ -329,10 +324,6 @@ class LeaseSearchQueryBuilder {
   }
 
   /**
-   * Ensure all joins needed for response fields
-   * Contact/email/phone are fetched separately via getContactsForLeases()
-   */
-  /**
    * Build SELECT fields
    * Only selects property/area/district fields if those filters were used
    */
@@ -421,7 +412,7 @@ class LeaseSearchQueryBuilder {
 /**
  * Map object type codes to Swedish labels
  */
-const getObjectTypeLabel = (objectTypeCode: string): string => {
+export const getObjectTypeLabel = (objectTypeCode: string): string => {
   const typeMap: Record<string, string> = {
     balgh: 'Bostad',
     babps: 'Parkering',
@@ -432,103 +423,24 @@ const getObjectTypeLabel = (objectTypeCode: string): string => {
 }
 
 /**
- * Batch fetch contacts for a list of lease keys
- * Returns a Map from leaseKey to array of ContactInfo
+ * Map numeric status to Swedish label for Excel export
  */
-const getContactsForLeases = async (
-  leaseKeys: string[]
-): Promise<Map<string, leasing.v1.ContactInfo[]>> => {
-  if (leaseKeys.length === 0) {
-    return new Map()
+export const getStatusLabel = (status: LeaseStatus): string => {
+  const statusMap: Record<number, string> = {
+    [LeaseStatus.Current]: 'Pågående',
+    [LeaseStatus.Upcoming]: 'Kommande',
+    [LeaseStatus.AboutToEnd]: 'Avslutas snart',
+    [LeaseStatus.Ended]: 'Avslutat',
   }
-
-  // Query 1: Get contacts for all leases
-  const startContacts = Date.now()
-  const rows = await xpandDb
-    .from('hyavk')
-    .select(
-      'hyavk.keyhyobj as leaseKey',
-      'cmctc.cmctcben as name',
-      'cmctc.cmctckod as contactCode',
-      'cmctc.keycmobj'
-    )
-    .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
-    .whereIn('hyavk.keyhyobj', leaseKeys)
-  console.log(
-    `  Contact names query: ${Date.now() - startContacts}ms (${rows.length} contacts)`
-  )
-
-  if (rows.length === 0) {
-    const result = new Map<string, leasing.v1.ContactInfo[]>()
-    leaseKeys.forEach((key) => result.set(key, []))
-    return result
-  }
-
-  const keycmobjs = [...new Set(rows.map((r) => r.keycmobj as string))]
-  console.log(
-    `  Fetching emails/phones for ${keycmobjs.length} unique contacts`
-  )
-
-  // Batch fetch emails and phones in parallel
-  const startEmailPhone = Date.now()
-  const [emailRows, phoneRows] = await Promise.all([
-    xpandDb
-      .from('cmeml')
-      .select('keycmobj', 'cmemlben as email')
-      .whereIn('keycmobj', keycmobjs)
-      .where('main', 1)
-      .then((result) => {
-        console.log(
-          `    Email query: ${Date.now() - startEmailPhone}ms (${result.length} emails)`
-        )
-        return result
-      }),
-    xpandDb
-      .from('cmtel')
-      .select('keycmobj', 'cmtelben as phone')
-      .whereIn('keycmobj', keycmobjs)
-      .where('main', 1)
-      .then((result) => {
-        console.log(
-          `    Phone query: ${Date.now() - startEmailPhone}ms (${result.length} phones)`
-        )
-        return result
-      }),
-  ])
-
-  // Build lookups
-  const emailByKeycmobj = new Map(
-    emailRows.map((r) => [r.keycmobj, trimRow(r).email as string])
-  )
-  const phoneByKeycmobj = new Map(
-    phoneRows.map((r) => [r.keycmobj, trimRow(r).phone as string])
-  )
-
-  // Group contacts by lease key
-  const result = new Map<string, leasing.v1.ContactInfo[]>()
-  leaseKeys.forEach((key) => result.set(key, []))
-
-  for (const row of rows) {
-    const trimmed = trimRow(row)
-    const contact: leasing.v1.ContactInfo = {
-      name: trimmed.name as string,
-      contactCode: trimmed.contactCode as string,
-      email: emailByKeycmobj.get(row.keycmobj as string) || null,
-      phone: phoneByKeycmobj.get(row.keycmobj as string) || null,
-    }
-    result.get(row.leaseKey as string)!.push(contact)
-  }
-
-  return result
+  return statusMap[status] || String(status)
 }
 
 /**
  * Transform database row to LeaseSearchResult with calculated status
- * Contacts are attached separately via getContactsForLeases()
  * Only includes optional fields (property/area/district) if they were selected
  * Fields are omitted entirely when not queried (vs null when queried but empty in DB)
  */
-const transformRow = (
+export const transformRow = (
   row: any
 ): Omit<leasing.v1.LeaseSearchResult, 'contacts'> => {
   const trimmedRow = trimRow(row)
@@ -568,6 +480,27 @@ const transformRow = (
 }
 
 // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+/**
+ * Parse contacts JSON from the SQL subquery result
+ */
+export const parseContactsJson = (
+  contactsJson: string | null
+): leasing.v1.ContactInfo[] => {
+  if (!contactsJson) return []
+
+  try {
+    const parsed = JSON.parse(contactsJson)
+    return parsed.map((c: any) => ({
+      name: c.name ? String(c.name).trim() : '',
+      contactCode: c.contactCode ? String(c.contactCode).trim() : '',
+      email: c.email ? String(c.email).trim() : null,
+      phone: c.phone ? String(c.phone).trim() : null,
+    }))
+  } catch {
+    return []
+  }
+}
+
 /**
  * Main search function with pagination
  */
@@ -632,23 +565,7 @@ export const searchLeases = async (
   // Transform rows and parse contacts JSON
   const transformedContent = paginatedResult.content.map((row: any) => {
     const basicData = transformRow(row)
-
-    // Parse contacts JSON from subquery
-    let contacts: leasing.v1.ContactInfo[] = []
-    if (row.contactsJson) {
-      try {
-        const parsed = JSON.parse(row.contactsJson)
-        contacts = parsed.map((c: any) => ({
-          name: c.name ? String(c.name).trim() : '',
-          contactCode: c.contactCode ? String(c.contactCode).trim() : '',
-          email: c.email ? String(c.email).trim() : null,
-          phone: c.phone ? String(c.phone).trim() : null,
-        }))
-      } catch (e) {
-        console.error('Failed to parse contacts JSON:', e)
-      }
-    }
-
+    const contacts = parseContactsJson(row.contactsJson)
     return { ...basicData, contacts }
   })
 
@@ -656,124 +573,4 @@ export const searchLeases = async (
     ...paginatedResult,
     content: transformedContent,
   }
-}
-
-/**
- * Map numeric status to Swedish label for Excel export
- */
-const getStatusLabel = (status: LeaseStatus): string => {
-  const statusMap: Record<number, string> = {
-    [LeaseStatus.Current]: 'Pågående',
-    [LeaseStatus.Upcoming]: 'Kommande',
-    [LeaseStatus.AboutToEnd]: 'Avslutas snart',
-    [LeaseStatus.Ended]: 'Avslutat',
-  }
-  return statusMap[status] || String(status)
-}
-
-/**
- * Export leases to Excel (no pagination)
- * Reuses LeaseSearchQueryBuilder with same filters
- * Returns Excel buffer for download
- */
-export const exportLeasesToExcel = async (
-  params: leasing.v1.LeaseSearchQueryParams
-): Promise<Buffer> => {
-  const builder = new LeaseSearchQueryBuilder(params)
-
-  // Apply all filters (same as searchLeases)
-  builder
-    .applySearch()
-    .applyObjectTypeFilter()
-    .applyStatusFilter()
-    .applyDateFilters()
-    .applyPropertyFilter()
-    .applyBuildingFilter()
-    .applyAreaFilter()
-    .applyDistrictFilter()
-    .applyBuildingManagerFilter()
-    .buildSelectFields()
-    .applySorting()
-
-  // Execute without pagination (get all matching rows)
-  const rows = await builder.getQuery()
-
-  // Transform rows
-  const leases = rows.map((row: any) => {
-    const basicData = transformRow(row)
-
-    // Parse contacts JSON
-    let contacts: leasing.v1.ContactInfo[] = []
-    if (row.contactsJson) {
-      try {
-        const parsed = JSON.parse(row.contactsJson)
-        contacts = parsed.map((c: any) => ({
-          name: c.name ? String(c.name).trim() : '',
-          contactCode: c.contactCode ? String(c.contactCode).trim() : '',
-          email: c.email ? String(c.email).trim() : null,
-          phone: c.phone ? String(c.phone).trim() : null,
-        }))
-      } catch (e) {
-        // Ignore parse errors
-      }
-    }
-
-    return { ...basicData, contacts }
-  })
-
-  // Define lease type for rowMapper
-  type LeaseWithContacts = (typeof leases)[number]
-
-  return createExcelExport({
-    sheetName: 'Hyreskontrakt',
-    columns: [
-      { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-      { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-      { header: 'Kundnummer', key: 'contactCode', width: 18 },
-      { header: 'E-post', key: 'email', width: 30 },
-      { header: 'Telefon', key: 'phone', width: 15 },
-      { header: 'Objekttyp', key: 'objectType', width: 12 },
-      { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-      { header: 'Adress', key: 'address', width: 35 },
-      { header: 'Fastighet', key: 'property', width: 20 },
-      { header: 'Distrikt', key: 'districtName', width: 15 },
-      { header: 'Startdatum', key: 'startDate', width: 12 },
-      { header: 'Slutdatum', key: 'endDate', width: 12 },
-      { header: 'Status', key: 'status', width: 15 },
-    ],
-    data: leases,
-    rowMapper: (lease: LeaseWithContacts) => {
-      // Format contacts (join multiple with semicolon)
-      const tenantNames = lease.contacts
-        .map((c: leasing.v1.ContactInfo) => c.name)
-        .join('; ')
-      const contactCodes = lease.contacts
-        .map((c: leasing.v1.ContactInfo) => c.contactCode)
-        .join('; ')
-      const emails = lease.contacts
-        .filter((c: leasing.v1.ContactInfo) => c.email)
-        .map((c: leasing.v1.ContactInfo) => c.email)
-        .join('; ')
-      const phones = lease.contacts
-        .filter((c: leasing.v1.ContactInfo) => c.phone)
-        .map((c: leasing.v1.ContactInfo) => c.phone)
-        .join('; ')
-
-      return {
-        leaseId: lease.leaseId,
-        tenantName: tenantNames || '',
-        contactCode: contactCodes || '',
-        email: emails || '',
-        phone: phones || '',
-        objectType: lease.objectTypeCode,
-        leaseType: lease.leaseType,
-        address: lease.address || '',
-        property: lease.property || '',
-        districtName: lease.districtName || '',
-        startDate: formatDateForExcel(lease.startDate),
-        endDate: formatDateForExcel(lease.lastDebitDate),
-        status: getStatusLabel(lease.status),
-      }
-    },
-  })
 }
