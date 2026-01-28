@@ -253,7 +253,7 @@ export const RentalBlockWithRentalObjectSchema = z.object({
     address: z.string().nullable(),
     rentalId: z.string().nullable(),
     residenceId: z.string().nullable(),
-    monthlyRent: z.number(),
+    yearlyRent: z.number(),
     type: z.string().nullable(),
   }),
   building: z.object({

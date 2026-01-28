@@ -5,7 +5,7 @@ import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
 import {
-  calculateMonthlyRentFromYearRentRows,
+  calculateYearlyRentFromYearRentRows,
   calculateEstimatedHyresbortfall,
 } from '../utils/rent-calculation'
 
@@ -595,7 +595,7 @@ function transformRentalBlock(
   }
   const category = getCategory()
 
-  const monthlyRent = calculateMonthlyRentFromYearRentRows(rb.rentRows || [])
+  const yearlyRent = calculateYearlyRentFromYearRentRows(rb.rentRows || [])
   const residenceType = ps?.residence?.residenceType
 
   return {
@@ -606,7 +606,7 @@ function transformRentalBlock(
     toDate: rb.toDate,
     amount:
       rb.amount ??
-      calculateEstimatedHyresbortfall(monthlyRent, rb.fromDate, rb.toDate),
+      calculateEstimatedHyresbortfall(yearlyRent, rb.fromDate, rb.toDate),
     rentalObject: {
       code:
         ps?.residenceCode ||
@@ -624,7 +624,7 @@ function transformRentalBlock(
       address: ps?.name || null,
       rentalId: ps?.rentalId || null,
       residenceId: ps?.residence?.id || null,
-      monthlyRent,
+      yearlyRent,
       type: residenceType?.name || null,
     },
     building: {
@@ -888,7 +888,7 @@ function transformRawRentalBlockRow(
   row: RawRentalBlockRow,
   rentRows: RentRow[]
 ) {
-  const monthlyRent = calculateMonthlyRentFromYearRentRows(rentRows)
+  const yearlyRent = calculateYearlyRentFromYearRentRows(rentRows)
 
   const getCategory = () => {
     if (row.residenceCode) return 'Bostad' as const
@@ -906,7 +906,7 @@ function transformRawRentalBlockRow(
     toDate: row.toDate,
     amount:
       row.amount ??
-      calculateEstimatedHyresbortfall(monthlyRent, row.fromDate, row.toDate),
+      calculateEstimatedHyresbortfall(yearlyRent, row.fromDate, row.toDate),
     rentalObject: {
       code:
         row.residenceCode?.trim() ||
@@ -923,7 +923,7 @@ function transformRawRentalBlockRow(
       category: getCategory(),
       address: row.address?.trim() || null,
       rentalId: row.rentalId?.trim() || null,
-      monthlyRent,
+      yearlyRent,
       type: row.residenceTypeName?.trim() || null,
     },
     building: {

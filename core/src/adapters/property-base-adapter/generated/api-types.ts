@@ -2996,7 +2996,7 @@ export interface components {
         address: string | null;
         rentalId: string | null;
         residenceId: string | null;
-        monthlyRent: number;
+        yearlyRent: number;
         type: string | null;
       };
       building: {

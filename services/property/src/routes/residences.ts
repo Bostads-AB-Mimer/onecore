@@ -625,8 +625,8 @@ export const routes = (router: KoaRouter) => {
             slutdatum: block.toDate
               ? new Date(block.toDate).toLocaleDateString('sv-SE')
               : '',
-            hyra: block.rentalObject?.monthlyRent
-              ? Math.round(block.rentalObject.monthlyRent)
+            hyra: block.rentalObject?.yearlyRent
+              ? Math.round(block.rentalObject.yearlyRent)
               : null,
             hyresbortfall: block.amount ?? null,
           })

@@ -511,11 +511,11 @@ const RentalBlocksPage = () => {
                 },
                 {
                   key: 'hyra',
-                  label: 'Hyra',
+                  label: 'Årshyra',
                   className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
-                    block.rentalObject?.monthlyRent
-                      ? `${Math.round(block.rentalObject.monthlyRent).toLocaleString('sv-SE')} kr/mån`
+                    block.rentalObject?.yearlyRent
+                      ? `${Math.round(block.rentalObject.yearlyRent).toLocaleString('sv-SE')} kr/år`
                       : '-',
                   hideOnMobile: true,
                 },
