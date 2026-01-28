@@ -24,10 +24,10 @@ export const EmailAddressSchema = z.object({
 })
 
 export const ContactIdentitySchema = z.object({
-  nationalRegistrationNumber: z.string(),
-  birthDate: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
+  nationalId: z.string().nullable(),
+  birthDate: z.string().nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
   fullName: z.string(),
 })
 
@@ -38,12 +38,12 @@ export const ContactCommunicationSchema = z.object({
 })
 
 export const ContactAddressSchema = z.object({
-  careOf: z.string().optional(),
-  street: z.string(),
-  zipCode: z.string(),
-  city: z.string(),
-  region: z.string(),
-  country: z.string(),
+  careOf: z.string().nullable(),
+  street: z.string().nullable(),
+  zipCode: z.string().nullable(),
+  city: z.string().nullable(),
+  region: z.string().nullable(),
+  country: z.string().nullable(),
 })
 
 export const ContactBaseSchema = z.object({
