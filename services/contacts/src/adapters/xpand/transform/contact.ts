@@ -84,7 +84,7 @@ export const toIndividual = (
       firstName: protectedIdentity ? 'redacted' : row.firstName || '',
       lastName: protectedIdentity ? 'redacted' : row.lastName || '',
       fullName: protectedIdentity ? 'redacted' : row.fullName,
-      nationalRegistrationNumber: protectedIdentity ? 'redacted' : row.nid,
+      nationalId: protectedIdentity ? 'redacted' : row.nid,
       birthDate: protectedIdentity ? 'redacted' : row.birthDate,
     },
     ...toTrustee(row),
