@@ -3,6 +3,8 @@ import {
   logger,
   generateRouteMetadata,
   buildPaginatedResponse,
+  createExcelExport,
+  formatDateForExcel,
 } from '@onecore/utilities'
 import { z } from 'zod'
 
@@ -601,31 +603,22 @@ export const routes = (router: KoaRouter) => {
           ctx.request.parsedQuery
         )
 
-        // Dynamic import of ExcelJS to avoid loading it on every request
-        const ExcelJS = await import('exceljs')
-        const workbook = new ExcelJS.default.Workbook()
-        const worksheet = workbook.addWorksheet('Spärrlista')
-
-        // Add columns
-        worksheet.columns = [
-          { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
-          { header: 'Kategori', key: 'kategori', width: 12 },
-          { header: 'Typ', key: 'typ', width: 15 },
-          { header: 'Adress', key: 'adress', width: 30 },
-          { header: 'Fastighet', key: 'fastighet', width: 15 },
-          { header: 'Distrikt', key: 'distrikt', width: 15 },
-          { header: 'Orsak', key: 'orsak', width: 35 },
-          { header: 'Startdatum', key: 'startdatum', width: 12 },
-          { header: 'Slutdatum', key: 'slutdatum', width: 12 },
-          { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
-        ]
-
-        // Style header row
-        worksheet.getRow(1).font = { bold: true }
-
-        // Add rows
-        for (const block of allBlocks) {
-          worksheet.addRow({
+        const buffer = await createExcelExport({
+          sheetName: 'Spärrlista',
+          columns: [
+            { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
+            { header: 'Kategori', key: 'kategori', width: 12 },
+            { header: 'Typ', key: 'typ', width: 15 },
+            { header: 'Adress', key: 'adress', width: 30 },
+            { header: 'Fastighet', key: 'fastighet', width: 15 },
+            { header: 'Distrikt', key: 'distrikt', width: 15 },
+            { header: 'Orsak', key: 'orsak', width: 35 },
+            { header: 'Startdatum', key: 'startdatum', width: 12 },
+            { header: 'Slutdatum', key: 'slutdatum', width: 12 },
+            { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
+          ],
+          data: allBlocks,
+          rowMapper: (block: (typeof allBlocks)[number]) => ({
             hyresobjekt:
               block.rentalObject?.rentalId || block.rentalObject?.code || '',
             kategori: block.rentalObject?.category || '',
@@ -634,20 +627,13 @@ export const routes = (router: KoaRouter) => {
             fastighet: block.property?.name || '',
             distrikt: block.distrikt || '',
             orsak: block.blockReason || '',
-            startdatum: block.fromDate
-              ? new Date(block.fromDate).toLocaleDateString('sv-SE')
-              : '',
-            slutdatum: block.toDate
-              ? new Date(block.toDate).toLocaleDateString('sv-SE')
-              : '',
+            startdatum: formatDateForExcel(block.fromDate),
+            slutdatum: formatDateForExcel(block.toDate),
             hyra: block.rentalObject?.yearlyRent
               ? Math.round(block.rentalObject.yearlyRent)
               : null,
-          })
-        }
-
-        // Generate buffer
-        const buffer = await workbook.xlsx.writeBuffer()
+          }),
+        })
 
         // Set response headers for file download
         const timestamp = new Date().toISOString().split('T')[0]

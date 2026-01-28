@@ -889,9 +889,54 @@ const deleteListingTextContent = async (
   }
 }
 
+interface ExportLeasesResult {
+  data: Buffer
+  contentType: string
+  contentDisposition: string
+}
+
+const exportLeasesToExcel = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
+  try {
+    const params = new URLSearchParams()
+
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value === undefined) return
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(key, v))
+      } else {
+        params.append(key, value)
+      }
+    })
+
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/export?${params.toString()}`,
+      { responseType: 'arraybuffer' }
+    )
+
+    return {
+      ok: true,
+      data: {
+        data: Buffer.from(response.data),
+        contentType:
+          response.headers['content-type'] ||
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentDisposition:
+          response.headers['content-disposition'] ||
+          `attachment; filename="hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx"`,
+      },
+    }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
+  exportLeasesToExcel,
   getApplicantByContactCodeAndListingId,
   getApplicantsAndListingByContactCode,
   getApplicantsByContactCode,

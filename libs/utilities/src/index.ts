@@ -7,6 +7,7 @@ import {
 } from './routes/generateRouteMetadata'
 import * as axiosTypes from 'axios'
 
+export * from './excel'
 export * from './health-check'
 export * from './pagination'
 export * from './search'
