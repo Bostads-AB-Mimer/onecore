@@ -159,25 +159,32 @@
                                       "type": "object",
                                       "properties": {
                                         "careOf": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "street": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "zipCode": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "city": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "region": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "country": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         }
                                       },
                                       "required": [
+                                        "careOf",
                                         "street",
                                         "zipCode",
                                         "city",
@@ -330,25 +337,32 @@
                                       "type": "object",
                                       "properties": {
                                         "careOf": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "street": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "zipCode": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "city": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "region": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         },
                                         "country": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "nullable": true
                                         }
                                       },
                                       "required": [
+                                        "careOf",
                                         "street",
                                         "zipCode",
                                         "city",
@@ -551,25 +565,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -722,25 +743,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -922,25 +950,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -1093,25 +1128,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -1293,25 +1335,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -1464,25 +1513,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -1664,25 +1720,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -1835,25 +1898,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -2035,25 +2105,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",
@@ -2206,25 +2283,32 @@
                                 "type": "object",
                                 "properties": {
                                   "careOf": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "street": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "zipCode": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "city": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "region": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "country": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "nullable": true
                                   }
                                 },
                                 "required": [
+                                  "careOf",
                                   "street",
                                   "zipCode",
                                   "city",

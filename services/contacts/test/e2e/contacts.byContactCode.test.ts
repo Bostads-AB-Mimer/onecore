@@ -25,9 +25,9 @@ describe('/contacts/:contactCode', () => {
   })
 
   describe('Individual', () => {
-    it('should fetch P184660, who has 1 of each contact detail type', async () => {
+    it('should fetch P000333, who has 1 of each contact detail type', async () => {
       // When
-      const response = await httpClient.get('/contacts/P184660')
+      const response = await httpClient.get('/contacts/P000333')
 
       // Then
       expect(response.data).toEqual({
@@ -48,27 +48,21 @@ describe('/contacts/:contactCode', () => {
       expect(parseResult.success).toBe(true)
 
       expect(parseResult.data).toEqual({
-        contactCode: 'P184660',
-        contactKey: '_6QB0ZX3T658SQP',
+        contactCode: 'P000333',
+        contactKey: '_0J4157CCC',
         type: 'individual',
         personal: {
-          birthDate: '1988-02-03T01:00:00.000Z',
-          firstName: 'Bellatrix',
-          fullName: 'Julaftonsson Bellatrix',
-          lastName: 'Julaftonsson',
-          nationalRegistrationNumber: '810218877181',
+          birthDate: null,
+          firstName: '',
+          lastName: '',
+          fullName: 'Fiktivsson Exempel',
+          nationalId: null,
         },
         communication: {
-          emailAddresses: [
-            {
-              emailAddress: 'ola@korv.mock-domain.se',
-              isPrimary: true,
-              type: 'unspecified',
-            },
-          ],
+          emailAddresses: [],
           phoneNumbers: [
             {
-              phoneNumber: '0737948111',
+              phoneNumber: '199574  84',
               isPrimary: false,
               type: 'unspecified',
             },
@@ -77,12 +71,12 @@ describe('/contacts/:contactCode', () => {
         },
         addresses: [
           {
-            city: 'STOCKHOLM',
-            country: 'SVERIGE',
-            full: 'Kängurutorp 34D, 11667, STOCKHOLM, SVERIGE',
+            city: 'Västerås',
+            country: '',
+            full: 'Exempelvägen 79 A, 722 99, Västerås',
             region: 'SE',
-            street: 'Kängurutorp 34D',
-            zipCode: '11667',
+            street: 'Exempelvägen 79 A',
+            zipCode: '722 99',
           },
         ],
       })
