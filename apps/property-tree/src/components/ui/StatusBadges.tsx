@@ -32,7 +32,7 @@ export const LeaseStatusBadge = ({ status }: { status: LeaseStatus }) => {
           variant="outline"
           className="bg-yellow-50 text-yellow-700 hover:bg-yellow-50 border-yellow-200"
         >
-          Upphör snart
+          Uppsagd
         </Badge>
       )
     case LeaseStatus.Ended:
