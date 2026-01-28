@@ -6,10 +6,8 @@ import {
   getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
-import {
-  searchLeases,
-  exportLeasesToExcel,
-} from '../adapters/xpand/lease-search-adapter'
+import { searchLeases } from '../adapters/xpand/lease-search-adapter'
+import { exportLeasesToExcel } from '../adapters/xpand/lease-export-adapter'
 import { logger } from '@onecore/utilities'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
