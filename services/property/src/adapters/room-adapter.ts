@@ -8,6 +8,7 @@ import { prisma } from './db'
 
 const roomSelect = {
   id: true,
+  propertyObjectId: true,
   code: true,
   name: true,
   sharedUse: true,
@@ -107,7 +108,7 @@ export async function getRooms(residenceId: string) {
     .then(trimStrings)
 
   if (!residence) {
-    throw 'foo'
+    throw new Error(`Residence not found: ${residenceId}`)
   }
 
   const propertyStructures = await prisma.propertyStructure.findMany({

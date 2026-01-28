@@ -129,13 +129,13 @@ export function DashboardView() {
     },
     // Disabled cards (not yet implemented)
     {
-      id: 'barriers',
+      id: 'rental-blocks',
       title: 'Spärrar',
       icon: ShieldX,
       description: 'Hantera spärrar och begränsningar',
-      path: '/barriers',
+      path: '/rental-blocks',
       isExternal: false,
-      isDisabled: true,
+      isDisabled: false,
     },
     {
       id: 'turnover',

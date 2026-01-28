@@ -903,7 +903,7 @@ describe('@onecore/property-adapter', () => {
       })
     })
 
-    it('returns rental blocks with includeActiveBlocksOnly option', async () => {
+    it('returns rental blocks with active option', async () => {
       const rentalBlocksMock = factory.rentalBlock.buildList(2)
       mockServer.use(
         http.get(
@@ -920,7 +920,7 @@ describe('@onecore/property-adapter', () => {
 
       const result = await propertyBaseAdapter.getRentalBlocksByRentalId(
         '1234',
-        { includeActiveBlocksOnly: true }
+        { active: true }
       )
 
       expect(result).toMatchObject({

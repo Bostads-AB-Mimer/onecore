@@ -1,7 +1,8 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
 import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 
-import { logger } from '@onecore/utilities'
+import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
+import { Context } from 'koa'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
@@ -482,6 +483,92 @@ const getContactsDataBySearchQuery = async (
   }
 }
 
+/**
+ * Paginated contact search
+ * @param q - Search query string
+ * @param ctx - Koa context for pagination params
+ * @returns Paginated response with contacts
+ */
+const searchContactsPaginated = async (
+  q: string,
+  ctx: Context
+): Promise<PaginatedResponse<{ contactCode: string; fullName: string }>> => {
+  const isEmailSearch = q.includes('@')
+
+  if (isEmailSearch) {
+    const query = xpandDb
+      .from('cmctc')
+      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .where(
+        'cmctc.keycmobj',
+        'in',
+        xpandDb
+          .select('keycmobj')
+          .from('cmeml')
+          .where('cmemlben', 'like', `${q}%`)
+      )
+
+    return paginateKnex(query, ctx)
+  }
+
+  // Split into terms - all must match name (AND), or match contactCode/persorgnr
+  const searchTerms = q
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+
+  const query = xpandDb
+    .from('cmctc')
+    .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+    .where('cmctc.deletemark', '=', '0')
+    .where((builder) => {
+      builder.where('cmctc.cmctckod', 'like', `${q}%`)
+      builder.orWhere('cmctc.persorgnr', 'like', `${q}%`)
+      // Name search - all terms must match
+      builder.orWhere((builder) => {
+        for (const term of searchTerms) {
+          builder.where('cmctc.cmctcben', 'like', `%${term}%`)
+        }
+      })
+    })
+    .orderBy('cmctc.cmctcben', 'asc')
+
+  return paginateKnex(query, ctx)
+}
+
+/**
+ * Get contacts eligible for deceased/protected identity checks (paginated)
+ * Returns person contacts that:
+ * - Are not deleted
+ * - Have contact code starting with 'P' (persons, not organizations)
+ * - Have valid national registration numbers (not organizations, not test numbers, no letters)
+ * - Are not already marked as deceased
+ *
+ * @param ctx - Koa context for pagination params
+ * @returns Paginated response with identity check contacts
+ */
+const getContactsForIdentityCheck = async (
+  ctx: Context
+): Promise<
+  PaginatedResponse<{ contactCode: string; nationalRegistrationNumber: string }>
+> => {
+  const query = xpandDb
+    .from('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.persorgnr as nationalRegistrationNumber'
+    )
+    .where('cmctc.deletemark', '=', 0)
+    .where('cmctc.cmctckod', 'like', 'P%')
+    .whereNot('cmctc.persorgnr', 'like', '55%')
+    .whereNot('cmctc.persorgnr', 'like', '1900%')
+    .whereRaw("cmctc.persorgnr NOT LIKE '%[A-Za-z]%'")
+    .whereNull('cmctc.avliden')
+    .orderBy('cmctc.cmctckod', 'asc')
+
+  return paginateKnex(query, ctx)
+}
+
 const getContactByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
   includeTerminatedLeases: boolean
@@ -740,25 +827,27 @@ const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
 ) => {
-  return leases.filter((lease) => {
-    if (options.includeTerminatedLeases && options.includeUpcomingLeases) {
-      return true
-    }
+  return leases
+    .filter((lease) => !lease.leaseId.includes('M'))
+    .filter((lease) => {
+      if (options.includeTerminatedLeases && options.includeUpcomingLeases) {
+        return true
+      }
 
-    if (!options.includeTerminatedLeases && !options.includeUpcomingLeases) {
-      return isLeaseActive(lease)
-    }
+      if (!options.includeTerminatedLeases && !options.includeUpcomingLeases) {
+        return isLeaseActive(lease)
+      }
 
-    if (options.includeTerminatedLeases && !options.includeUpcomingLeases) {
-      return isLeaseActive(lease) || isLeaseTerminated(lease)
-    }
+      if (options.includeTerminatedLeases && !options.includeUpcomingLeases) {
+        return isLeaseActive(lease) || isLeaseTerminated(lease)
+      }
 
-    if (!options.includeTerminatedLeases && options.includeUpcomingLeases) {
-      return isLeaseActive(lease) || isLeaseUpcoming(lease)
-    }
+      if (!options.includeTerminatedLeases && options.includeUpcomingLeases) {
+        return isLeaseActive(lease) || isLeaseUpcoming(lease)
+      }
 
-    return false
-  })
+      return false
+    })
 }
 
 const isLeaseActive = (lease: Lease | PartialLease): boolean => {
@@ -805,5 +894,7 @@ export {
   isLeaseTerminated,
   getResidentialAreaByRentalPropertyId,
   getContactsDataBySearchQuery,
+  searchContactsPaginated,
+  getContactsForIdentityCheck,
   transformFromDbContact,
 }

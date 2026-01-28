@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
+import * as contactCommentsAdapter from '../adapters/xpand/contact-comments-adapter'
 import {
   getContactByContactCode,
   getContactByNationalRegistrationNumber,
@@ -80,6 +81,145 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /contacts/search-paginated:
+   *   get:
+   *     summary: Search contacts with pagination (proof of concept)
+   *     description: Paginated version of contact search. Supports page and limit query params.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Search query - can be contact code, personal registration number, name, or email.
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved paginated contacts data.
+   *       400:
+   *         description: Bad request. The query parameter 'q' must be a string.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/contacts/search-paginated', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['q', 'page', 'limit'])
+
+    if (typeof ctx.query.q !== 'string') {
+      ctx.status = 400
+      ctx.body = { reason: 'Invalid query parameter', ...metadata }
+      return
+    }
+
+    try {
+      const result = await tenantLeaseAdapter.searchContactsPaginated(
+        ctx.query.q,
+        ctx
+      )
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...result }
+    } catch (err) {
+      logger.error({ err }, 'contacts.search-paginated')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/for-identity-check:
+   *   get:
+   *     summary: Get contacts for deceased/protected identity check
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved contacts for identity check.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       contactCode:
+   *                         type: string
+   *                         description: Contact code starting with P
+   *                       nationalRegistrationNumber:
+   *                         type: string
+   *                         description: Swedish personal identity number (personnummer)
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/contacts/for-identity-check', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['page', 'limit'])
+
+    try {
+      const result = await tenantLeaseAdapter.getContactsForIdentityCheck(ctx)
+
+      ctx.status = 200
+      ctx.body = { ...metadata, ...result }
+    } catch (err) {
+      logger.error({ err }, 'contacts.for-identity-check')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
   })
 
   //todo: rename singular routes to plural
@@ -695,6 +835,206 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
       return
+    }
+  )
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/comments:
+   *   get:
+   *     summary: Get comments/notes for a contact
+   *     description: Retrieve all comments (type 210) associated with a contact from Xpand. RTF formatted text is automatically converted to plain text.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code
+   *         example: "P086890"
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved contact comments
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       contactKey:
+   *                         type: string
+   *                       contactCode:
+   *                         type: string
+   *                       commentKey:
+   *                         type: string
+   *                       id:
+   *                         type: integer
+   *                       commentType:
+   *                         type: string
+   *                         nullable: true
+   *                         description: Comment type/category name
+   *                       notes:
+   *                         type: array
+   *                         description: Array of individual notes parsed from comment text
+   *                         items:
+   *                           type: object
+   *                           properties:
+   *                             date:
+   *                               type: string
+   *                               format: date
+   *                               nullable: true
+   *                               description: Date in YYYY-MM-DD format
+   *                             time:
+   *                               type: string
+   *                               nullable: true
+   *                               description: Time in HH:MM format
+   *                             author:
+   *                               type: string
+   *                               description: Author initials (6 letters) or "Notering utan signatur"
+   *                             text:
+   *                               type: string
+   *                               description: Note content (plain text)
+   *                       priority:
+   *                         type: integer
+   *                         nullable: true
+   *                       kind:
+   *                         type: integer
+   *                         nullable: true
+   *       404:
+   *         description: Contact not found
+   *       500:
+   *         description: Database error
+   */
+  router.get('(.*)/contacts/:contactCode/comments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await contactCommentsAdapter.getContactCommentsByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          type: result.err,
+          title: 'Contact not found',
+          status: 404,
+          detail: `No contact found with code: ${ctx.params.contactCode}`,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        type: 'database-error',
+        title: 'Internal server error',
+        status: 500,
+        ...metadata,
+      } satisfies RouteErrorResponse
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/comments:
+   *   post:
+   *     summary: Create or append to contact comment
+   *     description: Creates a new comment if none exists, or appends to existing comment
+   *     tags:
+   *       - Contacts
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *           example: P000047
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - content
+   *               - author
+   *             properties:
+   *               content:
+   *                 type: string
+   *                 description: Plain text content of the note
+   *                 example: Contacted customer regarding payment
+   *               author:
+   *                 type: string
+   *                 description: Author name or code (1-50 characters, any format)
+   *                 minLength: 1
+   *                 maxLength: 50
+   *                 example: DAVLIN
+   *     responses:
+   *       200:
+   *         description: Comment updated successfully
+   *       201:
+   *         description: Comment created successfully
+   *       400:
+   *         description: Invalid request body
+   *       404:
+   *         description: Contact not found
+   *       500:
+   *         description: Database error
+   */
+  router.post(
+    '(.*)/contacts/:contactCode/comments',
+    parseRequestBody(leasing.v1.CreateContactCommentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { content, author } = ctx.request.body
+
+      const result = await contactCommentsAdapter.upsertContactComment(
+        ctx.params.contactCode,
+        content,
+        author
+      )
+
+      if (!result.ok) {
+        if (result.err === 'contact-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            type: result.err,
+            title: 'Contact not found',
+            status: 404,
+            detail: `No contact found with code: ${ctx.params.contactCode}`,
+            ...metadata,
+          } satisfies RouteErrorResponse
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          type: 'database-error',
+          title: 'Internal server error',
+          status: 500,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = result.data.operation === 'created' ? 201 : 200
+      ctx.body = {
+        content: result.data.comment,
+        ...metadata,
+      }
     }
   )
 }

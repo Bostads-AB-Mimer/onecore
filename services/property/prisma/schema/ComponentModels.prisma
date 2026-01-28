@@ -1,0 +1,23 @@
+model ComponentModels {
+  id                       String   @id @default(uuid()) @db.UniqueIdentifier
+  modelName                String   @db.NVarChar(255)
+  componentSubtypeId       String   @db.UniqueIdentifier
+  currentPrice             Float    @db.Money
+  currentInstallPrice      Float    @db.Money
+  warrantyMonths           Int
+  manufacturer             String   @db.NVarChar(255)
+  technicalSpecification   String?  @db.NVarChar(Max)
+  installationInstructions String?  @db.NVarChar(Max)
+  dimensions               String?  @db.NVarChar(255)
+  coclassCode              String?  @db.NVarChar(50)
+  createdAt                DateTime @default(now()) @db.DateTime
+  updatedAt                DateTime @default(now()) @updatedAt @db.DateTime
+
+  // Relations
+  subtype    ComponentSubtypes @relation(fields: [componentSubtypeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  components Components[]
+  documents  Documents[]
+
+  @@index([componentSubtypeId])
+  @@map("component_models")
+}

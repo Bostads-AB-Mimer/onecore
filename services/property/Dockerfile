@@ -22,8 +22,8 @@ COPY libs/utilities ./libs/utilities
 COPY services/property ./services/property
 
 RUN pnpm install
-
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run generate:static
 RUN pnpm run --filter @onecore/property build
 RUN pnpm deploy --filter @onecore/property --prod /out

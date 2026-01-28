@@ -20,6 +20,7 @@ COPY services/economy ./services/economy
 
 RUN pnpm install
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run --filter @onecore/economy build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/economy --prod /out

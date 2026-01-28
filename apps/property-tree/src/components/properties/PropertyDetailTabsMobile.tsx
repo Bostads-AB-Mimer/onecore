@@ -1,18 +1,13 @@
 import { Info, Building, Home, BarChart3, Wrench } from 'lucide-react'
 import { PropertyInfoTab } from './tabs/PropertyInfoTab'
-import { PropertyDocumentsTab } from './tabs/PropertyDocumentsTab'
-import { PropertyPlanningTab } from './tabs/PropertyPlanningTab'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
-//import { PropertyMapTab } from './tabs/PropertyMapTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
 import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
-//import { PropertyAccessTab } from './tabs/PropertyAccessTab'
 import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
-//import { useFeatureToggles } from "@/contexts/FeatureTogglesContext";
 import type { PropertyDetail } from '@/types/api'
 
 interface PropertyDetailTabsMobileProps {

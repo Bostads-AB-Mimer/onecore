@@ -4,6 +4,7 @@ import { MaintenanceUnit } from '@src/types/maintenance-unit'
 
 const maintenanceUnitBaseSelect = {
   id: true,
+  propertyObjectId: true,
   code: true,
   name: true,
   maintenanceUnitType: {
@@ -26,6 +27,7 @@ type PropertyInfo = { propertyCode: string | null; propertyName: string | null }
 const mapToMaintenanceUnit = (
   item: {
     id: string
+    propertyObjectId: string
     code: string
     name: string | null
     maintenanceUnitType: { name: string | null } | null
@@ -33,6 +35,7 @@ const mapToMaintenanceUnit = (
   property: PropertyInfo | null
 ): MaintenanceUnit => ({
   id: item.id,
+  propertyObjectId: item.propertyObjectId,
   code: item.code,
   caption: item.name,
   type: item.maintenanceUnitType?.name ?? null,

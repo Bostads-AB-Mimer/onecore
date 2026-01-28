@@ -1,10 +1,32 @@
-import { logger } from '@onecore/utilities'
+import { logger, PaginatedResponse } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
+import axios from 'axios'
 
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
 
 import config from '../../common/config'
+
+type RentalBlockWithRentalObject =
+  components['schemas']['RentalBlockWithRentalObject']
+
+// Shared filter options for rental blocks (used by search and export)
+interface RentalBlocksFilterOptions {
+  q?: string
+  fields?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  active?: boolean
+}
+
+interface SearchRentalBlocksOptions extends RentalBlocksFilterOptions {
+  page?: number
+  limit?: number
+}
 
 const client = () =>
   createClient<paths>({
@@ -274,7 +296,7 @@ type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
 
 export async function getResidenceDetails(
   residenceId: string,
-  options?: { includeActiveBlocksOnly?: boolean }
+  options?: { active?: boolean }
 ): Promise<
   AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
 > {
@@ -282,10 +304,7 @@ export async function getResidenceDetails(
     const fetchResponse = await client().GET('/residences/{id}', {
       params: {
         path: { id: residenceId },
-        query: {
-          includeActiveBlocksOnly:
-            options?.includeActiveBlocksOnly === true ? true : false,
-        },
+        query: { active: options?.active },
       },
     })
 
@@ -738,19 +757,17 @@ type GetRentalBlocksByRentalIdResponse = components['schemas']['RentalBlock'][]
 
 export async function getRentalBlocksByRentalId(
   rentalId: string,
-  options?: { includeActiveBlocksOnly?: boolean }
+  options?: { active?: boolean }
 ): Promise<
   AdapterResult<GetRentalBlocksByRentalIdResponse, 'not-found' | 'unknown'>
 > {
   try {
-    const includeActiveBlocksOnly = options?.includeActiveBlocksOnly ?? false
-
     const fetchResponse = await client().GET(
       '/residences/rental-id/{rentalId}/rental-blocks',
       {
         params: {
           path: { rentalId },
-          query: { includeActiveBlocksOnly },
+          query: { active: options?.active },
         },
       }
     )
@@ -771,3 +788,202 @@ export async function getRentalBlocksByRentalId(
     return { ok: false, err: 'unknown' }
   }
 }
+
+export async function getAllRentalBlocks(options?: {
+  active?: boolean
+  page?: number
+  limit?: number
+}): Promise<
+  AdapterResult<PaginatedResponse<RentalBlockWithRentalObject>, 'unknown'>
+> {
+  try {
+    const page = options?.page ?? 1
+    const limit = options?.limit ?? 20
+
+    const fetchResponse = await client().GET('/residences/rental-blocks/all', {
+      params: {
+        query: { active: options?.active, page, limit },
+      },
+    })
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data as PaginatedResponse<RentalBlockWithRentalObject>,
+      }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getAllRentalBlocks')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function searchRentalBlocks(
+  options: SearchRentalBlocksOptions
+): Promise<
+  AdapterResult<PaginatedResponse<RentalBlockWithRentalObject>, 'unknown'>
+> {
+  try {
+    const {
+      q,
+      fields,
+      kategori,
+      distrikt,
+      blockReason,
+      fastighet,
+      fromDateGte,
+      toDateLte,
+      active,
+      page = 1,
+      limit = 50,
+    } = options
+
+    const fetchResponse = await client().GET(
+      '/residences/rental-blocks/search',
+      {
+        params: {
+          query: {
+            q,
+            fields,
+            kategori: kategori as
+              | 'Bostad'
+              | 'Bilplats'
+              | 'Lokal'
+              | 'Förråd'
+              | 'Övrigt'
+              | undefined,
+            distrikt,
+            blockReason,
+            fastighet,
+            fromDateGte,
+            toDateLte,
+            active,
+            page,
+            limit,
+          },
+        },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: fetchResponse.data as PaginatedResponse<RentalBlockWithRentalObject>,
+      }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.searchRentalBlocks')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function exportRentalBlocksToExcel(
+  options: RentalBlocksFilterOptions
+): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
+  try {
+    const params: Record<string, string> = {}
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params[key] = String(value)
+      }
+    })
+
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/residences/rental-blocks/export`,
+      {
+        params,
+        responseType: 'arraybuffer',
+      }
+    )
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.exportRentalBlocksToExcel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type BlockReason = { id: string; caption: string }
+
+export async function getBlockReasons(): Promise<
+  AdapterResult<BlockReason[], 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/residences/block-reasons`
+    )
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getBlockReasons')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== COMPONENTS ====================
+
+export {
+  // Component Categories
+  getComponentCategories,
+  getComponentCategoryById,
+  createComponentCategory,
+  updateComponentCategory,
+  deleteComponentCategory,
+  // Component Types
+  getComponentTypes,
+  getComponentTypeById,
+  createComponentType,
+  updateComponentType,
+  deleteComponentType,
+  // Component Subtypes
+  getComponentSubtypes,
+  getComponentSubtypeById,
+  createComponentSubtype,
+  updateComponentSubtype,
+  deleteComponentSubtype,
+  // Component Models
+  getComponentModels,
+  getComponentModelById,
+  findModelByExactName,
+  createComponentModel,
+  updateComponentModel,
+  deleteComponentModel,
+  // Components
+  getComponents,
+  getComponentById,
+  createComponent,
+  updateComponent,
+  deleteComponent,
+  // Component Installations
+  getComponentInstallations,
+  getComponentInstallationById,
+  createComponentInstallation,
+  updateComponentInstallation,
+  deleteComponentInstallation,
+  // Components by Room
+  getComponentsByRoomId,
+  // Component File Uploads
+  uploadComponentFile,
+  getComponentFiles,
+  deleteComponentFile,
+  // Component Model Documents
+  uploadComponentModelDocument,
+  getComponentModelDocuments,
+  deleteComponentModelDocument,
+  // Document Metadata
+  createDocument,
+  // AI Analysis
+  analyzeComponentImage,
+} from './components'

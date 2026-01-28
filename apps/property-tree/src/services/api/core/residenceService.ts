@@ -1,9 +1,14 @@
 import { GET } from './base-api'
-import { components } from './generated/api-types'
+import { resolve } from '@/utils/env'
+import type {
+  Residence,
+  ResidenceDetails,
+  ResidenceSummary,
+  RentalBlock,
+  RentalBlocksSearchParams,
+} from '../../types'
 
-type Residence = components['schemas']['Residence']
-type ResidenceDetails = components['schemas']['ResidenceDetails']
-type ResidenceSummary = components['schemas']['ResidenceSummary']
+const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
 
 export const residenceService = {
   async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
@@ -32,7 +37,7 @@ export const residenceService = {
     const { data, error } = await GET(`/residences/{residenceId}`, {
       params: {
         path: { residenceId },
-        query: { includeActiveBlocksOnly: true },
+        query: { active: true },
       },
     })
 
@@ -44,15 +49,70 @@ export const residenceService = {
 
   async getRentalBlocksByRentalId(
     rentalId: string,
-    includeActiveBlocksOnly = false
-  ): Promise<components['schemas']['RentalBlock'][]> {
+    active?: boolean
+  ): Promise<RentalBlock[]> {
     const { data, error } = await GET(
       '/residences/rental-blocks/by-rental-id/{rentalId}',
       {
-        params: { path: { rentalId }, query: { includeActiveBlocksOnly } },
+        params: { path: { rentalId }, query: { active } },
       }
     )
     if (error) throw error
     return data.content || []
+  },
+
+  async getAllRentalBlocks(active?: boolean, page = 1, limit = 100) {
+    const { data, error } = await GET('/residences/rental-blocks/all', {
+      params: { query: { active, page, limit } },
+    })
+    if (error) throw error
+    return data
+  },
+
+  async searchRentalBlocks(
+    params: RentalBlocksSearchParams,
+    page = 1,
+    limit = 50
+  ) {
+    const { data, error } = await GET('/residences/rental-blocks/search', {
+      params: { query: { ...params, page, limit } },
+    })
+    if (error) throw error
+    return data
+  },
+
+  async getBlockReasons(): Promise<{ id: string; caption: string }[]> {
+    const response = await fetch(`${CORE_API_URL}/residences/block-reasons`, {
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      throw new Error(`Failed to fetch block reasons: ${response.statusText}`)
+    }
+    const data = await response.json()
+    return data.content || []
+  },
+
+  // Note: Using raw fetch instead of GET wrapper because this endpoint
+  // returns a binary Excel file (Blob), not JSON
+  async exportRentalBlocksToExcel(
+    params: RentalBlocksSearchParams
+  ): Promise<Blob> {
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.set(key, String(value))
+      }
+    })
+
+    const response = await fetch(
+      `${CORE_API_URL}/residences/rental-blocks/export?${searchParams}`,
+      { credentials: 'include' }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`)
+    }
+
+    return response.blob()
   },
 }

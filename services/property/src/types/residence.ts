@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { createGenericResponseSchema } from './response'
 import { StaircaseSchema } from './staircase'
 
+// Boolean schema for rental block active filtering
+const booleanStringSchema = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((val) => val === true || val === 'true')
+
 export const residencesQueryParamsSchema = z.object({
   buildingCode: z
     .string({
@@ -156,8 +161,8 @@ export const ResidenceDetailedSchema = z.object({
     rentalBlocks: z.array(
       z.object({
         id: z.string(),
-        blockReasonId: z.string(),
-        blockReason: z.string(),
+        blockReasonId: z.string().nullable(),
+        blockReason: z.string().nullable(),
         fromDate: z.date(),
         toDate: z.date().nullable(),
         amount: z.number().nullable(),
@@ -226,12 +231,82 @@ export const GetResidenceByRentalIdResponseSchema = createGenericResponseSchema(
 
 export const RentalBlockSchema = z.object({
   id: z.string(),
-  blockReasonId: z.string(),
-  blockReason: z.string(),
+  blockReasonId: z.string().nullable(),
+  blockReason: z.string().nullable(),
   fromDate: z.date(),
   toDate: z.date().nullable(),
   amount: z.number().nullable(),
 })
+
+export const RentalBlockWithRentalObjectSchema = z.object({
+  id: z.string(),
+  blockReasonId: z.string().nullable(),
+  blockReason: z.string().nullable(),
+  fromDate: z.date(),
+  toDate: z.date().nullable(),
+  amount: z.number().nullable(),
+  distrikt: z.string().nullable(),
+  rentalObject: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    category: z.enum(['Bostad', 'Bilplats', 'Lokal', 'Förråd', 'Övrigt']),
+    address: z.string().nullable(),
+    rentalId: z.string().nullable(),
+    residenceId: z.string().nullable(),
+    yearlyRent: z.number(),
+    type: z.string().nullable(),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+})
+
+export const BlockReasonSchema = z.object({
+  id: z.string(),
+  caption: z.string(),
+})
+
+export const getAllRentalBlocksQueryParamsSchema = z.object({
+  active: booleanStringSchema.optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(1000).optional().default(100),
+})
+
+// Base filter schema (shared between search and export)
+const rentalBlocksFilterSchema = z.object({
+  q: z.string().optional(),
+  fields: z.string().optional(),
+  kategori: z.string().optional(),
+  distrikt: z.string().optional(),
+  blockReason: z.string().optional(),
+  fastighet: z.string().optional(),
+  fromDateGte: z.string().optional(),
+  toDateLte: z.string().optional(),
+  active: booleanStringSchema.optional(),
+})
+
+// Search adds pagination
+export const searchRentalBlocksQueryParamsSchema =
+  rentalBlocksFilterSchema.extend({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(1000).optional().default(50),
+  })
+
+export type SearchRentalBlocksQueryParams = z.infer<
+  typeof searchRentalBlocksQueryParamsSchema
+>
+
+// Export uses base filters only (no pagination)
+export const exportRentalBlocksQueryParamsSchema = rentalBlocksFilterSchema
+
+export type ExportRentalBlocksQueryParams = z.infer<
+  typeof exportRentalBlocksQueryParamsSchema
+>
 
 export const GetRentalBlocksByRentalIdResponseSchema =
   createGenericResponseSchema(z.array(RentalBlockSchema))
@@ -244,6 +319,10 @@ export type GetResidenceByRentalIdResponse = z.infer<
   typeof GetResidenceByRentalIdResponseSchema
 >
 export type RentalBlock = z.infer<typeof RentalBlockSchema>
+export type RentalBlockWithRentalObject = z.infer<
+  typeof RentalBlockWithRentalObjectSchema
+>
+export type BlockReason = z.infer<typeof BlockReasonSchema>
 export type GetRentalBlocksByRentalIdResponse = z.infer<
   typeof GetRentalBlocksByRentalIdResponseSchema
 >

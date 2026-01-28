@@ -1,14 +1,55 @@
 import { components } from '@/services/api/generated/api-types'
 import { ResponsiveTable } from '../ui/ResponsiveTable'
 import { TabLayout } from '../ui/TabLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/v2/Card'
 import { useState } from 'react'
 import { Button } from '../ui/v2/Button'
-import { useQuery } from '@tanstack/react-query'
 import { useRentalBlocks } from '../hooks/useRentalBlocks'
 import { Badge } from '../ui/v3/Badge'
 
 const INITIAL_DISPLAY_COUNT = 5
+
+const formatISODate = (isoDateString: string | null | undefined) => {
+  if (!isoDateString) return '-'
+  const date = new Date(isoDateString)
+  return date.toLocaleDateString('sv-SE')
+}
+
+type BlockStatus = 'active' | 'expired' | 'upcoming'
+
+const getBlockStatus = (
+  fromDate: string,
+  toDate: string | null | undefined
+): BlockStatus => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const from = new Date(fromDate)
+  from.setHours(0, 0, 0, 0)
+
+  // Upcoming: hasn't started yet
+  if (from > today) return 'upcoming'
+
+  // Expired: already ended
+  if (toDate) {
+    const to = new Date(toDate)
+    to.setHours(0, 0, 0, 0)
+    if (to < today) return 'expired'
+  }
+
+  // Active: started and not ended
+  return 'active'
+}
+
+const StatusBadge = ({ status }: { status: BlockStatus }) => {
+  switch (status) {
+    case 'active':
+      return <Badge variant="success">Aktiv</Badge>
+    case 'expired':
+      return <Badge variant="destructive">Utgången</Badge>
+    case 'upcoming':
+      return <Badge variant="outline">Kommande</Badge>
+  }
+}
 
 function RentalBlocksTab({ rentalId }: { rentalId: string }) {
   const [showAll, setShowAll] = useState(false)
@@ -39,20 +80,6 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
     ? rentalBlocks
     : rentalBlocks.slice(0, INITIAL_DISPLAY_COUNT)
   const hasMoreRentalBlocks = rentalBlocks.length > INITIAL_DISPLAY_COUNT
-
-  const formatISODate = (isoDateString: string | null | undefined) => {
-    if (!isoDateString) return '-'
-
-    const date = new Date(isoDateString)
-    return date.toLocaleDateString('sv-SE')
-  }
-
-  const isExpired = (toDate: string | null | undefined) => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const isExpired = toDate && new Date(toDate) < today
-    return isExpired
-  }
 
   return (
     <TabLayout title="Spärrar" showCard={true}>
@@ -85,36 +112,30 @@ function RentalBlocksTab({ rentalId }: { rentalId: string }) {
               key: 'status',
               label: 'Status',
               render: (rb: components['schemas']['RentalBlock']) => {
-                return isExpired(rb.toDate) ? (
-                  <Badge variant="destructive">Inaktiv</Badge>
-                ) : (
-                  <Badge variant="success">Aktiv</Badge>
-                )
+                const status = getBlockStatus(rb.fromDate, rb.toDate)
+                return <StatusBadge status={status} />
               },
             },
           ]}
           keyExtractor={(rb) => rb.id}
-          mobileCardRenderer={(rb: components['schemas']['RentalBlock']) => (
-            <div className="space-y-2 w-full">
-              <div className="flex flex-auto justify-between items-start">
-                <div>
-                  <div className="text-sm">
-                    {formatISODate(rb.fromDate)} - {formatISODate(rb.toDate)}
+          mobileCardRenderer={(rb: components['schemas']['RentalBlock']) => {
+            const status = getBlockStatus(rb.fromDate, rb.toDate)
+            return (
+              <div className="space-y-2 w-full">
+                <div className="flex flex-auto justify-between items-start">
+                  <div>
+                    <div className="text-sm">
+                      {formatISODate(rb.fromDate)} - {formatISODate(rb.toDate)}
+                    </div>
+                    <div className="font-medium">{rb.blockReason}</div>
                   </div>
-                  <div className="font-medium">{rb.blockReason}</div>
+                  <div className="mt-1">
+                    <StatusBadge status={status} />
+                  </div>
                 </div>
-                {isExpired(rb.toDate) ? (
-                  <Badge className="mt-1" variant="destructive">
-                    Inaktiv
-                  </Badge>
-                ) : (
-                  <Badge className="mt-1" variant="success">
-                    Aktiv
-                  </Badge>
-                )}
               </div>
-            </div>
-          )}
+            )
+          }}
         />
 
         {hasMoreRentalBlocks && !showAll && (

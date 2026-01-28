@@ -12,6 +12,7 @@ import { CompanyView } from './components/views/CompanyView'
 import SearchView from './components/views/SearchView'
 import PropertyView from './components/views/v2/PropertyView'
 import BuildingView from './components/views/v2/BuildingView'
+import ComponentLibraryView from './components/views/ComponentLibraryView'
 import TenantView from './components/views/v2/TenantView'
 import { StaircaseView } from './components/views/StaircaseView'
 import ResidenceView from './components/views/v2/ResidenceView'
@@ -23,6 +24,8 @@ import { DashboardView } from './components/views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
 import AllTenantsPage from './components/tenants/AllTenantsPage'
+import RentalBlocksPage from './components/rental-blocks/RentalBlocksPage'
+import LeasesPage from './components/leases/LeasesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +59,7 @@ export default function App() {
               <Route path="properties" element={<SearchView />} />
               <Route path="properties/:propertyId" element={<PropertyView />} />
               <Route path="buildings/:buildingId" element={<BuildingView />} />
+              <Route path="components" element={<ComponentLibraryView />} />
               <Route
                 path="staircases/:buildingId/:staircaseId"
                 element={<StaircaseView />}
@@ -79,6 +83,8 @@ export default function App() {
               <Route path="facilities/:rentalId" element={<FacilityView />} />
               <Route path="tenants" element={<AllTenantsPage />} />
               <Route path="tenants/:contactCode" element={<TenantView />} />
+              <Route path="rental-blocks" element={<RentalBlocksPage />} />
+              <Route path="leases" element={<LeasesPage />} />
             </Route>
           </Routes>
         </Router>

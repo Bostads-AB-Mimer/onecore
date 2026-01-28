@@ -5,14 +5,7 @@ import { TabLayout } from '@/components/ui/TabLayout'
 import { FilePlus } from 'lucide-react'
 import useWorkOrders from '../hooks/useWorkOrders'
 import { linkToOdooCreateMaintenanceRequestForContext } from '@/utils/odooUtils'
-
-export enum ContextType {
-  Property = 'property',
-  Building = 'building',
-  Residence = 'residence',
-  Tenant = 'tenant',
-  MaintenanceUnit = 'maintenanceUnit',
-}
+import { ContextType } from '@/types/ui'
 
 export interface WorkOrdersManagementProps {
   id: string

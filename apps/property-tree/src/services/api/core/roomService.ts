@@ -1,5 +1,7 @@
-import { Room } from '../../types'
 import { GET } from './base-api'
+import type { components } from './generated/api-types'
+
+type Room = components['schemas']['Room']
 
 export const roomService = {
   async getByResidenceId(residenceId: string): Promise<Room[]> {

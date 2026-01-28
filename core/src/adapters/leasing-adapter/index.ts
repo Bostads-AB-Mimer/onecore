@@ -1,4 +1,8 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  loggedAxios as axios,
+  logger,
+  PaginatedResponse,
+} from '@onecore/utilities'
 import { AxiosError } from 'axios'
 import {
   ConsumerReport,
@@ -32,6 +36,10 @@ interface GetLeasesOptions {
   includeContacts: boolean
   includeRentInfo?: boolean // defaults to true
 }
+
+type IdentityCheckContact = z.infer<
+  typeof leasing.v1.IdentityCheckContactSchema
+>
 
 const getLease = async (
   leaseId: string,
@@ -97,6 +105,27 @@ const getLeasesForPropertyId = async (
   return leasesResponse.data.content
 }
 
+const searchLeases = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  const params = new URLSearchParams()
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (Array.isArray(value)) {
+      value.forEach((v) => params.append(key, v))
+    } else {
+      params.append(key, value)
+    }
+  })
+
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
+  )
+
+  return response.data
+}
+
 const getContactForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Contact> => {
@@ -130,6 +159,29 @@ const getContactsDataBySearchQuery = async (
   }
 }
 
+const getContactsForIdentityCheck = async (
+  page: number,
+  limit: number
+): Promise<
+  AdapterResult<PaginatedResponse<IdentityCheckContact>, 'unknown'>
+> => {
+  try {
+    const response = await axios.get<PaginatedResponse<IdentityCheckContact>>(
+      `${tenantsLeasesServiceUrl}/contacts/for-identity-check`,
+      { params: { page, limit } }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactsForIdentityCheck')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getContactByContactCode = async (
   contactCode: string
 ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> => {
@@ -143,6 +195,67 @@ const getContactByContactCode = async (
     return { ok: true, data: res.data.content }
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.getContactByContactCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getContactCommentsByContactCode = async (
+  contactCode: string
+): Promise<
+  AdapterResult<
+    z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>,
+    'contact-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const res = await axios.get<{
+      content: z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`)
+
+    if (res.status === 404) {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    if (res.status === 200) {
+      return { ok: true, data: res.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactCommentsByContactCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const createContactComment = async (
+  contactCode: string,
+  params: z.infer<typeof leasing.v1.CreateContactCommentRequestSchema>
+): Promise<
+  AdapterResult<
+    z.infer<typeof leasing.v1.ContactCommentSchema>,
+    'contact-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const res = await axios.post<{
+      content: z.infer<typeof leasing.v1.ContactCommentSchema>
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`, params)
+
+    if (res.status === 404) {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    if (res.status === 200 || res.status === 201) {
+      return {
+        ok: true,
+        data: res.data.content,
+        statusCode: res.status,
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.createContactComment')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -663,17 +776,21 @@ export {
   getApplicationProfileByContactCode,
   getContactByContactCode,
   getContactByPhoneNumber,
+  getContactCommentsByContactCode,
   getContactForPnr,
   getContactsDataBySearchQuery,
+  getContactsForIdentityCheck,
   getCreditInformation,
   getLease,
   getLeasesForPnr,
   getLeasesForContactCode,
   getLeasesForPropertyId,
+  searchLeases,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
   resetWaitingList,
   setApplicantStatusActive,
+  createContactComment,
   createOrUpdateApplicationProfileByContactCode,
   updateApplicantStatus,
   validatePropertyRentalRules,

@@ -22,6 +22,7 @@ ENV VITE_BACKEND_URL=${BACKEND_URL}
 
 RUN pnpm install
 RUN pnpm build:types
+RUN pnpm install
 RUN pnpm run --filter @onecore/internal-portal build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/internal-portal --prod /out

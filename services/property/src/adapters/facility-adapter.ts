@@ -119,6 +119,7 @@ export const getFacilityByRentalId = async (rentalId: string) => {
 
     const facility = {
       id: result.propertyObject.facility.id,
+      propertyObjectId: result.propertyObject.facility.propertyObjectId,
       code: result.propertyObject.facility.code,
       name: result.propertyObject.facility.name ?? null,
       entrance: result.propertyObject.facility.entrance ?? null,
@@ -223,6 +224,7 @@ export const getFacilitiesByPropertyCode = async (propertyCode: string) => {
       .filter((item) => item.propertyObject.facility)
       .map((item) => ({
         id: item.propertyObject.facility!.id,
+        propertyObjectId: item.propertyObject.facility!.propertyObjectId,
         code: item.propertyObject.facility!.code,
         name: item.propertyObject.facility!.name ?? null,
         entrance: item.propertyObject.facility!.entrance ?? null,
@@ -330,6 +332,7 @@ export const getFacilitiesByBuildingCode = async (buildingCode: string) => {
       .filter((item) => item.propertyObject.facility)
       .map((item) => ({
         id: item.propertyObject.facility!.id,
+        propertyObjectId: item.propertyObject.facility!.propertyObjectId,
         code: item.propertyObject.facility!.code,
         name: item.propertyObject.facility!.name ?? null,
         entrance: item.propertyObject.facility!.entrance ?? null,

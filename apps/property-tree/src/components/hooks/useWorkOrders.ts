@@ -1,15 +1,8 @@
 import { workOrderService } from '@/services/api/core'
+import { ContextType } from '@/types/ui'
 import { useQuery } from '@tanstack/react-query'
 
-const useWorkOrders = (
-  id: string,
-  contextType:
-    | 'property'
-    | 'building'
-    | 'residence'
-    | 'tenant'
-    | 'maintenanceUnit'
-) => {
+const useWorkOrders = (id: string, contextType: ContextType) => {
   const getWorkOrdersFn = () => {
     switch (contextType) {
       case 'property':

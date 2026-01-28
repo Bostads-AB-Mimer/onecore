@@ -5,7 +5,15 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, LayoutGrid, Contact, ChevronRight } from 'lucide-react'
+import {
+  Home,
+  LayoutGrid,
+  Contact,
+  ShieldX,
+  FileText,
+  ChevronRight,
+  Settings,
+} from 'lucide-react'
 import { CompanyList } from './CompanyList'
 import {
   Sidebar,
@@ -45,6 +53,9 @@ function SidebarNavigationContent() {
   const isHomeActive = location.pathname === '/' || location.pathname === '/sv'
   const isPropertiesActive = location.pathname === '/properties'
   const isTenantsActive = location.pathname === '/tenants'
+  const isRentalBlocksActive = location.pathname === '/rental-blocks'
+  const isLeasesActive = location.pathname === '/leases'
+  const isComponentsActive = location.pathname === '/components'
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -153,6 +164,54 @@ function SidebarNavigationContent() {
               >
                 <Contact />
                 <span>Kunder</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* SPÄRRAR - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate('/rental-blocks')}
+                isActive={isRentalBlocksActive}
+                tooltip="Spärrar"
+              >
+                <ShieldX />
+                <span>Spärrar</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* HYRESKONTRAKT - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate('/leases')}
+                isActive={isLeasesActive}
+                tooltip="Hyreskontrakt"
+              >
+                <FileText />
+                <span>Hyreskontrakt</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* ADMINISTRERA KOMPONENTER - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate('/components')}
+                isActive={isComponentsActive}
+                tooltip="Administrera Komponenter"
+              >
+                <Settings />
+                <span>Administrera Komponenter</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
