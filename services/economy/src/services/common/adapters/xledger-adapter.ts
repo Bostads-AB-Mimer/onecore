@@ -9,6 +9,7 @@ import {
   PaymentStatus,
 } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
+import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
@@ -126,6 +127,35 @@ const dateToXledgerDateString = (date: Date): string => {
   return `${year}-${month > 9 ? month : `0${month}`}-${day > 9 ? day : `0${day}`}`
 }
 
+// Extract deferment date from description like "Anstånd till 2025-12-31"
+const getDefermentDate = (
+  description: string | undefined
+): Date | undefined => {
+  if (!description) return undefined
+  const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
+  if (match && match[1]) {
+    return new Date(match[1])
+  }
+  return undefined
+}
+
+/*
+ * If invoice is "ströfaktura", then the field "paymentReference"
+ * will be present and point to the original invoice.
+ * If invoice number ends with "K" we get the original invoice by simply
+ * removing the "K" from the invoice number.
+ */
+function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
+  return match(invoiceNode)
+    .with({ paymentReference: P.string }, (data) => ({
+      originalInvoiceId: data.paymentReference,
+    }))
+    .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
+      originalInvoiceId: v.invoiceNumber.replace('K', ''),
+    }))
+    .otherwise(() => null)
+}
+
 const transformToInvoice = (invoiceData: any): Invoice => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
@@ -159,7 +189,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     }
   }
 
-  const invoice: Invoice = {
+  const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
     leaseId: 'missing',
     reference: invoiceData.node.subledger.code,
@@ -168,8 +198,8 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     fromDate: dateFromString(invoiceData.node.period.fromDate),
     toDate: dateFromString(invoiceData.node.period.toDate),
     expirationDate: dateFromString(invoiceData.node.dueDate),
+    defermentDate: getDefermentDate(invoiceData.node.text),
     debitStatus: 0,
-    paymentStatus: PaymentStatus.Unpaid,
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: randomUUID(),
     paidAmount:
@@ -182,13 +212,31 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     source: 'next',
     invoiceRows: [],
     invoiceFileUrl: invoiceData.node.invoiceFile?.url,
+    credit: getInvoiceCredit(invoiceData.node),
   }
 
-  if (invoice.paidAmount === invoice.amount) {
-    invoice.paymentStatus = PaymentStatus.Paid
+  function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
+    const now = Date.now()
+
+    // If invoice has a defermentDate, use it for overdue check, else use expirationDate
+    return match(invoice)
+      .with({ remainingAmount: 0 }, () => PaymentStatus.Paid)
+      .with(
+        { defermentDate: P.when((date) => now > (date?.getTime() ?? 0)) },
+        () => PaymentStatus.Overdue
+      )
+      .with(
+        {
+          defermentDate: undefined,
+          expirationDate: P.when((date) => now > (date?.getTime() ?? 0)),
+        },
+        () => PaymentStatus.Overdue
+      )
+      .with({ remainingAmount: P.number.gt(0) }, () => PaymentStatus.PartlyPaid)
+      .otherwise(() => PaymentStatus.Unpaid)
   }
 
-  return invoice
+  return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
 }
 
 const getContact = async (contactCode: string) => {
@@ -313,6 +361,7 @@ const invoiceNodeFragment = `
   text
   matchId
   headerTransactionSourceDbId
+  paymentReference
   subledger {
     code
     description

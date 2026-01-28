@@ -1,26 +1,11 @@
 import { useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
+import { Card, CardContent, CardHeader } from '@/components/ui/v2/Card'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/v2/Collapsible'
-import {
-  Phone,
-  Mail,
-  MessageSquare,
-  User,
-  Users,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  MapPin,
-} from 'lucide-react'
+import { ChevronDown, ChevronUp, MapPin } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import type { Tenant } from '@/services/types'
 import { CopyableField } from '@/components/ui/CopyableField'
@@ -33,25 +18,6 @@ interface TenantCardProps {
 export function TenantCard({ tenant }: TenantCardProps) {
   const isMobile = useIsMobile()
   const [isOpen, setIsOpen] = useState(false)
-
-  // const handleCall = () => {
-  //   window.location.href = `tel:${tenant.phone.replace(/[\s-]/g, '')}`
-  // }
-
-  // const handleSMS = () => {
-  //   window.location.href = `sms:${tenant.phone.replace(/[\s-]/g, '')}`
-  // }
-
-  // const handleEmail = () => {
-  //   window.location.href = `mailto:${tenant.email}`
-  // }
-
-  // Format personal number to P-number format
-  const formatPersonalNumber = (personalNumber: string) => {
-    const numbersOnly = personalNumber.replace(/\D/g, '')
-    const lastSixDigits = numbersOnly.slice(-6)
-    return `P${lastSixDigits.padStart(6, '0')}`
-  }
 
   // Build address string from compound address object
   const formatAddress = (address: {
@@ -77,22 +43,6 @@ export function TenantCard({ tenant }: TenantCardProps) {
     const formattedAddress = formatAddress(address)
     const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(formattedAddress)}`
     window.open(mapsUrl, '_blank', 'noopener,noreferrer')
-  }
-
-  // Map contract status number to Swedish text
-  const getContractStatusText = (status: number) => {
-    switch (status) {
-      case 0:
-        return 'Gällande'
-      case 1:
-        return 'Kommande'
-      case 2:
-        return 'Uppsagt, kommer att upphöra'
-      case 3:
-        return 'Uppsagt'
-      default:
-        return 'Okänd status'
-    }
   }
 
   // Get main phone number or first available

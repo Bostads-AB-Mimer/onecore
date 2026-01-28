@@ -24,6 +24,7 @@ export const InvoiceFactory = Factory.define<Invoice>(() => {
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: null,
   }
 })
 
