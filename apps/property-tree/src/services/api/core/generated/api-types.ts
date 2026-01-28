@@ -207,8 +207,8 @@ export interface paths {
           q?: string;
           /** @description Object types (e.g., residence, parking)) */
           objectType?: string[];
-          /** @description Contract status filter */
-          status?: ("current" | "upcoming" | "terminated")[];
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: ("0" | "1" | "2" | "3")[];
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */

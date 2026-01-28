@@ -12,9 +12,9 @@ import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Button } from '@/components/ui/Button'
 import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
 import {
-  SearchFilterDropdown,
+  MultiSelectSearchFilterDropdown,
   SearchFilterOption,
-} from '@/components/ui/SearchFilterDropdown'
+} from '@/components/ui/MultiSelectSearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
 import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
@@ -81,11 +81,11 @@ const LeasesPage = () => {
     [searchParams]
   )
   const selectedStatuses = useMemo(
-    () => searchParams.getAll('status'),
+    () => searchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
     [searchParams]
   )
-  const selectedProperty = useMemo(
-    () => searchParams.get('property') || '',
+  const selectedProperties = useMemo(
+    () => searchParams.getAll('property'),
     [searchParams]
   )
   const selectedDistricts = useMemo(
@@ -151,8 +151,12 @@ const LeasesPage = () => {
     setSearchParams(newParams)
   }
 
-  const setSelectedProperty = (val: string | null) => {
-    updateUrlParams({ property: val || undefined, page: undefined })
+  const setSelectedProperties = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('property')
+    vals.forEach((v) => newParams.append('property', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
   const setSelectedDistricts = (vals: string[]) => {
@@ -191,7 +195,7 @@ const LeasesPage = () => {
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
-      property: selectedProperty ? [selectedProperty] : undefined,
+      property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
       startDateFrom: startDateFrom || undefined,
@@ -251,7 +255,7 @@ const LeasesPage = () => {
     debouncedSearch ||
     selectedObjectTypes.length > 0 ||
     selectedStatuses.length > 0 ||
-    selectedProperty ||
+    selectedProperties.length > 0 ||
     selectedDistricts.length > 0 ||
     startDateFrom ||
     startDateTo ||
@@ -311,10 +315,10 @@ const LeasesPage = () => {
                 placeholder="Status"
               />
 
-              <SearchFilterDropdown
+              <MultiSelectSearchFilterDropdown
                 searchFn={searchProperties}
-                selectedValue={selectedProperty || null}
-                onSelectionChange={setSelectedProperty}
+                selectedValues={selectedProperties}
+                onSelectionChange={setSelectedProperties}
                 placeholder="Fastighet"
                 searchPlaceholder="Sök fastighet"
               />

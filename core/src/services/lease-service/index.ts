@@ -117,8 +117,8 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *             enum: [current, upcoming, terminated]
-   *         description: Contract status filter
+   *             enum: ['0', '1', '2', '3']
+   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
    *       - in: query
    *         name: startDateFrom
    *         schema:
