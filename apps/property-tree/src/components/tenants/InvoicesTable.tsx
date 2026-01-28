@@ -441,6 +441,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
         {invoice.description && (
           <div className="mb-3 text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Text:</span> {invoice.description}
+            {invoice.expectedLoss && <div>Befarad kundförlust</div>}
           </div>
         )}
         {invoice.invoiceFileUrl && (
