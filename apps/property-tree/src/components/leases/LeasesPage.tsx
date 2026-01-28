@@ -22,7 +22,7 @@ import { useDebounce } from '@/components/hooks/useDebounce'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
-import { LeaseStatus } from '@onecore/types'
+import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -50,21 +50,6 @@ const formatDate = (date: Date | string | null | undefined) => {
   if (!date) return '-'
   const d = typeof date === 'string' ? new Date(date) : date
   return d.toLocaleDateString('sv-SE')
-}
-
-const getStatusLabel = (status: LeaseStatus) => {
-  switch (status) {
-    case LeaseStatus.Current:
-      return 'Pågående'
-    case LeaseStatus.Upcoming:
-      return 'Kommande'
-    case LeaseStatus.AboutToEnd:
-      return 'Avslutas snart'
-    case LeaseStatus.Ended:
-      return 'Avslutat'
-    default:
-      return '-'
-  }
 }
 
 const PAGE_SIZE = 50
@@ -384,24 +369,67 @@ const LeasesPage = () => {
                   label: 'Hyresgäst',
                   className: 'px-2',
                   render: (lease: LeaseSearchResult) => {
-                    const primaryContact = lease.contacts?.[0]
-                    if (!primaryContact) return '-'
+                    if (!lease.contacts || lease.contacts.length === 0) {
+                      return <span className="text-muted-foreground">-</span>
+                    }
                     return (
-                      <Link
-                        to={`/tenants/${primaryContact.contactCode}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {primaryContact.name}
-                      </Link>
+                      <div className="space-y-1">
+                        {lease.contacts.map((contact) => (
+                          <div key={contact.contactCode}>
+                            <Link
+                              to={`/tenants/${contact.contactCode}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {contact.name}
+                            </Link>
+                            <div className="text-sm text-muted-foreground">
+                              {contact.contactCode}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )
                   },
+                },
+                {
+                  key: 'contactInfo',
+                  label: 'Kontaktuppgifter',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) => {
+                    if (!lease.contacts || lease.contacts.length === 0) {
+                      return <span className="text-muted-foreground">-</span>
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {lease.contacts.map((contact) => (
+                          <div key={contact.contactCode}>
+                            {contact.email && (
+                              <div className="text-sm">{contact.email}</div>
+                            )}
+                            {contact.phone && (
+                              <div className="text-sm text-muted-foreground">
+                                {contact.phone}
+                              </div>
+                            )}
+                            {!contact.email && !contact.phone && (
+                              <span className="text-sm text-muted-foreground">
+                                -
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  },
+                  hideOnMobile: true,
                 },
                 {
                   key: 'objectType',
                   label: 'Objekttyp',
                   className: 'px-2',
-                  render: (lease: LeaseSearchResult) =>
-                    lease.objectTypeCode || '-',
+                  render: (lease: LeaseSearchResult) => (
+                    <ObjectTypeBadge type={lease.objectTypeCode} />
+                  ),
                   hideOnMobile: true,
                 },
                 {
@@ -430,31 +458,59 @@ const LeasesPage = () => {
                   key: 'status',
                   label: 'Status',
                   className: 'px-2',
-                  render: (lease: LeaseSearchResult) =>
-                    getStatusLabel(lease.status),
+                  render: (lease: LeaseSearchResult) => (
+                    <LeaseStatusBadge status={lease.status} />
+                  ),
                   hideOnMobile: true,
                 },
               ]}
               keyExtractor={(lease) => lease.leaseId}
               mobileCardRenderer={(lease: LeaseSearchResult) => (
-                <div className="space-y-2 w-full">
+                <div className="space-y-3 w-full">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="font-medium">{lease.leaseId}</span>
-                      <div className="text-sm text-muted-foreground">
-                        {lease.contacts?.[0]?.name || '-'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {lease.address || '-'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm font-medium">{lease.leaseId}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
                         {formatDate(lease.startDate)} -{' '}
                         {formatDate(lease.lastDebitDate)}
                       </div>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {getStatusLabel(lease.status)}
-                    </span>
+                    <LeaseStatusBadge status={lease.status} />
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {lease.contacts && lease.contacts.length > 0 ? (
+                      lease.contacts.map((contact) => (
+                        <div
+                          key={contact.contactCode}
+                          className="flex justify-between"
+                        >
+                          <span className="text-muted-foreground">
+                            Hyresgäst:
+                          </span>
+                          <Link
+                            to={`/tenants/${contact.contactCode}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {contact.name}
+                          </Link>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Hyresgäst:
+                        </span>
+                        <span className="text-muted-foreground">-</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Adress:</span>
+                      <span>{lease.address || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Objekttyp:</span>
+                      <ObjectTypeBadge type={lease.objectTypeCode} />
+                    </div>
                   </div>
                 </div>
               )}
