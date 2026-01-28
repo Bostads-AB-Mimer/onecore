@@ -32,10 +32,10 @@ const objectTypeOptions = [
 ] as const
 
 const statusOptions = [
-  { label: 'Pågående', value: '0' },
+  { label: 'Gällande', value: '0' },
   { label: 'Kommande', value: '1' },
-  { label: 'Avslutas snart', value: '2' },
-  { label: 'Avslutat', value: '3' },
+  { label: 'Uppsagd', value: '2' },
+  { label: 'Upphört', value: '3' },
 ] as const
 
 const districtOptions = [
