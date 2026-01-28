@@ -4286,14 +4286,14 @@ export interface paths {
         query?: {
           /** @description Search term */
           q?: string;
-          /** @description Filter by category */
-          kategori?: string;
-          /** @description Filter by district */
-          distrikt?: string;
-          /** @description Filter by block reason */
-          blockReason?: string;
-          /** @description Filter by property */
-          fastighet?: string;
+          /** @description Filter by category (supports multiple values) */
+          kategori?: string[];
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[];
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[];
+          /** @description Filter by property (supports multiple values) */
+          fastighet?: string[];
           /** @description Filter by start date */
           fromDateGte?: string;
           /** @description Filter by end date */
@@ -4326,14 +4326,14 @@ export interface paths {
           q?: string;
           /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
           fields?: string;
-          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) */
-          kategori?: string;
-          /** @description Filter by district */
-          distrikt?: string;
-          /** @description Filter by block reason */
-          blockReason?: string;
-          /** @description Filter by property code/name */
-          fastighet?: string;
+          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) - supports multiple values */
+          kategori?: string[];
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[];
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[];
+          /** @description Filter by property code/name (supports multiple values) */
+          fastighet?: string[];
           /** @description Filter blocks starting on or after this date */
           fromDateGte?: string;
           /** @description Filter blocks ending on or before this date */

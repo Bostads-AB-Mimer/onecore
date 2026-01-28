@@ -775,19 +775,25 @@ async function fetchRentalBlocksRaw(
     conditions.push('hyspt.tdate < GETDATE()')
   }
 
-  // Distrikt filter via fencode → bafen.code join
-  if (distrikt) {
-    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
+  // Distrikt filter via fencode → bafen.code join (supports multi-select)
+  const distrikter = toArray(distrikt)
+  if (distrikter.length > 0) {
+    const inClause = distrikter.map(escapeSqlString).join(', ')
+    conditions.push(`bafen.distrikt IN (${inClause})`)
   }
 
-  // Fastighet (property) filter
-  if (fastighet) {
-    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
+  // Fastighet (property) filter (supports multi-select)
+  const fastigheter = toArray(fastighet)
+  if (fastigheter.length > 0) {
+    const inClause = fastigheter.map(escapeSqlString).join(', ')
+    conditions.push(`babuf.fstcaption IN (${inClause})`)
   }
 
-  // Block reason filter
-  if (blockReason) {
-    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
+  // Block reason filter (supports multi-select)
+  const blockReasons = toArray(blockReason)
+  if (blockReasons.length > 0) {
+    const inClause = blockReasons.map(escapeSqlString).join(', ')
+    conditions.push(`hyspa.caption IN (${inClause})`)
   }
 
   // Date range filters
@@ -798,19 +804,28 @@ async function fetchRentalBlocksRaw(
     conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
   }
 
-  // Kategori filter
-  if (kategori === 'Bostad') {
-    conditions.push('babuf.lghcode IS NOT NULL')
-  } else if (kategori === 'Bilplats') {
-    conditions.push('babuf.bpscode IS NOT NULL')
-  } else if (kategori === 'Lokal') {
-    conditions.push('babuf.lokcode IS NOT NULL')
-  } else if (kategori === 'Förråd') {
-    conditions.push('babuf.hyrcode IS NOT NULL')
-  } else if (kategori === 'Övrigt') {
-    conditions.push(
-      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
-    )
+  // Kategori filter (supports multi-select)
+  const kategorier = toArray(kategori)
+  if (kategorier.length > 0) {
+    const kategoriConditions: string[] = []
+    for (const k of kategorier) {
+      if (k === 'Bostad') {
+        kategoriConditions.push('babuf.lghcode IS NOT NULL')
+      } else if (k === 'Bilplats') {
+        kategoriConditions.push('babuf.bpscode IS NOT NULL')
+      } else if (k === 'Lokal') {
+        kategoriConditions.push('babuf.lokcode IS NOT NULL')
+      } else if (k === 'Förråd') {
+        kategoriConditions.push('babuf.hyrcode IS NOT NULL')
+      } else if (k === 'Övrigt') {
+        kategoriConditions.push(
+          '(babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL)'
+        )
+      }
+    }
+    if (kategoriConditions.length > 0) {
+      conditions.push(`(${kategoriConditions.join(' OR ')})`)
+    }
   }
 
   // Search filter (q param) - OR across fields
@@ -1068,13 +1083,19 @@ export const getAllRentalBlocks = async (options?: {
   }
 }
 
+// Helper to normalize string | string[] to array
+function toArray(val: string | string[] | undefined): string[] {
+  if (!val) return []
+  return Array.isArray(val) ? val : [val]
+}
+
 interface RentalBlockFilterOptions {
   q?: string
   fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string | string[]
+  distrikt?: string | string[]
+  blockReason?: string | string[]
+  fastighet?: string | string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -1144,29 +1165,33 @@ function buildRentalBlockWhereClause(
     }
   }
 
-  // Distrikt filter - note: when distrikt is set, searchRentalBlocks uses raw SQL instead
+  // Distrikt filter (supports multi-select)
+  // Note: when distrikt is set, searchRentalBlocks uses raw SQL instead
   // This is kept as a simple fallback but the raw SQL path handles fencode correctly
-  if (distrikt) {
+  const distrikter = toArray(distrikt)
+  if (distrikter.length > 0) {
     andConditions.push({
       propertyStructure: {
-        administrativeUnit: { district: distrikt },
+        administrativeUnit: { district: { in: distrikter } },
       },
     })
   }
 
-  // Fastighet (property) filter (AND)
-  if (fastighet) {
+  // Fastighet (property) filter (supports multi-select)
+  const fastigheter = toArray(fastighet)
+  if (fastigheter.length > 0) {
     andConditions.push({
       propertyStructure: {
-        propertyName: fastighet,
+        propertyName: { in: fastigheter },
       },
     })
   }
 
-  // Block reason filter (AND)
-  if (blockReason) {
+  // Block reason filter (supports multi-select)
+  const blockReasons = toArray(blockReason)
+  if (blockReasons.length > 0) {
     andConditions.push({
-      blockReason: { caption: blockReason },
+      blockReason: { caption: { in: blockReasons } },
     })
   }
 
@@ -1182,33 +1207,40 @@ function buildRentalBlockWhereClause(
     })
   }
 
-  // Kategori filter (derived from which code field is populated)
-  if (kategori) {
-    if (kategori === 'Bostad') {
-      andConditions.push({
-        propertyStructure: { residenceCode: { not: null } },
-      })
-    } else if (kategori === 'Bilplats') {
-      andConditions.push({
-        propertyStructure: { parkingSpaceCode: { not: null } },
-      })
-    } else if (kategori === 'Lokal') {
-      andConditions.push({
-        propertyStructure: { localeCode: { not: null } },
-      })
-    } else if (kategori === 'Förråd') {
-      andConditions.push({
-        propertyStructure: { rentalObjectCode: { not: null } },
-      })
-    } else if (kategori === 'Övrigt') {
-      andConditions.push({
-        propertyStructure: {
-          residenceCode: null,
-          parkingSpaceCode: null,
-          localeCode: null,
-          rentalObjectCode: null,
-        },
-      })
+  // Kategori filter (supports multi-select)
+  const kategorier = toArray(kategori)
+  if (kategorier.length > 0) {
+    const kategoriConditions: Prisma.RentalBlockWhereInput[] = []
+    for (const k of kategorier) {
+      if (k === 'Bostad') {
+        kategoriConditions.push({
+          propertyStructure: { residenceCode: { not: null } },
+        })
+      } else if (k === 'Bilplats') {
+        kategoriConditions.push({
+          propertyStructure: { parkingSpaceCode: { not: null } },
+        })
+      } else if (k === 'Lokal') {
+        kategoriConditions.push({
+          propertyStructure: { localeCode: { not: null } },
+        })
+      } else if (k === 'Förråd') {
+        kategoriConditions.push({
+          propertyStructure: { rentalObjectCode: { not: null } },
+        })
+      } else if (k === 'Övrigt') {
+        kategoriConditions.push({
+          propertyStructure: {
+            residenceCode: null,
+            parkingSpaceCode: null,
+            localeCode: null,
+            rentalObjectCode: null,
+          },
+        })
+      }
+    }
+    if (kategoriConditions.length > 0) {
+      andConditions.push({ OR: kategoriConditions })
     }
   }
 
@@ -1220,10 +1252,10 @@ function buildRentalBlockWhereClause(
 export interface SearchRentalBlocksOptions {
   q?: string
   fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string | string[]
+  distrikt?: string | string[]
+  blockReason?: string | string[]
+  fastighet?: string | string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -1259,9 +1291,11 @@ async function searchRentalBlocksWithDistriktRaw(
   // Base filter: must have a rentalId
   conditions.push("babuf.hyresid IS NOT NULL AND babuf.hyresid <> ''")
 
-  // Distrikt filter via fencode → bafen.code join
-  if (distrikt) {
-    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
+  // Distrikt filter via fencode → bafen.code join (supports multi-select)
+  const distrikter = toArray(distrikt)
+  if (distrikter.length > 0) {
+    const inClause = distrikter.map(escapeSqlString).join(', ')
+    conditions.push(`bafen.distrikt IN (${inClause})`)
   }
 
   // Active filter
@@ -1271,14 +1305,18 @@ async function searchRentalBlocksWithDistriktRaw(
     conditions.push('hyspt.tdate < GETDATE()')
   }
 
-  // Fastighet (property) filter
-  if (fastighet) {
-    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
+  // Fastighet (property) filter (supports multi-select)
+  const fastigheter = toArray(fastighet)
+  if (fastigheter.length > 0) {
+    const inClause = fastigheter.map(escapeSqlString).join(', ')
+    conditions.push(`babuf.fstcaption IN (${inClause})`)
   }
 
-  // Block reason filter
-  if (blockReason) {
-    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
+  // Block reason filter (supports multi-select)
+  const blockReasons = toArray(blockReason)
+  if (blockReasons.length > 0) {
+    const inClause = blockReasons.map(escapeSqlString).join(', ')
+    conditions.push(`hyspa.caption IN (${inClause})`)
   }
 
   // Date range filters
@@ -1289,19 +1327,28 @@ async function searchRentalBlocksWithDistriktRaw(
     conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
   }
 
-  // Kategori filter
-  if (kategori === 'Bostad') {
-    conditions.push('babuf.lghcode IS NOT NULL')
-  } else if (kategori === 'Bilplats') {
-    conditions.push('babuf.bpscode IS NOT NULL')
-  } else if (kategori === 'Lokal') {
-    conditions.push('babuf.lokcode IS NOT NULL')
-  } else if (kategori === 'Förråd') {
-    conditions.push('babuf.hyrcode IS NOT NULL')
-  } else if (kategori === 'Övrigt') {
-    conditions.push(
-      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
-    )
+  // Kategori filter (supports multi-select)
+  const kategorier = toArray(kategori)
+  if (kategorier.length > 0) {
+    const kategoriConditions: string[] = []
+    for (const k of kategorier) {
+      if (k === 'Bostad') {
+        kategoriConditions.push('babuf.lghcode IS NOT NULL')
+      } else if (k === 'Bilplats') {
+        kategoriConditions.push('babuf.bpscode IS NOT NULL')
+      } else if (k === 'Lokal') {
+        kategoriConditions.push('babuf.lokcode IS NOT NULL')
+      } else if (k === 'Förråd') {
+        kategoriConditions.push('babuf.hyrcode IS NOT NULL')
+      } else if (k === 'Övrigt') {
+        kategoriConditions.push(
+          '(babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL)'
+        )
+      }
+    }
+    if (kategoriConditions.length > 0) {
+      conditions.push(`(${kategoriConditions.join(' OR ')})`)
+    }
   }
 
   // Search filter (q param) - OR across fields
