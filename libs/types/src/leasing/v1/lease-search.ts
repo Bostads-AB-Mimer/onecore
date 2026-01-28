@@ -38,7 +38,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
   endDateTo: z.string().optional(),
 
   // Property/Building/Area filters
-  propertyCodes: z
+  property: z
     .union([z.string(), z.array(z.string())])
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
@@ -98,15 +98,10 @@ export const LeaseSearchResultSchema = z.object({
 
   // Property/Building/Area fields - optional (only included when filter used)
   // nullable().optional() = omit when not queried, null when queried but empty in DB
-  propertyCode: z.string().nullable().optional(),
-  propertyCaption: z.string().nullable().optional(),
+  property: z.string().nullable().optional(),
   buildingCode: z.string().nullable().optional(),
-  buildingCaption: z.string().nullable().optional(),
-  areaCode: z.string().nullable().optional(),
-  areaName: z.string().nullable().optional(),
-  buildingManagerCode: z.string().nullable().optional(),
-  managementUnitName: z.string().nullable().optional(),
-  buildingManagerName: z.string().nullable().optional(),
+  area: z.string().nullable().optional(),
+  buildingManager: z.string().nullable().optional(),
   districtName: z.string().nullable().optional(),
 })
 

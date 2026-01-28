@@ -5,6 +5,7 @@ import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
+import { analyzeSearchTerm } from '../../helpers/searchTermAnalyzer'
 
 /** Maps enum values to normalized status keys */
 const STATUS_ENUM_MAP: Record<string, string> = {
@@ -30,6 +31,18 @@ const STATUS_CONDITIONS: Record<
 
 const normalizeStatus = (status: string): string =>
   STATUS_ENUM_MAP[status] ?? status.toLowerCase()
+
+/** Maps friendly object type names to Xpand database codes */
+const OBJECT_TYPE_MAP: Record<string, string> = {
+  bostad: 'balgh',
+  parkering: 'babps',
+  lokal: 'balok',
+  ovrigt: 'bahyr',
+}
+
+/** Convert friendly object type to DB code (passes through if already a DB code) */
+const normalizeObjectType = (type: string): string =>
+  OBJECT_TYPE_MAP[type.toLowerCase()] ?? type
 
 /**
  * Modular query builder for lease search
@@ -136,29 +149,50 @@ class LeaseSearchQueryBuilder {
 
   /**
    * Apply text search filter
-   * Uses LEFT JOINs to search on contact fields
+   * Uses smart analysis to only search relevant columns based on input pattern
+   * Uses EXISTS subquery for contact search to avoid row duplication
    */
   applySearch(): this {
     if (this.params.q) {
-      const searchTerm = `%${this.params.q}%`
+      const targets = analyzeSearchTerm(this.params.q)
 
-      // Add LEFT JOIN for contact search
-      if (!this.joinedTables.has('cmctc')) {
-        this.query
-          .leftJoin('hyavk', 'hyavk.keyhyobj', 'hyobj.keyhyobj')
-          .leftJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
-        this.joinedTables.add('hyavk')
-        this.joinedTables.add('cmctc')
+      // Separate targets into contact columns (need EXISTS) and direct columns
+      const contactTargets = targets.filter((t) => t.column.startsWith('cmctc.'))
+      const directTargets = targets.filter((t) => !t.column.startsWith('cmctc.'))
+
+      // Ensure address join if we're searching address
+      if (directTargets.some((t) => t.column.startsWith('cmadr.'))) {
+        this.ensureAddressJoin()
       }
 
-      this.ensureAddressJoin()
-
       this.query.where(function () {
-        this.where('hyobj.hyobjben', 'like', searchTerm)
-          .orWhere('cmctc.cmctcben', 'like', searchTerm)
-          .orWhere('cmctc.persorgnr', 'like', searchTerm)
-          .orWhere('cmctc.cmctckod', 'like', searchTerm)
-          .orWhere('cmadr.adress1', 'like', searchTerm)
+        // Direct columns (hyobj, cmadr)
+        directTargets.forEach((target, i) => {
+          if (i === 0 && contactTargets.length === 0) {
+            this.where(target.column, 'like', target.pattern)
+          } else {
+            this.orWhere(target.column, 'like', target.pattern)
+          }
+        })
+
+        // Contact columns via EXISTS subquery
+        if (contactTargets.length > 0) {
+          this.orWhereExists(function () {
+            this.select(xpandDb.raw(1))
+              .from('hyavk')
+              .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
+              .whereRaw('hyavk.keyhyobj = hyobj.keyhyobj')
+              .where(function () {
+                contactTargets.forEach((target, i) => {
+                  if (i === 0) {
+                    this.where(target.column, 'like', target.pattern)
+                  } else {
+                    this.orWhere(target.column, 'like', target.pattern)
+                  }
+                })
+              })
+          })
+        }
       })
     }
 
@@ -167,10 +201,12 @@ class LeaseSearchQueryBuilder {
 
   /**
    * Apply object type filter
+   * Accepts friendly names (bostad, parkering, lokal, ovrigt) or DB codes (balgh, babps, balok, bahyr)
    */
   applyObjectTypeFilter(): this {
     if (this.params.objectType && this.params.objectType.length > 0) {
-      this.query.whereIn('cmobj.keycmobt', this.params.objectType)
+      const dbCodes = this.params.objectType.map(normalizeObjectType)
+      this.query.whereIn('cmobj.keycmobt', dbCodes)
     }
 
     return this
@@ -223,11 +259,12 @@ class LeaseSearchQueryBuilder {
 
   /**
    * Apply property filter
+   * Filters by property name (fstcaption) not code
    */
   applyPropertyFilter(): this {
-    if (this.params.propertyCodes && this.params.propertyCodes.length > 0) {
+    if (this.params.property && this.params.property.length > 0) {
       this.ensureBabufJoin()
-      this.query.whereIn('babuf.fstcode', this.params.propertyCodes)
+      this.query.whereIn('babuf.fstcaption', this.params.property)
     }
 
     return this
@@ -290,19 +327,15 @@ class LeaseSearchQueryBuilder {
    */
   /**
    * Build SELECT fields
-   * Uses DISTINCT to prevent duplicate rows from search joins
    * Only selects property/area/district fields if those filters were used
    */
   buildSelectFields(): this {
     // Always join address for display
     this.ensureAddressJoin()
 
-    // DISTINCT prevents duplicates when search join matches multiple contacts
-    this.query.distinct()
-
     // Always selected (core display fields)
     this.query.select(
-      'hyobj.keyhyobj', // Needed for contact batch lookup
+      'hyobj.keyhyobj',
       'hyobj.hyobjben as leaseId',
       'hyobj.fdate as startDate',
       'hyobj.sistadeb as lastDebitDate',
@@ -311,25 +344,38 @@ class LeaseSearchQueryBuilder {
       'cmadr.adress1 as address'
     )
 
+    // Add JSON subquery to fetch contacts with email/phone in one go
+    this.query.select(
+      xpandDb.raw(`(
+        SELECT
+          cmctc.cmctcben as name,
+          cmctc.cmctckod as contactCode,
+          cmeml.cmemlben as email,
+          cmtel.cmtelben as phone
+        FROM hyavk
+        INNER JOIN cmctc ON cmctc.keycmctc = hyavk.keycmctc
+        LEFT JOIN cmeml ON cmeml.keycmobj = cmctc.keycmobj AND cmeml.main = 1
+        LEFT JOIN cmtel ON cmtel.keycmobj = cmctc.keycmobj AND cmtel.main = 1
+        WHERE hyavk.keyhyobj = hyobj.keyhyobj
+        FOR JSON PATH
+      ) as contactsJson`)
+    )
+
     // Conditionally select if tables were joined by filters
     if (this.joinedTables.has('babuf')) {
       this.query.select(
-        'babuf.fstcode as propertyCode',
-        'babuf.fstcaption as propertyCaption',
-        'babuf.bygcode as buildingCode',
-        'babuf.bygcaption as buildingCaption'
+        'babuf.fstcaption as property',
+        'babuf.bygcode as buildingCode'
       )
     }
 
     if (this.joinedTables.has('babya')) {
-      this.query.select('babya.code as areaCode', 'babya.caption as areaName')
+      this.query.select('babya.caption as area')
     }
 
     if (this.joinedTables.has('bafen')) {
       this.query.select(
-        'bafen.code as buildingManagerCode',
-        'bafen.caption as managementUnitName',
-        'bafen.omrade as buildingManagerName',
+        'bafen.omrade as buildingManager',
         'bafen.distrikt as districtName'
       )
     }
@@ -390,6 +436,7 @@ const getContactsForLeases = async (
   }
 
   // Query 1: Get contacts for all leases
+  const startContacts = Date.now()
   const rows = await xpandDb
     .from('hyavk')
     .select(
@@ -400,6 +447,7 @@ const getContactsForLeases = async (
     )
     .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
     .whereIn('hyavk.keyhyobj', leaseKeys)
+  console.log(`  Contact names query: ${Date.now() - startContacts}ms (${rows.length} contacts)`)
 
   if (rows.length === 0) {
     const result = new Map<string, leasing.v1.ContactInfo[]>()
@@ -408,19 +456,29 @@ const getContactsForLeases = async (
   }
 
   const keycmobjs = [...new Set(rows.map((r) => r.keycmobj as string))]
+  console.log(`  Fetching emails/phones for ${keycmobjs.length} unique contacts`)
 
   // Batch fetch emails and phones in parallel
+  const startEmailPhone = Date.now()
   const [emailRows, phoneRows] = await Promise.all([
     xpandDb
       .from('cmeml')
       .select('keycmobj', 'cmemlben as email')
       .whereIn('keycmobj', keycmobjs)
-      .where('main', 1),
+      .where('main', 1)
+      .then((result) => {
+        console.log(`    Email query: ${Date.now() - startEmailPhone}ms (${result.length} emails)`)
+        return result
+      }),
     xpandDb
       .from('cmtel')
       .select('keycmobj', 'cmtelben as phone')
       .whereIn('keycmobj', keycmobjs)
-      .where('main', 1),
+      .where('main', 1)
+      .then((result) => {
+        console.log(`    Phone query: ${Date.now() - startEmailPhone}ms (${result.length} phones)`)
+        return result
+      }),
   ])
 
   // Build lookups
@@ -477,22 +535,17 @@ const transformRow = (
 
   // Only include optional fields if they were selected (filter was used)
   // Omit entirely when not queried, null when queried but empty in DB
-  if (trimmedRow.propertyCode !== undefined) {
-    result.propertyCode = trimmedRow.propertyCode || null
-    result.propertyCaption = trimmedRow.propertyCaption || null
+  if (trimmedRow.property !== undefined) {
+    result.property = trimmedRow.property || null
     result.buildingCode = trimmedRow.buildingCode || null
-    result.buildingCaption = trimmedRow.buildingCaption || null
   }
 
-  if (trimmedRow.areaCode !== undefined) {
-    result.areaCode = trimmedRow.areaCode || null
-    result.areaName = trimmedRow.areaName || null
+  if (trimmedRow.area !== undefined) {
+    result.area = trimmedRow.area || null
   }
 
-  if (trimmedRow.buildingManagerCode !== undefined) {
-    result.buildingManagerCode = trimmedRow.buildingManagerCode || null
-    result.managementUnitName = trimmedRow.managementUnitName || null
-    result.buildingManagerName = trimmedRow.buildingManagerName || null
+  if (trimmedRow.buildingManager !== undefined) {
+    result.buildingManager = trimmedRow.buildingManager || null
     result.districtName = trimmedRow.districtName || null
   }
 
@@ -524,6 +577,14 @@ export const searchLeases = async (
 
   const query = builder.getQuery()
 
+  // DEBUG: Log SQL query and timing
+  const sqlDebug = query.toSQL()
+  console.log('=== LEASE SEARCH SQL ===')
+  console.log('SQL:', sqlDebug.sql)
+  console.log('Bindings:', sqlDebug.bindings)
+  console.log('========================')
+
+  const startQuery = Date.now()
   // Use pagination utility
   const paginatedResult = await paginateKnex<any>(
     query,
@@ -531,17 +592,29 @@ export const searchLeases = async (
     {},
     params.limit
   )
+  const queryTime = Date.now() - startQuery
+  console.log(`Main query time (with contacts): ${queryTime}ms`)
 
-  // Batch fetch contacts for all leases in this page
-  const leaseKeys = paginatedResult.content.map(
-    (row: any) => row.keyhyobj as string
-  )
-  const contactsByLeaseKey = await getContactsForLeases(leaseKeys)
-
-  // Transform rows and attach contacts
+  // Transform rows and parse contacts JSON
   const transformedContent = paginatedResult.content.map((row: any) => {
     const basicData = transformRow(row)
-    const contacts = contactsByLeaseKey.get(row.keyhyobj as string) || []
+
+    // Parse contacts JSON from subquery
+    let contacts: leasing.v1.ContactInfo[] = []
+    if (row.contactsJson) {
+      try {
+        const parsed = JSON.parse(row.contactsJson)
+        contacts = parsed.map((c: any) => ({
+          name: c.name ? String(c.name).trim() : '',
+          contactCode: c.contactCode ? String(c.contactCode).trim() : '',
+          email: c.email ? String(c.email).trim() : null,
+          phone: c.phone ? String(c.phone).trim() : null,
+        }))
+      } catch (e) {
+        console.error('Failed to parse contacts JSON:', e)
+      }
+    }
+
     return { ...basicData, contacts }
   })
 
