@@ -540,46 +540,49 @@ export const getRentalBlocksByRentalId = async (
 
 // Transform raw rental block data to API response format
 // Moved from routes to keep transformation logic in adapter
-function transformRentalBlock(rb: {
-  id: string
-  blockReasonId: string | null
-  blockReason: { caption: string | null } | null
-  fromDate: Date
-  toDate: Date | null
-  amount: number | null
-  propertyStructure: {
-    name: string | null
-    rentalId: string | null
-    propertyCode: string | null
-    propertyName: string | null
-    buildingCode: string | null
-    buildingName: string | null
-    residenceCode: string | null
-    residenceName: string | null
-    parkingSpaceCode: string | null
-    parkingSpaceName: string | null
-    localeCode: string | null
-    localeName: string | null
-    rentalObjectCode: string | null
-    rentalObjectName: string | null
-    administrativeUnit: {
-      district: string | null
-    } | null
-    residence: {
-      id: string
-      residenceType: {
-        code: string | null
-        name: string | null
-        roomCount: number | null
+function transformRentalBlock(
+  rb: {
+    id: string
+    blockReasonId: string | null
+    blockReason: { caption: string | null } | null
+    fromDate: Date
+    toDate: Date | null
+    amount: number | null
+    propertyStructure: {
+      name: string | null
+      rentalId: string | null
+      propertyCode: string | null
+      propertyName: string | null
+      buildingCode: string | null
+      buildingName: string | null
+      residenceCode: string | null
+      residenceName: string | null
+      parkingSpaceCode: string | null
+      parkingSpaceName: string | null
+      localeCode: string | null
+      localeName: string | null
+      rentalObjectCode: string | null
+      rentalObjectName: string | null
+      administrativeUnit: {
+        district: string | null
+      } | null
+      residence: {
+        id: string
+        residenceType: {
+          code: string | null
+          name: string | null
+          roomCount: number | null
+        } | null
       } | null
     } | null
-  } | null
-  rentRows: Array<{
-    yearRent: number | null
-    debitFromDate: Date | null
-    debitToDate: Date | null
-  }>
-}) {
+    rentRows: Array<{
+      yearRent: number | null
+      debitFromDate: Date | null
+      debitToDate: Date | null
+    }>
+  },
+  fallbackDistrikt?: string | null
+) {
   const ps = rb.propertyStructure
 
   // Determine category based on which code field is populated (priority order)
@@ -632,7 +635,7 @@ function transformRentalBlock(rb: {
       code: ps?.propertyCode || null,
       name: ps?.propertyName || null,
     },
-    distrikt: ps?.administrativeUnit?.district || null,
+    distrikt: ps?.administrativeUnit?.district || fallbackDistrikt || null,
   }
 }
 
@@ -682,6 +685,27 @@ async function fetchRentDataBatched(
   }
 
   return rentByRentalId
+}
+
+/**
+ * Fetches district values by management unit code (fencode).
+ * Used as fallback when the direct keyobjfen → keybafen join fails.
+ */
+async function fetchDistrictsByFencode(
+  fencodes: string[]
+): Promise<Map<string, string | null>> {
+  if (fencodes.length === 0) return new Map()
+
+  const results = await prisma.administrativeUnit.findMany({
+    where: { code: { in: fencodes } },
+    select: { code: true, district: true },
+  })
+
+  return new Map(
+    results
+      .filter((r) => r.code)
+      .map((r) => [r.code!.trim(), r.district?.trim() || null])
+  )
 }
 
 /** Raw rental block row from SQL query with explicit JOINs */
@@ -744,9 +768,11 @@ async function fetchRentalBlocksRaw(
     conditions.push('hyspt.tdate < GETDATE()')
   }
 
-  // Distrikt filter
+  // Distrikt filter - check both direct join AND fencode fallback
   if (distrikt) {
-    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
+    conditions.push(
+      `COALESCE(bafen.distrikt, fallback_bafen.distrikt) = ${escapeSqlString(distrikt)}`
+    )
   }
 
   // Fastighet (property) filter
@@ -827,12 +853,13 @@ async function fetchRentalBlocksRaw(
       babuf.lokcaption AS localeName,
       babuf.hyrcode AS rentalObjectCode,
       babuf.hyrcaption AS rentalObjectName,
-      bafen.distrikt AS district,
+      COALESCE(bafen.distrikt, fallback_bafen.distrikt) AS district,
       balgt.caption AS residenceTypeName
     FROM hyspt
     LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
     LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
     LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
+    LEFT JOIN bafen fallback_bafen ON babuf.fencode = fallback_bafen.code
     LEFT JOIN balgh ON babuf.keyobjlgh = balgh.keybalgh
     LEFT JOIN balgt ON balgh.keybalgt = balgt.keybalgt
     WHERE ${whereClause}
@@ -956,6 +983,7 @@ export const getAllRentalBlocks = async (options?: {
               localeName: true, // Locale name
               rentalObjectCode: true, // Rental object code (for Förråd)
               rentalObjectName: true, // Rental object name
+              managementUnitCode: true, // fencode - for fallback distrikt lookup
               // Join to AdministrativeUnit (bafen) for distrikt
               administrativeUnit: {
                 select: {
@@ -998,6 +1026,19 @@ export const getAllRentalBlocks = async (options?: {
     // Fetch rent data using batched queries
     const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
 
+    // Fetch fallback distrikts for records missing district (via fencode → bafen.code)
+    const fencodesMissingDistrikt = [
+      ...new Set(
+        rentalBlocks
+          .filter((rb) => !rb.propertyStructure?.administrativeUnit?.district)
+          .map((rb) => rb.propertyStructure?.managementUnitCode?.trim())
+          .filter((code): code is string => !!code)
+      ),
+    ]
+    const districtByFencode = await fetchDistrictsByFencode(
+      fencodesMissingDistrikt
+    )
+
     // Attach rent data to rental blocks
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
       const rentalId = rb.propertyStructure?.rentalId?.trim()
@@ -1007,7 +1048,11 @@ export const getAllRentalBlocks = async (options?: {
       }
     })
 
-    const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    const transformedBlocks = rentalBlocksWithRent.map((rb) => {
+      const fencode = rb.propertyStructure?.managementUnitCode?.trim()
+      const fallbackDistrikt = fencode ? districtByFencode.get(fencode) : null
+      return transformRentalBlock(rb, fallbackDistrikt)
+    })
     const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
     return {
       data: sortedBlocks,
@@ -1032,17 +1077,45 @@ interface RentalBlockFilterOptions {
 }
 
 /**
+ * Fetches fencodes (managementUnitCodes) that map to a specific district via bafen.code.
+ * Used for distrikt filtering with fencode fallback support.
+ * @deprecated Not currently used - raw SQL approach is used instead via getRentalBlockIdsForDistrikt
+ */
+async function _getFencodesForDistrikt(distrikt: string): Promise<string[]> {
+  const results = await prisma.administrativeUnit.findMany({
+    where: { district: distrikt },
+    select: { code: true },
+  })
+  const fencodes = results
+    .map((r) => r.code?.trim())
+    .filter((code): code is string => !!code && code !== '')
+
+  logger.info(
+    { distrikt, fencodeCount: fencodes.length },
+    'getFencodesForDistrikt: found fencodes for district'
+  )
+
+  return fencodes
+}
+
+interface BuildRentalBlockWhereClauseOptions extends RentalBlockFilterOptions {
+  /** Fencodes that map to the desired district (for fallback filtering) */
+  distriktFencodes?: string[]
+}
+
+/**
  * Builds the Prisma where clause for rental block queries.
  * Used by both searchRentalBlocks and getAllRentalBlocksForExport to avoid duplication.
  */
 function buildRentalBlockWhereClause(
-  options: RentalBlockFilterOptions
+  options: BuildRentalBlockWhereClauseOptions
 ): Prisma.RentalBlockWhereInput {
   const {
     q,
     fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
+    distriktFencodes,
     blockReason,
     fastighet,
     fromDateGte,
@@ -1093,13 +1166,37 @@ function buildRentalBlockWhereClause(
     }
   }
 
-  // Distrikt filter (AND)
+  // Distrikt filter - check both direct join AND fencode fallback
   if (distrikt) {
-    andConditions.push({
-      propertyStructure: {
-        administrativeUnit: { district: distrikt },
+    const distriktConditions: Prisma.RentalBlockWhereInput[] = [
+      // Direct join: administrativeUnit.district matches
+      {
+        propertyStructure: {
+          administrativeUnit: { district: distrikt },
+        },
       },
-    })
+    ]
+
+    // Fencode fallback: managementUnitCode is in the list of fencodes that map to this district
+    // AND direct join doesn't provide the district (either no link, or link exists but no district value)
+    if (distriktFencodes && distriktFencodes.length > 0) {
+      // Case 1: administrativeUnit relation is null (no matching bafen record via keyobjfen)
+      distriktConditions.push({
+        propertyStructure: {
+          administrativeUnit: { is: null },
+          managementUnitCode: { in: distriktFencodes },
+        },
+      })
+      // Case 2: administrativeUnit exists but has no district value
+      distriktConditions.push({
+        propertyStructure: {
+          administrativeUnit: { district: null },
+          managementUnitCode: { in: distriktFencodes },
+        },
+      })
+    }
+
+    andConditions.push({ OR: distriktConditions })
   }
 
   // Fastighet (property) filter (AND)
@@ -1179,64 +1276,239 @@ export interface SearchRentalBlocksOptions {
   offset?: number
 }
 
+/**
+ * Searches rental blocks with distrikt filter using raw SQL with fencode fallback.
+ * Applies ALL filters and pagination in SQL to avoid the 2100 parameter limit.
+ * Returns paginated IDs and total count.
+ */
+async function searchRentalBlocksWithDistriktRaw(
+  options: SearchRentalBlocksOptions
+): Promise<{ ids: string[]; totalCount: number }> {
+  const {
+    q,
+    fields = 'rentalId,address,blockReason',
+    kategori,
+    distrikt,
+    blockReason,
+    fastighet,
+    fromDateGte,
+    toDateLte,
+    active,
+    limit,
+    offset,
+  } = options
+
+  const conditions: string[] = []
+
+  // Base filter: must have a rentalId
+  conditions.push("babuf.hyresid IS NOT NULL AND babuf.hyresid <> ''")
+
+  // Distrikt filter using COALESCE for fallback
+  if (distrikt) {
+    conditions.push(
+      `COALESCE(bafen.distrikt, fallback_bafen.distrikt) = ${escapeSqlString(distrikt)}`
+    )
+  }
+
+  // Active filter
+  if (active === true) {
+    conditions.push('(hyspt.tdate >= GETDATE() OR hyspt.tdate IS NULL)')
+  } else if (active === false) {
+    conditions.push('hyspt.tdate < GETDATE()')
+  }
+
+  // Fastighet (property) filter
+  if (fastighet) {
+    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
+  }
+
+  // Block reason filter
+  if (blockReason) {
+    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
+  }
+
+  // Date range filters
+  if (fromDateGte) {
+    conditions.push(`hyspt.fdate >= ${escapeSqlString(fromDateGte)}`)
+  }
+  if (toDateLte) {
+    conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
+  }
+
+  // Kategori filter
+  if (kategori === 'Bostad') {
+    conditions.push('babuf.lghcode IS NOT NULL')
+  } else if (kategori === 'Bilplats') {
+    conditions.push('babuf.bpscode IS NOT NULL')
+  } else if (kategori === 'Lokal') {
+    conditions.push('babuf.lokcode IS NOT NULL')
+  } else if (kategori === 'Förråd') {
+    conditions.push('babuf.hyrcode IS NOT NULL')
+  } else if (kategori === 'Övrigt') {
+    conditions.push(
+      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
+    )
+  }
+
+  // Search filter (q param) - OR across fields
+  if (q && q.trim().length >= 2) {
+    const searchTerm = q.trim()
+    const searchFields = fields.split(',').map((f) => f.trim())
+    const orClauses: string[] = []
+
+    if (searchFields.includes('rentalId')) {
+      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
+    }
+    if (searchFields.includes('address')) {
+      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    }
+    if (searchFields.includes('blockReason')) {
+      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    }
+
+    if (orClauses.length > 0) {
+      conditions.push(`(${orClauses.join(' OR ')})`)
+    }
+  }
+
+  const whereClause = conditions.join(' AND ')
+
+  // Get total count
+  const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
+    SELECT COUNT(*) AS count
+    FROM hyspt
+    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+    LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
+    LEFT JOIN bafen fallback_bafen ON babuf.fencode = fallback_bafen.code
+    WHERE ${whereClause}
+  `)
+  const totalCount = countResult[0]?.count ?? 0
+
+  // Get paginated IDs with ordering
+  const paginationClause =
+    limit !== undefined
+      ? `OFFSET ${offset ?? 0} ROWS FETCH NEXT ${limit} ROWS ONLY`
+      : ''
+
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(`
+    SELECT hyspt.keyhyspt AS id
+    FROM hyspt
+    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+    LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
+    LEFT JOIN bafen fallback_bafen ON babuf.fencode = fallback_bafen.code
+    WHERE ${whereClause}
+    ORDER BY hyspt.fdate DESC
+    ${paginationClause}
+  `)
+
+  return {
+    ids: rows.map((r) => r.id.trim()),
+    totalCount,
+  }
+}
+
+// Shared include config for rental block queries
+const rentalBlockInclude = {
+  blockReason: true,
+  propertyStructure: {
+    select: {
+      name: true,
+      rentalId: true,
+      propertyCode: true,
+      propertyName: true,
+      buildingCode: true,
+      buildingName: true,
+      residenceCode: true,
+      residenceName: true,
+      parkingSpaceCode: true,
+      parkingSpaceName: true,
+      localeCode: true,
+      localeName: true,
+      rentalObjectCode: true,
+      rentalObjectName: true,
+      managementUnitCode: true,
+      administrativeUnit: {
+        select: {
+          district: true,
+        },
+      },
+      residence: {
+        select: {
+          id: true,
+          residenceType: {
+            select: {
+              code: true,
+              name: true,
+              roomCount: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} as const
+
 export const searchRentalBlocks = async (
   options: SearchRentalBlocksOptions
 ) => {
   try {
-    const { limit, offset } = options
+    const { limit, offset, distrikt } = options
 
-    const whereClause = buildRentalBlockWhereClause(options)
+    let totalCount: number
+    let rentalBlocks: Awaited<
+      ReturnType<
+        typeof prisma.rentalBlock.findMany<{ include: typeof rentalBlockInclude }>
+      >
+    >
 
-    // Run count and data queries in parallel for better performance
-    const [totalCount, rentalBlocks] = await Promise.all([
-      prisma.rentalBlock.count({ where: whereClause }),
-      prisma.rentalBlock.findMany({
-        where: whereClause,
-        include: {
-          blockReason: true,
-          propertyStructure: {
-            select: {
-              name: true,
-              rentalId: true,
-              propertyCode: true,
-              propertyName: true,
-              buildingCode: true,
-              buildingName: true,
-              residenceCode: true,
-              residenceName: true,
-              parkingSpaceCode: true,
-              parkingSpaceName: true,
-              localeCode: true,
-              localeName: true,
-              rentalObjectCode: true,
-              rentalObjectName: true,
-              administrativeUnit: {
-                select: {
-                  district: true,
-                },
-              },
-              residence: {
-                select: {
-                  id: true,
-                  residenceType: {
-                    select: {
-                      code: true,
-                      name: true,
-                      roomCount: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+    if (distrikt) {
+      // When filtering by distrikt, use raw SQL to handle the COALESCE join logic
+      // This applies ALL filters and pagination in SQL, returning only paginated IDs
+      // to avoid SQL Server's 2100 parameter limit
+      const result = await searchRentalBlocksWithDistriktRaw(options)
+      totalCount = result.totalCount
+
+      logger.info(
+        { distrikt, totalCount, pageIds: result.ids.length },
+        'searchRentalBlocks: found rental blocks for distrikt via fencode fallback'
+      )
+
+      if (result.ids.length === 0) {
+        // No results, return empty
+        return { data: [], totalCount: 0 }
+      }
+
+      // Fetch full data for just the paginated IDs (max 50-100, well under 2100 limit)
+      rentalBlocks = await prisma.rentalBlock.findMany({
+        where: { id: { in: result.ids } },
+        include: rentalBlockInclude,
         orderBy: {
           fromDate: 'desc',
         },
-        ...(limit && { take: limit }),
-        ...(offset && { skip: offset }),
-      }),
-    ])
+      })
+    } else {
+      // No distrikt filter - use standard Prisma query
+      const whereClause = buildRentalBlockWhereClause(options)
+
+      // Run count and data queries in parallel for better performance
+      const [count, blocks] = await Promise.all([
+        prisma.rentalBlock.count({ where: whereClause }),
+        prisma.rentalBlock.findMany({
+          where: whereClause,
+          include: rentalBlockInclude,
+          orderBy: {
+            fromDate: 'desc',
+          },
+          ...(limit && { take: limit }),
+          ...(offset && { skip: offset }),
+        }),
+      ])
+
+      totalCount = count
+      rentalBlocks = blocks
+    }
 
     // Get unique rental IDs for fetching rent data
     const uniqueRentalIds = [
@@ -1250,6 +1522,19 @@ export const searchRentalBlocks = async (
     // Fetch rent data using batched queries
     const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
 
+    // Fetch fallback distrikts for records missing district (via fencode → bafen.code)
+    const fencodesMissingDistrikt = [
+      ...new Set(
+        rentalBlocks
+          .filter((rb) => !rb.propertyStructure?.administrativeUnit?.district)
+          .map((rb) => rb.propertyStructure?.managementUnitCode?.trim())
+          .filter((code): code is string => !!code)
+      ),
+    ]
+    const districtByFencode = await fetchDistrictsByFencode(
+      fencodesMissingDistrikt
+    )
+
     // Attach rent data to rental blocks
     const rentalBlocksWithRent = rentalBlocks.map((rb) => {
       const rentalId = rb.propertyStructure?.rentalId?.trim()
@@ -1259,7 +1544,11 @@ export const searchRentalBlocks = async (
       }
     })
 
-    const transformedBlocks = rentalBlocksWithRent.map(transformRentalBlock)
+    const transformedBlocks = rentalBlocksWithRent.map((rb) => {
+      const fencode = rb.propertyStructure?.managementUnitCode?.trim()
+      const fallbackDistrikt = fencode ? districtByFencode.get(fencode) : null
+      return transformRentalBlock(rb, fallbackDistrikt)
+    })
     const sortedBlocks = sortRentalBlocksByFutureThenActive(transformedBlocks)
     return {
       data: sortedBlocks,
