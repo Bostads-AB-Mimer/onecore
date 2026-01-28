@@ -820,6 +820,9 @@ importers:
       eslint-plugin-node:
         specifier: ^11.1.0
         version: 11.1.0(eslint@9.34.0(jiti@1.21.7))
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@24.3.0)(babel-plugin-macros@3.1.0)
@@ -964,7 +967,7 @@ importers:
         version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
-        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
       '@urql/core':
         specifier: ^5.1.0
         version: 5.2.0(graphql@16.11.0)
@@ -1263,7 +1266,7 @@ importers:
         version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
-        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
       '@types/easy-soap-request':
         specifier: ^5.6.0
         version: 5.6.0
@@ -1291,6 +1294,9 @@ importers:
       easy-soap-request:
         specifier: ^5.6.1
         version: 5.7.0
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
       fast-xml-parser:
         specifier: ^4.4.0
         version: 4.5.3
@@ -1553,7 +1559,7 @@ importers:
         version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
-        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
       '@types/swagger-jsdoc':
         specifier: ^6.0.4
         version: 6.0.4
@@ -1701,7 +1707,7 @@ importers:
         version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
-        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))
+        version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
       '@types/swagger-jsdoc':
         specifier: ^6.0.4
         version: 6.0.4
@@ -3376,6 +3382,7 @@ packages:
     peerDependencies:
       '@elastic/elasticsearch': ^8.0.0
       '@elastic/transport': ^8.0.0
+      exceljs: ^4.4.0
       knex: ^3.1.0
 
   '@open-draft/deferred-promise@2.2.0':
@@ -12517,11 +12524,12 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 18.1.1
 
-  '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(knex@3.1.0(tedious@18.6.1))':
+  '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))':
     dependencies:
       '@elastic/elasticsearch': 8.19.1
       '@elastic/transport': 8.10.0
       axios: 1.11.0
+      exceljs: 4.4.0
       knex: 3.1.0(tedious@18.6.1)
       koa: 2.16.2
       pino: 9.9.1
