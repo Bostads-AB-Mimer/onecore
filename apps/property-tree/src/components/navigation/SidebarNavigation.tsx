@@ -183,17 +183,17 @@ function SidebarNavigationContent() {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* UTFLYTTNINGSLISTA - Simple navigation item */}
+        {/* HYRESKONTRAKT - Simple navigation item */}
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => navigate('/leases')}
                 isActive={isLeasesActive}
-                tooltip="Utflyttningslista"
+                tooltip="Hyreskontrakt"
               >
                 <FileText />
-                <span>Utflyttningslista</span>
+                <span>Hyreskontrakt</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

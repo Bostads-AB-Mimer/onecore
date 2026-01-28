@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/Input'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Button } from '@/components/ui/Button'
-import { FilterDropdown } from '@/components/ui/FilterDropdown'
+import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
 import {
   SearchFilterDropdown,
   SearchFilterOption,
@@ -38,7 +38,7 @@ const statusOptions = [
   { label: 'Avslutat', value: '3' },
 ] as const
 
-const distriktOptions = [
+const districtOptions = [
   'Distrikt Norr',
   'Distrikt Väst',
   'Distrikt Öst',
@@ -70,25 +70,26 @@ const getStatusLabel = (status: LeaseStatus) => {
 const PAGE_SIZE = 50
 
 const LeasesPage = () => {
-  const { page, setPage, searchParams, updateUrlParams } = useUrlPagination({
-    defaultLimit: PAGE_SIZE,
-  })
+  const { page, setPage, searchParams, setSearchParams, updateUrlParams } =
+    useUrlPagination({
+      defaultLimit: PAGE_SIZE,
+    })
 
   // Read filters from URL params
-  const selectedObjectType = useMemo(
-    () => searchParams.get('objectType') || '',
+  const selectedObjectTypes = useMemo(
+    () => searchParams.getAll('objectType'),
     [searchParams]
   )
-  const selectedStatus = useMemo(
-    () => searchParams.get('status') || '',
+  const selectedStatuses = useMemo(
+    () => searchParams.getAll('status'),
     [searchParams]
   )
   const selectedProperty = useMemo(
     () => searchParams.get('property') || '',
     [searchParams]
   )
-  const selectedDistrikt = useMemo(
-    () => searchParams.get('distrikt') || '',
+  const selectedDistricts = useMemo(
+    () => searchParams.getAll('district'),
     [searchParams]
   )
   const startDateFrom = useMemo(
@@ -134,20 +135,32 @@ const LeasesPage = () => {
   }, [searchParams])
 
   // Filter update handlers
-  const setSelectedObjectType = (val: string | null) => {
-    updateUrlParams({ objectType: val || undefined, page: undefined })
+  const setSelectedObjectTypes = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('objectType')
+    vals.forEach((v) => newParams.append('objectType', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
-  const setSelectedStatus = (val: string | null) => {
-    updateUrlParams({ status: val || undefined, page: undefined })
+  const setSelectedStatuses = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('status')
+    vals.forEach((v) => newParams.append('status', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
   const setSelectedProperty = (val: string | null) => {
     updateUrlParams({ property: val || undefined, page: undefined })
   }
 
-  const setSelectedDistrikt = (val: string | null) => {
-    updateUrlParams({ distrikt: val || undefined, page: undefined })
+  const setSelectedDistricts = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('district')
+    vals.forEach((v) => newParams.append('district', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
   const setStartDateRange = (start: string | null, end: string | null) => {
@@ -175,10 +188,12 @@ const LeasesPage = () => {
   } = useLeaseSearch(
     {
       q: debouncedSearch || undefined,
-      objectType: selectedObjectType ? [selectedObjectType] : undefined,
-      status: selectedStatus ? [selectedStatus] : undefined,
+      objectType:
+        selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
+      status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
       property: selectedProperty ? [selectedProperty] : undefined,
-      districtNames: selectedDistrikt ? [selectedDistrikt] : undefined,
+      districtNames:
+        selectedDistricts.length > 0 ? selectedDistricts : undefined,
       startDateFrom: startDateFrom || undefined,
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
@@ -223,7 +238,7 @@ const LeasesPage = () => {
       objectType: undefined,
       status: undefined,
       property: undefined,
-      distrikt: undefined,
+      district: undefined,
       startDateFrom: undefined,
       startDateTo: undefined,
       endDateFrom: undefined,
@@ -234,10 +249,10 @@ const LeasesPage = () => {
 
   const hasActiveFilters =
     debouncedSearch ||
-    selectedObjectType ||
-    selectedStatus ||
+    selectedObjectTypes.length > 0 ||
+    selectedStatuses.length > 0 ||
     selectedProperty ||
-    selectedDistrikt ||
+    selectedDistricts.length > 0 ||
     startDateFrom ||
     startDateTo ||
     endDateFrom ||
@@ -246,7 +261,7 @@ const LeasesPage = () => {
   return (
     <div className="py-4 animate-in">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Utflyttningslista</h1>
+        <h1 className="text-3xl font-bold mb-2">Hyreskontrakt</h1>
         <p className="text-muted-foreground">
           Sök och filtrera hyreskontrakt i systemet
         </p>
@@ -276,53 +291,53 @@ const LeasesPage = () => {
 
             {/* Filter row */}
             <div className="flex flex-wrap gap-2">
-              <FilterDropdown
+              <MultiSelectFilterDropdown
                 options={objectTypeOptions.map((o) => ({
                   label: o.label,
                   value: o.value,
                 }))}
-                selectedValue={selectedObjectType || null}
-                onSelectionChange={setSelectedObjectType}
-                placeholder="Objekttyp..."
+                selectedValues={selectedObjectTypes}
+                onSelectionChange={setSelectedObjectTypes}
+                placeholder="Objekttyp"
               />
 
-              <FilterDropdown
+              <MultiSelectFilterDropdown
                 options={statusOptions.map((o) => ({
                   label: o.label,
                   value: o.value,
                 }))}
-                selectedValue={selectedStatus || null}
-                onSelectionChange={setSelectedStatus}
-                placeholder="Status..."
+                selectedValues={selectedStatuses}
+                onSelectionChange={setSelectedStatuses}
+                placeholder="Status"
               />
 
               <SearchFilterDropdown
                 searchFn={searchProperties}
                 selectedValue={selectedProperty || null}
                 onSelectionChange={setSelectedProperty}
-                placeholder="Fastighet..."
-                searchPlaceholder="Sök fastighet..."
+                placeholder="Fastighet"
+                searchPlaceholder="Sök fastighet"
               />
 
-              <FilterDropdown
-                options={distriktOptions.map((o) => ({ label: o, value: o }))}
-                selectedValue={selectedDistrikt || null}
-                onSelectionChange={setSelectedDistrikt}
-                placeholder="Distrikt..."
+              <MultiSelectFilterDropdown
+                options={districtOptions.map((o) => ({ label: o, value: o }))}
+                selectedValues={selectedDistricts}
+                onSelectionChange={setSelectedDistricts}
+                placeholder="Distrikt"
               />
 
               <DateRangeFilterDropdown
                 startDate={startDateFrom || null}
                 endDate={startDateTo || null}
                 onDateChange={setStartDateRange}
-                placeholder="Startdatum..."
+                placeholder="Startdatum"
               />
 
               <DateRangeFilterDropdown
                 startDate={endDateFrom || null}
                 endDate={endDateTo || null}
                 onDateChange={setEndDateRange}
-                placeholder="Slutdatum..."
+                placeholder="Slutdatum"
               />
             </div>
 
