@@ -1,4 +1,5 @@
 import type { components } from './generated/api-types'
+import { GET } from './base-api'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
 export type PaginationMeta = components['schemas']['PaginationMeta']
@@ -13,7 +14,7 @@ export type PaginatedResponse<T> = {
 export type LeaseSearchQueryParams = {
   q?: string
   objectType?: string[]
-  status?: string[]
+  status?: ('0' | '1' | '2' | '3')[]
   startDateFrom?: string
   startDateTo?: string
   endDateFrom?: string
@@ -32,40 +33,29 @@ async function search(
   page = 1,
   limit = 50
 ): Promise<PaginatedResponse<LeaseSearchResult>> {
-  const searchParams = new URLSearchParams()
+  const { data, error } = await GET('/leases/search', {
+    params: {
+      query: {
+        ...params,
+        page,
+        limit,
+      },
+    },
+  })
 
-  if (params.q) searchParams.append('q', params.q)
-  if (params.startDateFrom)
-    searchParams.append('startDateFrom', params.startDateFrom)
-  if (params.startDateTo) searchParams.append('startDateTo', params.startDateTo)
-  if (params.endDateFrom) searchParams.append('endDateFrom', params.endDateFrom)
-  if (params.endDateTo) searchParams.append('endDateTo', params.endDateTo)
-  if (params.sortBy) searchParams.append('sortBy', params.sortBy)
-  if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+  if (error) throw error
 
-  params.objectType?.forEach((v) => searchParams.append('objectType', v))
-  params.status?.forEach((v) => searchParams.append('status', v))
-  params.property?.forEach((v) => searchParams.append('property', v))
-  params.buildingCodes?.forEach((v) => searchParams.append('buildingCodes', v))
-  params.areaCodes?.forEach((v) => searchParams.append('areaCodes', v))
-  params.districtNames?.forEach((v) => searchParams.append('districtNames', v))
-  params.buildingManagerCodes?.forEach((v) =>
-    searchParams.append('buildingManagerCodes', v)
-  )
-
-  searchParams.append('page', String(page))
-  searchParams.append('limit', String(limit))
-
-  const response = await fetch(
-    `${import.meta.env.VITE_CORE_API_URL || 'http://localhost:5010'}/leases/search?${searchParams.toString()}`,
-    { credentials: 'include' }
-  )
-
-  if (!response.ok) {
-    throw new Error(`Lease search failed: ${response.statusText}`)
+  const response = data as {
+    content?: LeaseSearchResult[]
+    _meta?: PaginationMeta
+    _links?: PaginationLinks[]
   }
 
-  return response.json()
+  return {
+    content: response.content ?? [],
+    _meta: response._meta!,
+    _links: response._links ?? [],
+  }
 }
 
 export const leaseSearchService = { search }
