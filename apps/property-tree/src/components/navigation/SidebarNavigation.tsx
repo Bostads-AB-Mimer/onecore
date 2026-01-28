@@ -12,6 +12,7 @@ import {
   ShieldX,
   FileText,
   ChevronRight,
+  Settings,
 } from 'lucide-react'
 import { CompanyList } from './CompanyList'
 import {
@@ -54,6 +55,7 @@ function SidebarNavigationContent() {
   const isTenantsActive = location.pathname === '/tenants'
   const isRentalBlocksActive = location.pathname === '/rental-blocks'
   const isLeasesActive = location.pathname === '/leases'
+  const isComponentsActive = location.pathname === '/components'
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -194,6 +196,22 @@ function SidebarNavigationContent() {
               >
                 <FileText />
                 <span>Hyreskontrakt</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* ADMINISTRERA KOMPONENTER - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => navigate('/components')}
+                isActive={isComponentsActive}
+                tooltip="Administrera Komponenter"
+              >
+                <Settings />
+                <span>Administrera Komponenter</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
