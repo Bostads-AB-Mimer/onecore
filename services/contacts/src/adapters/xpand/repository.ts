@@ -132,12 +132,10 @@ export const xpandContactsRepository = (
      *          or empty list if no contact is found.
      */
     getByEmailAddress: async (emailAddress: string): Promise<Contact[]> => {
-      console.log(emailAddress)
       const contactObjectKeys = await contactObjectKeysForEmailAddress(
         db.get(),
         emailAddress.trim()
       )
-      console.log(contactObjectKeys)
       if (contactObjectKeys.length) {
         const rows: DbContactRow[] = await contactsQuery()
           .withObjectKeyIn(contactObjectKeys)
