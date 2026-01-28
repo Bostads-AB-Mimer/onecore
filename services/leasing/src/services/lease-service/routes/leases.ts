@@ -9,8 +9,9 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
+  exportLeasesToExcel,
 } from '../adapters/xpand/lease-search-adapter'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 import z from 'zod'
 
@@ -275,6 +276,141 @@ export const routes = (router: KoaRouter) => {
           error: 'Unknown error occurred during lease search',
           ...metadata,
         }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/export:
+   *   get:
+   *     summary: Export leases to Excel
+   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property names
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'objectType',
+      'status',
+      'startDateFrom',
+      'startDateTo',
+      'endDateFrom',
+      'endDateTo',
+      'property',
+      'buildingCodes',
+      'areaCodes',
+      'districtNames',
+      'buildingManagerCodes',
+    ])
+
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const buffer = await exportLeasesToExcel(queryParams.data)
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      ctx.set(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      )
+      ctx.set(
+        'Content-Disposition',
+        `attachment; filename="hyreskontrakt-${timestamp}.xlsx"`
+      )
+
+      ctx.status = 200
+      ctx.body = buffer
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      ctx.status = 500
+      ctx.body = {
+        error: error instanceof Error ? error.message : 'Export failed',
+        ...metadata,
       }
     }
   })
