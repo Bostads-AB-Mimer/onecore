@@ -25,7 +25,7 @@ const currencyFormatter = new Intl.NumberFormat('sv-SE', {
 
 type Props = {
   invoices: Invoice[]
-  onInvoiceRowClick: (invoiceId: string) => void
+  onInvoiceRowClick: (invoiceId: string | null) => void
   expandedInvoiceId: string | null
 }
 
