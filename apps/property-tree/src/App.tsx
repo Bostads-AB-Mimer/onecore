@@ -25,6 +25,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './components/layout/AppLayout'
 import AllTenantsPage from './components/tenants/AllTenantsPage'
 import RentalBlocksPage from './components/rental-blocks/RentalBlocksPage'
+import LeasesPage from './components/leases/LeasesPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="tenants" element={<AllTenantsPage />} />
               <Route path="tenants/:contactCode" element={<TenantView />} />
               <Route path="rental-blocks" element={<RentalBlocksPage />} />
+              <Route path="leases" element={<LeasesPage />} />
             </Route>
           </Routes>
         </Router>

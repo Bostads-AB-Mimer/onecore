@@ -38,3 +38,8 @@ export const paginatedResponseSchema = <T extends z.ZodTypeAny>(
 // Inferred types for convenience
 export type PaginationMeta = z.infer<typeof PaginationMetaSchema>
 export type PaginationLinks = z.infer<typeof PaginationLinksSchema>
+export type PaginatedResponse<T> = {
+  content: T[]
+  _meta: PaginationMeta
+  _links: PaginationLinks[]
+}

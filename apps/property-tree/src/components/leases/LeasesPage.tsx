@@ -1,0 +1,459 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Search } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/v2/Card'
+import { Input } from '@/components/ui/Input'
+import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
+import { Button } from '@/components/ui/Button'
+import { FilterDropdown } from '@/components/ui/FilterDropdown'
+import {
+  SearchFilterDropdown,
+  SearchFilterOption,
+} from '@/components/ui/SearchFilterDropdown'
+import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
+import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
+import { useUrlPagination } from '@/components/hooks/useUrlPagination'
+import { useDebounce } from '@/components/hooks/useDebounce'
+import { Pagination } from '@/components/ui/Pagination'
+import { propertyService } from '@/services/api/core/propertyService'
+import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
+import { LeaseStatus } from '@onecore/types'
+
+const objectTypeOptions = [
+  { label: 'Bostad', value: 'bostad' },
+  { label: 'Parkering', value: 'parkering' },
+  { label: 'Lokal', value: 'lokal' },
+  { label: 'Övrigt', value: 'ovrigt' },
+] as const
+
+const statusOptions = [
+  { label: 'Pågående', value: '0' },
+  { label: 'Kommande', value: '1' },
+  { label: 'Avslutas snart', value: '2' },
+  { label: 'Avslutat', value: '3' },
+] as const
+
+const distriktOptions = [
+  'Distrikt Norr',
+  'Distrikt Väst',
+  'Distrikt Öst',
+  'Distrikt Mitt',
+  'Mimer Student',
+] as const
+
+const formatDate = (date: Date | string | null | undefined) => {
+  if (!date) return '-'
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleDateString('sv-SE')
+}
+
+const getStatusLabel = (status: LeaseStatus) => {
+  switch (status) {
+    case LeaseStatus.Current:
+      return 'Pågående'
+    case LeaseStatus.Upcoming:
+      return 'Kommande'
+    case LeaseStatus.AboutToEnd:
+      return 'Avslutas snart'
+    case LeaseStatus.Ended:
+      return 'Avslutat'
+    default:
+      return '-'
+  }
+}
+
+const PAGE_SIZE = 50
+
+const LeasesPage = () => {
+  const { page, setPage, searchParams, updateUrlParams } = useUrlPagination({
+    defaultLimit: PAGE_SIZE,
+  })
+
+  // Read filters from URL params
+  const selectedObjectType = useMemo(
+    () => searchParams.get('objectType') || '',
+    [searchParams]
+  )
+  const selectedStatus = useMemo(
+    () => searchParams.get('status') || '',
+    [searchParams]
+  )
+  const selectedProperty = useMemo(
+    () => searchParams.get('property') || '',
+    [searchParams]
+  )
+  const selectedDistrikt = useMemo(
+    () => searchParams.get('distrikt') || '',
+    [searchParams]
+  )
+  const startDateFrom = useMemo(
+    () => searchParams.get('startDateFrom') || '',
+    [searchParams]
+  )
+  const startDateTo = useMemo(
+    () => searchParams.get('startDateTo') || '',
+    [searchParams]
+  )
+  const endDateFrom = useMemo(
+    () => searchParams.get('endDateFrom') || '',
+    [searchParams]
+  )
+  const endDateTo = useMemo(
+    () => searchParams.get('endDateTo') || '',
+    [searchParams]
+  )
+
+  // Search input with debounce for URL sync
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get('search') || ''
+  )
+  const debouncedSearch = useDebounce(searchInput, 300)
+
+  // Sync debounced search to URL
+  useEffect(() => {
+    const currentSearch = searchParams.get('search') || ''
+    if (debouncedSearch !== currentSearch) {
+      updateUrlParams(
+        { search: debouncedSearch || undefined, page: undefined },
+        { replace: true }
+      )
+    }
+  }, [debouncedSearch, searchParams, updateUrlParams])
+
+  // Sync URL back to input (for browser back/forward)
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || ''
+    if (urlSearch !== searchInput) {
+      setSearchInput(urlSearch)
+    }
+  }, [searchParams])
+
+  // Filter update handlers
+  const setSelectedObjectType = (val: string | null) => {
+    updateUrlParams({ objectType: val || undefined, page: undefined })
+  }
+
+  const setSelectedStatus = (val: string | null) => {
+    updateUrlParams({ status: val || undefined, page: undefined })
+  }
+
+  const setSelectedProperty = (val: string | null) => {
+    updateUrlParams({ property: val || undefined, page: undefined })
+  }
+
+  const setSelectedDistrikt = (val: string | null) => {
+    updateUrlParams({ distrikt: val || undefined, page: undefined })
+  }
+
+  const setStartDateRange = (start: string | null, end: string | null) => {
+    updateUrlParams({
+      startDateFrom: start || undefined,
+      startDateTo: end || undefined,
+      page: undefined,
+    })
+  }
+
+  const setEndDateRange = (start: string | null, end: string | null) => {
+    updateUrlParams({
+      endDateFrom: start || undefined,
+      endDateTo: end || undefined,
+      page: undefined,
+    })
+  }
+
+  const {
+    data: leases,
+    meta,
+    isLoading,
+    isFetching,
+    error,
+  } = useLeaseSearch(
+    {
+      q: debouncedSearch || undefined,
+      objectType: selectedObjectType ? [selectedObjectType] : undefined,
+      status: selectedStatus ? [selectedStatus] : undefined,
+      property: selectedProperty ? [selectedProperty] : undefined,
+      districtNames: selectedDistrikt ? [selectedDistrikt] : undefined,
+      startDateFrom: startDateFrom || undefined,
+      startDateTo: startDateTo || undefined,
+      endDateFrom: endDateFrom || undefined,
+      endDateTo: endDateTo || undefined,
+    },
+    page,
+    PAGE_SIZE
+  )
+
+  const totalPages = meta?.totalRecords
+    ? Math.ceil(meta.totalRecords / PAGE_SIZE)
+    : 1
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+    const mainContent = document.querySelector('main')
+    if (mainContent) {
+      mainContent.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  // Search function for property filter
+  const searchProperties = useCallback(
+    async (query: string): Promise<SearchFilterOption[]> => {
+      const results = await propertyService.searchProperties(query)
+      return results.map((p) => ({
+        label: p.designation,
+        value: p.designation,
+      }))
+    },
+    []
+  )
+
+  const displayLeases = leases || []
+
+  const clearFilters = () => {
+    setSearchInput('')
+    updateUrlParams({
+      search: undefined,
+      objectType: undefined,
+      status: undefined,
+      property: undefined,
+      distrikt: undefined,
+      startDateFrom: undefined,
+      startDateTo: undefined,
+      endDateFrom: undefined,
+      endDateTo: undefined,
+      page: undefined,
+    })
+  }
+
+  const hasActiveFilters =
+    debouncedSearch ||
+    selectedObjectType ||
+    selectedStatus ||
+    selectedProperty ||
+    selectedDistrikt ||
+    startDateFrom ||
+    startDateTo ||
+    endDateFrom ||
+    endDateTo
+
+  return (
+    <div className="py-4 animate-in">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Utflyttningslista</h1>
+        <p className="text-muted-foreground">
+          Sök och filtrera hyreskontrakt i systemet
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Hyreskontrakt</CardTitle>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {displayLeases.length} av {meta?.totalRecords ?? 0} resultat
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Search input with icon */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Sök på kontraktsnummer, hyresgäst, personnummer, adress..."
+                className="pl-10"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+            </div>
+
+            {/* Filter row */}
+            <div className="flex flex-wrap gap-2">
+              <FilterDropdown
+                options={objectTypeOptions.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                }))}
+                selectedValue={selectedObjectType || null}
+                onSelectionChange={setSelectedObjectType}
+                placeholder="Objekttyp..."
+              />
+
+              <FilterDropdown
+                options={statusOptions.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                }))}
+                selectedValue={selectedStatus || null}
+                onSelectionChange={setSelectedStatus}
+                placeholder="Status..."
+              />
+
+              <SearchFilterDropdown
+                searchFn={searchProperties}
+                selectedValue={selectedProperty || null}
+                onSelectionChange={setSelectedProperty}
+                placeholder="Fastighet..."
+                searchPlaceholder="Sök fastighet..."
+              />
+
+              <FilterDropdown
+                options={distriktOptions.map((o) => ({ label: o, value: o }))}
+                selectedValue={selectedDistrikt || null}
+                onSelectionChange={setSelectedDistrikt}
+                placeholder="Distrikt..."
+              />
+
+              <DateRangeFilterDropdown
+                startDate={startDateFrom || null}
+                endDate={startDateTo || null}
+                onDateChange={setStartDateRange}
+                placeholder="Startdatum..."
+              />
+
+              <DateRangeFilterDropdown
+                startDate={endDateFrom || null}
+                endDate={endDateTo || null}
+                onDateChange={setEndDateRange}
+                placeholder="Slutdatum..."
+              />
+            </div>
+
+            {/* Clear all filters button */}
+            {hasActiveFilters && (
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Rensa alla filter
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Laddar hyreskontrakt...
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-destructive">
+              Ett fel uppstod vid hämtning av hyreskontrakt
+            </div>
+          ) : displayLeases.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Inga hyreskontrakt hittades
+            </div>
+          ) : (
+            <ResponsiveTable
+              data={displayLeases}
+              columns={[
+                {
+                  key: 'leaseId',
+                  label: 'Kontraktsnummer',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) => (
+                    <span className="font-medium">{lease.leaseId}</span>
+                  ),
+                },
+                {
+                  key: 'contacts',
+                  label: 'Hyresgäst',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) => {
+                    const primaryContact = lease.contacts?.[0]
+                    if (!primaryContact) return '-'
+                    return (
+                      <Link
+                        to={`/tenants/${primaryContact.contactCode}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {primaryContact.name}
+                      </Link>
+                    )
+                  },
+                },
+                {
+                  key: 'objectType',
+                  label: 'Objekttyp',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) =>
+                    lease.objectTypeCode || '-',
+                  hideOnMobile: true,
+                },
+                {
+                  key: 'address',
+                  label: 'Adress',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) => lease.address || '-',
+                  hideOnMobile: true,
+                },
+                {
+                  key: 'startDate',
+                  label: 'Startdatum',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) =>
+                    formatDate(lease.startDate),
+                  hideOnMobile: true,
+                },
+                {
+                  key: 'lastDebitDate',
+                  label: 'Slutdatum',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) =>
+                    formatDate(lease.lastDebitDate),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  className: 'px-2',
+                  render: (lease: LeaseSearchResult) =>
+                    getStatusLabel(lease.status),
+                  hideOnMobile: true,
+                },
+              ]}
+              keyExtractor={(lease) => lease.leaseId}
+              mobileCardRenderer={(lease: LeaseSearchResult) => (
+                <div className="space-y-2 w-full">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-medium">{lease.leaseId}</span>
+                      <div className="text-sm text-muted-foreground">
+                        {lease.contacts?.[0]?.name || '-'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {lease.address || '-'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatDate(lease.startDate)} -{' '}
+                        {formatDate(lease.lastDebitDate)}
+                      </div>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {getStatusLabel(lease.status)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            />
+          )}
+
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRecords={meta?.totalRecords ?? 0}
+            pageSize={PAGE_SIZE}
+            onPageChange={handlePageChange}
+            isFetching={isFetching}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default LeasesPage

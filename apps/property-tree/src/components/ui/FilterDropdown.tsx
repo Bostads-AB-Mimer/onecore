@@ -152,6 +152,10 @@ export function FilterDropdown({
     )
   }
 
+  // Get the label for the selected value
+  const selectedLabel =
+    options.find((o) => o.value === selectedValue)?.label ?? selectedValue
+
   // Standard non-searchable dropdown
   return (
     <DropdownMenu>
@@ -165,7 +169,7 @@ export function FilterDropdown({
             className
           )}
         >
-          <span className="truncate">{selectedValue || placeholder}</span>
+          <span className="truncate">{selectedLabel || placeholder}</span>
           <Filter
             className={cn(
               'h-3 w-3 ml-2 shrink-0',

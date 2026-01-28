@@ -71,12 +71,12 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum last debit date (YYYY-MM-DD)
    *       - in: query
-   *         name: propertyCodes
+   *         name: property
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Property/estate codes
+   *         description: Property/estate names
    *       - in: query
    *         name: buildingCodes
    *         schema:
@@ -209,7 +209,7 @@ export const routes = (router: KoaRouter) => {
       'startDateTo',
       'endDateFrom',
       'endDateTo',
-      'propertyCodes',
+      'property',
       'buildingCodes',
       'areaCodes',
       'districtNames',

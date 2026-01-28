@@ -205,7 +205,7 @@ export interface paths {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
           q?: string;
-          /** @description Object type codes (balgh, babps, balok, bahyr) */
+          /** @description Object types (e.g., residence, parking)) */
           objectType?: string[];
           /** @description Contract status filter */
           status?: ("current" | "upcoming" | "terminated")[];
@@ -213,8 +213,12 @@ export interface paths {
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */
           startDateTo?: string;
-          /** @description Property/estate codes */
-          propertyCodes?: string[];
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string;
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string;
+          /** @description Property/estate names */
+          property?: string[];
           /** @description Building codes */
           buildingCodes?: string[];
           /** @description Area codes (Område) */
@@ -228,7 +232,7 @@ export interface paths {
           /** @description Items per page */
           limit?: number;
           /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "tenantName";
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
           /** @description Sort direction */
           sortOrder?: "asc" | "desc";
         };
@@ -238,9 +242,9 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: Record<string, never>[];
-              _meta?: Record<string, never>;
-              _links?: unknown[];
+              content?: components["schemas"]["LeaseSearchResult"][];
+              _meta?: components["schemas"]["PaginationMeta"];
+              _links?: components["schemas"]["PaginationLinks"][];
             };
           };
         };
@@ -5314,6 +5318,46 @@ export interface components {
     IdentityCheckContact: {
       contactCode: string;
       nationalRegistrationNumber: string;
+    };
+    LeaseSearchResult: {
+      leaseId: string;
+      objectTypeCode: string;
+      leaseType: string;
+      contacts: ({
+          name: string;
+          contactCode: string;
+          email: string | null;
+          phone: string | null;
+        })[];
+      address: string | null;
+      /** Format: date-time */
+      startDate: string | null;
+      /** Format: date-time */
+      lastDebitDate: string | null;
+      /** @enum {number} */
+      status: 0 | 1 | 2 | 3;
+      property?: string | null;
+      buildingCode?: string | null;
+      area?: string | null;
+      buildingManager?: string | null;
+      districtName?: string | null;
+    };
+    ContactInfo: {
+      name: string;
+      contactCode: string;
+      email: string | null;
+      phone: string | null;
+    };
+    PaginationMeta: {
+      totalRecords: number;
+      page: number;
+      limit: number;
+      count: number;
+    };
+    PaginationLinks: {
+      href: string;
+      /** @enum {string} */
+      rel: "self" | "first" | "last" | "prev" | "next";
     };
     WorkOrder: {
       accessCaption: string;

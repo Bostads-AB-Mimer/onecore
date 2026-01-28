@@ -11,6 +11,7 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
   leasing,
+  schemas as typesSchemas,
 } from '@onecore/types'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
@@ -76,6 +77,10 @@ const getLeasesWithRelatedEntitiesForPnr = async (
 export const routes = (router: KoaRouter) => {
   registerSchema('Lease', Lease)
   registerSchema('IdentityCheckContact', leasing.v1.IdentityCheckContactSchema)
+  registerSchema('LeaseSearchResult', leasing.v1.LeaseSearchResultSchema)
+  registerSchema('ContactInfo', leasing.v1.ContactInfoSchema)
+  registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
+  registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -105,7 +110,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Object type codes (balgh, babps, balok, bahyr)
+   *         description: Object types (e.g., residence, parking))
    *       - in: query
    *         name: status
    *         schema:
@@ -127,12 +132,24 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum start date (YYYY-MM-DD)
    *       - in: query
-   *         name: propertyCodes
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Property/estate codes
+   *         description: Property/estate names
    *       - in: query
    *         name: buildingCodes
    *         schema:
@@ -178,7 +195,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, tenantName]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -197,11 +214,13 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     type: object
+   *                     $ref: '#/components/schemas/LeaseSearchResult'
    *                 _meta:
-   *                   type: object
+   *                   $ref: '#/components/schemas/PaginationMeta'
    *                 _links:
    *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PaginationLinks'
    *       '400':
    *         description: Invalid query parameters
    *       '500':
@@ -221,7 +240,10 @@ export const routes = (router: KoaRouter) => {
       logger.error({ error, metadata }, 'Error searching leases')
       ctx.status = 500
       ctx.body = {
-        error: error instanceof Error ? error.message : 'Unknown error occurred during lease search',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred during lease search',
         ...metadata,
       }
     }
