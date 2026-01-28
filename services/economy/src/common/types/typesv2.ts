@@ -31,6 +31,8 @@ export type InvoiceRowWithAccounting = InvoiceRow & {
 
 export type InvoiceWithAccounting = Omit<Invoice, 'invoiceRows'> & {
   invoiceRows: InvoiceRowWithAccounting[]
+  ledgerAccount?: string
+  totalAccount?: string
 }
 
 export type CounterPartCustomer = {
@@ -103,4 +105,17 @@ export type AggregatedRow = {
   projectCode?: string
   freeCode?: string
   totalAccount: string
+}
+
+export type LedgerRow = {
+  invoiceNumber?: string
+  ocr?: string
+  amount: number
+  vat: number
+  account?: string
+  invoiceDate?: string
+  invoiceDueDate?: string
+  recipientContactCode?: string
+  voucherDate: string
+  voucherNumber: string
 }

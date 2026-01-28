@@ -57,4 +57,8 @@ export const InvoiceSchema = z.object({
   invoiceRows: z.array(InvoiceRowSchema),
   invoiceFileUrl: z.string().optional(),
   remainingAmount: z.number().optional(),
+  totalVat6: z.number().optional(),
+  totalVat12: z.number().optional(),
+  totalVat25: z.number().optional(),
+  totalVat: z.number().optional(),
 })

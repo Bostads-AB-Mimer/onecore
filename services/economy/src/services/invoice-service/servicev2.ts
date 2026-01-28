@@ -31,6 +31,7 @@ import {
   TOTAL_ACCOUNT,
   CUSTOMER_LEDGER_ACCOUNT,
   AggregatedRow,
+  LedgerRow,
 } from '../../common/types/typesv2'
 import {
   createCustomerLedgerRow,
@@ -53,10 +54,6 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 500
 
-    //const batchId = await createBatch()
-    //logger.info(`Created new batch: ${batchId}`)
-
-    //do {
     const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
     if (!invoicesResult.ok) {
       logger.error(
@@ -72,18 +69,36 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
     }
 
     const invoices = invoicesResult.data
+    const counterPartCustomers = await getCounterPartCustomers()
 
     for (const invoice of invoices) {
       await enrichInvoiceWithAccounting(invoice)
+
+      const counterPartCustomer = counterPartCustomers.find(
+        counterPartCustomers.customers,
+        invoice.recipientName
+      )
+
+      if (counterPartCustomer) {
+        invoice.totalAccount = counterPartCustomer.totalAccount
+        invoice.ledgerAccount = counterPartCustomer.ledgerAccount
+      } else {
+        invoice.totalAccount = TOTAL_ACCOUNT
+        invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
+      }
     }
 
-    return invoices
+    invoices.sort((a: InvoiceWithAccounting, b: InvoiceWithAccounting) => {
+      return (
+        a.ledgerAccount?.localeCompare(b.ledgerAccount ?? '') ||
+        a.totalAccount?.localeCompare(b.totalAccount ?? '') ||
+        dateString(a.fromDate)?.localeCompare(dateString(b.fromDate) ?? '') ||
+        dateString(a.toDate)?.localeCompare(dateString(b.toDate) ?? '') ||
+        0
+      )
+    })
 
-    /*      const invoiceDataRows = convertToInvoiceDataRows(invoicesToImport)
-      const contactCodes = await processInvoiceRows(invoiceDataRows, batchId)
-      const contacts = await getXpandContacts(contactCodes.contacts)
-      await saveContacts(contacts, batchId)*/
-    //    } while (invoicesResult.data.length > 0)
+    return invoices
   } catch (error: any) {
     logger.error(error, 'Error importing invoices - batch could not be created')
 
@@ -96,6 +111,7 @@ export const createAggregateAccounting = async (
 ) => {
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
   const aggregateAccountingCsv = await createAggregateCsv(invoiceRowsForExport)
+  const ledgerAccountingCsv = await createLedgerCsv(invoices)
 
   return invoiceRowsForExport
 }
@@ -180,9 +196,10 @@ const createRoundOffRow = async (
   }
 }
 
+//#region Aggregate
 const createAggregateCsv = async (invoiceRows: ExportedInvoiceRow[]) => {
   const aggregateRows = createAggregateRows(invoiceRows)
-  //const aggregateTotal
+  // TODO: Create csv
 }
 
 const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
@@ -205,7 +222,25 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
     )
   })
 
-  invoiceRows.forEach((invoiceRow) => {
+  const finishChunk = (invoiceRow: ExportedInvoiceRow) => {
+    const voucherNumber =
+      '1' +
+      '123'.toString().padStart(5, '0') +
+      voucherIndex.toString().padStart(3, '0')
+    voucherIndex++
+    // create aggregate rows, reset current values, add row as first new batch
+    const chunkRows = groupAggregateRows(currentRows, voucherNumber)
+    aggregatedRows.push(...chunkRows)
+    const chunkTotalRow = createAggregatedTotalRow(chunkRows, voucherNumber)
+    aggregatedRows.push(chunkTotalRow)
+
+    currentStartDate = dateString(invoiceRow.fromDate)
+    currentEndDate = dateString(invoiceRow.toDate)
+    currentTotalAccount = invoiceRow.totalAccount
+    currentRows = [invoiceRow]
+  }
+
+  invoiceRows.forEach((invoiceRow, index) => {
     if (
       dateString(invoiceRow.fromDate) == currentStartDate &&
       dateString(invoiceRow.toDate) == currentEndDate &&
@@ -213,33 +248,14 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
     ) {
       // Add row to current batch
       currentRows.push(invoiceRow)
-    } else {
-      const voucherNumber =
-        '1' +
-        '123'.toString().padStart(5, '0') +
-        voucherIndex.toString().padStart(3, '0')
-      voucherIndex++
-      // create aggregate rows, reset current values, add row as first new batch
-      const chunkRows = aggregateRows(currentRows, voucherNumber)
-      aggregatedRows.push(...chunkRows)
-      const chunkTotalRow = createAggregatedTotalRow(chunkRows, voucherNumber)
-      aggregatedRows.push(chunkTotalRow)
 
-      currentStartDate = dateString(invoiceRow.fromDate)
-      currentEndDate = dateString(invoiceRow.toDate)
-      currentTotalAccount = invoiceRow.totalAccount
-      currentRows = [invoiceRow]
+      if (index === invoiceRows.length - 1) {
+        finishChunk(invoiceRow)
+      }
+    } else {
+      finishChunk(invoiceRow)
     }
   })
-
-  const voucherNumber =
-    '1' +
-    '123'.toString().padStart(5, '0') +
-    voucherIndex.toString().padStart(3, '0')
-  const chunkRows = aggregateRows(currentRows, voucherNumber)
-  aggregatedRows.push(...chunkRows)
-  const chunkTotalRow = createAggregatedTotalRow(chunkRows, voucherNumber)
-  aggregatedRows.push(chunkTotalRow)
 
   console.table(aggregatedRows)
   return aggregatedRows
@@ -265,7 +281,7 @@ const safeAdd = (
  *
  * @param invoiceRows
  */
-const aggregateRows = (
+const groupAggregateRows = (
   invoiceRows: ExportedInvoiceRow[],
   voucherNumber: string
 ): AggregatedRow[] => {
@@ -290,8 +306,6 @@ const aggregateRows = (
           dateString(o.toDate) +
           '||' +
           o.totalAccount
-
-        console.log(key)
 
         const aggregatedRow = r.get(key) || {
           account: o.account,
@@ -344,176 +358,106 @@ export const createAggregatedTotalRow = (
 
   return totalRow
 }
+//#endregion
+const createLedgerCsv = async (invoices: InvoiceWithAccounting[]) => {
+  const ledgerRows = createLedgerRows(invoices)
+  // TODO: Create csv
+}
 
-// export const createAggregateRows = async (batchId: string) => {
-//   const transactionRows: InvoiceDataRow[] = []
+//#region Ledger
+export const createLedgerRows = async (
+  invoices: InvoiceWithAccounting[]
+): Promise<LedgerRow[]> => {
+  let ledgerRows: LedgerRow[] = []
+  let chunkLedgerAccount = invoices[0].ledgerAccount
+  let chunkInvoiceDate = dateString(invoices[0].invoiceDate)
+  let chunkInvoices: InvoiceWithAccounting[] = []
+  let voucherIndex = 0
 
-//   // Do transaction rows in chunks of contracts to get different
-//   // voucher numbers.
-//   const invoices = await getInvoicesByChunks(batchId)
-//   const CHUNK_SIZE = 500
-//   let currentStart = 0
-//   let chunkNum = 0
+  const finishChunk = (invoice: InvoiceWithAccounting) => {
+    const voucherNumber =
+      '1' +
+      '123'.toString().padStart(5, '0') +
+      voucherIndex.toString().padStart(3, '0')
+    voucherIndex++
+    // create aggregate rows, reset current values, add row as first new batch
+    const chunkRows = convertToLedgerRows(chunkInvoices, voucherNumber)
+    ledgerRows.push(...chunkRows)
+    const chunkTotalRow = createLedgerTotalRow(chunkInvoices, voucherNumber)
+    ledgerRows.push(chunkTotalRow)
 
-//   while (currentStart < invoices.length) {
-//     // Create chunks of maximum CHUNK_SIZE invoices
-//     // where all invoices invoices have the same start
-//     // and end dates, and totalAccount.
-//     const currentInvoices: InvoiceContract[] = []
-//     const startDate = invoices[currentStart].invoiceFromDate
-//     const endDate = invoices[currentStart].invoiceToDate
-//     const totalAccount = invoices[currentStart].totalAccount
+    chunkLedgerAccount = invoice.ledgerAccount
+    chunkInvoices = [invoice]
+  }
 
-//     for (
-//       let currentInvoicesIndex = currentStart;
-//       currentInvoicesIndex < CHUNK_SIZE + currentStart &&
-//       currentInvoicesIndex < invoices.length;
-//       currentInvoicesIndex++
-//     ) {
-//       const currentInvoice = invoices[currentInvoicesIndex]
+  invoices.forEach((invoice, index) => {
+    if (
+      dateString(invoice.invoiceDate) == chunkInvoiceDate &&
+      invoice.ledgerAccount == chunkLedgerAccount
+    ) {
+      // Add row to current batch
+      chunkInvoices.push(invoice)
 
-//       if (
-//         currentInvoice.invoiceFromDate == startDate &&
-//         currentInvoice.invoiceToDate == endDate &&
-//         currentInvoice.totalAccount == totalAccount
-//       ) {
-//         currentInvoices.push(invoices[currentInvoicesIndex])
-//       } else {
-//         break
-//       }
-//     }
-//     logger.info(
-//       { start: currentStart, end: currentInvoices.length + currentStart - 1 },
-//       'Aggregate chunk'
-//     )
-//     currentStart += currentInvoices.length
+      if (index === invoices.length - 1) {
+        finishChunk(invoice)
+      }
+    } else {
+      finishChunk(invoice)
+    }
+  })
 
-//     // Get aggregated rows for chunk
-//     const aggregatedDbRows = await getAggregatedInvoiceRows(
-//       batchId,
-//       currentInvoices.map((invoice) => invoice.invoiceNumber)
-//     )
-//     const aggregatedRows = aggregatedDbRows.map((row) => {
-//       return transformAggregatedInvoiceRow(row, chunkNum)
-//     })
-//     transactionRows.push(...aggregatedRows)
+  console.table(ledgerRows)
 
-//     const chunkTotalRow = createAggregateTotalRow(aggregatedRows)
+  return ledgerRows
+}
 
-//     transactionRows.push(chunkTotalRow)
+const convertToLedgerRows = (
+  invoices: InvoiceWithAccounting[],
+  voucherNumber: string
+): LedgerRow[] => {
+  return invoices.map((invoice) => {
+    return {
+      account: invoice.ledgerAccount,
+      amount: invoice.amount,
+      vat: invoice.totalVat ?? 0,
+      voucherDate: dateString(invoice.invoiceDate) ?? '',
+      voucherNumber,
+      invoiceDate: dateString(invoice.invoiceDate),
+      invoiceNumber: invoice.invoiceId,
+      recipientContactCode: invoice.recipientContactCode,
+    }
+  })
+}
 
-//     let aggregatedRowsTotal = aggregatedRows.reduce((sum: number, row) => {
-//       sum += row.amount as number
-//       return sum
-//     }, 0)
+const createLedgerTotalRow = (
+  invoices: InvoiceWithAccounting[],
+  voucherNumber: string
+): LedgerRow => {
+  const totalAmount = invoices
+    .map((invoice) => invoice.amount)
+    .reduce((accumulator: number, amount: number) => {
+      accumulator += amount
 
-//     aggregatedRowsTotal =
-//       Math.round(((aggregatedRowsTotal as number) + Number.EPSILON) * 100) / 100
+      return accumulator
+    }, 0)
 
-//     logger.info(
-//       { difference: aggregatedRowsTotal + (chunkTotalRow.amount as number) },
-//       'Aggregate chunk created'
-//     )
+  const totalVat = invoices
+    .map((invoice) => invoice.totalVat)
+    .reduce((accumulator: number | undefined, amount: number | undefined) => {
+      accumulator = accumulator ? accumulator + (amount ?? 0) : 0
 
-//     chunkNum++
-//   }
+      return accumulator
+    }, 0)
 
-//   const accountTotals = calculateAccountTotals(transactionRows)
-//   const batchAccountTotals = await getBatchAccountTotals(batchId)
-
-//   try {
-//     verifyAccountTotals(accountTotals, batchAccountTotals)
-//   } catch {
-//     return null
-//   }
-
-//   return transactionRows
-// }
-
-// export const uploadFile = async (filename: string, csvFile: string) => {
-//   return await uploadFileToXledger(filename, csvFile)
-// }
-
-// /**
-//  * Enriches each invoice row of a batch with accounting data from Xpand. Saves each
-//  * enriched row to invoice_data in economy db. Also adds a roundoff row for each
-//  * unique invoice that has a roundoff.
-//  *
-//  * @param invoiceDataRows Array of invoice rows from Xpand
-//  * @param batchId Batch ID previously created
-//  * @param invoiceDate Invoice date
-//  * @param invoiceDueDate Invoice due date
-//  * @returns Array of all contact codes referred to in invoice data rows
-//  */
-// export const processInvoiceRows = async (
-//   invoiceDataRows: InvoiceDataRow[],
-//   batchId: string
-// ): Promise<{
-//   contacts: string[]
-//   errors: { invoiceNumber: string; error: string }[]
-// }> => {
-//   const addedContactCodes: Record<string, boolean> = {}
-
-//   const rowsByInvoiceNumber: Record<string, InvoiceDataRow[]> = {}
-//   invoiceDataRows.forEach((invoiceDataRow) => {
-//     if (rowsByInvoiceNumber[invoiceDataRow.invoiceNumber] === undefined) {
-//       rowsByInvoiceNumber[invoiceDataRow.invoiceNumber] = []
-//     }
-
-//     rowsByInvoiceNumber[invoiceDataRow.invoiceNumber].push(invoiceDataRow)
-//   })
-
-//   const invoices = Object.keys(rowsByInvoiceNumber).map((invoiceNumber) => {
-//     const invoiceRow = rowsByInvoiceNumber[invoiceNumber][0]
-
-//     return {
-//       fromdate: invoiceRow.fromDate,
-//       cmctcben: invoiceRow.tenantName,
-//       roundoff: invoiceRow.roundoff,
-//       invdate: invoiceRow.invoiceDate,
-//       todate: invoiceRow.toDate,
-//       reference: invoiceRow.contractCode,
-//       cmctckod: invoiceRow.contactCode,
-//       invoice: invoiceRow.invoiceNumber,
-//       expdate: invoiceRow.invoiceDueDate,
-//       invoicetotal: invoiceRow.invoiceTotalAmount,
-//     }
-//   })
-
-//   const counterPartCustomers = await getCounterPartCustomers()
-
-//   for (const invoice of invoices) {
-//     if ((invoice.roundoff as number) !== 0) {
-//       const roundOffRow = await createRoundOffRow(invoice, counterPartCustomers)
-//       invoiceDataRows.push(roundOffRow)
-//     }
-//   }
-
-//   const invoiceTable: Record<string, Invoice> = {}
-//   invoices.forEach((invoice) => {
-//     invoiceTable[(invoice.invoice as string).trimEnd()] = invoice
-//   })
-
-//   const enrichedInvoiceRows = await enrichInvoiceRows(
-//     invoiceDataRows,
-//     invoiceTable
-//   )
-
-//   const enrichedInvoiceRowsWithAccounts = await addAccountInformation(
-//     enrichedInvoiceRows.rows
-//   )
-
-//   enrichedInvoiceRowsWithAccounts.forEach((row) => {
-//     addedContactCodes[row.contactCode] = true
-//   })
-
-//   await saveInvoiceRows(enrichedInvoiceRowsWithAccounts, batchId)
-
-//   return {
-//     contacts: Object.keys(addedContactCodes),
-//     errors: enrichedInvoiceRows.errors,
-//   }
-// }
+  return {
+    account: invoices[0].totalAccount,
+    voucherDate: dateString(invoices[0].invoiceDate) ?? '',
+    voucherNumber,
+    vat: totalVat ?? 0,
+    amount: -Math.round(((totalAmount as number) + Number.EPSILON) * 100) / 100,
+  }
+}
+//#endregion
 
 // export const createLedgerTotalRow = (
 //   ledgerRows: InvoiceDataRow[]
@@ -549,132 +493,6 @@ export const createAggregatedTotalRow = (
 //     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
 //   return totalRow
-// }
-
-// export const createLedgerRows = async (
-//   batchId: string
-// ): Promise<InvoiceDataRow[]> => {
-//   const transactionRows: InvoiceDataRow[] = []
-
-//   const invoiceRows = await getAllInvoiceRows(batchId)
-
-//   const rowsByInvoiceNumber: Record<string, InvoiceDataRow[]> = {}
-//   invoiceRows.forEach((invoiceRow) => {
-//     if (rowsByInvoiceNumber[invoiceRow.InvoiceNumber] === undefined) {
-//       rowsByInvoiceNumber[invoiceRow.InvoiceNumber] = []
-//     }
-
-//     rowsByInvoiceNumber[invoiceRow.InvoiceNumber].push(invoiceRow)
-//   })
-
-//   const invoiceNumbers = Object.keys(rowsByInvoiceNumber)
-
-//   const CHUNK_SIZE = 500
-//   let currentStart = 0
-//   let chunkNum = 0
-//   const counterPartCustomers = await getCounterPartCustomers()
-
-//   while (currentStart < invoiceNumbers.length) {
-//     const currentInvoices: LedgerInvoice[] = []
-//     const invoice = rowsByInvoiceNumber[invoiceNumbers[currentStart]][0]
-//     const ledgerAccount = invoice.LedgerAccount
-//     const invoiceDate = invoice.InvoiceDate
-//     const chunkInvoiceRows: InvoiceDataRow[] = []
-//     const startTime = Date.now()
-
-//     for (
-//       let currentInvoiceIndex = currentStart;
-//       currentInvoiceIndex < CHUNK_SIZE + currentStart &&
-//       currentInvoiceIndex < invoiceNumbers.length;
-//       currentInvoiceIndex++
-//     ) {
-//       const currentInvoice =
-//         rowsByInvoiceNumber[invoiceNumbers[currentInvoiceIndex]][0]
-
-//       if (
-//         currentInvoice.LedgerAccount === ledgerAccount &&
-//         currentInvoice.InvoiceDate === invoiceDate
-//       ) {
-//         currentInvoices.push({
-//           contractCode: currentInvoice.ContractCode as string,
-//           invoiceNumber: currentInvoice.InvoiceNumber as string,
-//           invoiceFromDate: currentInvoice.InvoiceFromDate as string,
-//           invoiceToDate: currentInvoice.InvoiceToDate as string,
-//           invoiceDate: currentInvoice.InvoiceDate as string,
-//           ledgerAccount: currentInvoice.LedgerAccount as string,
-//           totalAccount: currentInvoice.TotalAccount as string,
-//           tenantName: currentInvoice.TenantName as string,
-//         })
-//       } else {
-//         break
-//       }
-//     }
-
-//     logger.info(
-//       {
-//         startNum: currentStart,
-//         endNum: currentInvoices.length + currentStart - 1,
-//         elapsed: Date.now() - startTime,
-//       },
-//       'Creating ledger chunk'
-//     )
-
-//     currentStart += currentInvoices.length
-
-//     for (const invoice of currentInvoices) {
-//       const invoiceRows = rowsByInvoiceNumber[invoice.invoiceNumber]
-
-//       const counterPart = counterPartCustomers.find(
-//         counterPartCustomers.customers,
-//         invoiceRows[0].TenantName as string
-//       )
-
-//       const customerLedgerRow = createCustomerLedgerRow(
-//         invoiceRows,
-//         batchId,
-//         chunkNum,
-//         counterPart ? counterPart.counterPartCode : ''
-//       )
-
-//       if (
-//         (customerLedgerRow.amount as number) -
-//           (invoiceRows[0].InvoiceTotalAmount as number) >
-//         1
-//       ) {
-//         logger.error(
-//           { customerLedgerRow, invoice: invoiceRows[0].invoiceNumber },
-//           'Invoice total does not match ledger total'
-//         )
-//         throw new Error('Invoice total does not match ledger total')
-//       }
-//       chunkInvoiceRows.push(customerLedgerRow)
-//     }
-
-//     transactionRows.push(...chunkInvoiceRows)
-
-//     const totalRow = createLedgerTotalRow(chunkInvoiceRows)
-//     transactionRows.push(totalRow)
-
-//     let ledgerChunkRowsTotal = chunkInvoiceRows.reduce((sum: number, row) => {
-//       sum += row.amount as number
-//       return sum
-//     }, 0)
-
-//     ledgerChunkRowsTotal =
-//       Math.round(((ledgerChunkRowsTotal as number) + Number.EPSILON) * 100) /
-//       100
-
-//     logger.info(
-//       {
-//         difference: ledgerChunkRowsTotal + (totalRow.amount as number),
-//       },
-//       'Ledger chunk created'
-//     )
-
-//     chunkNum++
-//   }
-
-//   return transactionRows
 // }
 
 // export const getContactFromInvoiceRows = (

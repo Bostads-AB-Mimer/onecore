@@ -362,7 +362,6 @@ export const createAggregateTotalRow = (
     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
   if (!totalRow.account || totalRow.account == 'null') {
-    console.log(aggregatedRows[0])
     throw new Error('Account is missing in aggregation')
   }
 
