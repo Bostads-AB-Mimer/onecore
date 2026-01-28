@@ -78,6 +78,7 @@ class LeaseSearchQueryBuilder {
       })
       .innerJoin('cmobj', 'cmobj.keycmobj', 'hykop.keycmobj')
       .where('hyobj.deletemark', 0)
+      .whereNot('hyobj.hyobjben', 'like', '%M%')
 
     this.joinedTables.add('hyobj')
     this.joinedTables.add('hyhav')

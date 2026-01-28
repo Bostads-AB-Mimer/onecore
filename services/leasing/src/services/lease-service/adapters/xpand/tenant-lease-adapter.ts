@@ -827,25 +827,27 @@ const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
 ) => {
-  return leases.filter((lease) => {
-    if (options.includeTerminatedLeases && options.includeUpcomingLeases) {
-      return true
-    }
+  return leases
+    .filter((lease) => !lease.leaseId.includes('M'))
+    .filter((lease) => {
+      if (options.includeTerminatedLeases && options.includeUpcomingLeases) {
+        return true
+      }
 
-    if (!options.includeTerminatedLeases && !options.includeUpcomingLeases) {
-      return isLeaseActive(lease)
-    }
+      if (!options.includeTerminatedLeases && !options.includeUpcomingLeases) {
+        return isLeaseActive(lease)
+      }
 
-    if (options.includeTerminatedLeases && !options.includeUpcomingLeases) {
-      return isLeaseActive(lease) || isLeaseTerminated(lease)
-    }
+      if (options.includeTerminatedLeases && !options.includeUpcomingLeases) {
+        return isLeaseActive(lease) || isLeaseTerminated(lease)
+      }
 
-    if (!options.includeTerminatedLeases && options.includeUpcomingLeases) {
-      return isLeaseActive(lease) || isLeaseUpcoming(lease)
-    }
+      if (!options.includeTerminatedLeases && options.includeUpcomingLeases) {
+        return isLeaseActive(lease) || isLeaseUpcoming(lease)
+      }
 
-    return false
-  })
+      return false
+    })
 }
 
 const isLeaseActive = (lease: Lease | PartialLease): boolean => {
