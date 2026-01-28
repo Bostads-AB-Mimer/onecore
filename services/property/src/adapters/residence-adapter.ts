@@ -768,11 +768,9 @@ async function fetchRentalBlocksRaw(
     conditions.push('hyspt.tdate < GETDATE()')
   }
 
-  // Distrikt filter - check both direct join AND fencode fallback
+  // Distrikt filter via fencode → bafen.code join
   if (distrikt) {
-    conditions.push(
-      `COALESCE(bafen.distrikt, fallback_bafen.distrikt) = ${escapeSqlString(distrikt)}`
-    )
+    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
   }
 
   // Fastighet (property) filter
@@ -853,13 +851,12 @@ async function fetchRentalBlocksRaw(
       babuf.lokcaption AS localeName,
       babuf.hyrcode AS rentalObjectCode,
       babuf.hyrcaption AS rentalObjectName,
-      COALESCE(bafen.distrikt, fallback_bafen.distrikt) AS district,
+      bafen.distrikt AS district,
       balgt.caption AS residenceTypeName
     FROM hyspt
     LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
     LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
-    LEFT JOIN bafen fallback_bafen ON babuf.fencode = fallback_bafen.code
+    LEFT JOIN bafen ON bafen.code = babuf.fencode
     LEFT JOIN balgh ON babuf.keyobjlgh = balgh.keybalgh
     LEFT JOIN balgt ON balgh.keybalgt = balgt.keybalgt
     WHERE ${whereClause}
@@ -1076,32 +1073,7 @@ interface RentalBlockFilterOptions {
   active?: boolean
 }
 
-/**
- * Fetches fencodes (managementUnitCodes) that map to a specific district via bafen.code.
- * Used for distrikt filtering with fencode fallback support.
- * @deprecated Not currently used - raw SQL approach is used instead via getRentalBlockIdsForDistrikt
- */
-async function _getFencodesForDistrikt(distrikt: string): Promise<string[]> {
-  const results = await prisma.administrativeUnit.findMany({
-    where: { district: distrikt },
-    select: { code: true },
-  })
-  const fencodes = results
-    .map((r) => r.code?.trim())
-    .filter((code): code is string => !!code && code !== '')
-
-  logger.info(
-    { distrikt, fencodeCount: fencodes.length },
-    'getFencodesForDistrikt: found fencodes for district'
-  )
-
-  return fencodes
-}
-
-interface BuildRentalBlockWhereClauseOptions extends RentalBlockFilterOptions {
-  /** Fencodes that map to the desired district (for fallback filtering) */
-  distriktFencodes?: string[]
-}
+interface BuildRentalBlockWhereClauseOptions extends RentalBlockFilterOptions {}
 
 /**
  * Builds the Prisma where clause for rental block queries.
@@ -1115,7 +1087,6 @@ function buildRentalBlockWhereClause(
     fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
-    distriktFencodes,
     blockReason,
     fastighet,
     fromDateGte,
@@ -1166,37 +1137,14 @@ function buildRentalBlockWhereClause(
     }
   }
 
-  // Distrikt filter - check both direct join AND fencode fallback
+  // Distrikt filter - note: when distrikt is set, searchRentalBlocks uses raw SQL instead
+  // This is kept as a simple fallback but the raw SQL path handles fencode correctly
   if (distrikt) {
-    const distriktConditions: Prisma.RentalBlockWhereInput[] = [
-      // Direct join: administrativeUnit.district matches
-      {
-        propertyStructure: {
-          administrativeUnit: { district: distrikt },
-        },
+    andConditions.push({
+      propertyStructure: {
+        administrativeUnit: { district: distrikt },
       },
-    ]
-
-    // Fencode fallback: managementUnitCode is in the list of fencodes that map to this district
-    // AND direct join doesn't provide the district (either no link, or link exists but no district value)
-    if (distriktFencodes && distriktFencodes.length > 0) {
-      // Case 1: administrativeUnit relation is null (no matching bafen record via keyobjfen)
-      distriktConditions.push({
-        propertyStructure: {
-          administrativeUnit: { is: null },
-          managementUnitCode: { in: distriktFencodes },
-        },
-      })
-      // Case 2: administrativeUnit exists but has no district value
-      distriktConditions.push({
-        propertyStructure: {
-          administrativeUnit: { district: null },
-          managementUnitCode: { in: distriktFencodes },
-        },
-      })
-    }
-
-    andConditions.push({ OR: distriktConditions })
+    })
   }
 
   // Fastighet (property) filter (AND)
@@ -1277,7 +1225,8 @@ export interface SearchRentalBlocksOptions {
 }
 
 /**
- * Searches rental blocks with distrikt filter using raw SQL with fencode fallback.
+ * Searches rental blocks with distrikt filter using raw SQL.
+ * Uses fencode → bafen.code join for district lookup (keyobjfen is redundant).
  * Applies ALL filters and pagination in SQL to avoid the 2100 parameter limit.
  * Returns paginated IDs and total count.
  */
@@ -1303,11 +1252,9 @@ async function searchRentalBlocksWithDistriktRaw(
   // Base filter: must have a rentalId
   conditions.push("babuf.hyresid IS NOT NULL AND babuf.hyresid <> ''")
 
-  // Distrikt filter using COALESCE for fallback
+  // Distrikt filter via fencode → bafen.code join
   if (distrikt) {
-    conditions.push(
-      `COALESCE(bafen.distrikt, fallback_bafen.distrikt) = ${escapeSqlString(distrikt)}`
-    )
+    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
   }
 
   // Active filter
@@ -1379,8 +1326,7 @@ async function searchRentalBlocksWithDistriktRaw(
     FROM hyspt
     LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
     LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
-    LEFT JOIN bafen fallback_bafen ON babuf.fencode = fallback_bafen.code
+    LEFT JOIN bafen ON bafen.code = babuf.fencode
     WHERE ${whereClause}
   `)
   const totalCount = countResult[0]?.count ?? 0
@@ -1396,8 +1342,7 @@ async function searchRentalBlocksWithDistriktRaw(
     FROM hyspt
     LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
     LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON babuf.keyobjfen = bafen.keybafen
-    LEFT JOIN bafen fallback_bafen ON babuf.fencode = fallback_bafen.code
+    LEFT JOIN bafen ON bafen.code = babuf.fencode
     WHERE ${whereClause}
     ORDER BY hyspt.fdate DESC
     ${paginationClause}
