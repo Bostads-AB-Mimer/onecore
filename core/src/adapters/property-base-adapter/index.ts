@@ -14,10 +14,10 @@ type RentalBlockWithRentalObject =
 interface RentalBlocksFilterOptions {
   q?: string
   fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string | string[]
+  distrikt?: string | string[]
+  blockReason?: string | string[]
+  fastighet?: string | string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -26,6 +26,12 @@ interface RentalBlocksFilterOptions {
 interface SearchRentalBlocksOptions extends RentalBlocksFilterOptions {
   page?: number
   limit?: number
+}
+
+// Helper to normalize string | string[] to array (for API calls that expect arrays)
+function toArray<T>(val: T | T[] | undefined): T[] | undefined {
+  if (val === undefined) return undefined
+  return Array.isArray(val) ? val : [val]
 }
 
 const client = () =>
@@ -849,16 +855,12 @@ export async function searchRentalBlocks(
           query: {
             q,
             fields,
-            kategori: kategori as
-              | 'Bostad'
-              | 'Bilplats'
-              | 'Lokal'
-              | 'Förråd'
-              | 'Övrigt'
+            kategori: toArray(kategori) as
+              | ('Bostad' | 'Bilplats' | 'Lokal' | 'Förråd' | 'Övrigt')[]
               | undefined,
-            distrikt,
-            blockReason,
-            fastighet,
+            distrikt: toArray(distrikt),
+            blockReason: toArray(blockReason),
+            fastighet: toArray(fastighet),
             fromDateGte,
             toDateLte,
             active,
@@ -889,10 +891,16 @@ export async function exportRentalBlocksToExcel(
   options: RentalBlocksFilterOptions
 ): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
   try {
-    const params: Record<string, string> = {}
+    // Build URLSearchParams to properly handle arrays (repeated params)
+    const params = new URLSearchParams()
     Object.entries(options).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        params[key] = String(value)
+        if (Array.isArray(value)) {
+          // For arrays, append each value with the same key
+          value.forEach((v) => params.append(key, v))
+        } else {
+          params.append(key, String(value))
+        }
       }
     })
 

@@ -528,20 +528,40 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (supports multiple values)
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -674,24 +694,40 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
-   *         description: Filter by category
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (supports multiple values)
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
-   *         description: Filter by district
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
-   *         description: Filter by block reason
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
-   *         description: Filter by property code/name
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property code/name (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -775,20 +811,33 @@ export const routes = (router: KoaRouter) => {
         })
 
         // Build additional params for pagination links
+        // Note: array params are serialized as comma-separated for URL building
         const additionalParams: Record<string, string> = {}
         if (active !== undefined) {
           additionalParams.active = String(active)
         }
         if (searchParams.q) additionalParams.q = searchParams.q
         if (searchParams.fields) additionalParams.fields = searchParams.fields
-        if (searchParams.kategori)
-          additionalParams.kategori = searchParams.kategori
-        if (searchParams.distrikt)
-          additionalParams.distrikt = searchParams.distrikt
-        if (searchParams.blockReason)
-          additionalParams.blockReason = searchParams.blockReason
-        if (searchParams.fastighet)
-          additionalParams.fastighet = searchParams.fastighet
+        if (searchParams.kategori) {
+          additionalParams.kategori = Array.isArray(searchParams.kategori)
+            ? searchParams.kategori.join(',')
+            : searchParams.kategori
+        }
+        if (searchParams.distrikt) {
+          additionalParams.distrikt = Array.isArray(searchParams.distrikt)
+            ? searchParams.distrikt.join(',')
+            : searchParams.distrikt
+        }
+        if (searchParams.blockReason) {
+          additionalParams.blockReason = Array.isArray(searchParams.blockReason)
+            ? searchParams.blockReason.join(',')
+            : searchParams.blockReason
+        }
+        if (searchParams.fastighet) {
+          additionalParams.fastighet = Array.isArray(searchParams.fastighet)
+            ? searchParams.fastighet.join(',')
+            : searchParams.fastighet
+        }
         if (searchParams.fromDateGte)
           additionalParams.fromDateGte = searchParams.fromDateGte
         if (searchParams.toDateLte)

@@ -17,12 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { FilterDropdown } from '@/components/ui/FilterDropdown'
-import { ObjectTypeBadge, DistriktBadge } from '@/components/ui/StatusBadges'
+import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
 import {
-  SearchFilterDropdown,
+  MultiSelectSearchFilterDropdown,
   SearchFilterOption,
-} from '@/components/ui/SearchFilterDropdown'
+} from '@/components/ui/MultiSelectSearchFilterDropdown'
+import { ObjectTypeBadge, DistriktBadge } from '@/components/ui/StatusBadges'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
 import { useAllRentalBlocks } from '@/components/hooks/useRentalBlocks'
 import { useBlockReasons } from '@/components/hooks/useBlockReasons'
@@ -63,9 +63,10 @@ const RentalBlocksPage = () => {
   const [isExporting, setIsExporting] = useState(false)
   const { data: blockReasons } = useBlockReasons()
 
-  const { page, setPage, searchParams, updateUrlParams } = useUrlPagination({
-    defaultLimit: PAGE_SIZE,
-  })
+  const { page, setPage, searchParams, setSearchParams, updateUrlParams } =
+    useUrlPagination({
+      defaultLimit: PAGE_SIZE,
+    })
 
   // Read filters from URL params
   // 'active' filter: true = active blocks, false = expired blocks, undefined = all blocks
@@ -78,20 +79,21 @@ const RentalBlocksPage = () => {
     return true
   }, [searchParams])
 
-  const selectedKategori = useMemo(
-    () => searchParams.get('kategori') || '',
+  // Multi-select filters use getAll() to support arrays
+  const selectedKategorier = useMemo(
+    () => searchParams.getAll('kategori'),
     [searchParams]
   )
-  const selectedFastighet = useMemo(
-    () => searchParams.get('fastighet') || '',
+  const selectedFastigheter = useMemo(
+    () => searchParams.getAll('fastighet'),
     [searchParams]
   )
-  const selectedDistrikt = useMemo(
-    () => searchParams.get('distrikt') || '',
+  const selectedDistrikter = useMemo(
+    () => searchParams.getAll('distrikt'),
     [searchParams]
   )
-  const selectedOrsak = useMemo(
-    () => searchParams.get('orsak') || '',
+  const selectedOrsaker = useMemo(
+    () => searchParams.getAll('orsak'),
     [searchParams]
   )
   const startDatum = useMemo(
@@ -140,20 +142,37 @@ const RentalBlocksPage = () => {
     })
   }
 
-  const setSelectedKategori = (val: string | null) => {
-    updateUrlParams({ kategori: val || undefined, page: undefined })
+  // Multi-select filter setters - handle arrays via URLSearchParams
+  const setSelectedKategorier = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('kategori')
+    vals.forEach((v) => newParams.append('kategori', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
-  const setSelectedFastighet = (val: string | null) => {
-    updateUrlParams({ fastighet: val || undefined, page: undefined })
+  const setSelectedFastigheter = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('fastighet')
+    vals.forEach((v) => newParams.append('fastighet', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
-  const setSelectedDistrikt = (val: string | null) => {
-    updateUrlParams({ distrikt: val || undefined, page: undefined })
+  const setSelectedDistrikter = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('distrikt')
+    vals.forEach((v) => newParams.append('distrikt', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
-  const setSelectedOrsak = (val: string | null) => {
-    updateUrlParams({ orsak: val || undefined, page: undefined })
+  const setSelectedOrsaker = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('orsak')
+    vals.forEach((v) => newParams.append('orsak', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
   }
 
   const setDateRange = (start: string | null, end: string | null) => {
@@ -176,10 +195,11 @@ const RentalBlocksPage = () => {
   } = useAllRentalBlocks(
     {
       q: debouncedSearch || undefined,
-      kategori: selectedKategori || undefined,
-      distrikt: selectedDistrikt || undefined,
-      blockReason: selectedOrsak || undefined,
-      fastighet: selectedFastighet || undefined,
+      kategori: selectedKategorier.length > 0 ? selectedKategorier : undefined,
+      distrikt: selectedDistrikter.length > 0 ? selectedDistrikter : undefined,
+      blockReason: selectedOrsaker.length > 0 ? selectedOrsaker : undefined,
+      fastighet:
+        selectedFastigheter.length > 0 ? selectedFastigheter : undefined,
       fromDateGte: startDatum || undefined,
       toDateLte: slutDatum || undefined,
       active: activeFilter,
@@ -210,10 +230,13 @@ const RentalBlocksPage = () => {
     try {
       const blob = await residenceService.exportRentalBlocksToExcel({
         q: debouncedSearch || undefined,
-        kategori: selectedKategori || undefined,
-        distrikt: selectedDistrikt || undefined,
-        blockReason: selectedOrsak || undefined,
-        fastighet: selectedFastighet || undefined,
+        kategori:
+          selectedKategorier.length > 0 ? selectedKategorier : undefined,
+        distrikt:
+          selectedDistrikter.length > 0 ? selectedDistrikter : undefined,
+        blockReason: selectedOrsaker.length > 0 ? selectedOrsaker : undefined,
+        fastighet:
+          selectedFastigheter.length > 0 ? selectedFastigheter : undefined,
         fromDateGte: startDatum || undefined,
         toDateLte: slutDatum || undefined,
         active: activeFilter,
@@ -266,10 +289,10 @@ const RentalBlocksPage = () => {
   const hasActiveFilters =
     debouncedSearch ||
     activeFilter !== true || // Default is active=true
-    selectedKategori ||
-    selectedFastighet ||
-    selectedDistrikt ||
-    selectedOrsak ||
+    selectedKategorier.length > 0 ||
+    selectedFastigheter.length > 0 ||
+    selectedDistrikter.length > 0 ||
+    selectedOrsaker.length > 0 ||
     startDatum ||
     slutDatum
 
@@ -337,40 +360,40 @@ const RentalBlocksPage = () => {
                 </SelectContent>
               </Select>
 
-              <FilterDropdown
+              <MultiSelectFilterDropdown
                 options={kategoriOptions.map((o) => ({ label: o, value: o }))}
-                selectedValue={selectedKategori || null}
-                onSelectionChange={setSelectedKategori}
-                placeholder="Kategori..."
+                selectedValues={selectedKategorier}
+                onSelectionChange={setSelectedKategorier}
+                placeholder="Kategori"
               />
 
-              <SearchFilterDropdown
+              <MultiSelectSearchFilterDropdown
                 searchFn={searchProperties}
-                selectedValue={selectedFastighet || null}
-                onSelectionChange={setSelectedFastighet}
-                placeholder="Fastighet..."
-                searchPlaceholder="Sök fastighet..."
+                selectedValues={selectedFastigheter}
+                onSelectionChange={setSelectedFastigheter}
+                placeholder="Fastighet"
+                searchPlaceholder="Sök fastighet"
               />
 
-              <FilterDropdown
+              <MultiSelectFilterDropdown
                 options={distriktOptions.map((o) => ({ label: o, value: o }))}
-                selectedValue={selectedDistrikt || null}
-                onSelectionChange={setSelectedDistrikt}
-                placeholder="Distrikt..."
+                selectedValues={selectedDistrikter}
+                onSelectionChange={setSelectedDistrikter}
+                placeholder="Distrikt"
               />
 
-              <FilterDropdown
+              <MultiSelectFilterDropdown
                 options={
                   blockReasons?.map((br) => ({
                     label: br.caption,
                     value: br.caption,
                   })) || []
                 }
-                selectedValue={selectedOrsak || null}
-                onSelectionChange={setSelectedOrsak}
-                placeholder="Orsak..."
+                selectedValues={selectedOrsaker}
+                onSelectionChange={setSelectedOrsaker}
+                placeholder="Orsak"
                 searchable
-                searchPlaceholder="Sök orsak..."
+                searchPlaceholder="Sök orsak"
               />
 
               <DateRangeFilterDropdown
