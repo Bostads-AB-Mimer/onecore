@@ -22,30 +22,20 @@ export const InvoiceRowSchema = z.object({
   vat: z.number(),
 })
 
-export const InvoiceDeferralSchema = z.object({
-  endDate: z.coerce.date(),
-  reason: z.string(),
-  madeBy: z.string(),
-})
-
 export const InvoicePaymentEventSchema = z.object({
   type: z.string(),
   invoiceId: z.string(),
   matchId: z.number(),
-  amount: z.number(),
+  amount: z.number().min(0),
   paymentDate: z.coerce.date(),
   text: z.string().nullable(),
   // TODO: type these when we know what they are
   transactionSourceCode: z.string(),
-  // Semantic event type from Xledger (e.g. INVOICE, CREDIT_MEMO,
-  // ELECTRONIC_PAYMENT). Null when Xledger doesn't classify the row (e.g. raw
-  // GL adjustments like öresutjämning).
-  slTransactionType: z.string().nullable(),
 })
 
 export const InvoiceSchema = z.object({
   invoiceId: z.string(),
-  leaseIds: z.string().array(),
+  leaseId: z.string(),
   amount: z.number(),
   recipientContactCode: z.string(),
   recipientName: z.string(),
@@ -54,7 +44,7 @@ export const InvoiceSchema = z.object({
   toDate: z.coerce.date(),
   invoiceDate: z.coerce.date(),
   expirationDate: z.coerce.date().optional(),
-  deferral: InvoiceDeferralSchema.optional(),
+  defermentDate: z.coerce.date().optional(),
   debitStatus: z.number(),
   paymentStatus: PaymentStatusSchema,
   transactionType: InvoiceTransactionTypeSchema,
@@ -72,23 +62,8 @@ export const InvoiceSchema = z.object({
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),
   expectedLoss: z.boolean().optional(),
-  matchId: z.number().optional(), // TODO ska denna finnas i Invoice?
-  costCentre: z.string().optional(), // TODO ska denna finnas i Invoice?
-})
-
-// TODO can we consolidate this and InvoiceRowSchema?
-export const RentInvoiceRowSchema = z.object({
-  type: z.enum(['Rent', 'Other']),
-  invoiceNumber: z.string(),
-  text: z.string(),
-  rentType: z.string().nullable(),
-  code: z.string().nullable(),
-  rowType: z.number(),
-  amount: z.number(),
-  reduction: z.number(),
-  vat: z.number(),
-  fromDate: z.coerce.date(),
-  toDate: z.coerce.date(),
-  printGroup: z.string().nullable(),
-  comment: z.string().optional(),
+  totalVat6: z.number().optional(),
+  totalVat12: z.number().optional(),
+  totalVat25: z.number().optional(),
+  totalVat: z.number().optional(),
 })
