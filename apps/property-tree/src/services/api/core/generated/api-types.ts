@@ -259,6 +259,48 @@ export interface paths {
       };
     };
   };
+  "/leases/export": {
+    /**
+     * Export leases to Excel
+     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search */
+          q?: string;
+          /** @description Object types */
+          objectType?: string[];
+          /** @description Contract status filter */
+          status?: string[];
+          /** @description Minimum start date */
+          startDateFrom?: string;
+          /** @description Maximum start date */
+          startDateTo?: string;
+          /** @description Minimum end date */
+          endDateFrom?: string;
+          /** @description Maximum end date */
+          endDateTo?: string;
+          /** @description Property names */
+          property?: string[];
+          /** @description District names */
+          districtNames?: string[];
+        };
+      };
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id
