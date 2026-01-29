@@ -378,16 +378,13 @@ const RentalBlocksPage = () => {
                 onDateChange={setDateRange}
                 placeholder="Datum..."
               />
-            </div>
 
-            {/* Clear all filters button */}
-            {hasActiveFilters && (
-              <div className="flex justify-end">
+              {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   Rensa alla filter
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {isLoading ? (
