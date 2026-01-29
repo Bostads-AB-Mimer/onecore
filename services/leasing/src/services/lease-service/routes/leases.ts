@@ -99,12 +99,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManagerCodes
+   *         name: buildingManager
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager codes (Kvartersvärd)
+   *         description: Building manager names (Kvartersvärd)
    *       - in: query
    *         name: page
    *         schema:
@@ -213,7 +213,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManagerCodes',
+      'buildingManager',
       'page',
       'limit',
       'sortBy',

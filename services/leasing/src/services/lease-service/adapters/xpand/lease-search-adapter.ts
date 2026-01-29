@@ -316,11 +316,11 @@ class LeaseSearchQueryBuilder {
    */
   applyBuildingManagerFilter(): this {
     if (
-      this.params.buildingManagerCodes &&
-      this.params.buildingManagerCodes.length > 0
+      this.params.buildingManager &&
+      this.params.buildingManager.length > 0
     ) {
       this.ensureDistrictJoin()
-      this.query.whereIn('bafen.code', this.params.buildingManagerCodes)
+      this.query.whereIn('bafen.omrade', this.params.buildingManager)
     }
 
     return this

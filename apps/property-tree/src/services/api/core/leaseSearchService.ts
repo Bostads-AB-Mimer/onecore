@@ -23,7 +23,7 @@ export type LeaseSearchQueryParams = {
   buildingCodes?: string[]
   areaCodes?: string[]
   districtNames?: string[]
-  buildingManagerCodes?: string[]
+  buildingManager?: string[]
   sortBy?: 'leaseStartDate' | 'lastDebitDate' | 'leaseId'
   sortOrder?: 'asc' | 'desc'
 }
