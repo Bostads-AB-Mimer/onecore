@@ -9,9 +9,13 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
+  exportLeasesToExcel,
 } from '../adapters/xpand/lease-search-adapter'
-import { exportLeasesToExcel } from '../adapters/xpand/lease-export-adapter'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  setExcelDownloadHeaders,
+} from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 import z from 'zod'
 
@@ -392,18 +396,7 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const buffer = await exportLeasesToExcel(queryParams.data)
-
-      const timestamp = new Date().toISOString().split('T')[0]
-      ctx.set(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      )
-      ctx.set(
-        'Content-Disposition',
-        `attachment; filename="hyreskontrakt-${timestamp}.xlsx"`
-      )
-
-      ctx.status = 200
+      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
       ctx.body = buffer
     } catch (error: unknown) {
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
