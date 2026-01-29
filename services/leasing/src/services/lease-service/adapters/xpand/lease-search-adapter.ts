@@ -1,13 +1,7 @@
 import { Knex } from 'knex'
 import { Context } from 'koa'
 import { leasing, LeaseStatus } from '@onecore/types'
-import {
-  paginateKnex,
-  PaginatedResponse,
-  createExcelExport,
-  formatDateForExcel,
-  joinField,
-} from '@onecore/utilities'
+import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
@@ -585,66 +579,4 @@ export const searchLeases = async (
     ...paginatedResult,
     content: transformedContent,
   }
-}
-
-/** Type for lease with parsed contacts */
-type LeaseWithContacts = Omit<leasing.v1.LeaseSearchResult, 'contacts'> & {
-  contacts: leasing.v1.ContactInfo[]
-}
-
-/**
- * Export leases to Excel (no pagination)
- * Reuses LeaseSearchQueryBuilder with same filters as search
- * Returns Excel buffer for download
- */
-export const exportLeasesToExcel = async (
-  params: leasing.v1.LeaseSearchQueryParams
-): Promise<Buffer> => {
-  const builder = new LeaseSearchQueryBuilder(params)
-  applyAllFilters(builder)
-
-  // Execute without pagination (get all matching rows)
-  const rows = await builder.getQuery()
-
-  // Transform rows
-  const leases: LeaseWithContacts[] = rows.map((row: any) => {
-    const basicData = transformRow(row)
-    const contacts = parseContactsJson(row.contactsJson)
-    return { ...basicData, contacts }
-  })
-
-  return createExcelExport({
-    sheetName: 'Hyreskontrakt',
-    columns: [
-      { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-      { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-      { header: 'Kundnummer', key: 'contactCode', width: 18 },
-      { header: 'E-post', key: 'email', width: 30 },
-      { header: 'Telefon', key: 'phone', width: 15 },
-      { header: 'Objekttyp', key: 'objectType', width: 12 },
-      { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-      { header: 'Adress', key: 'address', width: 35 },
-      { header: 'Fastighet', key: 'property', width: 20 },
-      { header: 'Distrikt', key: 'district', width: 15 },
-      { header: 'Startdatum', key: 'startDate', width: 12 },
-      { header: 'Slutdatum', key: 'endDate', width: 12 },
-      { header: 'Status', key: 'status', width: 15 },
-    ],
-    rowMapper: (lease) => ({
-      leaseId: lease.leaseId,
-      tenantName: joinField(lease.contacts, (c) => c.name),
-      contactCode: joinField(lease.contacts, (c) => c.contactCode),
-      email: joinField(lease.contacts, (c) => c.email),
-      phone: joinField(lease.contacts, (c) => c.phone),
-      objectType: lease.objectTypeCode,
-      leaseType: lease.leaseType,
-      address: lease.address || '',
-      property: lease.property || '',
-      district: lease.districtName || '',
-      startDate: formatDateForExcel(lease.startDate),
-      endDate: formatDateForExcel(lease.lastDebitDate),
-      status: getStatusLabel(lease.status),
-    }),
-    data: leases,
-  })
 }
