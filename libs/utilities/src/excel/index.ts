@@ -108,3 +108,62 @@ export function formatDateForExcel(
   if (!date) return ''
   return new Date(date).toLocaleDateString('sv-SE')
 }
+
+/**
+ * Join array items into a delimited string for Excel export
+ * Filters out null/undefined values before joining
+ *
+ * @example
+ * ```typescript
+ * // Basic usage
+ * joinField(contacts, c => c.name) // "John; Jane; Bob"
+ *
+ * // With custom separator
+ * joinField(tags, t => t.label, ', ') // "urgent, review, pending"
+ * ```
+ *
+ * @param items - Array of items to process
+ * @param accessor - Function to extract the value from each item
+ * @param separator - Delimiter between values (default: '; ')
+ * @returns Joined string or empty string if no valid values
+ */
+export function joinField<T>(
+  items: T[],
+  accessor: (item: T) => string | null | undefined,
+  separator = '; '
+): string {
+  return items
+    .map(accessor)
+    .filter((value): value is string => value != null && value !== '')
+    .join(separator)
+}
+
+/**
+ * Set standard HTTP response headers for Excel file download
+ * Use this in route handlers to ensure consistent download behavior
+ *
+ * @example
+ * ```typescript
+ * const buffer = await exportToExcel(data)
+ * setExcelDownloadHeaders(ctx, 'report')
+ * ctx.body = buffer
+ * ```
+ *
+ * @param ctx - Koa context object
+ * @param filename - Base filename without extension or timestamp
+ */
+export function setExcelDownloadHeaders(
+  ctx: { set: (key: string, value: string) => void; status: number },
+  filename: string
+): void {
+  const timestamp = new Date().toISOString().split('T')[0]
+  ctx.set(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  )
+  ctx.set(
+    'Content-Disposition',
+    `attachment; filename="${filename}-${timestamp}.xlsx"`
+  )
+  ctx.status = 200
+}

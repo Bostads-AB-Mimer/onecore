@@ -3,8 +3,7 @@ import {
   logger,
   generateRouteMetadata,
   buildPaginatedResponse,
-  createExcelExport,
-  formatDateForExcel,
+  setExcelDownloadHeaders,
 } from '@onecore/utilities'
 import { z } from 'zod'
 
@@ -19,7 +18,7 @@ import {
   getRentalBlocksByRentalId,
   getAllRentalBlocks,
   searchRentalBlocks,
-  getAllRentalBlocksForExport,
+  exportRentalBlocksToExcel,
   getDistinctBlockReasons,
 } from '../adapters/residence-adapter'
 import {
@@ -579,54 +578,8 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const allBlocks = await getAllRentalBlocksForExport(
-          ctx.request.parsedQuery
-        )
-
-        const buffer = await createExcelExport({
-          sheetName: 'Spärrlista',
-          columns: [
-            { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
-            { header: 'Kategori', key: 'kategori', width: 12 },
-            { header: 'Typ', key: 'typ', width: 15 },
-            { header: 'Adress', key: 'adress', width: 30 },
-            { header: 'Fastighet', key: 'fastighet', width: 15 },
-            { header: 'Distrikt', key: 'distrikt', width: 15 },
-            { header: 'Orsak', key: 'orsak', width: 35 },
-            { header: 'Startdatum', key: 'startdatum', width: 12 },
-            { header: 'Slutdatum', key: 'slutdatum', width: 12 },
-            { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
-          ],
-          data: allBlocks,
-          rowMapper: (block: (typeof allBlocks)[number]) => ({
-            hyresobjekt:
-              block.rentalObject?.rentalId || block.rentalObject?.code || '',
-            kategori: block.rentalObject?.category || '',
-            typ: block.rentalObject?.type || '',
-            adress: block.rentalObject?.address || '',
-            fastighet: block.property?.name || '',
-            distrikt: block.distrikt || '',
-            orsak: block.blockReason || '',
-            startdatum: formatDateForExcel(block.fromDate),
-            slutdatum: formatDateForExcel(block.toDate),
-            hyra: block.rentalObject?.yearlyRent
-              ? Math.round(block.rentalObject.yearlyRent)
-              : null,
-          }),
-        })
-
-        // Set response headers for file download
-        const timestamp = new Date().toISOString().split('T')[0]
-        ctx.set(
-          'Content-Type',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        ctx.set(
-          'Content-Disposition',
-          `attachment; filename="sparrlista-${timestamp}.xlsx"`
-        )
-
-        ctx.status = 200
+        const buffer = await exportRentalBlocksToExcel(ctx.request.parsedQuery)
+        setExcelDownloadHeaders(ctx, 'sparrlista')
         ctx.body = buffer
       } catch (err) {
         logger.error(err, 'Error exporting rental blocks to Excel')
