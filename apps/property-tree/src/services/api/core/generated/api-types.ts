@@ -225,8 +225,8 @@ export interface paths {
           areaCodes?: string[];
           /** @description District names */
           districtNames?: string[];
-          /** @description Building manager codes (Kvartersvärd) */
-          buildingManagerCodes?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
           /** @description Page number */
           page?: number;
           /** @description Items per page */
