@@ -3,6 +3,7 @@ import { CommandPalette } from '../CommandPalette'
 import SidebarNavigation from '../navigation/SidebarNavigation'
 import { SidebarInset, SidebarProvider, useSidebar } from '../ui/Sidebar'
 import { Toaster } from '../ui/Toaster'
+import { PageTitle } from './PageTitle'
 
 import { NavigationBar } from '../NavigationBar'
 
@@ -23,6 +24,7 @@ function AppLayoutContent() {
 
   return (
     <div className="flex-1 min-h-screen bg-gradient-to-b from-white to-secondary">
+      <PageTitle />
       {/* Header */}
       {!isDashboard && <NavigationBar onMenuClick={toggleSidebar} />}
       <div
