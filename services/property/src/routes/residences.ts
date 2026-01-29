@@ -584,56 +584,64 @@ export const routes = (router: KoaRouter) => {
         const { distrikt, active, blockReason, kategori } =
           ctx.request.parsedQuery
 
-        const buffer = await createExcelFromPaginated<RentalBlockWithRentalObject>(
-          async (page: number, limit: number) => {
-            const offset = (page - 1) * limit
-            const { data, totalCount } = await searchRentalBlocks({
-              distrikt,
-              active,
-              blockReason,
-              kategori,
-              limit,
-              offset,
-            })
-            // Wrap in PaginatedResponse format for the utility
-            return {
-              content: data,
-              _meta: { totalRecords: totalCount, page, limit, count: data.length },
-              _links: [],
+        const buffer =
+          await createExcelFromPaginated<RentalBlockWithRentalObject>(
+            async (page: number, limit: number) => {
+              const offset = (page - 1) * limit
+              const { data, totalCount } = await searchRentalBlocks({
+                distrikt,
+                active,
+                blockReason,
+                kategori,
+                limit,
+                offset,
+              })
+              // Wrap in PaginatedResponse format for the utility
+              return {
+                content: data,
+                _meta: {
+                  totalRecords: totalCount,
+                  page,
+                  limit,
+                  count: data.length,
+                },
+                _links: [],
+              }
+            },
+            {
+              sheetName: 'Spärrlista',
+              columns: [
+                { header: 'Hyresobjekt', key: 'rentalId', width: 15 },
+                { header: 'Kategori', key: 'category', width: 12 },
+                { header: 'Typ', key: 'type', width: 15 },
+                { header: 'Adress', key: 'address', width: 30 },
+                { header: 'Fastighet', key: 'property', width: 15 },
+                { header: 'Distrikt', key: 'distrikt', width: 15 },
+                { header: 'Orsak', key: 'blockReason', width: 35 },
+                { header: 'Startdatum', key: 'fromDate', width: 12 },
+                { header: 'Slutdatum', key: 'toDate', width: 12 },
+                { header: 'Årshyra (kr/år)', key: 'yearlyRent', width: 15 },
+              ],
+              rowMapper: (block: RentalBlockWithRentalObject) => ({
+                rentalId:
+                  block.rentalObject?.rentalId ||
+                  block.rentalObject?.code ||
+                  '',
+                category: block.rentalObject?.category || '',
+                type: block.rentalObject?.type || '',
+                address: block.rentalObject?.address || '',
+                property: block.property?.name || '',
+                distrikt: block.distrikt || '',
+                blockReason: block.blockReason || '',
+                fromDate: formatDateForExcel(block.fromDate),
+                toDate: formatDateForExcel(block.toDate),
+                yearlyRent: block.rentalObject?.yearlyRent
+                  ? Math.round(block.rentalObject.yearlyRent)
+                  : null,
+              }),
+              batchSize: 500,
             }
-          },
-          {
-            sheetName: 'Spärrlista',
-            columns: [
-              { header: 'Hyresobjekt', key: 'rentalId', width: 15 },
-              { header: 'Kategori', key: 'category', width: 12 },
-              { header: 'Typ', key: 'type', width: 15 },
-              { header: 'Adress', key: 'address', width: 30 },
-              { header: 'Fastighet', key: 'property', width: 15 },
-              { header: 'Distrikt', key: 'distrikt', width: 15 },
-              { header: 'Orsak', key: 'blockReason', width: 35 },
-              { header: 'Startdatum', key: 'fromDate', width: 12 },
-              { header: 'Slutdatum', key: 'toDate', width: 12 },
-              { header: 'Årshyra (kr/år)', key: 'yearlyRent', width: 15 },
-            ],
-            rowMapper: (block: RentalBlockWithRentalObject) => ({
-              rentalId:
-                block.rentalObject?.rentalId || block.rentalObject?.code || '',
-              category: block.rentalObject?.category || '',
-              type: block.rentalObject?.type || '',
-              address: block.rentalObject?.address || '',
-              property: block.property?.name || '',
-              distrikt: block.distrikt || '',
-              blockReason: block.blockReason || '',
-              fromDate: formatDateForExcel(block.fromDate),
-              toDate: formatDateForExcel(block.toDate),
-              yearlyRent: block.rentalObject?.yearlyRent
-                ? Math.round(block.rentalObject.yearlyRent)
-                : null,
-            }),
-            batchSize: 500,
-          }
-        )
+          )
 
         setExcelDownloadHeaders(ctx, 'sparrlista')
         ctx.body = buffer
