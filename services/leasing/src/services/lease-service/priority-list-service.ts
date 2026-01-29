@@ -80,6 +80,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
       priority: null,
     }
   }
+
   const activeParkingspaceContracts = applicant.parkingSpaceContracts?.filter(
     (l) => l.status === LeaseStatus.Current || l.status === LeaseStatus.Upcoming
   )
@@ -126,7 +127,7 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 
   //Applicant has 1 active contract for parking space and wishes to replace current parking space
   if (
-    applicant.parkingSpaceContracts?.length === 1 &&
+    activeParkingspaceContracts?.length === 1 &&
     applicant.applicationType === 'Replace'
   ) {
     logger.info(
