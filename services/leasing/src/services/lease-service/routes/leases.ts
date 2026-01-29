@@ -398,59 +398,60 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Create Excel using streaming - fetches pages incrementally
-      const buffer = await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
-        (page: number, limit: number) => {
-          // Inject page/limit into ctx.query for paginateKnex
-          const paginatedCtx = {
-            ...ctx,
-            query: { ...ctx.query, page: String(page), limit: String(limit) },
-          } as typeof ctx
-          return searchLeases(queryParams.data, paginatedCtx)
-        },
-        {
-          sheetName: 'Hyreskontrakt',
-          columns: [
-            { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-            { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-            { header: 'Kundnummer', key: 'contactCode', width: 18 },
-            { header: 'E-post', key: 'email', width: 30 },
-            { header: 'Telefon', key: 'phone', width: 15 },
-            { header: 'Objekttyp', key: 'objectType', width: 12 },
-            { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-            { header: 'Adress', key: 'address', width: 35 },
-            { header: 'Fastighet', key: 'property', width: 20 },
-            { header: 'Distrikt', key: 'district', width: 15 },
-            { header: 'Startdatum', key: 'startDate', width: 12 },
-            { header: 'Slutdatum', key: 'endDate', width: 12 },
-            { header: 'Status', key: 'status', width: 15 },
-          ],
-          rowMapper: (lease: leasing.v1.LeaseSearchResult) => {
-            const statusLabels: Record<number, string> = {
-              [LeaseStatus.Current]: 'Pågående',
-              [LeaseStatus.Upcoming]: 'Kommande',
-              [LeaseStatus.AboutToEnd]: 'Avslutas snart',
-              [LeaseStatus.Ended]: 'Avslutat',
-            }
-
-            return {
-              leaseId: lease.leaseId,
-              tenantName: joinField(lease.contacts, (c) => c.name),
-              contactCode: joinField(lease.contacts, (c) => c.contactCode),
-              email: joinField(lease.contacts, (c) => c.email),
-              phone: joinField(lease.contacts, (c) => c.phone),
-              objectType: lease.objectTypeCode,
-              leaseType: lease.leaseType,
-              address: lease.address || '',
-              property: lease.property || '',
-              district: lease.districtName || '',
-              startDate: formatDateForExcel(lease.startDate),
-              endDate: formatDateForExcel(lease.lastDebitDate),
-              status: statusLabels[lease.status] || String(lease.status),
-            }
+      const buffer =
+        await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
+          (page: number, limit: number) => {
+            // Inject page/limit into ctx.query for paginateKnex
+            const paginatedCtx = {
+              ...ctx,
+              query: { ...ctx.query, page: String(page), limit: String(limit) },
+            } as typeof ctx
+            return searchLeases(queryParams.data, paginatedCtx)
           },
-          batchSize: 500,
-        }
-      )
+          {
+            sheetName: 'Hyreskontrakt',
+            columns: [
+              { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+              { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+              { header: 'Kundnummer', key: 'contactCode', width: 18 },
+              { header: 'E-post', key: 'email', width: 30 },
+              { header: 'Telefon', key: 'phone', width: 15 },
+              { header: 'Objekttyp', key: 'objectType', width: 12 },
+              { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
+              { header: 'Adress', key: 'address', width: 35 },
+              { header: 'Fastighet', key: 'property', width: 20 },
+              { header: 'Distrikt', key: 'district', width: 15 },
+              { header: 'Startdatum', key: 'startDate', width: 12 },
+              { header: 'Slutdatum', key: 'endDate', width: 12 },
+              { header: 'Status', key: 'status', width: 15 },
+            ],
+            rowMapper: (lease: leasing.v1.LeaseSearchResult) => {
+              const statusLabels: Record<number, string> = {
+                [LeaseStatus.Current]: 'Pågående',
+                [LeaseStatus.Upcoming]: 'Kommande',
+                [LeaseStatus.AboutToEnd]: 'Avslutas snart',
+                [LeaseStatus.Ended]: 'Avslutat',
+              }
+
+              return {
+                leaseId: lease.leaseId,
+                tenantName: joinField(lease.contacts, (c) => c.name),
+                contactCode: joinField(lease.contacts, (c) => c.contactCode),
+                email: joinField(lease.contacts, (c) => c.email),
+                phone: joinField(lease.contacts, (c) => c.phone),
+                objectType: lease.objectTypeCode,
+                leaseType: lease.leaseType,
+                address: lease.address || '',
+                property: lease.property || '',
+                district: lease.districtName || '',
+                startDate: formatDateForExcel(lease.startDate),
+                endDate: formatDateForExcel(lease.lastDebitDate),
+                status: statusLabels[lease.status] || String(lease.status),
+              }
+            },
+            batchSize: 500,
+          }
+        )
 
       // 3. Set headers and return
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')
