@@ -16,15 +16,16 @@ import {
   SearchFilterOption,
 } from '@/components/ui/MultiSelectSearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
-import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
-import { leaseSearchService } from '@/services/api/core/leaseSearchService'
+import {
+  useLeaseSearch,
+  type LeaseSearchResult,
+} from '@/components/hooks/useLeaseSearch'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import {
   leaseSearchService,
-  type LeaseSearchResult,
   type BuildingManager,
 } from '@/services/api/core/leaseSearchService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
@@ -192,6 +193,7 @@ const LeasesPage = () => {
     isLoading,
     isFetching,
     error,
+    exportToExcel,
   } = useLeaseSearch(
     {
       q: debouncedSearch || undefined,
@@ -233,7 +235,7 @@ const LeasesPage = () => {
 
     setIsExporting(true)
     try {
-      const blob = await leaseSearchService.exportLeasesToExcel({
+      const blob = await exportToExcel({
         q: debouncedSearch || undefined,
         objectType:
           selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
