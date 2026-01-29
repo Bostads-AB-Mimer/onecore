@@ -7,9 +7,10 @@ import {
 import {
   leaseSearchService,
   type LeaseSearchQueryParams,
+  type LeaseSearchResult,
 } from '@/services/api/core/leaseSearchService'
 
-export type { LeaseSearchQueryParams }
+export type { LeaseSearchQueryParams, LeaseSearchResult }
 
 export function useLeaseSearch(
   params: LeaseSearchQueryParams,
@@ -43,11 +44,16 @@ export function useLeaseSearch(
     leaseSearchQuery.data?._meta?.totalRecords,
   ])
 
+  const exportToExcel = (exportParams: LeaseSearchQueryParams) => {
+    return leaseSearchService.exportLeasesToExcel(exportParams)
+  }
+
   return {
     data: leaseSearchQuery.data?.content,
     meta: leaseSearchQuery.data?._meta,
     isLoading: leaseSearchQuery.isLoading,
     isFetching: leaseSearchQuery.isFetching,
     error: leaseSearchQuery.error,
+    exportToExcel,
   }
 }
