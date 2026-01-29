@@ -6,7 +6,10 @@ import {
   getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
-import { searchLeases } from '../adapters/xpand/lease-search-adapter'
+import {
+  searchLeases,
+  getBuildingManagers,
+} from '../adapters/xpand/lease-search-adapter'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 import z from 'zod'
@@ -99,12 +102,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManagerCodes
+   *         name: buildingManager
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager codes (Kvartersvärd)
+   *         description: Building manager names (Kvartersvärd)
    *       - in: query
    *         name: page
    *         schema:
@@ -200,6 +203,26 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
+  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+  router.get('(.*)/leases/building-managers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await getBuildingManagers()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error) {
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching building managers',
+        ...metadata,
+      }
+    }
+  })
+
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
@@ -213,7 +236,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManagerCodes',
+      'buildingManager',
       'page',
       'limit',
       'sortBy',

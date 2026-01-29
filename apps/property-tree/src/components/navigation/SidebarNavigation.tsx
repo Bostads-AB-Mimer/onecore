@@ -4,7 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   Home,
   LayoutGrid,
@@ -39,7 +39,6 @@ export default function SidebarNavigation() {
 }
 
 function SidebarNavigationContent() {
-  const navigate = useNavigate()
   const location = useLocation()
   const { selectionState } = useHierarchicalSelection()
   const { requestExpansion } = useCompanyExpansion()
@@ -77,7 +76,6 @@ function SidebarNavigationContent() {
   }, [selectionState.selectedCompanyId])
 
   const handleFastighetsdataClick = () => {
-    navigate('/properties')
     setIsFastighetsdataExpanded(true)
     setIsForetagExpanded(true)
 
@@ -93,12 +91,14 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/')}
+                asChild
                 isActive={isHomeActive}
                 tooltip="Startsida"
               >
-                <Home />
-                <span>Startsida</span>
+                <Link to="/">
+                  <Home />
+                  <span>Startsida</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -114,13 +114,15 @@ function SidebarNavigationContent() {
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
-                  onClick={handleFastighetsdataClick}
+                  asChild
                   isActive={isPropertiesActive}
                   tooltip="Fastighetsdata"
                 >
-                  <LayoutGrid />
-                  <span>Fastighetsdata</span>
-                  <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  <Link to="/properties" onClick={handleFastighetsdataClick}>
+                    <LayoutGrid />
+                    <span>Fastighetsdata</span>
+                    <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  </Link>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
 
@@ -158,12 +160,14 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/tenants')}
+                asChild
                 isActive={isTenantsActive}
                 tooltip="Kunder"
               >
-                <Contact />
-                <span>Kunder</span>
+                <Link to="/tenants">
+                  <Contact />
+                  <span>Kunder</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -174,12 +178,14 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/rental-blocks')}
+                asChild
                 isActive={isRentalBlocksActive}
                 tooltip="Spärrar"
               >
-                <ShieldX />
-                <span>Spärrar</span>
+                <Link to="/rental-blocks">
+                  <ShieldX />
+                  <span>Spärrar</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -190,12 +196,14 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/leases')}
+                asChild
                 isActive={isLeasesActive}
                 tooltip="Hyreskontrakt"
               >
-                <FileText />
-                <span>Hyreskontrakt</span>
+                <Link to="/leases">
+                  <FileText />
+                  <span>Hyreskontrakt</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -206,12 +214,14 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/components')}
+                asChild
                 isActive={isComponentsActive}
                 tooltip="Administrera Komponenter"
               >
-                <Settings />
-                <span>Administrera Komponenter</span>
+                <Link to="/components">
+                  <Settings />
+                  <span>Administrera Komponenter</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

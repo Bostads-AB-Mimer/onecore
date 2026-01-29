@@ -172,12 +172,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManagerCodes
+   *         name: buildingManager
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager codes (Kvartersvärd)
+   *         description: Building manager names (Kvartersvärd)
    *       - in: query
    *         name: page
    *         schema:
@@ -228,6 +228,56 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+  /**
+   * @swagger
+   * /leases/building-managers:
+   *   get:
+   *     summary: Get all building managers
+   *     tags: [Leases]
+   *     description: Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+   *     responses:
+   *       '200':
+   *         description: List of building managers
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       name:
+   *                         type: string
+   *                       district:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('/leases/building-managers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.getBuildingManagers()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching building managers')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching building managers',
+        ...metadata,
+      }
+    }
+  })
+
   router.get('/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 

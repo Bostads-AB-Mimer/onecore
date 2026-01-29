@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Company } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
@@ -13,7 +13,6 @@ interface CompanyNavigationProps {
 }
 
 export function CompanyNavigation({ company }: CompanyNavigationProps) {
-  const navigate = useNavigate()
   const location = useLocation()
   const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
   const { expandedCompanyCodes } = useCompanyExpansion()
@@ -45,16 +44,18 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   return (
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton
-        onClick={() => {
-          setIsExpanded(!isExpanded)
-          navigate(`/companies/${company.id}`)
-        }}
+        asChild
         tooltip={company.name}
         isActive={isDirectlySelected}
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
-        <Building2 />
-        <span>{company.name.replace('** TEST **', '')}</span>
+        <Link
+          to={`/companies/${company.id}`}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <Building2 />
+          <span>{company.name.replace('** TEST **', '')}</span>
+        </Link>
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">

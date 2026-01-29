@@ -225,8 +225,8 @@ export interface paths {
           areaCodes?: string[];
           /** @description District names */
           districtNames?: string[];
-          /** @description Building manager codes (Kvartersvärd) */
-          buildingManagerCodes?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
           /** @description Page number */
           page?: number;
           /** @description Items per page */
@@ -251,6 +251,32 @@ export interface paths {
         /** @description Invalid query parameters */
         400: {
           content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/building-managers": {
+    /**
+     * Get all building managers
+     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+     */
+    get: {
+      responses: {
+        /** @description List of building managers */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  code?: string;
+                  name?: string;
+                  district?: string;
+                }[];
+            };
+          };
         };
         /** @description Internal server error */
         500: {

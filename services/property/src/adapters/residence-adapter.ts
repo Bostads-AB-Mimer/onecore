@@ -124,6 +124,7 @@ export const getResidenceByRentalId = async (rentalId: string) => {
       where: {
         rentalId,
         propertyObject: { objectTypeId: 'balgh' },
+        NOT: { rentalId: { endsWith: 'X' } },
       },
       select: {
         buildingCode: true,
@@ -264,10 +265,10 @@ export const getResidencesByBuildingCode = async (
       buildingCode: {
         contains: buildingCode,
       },
-      NOT: {
-        staircaseId: null,
-        residenceId: null,
-      },
+      NOT: [
+        { staircaseId: null, residenceId: null },
+        { rentalId: { endsWith: 'X' } },
+      ],
       localeId: null,
     },
   })
@@ -294,10 +295,10 @@ export const getResidencesByBuildingCodeAndStaircaseCode = async (
         contains: buildingCode,
       },
       staircaseCode: staircaseCode,
-      NOT: {
-        staircaseId: null,
-        residenceId: null,
-      },
+      NOT: [
+        { staircaseId: null, residenceId: null },
+        { rentalId: { endsWith: 'X' } },
+      ],
       localeId: null,
     },
   })
@@ -377,7 +378,12 @@ export const getResidenceSummariesByBuildingCodeAndStaircaseCode = async (
           contains: buildingCode,
         },
         ...(staircaseCode && { staircaseCode: staircaseCode }),
-        NOT: [{ staircaseId: null }, { residenceId: null }, { rentalId: null }],
+        NOT: [
+          { staircaseId: null },
+          { residenceId: null },
+          { rentalId: null },
+          { rentalId: { endsWith: 'X' } },
+        ],
         localeId: null,
       },
     })
@@ -459,6 +465,7 @@ export const searchResidences = async (
                 [field]: { contains: q },
               })),
             },
+            none: { rentalId: { endsWith: 'X' } },
           },
         },
       },

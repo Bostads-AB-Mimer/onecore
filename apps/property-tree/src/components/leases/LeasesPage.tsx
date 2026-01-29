@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import {
@@ -21,7 +21,11 @@ import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
-import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
+import {
+  leaseSearchService,
+  type LeaseSearchResult,
+  type BuildingManager,
+} from '@/services/api/core/leaseSearchService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
 
 const objectTypeOptions = [
@@ -75,6 +79,10 @@ const LeasesPage = () => {
   )
   const selectedDistricts = useMemo(
     () => searchParams.getAll('district'),
+    [searchParams]
+  )
+  const selectedBuildingManagers = useMemo(
+    () => searchParams.getAll('buildingManager'),
     [searchParams]
   )
   const startDateFrom = useMemo(
@@ -152,6 +160,14 @@ const LeasesPage = () => {
     setSearchParams(newParams)
   }
 
+  const setSelectedBuildingManagers = (vals: string[]) => {
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('buildingManager')
+    vals.forEach((v) => newParams.append('buildingManager', v))
+    newParams.delete('page')
+    setSearchParams(newParams)
+  }
+
   const setStartDateRange = (start: string | null, end: string | null) => {
     updateUrlParams({
       startDateFrom: start || undefined,
@@ -183,6 +199,10 @@ const LeasesPage = () => {
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
+      buildingManager:
+        selectedBuildingManagers.length > 0
+          ? selectedBuildingManagers
+          : undefined,
       startDateFrom: startDateFrom || undefined,
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
@@ -218,6 +238,31 @@ const LeasesPage = () => {
     []
   )
 
+  // Building manager filter: fetch once, filter client-side
+  const buildingManagersRef = useRef<BuildingManager[] | null>(null)
+  const searchBuildingManagers = useCallback(
+    async (query: string): Promise<SearchFilterOption[]> => {
+      if (!buildingManagersRef.current) {
+        buildingManagersRef.current =
+          await leaseSearchService.getBuildingManagers()
+      }
+
+      const q = query.toLowerCase()
+      return buildingManagersRef.current
+        .filter(
+          (bm: BuildingManager) =>
+            bm.name.toLowerCase().includes(q) ||
+            bm.district.toLowerCase().includes(q)
+        )
+        .map((bm: BuildingManager) => ({
+          label: `${bm.name} (${bm.code})`,
+          value: bm.name,
+          description: bm.district,
+        }))
+    },
+    []
+  )
+
   const displayLeases = leases || []
 
   const clearFilters = () => {
@@ -228,6 +273,7 @@ const LeasesPage = () => {
       status: undefined,
       property: undefined,
       district: undefined,
+      buildingManager: undefined,
       startDateFrom: undefined,
       startDateTo: undefined,
       endDateFrom: undefined,
@@ -242,6 +288,7 @@ const LeasesPage = () => {
     selectedStatuses.length > 0 ||
     selectedProperties.length > 0 ||
     selectedDistricts.length > 0 ||
+    selectedBuildingManagers.length > 0 ||
     startDateFrom ||
     startDateTo ||
     endDateFrom ||
@@ -315,6 +362,15 @@ const LeasesPage = () => {
                 placeholder="Distrikt"
               />
 
+              <MultiSelectSearchFilterDropdown
+                searchFn={searchBuildingManagers}
+                minSearchLength={0}
+                selectedValues={selectedBuildingManagers}
+                onSelectionChange={setSelectedBuildingManagers}
+                placeholder="Kvartersvärd"
+                searchPlaceholder="Sök kvartersvärd"
+              />
+
               <DateRangeFilterDropdown
                 startDate={startDateFrom || null}
                 endDate={startDateTo || null}
@@ -328,16 +384,13 @@ const LeasesPage = () => {
                 onDateChange={setEndDateRange}
                 placeholder="Slutdatum"
               />
-            </div>
 
-            {/* Clear all filters button */}
-            {hasActiveFilters && (
-              <div className="flex justify-end">
+              {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   Rensa alla filter
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {isLoading ? (

@@ -58,7 +58,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
 
-  buildingManagerCodes: z
+  buildingManager: z
     .union([z.string(), z.array(z.string())])
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
