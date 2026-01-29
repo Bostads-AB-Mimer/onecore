@@ -10,13 +10,6 @@ import { z } from 'zod'
  * Lease.roomtype has a list of material choices, which also has circular references.
  */
 
-const Address = z.object({
-  street: z.string().optional(),
-  number: z.string(),
-  postalCode: z.string(),
-  city: z.string(),
-})
-
 export const Lease = z.object({
   leaseId: z.string(),
   leaseNumber: z.string(),
@@ -31,7 +24,14 @@ export const Lease = z.object({
       apartmentNumber: z.number(),
       size: z.number(),
       type: z.string(),
-      address: Address.optional(),
+      address: z
+        .object({
+          street: z.string().optional(),
+          number: z.string(),
+          postalCode: z.string(),
+          city: z.string(),
+        })
+        .optional(),
       rentalPropertyType: z.string(),
       additionsIncludedInRent: z.string(),
       otherInfo: z.string().optional(),
@@ -61,7 +61,14 @@ export const Lease = z.object({
       }),
     })
     .optional(),
-  address: Address.optional(),
+  address: z
+    .object({
+      street: z.string().optional(),
+      number: z.string(),
+      postalCode: z.string(),
+      city: z.string(),
+    })
+    .optional(),
   noticeGivenBy: z.string().optional(),
   noticeDate: z.coerce.date().optional(),
   noticeTimeTenant: z.string().optional(),
@@ -87,7 +94,14 @@ export const Lease = z.object({
         fullName: z.string(),
         nationalRegistrationNumber: z.string(),
         birthDate: z.coerce.date(),
-        address: Address.optional(),
+        address: z
+          .object({
+            street: z.string().optional(),
+            number: z.string(),
+            postalCode: z.string(),
+            city: z.string(),
+          })
+          .optional(),
         phoneNumbers: z
           .array(
             z.object({

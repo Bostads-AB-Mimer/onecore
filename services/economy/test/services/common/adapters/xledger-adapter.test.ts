@@ -91,6 +91,99 @@ describe(adapter.getInvoicesByContactCode, () => {
     expect(result).toHaveLength(1)
     expect(() => schemas.v1.InvoiceSchema.array().parse(result)).not.toThrow()
   })
+
+  it('marks invoice as credit when payment reference is set', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          customers: {
+            edges: [{ node: { dbId: 1234 } }],
+          },
+        },
+      })
+
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              {
+                node: {
+                  invoiceNumber: '12345',
+                  invoiceDate: '2025-01-01',
+                  invoiceRemaining: 100,
+                  subledger: {
+                    code: 'code',
+                  },
+                  period: {
+                    fromDate: '2025-01-01',
+                    toDate: '2025-01-01',
+                  },
+                  dueDate: '2025-01-01',
+                  text: null,
+                  headerTransactionSourceDbId: 600,
+                  amount: 100,
+                  paymentReference: '123456',
+                },
+              },
+            ],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P12345')
+    expect(result).toEqual([
+      expect.objectContaining({ credit: { originalInvoiceId: '123456' } }),
+    ])
+  })
+
+  it('marks invoice as credit when invoice number ends with K', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          customers: {
+            edges: [{ node: { dbId: 1234 } }],
+          },
+        },
+      })
+
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              {
+                node: {
+                  invoiceNumber: '12345K',
+                  invoiceDate: '2025-01-01',
+                  invoiceRemaining: 100,
+                  subledger: {
+                    code: 'code',
+                  },
+                  period: {
+                    fromDate: '2025-01-01',
+                    toDate: '2025-01-01',
+                  },
+                  dueDate: '2025-01-01',
+                  text: null,
+                  headerTransactionSourceDbId: 600,
+                  amount: 100,
+                },
+              },
+            ],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P12345')
+    expect(result).toEqual([
+      expect.objectContaining({ credit: { originalInvoiceId: '12345' } }),
+    ])
+  })
 })
 
 describe(adapter.getInvoicePaymentEvents, () => {

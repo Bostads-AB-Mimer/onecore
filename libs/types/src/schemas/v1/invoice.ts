@@ -50,6 +50,7 @@ export const InvoiceSchema = z.object({
   toDate: z.coerce.date(),
   invoiceDate: z.coerce.date(),
   expirationDate: z.coerce.date().optional(),
+  defermentDate: z.coerce.date().optional(),
   debitStatus: z.number(),
   paymentStatus: PaymentStatusSchema,
   transactionType: InvoiceTransactionTypeSchema,
@@ -63,4 +64,5 @@ export const InvoiceSchema = z.object({
   invoiceRows: z.array(InvoiceRowSchema),
   invoiceFileUrl: z.string().optional(),
   remainingAmount: z.number().optional(),
+  credit: z.object({ originalInvoiceId: z.string() }).nullable(),
 })

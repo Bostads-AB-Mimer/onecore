@@ -33,6 +33,7 @@ const xledgerInvoiceFactory = Factory.define<InvoiceWithMatchId>(
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: null,
   })
 )
 

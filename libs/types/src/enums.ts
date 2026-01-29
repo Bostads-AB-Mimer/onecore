@@ -46,6 +46,8 @@ enum InvoiceTransactionType {
 enum PaymentStatus {
   Paid = 1,
   Unpaid = 2,
+  PartlyPaid = 3,
+  Overdue = 4,
 }
 
 enum ListingStatus {
