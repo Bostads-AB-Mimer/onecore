@@ -1,10 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { map } from 'lodash'
-import {
-  logger,
-  createExcelExport,
-  formatDateForExcel,
-} from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
@@ -1581,87 +1577,6 @@ export const searchRentalBlocks = async (
     logger.error({ err }, 'residence-adapter.searchRentalBlocks')
     throw err
   }
-}
-
-export type ExportRentalBlocksOptions = RentalBlockFilterOptions
-
-export const getAllRentalBlocksForExport = async (
-  options: ExportRentalBlocksOptions
-) => {
-  try {
-    // Fetch rental blocks using raw SQL with explicit JOINs
-    const rawBlocks = await fetchRentalBlocksRaw(options)
-
-    // Get unique rental IDs for fetching rent data
-    const uniqueRentalIds = [
-      ...new Set(
-        rawBlocks
-          .map((rb) => rb.rentalId?.trim())
-          .filter((id): id is string => !!id)
-      ),
-    ]
-
-    // Fetch rent data using batched queries
-    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
-
-    // Transform raw rows to API response format
-    const transformedBlocks = rawBlocks.map((row) => {
-      const rentalId = row.rentalId?.trim()
-      const rentRows = rentalId ? rentByRentalId.get(rentalId) || [] : []
-      return transformRawRentalBlockRow(row, rentRows)
-    })
-
-    return sortRentalBlocksByFutureThenActive(transformedBlocks)
-  } catch (err) {
-    logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
-    throw err
-  }
-}
-
-/** Type for rental block export data */
-type RentalBlockExportItem = Awaited<
-  ReturnType<typeof getAllRentalBlocksForExport>
->[number]
-
-/**
- * Export rental blocks to Excel
- * Fetches all matching blocks and generates Excel buffer
- */
-export const exportRentalBlocksToExcel = async (
-  options: ExportRentalBlocksOptions
-): Promise<Buffer> => {
-  const allBlocks = await getAllRentalBlocksForExport(options)
-
-  return createExcelExport<RentalBlockExportItem>({
-    sheetName: 'Spärrlista',
-    columns: [
-      { header: 'Hyresobjekt', key: 'rentalId', width: 15 },
-      { header: 'Kategori', key: 'category', width: 12 },
-      { header: 'Typ', key: 'type', width: 15 },
-      { header: 'Adress', key: 'address', width: 30 },
-      { header: 'Fastighet', key: 'property', width: 15 },
-      { header: 'Distrikt', key: 'distrikt', width: 15 },
-      { header: 'Orsak', key: 'blockReason', width: 35 },
-      { header: 'Startdatum', key: 'fromDate', width: 12 },
-      { header: 'Slutdatum', key: 'toDate', width: 12 },
-      { header: 'Årshyra (kr/år)', key: 'yearlyRent', width: 15 },
-    ],
-    rowMapper: (block) => ({
-      rentalId: block.rentalObject?.rentalId || block.rentalObject?.code || '',
-      category: block.rentalObject?.category || '',
-      type: block.rentalObject?.type || '',
-      address: block.rentalObject?.address || '',
-      property: block.property?.name || '',
-      distrikt: block.distrikt || '',
-      blockReason: block.blockReason || '',
-      fromDate: formatDateForExcel(block.fromDate),
-      toDate: formatDateForExcel(block.toDate),
-      yearlyRent: block.rentalObject?.yearlyRent
-        ? Math.round(block.rentalObject.yearlyRent)
-        : null,
-    }),
-    data: allBlocks,
-  })
 }
 
 export const getAllBlockReasons = async () => {

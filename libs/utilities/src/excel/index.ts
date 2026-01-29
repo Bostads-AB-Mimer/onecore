@@ -3,6 +3,8 @@
  * Uses ExcelJS for spreadsheet generation
  */
 
+import type { PaginatedResponse } from '../pagination'
+
 export interface ExcelColumn {
   /** Column header text displayed in first row */
   header: string
@@ -166,4 +168,107 @@ export function setExcelDownloadHeaders(
     `attachment; filename="${filename}-${timestamp}.xlsx"`
   )
   ctx.status = 200
+}
+
+/**
+ * Create Excel export from a paginated endpoint using streaming
+ * Writes rows incrementally as pages are fetched - keeps memory low
+ *
+ * Uses ExcelJS WorkbookWriter which flushes rows to buffer as they're committed,
+ * rather than holding all data in memory.
+ *
+ * @example
+ * ```typescript
+ * const buffer = await createExcelFromPaginated(
+ *   (page, limit) => searchLeases({ ...filters, page, limit }),
+ *   {
+ *     sheetName: 'Hyreskontrakt',
+ *     columns: [
+ *       { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+ *       { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+ *     ],
+ *     rowMapper: (lease) => ({
+ *       leaseId: lease.leaseId,
+ *       tenantName: lease.tenantName,
+ *     }),
+ *     batchSize: 1000,
+ *   }
+ * )
+ * ```
+ *
+ * @param fetcher - Function that fetches a single page (must accept page, limit params)
+ * @param options - Excel export options plus optional batchSize (default: 500)
+ * @returns Buffer containing the Excel file
+ */
+export async function createExcelFromPaginated<T>(
+  fetcher: (page: number, limit: number) => Promise<PaginatedResponse<T>>,
+  options: Omit<ExcelExportOptions<T>, 'data'> & { batchSize?: number }
+): Promise<Buffer> {
+  const {
+    sheetName,
+    columns,
+    rowMapper,
+    headerStyle = { bold: true },
+    batchSize = 500,
+  } = options
+
+  const ExcelJS = await import('exceljs')
+
+  // Create streaming workbook writer (no stream option = uses internal StreamBuf)
+  // useSharedStrings: false saves ~30% memory
+  const workbook = new ExcelJS.default.stream.xlsx.WorkbookWriter({
+    useStyles: true,
+    useSharedStrings: false,
+  })
+
+  const worksheet = workbook.addWorksheet(sheetName)
+
+  // Set up columns
+  worksheet.columns = columns.map((col) => ({
+    header: col.header,
+    key: col.key,
+    width: col.width ?? 15,
+    style: col.style,
+  }))
+
+  // Style header row and commit it (must commit to flush to stream)
+  if (headerStyle.bold) {
+    worksheet.getRow(1).font = { bold: true }
+  }
+  worksheet.getRow(1).commit()
+
+  // Fetch pages and write rows incrementally
+  let page = 1
+  let totalFetched = 0
+
+  while (true) {
+    const response = await fetcher(page, batchSize)
+
+    // Write each row and commit immediately (flushes to stream buffer)
+    for (const item of response.content) {
+      const row = worksheet.addRow(rowMapper(item))
+      row.commit()
+    }
+
+    totalFetched += response.content.length
+
+    // Stop if we've fetched all records or got an empty page
+    if (
+      totalFetched >= response._meta.totalRecords ||
+      response.content.length === 0
+    ) {
+      break
+    }
+    page++
+  }
+
+  // Commit worksheet and workbook (finalizes the stream)
+  worksheet.commit()
+  await workbook.commit()
+
+  // Get buffer from internal StreamBuf
+  // Cast needed because TypeScript types don't include the stream property
+  const stream = (workbook as unknown as { stream: { read: () => Buffer } })
+    .stream
+  return stream.read()
 }
