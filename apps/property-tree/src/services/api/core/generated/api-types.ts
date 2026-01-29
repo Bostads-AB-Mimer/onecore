@@ -259,6 +259,32 @@ export interface paths {
       };
     };
   };
+  "/leases/building-managers": {
+    /**
+     * Get all building managers
+     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+     */
+    get: {
+      responses: {
+        /** @description List of building managers */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  code?: string;
+                  name?: string;
+                  district?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id

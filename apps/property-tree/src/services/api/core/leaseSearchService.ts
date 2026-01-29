@@ -58,4 +58,19 @@ async function search(
   }
 }
 
-export const leaseSearchService = { search }
+export type BuildingManager = {
+  code: string
+  name: string
+  district: string
+}
+
+async function getBuildingManagers(): Promise<BuildingManager[]> {
+  const { data, error } = await GET('/leases/building-managers', {})
+
+  if (error) throw error
+
+  const response = data as { content?: BuildingManager[] }
+  return response.content ?? []
+}
+
+export const leaseSearchService = { search, getBuildingManagers }
