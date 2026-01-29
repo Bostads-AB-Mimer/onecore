@@ -105,6 +105,16 @@ const getLeasesForPropertyId = async (
   return leasesResponse.data.content
 }
 
+// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+const getBuildingManagers = async (): Promise<
+  { code: string; name: string; district: string }[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/building-managers`
+  )
+  return response.data.content
+}
+
 const searchLeases = async (
   queryParams: Record<string, string | string[] | undefined>
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
@@ -786,6 +796,7 @@ export {
   getLeasesForContactCode,
   getLeasesForPropertyId,
   searchLeases,
+  getBuildingManagers,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
   resetWaitingList,

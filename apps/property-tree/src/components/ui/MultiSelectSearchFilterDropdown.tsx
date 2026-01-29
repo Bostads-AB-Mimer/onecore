@@ -8,6 +8,7 @@ import { useDebounce } from '@/components/hooks/useDebounce'
 export interface SearchFilterOption {
   label: string
   value: string
+  description?: string
 }
 
 interface MultiSelectSearchFilterDropdownProps {
@@ -257,13 +258,20 @@ export function MultiSelectSearchFilterDropdown({
                     >
                       <span
                         className={cn(
-                          'flex h-4 w-4 items-center justify-center',
+                          'flex h-4 w-4 shrink-0 items-center justify-center',
                           isSelected ? 'text-primary' : 'text-transparent'
                         )}
                       >
                         <Check className="h-4 w-4" />
                       </span>
-                      {option.label}
+                      <div className="flex flex-col text-left">
+                        <span>{option.label}</span>
+                        {option.description && (
+                          <span className="text-xs text-muted-foreground">
+                            {option.description}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   )
                 })}
