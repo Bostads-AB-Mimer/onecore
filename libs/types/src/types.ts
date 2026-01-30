@@ -18,6 +18,7 @@ import {
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
   InvoiceSchema,
+  LeaseRentRowSchema,
 } from './schemas/v1'
 
 interface Contact {
@@ -324,7 +325,7 @@ interface ParkingSpace {
 interface RentalObject {
   rentalObjectCode: string
   address: string
-  monthlyRent: number
+  rent?: RentalObjectRent
   districtCaption?: string
   districtCode?: string
   propertyCaption?: string
@@ -339,6 +340,22 @@ interface RentalObject {
   boaArea?: number
   isSpecialResidentialArea?: boolean
   isSpecialProperty?: boolean
+}
+
+interface RentalObjectRent {
+  rentalObjectCode: string
+  amount: number
+  vat: number
+  rows: Array<RentalObjectRentRow>
+}
+
+interface RentalObjectRentRow {
+  code: string
+  description: string
+  amount: number
+  vatPercentage: number
+  fromDate?: Date
+  toDate?: Date
 }
 
 interface MaintenanceUnitInfo {
@@ -363,6 +380,7 @@ type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type LeaseRentRow = z.infer<typeof LeaseRentRowSchema>
 
 export type {
   Contact,
@@ -382,6 +400,8 @@ export type {
   InvoiceRow,
   InvoicePaymentEvent,
   RentalObject,
+  RentalObjectRent,
+  RentalObjectRentRow as RentRow,
   ParkingSpace,
   Email,
   Sms,
@@ -404,4 +424,5 @@ export type {
   CommentThread,
   CommentType,
   Comment,
+  LeaseRentRow,
 }

@@ -96,7 +96,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Hyra</Typography>
             <Box>
               <Typography fontWeight="bold">{`${numberFormatter.format(
-                parkingSpaceListing.rentalObject.monthlyRent
+                parkingSpaceListing.rentalObject.rent?.amount ?? 0
               )}/mån`}</Typography>
             </Box>
           </Box>
@@ -106,7 +106,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               <Box>
                 <Typography fontWeight="bold">{`${numberFormatter.format(
                   currency(
-                    parkingSpaceListing.rentalObject.monthlyRent
+                    parkingSpaceListing.rentalObject.rent?.amount ?? 0
                   ).multiply(1.25).value
                 )}/mån`}</Typography>
               </Box>

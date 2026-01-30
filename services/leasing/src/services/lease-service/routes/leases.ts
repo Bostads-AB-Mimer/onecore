@@ -15,7 +15,8 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
-import { TenfastInvoiceRowSchema } from '../adapters/tenfast/schemas'
+import config from '../../../common/config'
+import { toYearMonthString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
@@ -445,7 +446,6 @@ export const routes = (router: KoaRouter) => {
           contactResult.data,
           request.parkingSpaceId,
           new Date(request.fromDate),
-          'PARKING_SPACE',
           request.includeVAT
         )
 
@@ -487,63 +487,101 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/invoice-row:
+   * /leases/{leaseId}/rent-rows/home-insurance:
    *   post:
-   *     summary: Create a invoice row
-   *     description: Create a invoice row.
+   *     summary: Add home insurance rent row to a lease
+   *     description: Add a home insurance rent row. The article, VAT, amount, and label are determined by the service.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: leaseId
    *         required: true
    *         schema:
    *           type: string
    *         description: The ID of the lease.
    *     responses:
    *       201:
-   *         description: Successfully created invoice row.
+   *         description: Successfully added home insurance rent row.
    *       404:
    *         description: Lease not found.
+   *       422:
+   *         description: Home insurance rent row already exists for this lease.
    *       500:
    *         description: Internal server error.
    */
-  const CreateInvoiceRowRequestBodySchema = TenfastInvoiceRowSchema.omit({
-    _id: true,
-  })
+  router.post('(.*)/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
 
-  router.post(
-    '(.*)/leases/:leaseId/invoice-row',
-    parseRequestBody(CreateInvoiceRowRequestBodySchema),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
+    const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
+      ctx.params.leaseId
+    )
 
-      const invoiceRow = ctx.request.body
-
-      const createInvoiceRow = await tenfastAdapter.createInvoiceRow({
-        leaseId: ctx.params.leaseId,
-        invoiceRow: invoiceRow,
-      })
-
-      if (!createInvoiceRow.ok) {
-        ctx.status = 500
+    if (!getCurrentLease.ok) {
+      if (getCurrentLease.err === 'not-found') {
+        ctx.status = 404
         ctx.body = {
-          error: createInvoiceRow.err,
+          error: 'Lease not found',
           ...metadata,
         }
+
+        return
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: getCurrentLease.err,
+          ...metadata,
+        }
+
         return
       }
-
-      ctx.status = 201
-      ctx.body = makeSuccessResponseBody(createInvoiceRow.data, metadata)
     }
-  )
+
+    const existingHomeInsurance = getCurrentLease.data.hyror.find(
+      (row) =>
+        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    )
+
+    if (existingHomeInsurance) {
+      ctx.status = 422
+      ctx.body = {
+        error: 'Home insurance rent row already exists for this lease',
+        ...metadata,
+      }
+
+      return
+    }
+
+    const addHomeInsuranceResult = await tenfastAdapter.createLeaseInvoiceRow({
+      leaseId: ctx.params.leaseId,
+      invoiceRow: {
+        amount: config.tenfast.leaseRentRows.homeInsurance.amount,
+        article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+        label: 'Hemförsäkring', // TODO: Where should label be decided?
+        vat: 0, // TODO: No VAT on insurance?
+        from: toYearMonthString(new Date()), // TODO: From when?
+      },
+    })
+
+    if (!addHomeInsuranceResult.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: addHomeInsuranceResult.err,
+        ...metadata,
+      }
+
+      return
+    }
+
+    ctx.status = 201
+    ctx.body = makeSuccessResponseBody(addHomeInsuranceResult.data, metadata)
+  })
 
   /**
    * @swagger
-   * /leases/{id}/invoice-row/{invoiceRowId}:
+   * /leases/{id}/rent-rows/{rentRowId}:
    *   delete:
-   *     summary: Delete an invoice row
-   *     description: Delete an invoice row.
+   *     summary: Delete a rent row
+   *     description: Delete a rent row.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -553,42 +591,39 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the lease.
    *       - in: path
-   *         name: invoiceRowId
+   *         name: rentRowId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the invoice row.
+   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Successfully deleted invoice row.
+   *         description: Successfully deleted rent row.
    *       404:
    *         description: Lease not found.
    *       500:
    *         description: Internal server error.
    */
-  router.delete(
-    '(.*)/leases/:leaseId/invoice-row/:invoiceRowId',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
+  router.delete('(.*)/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
 
-      const deleteInvoiceRow = await tenfastAdapter.deleteInvoiceRow({
-        leaseId: ctx.params.leaseId,
-        invoiceRowId: ctx.params.invoiceRowId,
-      })
+    const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
+      leaseId: ctx.params.leaseId,
+      invoiceRowId: ctx.params.rentRowId,
+    })
 
-      if (!deleteInvoiceRow.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: deleteInvoiceRow.err,
-          ...metadata,
-        }
-        return
+    if (!deleteLeaseInvoiceRow.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: deleteLeaseInvoiceRow.err,
+        ...metadata,
       }
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(null, metadata)
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(null, metadata)
+  })
 
   /**
    * @swagger
@@ -701,7 +736,6 @@ export const routes = (router: KoaRouter) => {
     }
   )
 }
-
 async function patchLeasesWithContacts(
   leases: Lease[]
 ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {

@@ -295,4 +295,96 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/rent-rows/home-insurance:
+   *   post:
+   *     summary: Add home insurance rent row to a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       201:
+   *         description: Successfully added home insurance rent row.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.post('/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.addLeaseHomeInsuranceRentRow(
+      ctx.params.leaseId
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 201
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/rent-rows/{rentRowId}:
+   *   delete:
+   *     summary: Delete a rent row for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: rentRowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the rent row.
+   *     responses:
+   *       200:
+   *         description: Rent row deleted.
+   *       500:
+   *         description: Internal server error.
+   */
+
+  router.delete('/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const deleteRentRowResult = await leasingAdapter.deleteLeaseRentRow({
+      leaseId: ctx.params.leaseId,
+      rentRowId: ctx.params.rentRowId,
+    })
+
+    if (!deleteRentRowResult.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: deleteRentRowResult.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: deleteRentRowResult.data,
+      ...metadata,
+    }
+  })
 }
