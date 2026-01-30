@@ -565,6 +565,80 @@ export interface paths {
       };
     };
   };
+  "/contacts/send-bulk-sms": {
+    /**
+     * Send SMS to multiple contacts
+     * @description Send SMS messages to multiple phone numbers
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of phone numbers */
+            phoneNumbers: string[];
+            /** @description SMS message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description SMS sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkSmsResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/contacts/send-bulk-email": {
+    /**
+     * Send email to multiple contacts
+     * @description Send email messages to multiple email addresses
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of email addresses */
+            emails: string[];
+            /** @description Email subject */
+            subject: string;
+            /** @description Email message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Email sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkEmailResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/offers/{offerId}/applicants/{contactCode}": {
     /**
      * Get a specific offer for an applicant
@@ -5555,6 +5629,22 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+    };
+    BulkSmsResult: {
+      /** @description Phone numbers that received SMS */
+      successful: string[];
+      /** @description Invalid phone numbers */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
+    };
+    BulkEmailResult: {
+      /** @description Email addresses that received email */
+      successful: string[];
+      /** @description Invalid email addresses */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
     };
     WorkOrder: {
       accessCaption: string;
