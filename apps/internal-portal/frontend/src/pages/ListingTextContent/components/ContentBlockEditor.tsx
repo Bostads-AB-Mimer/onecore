@@ -114,7 +114,9 @@ export const ContentBlockEditor = ({
           <TextField
             fullWidth
             multiline
-            rows={block.type === 'headline' || block.type === 'subtitle' ? 2 : 4}
+            rows={
+              block.type === 'headline' || block.type === 'subtitle' ? 2 : 4
+            }
             value={block.content}
             onChange={(e) => onUpdate(block.id, 'content', e.target.value)}
             placeholder={

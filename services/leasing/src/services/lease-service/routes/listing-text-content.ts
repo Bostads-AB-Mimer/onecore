@@ -129,7 +129,9 @@ export const routes = (router: KoaRouter) => {
 
     if (!result.ok) {
       // Check if this is a duplicate rental object code error
-      if (result.err.message.includes('already exists for rental object code')) {
+      if (
+        result.err.message.includes('already exists for rental object code')
+      ) {
         ctx.status = 409
         ctx.body = { error: result.err.message, ...metadata }
         return

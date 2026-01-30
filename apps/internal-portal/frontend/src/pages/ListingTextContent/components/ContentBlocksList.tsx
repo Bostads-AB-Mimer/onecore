@@ -16,10 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SortableItem } from './SortableItem'
-import {
-  ContentBlock,
-  ContentBlockEditor,
-} from './ContentBlockEditor'
+import { ContentBlock, ContentBlockEditor } from './ContentBlockEditor'
 import { useState } from 'react'
 
 interface ContentBlocksListProps {
@@ -94,9 +91,7 @@ export const ContentBlocksList = ({
         alignItems="center"
         marginBottom={2}
       >
-        <Typography variant="h6">
-          Textelement ({blocks.length})
-        </Typography>
+        <Typography variant="h6">Textelement ({blocks.length})</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -169,8 +164,8 @@ export const ContentBlocksList = ({
 
       <Box marginTop={2}>
         <Typography variant="caption" color="text.secondary">
-          Tips: Dra i handtaget (⋮⋮) för att ändra ordning på texterna. Ordningen
-          påverkar hur annonsen visas.
+          Tips: Dra i handtaget (⋮⋮) för att ändra ordning på texterna.
+          Ordningen påverkar hur annonsen visas.
         </Typography>
       </Box>
     </Box>

@@ -720,8 +720,12 @@ const createLeaseForNonScoredParkingSpace = async (params: {
 }
 
 type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
-type CreateListingTextContentRequest = z.infer<typeof leasing.v1.CreateListingTextContentRequestSchema>
-type UpdateListingTextContentRequest = z.infer<typeof leasing.v1.UpdateListingTextContentRequestSchema>
+type CreateListingTextContentRequest = z.infer<
+  typeof leasing.v1.CreateListingTextContentRequestSchema
+>
+type UpdateListingTextContentRequest = z.infer<
+  typeof leasing.v1.UpdateListingTextContentRequestSchema
+>
 
 const getListingTextContentByRentalObjectCode = async (
   rentalObjectCode: string

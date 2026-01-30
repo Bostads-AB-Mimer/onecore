@@ -22,8 +22,14 @@ import { registerSchema } from '../../utils/openapi'
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('ListingTextContent', leasing.v1.ListingTextContentSchema)
-  registerSchema('CreateListingTextContentRequest', leasing.v1.CreateListingTextContentRequestSchema)
-  registerSchema('UpdateListingTextContentRequest', leasing.v1.UpdateListingTextContentRequestSchema)
+  registerSchema(
+    'CreateListingTextContentRequest',
+    leasing.v1.CreateListingTextContentRequestSchema
+  )
+  registerSchema(
+    'UpdateListingTextContentRequest',
+    leasing.v1.UpdateListingTextContentRequestSchema
+  )
 
   /**
    * @swagger
@@ -63,9 +69,10 @@ export const routes = (router: KoaRouter) => {
     const { rentalObjectCode } = ctx.params
 
     try {
-      const result = await leasingAdapter.getListingTextContentByRentalObjectCode(
-        rentalObjectCode
-      )
+      const result =
+        await leasingAdapter.getListingTextContentByRentalObjectCode(
+          rentalObjectCode
+        )
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -82,7 +89,10 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (err) {
-      logger.error({ err, metadata }, 'Error fetching listing text content from leasing')
+      logger.error(
+        { err, metadata },
+        'Error fetching listing text content from leasing'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -139,21 +149,28 @@ export const routes = (router: KoaRouter) => {
           if (result.err === 'conflict') {
             ctx.status = 409
             ctx.body = {
-              reason: 'Listing text content already exists for rental object code',
+              reason:
+                'Listing text content already exists for rental object code',
               ...metadata,
             }
             return
           }
 
           ctx.status = 500
-          ctx.body = { error: 'Failed to create listing text content', ...metadata }
+          ctx.body = {
+            error: 'Failed to create listing text content',
+            ...metadata,
+          }
           return
         }
 
         ctx.status = 201
         ctx.body = { content: result.data, ...metadata }
       } catch (err) {
-        logger.error({ err, metadata }, 'Error creating listing text content in leasing')
+        logger.error(
+          { err, metadata },
+          'Error creating listing text content in leasing'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
       }
@@ -227,14 +244,20 @@ export const routes = (router: KoaRouter) => {
           }
 
           ctx.status = 500
-          ctx.body = { error: 'Failed to update listing text content', ...metadata }
+          ctx.body = {
+            error: 'Failed to update listing text content',
+            ...metadata,
+          }
           return
         }
 
         ctx.status = 200
         ctx.body = { content: result.data, ...metadata }
       } catch (err) {
-        logger.error({ err, metadata }, 'Error updating listing text content in leasing')
+        logger.error(
+          { err, metadata },
+          'Error updating listing text content in leasing'
+        )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
       }
@@ -272,7 +295,8 @@ export const routes = (router: KoaRouter) => {
     const { rentalObjectCode } = ctx.params
 
     try {
-      const result = await leasingAdapter.deleteListingTextContent(rentalObjectCode)
+      const result =
+        await leasingAdapter.deleteListingTextContent(rentalObjectCode)
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -282,14 +306,20 @@ export const routes = (router: KoaRouter) => {
         }
 
         ctx.status = 500
-        ctx.body = { error: 'Failed to delete listing text content', ...metadata }
+        ctx.body = {
+          error: 'Failed to delete listing text content',
+          ...metadata,
+        }
         return
       }
 
       ctx.status = 200
       ctx.body = { content: null, ...metadata }
     } catch (err) {
-      logger.error({ err, metadata }, 'Error deleting listing text content in leasing')
+      logger.error(
+        { err, metadata },
+        'Error deleting listing text content in leasing'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

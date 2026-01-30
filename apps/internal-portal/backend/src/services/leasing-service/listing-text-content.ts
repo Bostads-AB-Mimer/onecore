@@ -8,7 +8,10 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalObjectCode } = ctx.params
 
-    const result = await coreAdapter.getListingTextContentByRentalObjectCode(rentalObjectCode)
+    const result =
+      await coreAdapter.getListingTextContentByRentalObjectCode(
+        rentalObjectCode
+      )
 
     if (result.ok) {
       ctx.status = 200
@@ -44,7 +47,7 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 409
         ctx.body = {
           error: 'Listing text content already exists for rental object code',
-          ...metadata
+          ...metadata,
         }
       } else {
         ctx.status = result.statusCode
@@ -58,7 +61,10 @@ export const routes = (router: KoaRouter) => {
     const { rentalObjectCode } = ctx.params
     const params = ctx.request.body
 
-    const result = await coreAdapter.updateListingTextContent(rentalObjectCode, params)
+    const result = await coreAdapter.updateListingTextContent(
+      rentalObjectCode,
+      params
+    )
 
     if (result.ok) {
       ctx.status = 200

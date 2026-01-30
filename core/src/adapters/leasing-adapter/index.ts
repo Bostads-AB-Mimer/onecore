@@ -842,7 +842,10 @@ const updateListingTextContent = async (
   try {
     const response = await axios.put<{
       content: ListingTextContent
-    }>(`${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`, data)
+    }>(
+      `${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`,
+      data
+    )
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
