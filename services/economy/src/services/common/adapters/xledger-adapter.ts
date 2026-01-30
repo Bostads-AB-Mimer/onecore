@@ -129,15 +129,12 @@ const dateToXledgerDateString = (date: Date): string => {
 
 // Extract deferment date from description like "Anstånd till 2025-12-31"
 const getDefermentDate = (
-  description: string | undefined,
-  expirationDate: Date | undefined
+  description: string | undefined
 ): Date | undefined => {
   if (!description) return undefined
   const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
   if (match && match[1]) {
-    const defermentDate = new Date(match[1])
-    if (expirationDate && defermentDate <= expirationDate) return undefined
-    return defermentDate
+    return new Date(match[1])
   }
   return undefined
 }
@@ -201,10 +198,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     fromDate: dateFromString(invoiceData.node.period.fromDate),
     toDate: dateFromString(invoiceData.node.period.toDate),
     expirationDate: dateFromString(invoiceData.node.dueDate),
-    defermentDate: getDefermentDate(
-      invoiceData.node.text,
-      dateFromString(invoiceData.node.dueDate)
-    ),
+    defermentDate: getDefermentDate(invoiceData.node.text),
     debitStatus: 0,
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: randomUUID(),
