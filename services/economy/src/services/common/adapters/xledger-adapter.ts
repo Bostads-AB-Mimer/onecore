@@ -129,12 +129,15 @@ const dateToXledgerDateString = (date: Date): string => {
 
 // Extract deferment date from description like "Anstånd till 2025-12-31"
 const getDefermentDate = (
-  description: string | undefined
+  description: string | undefined,
+  expirationDate: Date | undefined
 ): Date | undefined => {
   if (!description) return undefined
   const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
   if (match && match[1]) {
-    return new Date(match[1])
+    const defermentDate = new Date(match[1])
+    if (expirationDate && defermentDate <= expirationDate) return undefined
+    return defermentDate
   }
   return undefined
 }
@@ -198,7 +201,10 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     fromDate: dateFromString(invoiceData.node.period.fromDate),
     toDate: dateFromString(invoiceData.node.period.toDate),
     expirationDate: dateFromString(invoiceData.node.dueDate),
-    defermentDate: getDefermentDate(invoiceData.node.text),
+    defermentDate: getDefermentDate(
+      invoiceData.node.text,
+      dateFromString(invoiceData.node.dueDate)
+    ),
     debitStatus: 0,
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: randomUUID(),
@@ -222,17 +228,33 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     return match(invoice)
       .with({ remainingAmount: 0 }, () => PaymentStatus.Paid)
       .with(
-        { defermentDate: P.when((date) => now > (date?.getTime() ?? 0)) },
+        {
+          defermentDate: P.when(
+            (date): date is Date => date instanceof Date && now > date.getTime()
+          ),
+        },
         () => PaymentStatus.Overdue
       )
       .with(
         {
-          defermentDate: undefined,
-          expirationDate: P.when((date) => now > (date?.getTime() ?? 0)),
+          defermentDate: P.nullish,
+          expirationDate: P.when(
+            (date): date is Date => date instanceof Date && now > date.getTime()
+          ),
         },
         () => PaymentStatus.Overdue
       )
-      .with({ remainingAmount: P.number.gt(0) }, () => PaymentStatus.PartlyPaid)
+      .with(
+        {
+          remainingAmount: P.when(
+            (remaining): remaining is number =>
+              typeof remaining === 'number' &&
+              remaining > 0 &&
+              remaining < invoice.amount
+          ),
+        },
+        () => PaymentStatus.PartlyPaid
+      )
       .otherwise(() => PaymentStatus.Unpaid)
   }
 
