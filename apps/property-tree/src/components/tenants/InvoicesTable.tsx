@@ -82,13 +82,13 @@ export const InvoicesTable = (props: Props) => {
   const getStatusBadge = (invoice: Invoice): JSX.Element => {
     return match(invoice)
       .with({ credit: { originalInvoiceId: P.string } }, () => (
-        <Badge variant="success">Kredit</Badge>
+        <Badge variant="secondary">Kredit</Badge>
       ))
       .with({ paymentStatus: PaymentStatus.Paid }, () => (
         <Badge variant="success">Betald</Badge>
       ))
       .with({ paymentStatus: PaymentStatus.PartlyPaid }, () => (
-        <Badge variant="secondary">Delvis betald</Badge>
+        <Badge variant="priority-medium">Delvis betald</Badge>
       ))
       .with({ paymentStatus: PaymentStatus.Unpaid }, () => (
         <Badge variant="secondary">Obetald</Badge>

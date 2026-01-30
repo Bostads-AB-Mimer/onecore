@@ -215,25 +215,19 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     credit: getInvoiceCredit(invoiceData.node),
   }
 
+  // TODO? handle overpaid invoices (negative remainingAmount)?
+  // TODO? DO we want a unique status for invoices paid after due date?
   function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
-    const now = Date.now()
+    const now = new Date()
+    const overdueDate = invoice.defermentDate ?? invoice.expirationDate
 
-    // If invoice has a defermentDate, use it for overdue check, else use expirationDate
-    return match(invoice)
-      .with({ remainingAmount: 0 }, () => PaymentStatus.Paid)
-      .with(
-        { defermentDate: P.when((date) => now > (date?.getTime() ?? 0)) },
-        () => PaymentStatus.Overdue
-      )
-      .with(
-        {
-          defermentDate: undefined,
-          expirationDate: P.when((date) => now > (date?.getTime() ?? 0)),
-        },
-        () => PaymentStatus.Overdue
-      )
-      .with({ remainingAmount: P.number.gt(0) }, () => PaymentStatus.PartlyPaid)
-      .otherwise(() => PaymentStatus.Unpaid)
+    //Can remainingAmount be negative? otherwise skip check
+    if (!invoice.remainingAmount || invoice.remainingAmount <= 0)
+      return PaymentStatus.Paid
+    if (overdueDate != null && now > overdueDate) return PaymentStatus.Overdue
+    if (invoice.remainingAmount < invoice.amount)
+      return PaymentStatus.PartlyPaid
+    return PaymentStatus.Unpaid
   }
 
   return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
