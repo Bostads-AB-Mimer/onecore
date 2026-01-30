@@ -33,6 +33,17 @@ interface WorkOrderSms extends Sms {
   externalContractorName?: string
 }
 
+interface BulkSms {
+  phoneNumbers: string[]
+  text: string
+}
+
+interface BulkEmail {
+  emails: string[]
+  subject: string
+  text: string
+}
+
 interface WorkOrderEmail extends Email {
   externalContractorName?: string
 }
@@ -50,4 +61,6 @@ export type {
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,
+  BulkSms,
+  BulkEmail,
 }

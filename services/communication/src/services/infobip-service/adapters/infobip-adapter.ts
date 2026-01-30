@@ -8,6 +8,8 @@ import {
   WorkOrderEmail,
   WorkOrderSms,
   ParkingSpaceAcceptOfferEmail,
+  BulkSms,
+  BulkEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
@@ -256,6 +258,75 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
     }
   } catch (error) {
     logger.error(error, 'Error sending SMS')
+    throw error
+  }
+}
+
+export const sendBulkSms = async (sms: BulkSms) => {
+  logger.info(
+    {
+      recipientCount: sms.phoneNumbers.length,
+      baseUrl: config.infobip.baseUrl,
+    },
+    'Sending bulk SMS'
+  )
+
+  try {
+    const response = await infobip.channels.sms.send({
+      messages: [
+        {
+          destinations: sms.phoneNumbers.map((phone) => ({ to: phone })),
+          from: 'Mimer',
+          text: sms.text,
+        },
+      ],
+    })
+
+    if (response.status === 200) {
+      logger.info(
+        { recipientCount: sms.phoneNumbers.length },
+        'Bulk SMS sent successfully'
+      )
+      return response.data
+    } else {
+      throw new Error(response.body)
+    }
+  } catch (error) {
+    logger.error(error, 'Error sending bulk SMS')
+    throw error
+  }
+}
+
+export const sendBulkEmail = async (email: BulkEmail) => {
+  logger.info(
+    { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
+    'Sending bulk email'
+  )
+
+  try {
+    // Try simple array of email strings
+    const response = await infobip.channels.email.send({
+      to: email.emails,
+      from: 'Bostads Mimer AB <noreply@mimer.nu>',
+      subject: email.subject,
+      text: email.text,
+    })
+
+    if (response.status === 200) {
+      logger.info(
+        { recipientCount: email.emails.length },
+        'Bulk email sent successfully'
+      )
+      return response.data
+    } else {
+      logger.error(
+        { status: response.status, body: response.body },
+        'Bulk email failed'
+      )
+      throw new Error(response.body || `Failed with status ${response.status}`)
+    }
+  } catch (error) {
+    logger.error(error, 'Error sending bulk email')
     throw error
   }
 }
