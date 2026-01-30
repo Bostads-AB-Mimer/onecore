@@ -10,6 +10,7 @@ import {
 import { Input } from '@/components/ui/Input'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
 import {
   MultiSelectSearchFilterDropdown,
@@ -26,7 +27,12 @@ import {
   type LeaseSearchResult,
   type BuildingManager,
 } from '@/services/api/core/leaseSearchService'
+import { tenantService } from '@/services/api/core/tenantService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { BulkSmsModal, SmsRecipient } from '@/components/ui/BulkSmsModal'
+import { BulkEmailModal, EmailRecipient } from '@/components/ui/BulkEmailModal'
+import { useToast } from '@/components/hooks/useToast'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -265,6 +271,176 @@ const LeasesPage = () => {
 
   const displayLeases = leases || []
 
+  // Selection state for bulk actions
+  const [selectedLeaseIds, setSelectedLeaseIds] = useState<string[]>([])
+  const [showSmsModal, setShowSmsModal] = useState(false)
+  const [showEmailModal, setShowEmailModal] = useState(false)
+
+  // Toggle single lease selection
+  const toggleSelection = (leaseId: string) => {
+    setSelectedLeaseIds((prev) =>
+      prev.includes(leaseId)
+        ? prev.filter((id) => id !== leaseId)
+        : [...prev, leaseId]
+    )
+  }
+
+  // Select all / deselect all
+  const toggleSelectAll = () => {
+    if (selectedLeaseIds.length === displayLeases.length) {
+      setSelectedLeaseIds([])
+    } else {
+      setSelectedLeaseIds(displayLeases.map((l) => l.leaseId))
+    }
+  }
+
+  // Clear selection
+  const clearSelection = () => setSelectedLeaseIds([])
+
+  const { toast } = useToast()
+
+  // Handle sending bulk SMS
+  const handleSendSms = async (
+    message: string,
+    validRecipients: SmsRecipient[]
+  ) => {
+    try {
+      const phoneNumbers = validRecipients
+        .map((r) => r.phone)
+        .filter((p): p is string => p !== null)
+
+      const result = await tenantService.sendBulkSms(phoneNumbers, message)
+
+      toast({
+        title: 'SMS skickat',
+        description: `Skickades till ${result.totalSent} mottagare${
+          result.totalInvalid > 0
+            ? `. ${result.totalInvalid} ogiltiga nummer.`
+            : ''
+        }`,
+      })
+
+      clearSelection()
+      setShowSmsModal(false)
+    } catch (error) {
+      let errorMessage = 'Ett fel uppstod'
+
+      if (error && typeof error === 'object') {
+        // Handle structured API error (e.g., TOO_MANY_RECIPIENTS)
+        const apiError = error as { message?: string; reason?: string }
+        if (apiError.message) {
+          errorMessage = apiError.message
+        } else if (apiError.reason) {
+          errorMessage = apiError.reason
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message
+      }
+
+      toast({
+        title: 'Kunde inte skicka SMS',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Handle sending bulk email
+  const handleSendEmail = async (
+    subject: string,
+    body: string,
+    validRecipients: EmailRecipient[]
+  ) => {
+    try {
+      const emails = validRecipients
+        .map((r) => r.email)
+        .filter((e): e is string => e !== null)
+
+      const result = await tenantService.sendBulkEmail(emails, subject, body)
+
+      toast({
+        title: 'E-post skickat',
+        description: `Skickade till ${result.totalSent} mottagare${
+          result.totalInvalid > 0
+            ? `. ${result.totalInvalid} ogiltiga e-postadresser.`
+            : ''
+        }`,
+      })
+
+      clearSelection()
+      setShowEmailModal(false)
+    } catch (error) {
+      let errorMessage = 'Ett fel uppstod'
+
+      if (error && typeof error === 'object') {
+        const apiError = error as { message?: string; reason?: string }
+        if (apiError.message) {
+          errorMessage = apiError.message
+        } else if (apiError.reason) {
+          errorMessage = apiError.reason
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message
+      }
+
+      toast({
+        title: 'Kunde inte skicka e-post',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Derive unique recipients from selected leases
+  const recipients: SmsRecipient[] = useMemo(() => {
+    const selectedLeases = displayLeases.filter((l) =>
+      selectedLeaseIds.includes(l.leaseId)
+    )
+    const contactMap = new Map<
+      string,
+      { id: string; name: string; phone: string | null }
+    >()
+
+    selectedLeases.forEach((lease) => {
+      lease.contacts?.forEach((contact) => {
+        if (!contactMap.has(contact.contactCode)) {
+          contactMap.set(contact.contactCode, {
+            id: contact.contactCode,
+            name: contact.name,
+            phone: contact.phone,
+          })
+        }
+      })
+    })
+
+    return Array.from(contactMap.values())
+  }, [displayLeases, selectedLeaseIds])
+
+  // Derive unique email recipients from selected leases
+  const emailRecipients: EmailRecipient[] = useMemo(() => {
+    const selectedLeases = displayLeases.filter((l) =>
+      selectedLeaseIds.includes(l.leaseId)
+    )
+    const contactMap = new Map<
+      string,
+      { id: string; name: string; email: string | null }
+    >()
+
+    selectedLeases.forEach((lease) => {
+      lease.contacts?.forEach((contact) => {
+        if (!contactMap.has(contact.contactCode)) {
+          contactMap.set(contact.contactCode, {
+            id: contact.contactCode,
+            name: contact.name,
+            email: contact.email,
+          })
+        }
+      })
+    })
+
+    return Array.from(contactMap.values())
+  }, [displayLeases, selectedLeaseIds])
+
   const clearFilters = () => {
     setSearchInput('')
     updateUrlParams({
@@ -409,6 +585,28 @@ const LeasesPage = () => {
             <ResponsiveTable
               data={displayLeases}
               columns={[
+                {
+                  key: 'select',
+                  label: (
+                    <Checkbox
+                      checked={
+                        displayLeases.length > 0 &&
+                        selectedLeaseIds.length === displayLeases.length
+                      }
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Välj alla"
+                    />
+                  ) as unknown as string,
+                  className: 'w-10 px-2',
+                  render: (lease: LeaseSearchResult) => (
+                    <Checkbox
+                      checked={selectedLeaseIds.includes(lease.leaseId)}
+                      onCheckedChange={() => toggleSelection(lease.leaseId)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      aria-label={`Välj ${lease.leaseId}`}
+                    />
+                  ),
+                },
                 {
                   key: 'leaseId',
                   label: 'Kontraktsnummer',
@@ -580,6 +778,27 @@ const LeasesPage = () => {
           />
         </CardContent>
       </Card>
+
+      <BulkActionBar
+        selectedCount={selectedLeaseIds.length}
+        onClear={clearSelection}
+        onSendSms={() => setShowSmsModal(true)}
+        onSendEmail={() => setShowEmailModal(true)}
+      />
+
+      <BulkSmsModal
+        open={showSmsModal}
+        onOpenChange={setShowSmsModal}
+        recipients={recipients}
+        onSend={handleSendSms}
+      />
+
+      <BulkEmailModal
+        open={showEmailModal}
+        onOpenChange={setShowEmailModal}
+        recipients={emailRecipients}
+        onSend={handleSendEmail}
+      />
     </div>
   )
 }

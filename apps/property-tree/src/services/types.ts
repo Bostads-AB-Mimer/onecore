@@ -414,3 +414,7 @@ export interface ReleaseNote {
   category: ReleaseNoteCategory
   pinned?: boolean // Pinned items always appear at the top
 }
+
+// Bulk communication result types
+export type BulkSmsResult = components['schemas']['BulkSmsResult']
+export type BulkEmailResult = components['schemas']['BulkEmailResult']

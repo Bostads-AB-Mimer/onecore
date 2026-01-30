@@ -18,6 +18,7 @@ import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
+import * as communicationAdapter from '../../adapters/communication-adapter'
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
@@ -38,6 +39,22 @@ import {
   Contact,
   mapLease,
 } from './schemas/lease'
+
+const BulkSmsResult = z.object({
+  successful: z.array(z.string()).describe('Phone numbers that received SMS'),
+  invalid: z.array(z.string()).describe('Invalid phone numbers'),
+  totalSent: z.number(),
+  totalInvalid: z.number(),
+})
+
+const BulkEmailResult = z.object({
+  successful: z
+    .array(z.string())
+    .describe('Email addresses that received email'),
+  invalid: z.array(z.string()).describe('Invalid email addresses'),
+  totalSent: z.number(),
+  totalInvalid: z.number(),
+})
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -69,6 +86,8 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
   registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
   registerSchema('Contact', Contact)
+  registerSchema('BulkSmsResult', BulkSmsResult)
+  registerSchema('BulkEmailResult', BulkEmailResult)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -834,6 +853,191 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       content: result.data,
       ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/send-bulk-sms:
+   *   post:
+   *     summary: Send SMS to multiple contacts
+   *     description: Send SMS messages to multiple phone numbers
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - phoneNumbers
+   *               - text
+   *             properties:
+   *               phoneNumbers:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of phone numbers
+   *               text:
+   *                 type: string
+   *                 description: SMS message content
+   *     responses:
+   *       '200':
+   *         description: SMS sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkSmsResult'
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/contacts/send-bulk-sms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const MAX_BULK_SMS_RECIPIENTS = 15000
+    const { phoneNumbers, text } = ctx.request.body as {
+      phoneNumbers: string[]
+      text: string
+    }
+
+    if (!phoneNumbers?.length || !text) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'phoneNumbers and text are required',
+        ...metadata,
+      }
+      return
+    }
+
+    if (phoneNumbers.length > MAX_BULK_SMS_RECIPIENTS) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'TOO_MANY_RECIPIENTS',
+        message: `För många mottagare. Maximalt antal är ${MAX_BULK_SMS_RECIPIENTS.toLocaleString('sv-SE')}.`,
+        maxRecipients: MAX_BULK_SMS_RECIPIENTS,
+        requestedRecipients: phoneNumbers.length,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await communicationAdapter.sendBulkSms({
+        phoneNumbers,
+        text,
+      })
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        logger.error(
+          { error: result.err },
+          `Error sending bulk sms, status: ${result.statusCode}`
+        )
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Unexpected error sending bulk sms')
+      ctx.status = 500
+      ctx.body = { error: 'Unexpected error sending bulk sms', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/send-bulk-email:
+   *   post:
+   *     summary: Send email to multiple contacts
+   *     description: Send email messages to multiple email addresses
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - emails
+   *               - subject
+   *               - text
+   *             properties:
+   *               emails:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of email addresses
+   *               subject:
+   *                 type: string
+   *                 description: Email subject
+   *               text:
+   *                 type: string
+   *                 description: Email message content
+   *     responses:
+   *       '200':
+   *         description: Email sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkEmailResult'
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/contacts/send-bulk-email', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { emails, subject, text } = ctx.request.body as {
+      emails: string[]
+      subject: string
+      text: string
+    }
+
+    if (!emails?.length || !subject || !text) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'emails, subject, and text are required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await communicationAdapter.sendBulkEmail({
+        emails,
+        subject,
+        text,
+      })
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        logger.error(
+          { error: result.err },
+          `Error sending bulk email, status: ${result.statusCode}`
+        )
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Unexpected error sending bulk email')
+      ctx.status = 500
+      ctx.body = { error: 'Unexpected error sending bulk email', ...metadata }
     }
   })
 
