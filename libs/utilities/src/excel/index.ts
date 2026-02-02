@@ -213,10 +213,23 @@ export async function createExcelFromPaginated<T>(
   } = options
 
   const ExcelJS = await import('exceljs')
+  const { PassThrough } = await import('stream')
 
-  // Create streaming workbook writer (no stream option = uses internal StreamBuf)
+  // Create a PassThrough stream to collect the output
+  const passThrough = new PassThrough()
+  const chunks: Buffer[] = []
+  passThrough.on('data', (chunk: Buffer) => chunks.push(chunk))
+
+  // Set up promise to collect final buffer (must be created before writing)
+  const bufferPromise = new Promise<Buffer>((resolve, reject) => {
+    passThrough.on('end', () => resolve(Buffer.concat(chunks)))
+    passThrough.on('error', reject)
+  })
+
+  // Create streaming workbook writer with explicit stream
   // useSharedStrings: false saves ~30% memory
   const workbook = new ExcelJS.default.stream.xlsx.WorkbookWriter({
+    stream: passThrough,
     useStyles: true,
     useSharedStrings: false,
   })
@@ -266,9 +279,6 @@ export async function createExcelFromPaginated<T>(
   worksheet.commit()
   await workbook.commit()
 
-  // Get buffer from internal StreamBuf
-  // Cast needed because TypeScript types don't include the stream property
-  const stream = (workbook as unknown as { stream: { read: () => Buffer } })
-    .stream
-  return stream.read()
+  // Return the collected buffer
+  return bufferPromise
 }
