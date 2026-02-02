@@ -1006,7 +1006,7 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = makeSuccessResponseBody(
       {
-        amount: homeInsuranceRow.amount,
+        monthlyAmount: homeInsuranceRow.amount,
         from: homeInsuranceRow.from ?? undefined,
         to: homeInsuranceRow.to ?? undefined,
       },

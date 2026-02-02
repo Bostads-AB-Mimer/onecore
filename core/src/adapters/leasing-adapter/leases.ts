@@ -14,7 +14,7 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type HomeInsuranceStatus = {
-  amount: number
+  monthlyAmount: number
   from?: string
   to?: string
 }

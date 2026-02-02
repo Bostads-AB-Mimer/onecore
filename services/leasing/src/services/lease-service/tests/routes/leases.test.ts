@@ -8,6 +8,7 @@ import { routes } from '../../index'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
+import { toYearMonthString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 import config from '../../../../common/config'
 
@@ -419,7 +420,7 @@ describe('GET /leases/:leaseId/home-insurance', () => {
 
     expect(result.status).toBe(200)
     expect(result.body.content).toEqual({
-      amount: homeInsuranceRow.amount,
+      monthlyAmount: homeInsuranceRow.amount,
       from: homeInsuranceRow.from,
       to: homeInsuranceRow.to,
     })
