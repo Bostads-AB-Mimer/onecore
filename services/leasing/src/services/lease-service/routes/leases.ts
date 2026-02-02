@@ -379,7 +379,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManagerCodes',
+      'buildingManager',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
@@ -397,16 +397,30 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
+      const statusLabels: Record<number, string> = {
+        [LeaseStatus.Current]: 'Pågående',
+        [LeaseStatus.Upcoming]: 'Kommande',
+        [LeaseStatus.AboutToEnd]: 'Avslutas snart',
+        [LeaseStatus.Ended]: 'Avslutat',
+      }
+
       // Create Excel using streaming - fetches pages incrementally
       const buffer =
         await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
-          (page: number, limit: number) => {
-            // Inject page/limit into ctx.query for paginateKnex
-            const paginatedCtx = {
-              ...ctx,
-              query: { ...ctx.query, page: String(page), limit: String(limit) },
-            } as typeof ctx
-            return searchLeases(queryParams.data, paginatedCtx)
+          async (page: number, limit: number) => {
+            // Temporarily inject page/limit into ctx.query for paginateKnex/searchLeases
+            const originalQuery = ctx.query
+            const newQuery = {
+              ...ctx.query,
+              page: String(page),
+              limit: String(limit),
+            }
+            ctx.query = newQuery
+            try {
+              return await searchLeases(queryParams.data, ctx)
+            } finally {
+              ctx.query = originalQuery
+            }
           },
           {
             sheetName: 'Hyreskontrakt',
@@ -425,30 +439,21 @@ export const routes = (router: KoaRouter) => {
               { header: 'Slutdatum', key: 'endDate', width: 12 },
               { header: 'Status', key: 'status', width: 15 },
             ],
-            rowMapper: (lease: leasing.v1.LeaseSearchResult) => {
-              const statusLabels: Record<number, string> = {
-                [LeaseStatus.Current]: 'Pågående',
-                [LeaseStatus.Upcoming]: 'Kommande',
-                [LeaseStatus.AboutToEnd]: 'Avslutas snart',
-                [LeaseStatus.Ended]: 'Avslutat',
-              }
-
-              return {
-                leaseId: lease.leaseId,
-                tenantName: joinField(lease.contacts, (c) => c.name),
-                contactCode: joinField(lease.contacts, (c) => c.contactCode),
-                email: joinField(lease.contacts, (c) => c.email),
-                phone: joinField(lease.contacts, (c) => c.phone),
-                objectType: lease.objectTypeCode,
-                leaseType: lease.leaseType,
-                address: lease.address || '',
-                property: lease.property || '',
-                district: lease.districtName || '',
-                startDate: formatDateForExcel(lease.startDate),
-                endDate: formatDateForExcel(lease.lastDebitDate),
-                status: statusLabels[lease.status] || String(lease.status),
-              }
-            },
+            rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
+              leaseId: lease.leaseId,
+              tenantName: joinField(lease.contacts, (c) => c.name),
+              contactCode: joinField(lease.contacts, (c) => c.contactCode),
+              email: joinField(lease.contacts, (c) => c.email),
+              phone: joinField(lease.contacts, (c) => c.phone),
+              objectType: lease.objectTypeCode,
+              leaseType: lease.leaseType,
+              address: lease.address || '',
+              property: lease.property || '',
+              district: lease.districtName || '',
+              startDate: formatDateForExcel(lease.startDate),
+              endDate: formatDateForExcel(lease.lastDebitDate),
+              status: statusLabels[lease.status] || String(lease.status),
+            }),
             batchSize: 500,
           }
         )
