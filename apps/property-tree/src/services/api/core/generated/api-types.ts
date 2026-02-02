@@ -285,6 +285,44 @@ export interface paths {
       };
     };
   };
+  "/leases/contacts-by-filters": {
+    /**
+     * Get unique contacts from leases matching filters
+     * @description Returns deduplicated contacts for all leases matching the filter criteria. Used for bulk SMS/email operations.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search */
+          q?: string;
+          /** @description Object types */
+          objectType?: string[];
+          /** @description Contract status filter */
+          status?: string[];
+          startDateFrom?: string;
+          startDateTo?: string;
+          endDateFrom?: string;
+          endDateTo?: string;
+          property?: string[];
+          districtNames?: string[];
+        };
+      };
+      responses: {
+        /** @description List of unique contacts */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ContactInfo"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id

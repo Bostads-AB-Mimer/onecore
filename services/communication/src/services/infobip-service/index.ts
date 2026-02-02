@@ -323,22 +323,6 @@ export const routes = (router: KoaRouter) => {
     try {
       const email = ctx.request.body as Partial<BulkEmail>
 
-      // Check for exceeding recipient limit with specific error message
-      if (
-        Array.isArray(email?.emails) &&
-        email.emails.length > MAX_BULK_EMAIL_RECIPIENTS
-      ) {
-        ctx.status = 400
-        ctx.body = {
-          reason: 'TOO_MANY_RECIPIENTS',
-          message: `För många mottagare. Maximalt antal är ${MAX_BULK_EMAIL_RECIPIENTS.toLocaleString('sv-SE')}.`,
-          maxRecipients: MAX_BULK_EMAIL_RECIPIENTS,
-          requestedRecipients: email.emails.length,
-          ...metadata,
-        }
-        return
-      }
-
       if (!isValidBulkEmail(email)) {
         ctx.status = 400
         ctx.body = {
@@ -458,7 +442,6 @@ export const isValidWorkOrderSms = (sms: any): sms is WorkOrderSms => {
 }
 
 export const MAX_BULK_SMS_RECIPIENTS = 15000
-export const MAX_BULK_EMAIL_RECIPIENTS = 30000
 
 export const isValidBulkSms = (sms: any): sms is BulkSms => {
   return (
@@ -480,7 +463,6 @@ export const isValidBulkEmail = (email: any): email is BulkEmail => {
     email !== null &&
     Array.isArray(email.emails) &&
     email.emails.length > 0 &&
-    email.emails.length <= MAX_BULK_EMAIL_RECIPIENTS &&
     email.emails.every((e: any) => typeof e === 'string') &&
     typeof email.subject === 'string' &&
     email.subject.length > 0 &&

@@ -309,6 +309,143 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/contacts-by-filters:
+   *   get:
+   *     summary: Get unique contacts from leases matching filters
+   *     tags:
+   *       - Lease service
+   *     description: Returns deduplicated contacts for all leases matching the filter criteria. Used for bulk SMS/email operations.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *     responses:
+   *       '200':
+   *         description: List of unique contacts
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ContactInfo'
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/contacts-by-filters', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      // Fetch all leases matching filters with high limit (no pagination)
+      const result = await leasingAdapter.searchLeases({
+        ...ctx.query,
+        limit: '50000',
+        page: '1',
+      })
+
+      if (!result.content) {
+        ctx.status = 200
+        ctx.body = { content: [], ...metadata }
+        return
+      }
+
+      // Deduplicate contacts across all leases
+      const contactMap = new Map<
+        string,
+        { contactCode: string; name: string; phone: string | null; email: string | null }
+      >()
+
+      for (const lease of result.content) {
+        if (lease.contacts) {
+          for (const contact of lease.contacts) {
+            if (!contactMap.has(contact.contactCode)) {
+              contactMap.set(contact.contactCode, {
+                contactCode: contact.contactCode,
+                name: contact.name,
+                phone: contact.phone ?? null,
+                email: contact.email ?? null,
+              })
+            }
+          }
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: Array.from(contactMap.values()),
+        _meta: {
+          totalContacts: contactMap.size,
+          totalLeases: result.content.length,
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching contacts by filters')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching contacts',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get leases with related entities for a specific rental property id
