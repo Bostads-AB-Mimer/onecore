@@ -351,7 +351,7 @@ const LeasesPage = () => {
               variant="outline"
               size="sm"
               onClick={handleExport}
-              disabled={isExporting || displayLeases.length === 0}
+              disabled={isExporting || (meta?.totalRecords ?? 0) === 0}
             >
               <Download className="h-4 w-4 mr-2" />
               {isExporting ? 'Exporterar...' : 'Exportera Excel'}

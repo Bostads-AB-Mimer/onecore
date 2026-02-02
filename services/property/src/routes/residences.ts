@@ -581,18 +581,16 @@ export const routes = (router: KoaRouter) => {
 
       try {
         // Create Excel using streaming - fetches pages incrementally
-        const { distrikt, active, blockReason, kategori } =
-          ctx.request.parsedQuery
+        // Pass all filter params to match search endpoint behavior
+        const { active, ...filterParams } = ctx.request.parsedQuery
 
         const buffer =
           await createExcelFromPaginated<RentalBlockWithRentalObject>(
             async (page: number, limit: number) => {
               const offset = (page - 1) * limit
               const { data, totalCount } = await searchRentalBlocks({
-                distrikt,
+                ...filterParams,
                 active,
-                blockReason,
-                kategori,
                 limit,
                 offset,
               })
