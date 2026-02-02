@@ -7,6 +7,7 @@ import {
   ParkingSpaceOfferSms,
   WorkOrderEmail,
   WorkOrderSms,
+  ParkingSpaceAcceptOfferEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
@@ -18,6 +19,7 @@ const infobip = new Infobip({
   authType: AuthType.ApiKey,
 })
 
+const AcceptParkingSpaceOfferTemplateId = 205000000030455
 const AdditionalParkingSpaceOfferTemplateId = 200000000092027
 const NewParkingSpaceOfferSmsTemplateId = 200000000094113
 const ReplaceParkingSpaceOfferTemplateId = 200000000094058
@@ -74,8 +76,43 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
         email.applicationType === 'Replace'
           ? ReplaceParkingSpaceOfferTemplateId
           : AdditionalParkingSpaceOfferTemplateId,
-      subject: email.subject, // Might be overriden by tempalte
-      text: email.text, // Should be overriden by template, but can be used as fallback
+    })
+    if (response.status === 200) {
+      return response.data
+    } else {
+      throw new Error(response.body)
+    }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendParkingSpaceAcceptOffer = async (
+  email: ParkingSpaceAcceptOfferEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending Parking Space Accept Offer Email'
+  )
+
+  const toField = JSON.stringify({
+    to: email.to,
+    placeholders: {
+      firstName: email.firstName,
+      address: email.address,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      type: email.type,
+      rent: formatToSwedishCurrency(email.rent),
+    },
+  })
+  try {
+    const response = await infobip.channels.email.send({
+      from: 'Bostads Mimer AB <noreply@mimer.nu>',
+      to: toField,
+      templateId: AcceptParkingSpaceOfferTemplateId,
     })
     if (response.status === 200) {
       return response.data
