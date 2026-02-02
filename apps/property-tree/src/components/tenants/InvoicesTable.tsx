@@ -53,13 +53,6 @@ export const InvoicesTable = (props: Props) => {
     return format(dateObj, 'yyyy-MM-dd')
   }
 
-  const formatSource = (source: Invoice['source']) => {
-    return match(source)
-      .with('next', () => 'XLedger')
-      .with('legacy', () => 'Xpand')
-      .exhaustive()
-  }
-
   // Get the effective expiration date (deferment date if applicable, otherwise original)
   const getEffectiveExpirationDate = (
     invoice: Invoice
@@ -318,7 +311,7 @@ export const InvoicesTable = (props: Props) => {
       <>
         {invoice.paidAmount !== undefined && (
           <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-            <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+            <div className="grid grid-cols-2 gap-4 text-sm mb-3">
               <div>
                 <span className="text-muted-foreground block mb-1">
                   Betaldatum:
@@ -328,12 +321,6 @@ export const InvoicesTable = (props: Props) => {
                     events={events}
                     invoiceAmount={invoice.amount}
                   />
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block mb-1">Källa:</span>
-                <span className="font-semibold">
-                  {formatSource(invoice.source)}
                 </span>
               </div>
               <div>
@@ -411,14 +398,6 @@ export const InvoicesTable = (props: Props) => {
         <span className="text-sm">
           {invoice.sentToDebtCollection ? 'Ja' : 'Nej'}
         </span>
-      ),
-      className: 'p-3 text-sm',
-    },
-    {
-      key: 'source',
-      label: 'Källa',
-      render: (invoice) => (
-        <span className="text-sm">{formatSource(invoice.source)}</span>
       ),
       className: 'p-3 text-sm',
     },
@@ -553,10 +532,6 @@ export const InvoicesTable = (props: Props) => {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Inkasso:</span>
             <span>{invoice.sentToDebtCollection ? 'Ja' : 'Nej'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Källa:</span>
-            <span>{formatSource(invoice.source)}</span>
           </div>
         </div>
       </>
