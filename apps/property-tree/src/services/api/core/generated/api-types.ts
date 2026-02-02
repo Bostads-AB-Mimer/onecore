@@ -3482,6 +3482,51 @@ export interface paths {
       };
     };
   };
+  "/inspections/xpand/{inspectionId}/pdf": {
+    /**
+     * Generate PDF protocol for an inspection
+     * @description Generates and returns a PDF protocol for a specific inspection by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to generate a PDF for. */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully generated PDF protocol. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Base64 encoded PDF document */
+                pdfBase64?: string;
+              };
+            };
+          };
+        };
+        /** @description Inspection not found for the specified ID. */
+        404: {
+          content: {
+            "application/json": {
+              /** @example not-found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to generate PDF. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -3539,7 +3584,7 @@ export interface components {
       noticeGivenBy?: string;
       /** Format: date-time */
       noticeDate?: string;
-      noticeTimeTenant?: string;
+      noticeTimeTenant?: string | number;
       /** Format: date-time */
       preferredMoveOutDate?: string;
       /** Format: date-time */
@@ -4342,7 +4387,7 @@ export interface components {
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
-        noticeTimeTenant?: string;
+        noticeTimeTenant?: string | number;
         /** Format: date-time */
         preferredMoveOutDate?: string;
         /** Format: date-time */
@@ -4483,7 +4528,10 @@ export interface components {
       residenceId: string;
       address: string;
       apartmentCode: string;
+      isFurnished: boolean;
       leaseId: string;
+      isTenantPresent: number | null;
+      isNewTenantPresent: number | null;
       masterKeyAccess: string | null;
       hasRemarks: boolean;
       notes: string | null;
@@ -4559,7 +4607,7 @@ export interface components {
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
-        noticeTimeTenant?: string;
+        noticeTimeTenant?: string | number;
         /** Format: date-time */
         preferredMoveOutDate?: string;
         /** Format: date-time */
@@ -4684,7 +4732,10 @@ export interface components {
       residenceId: string;
       address: string;
       apartmentCode: string;
+      isFurnished: boolean;
       leaseId: string;
+      isTenantPresent: number | null;
+      isNewTenantPresent: number | null;
       masterKeyAccess: string | null;
       hasRemarks: boolean;
       notes: string | null;
@@ -4760,7 +4811,7 @@ export interface components {
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
-        noticeTimeTenant?: string;
+        noticeTimeTenant?: string | number;
         /** Format: date-time */
         preferredMoveOutDate?: string;
         /** Format: date-time */
@@ -4885,7 +4936,10 @@ export interface components {
       residenceId: string;
       address: string;
       apartmentCode: string;
+      isFurnished: boolean;
       leaseId: string;
+      isTenantPresent: number | null;
+      isNewTenantPresent: number | null;
       masterKeyAccess: string | null;
       hasRemarks: boolean;
       notes: string | null;
@@ -4961,7 +5015,7 @@ export interface components {
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
-        noticeTimeTenant?: string;
+        noticeTimeTenant?: string | number;
         /** Format: date-time */
         preferredMoveOutDate?: string;
         /** Format: date-time */

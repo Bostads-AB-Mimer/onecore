@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { components } from '@/services/api/core/generated/api-types'
+import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,14 @@ export function InspectionProtocol({
 
   const togglePhotoExpansion = (key: string) => {
     setExpandedPhotos((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const { downloadPdf, isDownloading: isDownloadingPdf } =
+    useInspectionPdfDownload()
+
+  const handleDownloadPdf = async () => {
+    if (!inspection?.id) return
+    await downloadPdf(inspection.id)
   }
 
   const renderHeader = () => (
@@ -321,6 +330,16 @@ export function InspectionProtocol({
 
   const renderContent = () => (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          disabled={!inspection || isDownloadingPdf}
+          className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+        >
+          {isDownloadingPdf ? 'Genererar PDF…' : 'Generera PDF'}
+        </button>
+      </div>
       {renderHeader()}
       <Card>
         <CardContent className="pt-6">

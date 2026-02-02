@@ -53,8 +53,20 @@ export const inspectionService = {
     if (!inspectionResponse.data.content)
       throw new Error('No data returned from API')
 
-    return {
-      ...inspectionResponse.data.content,
-    }
+    return inspectionResponse.data.content
+  },
+
+  async getInspectionPdfBase64(inspectionId: string): Promise<string> {
+    const pdfResponse = await GET(
+      '/inspections/xpand/{inspectionId}/pdf' as any,
+      {
+        params: { path: { inspectionId } },
+      }
+    )
+    if (pdfResponse.error) throw pdfResponse.error
+    if (!(pdfResponse.data as any).content?.pdfBase64)
+      throw new Error('No PDF data returned from API')
+
+    return (pdfResponse.data as any).content.pdfBase64
   },
 }
