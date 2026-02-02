@@ -3580,7 +3580,12 @@ export interface components {
           rentEndDate?: string;
         };
       };
-      address?: definitions["Lease"]["rentalProperty"]["address"];
+      address?: {
+        street?: string;
+        number: string;
+        postalCode: string;
+        city: string;
+      };
       noticeGivenBy?: string;
       /** Format: date-time */
       noticeDate?: string;
@@ -3609,7 +3614,12 @@ export interface components {
           nationalRegistrationNumber: string;
           /** Format: date-time */
           birthDate: string;
-          address?: definitions["Lease"]["rentalProperty"]["address"];
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
           phoneNumbers?: {
               phoneNumber: string;
               type: string;
@@ -4383,7 +4393,12 @@ export interface components {
             rentEndDate?: string;
           };
         };
-        address?: definitions["Inspection"]["lease"]["rentalProperty"]["address"];
+        address?: {
+          street?: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
@@ -4412,7 +4427,12 @@ export interface components {
             nationalRegistrationNumber: string;
             /** Format: date-time */
             birthDate: string;
-            address?: definitions["Inspection"]["lease"]["rentalProperty"]["address"];
+            address?: {
+              street?: string;
+              number: string;
+              postalCode: string;
+              city: string;
+            };
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
@@ -4530,8 +4550,8 @@ export interface components {
       apartmentCode: string;
       isFurnished: boolean;
       leaseId: string;
-      isTenantPresent: number | null;
-      isNewTenantPresent: number | null;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
       masterKeyAccess: string | null;
       hasRemarks: boolean;
       notes: string | null;
@@ -4603,7 +4623,12 @@ export interface components {
             rentEndDate?: string;
           };
         };
-        address?: definitions["DetailedInspection"]["lease"]["rentalProperty"]["address"];
+        address?: {
+          street?: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
@@ -4632,7 +4657,12 @@ export interface components {
             nationalRegistrationNumber: string;
             /** Format: date-time */
             birthDate: string;
-            address?: definitions["DetailedInspection"]["lease"]["rentalProperty"]["address"];
+            address?: {
+              street?: string;
+              number: string;
+              postalCode: string;
+              city: string;
+            };
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
@@ -4734,8 +4764,8 @@ export interface components {
       apartmentCode: string;
       isFurnished: boolean;
       leaseId: string;
-      isTenantPresent: number | null;
-      isNewTenantPresent: number | null;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
       masterKeyAccess: string | null;
       hasRemarks: boolean;
       notes: string | null;
@@ -4807,7 +4837,12 @@ export interface components {
             rentEndDate?: string;
           };
         };
-        address?: definitions["DetailedInspectionRoom"]["lease"]["rentalProperty"]["address"];
+        address?: {
+          street?: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
@@ -4836,7 +4871,12 @@ export interface components {
             nationalRegistrationNumber: string;
             /** Format: date-time */
             birthDate: string;
-            address?: definitions["DetailedInspectionRoom"]["lease"]["rentalProperty"]["address"];
+            address?: {
+              street?: string;
+              number: string;
+              postalCode: string;
+              city: string;
+            };
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
@@ -4938,8 +4978,8 @@ export interface components {
       apartmentCode: string;
       isFurnished: boolean;
       leaseId: string;
-      isTenantPresent: number | null;
-      isNewTenantPresent: number | null;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
       masterKeyAccess: string | null;
       hasRemarks: boolean;
       notes: string | null;
@@ -5011,7 +5051,12 @@ export interface components {
             rentEndDate?: string;
           };
         };
-        address?: definitions["DetailedInspectionRemark"]["lease"]["rentalProperty"]["address"];
+        address?: {
+          street?: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
         noticeGivenBy?: string;
         /** Format: date-time */
         noticeDate?: string;
@@ -5040,7 +5085,12 @@ export interface components {
             nationalRegistrationNumber: string;
             /** Format: date-time */
             birthDate: string;
-            address?: definitions["DetailedInspectionRemark"]["lease"]["rentalProperty"]["address"];
+            address?: {
+              street?: string;
+              number: string;
+              postalCode: string;
+              city: string;
+            };
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
