@@ -13,15 +13,17 @@ import {
  * @param ctx - Koa context
  * @param additionalParams - Additional query parameters to include in pagination links
  * @param defaultLimit - Default number of records per page (default: 20)
+ * @param overrides - Optional explicit page/limit values to override query params
  * @returns Paginated response with content, _meta, and _links
  */
 export async function paginateKnex<T>(
   query: Knex.QueryBuilder,
   ctx: Context,
   additionalParams: Record<string, string> = {},
-  defaultLimit = 20
+  defaultLimit = 20,
+  overrides?: { page?: number; limit?: number }
 ): Promise<PaginatedResponse<T>> {
-  const { limit, offset } = parsePaginationParams(ctx, defaultLimit)
+  const { limit, offset } = parsePaginationParams(ctx, defaultLimit, overrides)
 
   // Run count and data queries in parallel
   const [countResult, rows] = await Promise.all([
@@ -36,5 +38,6 @@ export async function paginateKnex<T>(
     ctx,
     additionalParams,
     defaultLimit,
+    overrides,
   })
 }

@@ -548,7 +548,8 @@ const applyAllFilters = (builder: LeaseSearchQueryBuilder): void => {
  */
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
+  ctx: Context,
+  overrides?: { page?: number; limit?: number }
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
   const builder = new LeaseSearchQueryBuilder(params)
   applyAllFilters(builder)
@@ -564,7 +565,13 @@ export const searchLeases = async (
 
   const startQuery = Date.now()
   // Use pagination utility
-  const paginatedResult = await paginateKnex<any>(query, ctx, {}, params.limit)
+  const paginatedResult = await paginateKnex<any>(
+    query,
+    ctx,
+    {},
+    params.limit,
+    overrides
+  )
   const queryTime = Date.now() - startQuery
   console.log(`Main query time (with contacts): ${queryTime}ms`)
 

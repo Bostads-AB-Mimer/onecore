@@ -28,14 +28,19 @@ export interface PaginatedResponse<T> {
  * Parse pagination parameters from query string
  * @param ctx - Koa context
  * @param defaultLimit - Default number of records per page (default: 20)
+ * @param overrides - Optional explicit page/limit values to override query params
  * @returns Pagination parameters with page, limit, and offset
  */
 export function parsePaginationParams(
   ctx: Context,
-  defaultLimit = 20
+  defaultLimit = 20,
+  overrides?: { page?: number; limit?: number }
 ): PaginationParams {
-  const page = Math.max(1, parseInt(ctx.query.page as string) || 1)
-  const limit = Math.max(1, parseInt(ctx.query.limit as string) || defaultLimit)
+  const page =
+    overrides?.page ?? Math.max(1, parseInt(ctx.query.page as string) || 1)
+  const limit =
+    overrides?.limit ??
+    Math.max(1, parseInt(ctx.query.limit as string) || defaultLimit)
   const offset = (page - 1) * limit
 
   return { page, limit, offset }
@@ -108,14 +113,16 @@ export function buildPaginatedResponse<T>({
   ctx,
   additionalParams = {},
   defaultLimit = 20,
+  overrides,
 }: {
   content: T[]
   totalRecords: number
   ctx: Context
   additionalParams?: Record<string, string>
   defaultLimit?: number
+  overrides?: { page?: number; limit?: number }
 }): PaginatedResponse<T> {
-  const { page, limit } = parsePaginationParams(ctx, defaultLimit)
+  const { page, limit } = parsePaginationParams(ctx, defaultLimit, overrides)
   const totalPages = Math.ceil(totalRecords / limit)
 
   return {

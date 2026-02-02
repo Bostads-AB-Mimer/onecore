@@ -408,19 +408,8 @@ export const routes = (router: KoaRouter) => {
       const buffer =
         await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
           async (page: number, limit: number) => {
-            // Temporarily inject page/limit into ctx.query for paginateKnex/searchLeases
-            const originalQuery = ctx.query
-            const newQuery = {
-              ...ctx.query,
-              page: String(page),
-              limit: String(limit),
-            }
-            ctx.query = newQuery
-            try {
-              return await searchLeases(queryParams.data, ctx)
-            } finally {
-              ctx.query = originalQuery
-            }
+            // Use explicit overrides instead of mutating ctx.query
+            return await searchLeases(queryParams.data, ctx, { page, limit })
           },
           {
             sheetName: 'Hyreskontrakt',
