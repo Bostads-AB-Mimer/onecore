@@ -254,8 +254,12 @@ const LeasesPage = () => {
       const a = document.createElement('a')
       a.href = url
       a.download = `hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      setTimeout(() => {
+        URL.revokeObjectURL(url)
+        a.remove()
+      }, 1000)
     } catch (error) {
       console.error('Export failed:', error)
     } finally {
