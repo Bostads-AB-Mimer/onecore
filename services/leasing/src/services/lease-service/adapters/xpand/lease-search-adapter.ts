@@ -496,7 +496,13 @@ export const parseContactsJson = (
       email: c.email ? String(c.email).trim() : null,
       phone: c.phone ? String(c.phone).trim() : null,
     }))
-  } catch {
+  } catch (e) {
+    console.warn(
+      'parseContactsJson failed:',
+      e,
+      'input:',
+      contactsJson?.substring(0, 100)
+    )
     return []
   }
 }

@@ -9,6 +9,7 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
+  getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
 import {
   logger,
@@ -18,7 +19,7 @@ import {
   joinField,
   formatDateForExcel,
 } from '@onecore/utilities'
-import { leasing, LeaseStatus } from '@onecore/types'
+import { leasing } from '@onecore/types'
 import z from 'zod'
 
 /**
@@ -397,30 +398,19 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const statusLabels: Record<number, string> = {
-        [LeaseStatus.Current]: 'Pågående',
-        [LeaseStatus.Upcoming]: 'Kommande',
-        [LeaseStatus.AboutToEnd]: 'Avslutas snart',
-        [LeaseStatus.Ended]: 'Avslutat',
-      }
-
       // Create Excel using streaming - fetches pages incrementally
       const buffer =
         await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
           async (page: number, limit: number) => {
-            // Temporarily inject page/limit into ctx.query for paginateKnex/searchLeases
-            const originalQuery = ctx.query
-            const newQuery = {
+            // Use a derived context with overridden query instead of mutating ctx.query
+            const paginationCtx = Object.create(ctx)
+            paginationCtx.query = {
               ...ctx.query,
               page: String(page),
               limit: String(limit),
             }
-            ctx.query = newQuery
-            try {
-              return await searchLeases(queryParams.data, ctx)
-            } finally {
-              ctx.query = originalQuery
-            }
+
+            return await searchLeases(queryParams.data, paginationCtx)
           },
           {
             sheetName: 'Hyreskontrakt',
@@ -452,7 +442,7 @@ export const routes = (router: KoaRouter) => {
               district: lease.districtName || '',
               startDate: formatDateForExcel(lease.startDate),
               endDate: formatDateForExcel(lease.lastDebitDate),
-              status: statusLabels[lease.status] || String(lease.status),
+              status: getStatusLabel(lease.status),
             }),
             batchSize: 500,
           }
