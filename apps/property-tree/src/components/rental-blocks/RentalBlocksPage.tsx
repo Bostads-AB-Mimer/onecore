@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { FilterDropdown } from '@/components/ui/FilterDropdown'
+import { ObjectTypeBadge, DistriktBadge } from '@/components/ui/StatusBadges'
 import {
   SearchFilterDropdown,
   SearchFilterOption,
@@ -431,10 +432,7 @@ const RentalBlocksPage = () => {
 
                     if (href) {
                       return (
-                        <Link
-                          to={href}
-                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                        >
+                        <Link to={href} className="font-medium hover:underline">
                           {displayText}
                         </Link>
                       )
@@ -447,8 +445,11 @@ const RentalBlocksPage = () => {
                   key: 'kategori',
                   label: 'Kategori',
                   className: 'px-2',
-                  render: (block: RentalBlockWithRentalObject) =>
-                    block.rentalObject?.category || '-',
+                  render: (block: RentalBlockWithRentalObject) => (
+                    <ObjectTypeBadge
+                      type={block.rentalObject?.category ?? null}
+                    />
+                  ),
                   hideOnMobile: true,
                 },
                 {
@@ -479,8 +480,9 @@ const RentalBlocksPage = () => {
                   key: 'distrikt',
                   label: 'Distrikt',
                   className: 'px-2',
-                  render: (block: RentalBlockWithRentalObject) =>
-                    block.distrikt || '-',
+                  render: (block: RentalBlockWithRentalObject) => (
+                    <DistriktBadge distrikt={block.distrikt ?? null} />
+                  ),
                   hideOnMobile: true,
                 },
                 {
@@ -503,7 +505,7 @@ const RentalBlocksPage = () => {
                   label: 'Slutdatum',
                   className: 'px-2',
                   render: (block: RentalBlockWithRentalObject) =>
-                    block.toDate ? formatISODate(block.toDate) : 'Pågående',
+                    block.toDate ? formatISODate(block.toDate) : '-',
                   hideOnMobile: true,
                 },
                 {
