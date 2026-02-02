@@ -1,9 +1,15 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -529,7 +535,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.getLeaseHomeInsurance(ctx.params.leaseId)
+    const result = await leasingAdapter.getLeaseHomeInsurance(
+      ctx.params.leaseId
+    )
 
     if (!result.ok) {
       if (result.err === 'not-found') {
@@ -553,6 +561,89 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       content: result.data,
       ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance/offer:
+   *   get:
+   *     summary: Get home insurance offer for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Home insurance offer retrieved.
+   *       404:
+   *         description: Lease or rental object not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/leases/:leaseId/home-insurance/offer', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+        includeContacts: false,
+      })
+
+      if (!lease.rentalPropertyId) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Rental object not found',
+          ...metadata,
+        }
+        return
+      }
+
+      const residenceResponse =
+        await propertyBaseAdapter.getResidenceByRentalId(lease.rentalPropertyId)
+
+      if (!residenceResponse.ok) {
+        if (residenceResponse.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Rental object not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: residenceResponse.err,
+          ...metadata,
+        }
+        return
+      }
+
+      const monthlyAmount = getHomeInsuranceOfferMonthlyAmount(
+        residenceResponse.data.type.roomCount
+      )
+
+      if (!monthlyAmount) {
+        throw {
+          error: 'No monthly amount found for residence',
+          residence: JSON.stringify(residenceResponse.data, null, 2),
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ monthlyAmount }, metadata)
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching home insurance offer')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+        ...metadata,
+      }
     }
   })
 
