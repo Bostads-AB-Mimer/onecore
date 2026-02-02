@@ -537,6 +537,10 @@ const getAccountDbId = async (account: string) => {
   }
 }
 
+/*const getTaxRule = (amount: number, vat: number) => {
+  const vatPercentage = vat && Math.round(vat / amount) === 0.25 ? '2' : ''
+}*/
+
 const _createAggregatedTransaction = async (
   account: string,
   postedDate: string,
@@ -637,7 +641,7 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number) => {
+export const getTaxRule = (totalAmount: number, totalVat: number) => {
   const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
 
   switch (vatRate) {
@@ -650,6 +654,31 @@ const getTaxRule = (totalAmount: number, totalVat: number) => {
     default:
       return ''
   }
+}
+
+export const getPeriodInformationFromDateStrings = (
+  invoiceDate: string | null,
+  fromDate: string,
+  toDate: string
+): { periodStart: string; periods: string } => {
+  if (!invoiceDate) {
+    invoiceDate = fromDate
+  }
+
+  const toStart =
+    parseInt(fromDate.substring(5, 7)) - parseInt(invoiceDate.substring(5, 7))
+  const invoiceInterval =
+    parseInt(toDate.substring(5, 7)) - parseInt(fromDate.substring(5, 7))
+
+  const periodInformation = {
+    periodStart: toStart == 0 ? '' : toStart.toString(),
+    periods:
+      invoiceInterval == 0 && toStart == 0
+        ? ''
+        : (invoiceInterval + 1).toString(),
+  }
+
+  return periodInformation
 }
 
 export const getPeriodInformation = (
