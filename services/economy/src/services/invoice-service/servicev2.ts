@@ -1,10 +1,7 @@
 import {
-  createBatch,
   addAccountInformation,
   getAggregatedInvoiceRows,
   getCounterPartCustomers,
-  saveInvoiceRows,
-  saveContacts,
   getContacts as getInvoiceContacts,
   markInvoicesAsImported,
   closeDb as closeInvoiceDb,
@@ -32,9 +29,11 @@ import {
   CUSTOMER_LEDGER_ACCOUNT,
   AggregatedRow,
   LedgerRow,
+  xledgerDateString,
 } from '../../common/types/typesv2'
 import {
   createCustomerLedgerRow,
+  getPeriodInformationFromDateStrings,
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
@@ -82,6 +81,7 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
       if (counterPartCustomer) {
         invoice.totalAccount = counterPartCustomer.totalAccount
         invoice.ledgerAccount = counterPartCustomer.ledgerAccount
+        invoice.counterPartCode = counterPartCustomer.counterPartCode
       } else {
         invoice.totalAccount = TOTAL_ACCOUNT
         invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
@@ -112,6 +112,9 @@ export const createAggregateAccounting = async (
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
   const aggregateAccountingCsv = await createAggregateCsv(invoiceRowsForExport)
   const ledgerAccountingCsv = await createLedgerCsv(invoices)
+
+  console.log('--- AGGREGATE CSV ---')
+  console.log(aggregateAccountingCsv.join('\n'))
 
   return invoiceRowsForExport
 }
@@ -198,8 +201,10 @@ const createRoundOffRow = async (
 
 //#region Aggregate
 const createAggregateCsv = async (invoiceRows: ExportedInvoiceRow[]) => {
-  const aggregateRows = createAggregateRows(invoiceRows)
-  // TODO: Create csv
+  const aggregateRows = await createAggregateRows(invoiceRows)
+  const aggregateRowsCsv = convertToAggregateCsvRows(aggregateRows)
+
+  return aggregateRowsCsv
 }
 
 const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
@@ -358,7 +363,26 @@ export const createAggregatedTotalRow = (
 
   return totalRow
 }
+
+const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
+  const csvRows: string[] = []
+
+  csvRows.push(
+    'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
+  )
+
+  aggregateRows.forEach((row) => {
+    const taxRule = '2'
+    csvRows.push(
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${''};${''};${''};${''};${''};${''};${''};${xledgerDateString('')};${''};${taxRule};${row.amount}`
+    )
+  })
+
+  return csvRows
+}
+
 //#endregion
+
 const createLedgerCsv = async (invoices: InvoiceWithAccounting[]) => {
   const ledgerRows = createLedgerRows(invoices)
   // TODO: Create csv

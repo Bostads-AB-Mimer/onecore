@@ -33,6 +33,7 @@ export type InvoiceWithAccounting = Omit<Invoice, 'invoiceRows'> & {
   invoiceRows: InvoiceRowWithAccounting[]
   ledgerAccount?: string
   totalAccount?: string
+  counterPartCode?: string
 }
 
 export type CounterPartCustomer = {
@@ -54,9 +55,9 @@ export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }
   | { ok: false; err: E; statusCode?: number }
 
-export const xledgerDateString = (date: Date | null | undefined) => {
+export const xledgerDateString = (date: string | null | undefined) => {
   if (date) {
-    return date.toISOString().substring(0, 10).replaceAll('-', '')
+    return date.replaceAll('-', '')
   } else {
     return ''
   }
@@ -118,4 +119,5 @@ export type LedgerRow = {
   recipientContactCode?: string
   voucherDate: string
   voucherNumber: string
+  counterPartCode?: string
 }
