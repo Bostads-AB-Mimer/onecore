@@ -5,6 +5,13 @@ enum LeaseStatus {
   Ended = 3, //Upphört
 }
 
+const LeaseStatusLabel: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Gällande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Upphört',
+}
+
 enum ParkingSpaceType {
   WarmGarage,
   ColdGarage,
@@ -86,6 +93,7 @@ enum WaitingListType {
 
 export {
   LeaseStatus,
+  LeaseStatusLabel,
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,
