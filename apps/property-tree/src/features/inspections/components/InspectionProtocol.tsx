@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { components } from '@/services/api/core/generated/api-types'
-import { inspectionService } from '@/services/api/core/inspectionService'
+import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
 import {
   Dialog,
   DialogContent,
@@ -50,25 +50,12 @@ export function InspectionProtocol({
     setExpandedPhotos((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
+  const { downloadPdf, isDownloading: isDownloadingPdf } =
+    useInspectionPdfDownload()
 
   const handleDownloadPdf = async () => {
     if (!inspection?.id) return
-
-    try {
-      setIsDownloadingPdf(true)
-      const pdfBase64 = await inspectionService.getInspectionPdfBase64(
-        inspection.id
-      )
-      inspectionService.downloadPdfFromBase64(
-        pdfBase64,
-        `besiktningsprotokoll-${inspection.id}.pdf`
-      )
-    } catch (error) {
-      console.error('Failed to download PDF:', error)
-    } finally {
-      setIsDownloadingPdf(false)
-    }
+    await downloadPdf(inspection.id)
   }
 
   const renderHeader = () => (
