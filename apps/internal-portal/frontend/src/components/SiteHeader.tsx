@@ -1,7 +1,7 @@
 import { Stack } from '@mui/material'
 import { Link } from 'react-router-dom'
 
-import mimerLogo from '@libs/assets/images/mimer-logo.png'
+import mimerLogo from '../../assets/mimer-logo.png'
 import SiteMenu from './SiteMenu'
 
 const SiteHeader = () => (
