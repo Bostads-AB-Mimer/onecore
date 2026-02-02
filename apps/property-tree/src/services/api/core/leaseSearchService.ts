@@ -28,6 +28,13 @@ export type LeaseSearchQueryParams = {
   sortOrder?: 'asc' | 'desc'
 }
 
+export type ContactInfo = {
+  contactCode: string
+  name: string
+  phone: string | null
+  email: string | null
+}
+
 async function search(
   params: LeaseSearchQueryParams,
   page = 1,
@@ -73,4 +80,19 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
   return response.content ?? []
 }
 
-export const leaseSearchService = { search, getBuildingManagers }
+async function getContactsByFilters(
+  params: LeaseSearchQueryParams
+): Promise<ContactInfo[]> {
+  const { data, error } = await GET('/leases/contacts-by-filters' as any, {
+    params: {
+      query: params,
+    },
+  })
+
+  if (error) throw error
+
+  const response = data as { content?: ContactInfo[] }
+  return response.content ?? []
+}
+
+export const leaseSearchService = { search, getBuildingManagers, getContactsByFilters }

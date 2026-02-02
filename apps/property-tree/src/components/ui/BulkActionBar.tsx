@@ -7,6 +7,7 @@ interface BulkActionBarProps {
   onClear: () => void
   onSendSms: () => void
   onSendEmail?: () => void
+  isLoading?: boolean
   className?: string
 }
 
@@ -15,6 +16,7 @@ export function BulkActionBar({
   onClear,
   onSendSms,
   onSendEmail,
+  isLoading,
   className,
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null
@@ -29,7 +31,7 @@ export function BulkActionBar({
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
-            {selectedCount} kunder valda
+            {selectedCount.toLocaleString('sv-SE')} valda
           </span>
           <button
             onClick={onClear}
@@ -39,14 +41,22 @@ export function BulkActionBar({
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onSendSms}>
+          <Button
+            variant="outline"
+            onClick={onSendSms}
+            disabled={isLoading}
+          >
             <MessageSquare className="mr-2 h-4 w-4" />
-            Skicka SMS
+            {isLoading ? 'Laddar...' : 'Skicka SMS'}
           </Button>
           {onSendEmail && (
-            <Button variant="outline" onClick={onSendEmail}>
+            <Button
+              variant="outline"
+              onClick={onSendEmail}
+              disabled={isLoading}
+            >
               <Mail className="mr-2 h-4 w-4" />
-              Skicka mejl
+              {isLoading ? 'Laddar...' : 'Skicka mejl'}
             </Button>
           )}
         </div>
