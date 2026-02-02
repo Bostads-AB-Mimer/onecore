@@ -71,7 +71,7 @@ const createLease = async (
     if (parsedResponse.Success === true) {
       return { data: parsedResponse.ObjectDescription, ok: true }
     } else if (parsedResponse.Message == 'Hyresobjekt saknas.') {
-      logger.info(
+      logger.error(
         { objectId: rentalPropertyId, contactId: tenantCode, fromDate },
         'XPand could not create lease for rental object'
       )

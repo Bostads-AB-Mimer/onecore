@@ -6,6 +6,7 @@ import {
   Listing,
   OfferStatus,
   OfferWithRentalObjectCode,
+  ParkingSpaceAcceptOfferEmail,
   RentalObject,
   ReplyToOfferErrorCodes,
   WaitingListType,
@@ -58,6 +59,11 @@ describe('replyToOffer', () => {
       [recipientRole: string, subject: string, message: string],
       any
     >,
+    sendParkingSpaceAcceptOfferEmail: jest.SpyInstance<
+      Promise<any>,
+      [parkingSpaceDetails: ParkingSpaceAcceptOfferEmail],
+      any
+    >,
     closeOfferByAcceptSpy: jest.SpyInstance<
       Promise<AdapterResult<null, 'unknown' | 'offer-not-found'>>,
       [offerId: number],
@@ -66,6 +72,11 @@ describe('replyToOffer', () => {
     getParkingSpaceByCodeSpy: jest.SpyInstance<
       Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>>,
       [rentalObjectCode: string],
+      any
+    >,
+    getContactByContactCodeSpy: jest.SpyInstance<
+      Promise<AdapterResult<any, 'not-found' | 'unknown'>>,
+      [contactCode: string],
       any
     >,
     denyOfferSpy: jest.SpyInstance<
@@ -94,12 +105,21 @@ describe('replyToOffer', () => {
       'sendNotificationToRole'
     )
 
+    sendParkingSpaceAcceptOfferEmail = jest.spyOn(
+      communicationAdapter,
+      'sendParkingSpaceAcceptOfferEmail'
+    )
+
     closeOfferByAcceptSpy = jest.spyOn(leasingAdapter, 'closeOfferByAccept')
     closeOfferByDenySpy = jest.spyOn(leasingAdapter, 'closeOfferByDeny')
     denyOfferSpy = jest.spyOn(replyProcesses, 'denyOffer')
     getParkingSpaceByCodeSpy = jest.spyOn(
       leasingAdapter,
       'getParkingSpaceByCode'
+    )
+    getContactByContactCodeSpy = jest.spyOn(
+      leasingAdapter,
+      'getContactByContactCode'
     )
 
     jest.resetAllMocks()
@@ -183,6 +203,14 @@ describe('replyToOffer', () => {
       resetWaitingListSpy.mockResolvedValue({
         ok: false,
         err: 'not-in-waiting-list',
+      })
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
       })
 
       const result = await replyProcesses.acceptOffer(123)
@@ -275,6 +303,14 @@ describe('replyToOffer', () => {
       sendNotificationToRoleSpy.mockImplementationOnce(() => {
         throw new Error('Email not sent')
       })
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
 
       const result = await replyProcesses.acceptOffer(123)
 
@@ -283,6 +319,150 @@ describe('replyToOffer', () => {
         httpStatus: 202,
         data: null,
       })
+    })
+
+    it('should send accept offer email to applicant', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({ rentalObjectCode: listing.rentalObjectCode })
+          .build(),
+      })
+
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      const contact = factory.contact.build({
+        emailAddress: 'test@example.com',
+        firstName: 'Test',
+      })
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: contact,
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      await replyProcesses.acceptOffer(123)
+
+      expect(sendParkingSpaceAcceptOfferEmail).toHaveBeenCalledTimes(1)
+      expect(sendParkingSpaceAcceptOfferEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: contact.emailAddress,
+          firstName: contact.firstName,
+        })
+      )
+    })
+
+    it('should return success even if getContactByContactCode fails', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({ rentalObjectCode: listing.rentalObjectCode })
+          .build(),
+      })
+
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: false,
+        err: 'not-found',
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+      expect(sendParkingSpaceAcceptOfferEmail).not.toHaveBeenCalled()
+    })
+
+    it('should return success even if sendParkingSpaceAcceptOfferEmail fails', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({ rentalObjectCode: listing.rentalObjectCode })
+          .build(),
+      })
+
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      const contact = factory.contact.build({
+        emailAddress: 'test@example.com',
+        firstName: 'Test',
+      })
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: contact,
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+      expect(sendParkingSpaceAcceptOfferEmail).toHaveBeenCalledTimes(1)
     })
 
     it('calls denyOffer with remaining offers if exists', async () => {
@@ -325,6 +505,15 @@ describe('replyToOffer', () => {
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
+
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
 
       const result = await replyProcesses.acceptOffer(123)
 
@@ -369,6 +558,15 @@ describe('replyToOffer', () => {
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
+
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
 
       const result = await replyProcesses.acceptOffer(123)
 
