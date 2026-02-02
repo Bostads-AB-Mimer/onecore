@@ -13,15 +13,17 @@ describe('generateInspectionProtocolPdf', () => {
 
   describe('input validation', () => {
     it('should throw error when inspection is null', async () => {
-      await expect(
-        generateInspectionProtocolPdf(null as any)
-      ).rejects.toThrow('Invalid inspection: inspection object is null or undefined')
+      await expect(generateInspectionProtocolPdf(null as any)).rejects.toThrow(
+        'Invalid inspection: inspection object is null or undefined'
+      )
     })
 
     it('should throw error when inspection is undefined', async () => {
       await expect(
         generateInspectionProtocolPdf(undefined as any)
-      ).rejects.toThrow('Invalid inspection: inspection object is null or undefined')
+      ).rejects.toThrow(
+        'Invalid inspection: inspection object is null or undefined'
+      )
     })
 
     it('should throw error when inspection ID is missing', async () => {

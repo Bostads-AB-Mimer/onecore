@@ -16,16 +16,16 @@ export function useInspectionPdfDownload(): UseInspectionPdfDownloadReturn {
     try {
       setIsDownloading(true)
       setError(null)
-      const pdfBase64 = await inspectionService.getInspectionPdfBase64(
-        inspectionId
-      )
+      const pdfBase64 =
+        await inspectionService.getInspectionPdfBase64(inspectionId)
       downloadFileFromBase64(
         pdfBase64,
         filename || `besiktningsprotokoll-${inspectionId}.pdf`,
         'application/pdf'
       )
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to download PDF')
+      const error =
+        err instanceof Error ? err : new Error('Failed to download PDF')
       setError(error)
       console.error('Failed to download PDF:', error)
     } finally {
