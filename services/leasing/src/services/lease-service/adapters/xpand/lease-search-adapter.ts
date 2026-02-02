@@ -1,6 +1,6 @@
 import { Knex } from 'knex'
 import { Context } from 'koa'
-import { leasing, LeaseStatus } from '@onecore/types'
+import { leasing, LeaseStatus, LeaseStatusLabel } from '@onecore/types'
 import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
@@ -426,13 +426,7 @@ export const getObjectTypeLabel = (objectTypeCode: string): string => {
  * Map numeric status to Swedish label for Excel export
  */
 export const getStatusLabel = (status: LeaseStatus): string => {
-  const statusMap: Record<number, string> = {
-    [LeaseStatus.Current]: 'Pågående',
-    [LeaseStatus.Upcoming]: 'Kommande',
-    [LeaseStatus.AboutToEnd]: 'Avslutas snart',
-    [LeaseStatus.Ended]: 'Avslutat',
-  }
-  return statusMap[status] || String(status)
+  return LeaseStatusLabel[status] ?? String(status)
 }
 
 /**
@@ -531,10 +525,13 @@ export const getBuildingManagers = async (): Promise<
 }
 
 /**
- * Apply all standard filters to a query builder
- * Shared between search and export to avoid duplication
+ * Main search function with pagination
  */
-const applyAllFilters = (builder: LeaseSearchQueryBuilder): void => {
+export const searchLeases = async (
+  params: leasing.v1.LeaseSearchQueryParams,
+  ctx: Context
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  const builder = new LeaseSearchQueryBuilder(params)
   builder
     .applySearch()
     .applyObjectTypeFilter()
@@ -547,17 +544,6 @@ const applyAllFilters = (builder: LeaseSearchQueryBuilder): void => {
     .applyBuildingManagerFilter()
     .buildSelectFields()
     .applySorting()
-}
-
-/**
- * Main search function with pagination
- */
-export const searchLeases = async (
-  params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const builder = new LeaseSearchQueryBuilder(params)
-  applyAllFilters(builder)
 
   const query = builder.getQuery()
 
