@@ -942,6 +942,80 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/{leaseId}/home-insurance:
+   *   get:
+   *     summary: Get home insurance for a lease
+   *     description: Returns home insurance details for a lease.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved home insurance.
+   *       404:
+   *         description: Lease or home insurance not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
+      ctx.params.leaseId
+    )
+
+    if (!getCurrentLease.ok) {
+      if (getCurrentLease.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: getCurrentLease.err,
+        ...metadata,
+      }
+
+      return
+    }
+
+    const homeInsuranceRow = getCurrentLease.data.hyror.find(
+      (row) =>
+        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    )
+
+    if (!homeInsuranceRow) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Home insurance not found',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(
+      {
+        amount: homeInsuranceRow.amount,
+        from: homeInsuranceRow.from ?? undefined,
+        to: homeInsuranceRow.to ?? undefined,
+      },
+      metadata
+    )
+  })
+
+  /**
+   * @swagger
    * /leases/{id}/rent-rows/{rentRowId}:
    *   delete:
    *     summary: Delete a rent row

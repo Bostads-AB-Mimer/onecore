@@ -457,6 +457,7 @@ export {
   getLeasesByContactCode,
   getLeasesByRentalObjectCode,
   addLeaseHomeInsuranceRentRow,
+  getLeaseHomeInsurance,
   deleteLeaseRentRow,
   getBuildingManagers,
   searchLeases,

@@ -175,6 +175,32 @@ describe('leases routes', () => {
     })
   })
 
+  describe('GET /leases/:leaseId/home-insurance', () => {
+    it('responds with 404 when lease is missing', async () => {
+      const getHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get('/leases/1337/home-insurance')
+
+      expect(res.status).toBe(404)
+      expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+    })
+
+    it('responds with home insurance status', async () => {
+      const responsePayload = { amount: 123, from: '2024-01', to: '2024-12' }
+      const getHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValue({ ok: true, data: responsePayload })
+
+      const res = await request(app.callback()).get('/leases/1337/home-insurance')
+
+      expect(res.status).toBe(200)
+      expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(res.body.content).toEqual(responsePayload)
+    })
+  })
+
   describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
       const addHomeInsuranceSpy = jest

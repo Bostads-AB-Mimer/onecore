@@ -356,6 +356,76 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
   })
 })
 
+describe('GET /leases/:leaseId/home-insurance', () => {
+  it('returns 404 when lease is not found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await request(app.callback()).get(
+      '/leases/123/home-insurance'
+    )
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('Lease not found')
+  })
+
+  it('returns 500 when fetching lease fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const result = await request(app.callback()).get(
+      '/leases/123/home-insurance'
+    )
+
+    expect(result.status).toBe(500)
+  })
+
+  it('returns 404 when rent row is missing', async () => {
+    const leaseWithoutHomeInsurance = factory.tenfastLease.build({
+      hyror: [],
+    })
+
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
+
+    const result = await request(app.callback()).get(
+      '/leases/123/home-insurance'
+    )
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('Home insurance not found')
+  })
+
+  it('returns home insurance with dates', async () => {
+    const homeInsuranceRow = factory.tenfastInvoiceRow.build({
+      article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+      from: toYearMonthString(new Date('2024-01-01')),
+      to: toYearMonthString(new Date('2024-12-01')),
+    })
+    const leaseWithHomeInsurance = factory.tenfastLease.build({
+      hyror: [homeInsuranceRow],
+    })
+
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: leaseWithHomeInsurance })
+
+    const result = await request(app.callback()).get(
+      '/leases/123/home-insurance'
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body.content).toEqual({
+      amount: homeInsuranceRow.amount,
+      from: homeInsuranceRow.from,
+      to: homeInsuranceRow.to,
+    })
+  })
+})
+
 describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
   it('deletes and returns null', async () => {
     const deleteInvoiceRowSpy = jest

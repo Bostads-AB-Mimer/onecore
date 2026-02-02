@@ -507,6 +507,57 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/{leaseId}/home-insurance:
+   *   get:
+   *     summary: Get home insurance for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Home insurance retrieved.
+   *       404:
+   *         description: Lease or home insurance not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/leases/:leaseId/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getLeaseHomeInsurance(ctx.params.leaseId)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Not found',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/{leaseId}/rent-rows/home-insurance:
    *   post:
    *     summary: Add home insurance rent row to a lease

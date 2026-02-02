@@ -13,6 +13,11 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
+type HomeInsuranceStatus = {
+  amount: number
+  from?: string
+  to?: string
+}
 
 export const getLease = async (
   leaseId: string,
@@ -124,6 +129,29 @@ export async function addLeaseHomeInsuranceRentRow(
 
     return { ok: false, err: 'unknown' }
   }
+}
+
+export async function getLeaseHomeInsurance(
+  leaseId: string
+): Promise<AdapterResult<HomeInsuranceStatus, 'not-found' | 'unknown'>> {
+  const result = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
+  )
+
+  if (result.status === 200) {
+    return { ok: true, data: result.data.content }
+  }
+
+  if (result.status === 404) {
+    return { ok: false, err: 'not-found' }
+  }
+
+  logger.error(
+    { error: JSON.stringify(result.data) },
+    'Unknown error when fetching home insurance'
+  )
+
+  return { ok: false, err: 'unknown' }
 }
 
 export async function deleteLeaseRentRow(params: {
