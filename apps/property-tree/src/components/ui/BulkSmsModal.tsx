@@ -17,6 +17,13 @@ const MAX_SMS_LENGTH = 160
 const COST_WARNING_THRESHOLD = 100
 const SMS_COST_SEK = 0.5
 
+function isValidSwedishMobile(phone: string | null): boolean {
+  if (!phone) return false
+  const cleaned = phone.replace(/[\s-]/g, '')
+  // Swedish mobile: 07XXXXXXXX, +467XXXXXXXX, 00467XXXXXXXX, or 467XXXXXXXX
+  return /^(07\d{8}|\+467\d{8}|00467\d{8}|467\d{8})$/.test(cleaned)
+}
+
 export interface SmsRecipient {
   id: string
   name: string
@@ -42,8 +49,8 @@ export function BulkSmsModal({
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
   const { validRecipients, invalidRecipients } = useMemo(() => {
-    const valid = recipients.filter((r) => r.phone)
-    const invalid = recipients.filter((r) => !r.phone)
+    const valid = recipients.filter((r) => isValidSwedishMobile(r.phone))
+    const invalid = recipients.filter((r) => !isValidSwedishMobile(r.phone))
     return { validRecipients: valid, invalidRecipients: invalid }
   }, [recipients])
 
@@ -119,7 +126,7 @@ export function BulkSmsModal({
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <div className="text-sm">
                 <span className="font-medium">
-                  {invalidRecipients.length} mottagare saknar telefonnummer:
+                  {invalidRecipients.length} mottagare saknar giltigt mobilnummer:
                 </span>{' '}
                 {invalidRecipients
                   .slice(0, 3)
