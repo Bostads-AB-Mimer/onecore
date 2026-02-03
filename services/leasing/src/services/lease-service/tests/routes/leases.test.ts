@@ -63,6 +63,23 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
     ])
   })
 
+  it('should return 400 if lastDebitDate is missing', async () => {
+    const res = await request(app.callback())
+      .post('/leases/216-704-00-0022%2F02/preliminary-termination')
+      .send({
+        contactCode: 'P12345',
+        desiredMoveDate: '2025-12-31T00:00:00.000Z',
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.data).toMatchObject([
+      {
+        message: 'Required',
+        path: ['lastDebitDate'],
+      },
+    ])
+  })
+
   it('should return 400 if desiredMoveDate is missing', async () => {
     const res = await request(app.callback())
       .post('/leases/216-704-00-0022%2F02/preliminary-termination')
