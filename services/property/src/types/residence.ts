@@ -278,10 +278,14 @@ export const getAllRentalBlocksQueryParamsSchema = z.object({
 })
 
 // Helper for array-or-string params (supports multi-select filters)
-// Normalizes to array (matches lease search pattern in libs/types)
+// Normalizes to array, filters empty strings
 const stringOrArraySchema = z
   .union([z.string(), z.array(z.string())])
-  .transform((val) => (Array.isArray(val) ? val : [val]))
+  .transform((val) => {
+    const asArray = Array.isArray(val) ? val : [val]
+    const cleaned = asArray.map((v) => v.trim()).filter((v) => v !== '')
+    return cleaned.length > 0 ? cleaned : undefined
+  })
   .optional()
 
 // Base filter schema (shared between search and export)

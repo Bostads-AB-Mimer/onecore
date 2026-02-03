@@ -685,7 +685,7 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason
+   *         description: Search term (min 2 chars). Searches across rentalId, address, blockReason
    *       - in: query
    *         name: kategori
    *         schema:
