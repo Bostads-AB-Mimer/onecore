@@ -166,10 +166,11 @@ describe('listing-text-content-adapter', () => {
         expect(deleteResult.ok).toBe(true)
 
         // Verify deleted
-        const findResult = await listingTextContentAdapter.getByRentalObjectCode(
-          testData.rentalObjectCode,
-          ctx.db
-        )
+        const findResult =
+          await listingTextContentAdapter.getByRentalObjectCode(
+            testData.rentalObjectCode,
+            ctx.db
+          )
         expect(findResult).toBeUndefined()
       }))
 
