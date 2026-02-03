@@ -1016,6 +1016,11 @@ export interface SearchRentalBlocksOptions {
   active?: boolean
   limit?: number
   offset?: number
+  /**
+   * If provided, skip the COUNT query and use this value as totalCount.
+   * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
+   */
+  knownTotalCount?: number
 }
 
 /**
@@ -1039,6 +1044,7 @@ async function searchRentalBlocksWithDistriktRaw(
     active,
     limit,
     offset,
+    knownTotalCount,
   } = options
 
   const conditions: string[] = []
@@ -1114,16 +1120,21 @@ async function searchRentalBlocksWithDistriktRaw(
 
   const whereClause = conditions.join(' AND ')
 
-  // Get total count
-  const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
-    SELECT COUNT(*) AS count
-    FROM hyspt
-    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
-    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON bafen.code = babuf.fencode
-    WHERE ${whereClause}
-  `)
-  const totalCount = countResult[0]?.count ?? 0
+  // Skip COUNT query if knownTotalCount is provided (e.g., from page 1 of export)
+  let totalCount: number
+  if (knownTotalCount !== undefined) {
+    totalCount = knownTotalCount
+  } else {
+    const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
+      SELECT COUNT(*) AS count
+      FROM hyspt
+      LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+      LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+      LEFT JOIN bafen ON bafen.code = babuf.fencode
+      WHERE ${whereClause}
+    `)
+    totalCount = countResult[0]?.count ?? 0
+  }
 
   // Get paginated IDs with ordering
   const paginationClause =
@@ -1193,7 +1204,7 @@ export const searchRentalBlocks = async (
   options: SearchRentalBlocksOptions
 ) => {
   try {
-    const { limit, offset, distrikt } = options
+    const { limit, offset, distrikt, knownTotalCount } = options
 
     let totalCount: number
     let rentalBlocks: Awaited<
@@ -1233,10 +1244,10 @@ export const searchRentalBlocks = async (
       // No distrikt filter - use standard Prisma query
       const whereClause = buildRentalBlockWhereClause(options)
 
-      // Run count and data queries in parallel for better performance
-      const [count, blocks] = await Promise.all([
-        prisma.rentalBlock.count({ where: whereClause }),
-        prisma.rentalBlock.findMany({
+      // Skip COUNT query if knownTotalCount is provided (e.g., from page 1 of export)
+      if (knownTotalCount !== undefined) {
+        totalCount = knownTotalCount
+        rentalBlocks = await prisma.rentalBlock.findMany({
           where: whereClause,
           include: rentalBlockInclude,
           orderBy: {
@@ -1244,11 +1255,25 @@ export const searchRentalBlocks = async (
           },
           ...(limit && { take: limit }),
           ...(offset && { skip: offset }),
-        }),
-      ])
+        })
+      } else {
+        // Run count and data queries in parallel for better performance
+        const [count, blocks] = await Promise.all([
+          prisma.rentalBlock.count({ where: whereClause }),
+          prisma.rentalBlock.findMany({
+            where: whereClause,
+            include: rentalBlockInclude,
+            orderBy: {
+              fromDate: 'desc',
+            },
+            ...(limit && { take: limit }),
+            ...(offset && { skip: offset }),
+          }),
+        ])
 
-      totalCount = count
-      rentalBlocks = blocks
+        totalCount = count
+        rentalBlocks = blocks
+      }
     }
 
     // Get unique rental IDs for fetching rent data
