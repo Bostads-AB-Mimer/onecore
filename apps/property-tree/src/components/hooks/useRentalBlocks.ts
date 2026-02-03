@@ -26,26 +26,6 @@ export function useRentalBlocks(rentalId: string | undefined) {
   }
 }
 
-const hasSearchFilters = (params: RentalBlocksSearchParams) =>
-  Boolean(
-    params.q ||
-      params.kategori ||
-      params.distrikt ||
-      params.blockReason ||
-      params.fastighet ||
-      params.fromDateGte ||
-      params.toDateLte
-  )
-
-const fetchRentalBlocks = (
-  params: RentalBlocksSearchParams,
-  page: number,
-  limit: number
-) =>
-  hasSearchFilters(params)
-    ? residenceService.searchRentalBlocks(params, page, limit)
-    : residenceService.getAllRentalBlocks(params.active, page, limit)
-
 export function useAllRentalBlocks(
   params: RentalBlocksSearchParams,
   page = 1,
@@ -55,7 +35,7 @@ export function useAllRentalBlocks(
 
   const allRentalBlocksQuery = useQuery({
     queryKey: ['allRentalBlocks', params, page, limit],
-    queryFn: () => fetchRentalBlocks(params, page, limit),
+    queryFn: () => residenceService.searchRentalBlocks(params, page, limit),
     placeholderData: keepPreviousData,
   })
 
@@ -67,7 +47,8 @@ export function useAllRentalBlocks(
     if (page < totalPages) {
       queryClient.prefetchQuery({
         queryKey: ['allRentalBlocks', params, page + 1, limit],
-        queryFn: () => fetchRentalBlocks(params, page + 1, limit),
+        queryFn: () =>
+          residenceService.searchRentalBlocks(params, page + 1, limit),
       })
     }
   }, [
