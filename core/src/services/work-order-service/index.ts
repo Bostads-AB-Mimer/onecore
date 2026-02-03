@@ -134,6 +134,7 @@ export const routes = (router: KoaRouter) => {
           {
             status: ['current', 'upcoming'],
             includeContacts: true,
+            includeRentInfo: true,
           }
         )
         if (leases && leases.length > 0) {
@@ -169,6 +170,7 @@ export const routes = (router: KoaRouter) => {
           {
             status: ['current', 'upcoming'],
             includeContacts: true,
+            includeRentInfo: true,
           }
         )
         if (leases) {
@@ -185,6 +187,7 @@ export const routes = (router: KoaRouter) => {
             {
               status: ['current', 'upcoming'],
               includeContacts: false,
+              includeRentInfo: true,
             }
           )
           if (leases) {
@@ -198,6 +201,7 @@ export const routes = (router: KoaRouter) => {
           {
             status: ['current', 'upcoming'],
             includeContacts: true,
+            includeRentInfo: true,
           }
         )
         if (leases) {
