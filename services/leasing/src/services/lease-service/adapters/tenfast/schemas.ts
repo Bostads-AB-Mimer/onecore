@@ -45,7 +45,6 @@ export const TenfastTenantSchema = z.object({
 })
 
 export const TenfastRentalObjectSchema = z.object({
-  // Required fields
   _id: z.string(),
   externalId: z.string(),
   hyra: z.number(), //total hyra inklusive moms
@@ -53,44 +52,11 @@ export const TenfastRentalObjectSchema = z.object({
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
   contractTemplate: z.string().optional(),
-
-  // Reference fields (can be IDs or populated objects)
-  hyresvard: z.union([z.string(), z.any()]).optional(),
-  fastighet: z.union([z.string(), z.any()]).nullish(),
-
-  // Address and location
-  nummer: z.union([z.string(), z.number()]).nullish(),
   postadress: z.string().nullish(),
-  postnummer: z.string().nullish(),
-  stad: z.string().nullish(),
   stadsdel: z.string().nullish(),
-  skvNummer: z.union([z.string(), z.number()]).nullish(),
-  district: z.string().nullish(),
-
-  // Display and type information
-  displayName: z.string().optional(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
-  lokalType: z.string().nullish(),
-  bostadType: z.string().nullish(),
-  parkeringType: z.string().nullish(),
-  category: z.string().optional(),
-
-  // Measurements
   kvm: z.number().nullish(),
-  roomCount: z.number().nullish(),
-
-  // State and metadata
-  avtalStates: z.array(z.string()).optional(),
-  lastStateChanged: z.string().optional(),
-  states: z.array(z.any()).optional(),
-  comments: z.array(z.any()).optional(),
-  files: z.array(z.any()).optional(),
-  images: z.array(z.any()).optional(),
-  tags: z.array(z.any()).optional(),
-  useCounter: z.number().optional(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
