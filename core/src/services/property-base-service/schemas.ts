@@ -616,7 +616,6 @@ const stringOrArraySchema = z
 // Base filter schema for rental blocks (shared between search and export)
 export const RentalBlocksFilterQuerySchema = z.object({
   q: z.string().optional(),
-  fields: z.string().optional(),
   kategori: stringOrArraySchema,
   distrikt: stringOrArraySchema,
   blockReason: stringOrArraySchema,
