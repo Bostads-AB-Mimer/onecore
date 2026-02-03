@@ -1,15 +1,14 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, MessageSquare } from 'lucide-react'
+import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 
 import { maintenanceUnitService } from '@/services/api/core'
 import { MaintenanceUnitBasicInfo } from '../maintenance-unit/MaintenanceUnitBasicInfo'
-import {
-  WorkOrdersManagement,
-  ContextType,
-} from '../work-orders/WorkOrdersManagement'
+import { MaintenanceUnitComponents } from '../maintenance-unit/MaintenanceUnitComponents'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { ContextType } from '@/types/ui'
 
 export function MaintenanceUnitView() {
   const { code } = useParams()
@@ -49,8 +48,21 @@ export function MaintenanceUnitView() {
       </div>
 
       <ObjectPageTabs
-        defaultTab="inspections"
+        defaultTab="workorders"
         tabs={[
+          {
+            value: 'components',
+            label: 'Komponenter',
+            icon: Wrench,
+            content: (
+              <MaintenanceUnitComponents
+                propertyObjectId={maintenanceUnit.propertyObjectId}
+                maintenanceUnitName={
+                  maintenanceUnit.caption || maintenanceUnit.code
+                }
+              />
+            ),
+          },
           {
             value: 'inspections',
             label: 'Besiktningar',
@@ -61,14 +73,12 @@ export function MaintenanceUnitView() {
             value: 'workorders',
             label: 'Ärenden',
             icon: MessageSquare,
-            disabled: true,
-            // TODO: Add MaintenanceUnit to ContextType enum in WorkOrdersManagement
-            // content: (
-            //   <WorkOrdersManagement
-            //     contextType={ContextType.MaintenanceUnit}
-            //     id={maintenanceUnit.rentalPropertyId!}
-            //   />
-            // ),
+            content: (
+              <WorkOrdersManagement
+                contextType={ContextType.MaintenanceUnit}
+                id={maintenanceUnit.code}
+              />
+            ),
           },
         ]}
       />

@@ -37,15 +37,12 @@ export interface CollapsibleTableProps<T> {
   columns: CollapsibleTableColumn<T>[]
   keyExtractor: (item: T) => string
   expandedContentRenderer: (item: T) => ReactNode
-
   expansionConfig?: ExpansionConfig
   mobileCardConfig?: MobileCardConfig<T>
   emptyMessage?: string
   className?: string
-
   expandedKeys?: string[]
   onExpandedChange?: (expandedKeys: string[]) => void
-
   isExpandable?: (item: T) => boolean
 }
 

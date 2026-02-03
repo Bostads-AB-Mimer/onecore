@@ -23,10 +23,6 @@ const schemas = {
     name: 'Building',
     target: 'openApi3',
   }).definitions,
-  ...zodToJsonSchema(types.ComponentSchema, {
-    name: 'Component',
-    target: 'openApi3',
-  }).definitions,
   ...zodToJsonSchema(types.PropertySchema, {
     name: 'Property',
     target: 'openApi3',
@@ -93,6 +89,128 @@ const schemas = {
   ...zodToJsonSchema(types.GetFacilitiesByBuildingCodeResponseSchema, {
     name: 'GetFacilitiesByBuildingCodeResponse',
     target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.RentalBlockSchema, {
+    name: 'RentalBlock',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.RentalBlockWithRentalObjectSchema, {
+    name: 'RentalBlockWithRentalObject',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.BlockReasonSchema, {
+    name: 'BlockReason',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.ComponentCategorySchema, {
+    name: 'ComponentCategory',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentCategorySchema, {
+    name: 'CreateComponentCategoryRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentCategorySchema, {
+    name: 'UpdateComponentCategoryRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.ComponentTypeSchema, {
+    name: 'ComponentType',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.ComponentSubtypeSchema, {
+    name: 'ComponentSubtype',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.ComponentModelSchema, {
+    name: 'ComponentModel',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.ComponentSchema, {
+    name: 'Component',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.ComponentInstallationSchema, {
+    name: 'ComponentInstallation',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentTypeSchema, {
+    name: 'CreateComponentTypeRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentTypeSchema, {
+    name: 'UpdateComponentTypeRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentSubtypeSchema, {
+    name: 'CreateComponentSubtypeRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentSubtypeSchema, {
+    name: 'UpdateComponentSubtypeRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentModelSchema, {
+    name: 'CreateComponentModelRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentModelSchema, {
+    name: 'UpdateComponentModelRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentSchema, {
+    name: 'CreateComponentRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentSchema, {
+    name: 'UpdateComponentRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentInstallationSchema, {
+    name: 'CreateComponentInstallationRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.UpdateComponentInstallationSchema, {
+    name: 'UpdateComponentInstallationRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.DocumentSchema, {
+    name: 'Document',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.DocumentWithUrlSchema, {
+    name: 'DocumentWithUrl',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.AnalyzeComponentImageRequestSchema, {
+    name: 'AnalyzeComponentImageRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.AIComponentAnalysisSchema, {
+    name: 'AIComponentAnalysis',
+    target: 'openApi3',
+    $refStrategy: 'none',
   }).definitions,
 }
 

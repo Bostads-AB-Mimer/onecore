@@ -4,26 +4,25 @@ import { InvoicePaymentSummary } from '../types'
 const DateFormat = 'yyyy-mm-dd'
 const ColumnWidth = 20
 
-type Row = {
+type PaymentRow = {
   invoiceId: string
   invoiceDate: Date
   expirationDate: Date | undefined
   invoiceAmount: number
-  paymentDate: Date
-  amountPaid: number
+  remainingAmount: number
   fractionPaid: number
   hemforTotal: number
-  hemforPaid: number
+  hemforDebt: number
   hyrsatTotal: number
-  hyrsatPaid: number
+  hyrsatDebt: number
   vhk906Total: number
-  vhk906Paid: number
+  vhk906Debt: number
   vhk933Total: number
-  vhk933Paid: number
+  vhk933Debt: number
   vhk934Total: number
-  vhk934Paid: number
+  vhk934Debt: number
   vhk936Total: number
-  vhk936Paid: number
+  vhk936Debt: number
 }
 
 export const convertInvoicePaymentSummariesToXlsx = async (
@@ -52,25 +51,23 @@ export const convertInvoicePaymentSummariesToXlsx = async (
     },
     { header: 'Totalbelopp', key: 'invoiceAmount' },
     {
-      header: 'Betaldatum',
-      key: 'paymentDate',
-      style: { numFmt: DateFormat },
+      header: 'Skuld',
+      key: 'remainingAmount',
       width: ColumnWidth,
     },
-    { header: 'Betalt belopp', key: 'amountPaid' },
     { header: 'Andel betald', key: 'fractionPaid' },
     { header: 'Hemförsäkring totalbelopp', key: 'hemforTotal' },
-    { header: 'Hemförsäkring betalt belopp', key: 'hemforPaid' },
+    { header: 'Hemförsäkring skuld', key: 'hemforDebt' },
     { header: 'Hyressättningsavgift totalbelopp', key: 'hyrsatTotal' },
-    { header: 'Hyressättningsavgift betalt belopp', key: 'hyrsatPaid' },
+    { header: 'Hyressättningsavgift skuld', key: 'hyrsatDebt' },
     { header: 'VHK906 totalbelopp', key: 'vhk906Total' },
-    { header: 'VHK906 betalt belopp', key: 'vhk906Paid' },
+    { header: 'VHK906 skuld', key: 'vhk906Debt' },
     { header: 'VHK933 totalbelopp', key: 'vhk933Total' },
-    { header: 'VHK933 betalt belopp', key: 'vhk933Paid' },
+    { header: 'VHK933 skuld', key: 'vhk933Debt' },
     { header: 'VHK934 totalbelopp', key: 'vhk934Total' },
-    { header: 'VHK934 betalt belopp', key: 'vhk934Paid' },
+    { header: 'VHK934 skuld', key: 'vhk934Debt' },
     { header: 'VHK936 totalbelopp', key: 'vhk936Total' },
-    { header: 'VHK936 betalt belopp', key: 'vhk936Paid' },
+    { header: 'VHK936 skuld', key: 'vhk936Debt' },
   ]
 
   summaries.forEach((summary) => {
@@ -83,26 +80,27 @@ export const convertInvoicePaymentSummariesToXlsx = async (
 
 const transformInvoicePaymentSummary = (
   summary: InvoicePaymentSummary
-): Row => {
+): PaymentRow => {
   return {
     invoiceId: summary.invoiceId,
     invoiceDate: summary.invoiceDate,
     expirationDate: summary.expirationDate,
     invoiceAmount: summary.amount,
-    paymentDate: summary.paymentDate,
-    amountPaid: summary.amountPaid,
+    remainingAmount: summary.paidAmount
+      ? summary.amount - summary.paidAmount
+      : summary.amount,
     fractionPaid: summary.fractionPaid,
     hemforTotal: summary.hemforTotal,
-    hemforPaid: summary.hemforPaid,
+    hemforDebt: summary.hemforDebt,
     hyrsatTotal: summary.hyrsatTotal,
-    hyrsatPaid: summary.hyrsatPaid,
+    hyrsatDebt: summary.hyrsatDebt,
     vhk906Total: summary.vhk906Total,
-    vhk906Paid: summary.vhk906Paid,
+    vhk906Debt: summary.vhk906Debt,
     vhk933Total: summary.vhk933Total,
-    vhk933Paid: summary.vhk933Paid,
+    vhk933Debt: summary.vhk933Debt,
     vhk934Total: summary.vhk934Total,
-    vhk934Paid: summary.vhk934Paid,
+    vhk934Debt: summary.vhk934Debt,
     vhk936Total: summary.vhk936Total,
-    vhk936Paid: summary.vhk936Paid,
+    vhk936Debt: summary.vhk936Debt,
   }
 }

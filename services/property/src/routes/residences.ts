@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  buildPaginatedResponse,
+} from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
@@ -10,6 +14,11 @@ import {
   searchResidences,
   getResidenceByRentalId,
   getResidenceSummariesByBuildingCodeAndStaircaseCode,
+  getRentalBlocksByRentalId,
+  getAllRentalBlocks,
+  searchRentalBlocks,
+  getAllRentalBlocksForExport,
+  getDistinctBlockReasons,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -18,6 +27,10 @@ import {
   ResidenceSearchResult,
   GetResidenceByRentalIdResponse,
   ResidenceSummarySchema,
+  RentalBlock,
+  getAllRentalBlocksQueryParamsSchema,
+  searchRentalBlocksQueryParamsSchema,
+  exportRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -228,7 +241,7 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search residences
    *     description: |
-   *       Retrieves a list of all real estate residences by rental object id.
+   *       Searches for residences by rental ID or name. The search query is matched against both fields using a case-insensitive contains operation. Returns up to 10 results.
    *     tags:
    *       - Residences
    *     parameters:
@@ -236,7 +249,7 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: The search query.
+   *         description: The search query. Matches against rental ID or residence name.
    *     responses:
    *       200:
    *         description: Successfully retrieved list of residences.
@@ -266,7 +279,8 @@ export const routes = (router: KoaRouter) => {
       const { q } = ctx.request.parsedQuery
 
       try {
-        const residences = await searchResidences(q)
+        // Search for residences by rental id and name
+        const residences = await searchResidences(q, ['rentalId', 'name'])
 
         ctx.status = 200
         ctx.body = {
@@ -413,6 +427,551 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-id/{rentalId}/rental-blocks:
+   *   get:
+   *     summary: Get rental blocks by rental ID
+   *     description: Returns all rental blocks for the specified rental ID
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental ID
+   *       - in: query
+   *         name: active
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter rental blocks by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, include all blocks.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlock'
+   *       404:
+   *         description: Rental ID not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-id/:rentalId/rental-blocks',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalId = ctx.params.rentalId
+      const activeParam = ctx.query.active as string | undefined
+      const active =
+        activeParam === 'true'
+          ? true
+          : activeParam === 'false'
+            ? false
+            : undefined
+
+      try {
+        const rentalBlocks = await getRentalBlocksByRentalId(rentalId, {
+          active,
+        })
+
+        if (rentalBlocks === null) {
+          ctx.status = 404
+          ctx.body = { reason: 'Rental ID not found', ...metadata }
+          return
+        }
+
+        const mappedRentalBlocks: RentalBlock[] = rentalBlocks.map((rb) => ({
+          id: rb.id,
+          blockReasonId: rb.blockReasonId,
+          blockReason: rb.blockReason?.caption ?? null,
+          fromDate: rb.fromDate,
+          toDate: rb.toDate,
+          amount: rb.amount,
+        }))
+
+        ctx.status = 200
+        ctx.body = {
+          content: mappedRentalBlocks,
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(err, 'Error fetching rental blocks by rental ID')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/export:
+   *   get:
+   *     summary: Export all rental blocks to Excel
+   *     description: Generates and downloads an Excel file with all rental blocks matching the filters
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term (min 2 chars)
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: Filter by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks.
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/export',
+    parseRequest({ query: exportRentalBlocksQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const allBlocks = await getAllRentalBlocksForExport(
+          ctx.request.parsedQuery
+        )
+
+        // Dynamic import of ExcelJS to avoid loading it on every request
+        const ExcelJS = await import('exceljs')
+        const workbook = new ExcelJS.default.Workbook()
+        const worksheet = workbook.addWorksheet('Spärrlista')
+
+        // Add columns
+        worksheet.columns = [
+          { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
+          { header: 'Kategori', key: 'kategori', width: 12 },
+          { header: 'Typ', key: 'typ', width: 15 },
+          { header: 'Adress', key: 'adress', width: 30 },
+          { header: 'Fastighet', key: 'fastighet', width: 15 },
+          { header: 'Distrikt', key: 'distrikt', width: 15 },
+          { header: 'Orsak', key: 'orsak', width: 35 },
+          { header: 'Startdatum', key: 'startdatum', width: 12 },
+          { header: 'Slutdatum', key: 'slutdatum', width: 12 },
+          { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
+        ]
+
+        // Style header row
+        worksheet.getRow(1).font = { bold: true }
+
+        // Add rows
+        for (const block of allBlocks) {
+          worksheet.addRow({
+            hyresobjekt:
+              block.rentalObject?.rentalId || block.rentalObject?.code || '',
+            kategori: block.rentalObject?.category || '',
+            typ: block.rentalObject?.type || '',
+            adress: block.rentalObject?.address || '',
+            fastighet: block.property?.name || '',
+            distrikt: block.distrikt || '',
+            orsak: block.blockReason || '',
+            startdatum: block.fromDate
+              ? new Date(block.fromDate).toLocaleDateString('sv-SE')
+              : '',
+            slutdatum: block.toDate
+              ? new Date(block.toDate).toLocaleDateString('sv-SE')
+              : '',
+            hyra: block.rentalObject?.yearlyRent
+              ? Math.round(block.rentalObject.yearlyRent)
+              : null,
+          })
+        }
+
+        // Generate buffer
+        const buffer = await workbook.xlsx.writeBuffer()
+
+        // Set response headers for file download
+        const timestamp = new Date().toISOString().split('T')[0]
+        ctx.set(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        ctx.set(
+          'Content-Disposition',
+          `attachment; filename="sparrlista-${timestamp}.xlsx"`
+        )
+
+        ctx.status = 200
+        ctx.body = buffer
+      } catch (err) {
+        logger.error(err, 'Error exporting rental blocks to Excel')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/search:
+   *   get:
+   *     summary: Search rental blocks with server-side filtering
+   *     description: Search and filter rental blocks with pagination. Supports free-text search and field filters.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason
+   *       - in: query
+   *         name: fields
+   *         schema:
+   *           type: string
+   *         description: Comma-separated fields to search (default rentalId,address,propertyName,blockReason)
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *         description: Filter by category
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *         description: Filter by district
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *         description: Filter by block reason
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *         description: Filter by property code/name
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter blocks starting on or after this date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Filter blocks ending on or before this date
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: Filter by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks.
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 1000
+   *           default: 50
+   *     responses:
+   *       200:
+   *         description: Successfully searched rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithRentalObject'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/search',
+    parseRequest({ query: searchRentalBlocksQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { page, limit, active, ...searchParams } = ctx.request.parsedQuery
+      const offset = (page - 1) * limit
+
+      try {
+        const { data: rentalBlocks, totalCount } = await searchRentalBlocks({
+          ...searchParams,
+          active,
+          limit,
+          offset,
+        })
+
+        // Build additional params for pagination links
+        const additionalParams: Record<string, string> = {}
+        if (active !== undefined) {
+          additionalParams.active = String(active)
+        }
+        if (searchParams.q) additionalParams.q = searchParams.q
+        if (searchParams.fields) additionalParams.fields = searchParams.fields
+        if (searchParams.kategori)
+          additionalParams.kategori = searchParams.kategori
+        if (searchParams.distrikt)
+          additionalParams.distrikt = searchParams.distrikt
+        if (searchParams.blockReason)
+          additionalParams.blockReason = searchParams.blockReason
+        if (searchParams.fastighet)
+          additionalParams.fastighet = searchParams.fastighet
+        if (searchParams.fromDateGte)
+          additionalParams.fromDateGte = searchParams.fromDateGte
+        if (searchParams.toDateLte)
+          additionalParams.toDateLte = searchParams.toDateLte
+
+        ctx.status = 200
+        ctx.body = {
+          ...buildPaginatedResponse({
+            content: rentalBlocks,
+            totalRecords: totalCount,
+            ctx,
+            additionalParams,
+            defaultLimit: 50,
+          }),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(err, 'Error searching rental blocks')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/all:
+   *   get:
+   *     summary: Get all rental blocks (paginated)
+   *     description: Returns paginated rental blocks for residences across the system with HATEOAS links
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: active
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter rental blocks by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, include all blocks.
+   *       - in: query
+   *         name: page
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (1-indexed)
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 1000
+   *           default: 20
+   *         description: Number of results per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved all rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithRentalObject'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/all',
+    parseRequest({ query: getAllRentalBlocksQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { active, page, limit } = ctx.request.parsedQuery
+      const offset = (page - 1) * limit
+
+      try {
+        const { data: rentalBlocks, totalCount } = await getAllRentalBlocks({
+          active,
+          limit,
+          offset,
+        })
+
+        // Build paginated response with HATEOAS links
+        const additionalParams: Record<string, string> = {}
+        if (active !== undefined) {
+          additionalParams.active = String(active)
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          ...buildPaginatedResponse({
+            content: rentalBlocks,
+            totalRecords: totalCount,
+            ctx,
+            additionalParams,
+            defaultLimit: 20,
+          }),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(err, 'Error fetching all rental blocks')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/block-reasons:
+   *   get:
+   *     summary: Get all block reasons
+   *     description: Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+   *     tags:
+   *       - Residences
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved block reasons
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/BlockReason'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/block-reasons', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const blockReasons = await getDistinctBlockReasons()
+
+      ctx.status = 200
+      ctx.body = {
+        content: blockReasons.map((br: { id: string; caption: string }) => ({
+          id: br.id,
+          caption: br.caption,
+        })),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error(err, 'Error fetching block reasons')
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences/{id}:
    *   get:
    *     summary: Get a residence by ID
@@ -427,12 +986,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The ID of the residence
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         required: false
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *         description: Filter rental blocks by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, include all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved the residence
@@ -451,10 +1009,16 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/residences/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    const includeActiveBlocksOnly = ctx.query.includeActiveBlocksOnly === 'true'
+    const activeParam = ctx.query.active as string | undefined
+    const active =
+      activeParam === 'true'
+        ? true
+        : activeParam === 'false'
+          ? false
+          : undefined
 
     try {
-      const residence = await getResidenceById(id, { includeActiveBlocksOnly })
+      const residence = await getResidenceById(id, { active })
       if (!residence) {
         ctx.status = 404
         return
@@ -553,7 +1117,7 @@ export const routes = (router: KoaRouter) => {
               return {
                 id: rb.id,
                 blockReasonId: rb.blockReasonId,
-                blockReason: rb.blockReason.caption,
+                blockReason: rb.blockReason?.caption ?? null,
                 fromDate: rb.fromDate,
                 toDate: rb.toDate,
                 amount: rb.amount,

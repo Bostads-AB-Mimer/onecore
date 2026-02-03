@@ -58,9 +58,134 @@ export type ResidenceDetails = components['schemas']['ResidenceDetails']
 export type ResidenceSearchResult =
   components['schemas']['ResidenceSearchResult']
 export type ResidenceSummary = components['schemas']['ResidenceSummary']
+export type RentalBlock = components['schemas']['RentalBlock']
+export type RentalBlockWithRentalObject =
+  components['schemas']['RentalBlockWithRentalObject']
+// Query params for /residences/rental-blocks/search endpoint
+export interface RentalBlocksSearchParams {
+  q?: string
+  fields?: string
+  kategori?: string
+  distrikt?: string
+  blockReason?: string
+  fastighet?: string
+  fromDateGte?: string
+  toDateLte?: string
+  active?: boolean
+}
 export type Room = components['schemas']['Room']
-export type Component = components['schemas']['Component']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
+export type Component = components['schemas']['Component']
+
+// Component Library entity types
+export type ComponentCategory = components['schemas']['ComponentCategory']
+export type ComponentType = components['schemas']['ComponentType']
+export type ComponentSubtype = components['schemas']['ComponentSubtype']
+export type ComponentModel = components['schemas']['ComponentModel']
+
+// Component Library request types
+export type CreateComponentCategory =
+  components['schemas']['CreateComponentCategoryRequest']
+export type UpdateComponentCategory =
+  components['schemas']['UpdateComponentCategoryRequest']
+export type CreateComponentType =
+  components['schemas']['CreateComponentTypeRequest']
+export type UpdateComponentType =
+  components['schemas']['UpdateComponentTypeRequest']
+export type CreateComponentSubtype =
+  components['schemas']['CreateComponentSubtypeRequest']
+export type UpdateComponentSubtype =
+  components['schemas']['UpdateComponentSubtypeRequest']
+export type CreateComponentModel =
+  components['schemas']['CreateComponentModelRequest']
+export type UpdateComponentModel =
+  components['schemas']['UpdateComponentModelRequest']
+
+// Component request types
+export type CreateComponent = {
+  modelId: string
+  serialNumber: string
+  specifications?: string | null
+  additionalInformation?: string | null
+  warrantyStartDate?: string | null
+  warrantyMonths: number
+  priceAtPurchase: number
+  depreciationPriceAtPurchase: number
+  ncsCode?: string | null
+  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
+  condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
+  quantity: number
+  economicLifespan: number
+}
+
+export type UpdateComponent = Partial<CreateComponent>
+
+// Component entity conditional helper types for generic hooks
+export type EntityType = 'category' | 'type' | 'subtype' | 'model' | 'instance'
+export type Operation = 'create' | 'update' | 'delete'
+
+export type EntityData<T extends EntityType> = T extends 'category'
+  ? ComponentCategory
+  : T extends 'type'
+    ? ComponentType
+    : T extends 'subtype'
+      ? ComponentSubtype
+      : T extends 'model'
+        ? ComponentModel
+        : T extends 'instance'
+          ? Component
+          : never
+
+export type CreateData<T extends EntityType> = T extends 'category'
+  ? CreateComponentCategory
+  : T extends 'type'
+    ? CreateComponentType
+    : T extends 'subtype'
+      ? CreateComponentSubtype
+      : T extends 'model'
+        ? CreateComponentModel
+        : T extends 'instance'
+          ? CreateComponent
+          : never
+
+export type UpdateData<T extends EntityType> = T extends 'category'
+  ? UpdateComponentCategory
+  : T extends 'type'
+    ? UpdateComponentType
+    : T extends 'subtype'
+      ? UpdateComponentSubtype
+      : T extends 'model'
+        ? UpdateComponentModel
+        : T extends 'instance'
+          ? UpdateComponent
+          : never
+
+export type CreateMutationVariables<T extends EntityType> = CreateData<T> & {
+  parentId?: string
+}
+
+export type UpdateMutationVariables<T extends EntityType> = {
+  id: string
+  data: UpdateData<T>
+  parentId?: string
+  oldParentId?: string
+}
+
+export type DeleteMutationVariables = {
+  id: string
+  parentId?: string
+}
+
+export type MutationVariables<
+  T extends EntityType,
+  Op extends Operation,
+> = Op extends 'create'
+  ? CreateMutationVariables<T>
+  : Op extends 'update'
+    ? UpdateMutationVariables<T>
+    : Op extends 'delete'
+      ? DeleteMutationVariables
+      : never
 
 // Custom types that aren't in the API
 export interface Issue {
@@ -223,3 +348,50 @@ export interface QueueData {
   }
   applicationProfile?: ApplicationProfileResponse
 }
+
+// Tenant Comments/Notes Types
+/**
+ * Individual note within a comment from the API
+ */
+export interface TenantCommentNote {
+  date: string // "2025-11-27"
+  time: string // "14:49"
+  author: string // "DAVLIN"
+  text: string // The actual comment text
+}
+
+/**
+ * Raw API response from /contacts/<contact>/comments
+ */
+export interface TenantCommentRaw {
+  contactKey: string
+  contactCode: string
+  commentKey: string
+  id: number
+  commentType: string
+  notes: TenantCommentNote[]
+  priority: number
+  kind: number
+}
+
+/**
+ * Transformed comment for UI display (flattened from notes array)
+ * Each note is transformed into its own TenantComment
+ */
+export interface TenantComment {
+  id: string
+  commentKey: string
+  text: string
+  author: string
+  createdAt: string // ISO datetime combining date + time
+}
+
+/**
+ * API response wrapper for comments endpoint
+ */
+export interface TenantCommentsResponse {
+  content: TenantCommentRaw[]
+  _links?: Record<string, { href: string }>
+}
+
+export type DocumentWithUrl = components['schemas']['DocumentWithUrl']

@@ -4,8 +4,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, LayoutGrid, Contact, ChevronRight } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import {
+  Home,
+  LayoutGrid,
+  Contact,
+  ShieldX,
+  FileText,
+  ChevronRight,
+  Settings,
+} from 'lucide-react'
 import { CompanyList } from './CompanyList'
 import {
   Sidebar,
@@ -31,7 +39,6 @@ export default function SidebarNavigation() {
 }
 
 function SidebarNavigationContent() {
-  const navigate = useNavigate()
   const location = useLocation()
   const { selectionState } = useHierarchicalSelection()
   const { requestExpansion } = useCompanyExpansion()
@@ -45,6 +52,9 @@ function SidebarNavigationContent() {
   const isHomeActive = location.pathname === '/' || location.pathname === '/sv'
   const isPropertiesActive = location.pathname === '/properties'
   const isTenantsActive = location.pathname === '/tenants'
+  const isRentalBlocksActive = location.pathname === '/rental-blocks'
+  const isLeasesActive = location.pathname === '/leases'
+  const isComponentsActive = location.pathname === '/components'
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -66,7 +76,6 @@ function SidebarNavigationContent() {
   }, [selectionState.selectedCompanyId])
 
   const handleFastighetsdataClick = () => {
-    navigate('/properties')
     setIsFastighetsdataExpanded(true)
     setIsForetagExpanded(true)
 
@@ -82,12 +91,14 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/')}
+                asChild
                 isActive={isHomeActive}
                 tooltip="Startsida"
               >
-                <Home />
-                <span>Startsida</span>
+                <Link to="/">
+                  <Home />
+                  <span>Startsida</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -103,13 +114,15 @@ function SidebarNavigationContent() {
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
-                  onClick={handleFastighetsdataClick}
+                  asChild
                   isActive={isPropertiesActive}
                   tooltip="Fastighetsdata"
                 >
-                  <LayoutGrid />
-                  <span>Fastighetsdata</span>
-                  <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  <Link to="/properties" onClick={handleFastighetsdataClick}>
+                    <LayoutGrid />
+                    <span>Fastighetsdata</span>
+                    <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  </Link>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
 
@@ -147,12 +160,68 @@ function SidebarNavigationContent() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => navigate('/tenants')}
+                asChild
                 isActive={isTenantsActive}
                 tooltip="Kunder"
               >
-                <Contact />
-                <span>Kunder</span>
+                <Link to="/tenants">
+                  <Contact />
+                  <span>Kunder</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* SPÄRRAR - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isRentalBlocksActive}
+                tooltip="Spärrar"
+              >
+                <Link to="/rental-blocks">
+                  <ShieldX />
+                  <span>Spärrar</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* HYRESKONTRAKT - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isLeasesActive}
+                tooltip="Hyreskontrakt"
+              >
+                <Link to="/leases">
+                  <FileText />
+                  <span>Hyreskontrakt</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* ADMINISTRERA KOMPONENTER - Simple navigation item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isComponentsActive}
+                tooltip="Administrera Komponenter"
+              >
+                <Link to="/components">
+                  <Settings />
+                  <span>Administrera Komponenter</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

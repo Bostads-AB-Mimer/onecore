@@ -166,6 +166,7 @@ export const mockedPaidInvoice: Invoice = {
   type: 'Regular',
   source: 'legacy',
   invoiceRows: [],
+  credit: null,
 }
 
 export const mockedUnpaidInvoice: Invoice = {
@@ -188,4 +189,5 @@ export const mockedUnpaidInvoice: Invoice = {
   type: 'Regular',
   source: 'legacy',
   invoiceRows: [],
+  credit: null,
 }

@@ -154,6 +154,13 @@ export const acceptOffer = async (
       )
     }
 
+    // Closes offer, updates listing and applicant status
+    const closeOffer = await leasingAdapter.closeOfferByAccept(offer.id)
+    if (!closeOffer.ok) {
+      log.push(`Something went wrong when closing the offer ${offer.id}.`)
+      logger.error(closeOffer.err)
+    }
+
     //Reset waiting list
     const waitingListResult = await leasingAdapter.resetWaitingList(
       offer.offeredApplicant.contactCode,
@@ -191,11 +198,53 @@ export const acceptOffer = async (
       }
     }
 
-    // Closes offer, updates listing and applicant status
-    const closeOffer = await leasingAdapter.closeOfferByAccept(offer.id)
-    if (!closeOffer.ok) {
-      log.push(`Something went wrong when closing the offer ${offer.id}.`)
-      logger.error(closeOffer.err)
+    //get contact
+    const contactResult = await leasingAdapter.getContactByContactCode(
+      offer.offeredApplicant.contactCode
+    )
+    if (!contactResult.ok || !contactResult.data) {
+      //what to do here? We don't want to fail the whole process just because we can't send the email. We log it I guess....
+      log.push(
+        'Contact retrieval failed - No confirmation email will be sent to the applicant'
+      )
+      if (!contactResult.ok)
+        logger.error(
+          {
+            err: contactResult.err,
+            contactCode: offer.offeredApplicant.contactCode,
+          },
+          'Contact retrieval failed'
+        )
+    } else if (!contactResult.data.emailAddress) {
+      log.push(
+        'Contact has no email address - No confirmation email will be sent to the applicant'
+      )
+    } else {
+      const acceptEmailResult =
+        await communicationAdapter.sendParkingSpaceAcceptOfferEmail({
+          to: contactResult.data.emailAddress,
+          subject: 'Du har tackat ja till en bilplats',
+          text: 'Du har tackat ja till en bilplats hos Bostads Mimer.',
+          address: listing.rentalObject.address,
+          firstName: contactResult.data.firstName,
+          availableFrom: calculateVacantFrom(listing).toISOString(),
+          rent: String(listing.rentalObject.monthlyRent),
+          type: listing.rentalObject.objectTypeCaption ?? '',
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+        })
+      if (!acceptEmailResult.ok) {
+        log.push('Send Accept Offer Email to applicant failed')
+        logger.error(
+          {
+            error: acceptEmailResult.err,
+            email: contactResult.data.emailAddress,
+            listingId: listing.id,
+            rentalObjectCode: listing.rentalObjectCode,
+          },
+          'Send Accept Offer Email to applicant failed'
+        )
+      }
     }
 
     try {

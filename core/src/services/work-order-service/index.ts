@@ -654,6 +654,113 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /work-orders/by-maintenance-unit-code/{maintenanceUnitCode}:
+   *   get:
+   *     summary: Get work orders by maintenance unit code
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided maintenance unit code.
+   *     parameters:
+   *       - in: path
+   *         name: maintenanceUnitCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The maintenance unit code used to fetch work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/work-orders/by-maintenance-unit-code/:maintenanceUnitCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const result =
+          await workOrderAdapter.getWorkOrdersByMaintenanceUnitCode(
+            ctx.params.maintenanceUnitCode
+          )
+
+        if (result.ok) {
+          ctx.status = 200
+          ctx.body = {
+            content: {
+              totalCount: result.data.length,
+              workOrders: result.data.map(
+                (v): schemas.CoreWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  contactCode: v.ContactCode,
+                  description: v.Description,
+                  detailsCaption: v.DetailsCaption,
+                  externalResource: v.ExternalResource,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                  url: v.Url,
+                  workOrderRows: v.WorkOrderRows.map((row) => ({
+                    description: row.Description,
+                    locationCode: row.LocationCode,
+                    equipmentCode: row.EquipmentCode,
+                  })),
+                })
+              ),
+            },
+            ...metadata,
+          }
+        } else {
+          logger.error(
+            {
+              err: result.err,
+              metadata,
+            },
+            'Error getting workOrders by maintenance unit code'
+          )
+          ctx.status = result.statusCode || 500
+          ctx.body = { error: result.err, ...metadata }
+        }
+      } catch (error) {
+        logger.error(error, 'Error getting workOrders by maintenance unit code')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /work-orders/xpand/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get work orders by contact code from xpand
@@ -1112,6 +1219,140 @@ export const routes = (router: KoaRouter) => {
       return
     }
   })
+
+  /**
+   * @swagger
+   * /work-orders/xpand/by-maintenance-unit-code/{maintenanceUnitCode}:
+   *   get:
+   *     summary: Get work orders by maintenance unit code from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves work orders based on the provided maintenance unit code.
+   *     parameters:
+   *       - in: path
+   *         name: maintenanceUnitCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The maintenance unit code used to fetch work orders.
+   *       - in: query
+   *         name: skip
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to skip.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: number
+   *         description: The number of work orders to fetch.
+   *       - in: query
+   *         name: sortAscending
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Whether to sort the work orders by ascending creation date.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     totalCount:
+   *                       type: integer
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/work-orders/xpand/by-maintenance-unit-code/:maintenanceUnitCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const parsedParams = schemas.GetWorkOrdersFromXpandQuerySchema.safeParse(
+        ctx.query
+      )
+      if (!parsedParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid query parameters',
+          ...metadata,
+        }
+        return
+      }
+
+      const { skip, limit, sortAscending } = parsedParams.data
+
+      try {
+        const result =
+          await workOrderAdapter.getXpandWorkOrdersByMaintenanceUnitCode(
+            ctx.params.maintenanceUnitCode,
+            { skip, limit, sortAscending }
+          )
+
+        if (result.ok) {
+          ctx.status = 200
+          ctx.body = {
+            content: {
+              totalCount: result.data.length,
+              workOrders: result.data.map(
+                (v): schemas.CoreXpandWorkOrder => ({
+                  accessCaption: v.AccessCaption,
+                  caption: v.Caption,
+                  code: v.Code,
+                  contactCode: v.ContactCode,
+                  id: v.Id,
+                  lastChanged: new Date(v.LastChanged),
+                  priority: v.Priority,
+                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                  registered: new Date(v.Registered),
+                  rentalObjectCode: v.RentalObjectCode,
+                  status: v.Status,
+                })
+              ),
+            },
+            ...metadata,
+          }
+        } else {
+          logger.error(
+            {
+              err: result.err,
+              metadata,
+            },
+            'Error getting workOrders by maintenance unit code from xpand'
+          )
+          ctx.status = result.statusCode || 500
+          ctx.body = { error: result.err, ...metadata }
+        }
+      } catch (error) {
+        logger.error(
+          error,
+          'Error getting workOrders by maintenance unit code from xpand'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+    }
+  )
 
   /**
    * @swagger

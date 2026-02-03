@@ -38,6 +38,9 @@ export interface Config {
   inspectionService: {
     url: string
   }
+  fileStorageService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: ms.StringValue | number
@@ -117,6 +120,8 @@ const config = configPackage({
     },
     inspectionService: {
       url: 'http://localhost:5090',
+    fileStorageService: {
+      url: 'http://localhost:5091',
     },
     auth: {
       secret: 'very secret. replace this',
@@ -180,4 +185,5 @@ export default {
   auth: config.get('auth'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
+  fileStorageService: config.get('fileStorageService'),
 } as Config

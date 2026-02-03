@@ -34,6 +34,14 @@ export type SearchResult =
       name: string | null
       property: { name: string | null; code: string | null }
     }
+  | {
+      type: 'maintenance-unit'
+      id: string
+      code: string
+      caption: string | null
+      maintenanceType: string | null
+      property: { name: string | null; code: string | null }
+    }
 
 interface SearchResultsTableProps {
   results: SearchResult[]
@@ -44,9 +52,10 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
   const hasProperties = results.some((r) => r.type === 'property')
   const hasParkingSpaces = results.some((r) => r.type === 'parking-space')
   const hasFacilities = results.some((r) => r.type === 'facility')
+  const hasMaintenanceUnits = results.some((r) => r.type === 'maintenance-unit')
 
-  const getTypeDisplay = (type: string) => {
-    switch (type) {
+  const getTypeDisplay = (result: SearchResult) => {
+    switch (result.type) {
       case 'property':
         return 'Fastighet'
       case 'building':
@@ -57,8 +66,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'Parkering'
       case 'facility':
         return 'Lokal'
-      default:
-        return type
+      case 'maintenance-unit':
+        return result.maintenanceType || 'Underhållsenhet'
     }
   }
 
@@ -74,6 +83,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'bg-orange-100 text-orange-800'
       case 'facility':
         return 'bg-yellow-100 text-yellow-800'
+      case 'maintenance-unit':
+        return 'bg-teal-100 text-teal-800'
       default:
         return 'bg-slate-100'
     }
@@ -91,6 +102,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return `/parking-spaces/${result.rentalId}`
       case 'facility':
         return `/facilities/${result.rentalId}`
+      case 'maintenance-unit':
+        return `/maintenance-units/${result.code}`
       default:
         return '#'
     }
@@ -108,6 +121,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return result.name || result.code
       case 'facility':
         return result.name || result.code
+      case 'maintenance-unit':
+        return result.caption || result.code
       default:
         return ''
     }
@@ -125,6 +140,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return result.rentalId
       case 'facility':
         return result.rentalId
+      case 'maintenance-unit':
+        return result.code
       default:
         return ''
     }
@@ -146,14 +163,17 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
           label: 'Typ',
           render: (result) => (
             <Badge variant="outline" className={getTypeColorClass(result.type)}>
-              {getTypeDisplay(result.type)}
+              {getTypeDisplay(result)}
             </Badge>
           ),
         },
         {
           key: 'info',
           label:
-            (hasResidences || hasParkingSpaces || hasFacilities) &&
+            (hasResidences ||
+              hasParkingSpaces ||
+              hasFacilities ||
+              hasMaintenanceUnits) &&
             !hasProperties
               ? 'Objektsnummer'
               : 'Information',
@@ -189,7 +209,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
               </div>
             </div>
             <Badge variant="outline" className={getTypeColorClass(result.type)}>
-              {getTypeDisplay(result.type)}
+              {getTypeDisplay(result)}
             </Badge>
           </div>
           <div className="flex justify-end">

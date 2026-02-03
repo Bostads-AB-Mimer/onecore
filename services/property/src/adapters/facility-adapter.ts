@@ -5,45 +5,49 @@ import { trimStrings } from '@src/utils/data-conversion'
 
 import { prisma } from './db'
 
-export async function searchFacilities(q: string) {
+export async function searchFacilities(q: string, searchFields: string[]) {
   /**
    * Searches for facilities by rental id
    */
-  const facilities = await prisma.propertyStructure.findMany({
-    select: {
-      rentalId: true,
-      companyCode: true,
-      companyName: true,
-      propertyCode: true,
-      propertyName: true,
-      buildingCode: true,
-      buildingName: true,
-      propertyObject: {
-        select: {
-          facility: {
-            select: {
-              propertyObjectId: true,
-              code: true,
-              name: true,
+  const facilities = await prisma.propertyStructure
+    .findMany({
+      select: {
+        rentalId: true,
+        companyCode: true,
+        companyName: true,
+        propertyCode: true,
+        propertyName: true,
+        buildingCode: true,
+        buildingName: true,
+        propertyObject: {
+          select: {
+            facility: {
+              select: {
+                propertyObjectId: true,
+                code: true,
+                name: true,
+              },
             },
           },
         },
       },
-    },
-    where: {
-      companyCode: '001',
-      propertyObject: {
-        objectTypeId: 'balok',
-        facility: {
-          isNot: null,
+      where: {
+        companyCode: '001',
+        propertyObject: {
+          objectTypeId: 'balok',
+          facility: {
+            isNot: null,
+          },
         },
+        OR: searchFields.map((field) => ({
+          [field]: {
+            contains: q,
+          },
+        })),
       },
-      rentalId: {
-        contains: q,
-      },
-    },
-    take: 10,
-  })
+      take: 10,
+    })
+    .then(trimStrings)
 
   return facilities
     .filter((f) => f.propertyObject?.facility !== null && f.rentalId !== null)
@@ -115,6 +119,7 @@ export const getFacilityByRentalId = async (rentalId: string) => {
 
     const facility = {
       id: result.propertyObject.facility.id,
+      propertyObjectId: result.propertyObject.facility.propertyObjectId,
       code: result.propertyObject.facility.code,
       name: result.propertyObject.facility.name ?? null,
       entrance: result.propertyObject.facility.entrance ?? null,
@@ -219,6 +224,7 @@ export const getFacilitiesByPropertyCode = async (propertyCode: string) => {
       .filter((item) => item.propertyObject.facility)
       .map((item) => ({
         id: item.propertyObject.facility!.id,
+        propertyObjectId: item.propertyObject.facility!.propertyObjectId,
         code: item.propertyObject.facility!.code,
         name: item.propertyObject.facility!.name ?? null,
         entrance: item.propertyObject.facility!.entrance ?? null,
@@ -326,6 +332,7 @@ export const getFacilitiesByBuildingCode = async (buildingCode: string) => {
       .filter((item) => item.propertyObject.facility)
       .map((item) => ({
         id: item.propertyObject.facility!.id,
+        propertyObjectId: item.propertyObject.facility!.propertyObjectId,
         code: item.propertyObject.facility!.code,
         name: item.propertyObject.facility!.name ?? null,
         entrance: item.propertyObject.facility!.entrance ?? null,

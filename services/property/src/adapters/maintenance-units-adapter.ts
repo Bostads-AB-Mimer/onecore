@@ -2,10 +2,50 @@ import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import { MaintenanceUnit } from '@src/types/maintenance-unit'
 
+const maintenanceUnitBaseSelect = {
+  id: true,
+  propertyObjectId: true,
+  code: true,
+  name: true,
+  maintenanceUnitType: {
+    select: { name: true },
+  },
+} as const
+
+const maintenanceUnitWithPropertySelect = {
+  ...maintenanceUnitBaseSelect,
+  propertyStructures: {
+    select: {
+      propertyCode: true,
+      propertyName: true,
+    },
+  },
+} as const
+
+type PropertyInfo = { propertyCode: string | null; propertyName: string | null }
+
+const mapToMaintenanceUnit = (
+  item: {
+    id: string
+    propertyObjectId: string
+    code: string
+    name: string | null
+    maintenanceUnitType: { name: string | null } | null
+  },
+  property: PropertyInfo | null
+): MaintenanceUnit => ({
+  id: item.id,
+  propertyObjectId: item.propertyObjectId,
+  code: item.code,
+  caption: item.name,
+  type: item.maintenanceUnitType?.name ?? null,
+  estateCode: property?.propertyCode ?? null,
+  estate: property?.propertyName ?? null,
+})
+
 export const getMaintenanceUnitsByBuildingCode = async (
   buildingCode: string
 ): Promise<MaintenanceUnit[]> => {
-  // Use buildingCode to find the propertyCode first
   const propertyStructure = await prisma.propertyStructure.findFirst({
     where: {
       buildingCode: buildingCode,
@@ -27,42 +67,24 @@ export const getMaintenanceUnitsByBuildingCode = async (
   }
 
   const maintenanceUnits = await prisma.maintenanceUnit.findMany({
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      maintenanceUnitType: {
-        select: {
-          name: true,
-        },
-      },
-    },
+    select: maintenanceUnitBaseSelect,
     where: {
       propertyStructures: {
         some: {
-          propertyCode: propertyStructure?.propertyCode,
+          propertyCode: propertyStructure.propertyCode,
         },
       },
     },
   })
 
-  return trimStrings(maintenanceUnits).map((item) => {
-    return {
-      id: item.id,
-      code: item.code,
-      caption: item.name,
-      type: item.maintenanceUnitType?.name ?? null,
-      estateCode: propertyStructure?.propertyCode ?? null,
-      estate: propertyStructure?.propertyName ?? null,
-    }
-  })
+  return trimStrings(maintenanceUnits).map((item) =>
+    mapToMaintenanceUnit(item, propertyStructure)
+  )
 }
 
-export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
-  /**
-   *  Get property structure info for the given rental ID
-   *  In order to extract propertyObjectId and other details used in response
-   */
+export const getMaintenanceUnitsByRentalId = async (
+  rentalId: string
+): Promise<MaintenanceUnit[]> => {
   const rentalPropertyInfo = await prisma.propertyStructure.findFirst({
     select: {
       rentalId: true,
@@ -87,7 +109,6 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
     return []
   }
 
-  // Grab related maintenance units with propertyObjectId
   const rentalPropertyToMaintenanceUnit =
     await prisma.residenceToMaintenanceUnitRelation.findMany({
       include: {
@@ -102,23 +123,13 @@ export const getMaintenanceUnitsByRentalId = async (rentalId: string) => {
       },
     })
 
-  // Trim strings and map the results to the desired structure
-  const rentalPropertyInfoTrimmed = trimStrings(rentalPropertyInfo)
-  const maintenanceUnitPropertyStructuresMapped = trimStrings(
-    rentalPropertyToMaintenanceUnit
-  ).map((item) => {
-    return {
-      id: item?.maintenanceUnit?.id,
-      rentalPropertyId: rentalPropertyInfoTrimmed.rentalId,
-      code: item.maintenanceUnit?.code,
-      caption: item?.maintenanceUnit?.name,
-      type: item.maintenanceUnit?.maintenanceUnitType?.name,
-      estateCode: rentalPropertyInfoTrimmed.propertyCode,
-      estate: rentalPropertyInfoTrimmed.propertyName,
-    }
-  })
-
-  return maintenanceUnitPropertyStructuresMapped
+  const propertyInfo = trimStrings(rentalPropertyInfo)
+  return trimStrings(rentalPropertyToMaintenanceUnit)
+    .filter((item) => item.maintenanceUnit)
+    .map((item) => ({
+      ...mapToMaintenanceUnit(item.maintenanceUnit!, propertyInfo),
+      rentalPropertyId: propertyInfo.rentalId ?? undefined,
+    }))
 }
 
 export const getMaintenanceUnitsByPropertyCode = async (
@@ -132,59 +143,20 @@ export const getMaintenanceUnitsByPropertyCode = async (
         },
       },
     },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      maintenanceUnitType: {
-        select: {
-          name: true,
-        },
-      },
-      propertyStructures: {
-        select: {
-          propertyCode: true,
-          propertyName: true,
-        },
-      },
-    },
+    select: maintenanceUnitWithPropertySelect,
   })
 
-  return trimStrings(maintenanceUnits).map((item) => {
-    return {
-      id: item.id,
-      code: item.code,
-      caption: item.name,
-      type: item.maintenanceUnitType?.name ?? null,
-      estateCode: item.propertyStructures[0]?.propertyCode ?? null,
-      estate: item.propertyStructures[0]?.propertyName ?? null,
-    }
-  })
+  return trimStrings(maintenanceUnits).map((item) =>
+    mapToMaintenanceUnit(item, item.propertyStructures[0] ?? null)
+  )
 }
 
 export const getMaintenanceUnitByCode = async (
   code: string
 ): Promise<MaintenanceUnit | null> => {
   const maintenanceUnit = await prisma.maintenanceUnit.findUnique({
-    where: {
-      code: code,
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      maintenanceUnitType: {
-        select: {
-          name: true,
-        },
-      },
-      propertyStructures: {
-        select: {
-          propertyCode: true,
-          propertyName: true,
-        },
-      },
-    },
+    where: { code },
+    select: maintenanceUnitWithPropertySelect,
   })
 
   if (!maintenanceUnit) {
@@ -192,12 +164,21 @@ export const getMaintenanceUnitByCode = async (
   }
 
   const trimmed = trimStrings(maintenanceUnit)
-  return {
-    id: trimmed.id,
-    code: trimmed.code,
-    caption: trimmed.name,
-    type: trimmed.maintenanceUnitType?.name ?? null,
-    estateCode: trimmed.propertyStructures[0]?.propertyCode ?? null,
-    estate: trimmed.propertyStructures[0]?.propertyName ?? null,
-  }
+  return mapToMaintenanceUnit(trimmed, trimmed.propertyStructures[0] ?? null)
+}
+
+export const searchMaintenanceUnits = async (
+  q: string
+): Promise<MaintenanceUnit[]> => {
+  const maintenanceUnits = await prisma.maintenanceUnit.findMany({
+    where: {
+      code: { contains: q },
+    },
+    select: maintenanceUnitWithPropertySelect,
+    take: 10,
+  })
+
+  return trimStrings(maintenanceUnits).map((item) =>
+    mapToMaintenanceUnit(item, item.propertyStructures[0] ?? null)
+  )
 }

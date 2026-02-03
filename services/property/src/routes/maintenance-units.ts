@@ -4,6 +4,7 @@ import {
   getMaintenanceUnitsByBuildingCode,
   getMaintenanceUnitsByRentalId,
   getMaintenanceUnitByCode,
+  searchMaintenanceUnits,
 } from '@src/adapters/maintenance-units-adapter'
 import {
   MaintenanceUnit,
@@ -243,6 +244,68 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (err) {
       logger.error(`Error fetching maintenance unit by code ${code}: ${err}`)
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /maintenance-units/search:
+   *   get:
+   *     summary: Search maintenance units
+   *     description: |
+   *       Searches for maintenance units by code. The search query is matched against the code using a case-insensitive contains operation. Returns up to 10 results.
+   *     tags:
+   *       - Maintenance units
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query. Matches against maintenance unit code.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved maintenance units matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/maintenance-units/search', async (ctx) => {
+    const q = ctx.query.q as string
+    const metadata = generateRouteMetadata(ctx)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const maintenanceUnits = await searchMaintenanceUnits(q)
+
+      ctx.status = 200
+      ctx.body = {
+        content: maintenanceUnits satisfies MaintenanceUnit[],
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error(`Error searching maintenance units: ${err}`)
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

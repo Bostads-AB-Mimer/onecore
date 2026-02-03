@@ -1,0 +1,28 @@
+model Components {
+  id                          String    @id @default(uuid()) @db.UniqueIdentifier
+  modelId                     String    @db.UniqueIdentifier
+  serialNumber                String?   @db.NVarChar(Max)
+  specifications              String?   @db.NVarChar(Max)
+  additionalInformation       String?   @db.NVarChar(Max)
+  warrantyStartDate           DateTime? @db.Date
+  warrantyMonths              Int
+  priceAtPurchase             Float     @db.Money
+  depreciationPriceAtPurchase Float     @db.Money
+  economicLifespan            Float
+  quantity                    Float
+  ncsCode                     String?   @db.NVarChar(10)
+  status                      String    @default("ACTIVE") @db.NVarChar(20)
+  condition                   String?   @db.NVarChar(20)
+  createdAt                   DateTime  @default(now()) @db.DateTime
+  updatedAt                   DateTime  @default(now()) @updatedAt @db.DateTime
+
+  // Relations
+  // NoAction prevents deletion if component instances exist (SQL Server doesn't support Restrict)
+  model                  ComponentModels           @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_components_model")
+  componentInstallations ComponentInstallations[]
+  documents              Documents[]
+
+  @@index([modelId], map: "idx_components_model")
+  @@index([status], map: "idx_components_status")
+  @@map("components")
+}

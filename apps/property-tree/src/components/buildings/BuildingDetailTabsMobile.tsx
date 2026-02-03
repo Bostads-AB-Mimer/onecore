@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import {
   MobileAccordion,
   MobileAccordionItem,
@@ -18,6 +19,8 @@ import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
 import { Building as BuildingType, ResidenceSummary } from '@/services/types'
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { UseQueryResult } from '@tanstack/react-query'
+import { DocumentsTab } from '../documents/DocumentsTab'
+import { ContextType } from '@/types/ui'
 
 interface BuildingDetailTabsMobileProps {
   building: BuildingType
@@ -57,11 +60,31 @@ export const BuildingDetailTabsMobile = ({
       ),
     },
     {
+      id: 'maintenance',
+      icon: Wrench,
+      title: 'Underhållsenheter',
+      content: (
+        <MaintenanceUnitsTab
+          contextType="building"
+          identifier={building.code}
+        />
+      ),
+    },
+    {
       id: 'orders',
       disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
       content: <BuildingOrdersTab building={building} />,
+    },
+    {
+      id: 'documents',
+      disabled: true,
+      icon: FileText,
+      title: 'Dokument',
+      content: (
+        <DocumentsTab contextType={ContextType.Building} id={building.id} />
+      ),
     },
   ].filter(Boolean) as MobileAccordionItem[]
 

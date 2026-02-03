@@ -13,6 +13,16 @@ interface ParkingSpaceOfferEmail extends Email {
   offerURL: string
 }
 
+interface ParkingSpaceAcceptOfferEmail extends Email {
+  address: string
+  firstName: string
+  availableFrom: string
+  rent: string
+  type: string
+  parkingSpaceId: string
+  objectId: string
+}
+
 interface ParkingSpaceOfferSms extends Sms {
   firstName: string
   deadlineDate: string
@@ -36,6 +46,7 @@ interface ParkingSpaceNotificationEmail extends Email {
 export type {
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
+  ParkingSpaceAcceptOfferEmail,
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,

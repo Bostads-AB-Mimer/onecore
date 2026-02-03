@@ -10,6 +10,8 @@ import dayjs from 'dayjs'
 import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
+  leasing,
+  schemas as typesSchemas,
 } from '@onecore/types'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
@@ -74,6 +76,11 @@ const getLeasesWithRelatedEntitiesForPnr = async (
 
 export const routes = (router: KoaRouter) => {
   registerSchema('Lease', Lease)
+  registerSchema('IdentityCheckContact', leasing.v1.IdentityCheckContactSchema)
+  registerSchema('LeaseSearchResult', leasing.v1.LeaseSearchResultSchema)
+  registerSchema('ContactInfo', leasing.v1.ContactInfoSchema)
+  registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
+  registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -82,6 +89,215 @@ export const routes = (router: KoaRouter) => {
   listings(router)
   commentsRoutes(router)
   rentalObjectsRoutes(router)
+
+  /**
+   * @swagger
+   * /leases/search:
+   *   get:
+   *     summary: Search and filter leases
+   *     tags:
+   *       - Lease service
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types (e.g., residence, parking))
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: ['0', '1', '2', '3']
+   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property/estate names
+   *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: buildingManager
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building manager names (Kvartersvärd)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *         description: Sort direction
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseSearchResult'
+   *                 _meta:
+   *                   $ref: '#/components/schemas/PaginationMeta'
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PaginationLinks'
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+  /**
+   * @swagger
+   * /leases/building-managers:
+   *   get:
+   *     summary: Get all building managers
+   *     tags: [Leases]
+   *     description: Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+   *     responses:
+   *       '200':
+   *         description: List of building managers
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       name:
+   *                         type: string
+   *                       district:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('/leases/building-managers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.getBuildingManagers()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching building managers')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching building managers',
+        ...metadata,
+      }
+    }
+  })
+
+  router.get('/leases/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.searchLeases(ctx.query)
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error searching leases')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred during lease search',
+        ...metadata,
+      }
+    }
+  })
 
   /**
    * @swagger
@@ -116,6 +332,12 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
+   *       - in: query
+   *         name: includeRentInfo
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include rent information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -390,6 +612,194 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /contacts/{contactCode}/comments:
+   *   get:
+   *     summary: Get comments for a contact
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves all comments/notes for a contact from Xpand
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique code identifying the contact.
+   *         example: "P086890"
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved comments
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       contactKey:
+   *                         type: string
+   *                       contactCode:
+   *                         type: string
+   *                       commentKey:
+   *                         type: string
+   *                       id:
+   *                         type: integer
+   *                       commentType:
+   *                         type: string
+   *                         nullable: true
+   *                       notes:
+   *                         type: array
+   *                         description: Array of individual notes parsed from comment text
+   *                         items:
+   *                           type: object
+   *                           properties:
+   *                             date:
+   *                               type: string
+   *                               format: date
+   *                               nullable: true
+   *                               description: Date in YYYY-MM-DD format
+   *                             time:
+   *                               type: string
+   *                               nullable: true
+   *                               description: Time in HH:MM format
+   *                             author:
+   *                               type: string
+   *                               description: Author initials (6 letters) or "Notering utan signatur"
+   *                             text:
+   *                               type: string
+   *                               description: Note content (plain text)
+   *                       priority:
+   *                         type: integer
+   *                         nullable: true
+   *                       kind:
+   *                         type: integer
+   *                         nullable: true
+   *       '404':
+   *         description: Contact not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/contacts/:contactCode/comments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getContactCommentsByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          reason: 'contact-not-found',
+          detail: `No contact found with code: ${ctx.params.contactCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/comments:
+   *   post:
+   *     summary: Create or append to contact comment
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new comment if none exists for the contact, or appends to existing comment in Xpand
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique code identifying the contact
+   *         example: "P086890"
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - content
+   *               - author
+   *             properties:
+   *               content:
+   *                 type: string
+   *                 description: Plain text content of the note
+   *                 minLength: 1
+   *                 example: "Customer contacted regarding lease renewal"
+   *               author:
+   *                 type: string
+   *                 description: Author name or code (1-50 characters)
+   *                 minLength: 1
+   *                 maxLength: 50
+   *                 example: "DAVLIN"
+   *     responses:
+   *       '200':
+   *         description: Comment updated successfully (appended to existing comment)
+   *       '201':
+   *         description: Comment created successfully (new comment)
+   *       '400':
+   *         description: Invalid request body (validation failed)
+   *       '404':
+   *         description: Contact not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/contacts/:contactCode/comments', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = ctx.request.body as z.infer<
+      typeof leasing.v1.CreateContactCommentRequestSchema
+    >
+
+    const result = await leasingAdapter.createContactComment(
+      ctx.params.contactCode,
+      body
+    )
+
+    if (!result.ok) {
+      if (result.err === 'contact-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'contact-not-found',
+          detail: `No contact found with code: ${ctx.params.contactCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = result.statusCode ?? 200
+    ctx.body = {
+      content: result.data,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /offers/{offerId}/applicants/{contactCode}:
    *   get:
    *     summary: Get a specific offer for an applicant
@@ -535,17 +945,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /contacts/search:
    *   get:
-   *     summary: Search contacts by PNR or contact code
+   *     summary: Search contacts by name, PNR, contact code, or email
    *     tags:
    *       - Lease service
-   *     description: Retrieves contacts based on the provided search query.
+   *     description: Search contacts by contact code, personal registration number, name, or email. Supports searching by full name or partial name (e.g., "john smith" or "smith"). Multiple search terms are matched with AND logic. Email search is triggered when query contains "@".
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query to filter contacts.
+   *         description: Search query - can be contact code, personal registration number, name, or email (if query contains "@").
    *     responses:
    *       '200':
    *         description: Successful response with search results
@@ -576,6 +986,86 @@ export const routes = (router: KoaRouter) => {
     } else {
       ctx.status = 200
       ctx.body = { content: res.data, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/for-identity-check:
+   *   get:
+   *     summary: Get contacts for deceased/protected identity check
+   *     tags:
+   *       - Lease service
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved contacts for identity check.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/IdentityCheckContact'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/contacts/for-identity-check', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['page', 'limit'])
+    const page = Number(ctx.query.page) || 1
+    const limit = Number(ctx.query.limit) || 20
+
+    const result = await leasingAdapter.getContactsForIdentityCheck(page, limit)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      ...result.data,
+      ...metadata,
     }
   })
 

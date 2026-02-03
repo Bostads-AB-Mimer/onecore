@@ -1,9 +1,9 @@
 {
   "name": "onecore-monorepo",
-  "version": "1.6.22",
+  "version": "1.6.39",
   "private": true,
   "author": "Bostads AB Mimer",
-  "packageManager": "pnpm@10.16.1",
+  "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=20"
   },
@@ -14,6 +14,7 @@
     "build:core": "pnpm run --filter @onecore/core build ",
     "build:economy": "pnpm run --filter @onecore/economy build",
     "build:inspection": "pnpm run --filter @onecore/inspection build",
+    "build:file-storage": "pnpm run --filter @onecore/file-storage build",
     "build:internal-portal": "pnpm run --filter @onecore/internal-portal build && pnpm run build:internal-portal-backend",
     "build:internal-portal-backend": "pnpm run --filter @onecore/internal-portal-backend  build ",
     "build:leasing": "pnpm run --filter @onecore/leasing build ",
@@ -21,7 +22,7 @@
     "build:property": "pnpm run --filter @onecore/property build ",
     "build:property-management": "pnpm run --filter @onecore/property-management build",
     "build:property-tree": "pnpm run build --filter @onecore/property-tree",
-    "build:services": "pnpm run build:leasing && pnpm run build:economy && pnpm run build:property-management && pnpm run build:communication && pnpm run build:work-order && pnpm run build:property && pnpm run build:inspection",
+    "build:services": "pnpm run build:leasing && pnpm run build:economy && pnpm run build:property-management && pnpm run build:communication && pnpm run build:work-order && pnpm run build:property && pnpm run build:file-storage && pnpm run build:inspection",
     "build:types": "pnpm run --filter @onecore/types build",
     "build:utilities": "pnpm run --filter @onecore/utilities build",
     "build:work-order": "pnpm run --filter @onecore/work-order build",
@@ -34,8 +35,8 @@
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
     "prettier": "pnpm -r run prettier",
-    "test": "pnpm -r run test",
-    "typecheck": "pnpm -r run typecheck"
+    "test": "pnpm -r --no-bail run test",
+    "typecheck": "pnpm -r --no-bail run typecheck"
   },
   "dependencies": {
     "@azure/msal-node": "^2.9.2"

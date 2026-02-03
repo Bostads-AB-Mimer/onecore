@@ -9,12 +9,27 @@ import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
 
+import { routes as componentRoutes } from './components'
+
 /**
  * @swagger
  * openapi: 3.0.0
  * tags:
  *   - name: Property base Service
  *     description: Operations related to property base
+ *   - name: Property-base/Components
+ *     description: |
+ *       Component management for property building parts and installations.
+ *
+ *       **Entity Hierarchy:**
+ *       Category → Type → Subtype → Model → Component → Installation
+ *
+ *       - **Categories**: Top-level groupings (e.g., Vitvaror, VVS, Ventilation, Tak, Undercentral)
+ *       - **Types**: Component types within a category (e.g., Diskmaskin, Värmepump, Takbeläggning)
+ *       - **Subtypes**: Variants with specifications and lifecycle data. Contains depreciation price, technical/economic lifespan, replacement interval.
+ *       - **Models**: Specific manufacturer products. Contains current prices, warranty, specifications, dimensions.
+ *       - **Components**: Physical units with serial numbers. Tracks purchase price, warranty start date, NCS color code, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED).
+ *       - **Installations**: Placement records linking components to property locations (spaceId). Tracks installation/deinstallation dates, order number, and cost. A component can be moved between locations over time.
  * components:
  *   securitySchemes:
  *     bearerAuth:
@@ -28,7 +43,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Building', schemas.BuildingSchema)
   registerSchema('Company', schemas.CompanySchema)
   registerSchema('CompanyDetails', schemas.CompanyDetailsSchema)
-  registerSchema('Component', schemas.ComponentSchema)
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
@@ -42,12 +56,74 @@ export const routes = (router: KoaRouter) => {
     schemas.ResidenceByRentalIdSchema
   )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
+  registerSchema('RentalBlock', schemas.RentalBlockSchema)
+  registerSchema(
+    'RentalBlockWithRentalObject',
+    schemas.RentalBlockWithRentalObjectSchema
+  )
   registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
   registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
   registerSchema(
     'ParkingSpaceSearchResult',
     schemas.ParkingSpaceSearchResultSchema
   )
+  registerSchema('Component', schemas.ComponentSchema)
+  registerSchema('ComponentCategory', schemas.ComponentCategorySchema)
+  registerSchema('ComponentType', schemas.ComponentTypeSchema)
+  registerSchema('ComponentSubtype', schemas.ComponentSubtypeSchema)
+  registerSchema('ComponentModel', schemas.ComponentModelSchema)
+  registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema)
+  registerSchema(
+    'CreateComponentCategoryRequest',
+    schemas.CreateComponentCategorySchema
+  )
+  registerSchema(
+    'UpdateComponentCategoryRequest',
+    schemas.UpdateComponentCategorySchema
+  )
+  registerSchema(
+    'CreateComponentTypeRequest',
+    schemas.CreateComponentTypeSchema
+  )
+  registerSchema(
+    'UpdateComponentTypeRequest',
+    schemas.UpdateComponentTypeSchema
+  )
+  registerSchema(
+    'CreateComponentSubtypeRequest',
+    schemas.CreateComponentSubtypeSchema
+  )
+  registerSchema(
+    'UpdateComponentSubtypeRequest',
+    schemas.UpdateComponentSubtypeSchema
+  )
+  registerSchema(
+    'CreateComponentModelRequest',
+    schemas.CreateComponentModelSchema
+  )
+  registerSchema(
+    'UpdateComponentModelRequest',
+    schemas.UpdateComponentModelSchema
+  )
+  registerSchema('CreateComponentRequest', schemas.CreateComponentSchema)
+  registerSchema('UpdateComponentRequest', schemas.UpdateComponentSchema)
+  registerSchema(
+    'CreateComponentInstallationRequest',
+    schemas.CreateComponentInstallationSchema
+  )
+  registerSchema(
+    'UpdateComponentInstallationRequest',
+    schemas.UpdateComponentInstallationSchema
+  )
+  registerSchema('DocumentWithUrl', schemas.DocumentWithUrlSchema)
+  registerSchema(
+    'AnalyzeComponentImageRequest',
+    schemas.AnalyzeComponentImageRequestSchema
+  )
+  registerSchema('AIComponentAnalysis', schemas.AIComponentAnalysisSchema)
+
+  // Component routes (categories, types, subtypes, models, components, installations, uploads)
+  componentRoutes(router)
 
   /**
    * @swagger
@@ -68,7 +144,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The code of the property.
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved the buildings.
    *         content:
    *           application/json:
@@ -79,9 +155,9 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Building'
-   *       '400':
+   *       400:
    *         description: Invalid query parameters.
-   *       '500':
+   *       500:
    *         description: Internal server error.
    *     security:
    *       - bearerAuth: []
@@ -142,7 +218,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The unique id of the building
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved building information
    *         content:
    *           application/json:
@@ -151,7 +227,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Building'
-   *       '404':
+   *       404:
    *         description: Building not found
    *         content:
    *           application/json:
@@ -161,7 +237,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Building not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -227,7 +303,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The code of the building
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved building
    *         content:
    *           application/json:
@@ -236,7 +312,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Building'
-   *       '404':
+   *       404:
    *         description: Building not found
    *         content:
    *           application/json:
@@ -246,7 +322,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Building not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -532,7 +608,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Code for the staircase to fetch residences from
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved residences
    *         content:
    *           application/json:
@@ -543,7 +619,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Residence'
-   *       '400':
+   *       400:
    *         description: Missing building code or invalid query parameters
    *         content:
    *           application/json:
@@ -552,7 +628,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                   error:
    *                     type: object
-   *       '500':
+   *       500:
    *          description: Internal server error
    *          content:
    *            application/json:
@@ -626,7 +702,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Optional filter to get properties in a specific tract.
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved properties
    *         content:
    *           application/json:
@@ -637,7 +713,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/Property'
-   *       '400':
+   *       400:
    *         description: Missing company code or invalid query parameters
    *         content:
    *           application/json:
@@ -646,7 +722,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 error:
    *                   type: object
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -785,7 +861,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The id of the property
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved property
    *         content:
    *           application/json:
@@ -794,7 +870,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Property'
-   *       '404':
+   *       404:
    *         description: Property not found
    *         content:
    *           application/json:
@@ -804,7 +880,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Property not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -864,7 +940,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Rental id for the residence to fetch
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved residence.
    *         content:
    *           application/json:
@@ -873,7 +949,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
-   *       '404':
+   *       404:
    *         description: Residence not found
    *         content:
    *           application/json:
@@ -883,7 +959,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Residence not found
-   *       '500':
+   *       500:
    *         description: Internal server error. Failed to retrieve residence data.
    *         content:
    *           application/json:
@@ -920,6 +996,520 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
       ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/by-rental-id/{rentalId}:
+   *   get:
+   *     summary: Get rental blocks by rental ID
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves rental blocks by rental ID
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Rental id to fetch rental blocks for
+   *       - in: query
+   *         name: active
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved rental blocks.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlock'
+   *       '404':
+   *         description: Rental ID not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Rental ID not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve rental blocks.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/by-rental-id/:rentalId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalId } = ctx.params
+      const queryParams =
+        schemas.GetRentalBlocksByRentalIdQueryParamsSchema.safeParse(ctx.query)
+
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = { error: queryParams.error.errors, ...metadata }
+        return
+      }
+
+      const { active } = queryParams.data
+
+      try {
+        const getRentalBlocks =
+          await propertyBaseAdapter.getRentalBlocksByRentalId(rentalId, {
+            active,
+          })
+
+        if (!getRentalBlocks.ok) {
+          if (getRentalBlocks.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Rental ID not found', ...metadata }
+            return
+          }
+
+          logger.error(
+            { err: getRentalBlocks.err, metadata },
+            'Internal server error'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: getRentalBlocks.data,
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error({ error, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/export:
+   *   get:
+   *     summary: Export rental blocks to Excel
+   *     tags:
+   *       - Property base Service
+   *     description: Generates and downloads an Excel file with all rental blocks matching the filters
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *         description: Filter by category
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *         description: Filter by district
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *         description: Filter by block reason
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *         description: Filter by property
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *         description: Filter by start date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *         description: Filter by end date
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks.
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-blocks/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.RentalBlocksFilterQuerySchema.safeParse(ctx.query)
+
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.exportRentalBlocksToExcel(
+        params.data
+      )
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Export failed')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      ctx.set(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      )
+      ctx.set(
+        'Content-Disposition',
+        `attachment; filename="sparrlista-${timestamp}.xlsx"`
+      )
+      ctx.status = 200
+      ctx.body = Buffer.from(result.data)
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/search:
+   *   get:
+   *     summary: Search rental blocks with server-side filtering
+   *     tags:
+   *       - Property base Service
+   *     description: Search and filter rental blocks. Searches by rentalId and address.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Search term (searches rentalId, address)
+   *       - in: query
+   *         name: fields
+   *         schema:
+   *           type: string
+   *         description: Comma-separated fields to search (default rentalId,address,propertyName,blockReason)
+   *       - in: query
+   *         name: kategori
+   *         schema:
+   *           type: string
+   *         description: Filter by category (Bostad, Bilplats, Lokal, Förråd)
+   *       - in: query
+   *         name: distrikt
+   *         schema:
+   *           type: string
+   *         description: Filter by district
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: string
+   *         description: Filter by block reason
+   *       - in: query
+   *         name: fastighet
+   *         schema:
+   *           type: string
+   *         description: Filter by property code/name
+   *       - in: query
+   *         name: fromDateGte
+   *         schema:
+   *           type: string
+   *         description: Filter blocks starting on or after this date
+   *       - in: query
+   *         name: toDateLte
+   *         schema:
+   *           type: string
+   *         description: Filter blocks ending on or before this date
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks.
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 50
+   *     responses:
+   *       200:
+   *         description: Successfully searched rental blocks
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithRentalObject'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-blocks/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.SearchRentalBlocksQuerySchema.safeParse(ctx.query)
+
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.searchRentalBlocks(params.data)
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        ...result.data,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/all:
+   *   get:
+   *     summary: Get all rental blocks (paginated)
+   *     tags:
+   *       - Property base Service
+   *     description: Retrieves all rental blocks for residences across the system with pagination support
+   *     parameters:
+   *       - in: query
+   *         name: active
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
+   *       - in: query
+   *         name: page
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (1-indexed)
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 100
+   *           default: 20
+   *         description: Number of items per page
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved all rental blocks.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalBlockWithRentalObject'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *                         enum: [self, first, last, prev, next]
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/residences/rental-blocks/all', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = schemas.GetAllRentalBlocksQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.errors, ...metadata }
+      return
+    }
+
+    const { active, page, limit } = queryParams.data
+
+    try {
+      const getAllRentalBlocksResult =
+        await propertyBaseAdapter.getAllRentalBlocks({
+          active,
+          page,
+          limit,
+        })
+
+      if (!getAllRentalBlocksResult.ok) {
+        logger.error(
+          { err: getAllRentalBlocksResult.err, metadata },
+          'Internal server error'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        ...getAllRentalBlocksResult.data,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /residences/block-reasons:
+   *   get:
+   *     summary: Get all block reasons
+   *     tags:
+   *       - Property base Service
+   *     description: Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved block reasons
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/block-reasons', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await propertyBaseAdapter.getBlockReasons()
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error fetching block reasons'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
 
@@ -1012,14 +1602,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Id for the residence to fetch
    *       - in: query
-   *         name: includeActiveBlocksOnly
+   *         name: active
    *         required: false
    *         schema:
    *           type: boolean
-   *           default: false
-   *         description: If true, only include active rental blocks (started and not ended). If false, include all rental blocks.
+   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved residence.
    *         content:
    *           application/json:
@@ -1028,7 +1617,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       '404':
+   *       404:
    *         description: Residence not found
    *         content:
    *           application/json:
@@ -1038,7 +1627,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Residence not found
-   *       '500':
+   *       500:
    *         description: Internal server error. Failed to retrieve residence data.
    *         content:
    *           application/json:
@@ -1064,12 +1653,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { includeActiveBlocksOnly } = queryParams.data
+    const { active: rentalBlockActive } = queryParams.data
 
     try {
       const getResidence = await propertyBaseAdapter.getResidenceDetails(
         residenceId,
-        { includeActiveBlocksOnly }
+        { active: rentalBlockActive }
       )
 
       if (!getResidence.ok) {
@@ -1228,7 +1817,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Code for the building to fetch staircases for
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved staircases.
    *         content:
    *           application/json:
@@ -1239,7 +1828,7 @@ export const routes = (router: KoaRouter) => {
    *                  type: array
    *                  items:
    *                    $ref: '#/components/schemas/Staircase'
-   *       '400':
+   *       400:
    *         description: Missing buildingCode
    *         content:
    *           application/json:
@@ -1249,7 +1838,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Missing buildingCode
-   *       '500':
+   *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
@@ -1362,6 +1951,63 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /rooms/by-facility-id/{facilityId}:
+   *   get:
+   *     summary: Get rooms by facility id.
+   *     description: Returns all rooms belonging to a facility.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: facilityId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The id of the facility.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the rooms.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Room'
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/rooms/by-facility-id/:facilityId', async (ctx) => {
+    const { facilityId } = ctx.params
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await propertyBaseAdapter.getRoomsByFacilityId(facilityId)
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error getting rooms by facility id from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.Room>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /parking-spaces/by-rental-id/{rentalId}:
    *   get:
    *     summary: Get parking space data by rentalId
@@ -1376,7 +2022,7 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Rental id to fetch parking space for
    *     responses:
-   *       '200':
+   *       200:
    *         description: Successfully retrieved parking space.
    *         content:
    *           application/json:
@@ -1385,7 +2031,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ParkingSpace'
-   *       '404':
+   *       404:
    *         description: Parking space not found
    *         content:
    *           application/json:
@@ -1395,7 +2041,7 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: Parking space not found
-   *       '500':
+   *       500:
    *         description: Internal server error. Failed to retrieve parking space data.
    *         content:
    *           application/json:
@@ -1570,12 +2216,6 @@ export const routes = (router: KoaRouter) => {
           )
           ctx.status = 500
           ctx.body = { error: 'Internal server error', ...metadata }
-          return
-        }
-
-        if (result.data.length === 0) {
-          ctx.status = 404
-          ctx.body = { error: 'No maintenance units found', ...metadata }
           return
         }
 
@@ -1873,6 +2513,79 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies schemas.MaintenanceUnit,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /maintenance-units/search:
+   *   get:
+   *     summary: Search maintenance units
+   *     description: |
+   *       Searches for maintenance units by code.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query (maintenance unit code).
+   *     responses:
+   *       200:
+   *         description: |
+   *           Successfully retrieved maintenance units matching the search query.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceUnit'
+   *       400:
+   *         description: Invalid query provided
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/maintenance-units/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const q = ctx.query.q as string
+
+    logger.info(metadata, `GET /maintenance-units/search?q=${q}`)
+
+    if (!q) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Query parameter "q" is required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.searchMaintenanceUnits(q)
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, metadata },
+          'Error searching maintenance units from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies Array<schemas.MaintenanceUnit>,
         ...metadata,
       }
     } catch (error) {

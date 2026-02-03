@@ -8,7 +8,7 @@ ENV CI=true
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 # Copy package files for dependency installation
 COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -20,6 +20,7 @@ COPY services/work-order ./services/work-order
 
 RUN pnpm install
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run --filter @onecore/work-order build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/work-order --prod /out

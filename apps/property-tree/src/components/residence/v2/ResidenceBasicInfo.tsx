@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
 import { TriangleAlert, Bug } from 'lucide-react'
+import { Badge } from '@/components/ui/v3/Badge'
 import { components } from '@/services/api/core/generated/api-types'
 
 interface ResidenceBasicInfoProps {
@@ -39,12 +40,35 @@ const requiresPestControl = (
   residence: components['schemas']['ResidenceDetails']
 ): boolean => {
   // Where do we find pest control info?
+  // Note: rentalBlocks is available on propertyObject but not yet in generated types
+  const propertyObject = residence?.propertyObject as
+    | (typeof residence.propertyObject & {
+        rentalBlocks?: Array<{ blockReason: string }>
+      })
+    | undefined
 
-  const hasPestIssues = residence?.propertyObject?.rentalBlocks.find(
+  const hasPestIssues = propertyObject?.rentalBlocks?.find(
     (b) => b.blockReason === 'SKADEDJUR'
   )
 
   return Boolean(hasPestIssues)
+}
+
+const getCurrentRentalBlock = (
+  residence: components['schemas']['ResidenceDetails']
+) => {
+  const rentalBlocks = residence?.propertyObject?.rentalBlocks
+
+  if (!rentalBlocks || rentalBlocks.length === 0) {
+    return null
+  }
+
+  const firstRentalBlock = rentalBlocks[0]
+
+  // Ignore pest control blocks for this purpose, we already have requiresPestControl
+  if (firstRentalBlock.blockReason === 'SKADEDJUR') return null
+
+  return `${firstRentalBlock.blockReason}`
 }
 
 export const ResidenceBasicInfo = ({
@@ -57,13 +81,19 @@ export const ResidenceBasicInfo = ({
   const hasPestIssues = requiresPestControl(residence)
   const rent = getCurrentRent(lease)
 
+  const currentRentalBlock = getCurrentRentalBlock(residence)
+
   return (
     <TooltipProvider>
       <div className="mb-6">
         <div className="flex flex-col gap-2 mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold">{residence.name}</h1>
+
           {(needsSpecialHandling || hasPestIssues) && (
             <div className="flex items-center gap-2">
+              {currentRentalBlock && (
+                <Badge variant="destructive">{currentRentalBlock}</Badge>
+              )}
               {needsSpecialHandling && (
                 <Tooltip>
                   <TooltipTrigger asChild>

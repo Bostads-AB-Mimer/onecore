@@ -1,2 +1,5 @@
 export * from './application-profile'
 export * from './comment'
+export * from './contact-comment'
+export * from './lease-search'
+export * from './identity-check-contact'

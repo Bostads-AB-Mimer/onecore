@@ -14,14 +14,14 @@ import {
   Users,
   FileText,
   Map,
+  Folder,
+  Lock,
+  Wrench,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { Lease, inspectionService } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
@@ -29,6 +29,10 @@ import { InspectionsList } from '@/components/residence/InspectionsList'
 import { useToast } from '@/components/hooks/useToast'
 import { components } from '@/services/api/core/generated/api-types'
 type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
+import { ContextType } from '@/types/ui'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
+import RentalBlocksTab from '@/components/residence/RentalBlocksTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -132,6 +136,27 @@ export const ResidenceView = () => {
                 <MessageSquare className="h-4 w-4" />
                 <span className="hidden sm:inline">Ärenden</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="documents"
+                className="flex items-center gap-1.5"
+              >
+                <Folder className="h-4 w-4" />
+                <span className="hidden sm:inline">Dokument</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="rental-blocks"
+                className="flex items-center gap-1.5"
+              >
+                <Lock className="h-4 w-4" />
+                <span className="hidden sm:inline">Spärrar</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="maintenance"
+                className="flex items-center gap-1.5"
+              >
+                <Wrench className="h-4 w-4" />
+                <span className="hidden sm:inline">Underhållsenheter</span>
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">
               <Card>
@@ -183,6 +208,24 @@ export const ResidenceView = () => {
                   id={residence?.propertyObject.rentalId}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="documents">
+              <DocumentsTab
+                contextType={ContextType.Residence}
+                id={residence.id}
+              />
+            </TabsContent>
+            <TabsContent value="rental-blocks">
+              <RentalBlocksTab
+                rentalId={residence.propertyObject.rentalId ?? ''}
+              />
+            </TabsContent>
+            <TabsContent value="maintenance">
+              <MaintenanceUnitsTab
+                contextType="residence"
+                identifier={residence.propertyObject.rentalId ?? undefined}
+                showFlatList
+              />
             </TabsContent>
           </Tabs>
         </div>

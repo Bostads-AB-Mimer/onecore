@@ -1,6 +1,9 @@
-import { Badge } from '@/components/ui/v3/Badge'
-import { parseISO } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { FileText } from 'lucide-react'
+import { match, P } from 'ts-pattern'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
+
+import { Badge } from '@/components/ui/v3/Badge'
 import { useInvoicePaymentEvents } from '@/components/hooks/useInvoicePaymentEvents'
 import {
   Tooltip,
@@ -12,11 +15,23 @@ import {
   CollapsibleTableColumn,
 } from '@/components/ui/CollapsibleTable'
 import { Button } from '@/components/ui/v2/Button'
-import { FileText } from 'lucide-react'
 
-export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
+const currencyFormatter = new Intl.NumberFormat('sv-SE', {
+  style: 'currency',
+  currency: 'SEK',
+  currencyDisplay: 'code',
+  maximumFractionDigits: 2,
+})
+
+type Props = {
+  invoices: Invoice[]
+  onInvoiceRowClick: (invoiceId: string | null) => void
+  expandedInvoiceId: string | null
+}
+
+export const InvoicesTable = (props: Props) => {
   // Sort invoices by invoice date, latest first
-  const sortedInvoices = [...invoices].sort((a, b) => {
+  const sortedInvoices = [...props.invoices].sort((a, b) => {
     const dateA =
       typeof a.invoiceDate === 'string'
         ? parseISO(a.invoiceDate)
@@ -28,32 +43,21 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return dateB.getTime() - dateA.getTime()
   })
 
-  const formatCurrency = (amount: number | string) => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-    return numAmount.toFixed(2).replace('.', ',') + ' SEK'
+  const formatCurrency = (amount: number) => {
+    return currencyFormatter.format(amount)
   }
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return '-'
     const dateObj = typeof date === 'string' ? new Date(date) : date
-    return dateObj.toISOString().split('T')[0]
+    return format(dateObj, 'yyyy-MM-dd')
   }
 
-  const formatSource = (source: string | undefined) => {
-    if (!source) return '-'
-    if (source.toLowerCase() === 'next') return 'XLedger'
-    if (source.toLowerCase() === 'legacy') return 'Xpand'
-    return source
-  }
-
-  // Extract deferment date from description like "Anstånd till 2025-12-31"
-  const getDefermentDate = (description: string | undefined): Date | null => {
-    if (!description) return null
-    const match = description.match(/Anstånd till (\d{4}-\d{2}-\d{2})/)
-    if (match && match[1]) {
-      return new Date(match[1])
-    }
-    return null
+  const formatSource = (source: Invoice['source']) => {
+    return match(source)
+      .with('next', () => 'XLedger')
+      .with('legacy', () => 'Xpand')
+      .exhaustive()
   }
 
   // Get the effective expiration date (deferment date if applicable, otherwise original)
@@ -61,12 +65,12 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     invoice: Invoice
   ): { date: Date | null; isDeferment: boolean; originalDate: Date | null } => {
     const originalDate = invoice.expirationDate
-      ? typeof invoice.expirationDate === 'string'
-        ? new Date(invoice.expirationDate)
-        : invoice.expirationDate
+      ? new Date(invoice.expirationDate)
       : null
 
-    const defermentDate = getDefermentDate(invoice.description)
+    const defermentDate = invoice.defermentDate
+      ? new Date(invoice.defermentDate)
+      : null
 
     if (defermentDate && originalDate && defermentDate > originalDate) {
       return { date: defermentDate, isDeferment: true, originalDate }
@@ -75,36 +79,26 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return { date: originalDate, isDeferment: false, originalDate: null }
   }
 
-  const isInvoiceOverdue = (invoice: Invoice): boolean => {
-    // If invoice is already paid, it's not overdue
-    if (invoice.paymentStatus === PaymentStatus.Paid) {
-      return false
-    }
-
-    // Get the effective expiration date (considering deferments)
-    const { date } = getEffectiveExpirationDate(invoice)
-
-    if (!date) {
-      return false
-    }
-
-    const today = new Date()
-    return today > date
-  }
-
   const getStatusBadge = (invoice: Invoice): JSX.Element => {
-    switch (invoice.paymentStatus) {
-      case PaymentStatus.Paid:
-        return <Badge variant={'success'}>Betald</Badge>
-      case PaymentStatus.Unpaid:
-        if (isInvoiceOverdue(invoice)) {
-          return <Badge variant={'destructive'}>Förfallen</Badge>
-        } else {
-          return <Badge variant={'secondary'}>Obetald</Badge>
-        }
-      default:
-        return <Badge variant={'secondary'}>Obetald</Badge>
-    }
+    return match(invoice)
+      .with({ credit: { originalInvoiceId: P.string } }, () => (
+        <Badge variant="secondary">Kredit</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Paid }, () => (
+        <Badge variant="success">Betald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.PartlyPaid }, () => (
+        <Badge variant="priority-medium">Delvis betald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Unpaid }, () => (
+        <Badge variant="secondary">Obetald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Overdue }, () => (
+        <Badge variant="destructive">Förfallen</Badge>
+      ))
+      .otherwise((v) => (
+        <Badge variant="secondary">Okänd betalstatus: {v.paymentStatus}</Badge>
+      ))
   }
 
   const getInvoiceType = (invoice: Invoice): string => {
@@ -121,6 +115,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return row?.rowType === 3
   }
 
+  // TODO(AL): Move to backend
   // Calculate subtotals for rows under each header
   const calculateSubtotals = (rows: any[]) => {
     const subtotals: Record<
@@ -173,6 +168,7 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
     return <span>{formatDate(date)}</span>
   }
 
+  // TODO(AL): Move to backend
   // Calculate payment date from payment events (when invoice was fully paid)
   const calculatePaymentDate = (
     events: InvoicePaymentEvent[] | undefined,
@@ -443,6 +439,12 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
             <span className="font-medium">Text:</span> {invoice.description}
           </div>
         )}
+        {invoice.credit && (
+          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Krediterar faktura:</span>{' '}
+            {invoice.credit.originalInvoiceId}
+          </div>
+        )}
         {invoice.invoiceFileUrl && (
           <div className="mb-3">
             <Button
@@ -564,6 +566,10 @@ export const InvoicesTable = ({ invoices }: { invoices: Invoice[] }) => {
   return (
     <CollapsibleTable
       data={sortedInvoices}
+      expandedKeys={props.expandedInvoiceId ? [props.expandedInvoiceId] : []}
+      onExpandedChange={(expandedKeys) =>
+        props.onInvoiceRowClick(expandedKeys[0] ?? null)
+      }
       columns={invoiceColumns}
       keyExtractor={(invoice) => invoice.invoiceId}
       expandedContentRenderer={renderExpandedInvoiceContent}

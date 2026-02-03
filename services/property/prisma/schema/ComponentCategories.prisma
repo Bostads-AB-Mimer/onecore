@@ -1,0 +1,12 @@
+model ComponentCategories {
+  id           String   @id @default(uuid()) @db.UniqueIdentifier
+  categoryName String   @db.NVarChar(255)
+  description  String   @db.NVarChar(255)
+  createdAt    DateTime @default(now()) @db.DateTime
+  updatedAt    DateTime @default(now()) @updatedAt @db.DateTime
+
+  // Relations
+  componentTypes ComponentTypes[]
+
+  @@map("component_categories")
+}

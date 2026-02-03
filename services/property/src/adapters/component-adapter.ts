@@ -1,85 +1,21 @@
-import { trimStrings } from '@src/utils/data-conversion'
+/**
+ * Barrel export file for component adapters
+ *
+ * This file re-exports all component-related adapter functions from their
+ * individual files to maintain backward compatibility with existing imports.
+ *
+ * Split into 6 entity adapter files:
+ * - component-category-adapter.ts: ComponentCategory CRUD operations
+ * - component-type-adapter.ts: ComponentType CRUD operations
+ * - component-subtype-adapter.ts: ComponentSubtype CRUD operations
+ * - component-model-adapter.ts: ComponentModel CRUD + document management
+ * - component-instance-adapter.ts: Component instance CRUD + file management + by-room queries
+ * - component-installation-adapter.ts: ComponentInstallation CRUD operations
+ */
 
-import { prisma } from './db'
-
-export const getComponentByMaintenanceUnitCode = async (
-  maintenanceUnitCode: string
-) => {
-  const response = await prisma.component.findMany({
-    where: {
-      propertyStructures: {
-        some: {
-          maintenanceUnitByCode: {
-            code: maintenanceUnitCode,
-          },
-        },
-      },
-    },
-    orderBy: {
-      installationDate: 'desc',
-    },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      manufacturer: true,
-      typeDesignation: true,
-      installationDate: true,
-      warrantyEndDate: true,
-      componentType: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      componentCategory: {
-        select: {
-          code: true,
-          name: true,
-        },
-      },
-      propertyStructures: {
-        select: {
-          maintenanceUnitByCode: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-            },
-          },
-        },
-      },
-    },
-  })
-
-  return response
-    .map((component) => ({
-      id: component.id,
-      code: component.code,
-      name: component.name,
-      details: {
-        manufacturer: component.manufacturer,
-        typeDesignation: component.typeDesignation,
-      },
-      dates: {
-        installation: component.installationDate,
-        warrantyEnd: component.warrantyEndDate,
-      },
-      classification: {
-        componentType: {
-          code: component.componentType?.code ?? '',
-          name: component.componentType?.name ?? '',
-        },
-        category: {
-          code: component.componentCategory?.code ?? '',
-          name: component.componentCategory?.name ?? '',
-        },
-      },
-      maintenanceUnits: component.propertyStructures.map((ps) => ({
-        id: ps.maintenanceUnitByCode?.id ?? '',
-        code: ps.maintenanceUnitByCode?.code ?? '',
-        name: ps.maintenanceUnitByCode?.name ?? '',
-      })),
-    }))
-    .map(trimStrings)
-}
+export * from './component-category-adapter'
+export * from './component-type-adapter'
+export * from './component-subtype-adapter'
+export * from './component-model-adapter'
+export * from './component-instance-adapter'
+export * from './component-installation-adapter'

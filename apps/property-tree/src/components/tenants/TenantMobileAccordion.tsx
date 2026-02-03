@@ -1,17 +1,16 @@
 import { TenantQueueSystem } from './TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
+import { TenantNotes } from './TenantNotes'
+// import { TenantOrders } from './TenantOrders'
 import { TenantLedger } from './TenantLedger'
-// import { TenantNotes } from './TenantNotes'
 import {
   MobileAccordion as GenericMobileAccordion,
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '../work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { ContextType } from '@/types/ui'
 
 interface TenantMobileAccordionProps {
   leases: Lease[]
@@ -70,13 +69,13 @@ export function TenantMobileAccordion({
       title: 'Fakturor & betalningar',
       content: <TenantLedger contactCode={contactCode} />,
     },
-    /*
     {
       id: 'notes',
       title: 'Noteringar',
-      content: <div>Placeholder Noteringar</div>,
-      // content: <TenantNotes />,
+      content: <TenantNotes contactCode={contactCode} />,
     },
+    /*
+    
     {
       id: 'keys',
       title: 'Nyckelknippa',

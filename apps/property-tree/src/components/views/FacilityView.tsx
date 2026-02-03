@@ -1,17 +1,25 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
+import {
+  ClipboardList,
+  Users,
+  MessageSquare,
+  FileText,
+  Wrench,
+  Info,
+} from 'lucide-react'
 
 import { facilityService, leaseService } from '@/services/api/core'
 import { FacilityBasicInfo } from '../facility/FacilityBasicInfo'
+import { FacilityComponents } from '../facility/FacilityComponents'
 import { CurrentTenant } from '../rental-object/CurrentTenant'
-import {
-  WorkOrdersManagement,
-  ContextType,
-} from '../work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
 import { RentalObjectContracts } from '../rental-object/RentalObjectContracts'
+import { RoomInfo } from '../residence/RoomInfo'
+
+import { ContextType } from '@/types/ui'
 
 export function FacilityView() {
   const { rentalId } = useParams()
@@ -72,8 +80,25 @@ export function FacilityView() {
       </div>
 
       <ObjectPageTabs
-        defaultTab="tenant"
+        defaultTab="components"
         tabs={[
+          {
+            value: 'components',
+            label: 'Komponenter',
+            icon: Wrench,
+            content: (
+              <FacilityComponents
+                propertyObjectId={facility.propertyObjectId}
+                facilityName={facility.name || facility.code}
+              />
+            ),
+          },
+          {
+            value: 'rooms',
+            label: 'Rumsinformation',
+            icon: Info,
+            content: <RoomInfo facilityId={facility.id} />,
+          },
           {
             value: 'tenant',
             label: 'Hyresgäst',
