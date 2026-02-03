@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ['**']
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to run CI workflow on?""
+        description: 'Branch to run CI workflow on?'
         required: true
-        default: "main"
+        default: 'main'
 
 concurrency:
   group: ci-${{ github.ref }}
