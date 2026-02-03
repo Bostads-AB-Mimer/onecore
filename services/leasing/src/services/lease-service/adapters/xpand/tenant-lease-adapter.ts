@@ -418,10 +418,15 @@ const getResidentialAreaByRentalPropertyId = async (
 }
 
 const getContactsDataBySearchQuery = async (
-  q: string
+  q: string,
+  contactType?: 'company' | 'person'
 ): Promise<
   AdapterResult<
-    Array<{ contactCode: string; fullName: string }>,
+    Array<{
+      contactCode: string
+      fullName: string
+      nationalRegistrationNumber: string
+    }>,
     'internal-error'
   >
 > => {
@@ -441,6 +446,12 @@ const getContactsDataBySearchQuery = async (
             .from('cmeml')
             .where('cmemlben', 'like', `${q}%`)
         )
+        .modify((qb) => {
+          if (contactType === 'company')
+            qb.andWhere('cmctc.cmctckod', 'like', 'F%')
+          else if (contactType === 'person')
+            qb.andWhere('cmctc.cmctckod', 'like', 'P%')
+        })
         .limit(10)
 
       return {
@@ -467,6 +478,12 @@ const getContactsDataBySearchQuery = async (
         if (searchTerms) {
           builder.orWhereRaw('CONTAINS(cmctc.cmctcben, ?)', [searchTerms])
         }
+      })
+      .modify((qb) => {
+        if (contactType === 'company')
+          qb.andWhere('cmctc.cmctckod', 'like', 'F%')
+        else if (contactType === 'person')
+          qb.andWhere('cmctc.cmctckod', 'like', 'P%')
       })
       .limit(10)
 

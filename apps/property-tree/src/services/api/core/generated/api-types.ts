@@ -332,6 +332,12 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include upcoming leases in the response */
+          includeUpcomingLeases?: boolean;
+          /** @description Whether to include terminated leases in the response */
+          includeTerminatedLeases?: boolean;
+        };
         path: {
           /** @description Personal Number (PNR) of the individual to fetch leases for. */
           pnr: string;
@@ -341,7 +347,9 @@ export interface paths {
         /** @description Successful response with leases and related entities */
         200: {
           content: {
-            "application/json": Record<string, never>[];
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
           };
         };
       };
@@ -354,6 +362,12 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include upcoming leases in the response */
+          includeUpcomingLeases?: boolean;
+          /** @description Whether to include terminated leases in the response */
+          includeTerminatedLeases?: boolean;
+        };
         path: {
           /** @description Contact code of the individual to fetch leases for. */
           contactCode: string;
@@ -655,7 +669,9 @@ export interface paths {
         /** @description Successful response with search results */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": {
+              content?: components["schemas"]["Contact"][];
+            };
           };
         };
         /** @description Bad request. The query parameter 'q' must be a string. */
@@ -725,7 +741,9 @@ export interface paths {
         /** @description Successful response with the requested contact */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": {
+              content?: components["schemas"]["Contact"];
+            };
           };
         };
       };
@@ -803,7 +821,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              data?: Record<string, never>;
+              content?: components["schemas"]["Lease"];
             };
           };
         };
@@ -1915,7 +1933,19 @@ export interface paths {
         /** @description Successfully retrieved rental property information */
         200: {
           content: {
-            "application/json": Record<string, never>;
+            "application/json": components["schemas"]["RentalPropertyResponse"];
+          };
+        };
+        /** @description Rental property not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
           };
         };
       };
@@ -5232,6 +5262,2618 @@ export interface paths {
       };
     };
   };
+  "/key-loans": {
+    /**
+     * List all key loans
+     * @description Fetches a list of all key loans ordered by creation date.
+     */
+    get: {
+      responses: {
+        /** @description A list of key loans. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        /** @description An error occurred while listing key loans. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Create a new key loan
+     * @description Create a new key loan record.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyLoanRequest"];
+        };
+      };
+      responses: {
+        /** @description Key loan created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"];
+            };
+          };
+        };
+        /** @description Invalid request data. */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description An error occurred while creating the key loan. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/search": {
+    /**
+     * Search key loans
+     * @description Search key loans with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any KeyLoan field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - **Advanced filters**: Search by key name/object code, filter by key count, null checks
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string;
+          /** @description Comma-separated list of fields for OR search. Defaults to contact and contact2. */
+          fields?: string;
+          /** @description Search by key name or rental object code (requires JOIN with keys table) */
+          keyNameOrObjectCode?: string;
+          /** @description Minimum number of keys in loan */
+          minKeys?: number;
+          /** @description Maximum number of keys in loan */
+          maxKeys?: number;
+          /** @description Filter by pickedUpAt null status (true = NOT NULL, false = NULL) */
+          hasPickedUp?: boolean;
+          /** @description Filter by returnedAt null status (true = NOT NULL, false = NULL) */
+          hasReturned?: boolean;
+          id?: string;
+          keys?: string;
+          contact?: string;
+          contact2?: string;
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Supports comparison operators (e.g., >=2024-01-01, <2024-12-31) */
+          returnedAt?: string;
+          availableToNextTenantFrom?: string;
+          /** @description Supports comparison operators (e.g., >=2024-01-01, <2024-12-31) */
+          pickedUpAt?: string;
+          createdAt?: string;
+          updatedAt?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved search results */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/by-key/{keyId}": {
+    /**
+     * Get all loans for a specific key
+     * @description Returns all loan records for the specified key ID, ordered by creation date DESC
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key ID to fetch loans for */
+          keyId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans for this key */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/by-card/{cardId}": {
+    /**
+     * Get all loans for a specific card
+     * @description Returns all loan records for the specified card ID, ordered by creation date DESC
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID to fetch loans for */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Array of loans for this card */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"][];
+            };
+          };
+        };
+        500: components["responses"]["InternalServerError"];
+      };
+    };
+  };
+  "/key-loans/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get key loans by rental object code
+     * @description Returns all key loans for a specific rental object with keys and optional receipts
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by contact code */
+          contact?: string;
+          /** @description Filter by second contact code */
+          contact2?: string;
+          /** @description Include receipts in the response */
+          includeReceipts?: boolean;
+          /**
+           * @description Filter by return status:
+           * - true: Only returned loans (returnedAt IS NOT NULL)
+           * - false: Only active loans (returnedAt IS NULL)
+           * - omitted: All loans (no filter)
+           */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The rental object code */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description A list of key loans with details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/by-contact/{contact}/with-keys": {
+    /**
+     * Get key loans by contact with keys
+     * @description Returns all key loans for a specific contact with full key details, optionally filtered by loan type and return status
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type (TENANT or MAINTENANCE) */
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Filter by return status (true = returned, false = not returned) */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The contact identifier to search for */
+          contact: string;
+        };
+      };
+      responses: {
+        /** @description Array of key loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/by-bundle/{bundleId}/with-keys": {
+    /**
+     * Get key loans by bundle with keys
+     * @description Returns all key loans for a specific bundle with full key details, optionally filtered by loan type and return status
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by loan type (TENANT or MAINTENANCE) */
+          loanType?: "TENANT" | "MAINTENANCE";
+          /** @description Filter by return status (true = returned, false = not returned) */
+          returned?: boolean;
+        };
+        path: {
+          /** @description The bundle ID to search for */
+          bundleId: string;
+        };
+      };
+      responses: {
+        /** @description Array of key loans with full key details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoanWithDetails"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-loans/{id}": {
+    /**
+     * Get key loan by ID
+     * @description Fetch a specific key loan by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key loan to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A key loan object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"];
+            };
+          };
+        };
+        /** @description Key loan not found. */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description An error occurred while fetching the key loan. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Delete a key loan
+     * @description Delete an existing key loan by ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key loan to delete. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Key loan deleted successfully. */
+        200: {
+          content: never;
+        };
+        /** @description Key loan not found. */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description An error occurred while deleting the key loan. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Update a key loan
+     * @description Partially update an existing key loan.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key loan to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyLoanRequest"];
+        };
+      };
+      responses: {
+        /** @description Key loan updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyLoan"];
+            };
+          };
+        };
+        /** @description Invalid request data. */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Key loan not found. */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description An error occurred while updating the key loan. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/keys": {
+    /**
+     * List keys with pagination
+     * @description Returns paginated keys ordered by createdAt (desc).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Paginated list of keys */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyDetails"][];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /** Create a key */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyRequest"];
+        };
+      };
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
+          };
+        };
+        /** @description Invalid key_type */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/keys/search": {
+    /**
+     * Search keys
+     * @description Search keys with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any Key field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+          q?: string;
+          /** @description Comma-separated list of fields for OR search. Defaults to keyName. */
+          fields?: string;
+          id?: string;
+          keyName?: string;
+          keySequenceNumber?: string;
+          flexNumber?: string;
+          rentalObjectCode?: string;
+          keyType?: string;
+          keySystemId?: string;
+          createdAt?: string;
+          updatedAt?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyDetails"][];
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/keys/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get all keys by rental object code
+     * @description Returns all keys associated with a specific rental object code without pagination
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to filter keys by */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved keys */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Key"][];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/cards/by-rental-object/{rentalObjectCode}": {
+    /** Get cards by rental object code */
+    get: {
+      parameters: {
+        query?: {
+          includeLoans?: boolean;
+        };
+        path: {
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Cards for the rental object */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CardDetails"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/cards/{cardId}": {
+    /** Get card by ID */
+    get: {
+      parameters: {
+        path: {
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/keys/{id}": {
+    /** Get key by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Key found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /** Delete a key */
+    delete: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Deleted */
+        200: {
+          content: never;
+        };
+        /** @description Not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /** Update a key (partial) */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyRequest"];
+        };
+      };
+      responses: {
+        /** @description Updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Key"];
+            };
+          };
+        };
+        /** @description Invalid key_type */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/keys/bulk-update-flex": {
+    /**
+     * Bulk update flex number for all keys on a rental object
+     * @description Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["BulkUpdateFlexRequest"];
+        };
+      };
+      responses: {
+        /** @description Flex numbers updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Number of keys updated */
+                updatedCount?: number;
+              };
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems": {
+    /**
+     * List all key systems with pagination
+     * @description Retrieve a paginated list of all key systems
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved paginated key systems */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeySystem"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Create a new key system
+     * @description Create a new key system
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeySystemRequest"];
+        };
+      };
+      responses: {
+        /** @description Key system created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeySystem"];
+            };
+          };
+        };
+        /** @description Invalid type or duplicate system code */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/search": {
+    /**
+     * Search key systems
+     * @description Search key systems with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any KeySystem field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     *
+     * Examples:
+     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+     * - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+          /** @description Search query for OR search across fields specified in 'fields' parameter */
+          q?: string;
+          /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
+          fields?: string;
+          id?: string;
+          systemCode?: string;
+          name?: string;
+          manufacturer?: string;
+          managingSupplier?: string;
+          type?: string;
+          propertyIds?: string;
+          installationDate?: string;
+          isActive?: string;
+          description?: string;
+          createdAt?: string;
+          updatedAt?: string;
+          createdBy?: string;
+          updatedBy?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeySystem"][];
+            };
+          };
+        };
+        /** @description Bad request. Invalid parameters or field names */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/{id}": {
+    /**
+     * Get key system by ID
+     * @description Retrieve a specific key system by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved key system */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeySystem"];
+            };
+          };
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Delete a key system
+     * @description Delete a key system by ID
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to delete */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Key system deleted successfully */
+        200: {
+          content: never;
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Update a key system
+     * @description Partially update a key system
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to update */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeySystemRequest"];
+        };
+      };
+      responses: {
+        /** @description Key system updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeySystem"];
+            };
+          };
+        };
+        /** @description Invalid type or duplicate system code */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs": {
+    /**
+     * List logs with pagination
+     * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /** Create a log */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateLogRequest"];
+        };
+      };
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Log"];
+            };
+          };
+        };
+        /** @description Invalid or missing fields */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/search": {
+    /**
+     * Search logs with pagination
+     * @description Search logs with flexible filtering and pagination.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any Log field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+          q?: string;
+          /** @description Comma-separated list of fields for OR search. Defaults to objectId. */
+          fields?: string;
+          id?: string;
+          userName?: string;
+          eventType?: string;
+          eventTime?: string;
+          objectType?: string;
+          objectId?: string;
+          description?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
+          };
+        };
+        /** @description Bad request */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/object/{objectId}": {
+    /**
+     * Get all logs for a specific objectId
+     * @description Returns all log entries for a given objectId, ordered by most recent first
+     */
+    get: {
+      parameters: {
+        path: {
+          objectId: string;
+        };
+      };
+      responses: {
+        /** @description List of logs for the objectId */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Log"][];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/{id}": {
+    /** Get log by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Log found */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Log"];
+            };
+          };
+        };
+        /** @description Not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/rental-object/{rentalObjectCode}": {
+    /**
+     * Get all logs for a specific rental object
+     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
+     *
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
+     *
+     * Excluded: keySystem logs (infrastructure-level, not property-specific)
+     *
+     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string;
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string;
+          /** @description Filter by user name */
+          userName?: string;
+        };
+        path: {
+          /** @description The rental object code (e.g., "705-011-03-0102") */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs for the rental object */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/logs/contact/{contactId}": {
+    /**
+     * Get all logs for a specific contact
+     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+     *
+     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+     *
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
+     *
+     * Note: Matches both contact and contact2 fields (co-tenants supported)
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string;
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string;
+          /** @description Filter by user name */
+          userName?: string;
+        };
+        path: {
+          /** @description The contact code (e.g., "P079586", "F123456") */
+          contactId: string;
+        };
+      };
+      responses: {
+        /** @description Paginated list of logs for the contact */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["Log"][];
+            };
+          };
+        };
+        /** @description Server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-notes/{id}": {
+    /**
+     * Get key note by ID
+     * @description Retrieve a specific key note by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key note */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved key note */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Key note not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Update a key note
+     * @description Update the description of an existing key note
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the key note to update */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyNoteRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Key note not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-notes/by-rental-object/{rentalObjectCode}": {
+    /**
+     * Get key note by rental object code
+     * @description Retrieve the key note for a specific rental object
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved key note */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Key note not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-notes": {
+    /**
+     * Create a new key note
+     * @description Create a new key note for a rental object
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyNoteRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyNote"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts": {
+    /**
+     * Create a receipt
+     * @description Create a new receipt record for a key loan
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateReceiptRequest"];
+        };
+      };
+      responses: {
+        /** @description Key note created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}": {
+    /**
+     * Get a receipt by ID
+     * @description Retrieve a specific receipt by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The receipt ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved receipt */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"];
+            };
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Delete a receipt
+     * @description Delete a receipt by ID (and associated file from MinIO)
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to delete */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Receipt deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Update a receipt
+     * @description Update a receipt (e.g., set fileId after upload)
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to update */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateReceiptRequest"];
+        };
+      };
+      responses: {
+        /** @description Receipt updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/by-key-loan/{keyLoanId}": {
+    /**
+     * Get receipt by key loan ID
+     * @description Retrieve a receipt associated with a specific key loan
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key loan ID to filter receipts by */
+          keyLoanId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved receipt */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Receipt"][];
+            };
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/upload-schema": {
+    /**
+     * Upload PDF schema file for a key system
+     * @description Upload a PDF schema file to attach to a key system
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid file or key system not found */
+        400: {
+          content: {
+            "application/json": components["schemas"]["BadRequestResponse"];
+          };
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description File too large */
+        413: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/download-schema": {
+    /**
+     * Get presigned download URL for key system schema PDF
+     * @description Returns a presigned URL to download the schema PDF file
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Download URL generated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["SchemaDownloadUrlResponse"];
+            };
+          };
+        };
+        /** @description Key system or file not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-systems/{id}/schema": {
+    /**
+     * Delete schema file for a key system
+     * @description Deletes the schema PDF file associated with a key system
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Schema file deleted successfully */
+        204: {
+          content: never;
+        };
+        /** @description Key system not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}/upload": {
+    /**
+     * Upload PDF file for a receipt
+     * @description Upload a PDF file to attach to an existing receipt
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to attach the file to */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "multipart/form-data": {
+            /** Format: binary */
+            file?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                fileId?: string;
+                fileName?: string;
+                size?: number;
+              };
+            };
+          };
+        };
+        /** @description Invalid file or receipt not found */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description File too large */
+        413: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}/upload-base64": {
+    /**
+     * Upload PDF file for a receipt (base64 encoded - for Power Automate)
+     * @description Upload a PDF file as base64 encoded JSON to attach to an existing receipt
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded PDF file content */
+            fileContent: string;
+            /** @description Optional file name (defaults to receipt-id-timestamp.pdf) */
+            fileName?: string;
+            /** @description Optional metadata for Power Automate workflow tracking */
+            metadata?: {
+              [key: string]: string;
+            };
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                fileId?: string;
+                fileName?: string;
+                size?: number;
+                source?: string;
+              };
+            };
+          };
+        };
+        /** @description Invalid base64 content or receipt not found */
+        400: {
+          content: {
+            "application/json": components["schemas"]["BadRequestResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description File too large (max 10MB) */
+        413: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/receipts/{id}/download": {
+    /**
+     * Get presigned download URL for receipt PDF
+     * @description Generate a presigned URL to download the PDF file attached to a receipt
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Download URL generated */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                url?: string;
+                expiresIn?: number;
+                fileId?: string;
+              };
+            };
+          };
+        };
+        /** @description Receipt or file not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/signatures/send": {
+    /**
+     * Send a document for digital signature via SimpleSign
+     * @description Send a PDF document to SimpleSign for digital signature
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            resourceType: "receipt";
+            /** Format: uuid */
+            resourceId: string;
+            /** Format: email */
+            recipientEmail: string;
+            recipientName?: string;
+            pdfBase64: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Signature request sent successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Resource not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/signatures/{id}": {
+    /**
+     * Get a signature by ID
+     * @description Retrieve a specific signature by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Signature details */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"];
+            };
+          };
+        };
+        /** @description Signature not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/signatures/resource/{resourceType}/{resourceId}": {
+    /**
+     * Get all signatures for a resource
+     * @description Retrieve all signatures associated with a specific resource
+     */
+    get: {
+      parameters: {
+        path: {
+          resourceType: "receipt";
+          resourceId: string;
+        };
+      };
+      responses: {
+        /** @description List of signatures */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Signature"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/webhooks/simplesign": {
+    /**
+     * Webhook endpoint for SimpleSign status updates
+     * @description Receives webhook notifications from SimpleSign when document status changes (e.g., signed, declined)
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SimpleSignWebhookPayload"];
+        };
+      };
+      responses: {
+        /** @description Webhook processed successfully */
+        200: {
+          content: never;
+        };
+        /** @description Signature not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-events": {
+    /**
+     * Get all key events
+     * @description Returns all key events ordered by creation date.
+     */
+    get: {
+      responses: {
+        /** @description List of key events. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching key events. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Create a key event
+     * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyEventRequest"];
+        };
+      };
+      responses: {
+        /** @description Key event created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Conflict - one or more keys have incomplete events. */
+        409: {
+          content: {
+            "application/json": {
+              reason?: string;
+              conflictingKeys?: string[];
+            };
+          };
+        };
+        /** @description An error occurred while creating the key event. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-events/by-key/{keyId}": {
+    /**
+     * Get all key events for a specific key
+     * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Optional limit on number of results (e.g., 1 for latest event only). */
+          limit?: number;
+        };
+        path: {
+          /** @description The key ID to filter events by. */
+          keyId: string;
+        };
+      };
+      responses: {
+        /** @description List of key events for the key. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching key events. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-events/{id}": {
+    /**
+     * Get key event by ID
+     * @description Fetch a specific key event by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A key event object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"];
+            };
+          };
+        };
+        /** @description Key event not found. */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description An error occurred while fetching the key event. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Update a key event
+     * @description Update an existing key event.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyEventRequest"];
+        };
+      };
+      responses: {
+        /** @description Key event updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyEvent"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Key event not found. */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description An error occurred while updating the key event. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/key-bundles": {
+    /**
+     * List key bundles with pagination
+     * @description Fetches a paginated list of all key bundles ordered by name.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description A paginated list of key bundles. */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyBundle"][];
+            };
+          };
+        };
+        /** @description An error occurred while listing key bundles. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+    /**
+     * Create a new key bundle
+     * @description Create a new key bundle record.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateKeyBundleRequest"];
+        };
+      };
+      responses: {
+        /** @description Key bundle created successfully. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description An error occurred while creating the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/search": {
+    /**
+     * Search key bundles with pagination
+     * @description Search key bundles with flexible filtering and pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+          q?: string;
+          /** @description Comma-separated list of fields for OR search. */
+          fields?: string;
+        };
+      };
+      responses: {
+        /** @description Paginated search results */
+        200: {
+          content: {
+            "application/json": components["schemas"]["PaginatedResponse"] & {
+              content?: components["schemas"]["KeyBundle"][];
+            };
+          };
+        };
+        /** @description Invalid search parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/by-key/{keyId}": {
+    /**
+     * Get all bundles containing a specific key
+     * @description Returns all bundle records containing the specified key ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key ID to search for */
+          keyId: string;
+        };
+      };
+      responses: {
+        /** @description Array of bundles containing this key */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/{id}": {
+    /**
+     * Get key bundle by ID
+     * @description Fetch a specific key bundle by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description A key bundle object. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"];
+            };
+          };
+        };
+        /** @description Key bundle not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while fetching the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a key bundle
+     * @description Delete a key bundle by ID.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to delete. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Key bundle deleted successfully. */
+        204: {
+          content: never;
+        };
+        /** @description Key bundle not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while deleting the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update a key bundle
+     * @description Partially update an existing key bundle.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to update. */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateKeyBundleRequest"];
+        };
+      };
+      responses: {
+        /** @description Key bundle updated successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundle"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Key bundle not found. */
+        404: {
+          content: never;
+        };
+        /** @description An error occurred while updating the key bundle. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/{id}/keys-with-loan-status": {
+    /**
+     * Get keys in bundle with maintenance loan status
+     * @description Fetches all keys in a key bundle along with their active maintenance loan information
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The key bundle ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Bundle information and keys with loan status */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeyBundleDetailsResponse"];
+            };
+          };
+        };
+        /** @description Key bundle not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/key-bundles/by-contact/{contactCode}/with-loaned-keys": {
+    /**
+     * Get key bundles with keys loaned to a contact
+     * @description Fetches all key bundles that have keys currently loaned to a specific contact.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The contact code (F-number) to find bundles for */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description A list of bundles with loaned keys info. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BundleWithLoanedKeysInfo"][];
+            };
+          };
+        };
+        /** @description An error occurred while fetching bundles. */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/card-owners": {
+    /**
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by name (rental object ID / object code) */
+          nameFilter?: string;
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+          /** @description Filter by ID */
+          idfilter?: string;
+          /** @description Filter by attribute */
+          attributeFilter?: string;
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string;
+          /** @description Filter by folder */
+          folderFilter?: string;
+          /** @description Filter by organisation */
+          organisationFilter?: string;
+          /** @description Pagination offset */
+          offset?: number;
+          /** @description Maximum number of results */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description Card owners retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwners?: Record<string, never>[];
+            };
+          };
+        };
+        /** @description Failed to fetch card owners */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/card-owners/{cardOwnerId}": {
+    /**
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string;
+        };
+      };
+      responses: {
+        /** @description Card owner retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              cardOwner?: components["schemas"]["CardOwner"];
+            };
+          };
+        };
+        /** @description Card owner not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Failed to fetch card owner */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/dax/cards/{cardId}": {
+    /**
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string;
+        };
+        path: {
+          /** @description The card ID */
+          cardId: string;
+        };
+      };
+      responses: {
+        /** @description Card retrieved successfully */
+        200: {
+          content: {
+            "application/json": {
+              card?: components["schemas"]["Card"];
+            };
+          };
+        };
+        /** @description Card not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Failed to fetch card */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -5384,6 +8026,31 @@ export interface components {
       href: string;
       /** @enum {string} */
       rel: "self" | "first" | "last" | "prev" | "next";
+    };
+    Contact: {
+      contactCode: string;
+      contactKey: string;
+      leaseIds?: string[];
+      firstName: string | null;
+      lastName: string | null;
+      fullName: string | null;
+      nationalRegistrationNumber: string;
+      /** Format: date-time */
+      birthDate: string | null;
+      address: {
+        street: string;
+        number: string;
+        postalCode: string;
+        city: string;
+      } | null;
+      phoneNumbers: {
+          phoneNumber: string;
+          type: string;
+          isMainNumber: number;
+        }[];
+      emailAddress: string | null;
+      isTenant: boolean;
+      specialAttention?: boolean;
     };
     WorkOrder: {
       accessCaption: string;
@@ -6300,8 +8967,7 @@ export interface components {
             /** Format: uuid */
             componentId: string;
             spaceId: string | null;
-            /** @enum {string} */
-            spaceType: "OBJECT" | "PropertyObject";
+            spaceType: components["schemas"]["ComponentInstallation"]["spaceType"];
             installationDate: string;
             deinstallationDate: string | null;
             orderNumber?: string | null;
@@ -6509,6 +9175,640 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
+    };
+    Key: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    KeySystem: {
+      /** Format: uuid */
+      id: string;
+      systemCode: string;
+      name: string;
+      manufacturer: string;
+      managingSupplier?: string | null;
+      /** @enum {string} */
+      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+      schemaFileId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+    };
+    KeyLoan: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      keyCards: string;
+      /** @enum {string} */
+      loanType: "TENANT" | "MAINTENANCE";
+      contact?: string;
+      contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+    };
+    KeyDetails: {
+      /** Format: uuid */
+      id: string;
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      /** @default false */
+      disposed?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      keySystem?: components["schemas"]["KeySystem"] | null;
+      loans?: components["schemas"]["KeyLoan"][] | null;
+      events?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          /** @enum {string} */
+          type: "FLEX" | "ORDER" | "LOST";
+          /** @enum {string} */
+          status: "ORDERED" | "RECEIVED" | "COMPLETED";
+          /** Format: uuid */
+          workOrderId?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[]) | null;
+    };
+    KeyLoanWithDetails: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      keyCards: string;
+      /** @enum {string} */
+      loanType: "TENANT" | "MAINTENANCE";
+      contact?: string;
+      contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      createdBy?: string | null;
+      updatedBy?: string | null;
+      keysArray: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
+      keyCardsArray: ({
+          cardId: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
+        })[];
+      receipts: ({
+          /** Format: uuid */
+          id: string;
+          /** Format: uuid */
+          keyLoanId: string;
+          /** @enum {string} */
+          receiptType: "LOAN" | "RETURN";
+          /** @enum {string} */
+          type: "DIGITAL" | "PHYSICAL";
+          fileId?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+        })[];
+    };
+    Log: {
+      /** Format: uuid */
+      id: string;
+      userName: string;
+      /** @enum {string} */
+      eventType: "creation" | "update" | "delete";
+      /** @enum {string} */
+      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
+      /** Format: uuid */
+      objectId?: string | null;
+      /** Format: date-time */
+      eventTime: string;
+      description?: string | null;
+    };
+    KeyNote: {
+      /** Format: uuid */
+      id: string;
+      rentalObjectCode: string;
+      description: string;
+    };
+    Receipt: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      keyLoanId: string;
+      /** @enum {string} */
+      receiptType: "LOAN" | "RETURN";
+      /** @enum {string} */
+      type: "DIGITAL" | "PHYSICAL";
+      fileId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    KeyEvent: {
+      /** Format: uuid */
+      id: string;
+      keys: string;
+      /** @enum {string} */
+      type: "FLEX" | "ORDER" | "LOST";
+      /** @enum {string} */
+      status: "ORDERED" | "RECEIVED" | "COMPLETED";
+      /** Format: uuid */
+      workOrderId?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    Signature: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      simpleSignDocumentId: number;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string | null;
+      status: string;
+      /** Format: date-time */
+      sentAt: string;
+      /** Format: date-time */
+      completedAt?: string | null;
+      /** Format: date-time */
+      lastSyncedAt?: string | null;
+    };
+    CreateKeyRequest: {
+      keyName: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+    };
+    UpdateKeyRequest: {
+      keyName?: string;
+      keySequenceNumber?: number;
+      flexNumber?: number | null;
+      rentalObjectCode?: string;
+      /** @enum {string} */
+      keyType?: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+      /** Format: uuid */
+      keySystemId?: string | null;
+      disposed?: boolean;
+    };
+    BulkUpdateFlexRequest: {
+      rentalObjectCode: string;
+      flexNumber: number;
+    };
+    CreateKeyLoanRequest: {
+      keys?: string;
+      keyCards?: string;
+      /** @enum {string} */
+      loanType: "TENANT" | "MAINTENANCE";
+      contact?: string;
+      contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      createdBy?: string | null;
+    };
+    UpdateKeyLoanRequest: {
+      keys?: string;
+      keyCards?: string;
+      /** @enum {string} */
+      loanType?: "TENANT" | "MAINTENANCE";
+      contact?: string;
+      contact2?: string;
+      contactPerson?: string | null;
+      description?: string | null;
+      /** Format: date-time */
+      returnedAt?: string | null;
+      /** Format: date-time */
+      availableToNextTenantFrom?: string | null;
+      /** Format: date-time */
+      pickedUpAt?: string | null;
+      updatedBy?: string | null;
+    };
+    CreateKeySystemRequest: {
+      systemCode: string;
+      name: string;
+      manufacturer: string;
+      /** @enum {string} */
+      type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+    };
+    UpdateKeySystemRequest: {
+      systemCode?: string;
+      name?: string;
+      manufacturer?: string;
+      /** @enum {string} */
+      type?: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+      propertyIds?: string;
+      /** Format: date-time */
+      installationDate?: string | null;
+      isActive?: boolean;
+      description?: string | null;
+    };
+    CreateLogRequest: {
+      userName: string;
+      /** @enum {string} */
+      eventType: "creation" | "update" | "delete";
+      /** @enum {string} */
+      objectType: "key" | "keySystem" | "keyLoan" | "keyBundle" | "receipt" | "keyEvent" | "signature" | "keyNote";
+      /** Format: uuid */
+      objectId?: string | null;
+      description?: string | null;
+      autoGenerateDescription?: boolean;
+      entityData?: unknown;
+      /** @enum {string} */
+      action?: "Skapad" | "Uppdaterad" | "Kasserad" | "Raderad";
+      /** Format: date-time */
+      eventTime?: string;
+    };
+    CreateKeyNoteRequest: {
+      rentalObjectCode: string;
+      description: string;
+    };
+    UpdateKeyNoteRequest: {
+      rentalObjectCode?: string;
+      description?: string;
+    };
+    KeyBundle: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      keys: string;
+      description?: string | null;
+    };
+    BundleWithLoanedKeysInfo: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: string | null;
+      loanedKeyCount: number;
+      totalKeyCount: number;
+    };
+    CreateKeyBundleRequest: {
+      name: string;
+      keys: string;
+      description?: string | null;
+    };
+    UpdateKeyBundleRequest: {
+      name?: string;
+      keys?: string;
+      description?: string | null;
+    };
+    KeyBundleDetailsResponse: {
+      bundle: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        keys: string;
+        description?: string | null;
+      };
+      keys: ({
+          /** Format: uuid */
+          id: string;
+          keyName: string;
+          keySequenceNumber?: number;
+          flexNumber?: number | null;
+          rentalObjectCode?: string;
+          /** @enum {string} */
+          keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
+          /** Format: uuid */
+          keySystemId?: string | null;
+          /** @default false */
+          disposed?: boolean;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          keySystem?: ({
+            /** Format: uuid */
+            id: string;
+            systemCode: string;
+            name: string;
+            manufacturer: string;
+            managingSupplier?: string | null;
+            /** @enum {string} */
+            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+            propertyIds?: string;
+            /** Format: date-time */
+            installationDate?: string | null;
+            isActive?: boolean;
+            description?: string | null;
+            schemaFileId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            createdBy?: string | null;
+            updatedBy?: string | null;
+          }) | null;
+          loans?: components["schemas"]["KeyLoan"][] | null;
+          events?: (({
+              /** Format: uuid */
+              id: string;
+              keys: string;
+              /** @enum {string} */
+              type: "FLEX" | "ORDER" | "LOST";
+              /** @enum {string} */
+              status: "ORDERED" | "RECEIVED" | "COMPLETED";
+              /** Format: uuid */
+              workOrderId?: string | null;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            })[]) | null;
+        })[];
+    };
+    CreateKeyEventRequest: {
+      keys: string;
+      /** @enum {string} */
+      type: "FLEX" | "ORDER" | "LOST";
+      /** @enum {string} */
+      status: "ORDERED" | "RECEIVED" | "COMPLETED";
+      /** Format: uuid */
+      workOrderId?: string | null;
+    };
+    UpdateKeyEventRequest: {
+      keys?: string;
+      /** @enum {string} */
+      type?: "FLEX" | "ORDER" | "LOST";
+      /** @enum {string} */
+      status?: "ORDERED" | "RECEIVED" | "COMPLETED";
+      /** Format: uuid */
+      workOrderId?: string | null;
+    };
+    CreateSignatureRequest: {
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      simpleSignDocumentId: number;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string | null;
+      /** @default sent */
+      status?: string;
+    };
+    UpdateSignatureRequest: {
+      status?: string;
+      /** Format: date-time */
+      completedAt?: string | null;
+      /** Format: date-time */
+      lastSyncedAt?: string | null;
+    };
+    SendSignatureRequest: {
+      /** @enum {string} */
+      resourceType: "receipt";
+      /** Format: uuid */
+      resourceId: string;
+      /** Format: email */
+      recipientEmail: string;
+      recipientName?: string;
+      pdfBase64: string;
+    };
+    SimpleSignWebhookPayload: {
+      id: number;
+      status: string;
+      status_updated_at: string;
+    };
+    CreateReceiptRequest: {
+      /** Format: uuid */
+      keyLoanId: string;
+      /** @enum {string} */
+      receiptType: "LOAN" | "RETURN";
+      /** @enum {string} */
+      type?: "DIGITAL" | "PHYSICAL";
+      fileId?: string;
+    };
+    UpdateReceiptRequest: {
+      fileId?: string;
+    };
+    /** @enum {string} */
+    ReceiptType: "LOAN" | "RETURN";
+    /** @enum {string} */
+    ReceiptFormat: "DIGITAL" | "PHYSICAL";
+    ErrorResponse: {
+      /** @example Internal server error */
+      error?: string;
+      reason?: string;
+    };
+    NotFoundResponse: {
+      /** @example Resource not found */
+      reason: string;
+    };
+    BadRequestResponse: {
+      reason: string;
+    };
+    SchemaDownloadUrlResponse: {
+      url: string;
+      expiresIn: number;
+    };
+    CardOwner: {
+      cardOwnerId: string;
+      cardOwnerType?: string | null;
+      familyName?: string | null;
+      specificName?: string | null;
+      primaryOrganization?: unknown;
+      cards?: (({
+          cardId: string;
+          name?: string | null;
+          owner?: unknown;
+          appearanceCode?: string | null;
+          classification?: string | null;
+          disabled?: boolean;
+          startTime?: string | null;
+          stopTime?: string | null;
+          createTime: string;
+          pinCode?: string | null;
+          state?: string | null;
+          archivedAt?: string | null;
+          codes?: unknown[] | null;
+        })[]) | null;
+      comment?: string | null;
+      folderId?: number | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      pinCode?: string | null;
+      attributes?: {
+        [key: string]: string;
+      } | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      createTime?: string;
+    };
+    Card: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+    };
+    CardDetails: {
+      cardId: string;
+      name?: string | null;
+      owner?: unknown;
+      appearanceCode?: string | null;
+      classification?: string | null;
+      disabled?: boolean;
+      startTime?: string | null;
+      stopTime?: string | null;
+      createTime: string;
+      pinCode?: string | null;
+      state?: string | null;
+      archivedAt?: string | null;
+      codes?: unknown[] | null;
+      loans?: (({
+          /** Format: uuid */
+          id: string;
+          keys: string;
+          keyCards: string;
+          /** @enum {string} */
+          loanType: "TENANT" | "MAINTENANCE";
+          contact?: string;
+          contact2?: string;
+          contactPerson?: string | null;
+          description?: string | null;
+          /** Format: date-time */
+          returnedAt?: string | null;
+          /** Format: date-time */
+          availableToNextTenantFrom?: string | null;
+          /** Format: date-time */
+          pickedUpAt?: string | null;
+          /** Format: date-time */
+          createdAt: string;
+          /** Format: date-time */
+          updatedAt: string;
+          createdBy?: string | null;
+          updatedBy?: string | null;
+        })[]) | null;
+    };
+    QueryCardOwnersParams: {
+      nameFilter?: string;
+      expand?: string;
+      idfilter?: string;
+      attributeFilter?: string;
+      selectedAttributes?: string;
+      folderFilter?: string;
+      organisationFilter?: string;
+      offset?: number;
+      limit?: number;
+    };
+    PaginatedResponse: {
+      content: unknown[];
+      _meta: {
+        totalRecords: number;
+        page: number;
+        limit: number;
+        count: number;
+      };
+      _links: ({
+          href: string;
+          /** @enum {string} */
+          rel: "self" | "first" | "last" | "prev" | "next";
+        })[];
     };
     SearchQueryParams: {
       /** @description The search query string used to find properties, buildings and residences */
@@ -6736,6 +10036,39 @@ export interface components {
        * @default 3600
        */
       expirySeconds?: number;
+    };
+    RentalPropertyResponse: {
+      content?: {
+        id?: string;
+        type?: string;
+        property?: {
+          rentalTypeCode?: string;
+          rentalType?: string;
+          address?: string;
+          code?: string;
+          number?: string;
+          type?: string;
+          roomTypeCode?: string;
+          entrance?: string;
+          floor?: string;
+          hasElevator?: boolean;
+          washSpace?: string;
+          area?: number;
+          estateCode?: string;
+          estate?: string;
+          buildingCode?: string;
+          building?: string;
+        };
+      };
+      _links?: {
+        self?: {
+          href?: string;
+        };
+        link?: {
+          href?: string;
+          templated?: boolean;
+        };
+      };
     };
   };
   responses: never;
