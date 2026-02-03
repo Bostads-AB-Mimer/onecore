@@ -76,8 +76,8 @@ export const getColumns = (
       field: 'rent.amount',
       headerName: 'Hyra',
       ...sharedColumnProps,
-      valueGetter: (params) => params.row.rentalObject?.rent?.amount ?? 0,
-      renderCell: (v) => {
+      valueGetter: (params: any) => params.row.rentalObject?.rent?.amount ?? 0,
+      renderCell: (v: any) => {
         const rent = v.row.rentalObject?.rent?.amount ?? 0
         const showInclVat = v.row.rentalRule === 'NON_SCORED'
         return (
