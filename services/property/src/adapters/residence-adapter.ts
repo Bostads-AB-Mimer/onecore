@@ -8,6 +8,10 @@ import {
   calculateYearlyRentFromYearRentRows,
   calculateEstimatedHyresbortfall,
 } from '../utils/rent-calculation'
+import {
+  analyzeRentalBlockSearchTerm,
+  getPrismaOperator,
+} from '../utils/rentalBlockSearchAnalyzer'
 
 import { prisma } from './db'
 //todo: add types
@@ -696,7 +700,7 @@ async function fetchRentDataBatched(
 
 /**
  * Fetches district values by management unit code (fencode).
- * Used as fallback when the direct keyobjfen → keybafen join fails.
+ * Used to enrich Prisma results with distrikt from bafen.code lookup.
  */
 async function fetchDistrictsByFencode(
   fencodes: string[]
@@ -752,7 +756,6 @@ async function fetchRentalBlocksRaw(
 ): Promise<RawRentalBlockRow[]> {
   const {
     q,
-    fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
     blockReason,
@@ -828,20 +831,23 @@ async function fetchRentalBlocksRaw(
     }
   }
 
-  // Search filter (q param) - OR across fields
+  // Search filter (q param) - use smart search analyzer
   if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
+    const searchTargets = analyzeRentalBlockSearchTerm(q)
     const orClauses: string[] = []
 
-    if (searchFields.includes('rentalId')) {
-      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('address')) {
-      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('blockReason')) {
-      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    for (const target of searchTargets) {
+      const escapeFn = target.startsWith
+        ? escapeSqlLikeStartsWith
+        : escapeSqlLike
+
+      if (target.field === 'rentalId') {
+        orClauses.push(`babuf.hyresid LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'address') {
+        orClauses.push(`babuf.caption LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'blockReason') {
+        orClauses.push(`hyspa.caption LIKE ${escapeFn(target.pattern)}`)
+      }
     }
 
     if (orClauses.length > 0) {
@@ -895,7 +901,7 @@ function escapeSqlString(value: string): string {
   return `'${escaped}'`
 }
 
-/** Escape a string value for LIKE pattern with wildcards */
+/** Escape a string value for LIKE pattern with wildcards (contains) */
 function escapeSqlLike(value: string): string {
   // Escape special LIKE characters and single quotes
   const escaped = value
@@ -903,6 +909,15 @@ function escapeSqlLike(value: string): string {
     .replace(/%/g, '[%]')
     .replace(/_/g, '[_]')
   return `'%${escaped}%'`
+}
+
+/** Escape a string value for LIKE pattern with startsWith (trailing wildcard only) */
+function escapeSqlLikeStartsWith(value: string): string {
+  const escaped = value
+    .replace(/'/g, "''")
+    .replace(/%/g, '[%]')
+    .replace(/_/g, '[_]')
+  return `'${escaped}%'`
 }
 
 /** Transform raw SQL row to API response format */
@@ -1112,7 +1127,6 @@ function buildRentalBlockWhereClause(
 ): Prisma.RentalBlockWhereInput {
   const {
     q,
-    fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
     blockReason,
@@ -1137,31 +1151,34 @@ function buildRentalBlockWhereClause(
     andConditions.push(activeFilter)
   }
 
-  // General search (q param) - OR across fields
+  // General search (q param) - use smart search analyzer
   if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
+    const searchTargets = analyzeRentalBlockSearchTerm(q)
 
-    const orConditions: Prisma.RentalBlockWhereInput[] = []
+    if (searchTargets.length > 0) {
+      const orConditions: Prisma.RentalBlockWhereInput[] = []
 
-    for (const field of searchFields) {
-      if (field === 'rentalId') {
-        orConditions.push({
-          propertyStructure: { rentalId: { contains: searchTerm } },
-        })
-      } else if (field === 'address') {
-        orConditions.push({
-          propertyStructure: { name: { contains: searchTerm } },
-        })
-      } else if (field === 'blockReason') {
-        orConditions.push({
-          blockReason: { caption: { contains: searchTerm } },
-        })
+      for (const target of searchTargets) {
+        const operator = getPrismaOperator(target)
+
+        if (target.field === 'rentalId') {
+          orConditions.push({
+            propertyStructure: { rentalId: { [operator]: target.pattern } },
+          })
+        } else if (target.field === 'address') {
+          orConditions.push({
+            propertyStructure: { name: { [operator]: target.pattern } },
+          })
+        } else if (target.field === 'blockReason') {
+          orConditions.push({
+            blockReason: { caption: { [operator]: target.pattern } },
+          })
+        }
       }
-    }
 
-    if (orConditions.length > 0) {
-      andConditions.push({ OR: orConditions })
+      if (orConditions.length > 0) {
+        andConditions.push({ OR: orConditions })
+      }
     }
   }
 
@@ -1274,7 +1291,6 @@ async function searchRentalBlocksWithDistriktRaw(
 ): Promise<{ ids: string[]; totalCount: number }> {
   const {
     q,
-    fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
     blockReason,
@@ -1351,20 +1367,23 @@ async function searchRentalBlocksWithDistriktRaw(
     }
   }
 
-  // Search filter (q param) - OR across fields
+  // Search filter (q param) - use smart search analyzer
   if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
+    const searchTargets = analyzeRentalBlockSearchTerm(q)
     const orClauses: string[] = []
 
-    if (searchFields.includes('rentalId')) {
-      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('address')) {
-      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('blockReason')) {
-      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    for (const target of searchTargets) {
+      const escapeFn = target.startsWith
+        ? escapeSqlLikeStartsWith
+        : escapeSqlLike
+
+      if (target.field === 'rentalId') {
+        orClauses.push(`babuf.hyresid LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'address') {
+        orClauses.push(`babuf.caption LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'blockReason') {
+        orClauses.push(`hyspa.caption LIKE ${escapeFn(target.pattern)}`)
+      }
     }
 
     if (orClauses.length > 0) {
@@ -1465,7 +1484,7 @@ export const searchRentalBlocks = async (
     >
 
     if (distrikt) {
-      // When filtering by distrikt, use raw SQL to handle the COALESCE join logic
+      // When filtering by distrikt, use raw SQL to join fencode → bafen.code
       // This applies ALL filters and pagination in SQL, returning only paginated IDs
       // to avoid SQL Server's 2100 parameter limit
       const result = await searchRentalBlocksWithDistriktRaw(options)
@@ -1473,7 +1492,7 @@ export const searchRentalBlocks = async (
 
       logger.info(
         { distrikt, totalCount, pageIds: result.ids.length },
-        'searchRentalBlocks: found rental blocks for distrikt via fencode fallback'
+        'searchRentalBlocks: found rental blocks for distrikt via fencode'
       )
 
       if (result.ids.length === 0) {
