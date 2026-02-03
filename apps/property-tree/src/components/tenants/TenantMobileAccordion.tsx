@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/MobileAccordion'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '../../features/work-orders/components/WorkOrdersManagement'
 import { ContextType } from '@/types/ui'
 
 interface TenantMobileAccordionProps {
@@ -75,7 +75,7 @@ export function TenantMobileAccordion({
       content: <TenantNotes contactCode={contactCode} />,
     },
     /*
-    
+
     {
       id: 'keys',
       title: 'Nyckelknippa',

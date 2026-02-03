@@ -21,7 +21,7 @@ import {
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 import { Lease, inspectionService } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'

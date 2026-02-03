@@ -1,5 +1,5 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 import { TenantNotes } from '@/components/tenants/TenantNotes'

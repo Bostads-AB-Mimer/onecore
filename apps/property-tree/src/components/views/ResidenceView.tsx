@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/v2/Tabs'
 import { Card, CardContent } from '../ui/v2/Card'
 import { RoomInfo } from '../residence/RoomInfo'
 import { TenantInformation } from '../residence/TenantInformation'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '../../features/work-orders/components/WorkOrdersManagement'
 import { useResidenceDetail } from '../hooks/useResidenceDetail'
 import { ContextType } from '@/types/ui'
 
