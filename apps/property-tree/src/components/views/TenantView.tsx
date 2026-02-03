@@ -10,6 +10,7 @@ import {
   FileText,
   MessageSquare,
 } from 'lucide-react'
+import type { Tenant } from '@/services/types'
 import { ViewHeader } from '../shared/ViewHeader'
 
 export function TenantView() {

@@ -24,6 +24,7 @@ features/
 ## Import Rules
 
 **Can import from:**
+
 - `components/` (shared UI)
 - `hooks/` (shared hooks)
 - `services/` (API calls)
@@ -33,6 +34,7 @@ features/
 - `store/` (global state)
 
 **Cannot import from:**
+
 - Other features (this is critical - extract shared code instead)
 - `pages/`
 - `layouts/`

@@ -21,11 +21,13 @@ hooks/
 ## Import Rules
 
 **Can import from:**
+
 - `utils/`
 - `types/`
 - `config/`
 
 **Cannot import from:**
+
 - `features/`
 - `pages/`
 - `services/` (hooks here should not make API calls directly)

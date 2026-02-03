@@ -23,7 +23,9 @@ src/
 ## Folder Descriptions
 
 ### `/assets`
+
 Static files like images, fonts, and icons.
+
 ```
 assets/
 ├── images/
@@ -32,7 +34,9 @@ assets/
 ```
 
 ### `/components`
+
 Shared, reusable UI components with no business logic. These can be used anywhere in the app.
+
 ```
 components/
 ├── ui/
@@ -46,7 +50,9 @@ components/
 ```
 
 ### `/config`
+
 Application configuration, environment variables, and constants.
+
 ```
 config/
 ├── env.ts
@@ -55,7 +61,9 @@ config/
 ```
 
 ### `/features`
+
 **The core of the app.** Each feature is a self-contained module with its own components, hooks, types, and constants. Features are organized by domain/functionality.
+
 ```
 features/
 └── [feature-name]/
@@ -67,12 +75,15 @@ features/
 ```
 
 **Rules for features:**
+
 - Keep all related code together (components, hooks, constants, types)
 - Export only what other parts of the app need via `index.ts`
 - Features should not import from other features (use shared code instead)
 
 ### `/hooks`
+
 Shared custom hooks that are used across multiple features. Not business-specific.
+
 ```
 hooks/
 ├── useDebounce.ts
@@ -82,7 +93,9 @@ hooks/
 ```
 
 ### `/layouts`
+
 Layout components that wrap pages (headers, sidebars, footers).
+
 ```
 layouts/
 ├── MainLayout.tsx
@@ -91,7 +104,9 @@ layouts/
 ```
 
 ### `/pages`
+
 Page-level components, one per route. Pages compose features and layouts.
+
 ```
 pages/
 ├── HomePage.tsx
@@ -100,7 +115,9 @@ pages/
 ```
 
 ### `/services`
+
 API service layer - all external API calls.
+
 ```
 services/
 └── api/
@@ -108,7 +125,9 @@ services/
 ```
 
 ### `/store`
+
 Global state management (Redux, Zustand, etc.).
+
 ```
 store/
 ├── index.ts
@@ -116,7 +135,9 @@ store/
 ```
 
 ### `/styles`
+
 Global styles, CSS variables, and theme definitions.
+
 ```
 styles/
 ├── globals.css
@@ -125,7 +146,9 @@ styles/
 ```
 
 ### `/types`
+
 Shared TypeScript types and interfaces used across the app.
+
 ```
 types/
 ├── api.ts
@@ -134,7 +157,9 @@ types/
 ```
 
 ### `/utils`
+
 Pure utility functions with no React dependencies.
+
 ```
 utils/
 ├── formatters.ts

@@ -9,7 +9,7 @@ import prettier from 'eslint-config-prettier';
 export default defineConfig([
   js.configs.recommended,
   {
-    files: ['**/*.{js,ts,cjs,mjs}'],
+    files: ['**/*.{js,jsx,ts,tsx,cjs,mjs}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',

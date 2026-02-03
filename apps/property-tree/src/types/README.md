@@ -20,9 +20,11 @@ types/
 ## Import Rules
 
 **Can import from:**
+
 - Nothing (or other type files only)
 
 **Cannot import from:**
+
 - Any runtime code
 
 Types is a **bottom-level** folder - it has no dependencies.

@@ -79,7 +79,7 @@ export const InvoicesTable = (props: Props) => {
     return { date: originalDate, isDeferment: false, originalDate: null }
   }
 
-  const getStatusBadge = (invoice: Invoice): JSX.Element => {
+  const getStatusBadge = (invoice: Invoice) => {
     return match(invoice)
       .with({ credit: { originalInvoiceId: P.string } }, () => (
         <Badge variant="secondary">Kredit</Badge>

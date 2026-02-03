@@ -20,6 +20,7 @@ layouts/
 ## Import Rules
 
 **Can import from:**
+
 - `components/` (shared UI)
 - `hooks/` (shared hooks)
 - `utils/`
@@ -28,6 +29,7 @@ layouts/
 - `store/` (for user/auth state needed in header, etc.)
 
 **Cannot import from:**
+
 - `features/`
 - `pages/`
 - `services/`

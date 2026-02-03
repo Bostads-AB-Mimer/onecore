@@ -20,11 +20,13 @@ services/
 ## Import Rules
 
 **Can import from:**
+
 - `types/`
 - `utils/`
 - `config/` (API base URLs, etc.)
 
 **Cannot import from:**
+
 - `features/`
 - `pages/`
 - `components/`

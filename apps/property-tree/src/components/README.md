@@ -20,11 +20,13 @@ components/
 ## Import Rules
 
 **Can import from:**
+
 - `utils/`
 - `types/`
 - `styles/`
 
 **Cannot import from:**
+
 - `features/`
 - `pages/`
 - `services/`

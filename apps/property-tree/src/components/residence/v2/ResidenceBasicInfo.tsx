@@ -33,7 +33,7 @@ const requiresSpecialHandling = (
     return false
   }
 
-  return Boolean(!!tenant.specialAttention)
+  return Boolean(tenant.specialAttention)
 }
 
 const requiresPestControl = (

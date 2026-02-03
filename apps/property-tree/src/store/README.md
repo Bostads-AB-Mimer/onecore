@@ -19,12 +19,14 @@ store/
 ## Import Rules
 
 **Can import from:**
+
 - `types/`
 - `utils/`
 - `config/`
 - `services/` (for async thunks/actions that fetch data)
 
 **Cannot import from:**
+
 - `features/`
 - `pages/`
 - `components/`

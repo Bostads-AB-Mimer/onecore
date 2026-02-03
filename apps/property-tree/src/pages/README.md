@@ -21,6 +21,7 @@ pages/
 ## Import Rules
 
 **Can import from:**
+
 - `features/` (this is where pages get their content)
 - `layouts/` (page structure)
 - `components/` (shared UI)
@@ -31,6 +32,7 @@ pages/
 - `config/`
 
 **Cannot import from:**
+
 - Other pages
 
 Pages are the **top level** - they can import from almost anywhere.

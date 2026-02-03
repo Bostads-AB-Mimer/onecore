@@ -20,9 +20,11 @@ config/
 ## Import Rules
 
 **Can import from:**
+
 - `types/`
 
 **Cannot import from:**
+
 - Any other folder (config should be self-contained)
 
 This is a **bottom-level** folder - it should have no dependencies on app code.

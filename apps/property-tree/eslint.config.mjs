@@ -62,9 +62,6 @@ export default defineConfig([
       ],
     },
     rules: {
-      // Disable base JS no-unused-vars (TypeScript version is in base config)
-      // 'no-unused-vars': 'off',
-
       // Catch files not matching any defined element type
       'boundaries/no-unknown-files': ['warn'],
 
@@ -173,5 +170,4 @@ export default defineConfig([
       ],
     },
   },
-  ,
 ])

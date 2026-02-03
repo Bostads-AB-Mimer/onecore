@@ -22,10 +22,12 @@ utils/
 ## Import Rules
 
 **Can import from:**
+
 - `types/`
 - `config/` (for constants needed in utils)
 
 **Cannot import from:**
+
 - Any other folder
 
 Utils is a **bottom-level** folder - it should have minimal dependencies.
