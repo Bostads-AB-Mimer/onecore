@@ -35,6 +35,10 @@ export interface Config {
   economyService: {
     url: string
   }
+  keysService: {
+    url: string
+  }
+
   fileStorageService: {
     url: string
   }
@@ -76,6 +80,10 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    keys: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
   }
 }
 
@@ -106,6 +114,9 @@ const config = configPackage({
     },
     economyService: {
       url: 'http://localhost:5080',
+    },
+    keysService: {
+      url: 'http://localhost:5090',
     },
     fileStorageService: {
       url: 'http://localhost:5091',
@@ -150,6 +161,10 @@ const config = configPackage({
         systemName: 'economy',
         minimumMinutesBetweenRequests: 1,
       },
+      keys: {
+        systemName: 'keys',
+        minimumMinutesBetweenRequests: 1,
+      },
     },
   },
 })
@@ -167,5 +182,6 @@ export default {
   auth: config.get('auth'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
+  keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
 } as Config

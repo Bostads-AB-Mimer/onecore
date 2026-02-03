@@ -35,6 +35,7 @@ import { registerSchema } from '../../utils/openapi'
 import {
   GetLeasesByRentalPropertyIdQueryParams,
   Lease,
+  Contact,
   mapLease,
 } from './schemas/lease'
 
@@ -42,21 +43,6 @@ const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
 
   return lease
-}
-
-const getLeasesWithRelatedEntitiesForPnr = async (
-  nationalRegistrationNumber: string
-) => {
-  const leases = await leasingAdapter.getLeasesForPnr(
-    nationalRegistrationNumber,
-    {
-      includeUpcomingLeases: false,
-      includeTerminatedLeases: false,
-      includeContacts: true,
-    }
-  )
-
-  return leases
 }
 
 /**
@@ -82,6 +68,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ContactInfo', leasing.v1.ContactInfoSchema)
   registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
   registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
+  registerSchema('Contact', Contact)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -409,26 +396,50 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Personal Number (PNR) of the individual to fetch leases for.
+   *       - in: query
+   *         name: includeUpcomingLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include upcoming leases in the response
+   *       - in: query
+   *         name: includeTerminatedLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include terminated leases in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
    *         content:
    *           application/json:
    *             schema:
-   *               type: array
-   *               items:
-   *                 type: object
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
    *     security:
    *       - bearerAuth: []
    */
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const responseData = await getLeasesWithRelatedEntitiesForPnr(
-      ctx.params.pnr
-    )
+    const metadata = generateRouteMetadata(ctx, [
+      'includeUpcomingLeases',
+      'includeTerminatedLeases',
+    ])
+    const includeTerminatedLeases = ctx.query.includeTerminatedLeases === 'true'
+    const includeUpcomingLeases = ctx.query.includeUpcomingLeases === 'true'
 
+    const responseData = await leasingAdapter.getLeasesForPnr(ctx.params.pnr, {
+      includeUpcomingLeases,
+      includeTerminatedLeases,
+      includeContacts: true,
+    })
+
+    ctx.status = 200
     ctx.body = {
-      content: responseData,
+      content: responseData.map(mapLease),
       ...metadata,
     }
   })
@@ -448,6 +459,18 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Contact code of the individual to fetch leases for.
+   *       - in: query
+   *         name: includeUpcomingLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include upcoming leases in the response
+   *       - in: query
+   *         name: includeTerminatedLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include terminated leases in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -979,6 +1002,11 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Contact'
    *       '400':
    *         description: Bad request. The query parameter 'q' must be a string.
    *       '500':
@@ -987,14 +1015,28 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/contacts/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'contactType'])
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
       ctx.body = { reason: 'Invalid query parameter', ...metadata }
       return
     }
 
-    const res = await leasingAdapter.getContactsDataBySearchQuery(ctx.query.q)
+    // Validate contactType parameter if provided
+    const contactType = ctx.query.contactType as string | undefined
+    if (contactType && contactType !== 'company' && contactType !== 'person') {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid contactType parameter. Must be "company" or "person"',
+        ...metadata,
+      }
+      return
+    }
+
+    const res = await leasingAdapter.getContactsDataBySearchQuery(
+      ctx.query.q,
+      contactType as 'company' | 'person' | undefined
+    )
 
     if (!res.ok) {
       ctx.status = 500
@@ -1107,6 +1149,9 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Contact'
    *     security:
    *       - bearerAuth: []
    */
@@ -1288,8 +1333,8 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
-   *                   type: object
+   *                 content:
+   *                   $ref: '#/components/schemas/Lease'
    *     security:
    *       - bearerAuth: []
    */
