@@ -65,10 +65,10 @@ export type RentalBlockWithRentalObject =
 export interface RentalBlocksSearchParams {
   q?: string
   fields?: string
-  kategori?: string | string[]
-  distrikt?: string | string[]
-  blockReason?: string | string[]
-  fastighet?: string | string[]
+  kategori?: string[]
+  distrikt?: string[]
+  blockReason?: string[]
+  fastighet?: string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
