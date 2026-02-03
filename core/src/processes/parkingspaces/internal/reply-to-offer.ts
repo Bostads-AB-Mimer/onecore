@@ -230,7 +230,7 @@ export const acceptOffer = async (
           address: listing.rentalObject.address,
           firstName: contactResult.data.firstName,
           availableFrom: calculateVacantFrom(listing).toISOString(),
-          rent: String(listing.rentalObject.monthlyRent),
+          rent: String(listing.rentalObject.rent?.amount ?? ''),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),

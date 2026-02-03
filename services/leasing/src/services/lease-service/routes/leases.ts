@@ -18,7 +18,6 @@ import {
   getBuildingManagers,
 } from '../adapters/xpand/lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
-import z from 'zod'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
 import config from '../../../common/config'
