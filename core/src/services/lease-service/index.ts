@@ -301,6 +301,116 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/export:
+   *   get:
+   *     summary: Export leases to Excel
+   *     tags:
+   *       - Lease service
+   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property names
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       '200':
+   *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.exportLeasesToExcel(ctx.query)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.set('Content-Type', result.data.contentType)
+      ctx.set('Content-Disposition', result.data.contentDisposition)
+      ctx.body = result.data.data
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error during export',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/by-rental-property-id/{rentalPropertyId}:
    *   get:
    *     summary: Get leases with related entities for a specific rental property id

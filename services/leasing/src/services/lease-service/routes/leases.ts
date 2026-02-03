@@ -9,8 +9,16 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
+  getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
-import { generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  setExcelDownloadHeaders,
+  createExcelFromPaginated,
+  joinField,
+  formatDateForExcel,
+} from '@onecore/utilities'
 import { leasing } from '@onecore/types'
 import z from 'zod'
 
@@ -275,6 +283,182 @@ export const routes = (router: KoaRouter) => {
           error: 'Unknown error occurred during lease search',
           ...metadata,
         }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/export:
+   *   get:
+   *     summary: Export leases to Excel
+   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property names
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'objectType',
+      'status',
+      'startDateFrom',
+      'startDateTo',
+      'endDateFrom',
+      'endDateTo',
+      'property',
+      'buildingCodes',
+      'areaCodes',
+      'districtNames',
+      'buildingManager',
+    ])
+
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      // Create Excel using streaming - fetches pages incrementally
+      const buffer =
+        await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
+          async (page: number, limit: number) => {
+            // Use a derived context with overridden query instead of mutating ctx.query
+            const paginationCtx = Object.create(ctx)
+            paginationCtx.query = {
+              ...ctx.query,
+              page: String(page),
+              limit: String(limit),
+            }
+
+            return await searchLeases(queryParams.data, paginationCtx, {
+              forExport: true,
+            })
+          },
+          {
+            sheetName: 'Hyreskontrakt',
+            columns: [
+              { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+              { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+              { header: 'Kundnummer', key: 'contactCode', width: 18 },
+              { header: 'E-post', key: 'email', width: 30 },
+              { header: 'Telefon', key: 'phone', width: 15 },
+              { header: 'Objekttyp', key: 'objectType', width: 12 },
+              { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
+              { header: 'Adress', key: 'address', width: 35 },
+              { header: 'Fastighet', key: 'property', width: 20 },
+              { header: 'Distrikt', key: 'district', width: 15 },
+              { header: 'Startdatum', key: 'startDate', width: 12 },
+              { header: 'Slutdatum', key: 'endDate', width: 12 },
+              { header: 'Status', key: 'status', width: 15 },
+            ],
+            rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
+              leaseId: lease.leaseId,
+              tenantName: joinField(lease.contacts, (c) => c.name),
+              contactCode: joinField(lease.contacts, (c) => c.contactCode),
+              email: joinField(lease.contacts, (c) => c.email),
+              phone: joinField(lease.contacts, (c) => c.phone),
+              objectType: lease.objectTypeCode,
+              leaseType: lease.leaseType,
+              address: lease.address || '',
+              property: lease.property || '',
+              district: lease.districtName || '',
+              startDate: formatDateForExcel(lease.startDate),
+              endDate: formatDateForExcel(lease.lastDebitDate),
+              status: getStatusLabel(lease.status),
+            }),
+            batchSize: 500,
+          }
+        )
+
+      // 3. Set headers and return
+      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
+      ctx.body = buffer
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      ctx.status = 500
+      ctx.body = {
+        error: error instanceof Error ? error.message : 'Export failed',
+        ...metadata,
       }
     }
   })

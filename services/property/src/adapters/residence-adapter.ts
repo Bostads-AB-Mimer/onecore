@@ -715,164 +715,6 @@ async function fetchDistrictsByFencode(
   )
 }
 
-/** Raw rental block row from SQL query with explicit JOINs */
-interface RawRentalBlockRow {
-  id: string
-  blockReasonId: string | null
-  blockReasonCaption: string | null
-  fromDate: Date
-  toDate: Date | null
-  amount: number | null
-  // PropertyStructure fields
-  address: string | null
-  rentalId: string | null
-  propertyCode: string | null
-  propertyName: string | null
-  buildingCode: string | null
-  buildingName: string | null
-  residenceCode: string | null
-  residenceName: string | null
-  parkingSpaceCode: string | null
-  parkingSpaceName: string | null
-  localeCode: string | null
-  localeName: string | null
-  rentalObjectCode: string | null
-  rentalObjectName: string | null
-  // Joined fields
-  district: string | null
-  residenceTypeName: string | null
-}
-
-/**
- * Fetches rental blocks using raw SQL with explicit JOINs for better performance.
- * Used by export function only - paginated functions use Prisma ORM.
- */
-async function fetchRentalBlocksRaw(
-  options: RentalBlockFilterOptions
-): Promise<RawRentalBlockRow[]> {
-  const {
-    q,
-    fields = 'rentalId,address,blockReason',
-    kategori,
-    distrikt,
-    blockReason,
-    fastighet,
-    fromDateGte,
-    toDateLte,
-    active,
-  } = options
-
-  // Build WHERE conditions
-  const conditions: string[] = []
-
-  // Base filter: must have a rentalId
-  conditions.push("babuf.hyresid IS NOT NULL AND babuf.hyresid <> ''")
-
-  // Active filter
-  if (active === true) {
-    conditions.push('(hyspt.tdate >= GETDATE() OR hyspt.tdate IS NULL)')
-  } else if (active === false) {
-    conditions.push('hyspt.tdate < GETDATE()')
-  }
-
-  // Distrikt filter via fencode → bafen.code join
-  if (distrikt) {
-    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
-  }
-
-  // Fastighet (property) filter
-  if (fastighet) {
-    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
-  }
-
-  // Block reason filter
-  if (blockReason) {
-    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
-  }
-
-  // Date range filters
-  if (fromDateGte) {
-    conditions.push(`hyspt.fdate >= ${escapeSqlString(fromDateGte)}`)
-  }
-  if (toDateLte) {
-    conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
-  }
-
-  // Kategori filter
-  if (kategori === 'Bostad') {
-    conditions.push('babuf.lghcode IS NOT NULL')
-  } else if (kategori === 'Bilplats') {
-    conditions.push('babuf.bpscode IS NOT NULL')
-  } else if (kategori === 'Lokal') {
-    conditions.push('babuf.lokcode IS NOT NULL')
-  } else if (kategori === 'Förråd') {
-    conditions.push('babuf.hyrcode IS NOT NULL')
-  } else if (kategori === 'Övrigt') {
-    conditions.push(
-      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
-    )
-  }
-
-  // Search filter (q param) - OR across fields
-  if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
-    const orClauses: string[] = []
-
-    if (searchFields.includes('rentalId')) {
-      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('address')) {
-      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('blockReason')) {
-      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-
-    if (orClauses.length > 0) {
-      conditions.push(`(${orClauses.join(' OR ')})`)
-    }
-  }
-
-  const whereClause = conditions.join(' AND ')
-
-  const rows = await prisma.$queryRawUnsafe<RawRentalBlockRow[]>(`
-    SELECT
-      hyspt.keyhyspt AS id,
-      hyspt.keyhyspa AS blockReasonId,
-      hyspa.caption AS blockReasonCaption,
-      hyspt.fdate AS fromDate,
-      hyspt.tdate AS toDate,
-      hyspt.amount,
-      babuf.caption AS address,
-      babuf.hyresid AS rentalId,
-      babuf.fstcode AS propertyCode,
-      babuf.fstcaption AS propertyName,
-      babuf.bygcode AS buildingCode,
-      babuf.bygcaption AS buildingName,
-      babuf.lghcode AS residenceCode,
-      babuf.lghcaption AS residenceName,
-      babuf.bpscode AS parkingSpaceCode,
-      babuf.bpscaption AS parkingSpaceName,
-      babuf.lokcode AS localeCode,
-      babuf.lokcaption AS localeName,
-      babuf.hyrcode AS rentalObjectCode,
-      babuf.hyrcaption AS rentalObjectName,
-      bafen.distrikt AS district,
-      balgt.caption AS residenceTypeName
-    FROM hyspt
-    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
-    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON bafen.code = babuf.fencode
-    LEFT JOIN balgh ON babuf.keyobjlgh = balgh.keybalgh
-    LEFT JOIN balgt ON balgh.keybalgt = balgt.keybalgt
-    WHERE ${whereClause}
-    ORDER BY hyspt.fdate DESC
-  `)
-
-  return rows
-}
-
 /** Escape a string value for safe SQL interpolation */
 function escapeSqlString(value: string): string {
   // Escape single quotes by doubling them
@@ -888,61 +730,6 @@ function escapeSqlLike(value: string): string {
     .replace(/%/g, '[%]')
     .replace(/_/g, '[_]')
   return `'%${escaped}%'`
-}
-
-/** Transform raw SQL row to API response format */
-function transformRawRentalBlockRow(
-  row: RawRentalBlockRow,
-  rentRows: RentRow[]
-) {
-  const yearlyRent = calculateYearlyRentFromYearRentRows(rentRows)
-
-  const getCategory = () => {
-    if (row.residenceCode) return 'Bostad' as const
-    if (row.parkingSpaceCode) return 'Bilplats' as const
-    if (row.localeCode) return 'Lokal' as const
-    if (row.rentalObjectCode) return 'Förråd' as const
-    return 'Övrigt' as const
-  }
-
-  return {
-    id: row.id?.trim() || '',
-    blockReasonId: row.blockReasonId?.trim() || null,
-    blockReason: row.blockReasonCaption?.trim() || null,
-    fromDate: row.fromDate,
-    toDate: row.toDate,
-    amount:
-      row.amount ??
-      calculateEstimatedHyresbortfall(yearlyRent, row.fromDate, row.toDate),
-    rentalObject: {
-      code:
-        row.residenceCode?.trim() ||
-        row.parkingSpaceCode?.trim() ||
-        row.localeCode?.trim() ||
-        row.rentalObjectCode?.trim() ||
-        null,
-      name:
-        row.residenceName?.trim() ||
-        row.parkingSpaceName?.trim() ||
-        row.localeName?.trim() ||
-        row.rentalObjectName?.trim() ||
-        null,
-      category: getCategory(),
-      address: row.address?.trim() || null,
-      rentalId: row.rentalId?.trim() || null,
-      yearlyRent,
-      type: row.residenceTypeName?.trim() || null,
-    },
-    building: {
-      code: row.buildingCode?.trim() || null,
-      name: row.buildingName?.trim() || null,
-    },
-    property: {
-      code: row.propertyCode?.trim() || null,
-      name: row.propertyName?.trim() || null,
-    },
-    distrikt: row.district?.trim() || null,
-  }
 }
 
 export const getAllRentalBlocks = async (options?: {
@@ -1229,6 +1016,11 @@ export interface SearchRentalBlocksOptions {
   active?: boolean
   limit?: number
   offset?: number
+  /**
+   * If provided, skip the COUNT query and use this value as totalCount.
+   * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
+   */
+  knownTotalCount?: number
 }
 
 /**
@@ -1252,6 +1044,7 @@ async function searchRentalBlocksWithDistriktRaw(
     active,
     limit,
     offset,
+    knownTotalCount,
   } = options
 
   const conditions: string[] = []
@@ -1327,16 +1120,21 @@ async function searchRentalBlocksWithDistriktRaw(
 
   const whereClause = conditions.join(' AND ')
 
-  // Get total count
-  const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
-    SELECT COUNT(*) AS count
-    FROM hyspt
-    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
-    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON bafen.code = babuf.fencode
-    WHERE ${whereClause}
-  `)
-  const totalCount = countResult[0]?.count ?? 0
+  // Skip COUNT query if knownTotalCount is provided (e.g., from page 1 of export)
+  let totalCount: number
+  if (knownTotalCount !== undefined) {
+    totalCount = knownTotalCount
+  } else {
+    const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
+      SELECT COUNT(*) AS count
+      FROM hyspt
+      LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+      LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+      LEFT JOIN bafen ON bafen.code = babuf.fencode
+      WHERE ${whereClause}
+    `)
+    totalCount = countResult[0]?.count ?? 0
+  }
 
   // Get paginated IDs with ordering
   const paginationClause =
@@ -1406,7 +1204,7 @@ export const searchRentalBlocks = async (
   options: SearchRentalBlocksOptions
 ) => {
   try {
-    const { limit, offset, distrikt } = options
+    const { limit, offset, distrikt, knownTotalCount } = options
 
     let totalCount: number
     let rentalBlocks: Awaited<
@@ -1446,10 +1244,10 @@ export const searchRentalBlocks = async (
       // No distrikt filter - use standard Prisma query
       const whereClause = buildRentalBlockWhereClause(options)
 
-      // Run count and data queries in parallel for better performance
-      const [count, blocks] = await Promise.all([
-        prisma.rentalBlock.count({ where: whereClause }),
-        prisma.rentalBlock.findMany({
+      // Skip COUNT query if knownTotalCount is provided (e.g., from page 1 of export)
+      if (knownTotalCount !== undefined) {
+        totalCount = knownTotalCount
+        rentalBlocks = await prisma.rentalBlock.findMany({
           where: whereClause,
           include: rentalBlockInclude,
           orderBy: {
@@ -1457,11 +1255,25 @@ export const searchRentalBlocks = async (
           },
           ...(limit && { take: limit }),
           ...(offset && { skip: offset }),
-        }),
-      ])
+        })
+      } else {
+        // Run count and data queries in parallel for better performance
+        const [count, blocks] = await Promise.all([
+          prisma.rentalBlock.count({ where: whereClause }),
+          prisma.rentalBlock.findMany({
+            where: whereClause,
+            include: rentalBlockInclude,
+            orderBy: {
+              fromDate: 'desc',
+            },
+            ...(limit && { take: limit }),
+            ...(offset && { skip: offset }),
+          }),
+        ])
 
-      totalCount = count
-      rentalBlocks = blocks
+        totalCount = count
+        rentalBlocks = blocks
+      }
     }
 
     // Get unique rental IDs for fetching rent data
@@ -1510,41 +1322,6 @@ export const searchRentalBlocks = async (
     }
   } catch (err) {
     logger.error({ err }, 'residence-adapter.searchRentalBlocks')
-    throw err
-  }
-}
-
-export type ExportRentalBlocksOptions = RentalBlockFilterOptions
-
-export const getAllRentalBlocksForExport = async (
-  options: ExportRentalBlocksOptions
-) => {
-  try {
-    // Fetch rental blocks using raw SQL with explicit JOINs
-    const rawBlocks = await fetchRentalBlocksRaw(options)
-
-    // Get unique rental IDs for fetching rent data
-    const uniqueRentalIds = [
-      ...new Set(
-        rawBlocks
-          .map((rb) => rb.rentalId?.trim())
-          .filter((id): id is string => !!id)
-      ),
-    ]
-
-    // Fetch rent data using batched queries
-    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
-
-    // Transform raw rows to API response format
-    const transformedBlocks = rawBlocks.map((row) => {
-      const rentalId = row.rentalId?.trim()
-      const rentRows = rentalId ? rentByRentalId.get(rentalId) || [] : []
-      return transformRawRentalBlockRow(row, rentRows)
-    })
-
-    return sortRentalBlocksByFutureThenActive(transformedBlocks)
-  } catch (err) {
-    logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
     throw err
   }
 }

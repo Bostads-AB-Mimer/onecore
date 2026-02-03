@@ -1,5 +1,8 @@
 import type { components } from './generated/api-types'
 import { GET } from './base-api'
+import { resolve } from '@/utils/env'
+
+const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
 export type PaginationMeta = components['schemas']['PaginationMeta']
@@ -73,4 +76,36 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
   return response.content ?? []
 }
 
-export const leaseSearchService = { search, getBuildingManagers }
+// Note: Using raw fetch instead of GET wrapper because this endpoint
+// returns a binary Excel file (Blob), not JSON
+async function exportLeasesToExcel(
+  params: LeaseSearchQueryParams
+): Promise<Blob> {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return
+    if (Array.isArray(value)) {
+      value.forEach((v) => searchParams.append(key, String(v)))
+    } else if (value !== '') {
+      searchParams.set(key, String(value))
+    }
+  })
+
+  const response = await fetch(
+    `${CORE_API_URL}/leases/export?${searchParams}`,
+    { credentials: 'include' }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Export failed: ${response.statusText}`)
+  }
+
+  return response.blob()
+}
+
+export const leaseSearchService = {
+  search,
+  getBuildingManagers,
+  exportLeasesToExcel,
+}
