@@ -20,6 +20,7 @@ import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown
 import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
+import { useBulkMessaging } from '@/components/hooks/useBulkMessaging'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import {
@@ -30,9 +31,8 @@ import {
 import { tenantService } from '@/services/api/core/tenantService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
-import { BulkSmsModal, SmsRecipient } from '@/components/ui/BulkSmsModal'
-import { BulkEmailModal, EmailRecipient } from '@/components/ui/BulkEmailModal'
-import { useToast } from '@/components/hooks/useToast'
+import { BulkSmsModal } from '@/components/ui/BulkSmsModal'
+import { BulkEmailModal } from '@/components/ui/BulkEmailModal'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -271,160 +271,16 @@ const LeasesPage = () => {
 
   const displayLeases = leases || []
 
-  // Selection state for bulk actions
-  const [selectedLeaseIds, setSelectedLeaseIds] = useState<string[]>([])
-  const [allResultsSelected, setAllResultsSelected] = useState(false)
-  const [showSmsModal, setShowSmsModal] = useState(false)
-  const [showEmailModal, setShowEmailModal] = useState(false)
-  const [isLoadingAllContacts, setIsLoadingAllContacts] = useState(false)
-
-  // Toggle single lease selection (manual click on individual checkbox)
-  const toggleSelection = (leaseId: string) => {
-    setAllResultsSelected(false) // Clear "all results" when manually selecting
-    setSelectedLeaseIds((prev) =>
-      prev.includes(leaseId)
-        ? prev.filter((id) => id !== leaseId)
-        : [...prev, leaseId]
-    )
-  }
-
-  // Header checkbox: Select ALL results across all pages / deselect all
-  const toggleSelectAll = () => {
-    if (allResultsSelected || selectedLeaseIds.length > 0) {
-      // Deselect all
-      setSelectedLeaseIds([])
-      setAllResultsSelected(false)
-    } else {
-      // Select ALL results (not just current page)
-      setAllResultsSelected(true)
-      setSelectedLeaseIds(displayLeases.map((l) => l.leaseId)) // Visual feedback on current page
-    }
-  }
-
-  // Clear selection
-  const clearSelection = () => {
-    setSelectedLeaseIds([])
-    setAllResultsSelected(false)
-  }
-
-  // Clear selection when filters change
-  useEffect(() => {
-    setSelectedLeaseIds([])
-    setAllResultsSelected(false)
-  }, [
-    debouncedSearch,
-    selectedObjectTypes,
-    selectedStatuses,
-    selectedProperties,
-    selectedDistricts,
-    startDateFrom,
-    startDateTo,
-    endDateFrom,
-    endDateTo,
-  ])
-
-  const { toast } = useToast()
-
-  // Handle sending bulk SMS
-  const handleSendSms = async (
-    message: string,
-    validRecipients: SmsRecipient[]
-  ) => {
-    try {
-      const phoneNumbers = validRecipients
-        .map((r) => r.phone)
-        .filter((p): p is string => p !== null)
-
-      const result = await tenantService.sendBulkSms(phoneNumbers, message)
-
-      toast({
-        title: 'SMS skickat',
-        description: `Skickades till ${result.totalSent} mottagare${
-          result.totalInvalid > 0
-            ? `. ${result.totalInvalid} ogiltiga nummer.`
-            : ''
-        }`,
-      })
-
-      clearSelection()
-      setShowSmsModal(false)
-    } catch (error) {
-      let errorMessage = 'Ett fel uppstod'
-
-      if (error && typeof error === 'object') {
-        // Handle structured API error (e.g., TOO_MANY_RECIPIENTS)
-        const apiError = error as { message?: string; reason?: string }
-        if (apiError.message) {
-          errorMessage = apiError.message
-        } else if (apiError.reason) {
-          errorMessage = apiError.reason
-        }
-      } else if (error instanceof Error) {
-        errorMessage = error.message
-      }
-
-      toast({
-        title: 'Kunde inte skicka SMS',
-        description: errorMessage,
-        variant: 'destructive',
-      })
-    }
-  }
-
-  // Handle sending bulk email
-  const handleSendEmail = async (
-    subject: string,
-    body: string,
-    validRecipients: EmailRecipient[]
-  ) => {
-    try {
-      const emails = validRecipients
-        .map((r) => r.email)
-        .filter((e): e is string => e !== null)
-
-      const result = await tenantService.sendBulkEmail(emails, subject, body)
-
-      toast({
-        title: 'E-post skickat',
-        description: `Skickade till ${result.totalSent} mottagare${
-          result.totalInvalid > 0
-            ? `. ${result.totalInvalid} ogiltiga e-postadresser.`
-            : ''
-        }`,
-      })
-
-      clearSelection()
-      setShowEmailModal(false)
-    } catch (error) {
-      let errorMessage = 'Ett fel uppstod'
-
-      if (error && typeof error === 'object') {
-        const apiError = error as { message?: string; reason?: string }
-        if (apiError.message) {
-          errorMessage = apiError.message
-        } else if (apiError.reason) {
-          errorMessage = apiError.reason
-        }
-      } else if (error instanceof Error) {
-        errorMessage = error.message
-      }
-
-      toast({
-        title: 'Kunde inte skicka e-post',
-        description: errorMessage,
-        variant: 'destructive',
-      })
-    }
-  }
-
   // Build current filter params for fetching all contacts
   const currentFilterParams = useMemo(
     () => ({
       q: debouncedSearch || undefined,
-      objectType: selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
+      objectType:
+        selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
-      districtNames: selectedDistricts.length > 0 ? selectedDistricts : undefined,
+      districtNames:
+        selectedDistricts.length > 0 ? selectedDistricts : undefined,
       startDateFrom: startDateFrom || undefined,
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
@@ -443,115 +299,58 @@ const LeasesPage = () => {
     ]
   )
 
-  // State for fetched contacts (when "all results" selected)
-  const [fetchedSmsRecipients, setFetchedSmsRecipients] = useState<SmsRecipient[] | null>(null)
-  const [fetchedEmailRecipients, setFetchedEmailRecipients] = useState<EmailRecipient[] | null>(null)
+  // Bulk messaging hook
+  const {
+    selectedIds: selectedLeaseIds,
+    allResultsSelected,
+    selectedCount,
+    toggleSelection,
+    toggleSelectAll,
+    clearSelection,
+    isSelected,
+    showSmsModal,
+    showEmailModal,
+    setShowSmsModal,
+    setShowEmailModal,
+    smsRecipients,
+    emailRecipients,
+    handleOpenSmsModal,
+    handleOpenEmailModal,
+    handleSendSms,
+    handleSendEmail,
+    isLoadingContacts,
+  } = useBulkMessaging({
+    items: displayLeases,
+    totalCount: meta?.totalRecords ?? 0,
+    getItemId: (lease) => lease.leaseId,
+    getContacts: (lease) =>
+      (lease.contacts ?? []).map((c) => ({
+        contactCode: c.contactCode,
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+      })),
+    fetchAllContacts: () =>
+      leaseSearchService.getContactsByFilters(currentFilterParams),
+    sendBulkSms: tenantService.sendBulkSms,
+    sendBulkEmail: tenantService.sendBulkEmail,
+  })
 
-  // Open SMS modal - fetch all contacts if allResultsSelected
-  const handleOpenSmsModal = async () => {
-    if (allResultsSelected) {
-      setIsLoadingAllContacts(true)
-      try {
-        const contacts = await leaseSearchService.getContactsByFilters(currentFilterParams)
-        const smsRecipients: SmsRecipient[] = contacts.map((c) => ({
-          id: c.contactCode,
-          name: c.name,
-          phone: c.phone,
-        }))
-        setFetchedSmsRecipients(smsRecipients)
-        setShowSmsModal(true)
-      } catch (error) {
-        toast({
-          title: 'Kunde inte hämta kontakter',
-          description: error instanceof Error ? error.message : 'Ett fel uppstod',
-          variant: 'destructive',
-        })
-      } finally {
-        setIsLoadingAllContacts(false)
-      }
-    } else {
-      setFetchedSmsRecipients(null)
-      setShowSmsModal(true)
-    }
-  }
-
-  // Open Email modal - fetch all contacts if allResultsSelected
-  const handleOpenEmailModal = async () => {
-    if (allResultsSelected) {
-      setIsLoadingAllContacts(true)
-      try {
-        const contacts = await leaseSearchService.getContactsByFilters(currentFilterParams)
-        const emailRecipientsAll: EmailRecipient[] = contacts.map((c) => ({
-          id: c.contactCode,
-          name: c.name,
-          email: c.email,
-        }))
-        setFetchedEmailRecipients(emailRecipientsAll)
-        setShowEmailModal(true)
-      } catch (error) {
-        toast({
-          title: 'Kunde inte hämta kontakter',
-          description: error instanceof Error ? error.message : 'Ett fel uppstod',
-          variant: 'destructive',
-        })
-      } finally {
-        setIsLoadingAllContacts(false)
-      }
-    } else {
-      setFetchedEmailRecipients(null)
-      setShowEmailModal(true)
-    }
-  }
-
-  // Derive unique recipients from selected leases
-  const recipients: SmsRecipient[] = useMemo(() => {
-    const selectedLeases = displayLeases.filter((l) =>
-      selectedLeaseIds.includes(l.leaseId)
-    )
-    const contactMap = new Map<
-      string,
-      { id: string; name: string; phone: string | null }
-    >()
-
-    selectedLeases.forEach((lease) => {
-      lease.contacts?.forEach((contact) => {
-        if (!contactMap.has(contact.contactCode)) {
-          contactMap.set(contact.contactCode, {
-            id: contact.contactCode,
-            name: contact.name,
-            phone: contact.phone,
-          })
-        }
-      })
-    })
-
-    return Array.from(contactMap.values())
-  }, [displayLeases, selectedLeaseIds])
-
-  // Derive unique email recipients from selected leases
-  const emailRecipients: EmailRecipient[] = useMemo(() => {
-    const selectedLeases = displayLeases.filter((l) =>
-      selectedLeaseIds.includes(l.leaseId)
-    )
-    const contactMap = new Map<
-      string,
-      { id: string; name: string; email: string | null }
-    >()
-
-    selectedLeases.forEach((lease) => {
-      lease.contacts?.forEach((contact) => {
-        if (!contactMap.has(contact.contactCode)) {
-          contactMap.set(contact.contactCode, {
-            id: contact.contactCode,
-            name: contact.name,
-            email: contact.email,
-          })
-        }
-      })
-    })
-
-    return Array.from(contactMap.values())
-  }, [displayLeases, selectedLeaseIds])
+  // Clear selection when filters change
+  useEffect(() => {
+    clearSelection()
+  }, [
+    debouncedSearch,
+    selectedObjectTypes,
+    selectedStatuses,
+    selectedProperties,
+    selectedDistricts,
+    startDateFrom,
+    startDateTo,
+    endDateFrom,
+    endDateTo,
+    clearSelection,
+  ])
 
   const clearFilters = () => {
     setSearchInput('')
@@ -701,7 +500,7 @@ const LeasesPage = () => {
                   key: 'select',
                   label: (
                     <Checkbox
-                      checked={allResultsSelected || (displayLeases.length > 0 && selectedLeaseIds.length > 0)}
+                      checked={allResultsSelected || selectedLeaseIds.length > 0}
                       onCheckedChange={toggleSelectAll}
                       aria-label="Välj alla"
                     />
@@ -709,7 +508,7 @@ const LeasesPage = () => {
                   className: 'w-10 px-2',
                   render: (lease: LeaseSearchResult) => (
                     <Checkbox
-                      checked={allResultsSelected || selectedLeaseIds.includes(lease.leaseId)}
+                      checked={isSelected(lease.leaseId)}
                       onCheckedChange={() => toggleSelection(lease.leaseId)}
                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
                       aria-label={`Välj ${lease.leaseId}`}
@@ -889,30 +688,24 @@ const LeasesPage = () => {
       </Card>
 
       <BulkActionBar
-        selectedCount={allResultsSelected ? (meta?.totalRecords ?? 0) : selectedLeaseIds.length}
+        selectedCount={selectedCount}
         onClear={clearSelection}
         onSendSms={handleOpenSmsModal}
         onSendEmail={handleOpenEmailModal}
-        isLoading={isLoadingAllContacts}
+        isLoading={isLoadingContacts}
       />
 
       <BulkSmsModal
         open={showSmsModal}
-        onOpenChange={(open) => {
-          setShowSmsModal(open)
-          if (!open) setFetchedSmsRecipients(null)
-        }}
-        recipients={fetchedSmsRecipients ?? recipients}
+        onOpenChange={setShowSmsModal}
+        recipients={smsRecipients}
         onSend={handleSendSms}
       />
 
       <BulkEmailModal
         open={showEmailModal}
-        onOpenChange={(open) => {
-          setShowEmailModal(open)
-          if (!open) setFetchedEmailRecipients(null)
-        }}
-        recipients={fetchedEmailRecipients ?? emailRecipients}
+        onOpenChange={setShowEmailModal}
+        recipients={emailRecipients}
         onSend={handleSendEmail}
       />
     </div>
