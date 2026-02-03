@@ -10,6 +10,7 @@ export default defineConfig([
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,ts,tsx,cjs,mjs}'],
+    ignores: ['apps/internal-portal/**'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
