@@ -1106,7 +1106,6 @@ function toArray(val: string | string[] | undefined): string[] {
 
 interface RentalBlockFilterOptions {
   q?: string
-  fields?: string
   kategori?: string | string[]
   distrikt?: string | string[]
   blockReason?: string | string[]
@@ -1268,7 +1267,6 @@ function buildRentalBlockWhereClause(
 
 export interface SearchRentalBlocksOptions {
   q?: string
-  fields?: string
   kategori?: string | string[]
   distrikt?: string | string[]
   blockReason?: string | string[]

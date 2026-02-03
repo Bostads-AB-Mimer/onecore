@@ -687,11 +687,6 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason
    *       - in: query
-   *         name: fields
-   *         schema:
-   *           type: string
-   *         description: Comma-separated fields to search (default rentalId,address,propertyName,blockReason)
-   *       - in: query
    *         name: kategori
    *         schema:
    *           type: array
@@ -810,46 +805,12 @@ export const routes = (router: KoaRouter) => {
           offset,
         })
 
-        // Build additional params for pagination links
-        // Note: array params are serialized as comma-separated for URL building
-        const additionalParams: Record<string, string> = {}
-        if (active !== undefined) {
-          additionalParams.active = String(active)
-        }
-        if (searchParams.q) additionalParams.q = searchParams.q
-        if (searchParams.fields) additionalParams.fields = searchParams.fields
-        if (searchParams.kategori) {
-          additionalParams.kategori = Array.isArray(searchParams.kategori)
-            ? searchParams.kategori.join(',')
-            : searchParams.kategori
-        }
-        if (searchParams.distrikt) {
-          additionalParams.distrikt = Array.isArray(searchParams.distrikt)
-            ? searchParams.distrikt.join(',')
-            : searchParams.distrikt
-        }
-        if (searchParams.blockReason) {
-          additionalParams.blockReason = Array.isArray(searchParams.blockReason)
-            ? searchParams.blockReason.join(',')
-            : searchParams.blockReason
-        }
-        if (searchParams.fastighet) {
-          additionalParams.fastighet = Array.isArray(searchParams.fastighet)
-            ? searchParams.fastighet.join(',')
-            : searchParams.fastighet
-        }
-        if (searchParams.fromDateGte)
-          additionalParams.fromDateGte = searchParams.fromDateGte
-        if (searchParams.toDateLte)
-          additionalParams.toDateLte = searchParams.toDateLte
-
         ctx.status = 200
         ctx.body = {
           ...buildPaginatedResponse({
             content: rentalBlocks,
             totalRecords: totalCount,
             ctx,
-            additionalParams,
             defaultLimit: 50,
           }),
           ...metadata,
