@@ -3,6 +3,7 @@
  * Uses ExcelJS for spreadsheet generation
  */
 
+import type { Workbook } from 'exceljs'
 import type { PaginatedResponse } from '../pagination'
 
 export interface ExcelColumn {
@@ -71,7 +72,7 @@ export async function createExcelExport<T>(
 
   // Dynamic import to avoid loading ExcelJS on every request
   const ExcelJS = await import('exceljs')
-  const workbook = new ExcelJS.default.Workbook()
+  const workbook: Workbook = new ExcelJS.default.Workbook()
   const worksheet = workbook.addWorksheet(sheetName)
 
   // Set up columns with defaults
@@ -93,6 +94,7 @@ export async function createExcelExport<T>(
   }
 
   // Generate and return buffer
+  // Type assertion needed: ExcelJS uses older Buffer types incompatible with Node's Buffer<ArrayBufferLike>
   return (await workbook.xlsx.writeBuffer()) as unknown as Buffer
 }
 
