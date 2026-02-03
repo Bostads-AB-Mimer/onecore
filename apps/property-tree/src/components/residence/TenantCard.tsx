@@ -38,7 +38,8 @@ export function TenantCard(props: Props) {
           lastName={props.tenant.lastName}
           fullName={props.tenant.fullName}
           moveInDate={props.lease.leaseStartDate}
-          moveOutDate={props.lease.preferredMoveOutDate}
+          lastDebitDate={props.lease.lastDebitDate}
+          preferredMoveOutDate={props.lease.preferredMoveOutDate}
           personalNumber={props.tenant.nationalRegistrationNumber}
           contactCode={props.tenant.contactCode}
         />
