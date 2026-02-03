@@ -61,6 +61,7 @@ describe('work-order-service index', () => {
       expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith('123-456-789', {
         status: ['current', 'upcoming'],
         includeContacts: true,
+        includeRentInfo: true,
       })
       expect(res.body.content).toBeDefined()
     })
@@ -88,6 +89,7 @@ describe('work-order-service index', () => {
         {
           status: ['current', 'upcoming'],
           includeContacts: true,
+          includeRentInfo: true,
         }
       )
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
@@ -115,7 +117,9 @@ describe('work-order-service index', () => {
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P158770', {
         status: ['current', 'upcoming'],
         includeContacts: false,
+        includeRentInfo: true,
       })
+
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
@@ -137,6 +141,7 @@ describe('work-order-service index', () => {
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
         status: ['current', 'upcoming'],
         includeContacts: true,
+        includeRentInfo: true,
       })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
