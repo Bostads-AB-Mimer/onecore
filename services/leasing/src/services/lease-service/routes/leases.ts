@@ -680,7 +680,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const getLease = await tenfastAdapter.getLeaseByLeaseId(
+      const getLease = await tenfastAdapter.getLeaseByExternalId(
         ctx.params.leaseId
       )
 

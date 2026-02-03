@@ -1352,6 +1352,56 @@ export interface paths {
       };
     };
   };
+  "/leases/{leaseId}/home-insurance": {
+    /** Get home insurance for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Home insurance retrieved. */
+        200: {
+          content: never;
+        };
+        /** @description Lease or home insurance not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/home-insurance/offer": {
+    /** Get home insurance offer for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Home insurance offer retrieved. */
+        200: {
+          content: never;
+        };
+        /** @description Lease or rental object not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/{leaseId}/rent-rows/home-insurance": {
     /** Add home insurance rent row to a lease */
     post: {
