@@ -3,6 +3,7 @@
  * Uses ExcelJS for spreadsheet generation
  */
 
+import { Buffer } from 'node:buffer'
 import type { PaginatedResponse } from '../pagination'
 
 export interface ExcelColumn {
@@ -93,8 +94,9 @@ export async function createExcelExport<T>(
   }
 
   // Generate and return buffer
-  const buffer = await workbook.xlsx.writeBuffer()
-  return Buffer.from(buffer)
+  // Note: writeBuffer() returns Buffer but TS sees it as incompatible with our Buffer type
+  // Double cast avoids unnecessary Buffer.from() copy while satisfying type checker
+  return (await workbook.xlsx.writeBuffer()) as unknown as Buffer
 }
 
 /**
