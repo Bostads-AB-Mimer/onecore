@@ -4,11 +4,13 @@ import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrde
 
 import { ContextType } from '@/types/ui'
 
-interface BuildingOrdersTabProps {
+interface BuildingWorkOrdersTabProps {
   building: Building
 }
 
-export const BuildingOrdersTab = ({ building }: BuildingOrdersTabProps) => {
+export const BuildingWorkOrdersTab = ({
+  building,
+}: BuildingWorkOrdersTabProps) => {
   return (
     <TabLayout title="Ärenden för byggnad" showCard={false}>
       <WorkOrdersManagement

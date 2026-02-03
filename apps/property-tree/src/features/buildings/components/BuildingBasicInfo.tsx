@@ -1,5 +1,6 @@
 import { Property, Building } from '@/services/types'
 import { CollapsibleInfoCard } from '@/components/ui/CollapsibleInfoCard'
+import { getQuantityValue } from '../lib/quantity'
 
 interface BuildingBasicInfoProps {
   building: Building
@@ -25,11 +26,8 @@ export const BuildingBasicInfo = ({
 
   const buildingArea = '-'
 
-  const residenceCount =
-    quantityValues?.find((x) => x.id === 'ANTALLGH')?.value ?? 0
-
-  const facilitiesCount =
-    quantityValues?.find((x) => x.id === 'ANTALLOK')?.value ?? 0
+  const residenceCount = getQuantityValue(quantityValues, 'ANTALLGH') ?? 0
+  const facilitiesCount = getQuantityValue(quantityValues, 'ANTALLOK') ?? 0
 
   // Preview content for mobile
   const previewContent = (

@@ -8,6 +8,7 @@ import { ChevronRight, Home } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { UseQueryResult } from '@tanstack/react-query'
 import { ResidenceSummary } from '@/services/types'
+import { getQuantityValue } from '../lib/quantity'
 
 interface BuildingEntranceHierarchyProps {
   isLoading: boolean
@@ -107,9 +108,11 @@ export const BuildingEntranceHierarchy = ({
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-sm text-muted-foreground">
-                                      {residence.quantityValues?.find(
-                                        (x) => x.quantityTypeId === 'BOA'
-                                      )?.value || 0}
+                                      {getQuantityValue(
+                                        residence.quantityValues,
+                                        'BOA',
+                                        'quantityTypeId'
+                                      ) || 0}
                                       m² • {residence.residenceType.roomCount}{' '}
                                       rum
                                     </span>

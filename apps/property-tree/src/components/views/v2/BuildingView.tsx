@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useBuildingDetail } from '@/components/hooks/useBuildingDetail'
+import { useBuildingDetail } from '@/features/buildings/hooks/useBuildingDetail'
 //import { useToast } from '@/hooks/use-toast'
-import { BuildingHeader } from '@/components/buildings/BuildingHeader'
-import { BuildingBasicInfo } from '@/components/buildings/BuildingBasicInfo'
-import { BuildingDetailTabs } from '@/components/buildings/BuildingDetailTabs'
+import { BuildingHeader } from '@/features/buildings/components/BuildingHeader'
+import { BuildingBasicInfo } from '@/features/buildings/components/BuildingBasicInfo'
+import { BuildingDetailTabs } from '@/features/buildings/components/BuildingDetailTabs'
 import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const BuildingDetailPage = () => {
