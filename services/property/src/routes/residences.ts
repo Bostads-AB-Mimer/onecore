@@ -606,13 +606,14 @@ export const routes = (router: KoaRouter) => {
 
         const buffer =
           await createExcelFromPaginated<RentalBlockWithRentalObject>(
-            async (page: number, limit: number) => {
+            async (page: number, limit: number, knownTotalCount?: number) => {
               const offset = (page - 1) * limit
               const { data, totalCount } = await searchRentalBlocks({
                 ...filterParams,
                 active,
                 limit,
                 offset,
+                knownTotalCount,
               })
               // Wrap in PaginatedResponse format for the utility
               return {

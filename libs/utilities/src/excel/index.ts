@@ -178,10 +178,13 @@ export function setExcelDownloadHeaders(
  * Uses ExcelJS WorkbookWriter which flushes rows to buffer as they're committed,
  * rather than holding all data in memory.
  *
+ * The fetcher receives an optional third parameter `knownTotalCount` on pages 2+,
+ * allowing adapters to skip expensive COUNT queries after the first page.
+ *
  * @example
  * ```typescript
  * const buffer = await createExcelFromPaginated(
- *   (page, limit) => searchLeases({ ...filters, page, limit }),
+ *   (page, limit, knownTotalCount) => searchLeases({ ...filters, page, limit, knownTotalCount }),
  *   {
  *     sheetName: 'Hyreskontrakt',
  *     columns: [
@@ -197,12 +200,17 @@ export function setExcelDownloadHeaders(
  * )
  * ```
  *
- * @param fetcher - Function that fetches a single page (must accept page, limit params)
+ * @param fetcher - Function that fetches a single page. Receives (page, limit, knownTotalCount?)
+ *                  where knownTotalCount is provided on pages 2+ to allow skipping COUNT queries.
  * @param options - Excel export options plus optional batchSize (default: 500)
  * @returns Buffer containing the Excel file
  */
 export async function createExcelFromPaginated<T>(
-  fetcher: (page: number, limit: number) => Promise<PaginatedResponse<T>>,
+  fetcher: (
+    page: number,
+    limit: number,
+    knownTotalCount?: number
+  ) => Promise<PaginatedResponse<T>>,
   options: Omit<ExcelExportOptions<T>, 'data'> & { batchSize?: number }
 ): Promise<Buffer> {
   const {
@@ -252,11 +260,19 @@ export async function createExcelFromPaginated<T>(
   worksheet.getRow(1).commit()
 
   // Fetch pages and write rows incrementally
+  // Cache totalRecords from page 1 to avoid redundant COUNT queries
   let page = 1
   let totalFetched = 0
+  let cachedTotalRecords: number | undefined
 
   while (true) {
-    const response = await fetcher(page, batchSize)
+    // Pass cachedTotalRecords to fetcher on pages 2+ so adapters can skip COUNT
+    const response = await fetcher(page, batchSize, cachedTotalRecords)
+
+    // Cache totalRecords from first page
+    if (cachedTotalRecords === undefined) {
+      cachedTotalRecords = response._meta.totalRecords
+    }
 
     // Write each row and commit immediately (flushes to stream buffer)
     for (const item of response.content) {
@@ -267,10 +283,7 @@ export async function createExcelFromPaginated<T>(
     totalFetched += response.content.length
 
     // Stop if we've fetched all records or got an empty page
-    if (
-      totalFetched >= response._meta.totalRecords ||
-      response.content.length === 0
-    ) {
+    if (totalFetched >= cachedTotalRecords || response.content.length === 0) {
       break
     }
     page++
