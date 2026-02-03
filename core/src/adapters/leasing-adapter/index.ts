@@ -10,6 +10,7 @@ import {
   WaitingListType,
   Tenant,
   leasing,
+  IdentityCheckContact,
 } from '@onecore/types'
 import { z } from 'zod'
 
@@ -581,6 +582,8 @@ export {
   getLeasesByRentalObjectCode,
   addLeaseHomeInsuranceRentRow,
   deleteLeaseRentRow,
+  getBuildingManagers,
+  searchLeases,
 } from './leases'
 
 export {
