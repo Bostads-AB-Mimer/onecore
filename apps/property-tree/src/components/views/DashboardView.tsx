@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/v2/Card'
 import { useUser } from '@/auth/useUser'
 import type { DashboardCard } from '@/services/types'
+import { ReleaseNotesCard } from '@/components/dashboard/ReleaseNotesCard'
 import { resolve } from '@/utils/env'
 import onecoreLogo from '@/components/assets/logos/stacked/onecore_logo_stacked_black.svg'
 
@@ -226,6 +227,15 @@ export function DashboardView() {
             </p>
           </CardContent>
         </Card>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="max-w-2xl mx-auto"
+      >
+        <ReleaseNotesCard />
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">

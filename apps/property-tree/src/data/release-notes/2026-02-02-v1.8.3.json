@@ -1,0 +1,16 @@
+[
+  {
+    "id": "rn-2026-02-02-v183-1",
+    "date": "2026-02-02",
+    "title": "Bekräftelsemail för bilplatserbjudanden",
+    "description": "Bekräftelsemail skickas nu till kontakter som accepterar erbjudanden på bilplatser.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-02-v183-2",
+    "date": "2026-02-02",
+    "title": "Korrigerad vy för historiska annonser",
+    "description": "Justerat vyn för historiska annonser så att korrekt datum visas.",
+    "category": "fix"
+  }
+]
