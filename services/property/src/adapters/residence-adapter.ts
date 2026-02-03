@@ -1481,7 +1481,8 @@ export const searchRentalBlocks = async (
       >
     >
 
-    if (distrikt) {
+    const distrikterArray = toArray(distrikt)
+    if (distrikterArray.length > 0) {
       // When filtering by distrikt, use raw SQL to join fencode → bafen.code
       // This applies ALL filters and pagination in SQL, returning only paginated IDs
       // to avoid SQL Server's 2100 parameter limit
@@ -1489,7 +1490,7 @@ export const searchRentalBlocks = async (
       totalCount = result.totalCount
 
       logger.info(
-        { distrikt, totalCount, pageIds: result.ids.length },
+        { distrikt: distrikterArray, totalCount, pageIds: result.ids.length },
         'searchRentalBlocks: found rental blocks for distrikt via fencode'
       )
 
