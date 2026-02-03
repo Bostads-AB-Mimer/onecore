@@ -38,6 +38,7 @@ describe('GET /leases/by-contact-code/:contactCode', () => {
 
     expect(res.status).toBe(404)
   })
+})
 
 describe('POST /leases/:leaseId/preliminary-termination', () => {
   const validRequestBody = {
