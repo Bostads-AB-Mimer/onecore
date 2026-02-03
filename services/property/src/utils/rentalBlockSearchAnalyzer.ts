@@ -55,7 +55,7 @@ const containsNumbers = (input: string): boolean => {
  * - Digits with dashes (e.g., "101-001"): rental ID search with startsWith
  * - Pure digits (3+ chars): rental ID contains search
  * - Starts with letter + has numbers: likely address (e.g., "Kungsgatan 5")
- * - Letters only: search all fields (name, address, block reason)
+ * - Letters only: search all fields (rentalId, address, blockReason)
  *
  * @param q The search query string
  * @returns Array of search targets with field and pattern
