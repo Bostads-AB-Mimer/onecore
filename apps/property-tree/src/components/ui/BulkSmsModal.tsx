@@ -60,7 +60,10 @@ export function BulkSmsModal({
     if (!message.trim() || validRecipients.length === 0) return
 
     // Show cost confirmation for large sends
-    if (validRecipients.length > COST_WARNING_THRESHOLD && !showCostConfirmation) {
+    if (
+      validRecipients.length > COST_WARNING_THRESHOLD &&
+      !showCostConfirmation
+    ) {
       setShowCostConfirmation(true)
       return
     }
@@ -97,8 +100,8 @@ export function BulkSmsModal({
             Skicka SMS
           </DialogTitle>
           <DialogDescription>
-            Skicka SMS till {validRecipients.length} av {recipients.length} valda
-            kunder
+            Skicka SMS till {validRecipients.length} av {recipients.length}{' '}
+            valda kunder
           </DialogDescription>
         </DialogHeader>
 
@@ -126,7 +129,8 @@ export function BulkSmsModal({
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <div className="text-sm">
                 <span className="font-medium">
-                  {invalidRecipients.length} mottagare saknar giltigt mobilnummer:
+                  {invalidRecipients.length} mottagare saknar giltigt
+                  mobilnummer:
                 </span>{' '}
                 {invalidRecipients
                   .slice(0, 3)

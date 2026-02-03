@@ -417,7 +417,12 @@ export const routes = (router: KoaRouter) => {
       // Deduplicate contacts across all leases
       const contactMap = new Map<
         string,
-        { contactCode: string; name: string; phone: string | null; email: string | null }
+        {
+          contactCode: string
+          name: string
+          phone: string | null
+          email: string | null
+        }
       >()
 
       for (const lease of result.content) {

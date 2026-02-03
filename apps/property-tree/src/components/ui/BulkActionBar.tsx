@@ -41,11 +41,7 @@ export function BulkActionBar({
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={onSendSms}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={onSendSms} disabled={isLoading}>
             <MessageSquare className="mr-2 h-4 w-4" />
             {isLoading ? 'Laddar...' : 'Skicka SMS'}
           </Button>
