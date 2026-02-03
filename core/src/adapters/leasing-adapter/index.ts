@@ -11,6 +11,7 @@ import {
   Tenant,
   leasing,
   Lease,
+  IdentityCheckContact,
 } from '@onecore/types'
 import { z } from 'zod'
 
@@ -30,10 +31,6 @@ interface GetLeasesOptions {
   includeContacts: boolean
   includeRentInfo?: boolean // defaults to true
 }
-
-type IdentityCheckContact = z.infer<
-  typeof leasing.v1.IdentityCheckContactSchema
->
 
 const getLease = async (
   leaseId: string,
@@ -777,8 +774,6 @@ export {
   getLeasesForContactCode,
   getLeasesForPropertyId,
   getLeasesBatch,
-  searchLeases,
-  getBuildingManagers,
   getTenantByContactCode,
   preliminaryTerminateLease,
   resetWaitingList,
@@ -810,6 +805,8 @@ export {
   getLeasesByRentalObjectCode,
   addLeaseHomeInsuranceRentRow,
   deleteLeaseRentRow,
+  getBuildingManagers,
+  searchLeases,
 } from './leases'
 
 export {

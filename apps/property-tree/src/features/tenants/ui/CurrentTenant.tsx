@@ -27,6 +27,7 @@ export function CurrentTenant({
     queryFn: () =>
       leaseService.getByRentalPropertyId(rentalPropertyId, {
         includeContacts: true,
+        includeRentInfo: true,
       }),
     enabled: !!rentalPropertyId && !externalLeases,
   })

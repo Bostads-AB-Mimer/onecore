@@ -2200,6 +2200,7 @@ export const routes = (router: KoaRouter) => {
           {
             status: ['current', 'upcoming'],
             includeContacts: true,
+            includeRentInfo: true,
           }
         )
 

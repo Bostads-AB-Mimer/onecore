@@ -69,7 +69,7 @@ import {
 } from './__mocks__/invoice-service-xpand-db-adapter'
 
 // Import the actual modules to get proper typing
-import { getInvoiceByInvoiceNumber } from '@src/services/invoice-service/adapters/xledger-adapter'
+import { getInvoiceByInvoiceNumber } from '@src/services/common/adapters/xledger-adapter'
 import {
   getInvoiceByOcr,
   getInvoiceArticle,

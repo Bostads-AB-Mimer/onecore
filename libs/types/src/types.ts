@@ -24,6 +24,7 @@ import {
 } from './schemas/v1'
 import { MiscellaneousInvoicePayload, MiscellaneousInvoiceRow } from './economy'
 import { XledgerProjectSchema } from './schemas/v1/project'
+import { IdentityCheckContactSchema } from './leasing/v1'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -396,6 +397,8 @@ type XledgerContact = z.infer<typeof XledgerContactSchema>
 type XledgerProject = z.infer<typeof XledgerProjectSchema>
 type LeaseRentRow = z.infer<typeof LeaseRentRowSchema>
 
+type IdentityCheckContact = z.infer<typeof IdentityCheckContactSchema>
+
 export type {
   Contact,
   Lease,
@@ -445,4 +448,5 @@ export type {
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
   LeaseRentRow,
+  IdentityCheckContact,
 }

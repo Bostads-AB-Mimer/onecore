@@ -1,4 +1,8 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  loggedAxios as axios,
+  logger,
+  PaginatedResponse,
+} from '@onecore/utilities'
 import { Lease, leasing } from '@onecore/types'
 import z from 'zod'
 
@@ -50,6 +54,7 @@ export const getLeasesByRentalObjectCode = async (
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
+    includeRentInfo: options.includeRentInfo.toString(),
   })
 
   if (options.status) {
@@ -139,4 +144,35 @@ export async function deleteLeaseRentRow(params: {
 
     return { ok: false, err: 'unknown' }
   }
+}
+
+// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+export const getBuildingManagers = async (): Promise<
+  { code: string; name: string; district: string }[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/building-managers`
+  )
+  return response.data.content
+}
+
+export const searchLeases = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  const params = new URLSearchParams()
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (Array.isArray(value)) {
+      value.forEach((v) => params.append(key, v))
+    } else {
+      params.append(key, value)
+    }
+  })
+
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
+  )
+
+  return response.data
 }
