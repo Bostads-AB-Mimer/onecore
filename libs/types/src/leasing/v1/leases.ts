@@ -53,14 +53,6 @@ export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema.merge(
   IncludeRentalObjectQueryParamSchema
 )
 
-// TypeScript types for function parameters (not query string parsing)
-export type GetLeasesOptions = {
-  includeContacts?: boolean
-  includeRentalObject?: boolean
-  status?: Array<z.infer<typeof GetLeasesStatusSchema>>
-}
+export type GetLeasesOptions = z.infer<typeof GetLeasesOptionsSchema>
 
-export type GetLeaseOptions = {
-  includeContacts?: boolean
-  includeRentalObject?: boolean
-}
+export type GetLeaseOptions = z.infer<typeof GetLeaseOptionsSchema>
