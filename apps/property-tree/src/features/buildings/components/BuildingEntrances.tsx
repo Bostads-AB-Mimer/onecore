@@ -1,7 +1,7 @@
 import { Residence, ResidenceSummary, Staircase } from '@/services/types'
-import { BuildingEntranceHierarchy } from './BuildingEntranceHierarchy'
+import { BuildingEntranceHierarchy } from './BuildingEntrancesHierarchy'
 import { TabLayout } from '@/components/ui/TabLayout'
-import { useResidenceStaircaseLookupMap } from '../hooks/useResidenceStaircaseLookupMap'
+import { useResidenceStaircaseLookupMap } from '../../../components/hooks/useResidenceStaircaseLookupMap'
 import { UseQueryResult } from '@tanstack/react-query'
 
 interface BuildingEntrancesProps {

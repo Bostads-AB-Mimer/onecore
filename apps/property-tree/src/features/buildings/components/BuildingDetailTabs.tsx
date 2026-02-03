@@ -1,13 +1,13 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { BuildingEntrances } from './BuildingEntrances'
-import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
+import { BuildingWorkOrdersTab } from './BuildingWorkOrdersTab'
 import { BuildingDetailTabsMobile } from './BuildingDetailTabsMobile'
 import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { Building, Staircase } from '@/services/types'
-import { useResidenceStaircaseLookupMap } from '../hooks/useResidenceStaircaseLookupMap'
-import { DocumentsTab } from '../documents/DocumentsTab'
+import { useResidenceStaircaseLookupMap } from '../../../components/hooks/useResidenceStaircaseLookupMap'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
 import { ContextType } from '@/types/ui'
 
 interface BuildingDetailTabsProps {
@@ -62,7 +62,7 @@ export const BuildingDetailTabs = ({
       </TabsContent>
 
       <TabsContent value="orders">
-        <BuildingOrdersTab building={building} />
+        <BuildingWorkOrdersTab building={building} />
       </TabsContent>
 
       <TabsContent value="documents">

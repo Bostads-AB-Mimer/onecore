@@ -1,15 +1,6 @@
-import {
-  Building,
-  Wrench,
-  FileText,
-  Users,
-  Car,
-  Home,
-  MessageSquare,
-  StickyNote,
-} from 'lucide-react'
+import { Building, Wrench, FileText, MessageSquare } from 'lucide-react'
 import { BuildingEntrances } from './BuildingEntrances'
-import { BuildingOrdersTab } from './tabs/BuildingOrdersTab'
+import { BuildingWorkOrdersTab } from './BuildingWorkOrdersTab'
 import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 import {
   MobileAccordion,
@@ -19,7 +10,7 @@ import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
 import { Building as BuildingType, ResidenceSummary } from '@/services/types'
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { UseQueryResult } from '@tanstack/react-query'
-import { DocumentsTab } from '../documents/DocumentsTab'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
 import { ContextType } from '@/types/ui'
 
 interface BuildingDetailTabsMobileProps {
@@ -75,7 +66,7 @@ export const BuildingDetailTabsMobile = ({
       disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
-      content: <BuildingOrdersTab building={building} />,
+      content: <BuildingWorkOrdersTab building={building} />,
     },
     {
       id: 'documents',
