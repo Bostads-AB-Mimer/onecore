@@ -56,9 +56,12 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body).toMatchObject({
-      error: 'Invalid request body',
-    })
+    expect(res.body.data).toMatchObject([
+      {
+        message: 'Required',
+        path: ['contactCode'],
+      },
+    ])
   })
 
   it('should return 400 if lastDebitDate is missing', async () => {
@@ -70,9 +73,12 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body).toMatchObject({
-      error: 'Invalid request body',
-    })
+    expect(res.body.data).toMatchObject([
+      {
+        message: 'Required',
+        path: ['lastDebitDate'],
+      },
+    ])
   })
 
   it('should return 400 if desiredMoveDate is missing', async () => {
@@ -84,9 +90,12 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body).toMatchObject({
-      error: 'Invalid request body',
-    })
+    expect(res.body.data).toMatchObject([
+      {
+        message: 'Required',
+        path: ['desiredMoveDate'],
+      },
+    ])
   })
 
   it('should return 400 if lastDebitDate is not a valid datetime', async () => {
@@ -99,9 +108,12 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body).toMatchObject({
-      error: 'Invalid request body',
-    })
+    expect(res.body.data).toMatchObject([
+      {
+        message: 'Invalid datetime',
+        path: ['lastDebitDate'],
+      },
+    ])
   })
 
   it('should return 400 if desiredMoveDate is not a valid datetime', async () => {
@@ -114,9 +126,12 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body).toMatchObject({
-      error: 'Invalid request body',
-    })
+    expect(res.body.data).toMatchObject([
+      {
+        message: 'Invalid datetime',
+        path: ['desiredMoveDate'],
+      },
+    ])
   })
 
   it('should return 404 if lease is not found', async () => {
