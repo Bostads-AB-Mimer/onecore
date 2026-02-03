@@ -193,6 +193,7 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
     // We should maybe add a unique id property to the Invoice type instead
     transactionTypeName: 'some random string',
+    credit: null,
   }
 }
 

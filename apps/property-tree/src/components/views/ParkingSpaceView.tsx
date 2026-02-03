@@ -28,6 +28,7 @@ export function ParkingSpaceView() {
     queryFn: () =>
       leaseService.getByRentalPropertyId(parkingSpace!.rentalId!, {
         includeContacts: true,
+        includeRentInfo: true,
       }),
     enabled: !!parkingSpace?.rentalId,
   })
