@@ -1,16 +1,29 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
-export const useValidateRentalObject = (rentalObjectCode: string | null) =>
-  useQuery<boolean, AxiosError>({
-    queryKey: ['validate-rental-object', rentalObjectCode],
-    enabled: Boolean(rentalObjectCode && rentalObjectCode.trim().length > 0),
+const DEBOUNCE_DELAY = 300 // ms
+
+export const useValidateRentalObject = (rentalObjectCode: string | null) => {
+  const [debouncedCode, setDebouncedCode] = useState(rentalObjectCode)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCode(rentalObjectCode)
+    }, DEBOUNCE_DELAY)
+
+    return () => clearTimeout(timer)
+  }, [rentalObjectCode])
+
+  return useQuery<boolean, AxiosError>({
+    queryKey: ['validate-rental-object', debouncedCode],
+    enabled: Boolean(debouncedCode && debouncedCode.trim().length > 0),
     queryFn: async () => {
       try {
         await axios.get(
-          `${backendUrl}/rental-objects/by-code/${rentalObjectCode}`,
+          `${backendUrl}/rental-objects/by-code/${debouncedCode}`,
           {
             headers: {
               Accept: 'application/json',
@@ -30,3 +43,4 @@ export const useValidateRentalObject = (rentalObjectCode: string | null) =>
     retry: false,
     staleTime: 30000, // Cache for 30 seconds
   })
+}
