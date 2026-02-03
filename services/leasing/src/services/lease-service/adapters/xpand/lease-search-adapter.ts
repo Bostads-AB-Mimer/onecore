@@ -2,6 +2,7 @@ import { Knex } from 'knex'
 import { Context } from 'koa'
 import { leasing, LeaseStatus, LeaseStatusLabel } from '@onecore/types'
 import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
@@ -44,6 +45,15 @@ const OBJECT_TYPE_MAP: Record<string, string> = {
 const normalizeObjectType = (type: string): string =>
   OBJECT_TYPE_MAP[type.toLowerCase()] ?? type
 
+export interface LeaseSearchOptions {
+  forExport?: boolean
+  /**
+   * If provided, skip the COUNT query and use this value as totalRecords.
+   * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
+   */
+  knownTotalCount?: number
+}
+
 /**
  * Modular query builder for lease search
  * Only joins tables when filters require them
@@ -52,9 +62,14 @@ export class LeaseSearchQueryBuilder {
   private query: Knex.QueryBuilder
   private joinedTables: Set<string>
   private params: leasing.v1.LeaseSearchQueryParams
+  private options: LeaseSearchOptions
 
-  constructor(params: leasing.v1.LeaseSearchQueryParams) {
+  constructor(
+    params: leasing.v1.LeaseSearchQueryParams,
+    options?: LeaseSearchOptions
+  ) {
     this.params = params
+    this.options = options || {}
     this.joinedTables = new Set()
     this.query = this.buildBaseQuery()
   }
@@ -326,10 +341,17 @@ export class LeaseSearchQueryBuilder {
   /**
    * Build SELECT fields
    * Only selects property/area/district fields if those filters were used
+   * (unless forExport is true, then always include them)
    */
   buildSelectFields(): this {
     // Always join address for display
     this.ensureAddressJoin()
+
+    // Force joins for export to ensure all fields are populated
+    if (this.options.forExport) {
+      this.ensureBabufJoin()
+      this.ensureDistrictJoin()
+    }
 
     // Always selected (core display fields)
     this.query.select(
@@ -491,7 +513,7 @@ export const parseContactsJson = (
       phone: c.phone ? String(c.phone).trim() : null,
     }))
   } catch (e) {
-    console.warn('parseContactsJson failed:', e)
+    logger.warn(e, 'parseContactsJson: failed to parse contacts JSON')
     return []
   }
 }
@@ -524,9 +546,10 @@ export const getBuildingManagers = async (): Promise<
  */
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
+  ctx: Context,
+  options?: LeaseSearchOptions
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const builder = new LeaseSearchQueryBuilder(params)
+  const builder = new LeaseSearchQueryBuilder(params, options)
   builder
     .applySearch()
     .applyObjectTypeFilter()
@@ -542,18 +565,14 @@ export const searchLeases = async (
 
   const query = builder.getQuery()
 
-  // DEBUG: Log SQL query and timing
-  const sqlDebug = query.toSQL()
-  console.log('=== LEASE SEARCH SQL ===')
-  console.log('SQL:', sqlDebug.sql)
-  console.log('Bindings:', sqlDebug.bindings)
-  console.log('========================')
-
-  const startQuery = Date.now()
-  // Use pagination utility
-  const paginatedResult = await paginateKnex<any>(query, ctx, {}, params.limit)
-  const queryTime = Date.now() - startQuery
-  console.log(`Main query time (with contacts): ${queryTime}ms`)
+  // Use pagination utility (pass knownTotalCount to skip COUNT on pages 2+)
+  const paginatedResult = await paginateKnex<any>(
+    query,
+    ctx,
+    {},
+    params.limit,
+    options?.knownTotalCount
+  )
 
   // Transform rows and parse contacts JSON
   const transformedContent = paginatedResult.content.map((row: any) => {

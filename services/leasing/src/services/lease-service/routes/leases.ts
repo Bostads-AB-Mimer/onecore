@@ -410,7 +410,9 @@ export const routes = (router: KoaRouter) => {
               limit: String(limit),
             }
 
-            return await searchLeases(queryParams.data, paginationCtx)
+            return await searchLeases(queryParams.data, paginationCtx, {
+              forExport: true,
+            })
           },
           {
             sheetName: 'Hyreskontrakt',
