@@ -112,7 +112,7 @@ export const createLease = async (
   }
 }
 
-export async function addLeaseHomeInsuranceRentRow(
+export async function addLeaseHomeInsurance(
   leaseId: string
 ): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios.post(

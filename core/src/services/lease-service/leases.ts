@@ -649,9 +649,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows/home-insurance:
+   * /leases/{leaseId}/home-insurance:
    *   post:
-   *     summary: Add home insurance rent row to a lease
+   *     summary: Add home insurance to a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -663,13 +663,13 @@ export const routes = (router: KoaRouter) => {
    *         description: The ID of the lease.
    *     responses:
    *       201:
-   *         description: Successfully added home insurance rent row.
+   *         description: Successfully added home insurance.
    *       500:
    *         description: Internal server error.
    */
-  router.post('/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
+  router.post('/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.addLeaseHomeInsuranceRentRow(
+    const result = await leasingAdapter.addLeaseHomeInsurance(
       ctx.params.leaseId
     )
 

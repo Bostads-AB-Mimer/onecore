@@ -212,11 +212,11 @@ describe('leases routes', () => {
   describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
       const addHomeInsuranceSpy = jest
-        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).post(
-        '/leases/1337/rent-rows/home-insurance'
+        '/leases/1337/home-insurance'
       )
 
       expect(res.status).toBe(500)
@@ -225,14 +225,14 @@ describe('leases routes', () => {
 
     it('adds home insurance rent row', async () => {
       const addHomeInsuranceSpy = jest
-        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
         .mockResolvedValue({
           ok: true,
           data: null,
         })
 
       const res = await request(app.callback()).post(
-        '/leases/1337/rent-rows/home-insurance'
+        '/leases/1337/home-insurance'
       )
 
       expect(res.status).toBe(201)
