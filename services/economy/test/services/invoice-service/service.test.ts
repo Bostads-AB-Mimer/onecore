@@ -41,7 +41,7 @@ jest.mock('@src/services/invoice-service/adapters/xpand-db-adapter', () =>
 )
 
 // Mock the additional adapters used by getInvoiceDetails
-jest.mock('@src/services/invoice-service/adapters/xledger-adapter', () => ({
+jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
   getInvoiceByInvoiceNumber: jest.fn(),
   uploadFile: jest.fn(),
   createCustomerLedgerRow: jest.fn(),
