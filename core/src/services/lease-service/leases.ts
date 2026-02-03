@@ -5,11 +5,13 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { leasing } from '@onecore/types'
+import z from 'zod'
 
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -667,27 +669,37 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.post('/leases/:leaseId/home-insurance', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.addLeaseHomeInsurance(
-      ctx.params.leaseId
-    )
 
-    if (!result.ok) {
-      ctx.status = 500
+  const AddLeaseHomeInsuranceRequestSchema = z.object({
+    from: z.coerce.date(),
+  })
+
+  router.post(
+    '/leases/:leaseId/home-insurance',
+    parseRequestBody(AddLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await leasingAdapter.addLeaseHomeInsurance(
+        ctx.params.leaseId,
+        ctx.request.body as z.infer<typeof AddLeaseHomeInsuranceRequestSchema>
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: result.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
       ctx.body = {
-        error: result.err,
+        content: result.data,
         ...metadata,
       }
-      return
     }
-
-    ctx.status = 201
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
-  })
+  )
 
   /**
    * @swagger

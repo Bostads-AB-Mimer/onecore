@@ -112,11 +112,17 @@ export const createLease = async (
   }
 }
 
+type AddLeaseHomeInsuranceParams = z.infer<
+  typeof leasing.v1.AddLeaseHomeInsuranceRequestSchema
+>
+
 export async function addLeaseHomeInsurance(
-  leaseId: string
+  leaseId: string,
+  params: AddLeaseHomeInsuranceParams
 ): Promise<AdapterResult<null, 'unknown'>> {
   const result = await axios.post(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`,
+    params
   )
 
   if (result.status === 201) {

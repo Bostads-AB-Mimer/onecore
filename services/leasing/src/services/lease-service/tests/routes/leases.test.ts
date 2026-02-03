@@ -385,9 +385,9 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
-    const result = await request(app.callback()).post(
-      '/leases/123/rent-rows/home-insurance'
-    )
+    const result = await request(app.callback())
+      .post('/leases/123/rent-rows/home-insurance')
+      .send({ from: new Date('2024-01-01') })
 
     expect(result.status).toBe(404)
     expect(result.body.error).toBe('Lease not found')
@@ -398,9 +398,9 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const result = await request(app.callback()).post(
-      '/leases/123/rent-rows/home-insurance'
-    )
+    const result = await request(app.callback())
+      .post('/leases/123/rent-rows/home-insurance')
+      .send({ from: new Date('2024-01-01') })
 
     expect(result.status).toBe(500)
   })
@@ -418,9 +418,9 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: true, data: leaseWithHomeInsurance })
 
-    const result = await request(app.callback()).post(
-      '/leases/123/rent-rows/home-insurance'
-    )
+    const result = await request(app.callback())
+      .post('/leases/123/rent-rows/home-insurance')
+      .send({ from: new Date('2024-01-01') })
 
     expect(result.status).toBe(422)
     expect(result.body.error).toBe(
@@ -441,9 +441,9 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const result = await request(app.callback()).post(
-      '/leases/123/rent-rows/home-insurance'
-    )
+    const result = await request(app.callback())
+      .post('/leases/123/rent-rows/home-insurance')
+      .send({ from: new Date('2024-01-01') })
 
     expect(result.status).toBe(500)
   })
@@ -461,9 +461,9 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
 
-    const result = await request(app.callback()).post(
-      '/leases/123/rent-rows/home-insurance'
-    )
+    const result = await request(app.callback())
+      .post('/leases/123/rent-rows/home-insurance')
+      .send({ from: new Date('2024-01-01') })
 
     expect(result.status).toBe(201)
     expect(result.body.content).toEqual(null)
