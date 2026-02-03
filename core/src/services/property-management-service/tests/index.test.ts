@@ -145,6 +145,7 @@ describe('rental-property-service index', () => {
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
         includeContacts: false,
+        includeRentInfo: true,
         status: ['current', 'upcoming'],
       })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
@@ -167,6 +168,7 @@ describe('rental-property-service index', () => {
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
         status: ['current', 'upcoming'],
         includeContacts: false,
+        includeRentInfo: true,
       })
     })
   })
