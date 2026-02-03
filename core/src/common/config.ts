@@ -120,6 +120,7 @@ const config = configPackage({
     },
     inspectionService: {
       url: 'http://localhost:5090',
+    },
     fileStorageService: {
       url: 'http://localhost:5091',
     },
@@ -165,6 +166,10 @@ const config = configPackage({
       },
       inspection: {
         systemName: 'inspection',
+        minimumMinutesBetweenRequests: 1,
+      },
+      fileStorage: {
+        systemName: 'file-storage',
         minimumMinutesBetweenRequests: 1,
       },
     },

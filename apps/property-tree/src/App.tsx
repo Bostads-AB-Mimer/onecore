@@ -131,6 +131,11 @@ const router = createBrowserRouter([
         element: <LeasesPage />,
         handle: { title: 'Hyreskontrakt' },
       },
+      {
+        path: 'inspections',
+        element: <InspectionsView />,
+        handle: { title: 'Besiktningar' },
+      },
     ],
   },
 ])
@@ -139,58 +144,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CommandPaletteProvider>
-<<<<<<< HEAD
-        <Router>
-          <Routes>
-            <Route path="/callback" element={<AuthCallback />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<DashboardView />} />
-              {/* Legacy route ----------------------------*/}
-              <Route path="sv" element={<DashboardView />} />
-              {/*------------------------------------------*/}
-              <Route path="companies/:companyId" element={<CompanyView />} />
-              <Route path="properties" element={<SearchView />} />
-              <Route path="properties/:propertyId" element={<PropertyView />} />
-              <Route path="buildings/:buildingId" element={<BuildingView />} />
-              <Route
-                path="staircases/:buildingId/:staircaseId"
-                element={<StaircaseView />}
-              />
-              <Route
-                path="residences/:residenceId"
-                element={<ResidenceView />}
-              />
-              <Route
-                path="residences/:residenceId/rooms/:roomId"
-                element={<RoomView />}
-              />
-              <Route
-                path="parking-spaces/:rentalId"
-                element={<ParkingSpaceView />}
-              />
-              <Route
-                path="maintenance-units/:code"
-                element={<MaintenanceUnitView />}
-              />
-              <Route path="facilities/:rentalId" element={<FacilityView />} />
-              <Route path="tenants" element={<AllTenantsPage />} />
-              <Route path="tenants/:contactCode" element={<TenantView />} />
-              <Route path="inspections" element={<InspectionsView />} />
-            </Route>
-          </Routes>
-        </Router>
-=======
         <NuqsAdapter>
           <RouterProvider router={router} />
         </NuqsAdapter>
->>>>>>> main
       </CommandPaletteProvider>
     </QueryClientProvider>
   )
