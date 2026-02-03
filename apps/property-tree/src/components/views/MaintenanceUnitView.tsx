@@ -7,7 +7,7 @@ import { MaintenanceUnitBasicInfo } from '../maintenance-unit/MaintenanceUnitBas
 import { MaintenanceUnitComponents } from '../maintenance-unit/MaintenanceUnitComponents'
 import { ObjectPageLayout } from '../layout/ObjectPageLayout'
 import { ObjectPageTabs } from '../layout/ObjectPageTabs'
-import { WorkOrdersManagement } from '../work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '../../features/work-orders/components/WorkOrdersManagement'
 import { ContextType } from '@/types/ui'
 
 export function MaintenanceUnitView() {

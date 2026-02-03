@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/v2/Button'
-import { WorkOrdersTable } from '@/components/work-orders/v2/WorkOrdersTable'
-import { WorkOrdersTableSkeleton } from '@/components/work-orders/WorkOrdersTableSkeleton'
+import { WorkOrdersTable } from '@/features/work-orders/components/WorkOrdersTable'
+import { WorkOrdersTableSkeleton } from '@/features/work-orders/components/WorkOrdersTableSkeleton'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { FilePlus } from 'lucide-react'
 import useWorkOrders from '../hooks/useWorkOrders'

@@ -1,6 +1,6 @@
 import { TabLayout } from '@/components/ui/TabLayout'
 import type { Building } from '@/services/types'
-import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 
 import { ContextType } from '@/types/ui'
 
