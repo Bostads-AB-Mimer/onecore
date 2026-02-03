@@ -93,8 +93,7 @@ export async function createExcelExport<T>(
   }
 
   // Generate and return buffer
-  const buffer = await workbook.xlsx.writeBuffer()
-  return Buffer.from(buffer)
+  return (await workbook.xlsx.writeBuffer()) as unknown as Buffer
 }
 
 /**
