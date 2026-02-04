@@ -1,8 +1,11 @@
-import { GET } from './baseApi'
+import { GET, POST } from './baseApi'
 import { components } from './generated/api-types'
 
 type Inspection = components['schemas']['Inspection']
 type DetailedInspection = components['schemas']['DetailedInspection']
+type TenantContactsResponse = components['schemas']['TenantContactsResponse']
+type SendProtocolRequest = components['schemas']['SendProtocolRequest']
+type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 // export type InternalInspection = {
 //   _tag: 'internal'
 // } & components['schemas']['Inspection']
@@ -68,5 +71,31 @@ export const inspectionService = {
       throw new Error('No PDF data returned from API')
 
     return (pdfResponse.data as any).content.pdfBase64
+  },
+
+  async getTenantContacts(
+    inspectionId: string
+  ): Promise<TenantContactsResponse> {
+    const response = await GET('/inspections/{inspectionId}/tenant-contacts', {
+      params: { path: { inspectionId } },
+    })
+    if (response.error) throw response.error
+    if (!response.data.content) throw new Error('No data returned from API')
+
+    return response.data.content as TenantContactsResponse
+  },
+
+  async sendProtocol(
+    inspectionId: string,
+    recipient: 'new-tenant' | 'previous-tenant'
+  ): Promise<SendProtocolResponse> {
+    const response = await POST('/inspections/{inspectionId}/send-protocol', {
+      params: { path: { inspectionId } },
+      body: { recipient } as SendProtocolRequest,
+    })
+    if (response.error) throw response.error
+    if (!response.data.content) throw new Error('No data returned from API')
+
+    return response.data.content as SendProtocolResponse
   },
 }
