@@ -89,6 +89,47 @@ function categorizeCards(
   return { returned, missing }
 }
 
+/**
+ * Builds a keySystemMap from a list of keys by fetching key system details
+ * @param keys - Array of keys to extract keySystemIds from
+ * @returns Map of keySystemId -> systemCode
+ */
+async function buildKeySystemMap(keys: Key[]): Promise<Record<string, string>> {
+  // Collect unique keySystemIds
+  const keySystemIds = [
+    ...new Set(
+      keys
+        .map((k) => k.keySystemId)
+        .filter((id): id is string => id != null && id !== '')
+    ),
+  ]
+
+  if (keySystemIds.length === 0) {
+    return {}
+  }
+
+  // Fetch key systems in parallel
+  const keySystems = await Promise.all(
+    keySystemIds.map(async (id) => {
+      try {
+        return await keyService.getKeySystem(id)
+      } catch {
+        return null
+      }
+    })
+  )
+
+  // Build the map
+  const map: Record<string, string> = {}
+  keySystems.forEach((ks) => {
+    if (ks) {
+      map[ks.id] = ks.systemCode
+    }
+  })
+
+  return map
+}
+
 // ============================================================================
 // Data Assembly Functions
 // ============================================================================
@@ -119,6 +160,9 @@ async function assembleFromReceipt(
 
   const cards = cardResults.filter((c): c is Card => c !== null)
 
+  // Build keySystemMap for displaying lock system codes
+  const keySystemMap = await buildKeySystemMap(keys)
+
   // Determine operation date based on receipt type
   const operationDate =
     receipt.receiptType === 'LOAN'
@@ -136,6 +180,7 @@ async function assembleFromReceipt(
     receiptType: receipt.receiptType,
     operationDate,
     cards: cards.length > 0 ? cards : undefined,
+    keySystemMap,
   }
 }
 
@@ -148,7 +193,8 @@ function assembleReturnReceipt(
   selectedKeyIds: Set<string>,
   lease: Lease,
   loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set()
+  selectedCardIds: Set<string> = new Set(),
+  keySystemMap?: Record<string, string>
 ): ReceiptData {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
@@ -169,6 +215,7 @@ function assembleReturnReceipt(
     disposedKeys: disposed.length > 0 ? disposed : undefined,
     cards: returnedCards.length > 0 ? returnedCards : undefined,
     missingCards: missingCards.length > 0 ? missingCards : undefined,
+    keySystemMap,
   }
 }
 
@@ -195,6 +242,9 @@ async function assembleMaintenanceLoanReceipt(
   const cards = cardResults.filter((c): c is Card => c !== null)
   const contactName = contactInfo?.fullName || loan.contact || 'Unknown'
 
+  // Build keySystemMap for displaying lock system codes
+  const keySystemMap = await buildKeySystemMap(keys)
+
   return {
     contact: loan.contact || 'Unknown',
     contactName,
@@ -204,6 +254,7 @@ async function assembleMaintenanceLoanReceipt(
     receiptType: 'LOAN',
     operationDate: new Date(),
     cards: cards.length > 0 ? cards : undefined,
+    keySystemMap,
   }
 }
 
@@ -219,7 +270,8 @@ function assembleMaintenanceReturnReceipt(
   loanKeys: Key[],
   selectedKeyIds: Set<string>,
   loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set()
+  selectedCardIds: Set<string> = new Set(),
+  keySystemMap?: Record<string, string>
 ): MaintenanceReceiptData {
   const { returned, missing, disposed } = categorizeKeys(loanKeys, selectedKeyIds)
   const { returned: returnedCards, missing: missingCards } = categorizeCards(
@@ -239,6 +291,7 @@ function assembleMaintenanceReturnReceipt(
     disposedKeys: disposed.length > 0 ? disposed : undefined,
     cards: returnedCards.length > 0 ? returnedCards : undefined,
     missingCards: missingCards.length > 0 ? missingCards : undefined,
+    keySystemMap,
   }
 }
 
@@ -334,13 +387,17 @@ export async function generateAndUploadReturnReceipt(
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set()
 ): Promise<void> {
+  // Build keySystemMap for displaying lock system codes
+  const keySystemMap = await buildKeySystemMap(loanKeys)
+
   // Assemble receipt data (no API calls - uses pre-fetched data)
   const receiptData = assembleReturnReceipt(
     loanKeys,
     selectedKeyIds,
     lease,
     loanCards,
-    selectedCardIds
+    selectedCardIds,
+    keySystemMap
   )
 
   // Generate PDF blob
@@ -410,6 +467,9 @@ export async function generateAndUploadMaintenanceReturnReceipt(
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set()
 ): Promise<void> {
+  // Build keySystemMap for displaying lock system codes
+  const keySystemMap = await buildKeySystemMap(loanKeys)
+
   // Assemble receipt data (no API calls - uses pre-fetched data)
   const receiptData = assembleMaintenanceReturnReceipt(
     contact,
@@ -419,7 +479,8 @@ export async function generateAndUploadMaintenanceReturnReceipt(
     loanKeys,
     selectedKeyIds,
     loanCards,
-    selectedCardIds
+    selectedCardIds,
+    keySystemMap
   )
 
   // Generate PDF blob

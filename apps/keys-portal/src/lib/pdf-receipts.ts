@@ -181,7 +181,8 @@ const renderKeysTableSection = (
   y: number,
   headerText: string,
   headerColor: { r: number; g: number; b: number } = BLUE,
-  reserveAfter: number = 0
+  reserveAfter: number = 0,
+  keySystemMap?: Record<string, string>
 ): number => {
   if (keys.length === 0) return y
 
@@ -204,10 +205,11 @@ const renderKeysTableSection = (
   const top = y + 10
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-  doc.text('Nyckelnamn', MARGIN_X, top)
-  doc.text('Typ', 80, top)
+  doc.text('Namn', MARGIN_X, top)
+  doc.text('Låssystem', 55, top)
+  doc.text('Typ', 95, top)
   doc.text('Löp.nr', 130, top)
-  doc.text('Flex.nr', 160, top)
+  doc.text('Flex.nr', 165, top)
 
   // Header line
   doc.setDrawColor(0, 0, 0)
@@ -237,10 +239,11 @@ const renderKeysTableSection = (
       doc.setFont(FONT_GRAPHIK, 'bold')
       doc.setFontSize(FONT_SIZE.TABLE_HEADER)
       cy += 10
-      doc.text('Nyckelnamn', MARGIN_X, cy)
-      doc.text('Typ', 80, cy)
+      doc.text('Namn', MARGIN_X, cy)
+      doc.text('Låssystem', 55, cy)
+      doc.text('Typ', 95, cy)
       doc.text('Löp.nr', 130, cy)
-      doc.text('Flex.nr', 160, cy)
+      doc.text('Flex.nr', 165, cy)
       doc.line(MARGIN_X, cy + 3, PAGE_W - MARGIN_X, cy + 3)
       cy += 9
     }
@@ -248,13 +251,15 @@ const renderKeysTableSection = (
     doc.setFont(FONT_GRAPHIK, 'normal')
     doc.setFontSize(FONT_SIZE.BODY)
     doc.text(k.keyName, MARGIN_X, cy)
+    const systemCode = keySystemMap?.[k.keySystemId || ''] || '-'
+    doc.text(systemCode, 55, cy)
     const labelForType =
       (KeyTypeLabels as Record<string, string>)[
         k.keyType as unknown as string
       ] || (k.keyType as string)
-    doc.text(labelForType, 80, cy)
+    doc.text(labelForType, 95, cy)
     doc.text(k.keySequenceNumber ? String(k.keySequenceNumber) : '-', 130, cy)
-    doc.text(k.flexNumber ? String(k.flexNumber) : '-', 160, cy)
+    doc.text(k.flexNumber ? String(k.flexNumber) : '-', 165, cy)
     cy += rowH
   })
 
@@ -277,9 +282,10 @@ const renderKeysTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
   y: number,
-  reserveAfter: number = 0
+  reserveAfter: number = 0,
+  keySystemMap?: Record<string, string>
 ): number => {
-  return renderKeysTableSection(doc, keys, y, 'NYCKLAR', BLUE, reserveAfter)
+  return renderKeysTableSection(doc, keys, y, 'NYCKLAR', BLUE, reserveAfter, keySystemMap)
 }
 
 /**
@@ -291,7 +297,8 @@ const renderReturnKeysTable = (
   missingKeys: ReceiptData['keys'] | undefined,
   disposedKeys: ReceiptData['keys'] | undefined,
   y: number,
-  reserveAfter: number = 0
+  reserveAfter: number = 0,
+  keySystemMap?: Record<string, string>
 ): number => {
   const hasMissing = missingKeys && missingKeys.length > 0
   const hasDisposed = disposedKeys && disposedKeys.length > 0
@@ -308,7 +315,8 @@ const renderReturnKeysTable = (
     y,
     returnedHeader,
     BLUE,
-    returnedReserve
+    returnedReserve,
+    keySystemMap
   )
 
   // Missing keys section (red)
@@ -321,7 +329,8 @@ const renderReturnKeysTable = (
       y,
       'SAKNADE NYCKLAR',
       RED,
-      missingReserve
+      missingReserve,
+      keySystemMap
     )
   }
 
@@ -334,7 +343,8 @@ const renderReturnKeysTable = (
       y,
       'KASSERADE NYCKLAR',
       BLUE,
-      reserveAfter
+      reserveAfter,
+      keySystemMap
     )
   }
 
@@ -800,7 +810,7 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
 
   const hasCards = data.cards && data.cards.length > 0
   const keysReserve = hasCards ? 0 : 55
-  y = renderKeysTable(doc, data.keys, y, keysReserve)
+  y = renderKeysTable(doc, data.keys, y, keysReserve, data.keySystemMap)
 
   if (hasCards) {
     y += 4
@@ -842,7 +852,8 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
     data.missingKeys,
     data.disposedKeys,
     y,
-    keysReserve
+    keysReserve,
+    data.keySystemMap
   )
 
   // Cards section
@@ -879,7 +890,7 @@ async function buildMaintenanceLoanDoc(
 
   const hasCards = data.cards && data.cards.length > 0
   const keysReserve = hasCards ? 0 : 55
-  y = renderKeysTable(doc, data.keys, y, keysReserve)
+  y = renderKeysTable(doc, data.keys, y, keysReserve, data.keySystemMap)
 
   if (hasCards) {
     y += 4
@@ -924,7 +935,8 @@ async function buildMaintenanceReturnDoc(
     data.missingKeys,
     data.disposedKeys,
     y,
-    keysReserve
+    keysReserve,
+    data.keySystemMap
   )
 
   // Cards section

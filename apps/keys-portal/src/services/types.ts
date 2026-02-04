@@ -254,6 +254,7 @@ export interface ReceiptData {
   disposedKeys?: Key[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
+  keySystemMap?: Record<string, string> // keySystemId -> systemCode for display
 }
 
 export interface MaintenanceReceiptData {
@@ -268,4 +269,5 @@ export interface MaintenanceReceiptData {
   disposedKeys?: Key[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
+  keySystemMap?: Record<string, string> // keySystemId -> systemCode for display
 }
