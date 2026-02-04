@@ -1,4 +1,5 @@
 import { authConfig } from '@/auth-config'
+import { blobToBase64 } from '@/utils/fileUtils'
 
 import type {
   Receipt,
@@ -14,6 +15,26 @@ export const receiptService = {
    */
   async create(payload: CreateReceiptRequest): Promise<Receipt> {
     const { data, error } = await POST('/receipts', { body: payload })
+    if (error) throw error
+    return data?.content as Receipt
+  },
+
+  /**
+   * Create a new receipt with a file in a single call
+   * The file is uploaded along with the receipt creation (more efficient than create + uploadFile)
+   */
+  async createWithFile(
+    payload: Omit<CreateReceiptRequest, 'fileData' | 'fileContentType'>,
+    file: File
+  ): Promise<Receipt> {
+    const fileData = await blobToBase64(file)
+    const { data, error } = await POST('/receipts', {
+      body: {
+        ...payload,
+        fileData,
+        fileContentType: file.type || 'application/pdf',
+      },
+    })
     if (error) throw error
     return data?.content as Receipt
   },
@@ -54,17 +75,22 @@ export const receiptService = {
   },
 
   /**
-   * Upload a PDF file to a receipt
+   * Upload a PDF file to a receipt using base64 encoding
    */
   async uploadFile(receiptId: string, file: File): Promise<UploadFileResponse> {
-    const formData = new FormData()
-    formData.append('file', file)
+    const base64Content = await blobToBase64(file)
 
     const response = await fetch(
       `${authConfig.apiUrl}/receipts/${receiptId}/upload`,
       {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileData: base64Content,
+          fileContentType: file.type || 'application/pdf',
+        }),
         credentials: 'include',
       }
     )
@@ -98,56 +124,6 @@ export const receiptService = {
   async downloadFile(receiptId: string): Promise<void> {
     const { url } = await this.getDownloadUrl(receiptId)
     window.open(url, '_blank')
-  },
-
-  /**
-   * Upload a PDF file to a receipt using base64 encoding (for Power Automate integration)
-   */
-  async uploadFileBase64(
-    receiptId: string,
-    base64Content: string,
-    fileName?: string,
-    metadata?: Record<string, string>
-  ): Promise<UploadFileResponse> {
-    const { data, error } = await POST('/receipts/{id}/upload-base64', {
-      params: { path: { id: receiptId } },
-      body: {
-        fileContent: base64Content,
-        fileName,
-        metadata,
-      },
-    })
-    if (error) throw error
-    return data?.content as UploadFileResponse
-  },
-
-  /**
-   * Helper: Convert a Blob to base64 string
-   */
-  blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64 = reader.result as string
-        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
-        const base64String = base64.split(',')[1]
-        resolve(base64String)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-  },
-
-  /**
-   * Helper: Convert a File to base64 string and upload
-   */
-  async uploadFileAsBase64(
-    receiptId: string,
-    file: File,
-    metadata?: Record<string, string>
-  ): Promise<UploadFileResponse> {
-    const base64Content = await this.blobToBase64(file)
-    return this.uploadFileBase64(receiptId, base64Content, file.name, metadata)
   },
 
   /**

@@ -14,8 +14,9 @@
 import { Knex } from 'knex'
 import * as signaturesAdapter from './adapters/signatures-adapter'
 import * as receiptsAdapter from './adapters/receipts-adapter'
-import * as simpleSignApi from './adapters/simplesign-adapter'
-import { uploadFile } from './adapters/minio'
+// TODO: Uncomment when webhook flow is implemented
+// import * as simpleSignApi from './adapters/simplesign-adapter'
+// import { uploadFile } from './adapters/minio' - Replace with file-storage service call
 import { logger } from '@onecore/utilities'
 
 export interface ProcessWebhookParams {
@@ -99,65 +100,13 @@ export async function processSignatureWebhook(
           return { ok: true, data: { fileId: receipt.fileId } } as const
         }
 
-        // Step 3: Download signed PDF from SimpleSign
-        let pdfBuffer: Buffer
-        try {
-          pdfBuffer = await simpleSignApi.downloadSignedPdf(params.documentId)
-        } catch (err) {
-          logger.error(
-            { err, documentId: params.documentId },
-            'Failed to download signed PDF from SimpleSign'
-          )
-          throw new Error('download-pdf')
-        }
-        // Step 4: Upload to MinIO
-        let minioFileId: string
-        try {
-          minioFileId = await uploadFile(
-            pdfBuffer,
-            `receipt-${signature.resourceId}-signed.pdf`,
-            {
-              'Content-Type': 'application/pdf',
-              'x-amz-meta-signed': 'true',
-              'x-amz-meta-signature-id': signature.id,
-            }
-          )
-        } catch (err) {
-          logger.error(
-            { err, receiptId: signature.resourceId },
-            'Failed to upload signed PDF to MinIO'
-          )
-          throw new Error('upload-file')
-        }
-        // Step 5: Update receipt with fileId
-        const updatedReceipt = await receiptsAdapter.updateReceipt(
-          signature.resourceId,
-          { fileId: minioFileId },
-          trx
-        )
-
-        if (!updatedReceipt) {
-          throw new Error('update-receipt')
-        }
-
-        // Step 6: Mark other pending signatures as superseded
-        const superseded = await signaturesAdapter.supersedePendingSignatures(
-          signature.resourceType,
-          signature.resourceId,
-          signature.id,
-          trx
-        )
-
-        logger.info(
-          {
-            receiptId: signature.resourceId,
-            fileId: minioFileId,
-            supersededCount: superseded,
-          },
-          'Signed PDF uploaded and receipt updated'
-        )
-
-        return { ok: true, data: { fileId: minioFileId } } as const
+        // TODO: Implement file upload via file-storage service when webhook flow is ready
+        // Steps 3-6 are commented out until file-storage integration is implemented:
+        // - Download signed PDF from SimpleSign
+        // - Upload to file-storage service
+        // - Update receipt with fileId
+        // - Supersede other pending signatures
+        throw new Error('not-implemented')
       }
 
       return { ok: true, data: {} } as const

@@ -6853,10 +6853,64 @@ export interface paths {
       };
     };
   };
+  "/receipts/{id}/upload": {
+    /**
+     * Upload a file to an existing receipt
+     * @description Upload a PDF file (base64 encoded) to an existing receipt
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The receipt ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Base64 encoded file content */
+            fileData: string;
+            /** @description MIME type of the file (defaults to application/pdf) */
+            fileContentType?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                fileId?: string;
+              };
+            };
+          };
+        };
+        /** @description Missing fileData in request body */
+        400: {
+          content: {
+            "application/json": components["schemas"]["BadRequestResponse"];
+          };
+        };
+        /** @description Receipt not found */
+        404: {
+          content: {
+            "application/json": components["schemas"]["NotFoundResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/key-systems/{id}/upload-schema": {
     /**
      * Upload PDF schema file for a key system
-     * @description Upload a PDF schema file to attach to a key system
+     * @description Upload a PDF schema file (base64 encoded) to attach to a key system
      */
     post: {
       parameters: {
@@ -6867,18 +6921,28 @@ export interface paths {
       };
       requestBody: {
         content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
+          "application/json": {
+            /** @description Base64 encoded file content */
+            fileData: string;
+            /** @description MIME type of the file (defaults to application/pdf) */
+            fileContentType?: string;
+            /** @description Original filename (used for logging) */
+            fileName?: string;
           };
         };
       };
       responses: {
         /** @description File uploaded successfully */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: {
+                fileId?: string;
+              };
+            };
+          };
         };
-        /** @description Invalid file or key system not found */
+        /** @description Missing fileData in request body */
         400: {
           content: {
             "application/json": components["schemas"]["BadRequestResponse"];
@@ -6888,12 +6952,6 @@ export interface paths {
         404: {
           content: {
             "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
-        /** @description File too large */
-        413: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
           };
         };
         /** @description Internal server error */
@@ -6962,133 +7020,6 @@ export interface paths {
         404: {
           content: {
             "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload": {
-    /**
-     * Upload PDF file for a receipt
-     * @description Upload a PDF file to attach to an existing receipt
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the receipt to attach the file to */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                fileId?: string;
-                fileName?: string;
-                size?: number;
-              };
-            };
-          };
-        };
-        /** @description Invalid file or receipt not found */
-        400: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Receipt not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
-        /** @description File too large */
-        413: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
-          };
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload-base64": {
-    /**
-     * Upload PDF file for a receipt (base64 encoded - for Power Automate)
-     * @description Upload a PDF file as base64 encoded JSON to attach to an existing receipt
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the receipt */
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": {
-            /** @description Base64 encoded PDF file content */
-            fileContent: string;
-            /** @description Optional file name (defaults to receipt-id-timestamp.pdf) */
-            fileName?: string;
-            /** @description Optional metadata for Power Automate workflow tracking */
-            metadata?: {
-              [key: string]: string;
-            };
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                fileId?: string;
-                fileName?: string;
-                size?: number;
-                source?: string;
-              };
-            };
-          };
-        };
-        /** @description Invalid base64 content or receipt not found */
-        400: {
-          content: {
-            "application/json": components["schemas"]["BadRequestResponse"];
-          };
-        };
-        /** @description Receipt not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["NotFoundResponse"];
-          };
-        };
-        /** @description File too large (max 10MB) */
-        413: {
-          content: {
-            "application/json": components["schemas"]["ErrorResponse"];
           };
         };
         /** @description Internal server error */
@@ -9498,6 +9429,7 @@ export interface components {
       installationDate?: string | null;
       isActive?: boolean;
       description?: string | null;
+      schemaFileId?: string | null;
     };
     CreateLogRequest: {
       userName: string;
@@ -9673,6 +9605,8 @@ export interface components {
       /** @enum {string} */
       type?: "DIGITAL" | "PHYSICAL";
       fileId?: string;
+      fileData?: string;
+      fileContentType?: string;
     };
     UpdateReceiptRequest: {
       fileId?: string;
