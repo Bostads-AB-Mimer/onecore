@@ -562,92 +562,89 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '/inspections/:inspectionId/tenant-contacts',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { inspectionId } = ctx.params
+  router.get('/inspections/:inspectionId/tenant-contacts', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
 
-      try {
-        // Fetch inspection by ID
-        const inspectionResult =
-          await inspectionAdapter.getXpandInspectionById(inspectionId)
+    try {
+      // Fetch inspection by ID
+      const inspectionResult =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
 
-        if (!inspectionResult.ok) {
-          logger.error(
-            {
-              err: inspectionResult.err,
-              inspectionId,
-            },
-            'Error getting inspection by id for tenant contacts'
-          )
-          ctx.status = inspectionResult.statusCode || 500
-          ctx.body = { error: inspectionResult.err, ...metadata }
-          return
-        }
-
-        const inspection = inspectionResult.data
-
-        // Fetch leases for the property
-        const leases = await leasingAdapter.getLeasesForPropertyId(
-          inspection.residenceId,
-          {
-            includeContacts: true,
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: true,
-          }
-        )
-
-        // Identify tenant contracts
-        const { newTenant, previousTenant } = identifyTenantContracts(leases)
-
-        // Build response
-        const response: schemas.TenantContactsResponse = {
-          inspection: {
-            id: inspection.id,
-            address: inspection.address,
-            apartmentCode: inspection.apartmentCode,
-          },
-        }
-
-        if (newTenant && newTenant.tenants) {
-          response.new_tenant = {
-            contacts: newTenant.tenants
-              .filter((t) => t.emailAddress)
-              .map((t) => ({
-                fullName: t.fullName,
-                emailAddress: t.emailAddress!,
-                contactCode: t.contactCode,
-              })),
-            contractId: newTenant.leaseId,
-          }
-        }
-
-        if (previousTenant && previousTenant.tenants) {
-          response.previous_tenant = {
-            contacts: previousTenant.tenants
-              .filter((t) => t.emailAddress)
-              .map((t) => ({
-                fullName: t.fullName,
-                emailAddress: t.emailAddress!,
-                contactCode: t.contactCode,
-              })),
-            contractId: previousTenant.leaseId,
-          }
-        }
-
-        ctx.status = 200
-        ctx.body = { content: response, ...metadata }
-      } catch (error) {
+      if (!inspectionResult.ok) {
         logger.error(
-          { error, inspectionId },
-          'Error retrieving tenant contacts for inspection'
+          {
+            err: inspectionResult.err,
+            inspectionId,
+          },
+          'Error getting inspection by id for tenant contacts'
         )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        ctx.status = inspectionResult.statusCode || 500
+        ctx.body = { error: inspectionResult.err, ...metadata }
+        return
       }
+
+      const inspection = inspectionResult.data
+
+      // Fetch leases for the property
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        inspection.residenceId,
+        {
+          includeContacts: true,
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: true,
+        }
+      )
+
+      // Identify tenant contracts
+      const { newTenant, previousTenant } = identifyTenantContracts(leases)
+
+      // Build response
+      const response: schemas.TenantContactsResponse = {
+        inspection: {
+          id: inspection.id,
+          address: inspection.address,
+          apartmentCode: inspection.apartmentCode,
+        },
+      }
+
+      if (newTenant && newTenant.tenants) {
+        response.new_tenant = {
+          contacts: newTenant.tenants
+            .filter((t) => t.emailAddress)
+            .map((t) => ({
+              fullName: t.fullName,
+              emailAddress: t.emailAddress!,
+              contactCode: t.contactCode,
+            })),
+          contractId: newTenant.leaseId,
+        }
+      }
+
+      if (previousTenant && previousTenant.tenants) {
+        response.previous_tenant = {
+          contacts: previousTenant.tenants
+            .filter((t) => t.emailAddress)
+            .map((t) => ({
+              fullName: t.fullName,
+              emailAddress: t.emailAddress!,
+              contactCode: t.contactCode,
+            })),
+          contractId: previousTenant.leaseId,
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = { content: response, ...metadata }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error retrieving tenant contacts for inspection'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  )
+  })
 
   /**
    * @swagger
