@@ -127,7 +127,7 @@ export async function addLeaseHomeInsurance(
   AdapterResult<null, 'unknown' | 'not-found' | 'insurance-already-exists'>
 > {
   const result = await axios.post(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`,
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`,
     params
   )
 
@@ -170,20 +170,23 @@ export async function getLeaseHomeInsurance(
   return { ok: false, err: 'unknown' }
 }
 
-export async function deleteLeaseRentRow(params: {
+export async function deleteLeaseHomeInsurance(
   leaseId: string
-  rentRowId: string
-}): Promise<AdapterResult<null, 'unknown'>> {
+): Promise<AdapterResult<null, 'unknown' | 'not-found'>> {
   const result = await axios.delete(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows/${params.rentRowId}`
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
   )
+
+  if (result.status === 404) {
+    return { ok: false, err: 'not-found' }
+  }
 
   if (result.status === 200) {
     return { ok: true, data: null }
   } else {
     logger.error(
-      { error: JSON.stringify(result.data) },
-      'Unknown error when deleting rent row'
+      { err: JSON.stringify(result.data) },
+      'Unknown error when deleting home insurance'
     )
 
     return { ok: false, err: 'unknown' }

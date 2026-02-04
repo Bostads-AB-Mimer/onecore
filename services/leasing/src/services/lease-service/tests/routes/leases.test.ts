@@ -251,14 +251,14 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
   })
 })
 
-describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
+describe('POST /leases/:leaseId/home-insurance', () => {
   it('returns 404 when lease is not found', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
     const result = await request(app.callback())
-      .post('/leases/123/rent-rows/home-insurance')
+      .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(404)
@@ -271,7 +271,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback())
-      .post('/leases/123/rent-rows/home-insurance')
+      .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(500)
@@ -291,7 +291,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .mockResolvedValueOnce({ ok: true, data: leaseWithHomeInsurance })
 
     const result = await request(app.callback())
-      .post('/leases/123/rent-rows/home-insurance')
+      .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(422)
@@ -314,7 +314,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback())
-      .post('/leases/123/rent-rows/home-insurance')
+      .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(500)
@@ -334,7 +334,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback())
-      .post('/leases/123/rent-rows/home-insurance')
+      .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(201)
@@ -425,14 +425,25 @@ describe('GET /leases/:leaseId/home-insurance', () => {
   })
 })
 
-describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
+describe('DELETE /leases/:leaseId/home-insurance', () => {
   it('deletes and returns null', async () => {
+    jest.spyOn(tenfastAdapter, 'getLeaseByExternalId').mockResolvedValueOnce({
+      ok: true,
+      data: factory.tenfastLease.build({
+        hyror: [
+          factory.tenfastInvoiceRow.build({
+            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+          }),
+        ],
+      }),
+    })
+
     const deleteInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback()).delete(
-      '/leases/123/rent-rows/123'
+      '/leases/123/home-insurance'
     )
 
     expect(result.status).toBe(200)
@@ -441,12 +452,23 @@ describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
   })
 
   it('returns 500 on error', async () => {
+    jest.spyOn(tenfastAdapter, 'getLeaseByExternalId').mockResolvedValueOnce({
+      ok: true,
+      data: factory.tenfastLease.build({
+        hyror: [
+          factory.tenfastInvoiceRow.build({
+            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+          }),
+        ],
+      }),
+    })
+
     const deleteInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback()).delete(
-      '/leases/123/rent-rows/123'
+      '/leases/123/home-insurance'
     )
 
     expect(result.status).toBe(500)

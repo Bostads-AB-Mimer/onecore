@@ -782,9 +782,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows/{rentRowId}:
+   * /leases/{leaseId}/home-insurance:
    *   delete:
-   *     summary: Delete a rent row for a lease
+   *     summary: Delete home insurance for a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -794,39 +794,53 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *       - in: path
-   *         name: rentRowId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Rent row deleted.
+   *         description: Home insurance deleted.
    *       500:
    *         description: Internal server error.
    */
-
-  router.delete('/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+  router.delete('/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const deleteRentRowResult = await leasingAdapter.deleteLeaseRentRow({
-      leaseId: ctx.params.leaseId,
-      rentRowId: ctx.params.rentRowId,
+    const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+      includeContacts: false,
     })
 
-    if (!deleteRentRowResult.ok) {
+    if (!lease) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Lease not found',
+        ...metadata,
+      }
+      return
+    }
+
+    const homeInsurance = leasingAdapter.getLeaseHomeInsurance(
+      ctx.params.leaseId
+    )
+
+    if (!homeInsurance) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Home insurance not found',
+        ...metadata,
+      }
+      return
+    }
+
+    const deleteLeaseHomeInsuranceResult =
+      await leasingAdapter.deleteLeaseHomeInsurance(ctx.params.leaseId)
+
+    if (!deleteLeaseHomeInsuranceResult.ok) {
       ctx.status = 500
       ctx.body = {
-        error: deleteRentRowResult.err,
+        error: deleteLeaseHomeInsuranceResult.err,
         ...metadata,
       }
       return
     }
 
     ctx.status = 200
-    ctx.body = {
-      content: deleteRentRowResult.data,
-      ...metadata,
-    }
+    ctx.body = makeSuccessResponseBody(null, metadata)
   })
 }

@@ -278,37 +278,53 @@ describe('leases routes', () => {
     })
   })
 
-  describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
+  describe('DELETE /leases/:leaseId/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
+        })
+
       const deleteRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
+        .spyOn(tenantLeaseAdapter, 'deleteLeaseHomeInsurance')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).delete(
-        '/leases/1337/rent-rows/row-1'
+        '/leases/1337/home-insurance'
       )
 
       expect(res.status).toBe(500)
-      expect(deleteRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRowId: 'row-1',
-      })
+      expect(deleteRentRowSpy).toHaveBeenCalledWith('1337')
     })
 
-    it('deletes rent row', async () => {
+    it('deletes home insurance', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
+        })
+
       const deleteRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
-        .mockResolvedValue({ ok: true, data: null })
+        .spyOn(tenantLeaseAdapter, 'deleteLeaseHomeInsurance')
+        .mockResolvedValueOnce({ ok: true, data: null })
 
       const res = await request(app.callback()).delete(
-        '/leases/1337/rent-rows/row-1'
+        '/leases/1337/home-insurance'
       )
 
       expect(res.status).toBe(200)
-      expect(deleteRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRowId: 'row-1',
-      })
+      expect(deleteRentRowSpy).toHaveBeenCalledWith('1337')
       expect(res.body.content).toBeNull()
     })
   })

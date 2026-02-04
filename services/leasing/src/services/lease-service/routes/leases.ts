@@ -861,7 +861,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows/home-insurance:
+   * /leases/{leaseId}/home-insurance:
    *   post:
    *     summary: Add home insurance rent row to a lease
    *     description: Add a home insurance rent row. The article, VAT, amount, and label are determined by the service.
@@ -884,7 +884,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error.
    */
   router.post(
-    '(.*)/leases/:leaseId/rent-rows/home-insurance',
+    '(.*)/leases/:leaseId/home-insurance',
     parseRequestBody(leasing.v1.AddLeaseHomeInsuranceRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -1033,10 +1033,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/rent-rows/{rentRowId}:
+   * /leases/{id}/home-insurance:
    *   delete:
-   *     summary: Delete a rent row
-   *     description: Delete a rent row.
+   *     summary: Delete lease home insurance
+   *     description: Delete lease home insurance.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -1045,26 +1045,53 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *       - in: path
-   *         name: rentRowId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Successfully deleted rent row.
+   *         description: Successfully deleted home insurance.
    *       404:
    *         description: Lease not found.
    *       500:
    *         description: Internal server error.
    */
-  router.delete('(.*)/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+  router.delete('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    const lease = await tenfastAdapter.getLeaseByExternalId(ctx.params.leaseId)
+    if (!lease.ok) {
+      if (lease.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: lease.err,
+        ...metadata,
+      }
+      return
+    }
+
+    const homeInsuranceRow = lease.data.hyror.find(
+      (row) =>
+        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    )
+
+    if (!homeInsuranceRow || !homeInsuranceRow.article) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Home insurance not found',
+        ...metadata,
+      }
+      return
+    }
 
     const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: ctx.params.leaseId,
-      invoiceRowId: ctx.params.rentRowId,
+      invoiceRowId: homeInsuranceRow.article,
     })
 
     if (!deleteLeaseInvoiceRow.ok) {
