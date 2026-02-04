@@ -45,6 +45,27 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.post('(.*)/sendMessageWithAttachment', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const message = ctx.request.body
+    if (!isMessageEmail(message)) {
+      ctx.status = 400
+      ctx.body = { reason: 'Message is not an email object', ...metadata }
+      return
+    }
+    try {
+      const result = await sendEmail(message)
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        error: error.message,
+        ...metadata,
+      }
+    }
+  })
+
   router.post('(.*)/sendParkingSpaceOffer', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const emailData = ctx.request.body
