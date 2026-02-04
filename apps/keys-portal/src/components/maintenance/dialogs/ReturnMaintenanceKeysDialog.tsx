@@ -17,8 +17,8 @@ import { receiptService } from '@/services/api/receiptService'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { generateAndUploadMaintenanceReturnReceipt } from '@/services/receiptHandlers'
 import { useToast } from '@/hooks/use-toast'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { CommentInput } from '@/components/shared/CommentInput'
+import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 
 type Props = {
   open: boolean
@@ -44,11 +44,12 @@ export function ReturnMaintenanceKeysDialog({
   onSuccess,
 }: Props) {
   const { toast } = useToast()
+  const { addSignature } = useCommentWithSignature()
   const [isProcessing, setIsProcessing] = useState(false)
   const [loanGroups, setLoanGroups] = useState<LoanGroup[]>([])
-  const [loanDetailsMap, setLoanDetailsMap] = useState<Map<string, LoanDetails>>(
-    new Map()
-  )
+  const [loanDetailsMap, setLoanDetailsMap] = useState<
+    Map<string, LoanDetails>
+  >(new Map())
   const [loading, setLoading] = useState(true)
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set())
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set())
@@ -90,7 +91,8 @@ export function ReturnMaintenanceKeysDialog({
               const contactInfo = activeLoan.contact
                 ? await fetchContactByContactCode(activeLoan.contact)
                 : null
-              const contactName = contactInfo?.fullName || activeLoan.contact || 'Unknown'
+              const contactName =
+                contactInfo?.fullName || activeLoan.contact || 'Unknown'
 
               // Store loan details for PDF generation
               detailsMap.set(activeLoan.id, {
@@ -159,12 +161,15 @@ export function ReturnMaintenanceKeysDialog({
             const loanDetails = loanDetailsMap.get(loanGroup.loanId)
             if (loanDetails && receipt.id) {
               try {
+                // Use user-entered returnNote for the PDF (with signature), falls back to original description
+                const noteForPdf =
+                  addSignature(returnNote) || loanDetails.description
                 await generateAndUploadMaintenanceReturnReceipt(
                   receipt.id,
                   loanDetails.contact,
                   loanDetails.contactName,
                   loanDetails.contactPerson,
-                  loanDetails.description,
+                  noteForPdf,
                   loanGroup.keys,
                   selectedKeyIds
                 )
@@ -201,14 +206,12 @@ export function ReturnMaintenanceKeysDialog({
   // Right side content - return note
   const rightContent = (
     <div className="space-y-3">
-      <Label htmlFor="returnNote">Anteckning vid återlämning (valfritt)</Label>
-      <Textarea
-        id="returnNote"
+      <CommentInput
         value={returnNote}
-        onChange={(e) => setReturnNote(e.target.value)}
+        onChange={setReturnNote}
+        label="Anteckning vid återlämning"
         placeholder="T.ex. Alla nycklar returnerade i gott skick"
         rows={4}
-        disabled={isProcessing}
       />
       <div className="text-xs text-muted-foreground">
         Anteckningen sparas tillsammans med återlämningsdatumet

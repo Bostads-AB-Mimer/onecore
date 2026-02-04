@@ -2,7 +2,11 @@ import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
-import type { ReceiptData, MaintenanceReceiptData, Card } from '@/services/types'
+import type {
+  ReceiptData,
+  MaintenanceReceiptData,
+  Card,
+} from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
@@ -285,7 +289,15 @@ const renderKeysTable = (
   reserveAfter: number = 0,
   keySystemMap?: Record<string, string>
 ): number => {
-  return renderKeysTableSection(doc, keys, y, 'NYCKLAR', BLUE, reserveAfter, keySystemMap)
+  return renderKeysTableSection(
+    doc,
+    keys,
+    y,
+    'NYCKLAR',
+    BLUE,
+    reserveAfter,
+    keySystemMap
+  )
 }
 
 /**
@@ -743,6 +755,40 @@ const addReturnConfirmation = (
 }
 
 /**
+ * Adds a comment section to the receipt
+ */
+const addComment = (doc: jsPDF, y: number, comment?: string): number => {
+  if (!comment?.trim()) return y
+
+  const bottom = contentBottom(doc)
+  const lines = doc.splitTextToSize(comment, PAGE_W - 2 * MARGIN_X)
+  const spaceNeeded = 25 + lines.length * 5
+
+  if (y + spaceNeeded > bottom) {
+    doc.addPage()
+    y = MARGIN_TOP
+  }
+
+  // Section header - Bison Bold blue (same style as NYCKLAR, DROPPAR)
+  doc.setFont(FONT_BISON, 'bold')
+  doc.setFontSize(FONT_SIZE.SECTION_HEADER)
+  doc.setTextColor(BLUE.r, BLUE.g, BLUE.b)
+  doc.text('KOMMENTAR', MARGIN_X, y)
+  doc.setTextColor(0, 0, 0)
+
+  y += 10
+  doc.setFont(FONT_GRAPHIK, 'normal')
+  doc.setFontSize(FONT_SIZE.BODY)
+
+  lines.forEach((line: string) => {
+    doc.text(line, MARGIN_X, y)
+    y += 5
+  })
+
+  return y + 8
+}
+
+/**
  * Adds footer with Mimer logo and contact info
  */
 const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
@@ -818,6 +864,7 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   }
 
   y = addLoanConfirmation(doc, y, data.tenants)
+  y = addComment(doc, y, data.comment)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
@@ -863,6 +910,7 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   }
 
   y = addReturnConfirmation(doc, y, hasMissingItems)
+  y = addComment(doc, y, data.comment)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(
@@ -898,6 +946,7 @@ async function buildMaintenanceLoanDoc(
   }
 
   y = addMaintenanceLoanConfirmation(doc, y)
+  y = addComment(doc, y, data.description ?? undefined)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelutlaning_${data.contact}_${format(
@@ -946,6 +995,7 @@ async function buildMaintenanceReturnDoc(
   }
 
   y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
+  y = addComment(doc, y, data.description ?? undefined)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelaterlamning_${data.contact}_${format(

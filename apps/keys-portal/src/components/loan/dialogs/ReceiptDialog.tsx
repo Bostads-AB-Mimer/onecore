@@ -12,6 +12,8 @@ import { FileText, Printer, AlertCircle } from 'lucide-react'
 
 import type { ReceiptData, Lease } from '@/services/types'
 import { fetchReceiptData, openPdfInNewTab } from '@/services/receiptHandlers'
+import { CommentInput } from '@/components/shared/CommentInput'
+import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 
 export function ReceiptDialog({
   isOpen,
@@ -24,14 +26,18 @@ export function ReceiptDialog({
   receiptId: string | null
   lease: Lease
 }) {
+  const { addSignature } = useCommentWithSignature()
+
   // Fetch receipt data when dialog opens
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [isLoadingReceipt, setIsLoadingReceipt] = useState(false)
+  const [comment, setComment] = useState('')
 
   // Fetch receipt data when dialog opens or receiptId changes
   useEffect(() => {
     if (!isOpen || !receiptId) {
       setReceiptData(null)
+      setComment('')
       return
     }
 
@@ -62,7 +68,8 @@ export function ReceiptDialog({
   // ---------- PRINT (open the PDF in a new tab with auto print) ----------
   const handleOpenPdfTab = async () => {
     if (!receiptData) return
-    await openPdfInNewTab(receiptData, receiptId ?? undefined)
+    const dataWithComment = { ...receiptData, comment: addSignature(comment) }
+    await openPdfInNewTab(dataWithComment, receiptId ?? undefined)
   }
 
   const actionText =
@@ -105,6 +112,13 @@ export function ReceiptDialog({
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Comment input */}
+          <CommentInput
+            value={comment}
+            onChange={setComment}
+            placeholder="Lägg till en kommentar på kvittensen..."
+          />
 
           {/* Print (opens the real PDF and auto-opens print dialog) */}
           <Button

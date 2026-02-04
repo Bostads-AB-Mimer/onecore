@@ -107,6 +107,7 @@ export type ReturnKeysParams = {
   selectedForReceipt?: string[] // Key IDs that were checked in dialog (for receipt PDF)
   selectedCardsForReceipt?: string[] // Card IDs that were checked in dialog (for receipt PDF)
   lease?: Lease // Lease information for PDF generation
+  comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
 export type ReturnKeysResult = {
@@ -132,6 +133,7 @@ export async function handleReturnKeys({
   selectedForReceipt,
   selectedCardsForReceipt,
   lease,
+  comment,
 }: ReturnKeysParams): Promise<ReturnKeysResult> {
   if (keyIds.length === 0 && cardIds.length === 0) {
     return {
@@ -240,7 +242,8 @@ export async function handleReturnKeys({
               selectedKeySet,
               lease,
               loanCards,
-              selectedCardSet
+              selectedCardSet,
+              comment
             )
           } catch (pdfErr) {
             console.error('Failed to generate/upload PDF:', pdfErr)

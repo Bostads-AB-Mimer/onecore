@@ -255,6 +255,7 @@ export interface ReceiptData {
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
   keySystemMap?: Record<string, string> // keySystemId -> systemCode for display
+  comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
 export interface MaintenanceReceiptData {

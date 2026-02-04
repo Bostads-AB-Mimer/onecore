@@ -1,5 +1,5 @@
 /**
- * Receipt Handlers
+Receipt Handlers
  *
  * Orchestration layer for receipt operations.
  * Handles data assembly, PDF generation, and file operations.
@@ -194,7 +194,8 @@ function assembleReturnReceipt(
   lease: Lease,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set(),
-  keySystemMap?: Record<string, string>
+  keySystemMap?: Record<string, string>,
+  comment?: string
 ): ReceiptData {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
@@ -216,6 +217,7 @@ function assembleReturnReceipt(
     cards: returnedCards.length > 0 ? returnedCards : undefined,
     missingCards: missingCards.length > 0 ? missingCards : undefined,
     keySystemMap,
+    comment,
   }
 }
 
@@ -236,7 +238,9 @@ async function assembleMaintenanceLoanReceipt(
     cardIds.length > 0
       ? Promise.all(cardIds.map((id) => cardService.getCard(id)))
       : Promise.resolve([]),
-    loan.contact ? fetchContactByContactCode(loan.contact) : Promise.resolve(null),
+    loan.contact
+      ? fetchContactByContactCode(loan.contact)
+      : Promise.resolve(null),
   ])
 
   const cards = cardResults.filter((c): c is Card => c !== null)
@@ -273,7 +277,10 @@ function assembleMaintenanceReturnReceipt(
   selectedCardIds: Set<string> = new Set(),
   keySystemMap?: Record<string, string>
 ): MaintenanceReceiptData {
-  const { returned, missing, disposed } = categorizeKeys(loanKeys, selectedKeyIds)
+  const { returned, missing, disposed } = categorizeKeys(
+    loanKeys,
+    selectedKeyIds
+  )
   const { returned: returnedCards, missing: missingCards } = categorizeCards(
     loanCards,
     selectedCardIds
@@ -345,10 +352,13 @@ function openPdfBlobInNewTab(blob: Blob, fileName: string): void {
   const viewerUrl = URL.createObjectURL(viewerBlob)
   win.location.href = viewerUrl
 
-  setTimeout(() => {
-    URL.revokeObjectURL(pdfUrl)
-    URL.revokeObjectURL(viewerUrl)
-  }, 5 * 60 * 1000)
+  setTimeout(
+    () => {
+      URL.revokeObjectURL(pdfUrl)
+      URL.revokeObjectURL(viewerUrl)
+    },
+    5 * 60 * 1000
+  )
 }
 
 // ============================================================================
@@ -378,6 +388,7 @@ export async function fetchReceiptData(
  * @param lease - The lease associated with the receipt
  * @param loanCards - All card objects in this specific loan (optional)
  * @param selectedCardIds - Card IDs that were checked in the dialog (optional)
+ * @param comment - Optional comment to include in the receipt (max 280 chars)
  */
 export async function generateAndUploadReturnReceipt(
   receiptId: string,
@@ -385,7 +396,8 @@ export async function generateAndUploadReturnReceipt(
   selectedKeyIds: Set<string>,
   lease: Lease,
   loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set()
+  selectedCardIds: Set<string> = new Set(),
+  comment?: string
 ): Promise<void> {
   // Build keySystemMap for displaying lock system codes
   const keySystemMap = await buildKeySystemMap(loanKeys)
@@ -397,7 +409,8 @@ export async function generateAndUploadReturnReceipt(
     lease,
     loanCards,
     selectedCardIds,
-    keySystemMap
+    keySystemMap,
+    comment
   )
 
   // Generate PDF blob
@@ -438,7 +451,8 @@ export async function openMaintenanceReceiptInNewTab(
   loanId: string
 ): Promise<void> {
   const receiptData = await assembleMaintenanceLoanReceipt(loanId)
-  const { blob, fileName } = await generateMaintenanceLoanReceiptBlob(receiptData)
+  const { blob, fileName } =
+    await generateMaintenanceLoanReceiptBlob(receiptData)
 
   openPdfBlobInNewTab(blob, fileName)
 }
@@ -484,7 +498,10 @@ export async function generateAndUploadMaintenanceReturnReceipt(
   )
 
   // Generate PDF blob
-  const { blob } = await generateMaintenanceReturnReceiptBlob(receiptData, receiptId)
+  const { blob } = await generateMaintenanceReturnReceiptBlob(
+    receiptData,
+    receiptId
+  )
 
   // Convert to File and upload to MinIO
   const file = new File([blob], `return_${receiptId}.pdf`, {
