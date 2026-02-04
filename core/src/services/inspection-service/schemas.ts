@@ -126,3 +126,48 @@ export type XpandInspection = z.infer<typeof XpandInspectionSchema>
 export type Inspection = z.infer<typeof InspectionSchema>
 export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
 export type DetailedInspection = z.infer<typeof DetailedInspectionSchema>
+
+// Tenant contact schemas for send-protocol feature
+export const TenantContactSchema = z.object({
+  fullName: z.string(),
+  emailAddress: z.string(),
+  contactCode: z.string(),
+})
+
+export const TenantInfoSchema = z.object({
+  contacts: z.array(TenantContactSchema),
+  contractId: z.string(),
+})
+
+export const TenantContactsResponseSchema = z.object({
+  inspection: z.object({
+    id: z.string(),
+    address: z.string(),
+    apartmentCode: z.string(),
+  }),
+  new_tenant: TenantInfoSchema.optional(),
+  previous_tenant: TenantInfoSchema.optional(),
+})
+
+export const SendProtocolRequestSchema = z.object({
+  recipient: z.enum(['previous-tenant', 'new-tenant']),
+})
+
+export const SendProtocolResponseSchema = z.object({
+  success: z.boolean(),
+  recipient: z.enum(['previous-tenant', 'new-tenant']),
+  sentTo: z.object({
+    emails: z.array(z.string()),
+    contactNames: z.array(z.string()),
+    contractId: z.string(),
+  }),
+  error: z.string().optional(),
+})
+
+export type TenantContact = z.infer<typeof TenantContactSchema>
+export type TenantInfo = z.infer<typeof TenantInfoSchema>
+export type TenantContactsResponse = z.infer<
+  typeof TenantContactsResponseSchema
+>
+export type SendProtocolRequest = z.infer<typeof SendProtocolRequestSchema>
+export type SendProtocolResponse = z.infer<typeof SendProtocolResponseSchema>
