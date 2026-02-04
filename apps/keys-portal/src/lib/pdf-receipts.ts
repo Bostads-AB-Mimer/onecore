@@ -864,7 +864,7 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   }
 
   y = addLoanConfirmation(doc, y, data.tenants)
-  y = addComment(doc, y, data.comment)
+  addComment(doc, y, data.comment)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
@@ -910,7 +910,7 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   }
 
   y = addReturnConfirmation(doc, y, hasMissingItems)
-  y = addComment(doc, y, data.comment)
+  addComment(doc, y, data.comment)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(
@@ -946,7 +946,7 @@ async function buildMaintenanceLoanDoc(
   }
 
   y = addMaintenanceLoanConfirmation(doc, y)
-  y = addComment(doc, y, data.description ?? undefined)
+  addComment(doc, y, data.description ?? undefined)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelutlaning_${data.contact}_${format(
@@ -995,7 +995,7 @@ async function buildMaintenanceReturnDoc(
   }
 
   y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
-  y = addComment(doc, y, data.description ?? undefined)
+  addComment(doc, y, data.description ?? undefined)
   await addFooter(doc, receiptId)
 
   const fileName = `nyckelaterlamning_${data.contact}_${format(
