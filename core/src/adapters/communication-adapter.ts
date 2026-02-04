@@ -236,10 +236,11 @@ export const sendNotificationToContactWithAttachment = async (
   subject: string,
   message: string,
   attachments: EmailAttachment[]
-) => {
+): Promise<AdapterResult<unknown, 'no-email' | 'unknown'>> => {
   try {
-    if (!recipientContact.emailAddress)
-      throw new Error('Recipient has no email address')
+    if (!recipientContact.emailAddress) {
+      return { ok: false, err: 'no-email', statusCode: 400 }
+    }
 
     const axiosOptions = {
       method: 'POST',
@@ -262,12 +263,12 @@ export const sendNotificationToContactWithAttachment = async (
       axiosOptions
     )
 
-    return result.data.content
+    return { ok: true, data: result.data.content }
   } catch (error) {
     logger.error(
       error,
       `Error sending notification with attachment to contact ${recipientContact.contactCode}`
     )
-    throw error
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

@@ -80,7 +80,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const sendSpy = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue({ ok: true, data: undefined })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -160,7 +160,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const sendSpy = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue({ ok: true, data: undefined })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -233,7 +233,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const sendSpy = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue({ ok: true, data: undefined })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -467,7 +467,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockRejectedValue(new Error('Communication service error'))
+      .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')

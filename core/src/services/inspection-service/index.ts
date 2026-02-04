@@ -2,10 +2,8 @@ import KoaRouter from '@koa/router'
 
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
-import { mapLease } from '../lease-service/schemas/lease'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
@@ -13,6 +11,7 @@ import {
   identifyTenantContracts,
   sendProtocolToTenants,
 } from './helpers/email-sender'
+import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
 
 /**
  * @swagger
@@ -332,45 +331,12 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      const result =
-        await inspectionAdapter.getXpandInspectionById(inspectionId)
+      const result = await fetchEnrichedInspection(inspectionId)
 
       if (result.ok) {
-        const rawInspection = result.data
-
-        let lease = null
-        if (rawInspection.leaseId) {
-          const rawLease = await leasingAdapter.getLease(
-            rawInspection.leaseId,
-            'true'
-          )
-          lease = mapLease(rawLease)
-        }
-
-        let residence = null
-        if (rawInspection.residenceId) {
-          const res = await propertyBaseAdapter.getResidenceByRentalId(
-            rawInspection.residenceId
-          )
-          if (res.ok) {
-            residence = res.data
-          }
-        }
-
-        // Validate only the inspection data from Xpand
-        const validatedInspection =
-          schemas.DetailedXpandInspectionSchema.parse(rawInspection)
-
-        // Attach lease and residence without validation
-        const inspection = {
-          ...validatedInspection,
-          lease,
-          residence,
-        }
-
         ctx.status = 200
         ctx.body = {
-          content: inspection,
+          content: result.data,
           ...metadata,
         }
       } else {
@@ -453,41 +419,10 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      const result =
-        await inspectionAdapter.getXpandInspectionById(inspectionId)
+      const result = await fetchEnrichedInspection(inspectionId)
 
       if (result.ok) {
-        const rawInspection = result.data
-
-        let lease = null
-        if (rawInspection.leaseId) {
-          const rawLease = await leasingAdapter.getLease(
-            rawInspection.leaseId,
-            'true'
-          )
-          lease = mapLease(rawLease)
-        }
-
-        let residence = null
-        if (rawInspection.residenceId) {
-          const res = await propertyBaseAdapter.getResidenceByRentalId(
-            rawInspection.residenceId
-          )
-          if (res.ok) {
-            residence = res.data
-          }
-        }
-
-        // Validate only the inspection data from Xpand
-        const validatedInspection =
-          schemas.DetailedXpandInspectionSchema.parse(rawInspection)
-
-        // Attach lease and residence without validation
-        const inspection = {
-          ...validatedInspection,
-          lease,
-          residence,
-        }
+        const inspection = result.data
 
         let protocol
         try {
@@ -708,9 +643,8 @@ export const routes = (router: KoaRouter) => {
 
       const { recipient } = validationResult.data
 
-      // Fetch inspection by ID
-      const inspectionResult =
-        await inspectionAdapter.getXpandInspectionById(inspectionId)
+      // Fetch enriched inspection
+      const inspectionResult = await fetchEnrichedInspection(inspectionId)
 
       if (!inspectionResult.ok) {
         logger.error(
@@ -725,41 +659,11 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const rawInspection = inspectionResult.data
-
-      // Fetch lease and residence (needed for PDF enrichment)
-      let lease = null
-      if (rawInspection.leaseId) {
-        const rawLease = await leasingAdapter.getLease(
-          rawInspection.leaseId,
-          'true'
-        )
-        lease = mapLease(rawLease)
-      }
-
-      let residence = null
-      if (rawInspection.residenceId) {
-        const res = await propertyBaseAdapter.getResidenceByRentalId(
-          rawInspection.residenceId
-        )
-        if (res.ok) {
-          residence = res.data
-        }
-      }
-
-      // Validate and prepare inspection data
-      const validatedInspection =
-        schemas.DetailedXpandInspectionSchema.parse(rawInspection)
-
-      const inspection = {
-        ...validatedInspection,
-        lease,
-        residence,
-      }
+      const inspection = inspectionResult.data
 
       // Fetch all leases for the property
       const leases = await leasingAdapter.getLeasesForPropertyId(
-        rawInspection.residenceId,
+        inspection.residenceId,
         {
           includeContacts: true,
           includeUpcomingLeases: true,
@@ -875,7 +779,7 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         content: {
           success: false,
-          recipient: ctx.request.body?.recipient || 'unknown',
+          recipient: 'unknown',
           sentTo: {
             emails: [],
             contactNames: [],
