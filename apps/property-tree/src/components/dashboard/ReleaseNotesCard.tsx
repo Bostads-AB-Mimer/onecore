@@ -171,6 +171,14 @@ export function ReleaseNotesCard() {
             ))}
           </motion.div>
         </AnimatePresence>
+        <div className="mt-6 pt-4 border-t text-center">
+          <p className="text-sm text-muted-foreground">
+            Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
+            <span className="font-semibold text-primary">David</span> eller{' '}
+            <span className="font-semibold text-primary">Lina</span> - vi finns
+            här för att stötta dig!
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

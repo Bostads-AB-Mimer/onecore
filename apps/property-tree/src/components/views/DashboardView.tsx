@@ -208,30 +208,6 @@ export function DashboardView() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="max-w-2xl mx-auto"
-      >
-        <Card className="hover:shadow-xl transition-shadow duration-200">
-          <CardContent className="p-8 text-center space-y-4">
-            <p className="text-lg leading-relaxed text-muted-foreground">
-              Vi är glada att ha dig här! ONECore är din digitala arbetsplats
-              där allt du behöver för att göra ditt bästa arbete finns samlat på
-              ett ställe. Ta det i din egen takt och utforska systemet - allt
-              finns ännu inte på plats utan vi uppdaterar löpande.
-            </p>
-            <p className="text-base text-muted-foreground">
-              Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
-              <span className="font-semibold text-primary">David</span> eller{' '}
-              <span className="font-semibold text-primary">Lina</span> - vi
-              finns här för att stötta dig!
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
         className="max-w-2xl mx-auto"
       >
