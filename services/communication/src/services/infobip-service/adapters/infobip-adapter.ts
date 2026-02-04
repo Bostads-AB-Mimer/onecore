@@ -31,12 +31,33 @@ export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
 
   try {
-    const response = await infobip.channels.email.send({
+    const emailPayload: any = {
       to: message.to,
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       subject: message.subject,
       text: message.text,
-    })
+    }
+
+    // Add attachments if provided
+    if (message.attachments && message.attachments.length > 0) {
+      emailPayload.attachment = message.attachments.map((att) => ({
+        name: att.filename,
+        data: Buffer.from(att.content, 'base64'),
+        contentType: att.contentType,
+      }))
+    }
+
+    const response = await infobip.channels.email.send(emailPayload)
+
+    // Infobip SDK can return an Error object directly
+    if (response instanceof Error) {
+      logger.error(
+        { errorMessage: response.message },
+        'Infobip SDK returned error'
+      )
+      throw response
+    }
+
     if (response.status === 200) {
       logger.info(
         { to: message.to, subject: message.subject },
@@ -44,7 +65,17 @@ export const sendEmail = async (message: Email) => {
       )
       return response.data
     } else {
-      throw new Error(response.body)
+      const errorMessage =
+        typeof response.body === 'string'
+          ? response.body
+          : JSON.stringify(response.body)
+      logger.error(
+        { status: response.status, body: response.body },
+        'Infobip API error response'
+      )
+      throw new Error(
+        errorMessage || `Infobip API returned status ${response.status}`
+      )
     }
   } catch (error) {
     logger.error(error)

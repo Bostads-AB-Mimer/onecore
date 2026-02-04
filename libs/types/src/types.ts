@@ -184,10 +184,17 @@ interface ConsumerReportError {
   Reject_comment: string
 }
 
+interface EmailAttachment {
+  filename: string
+  content: string // base64 string
+  contentType: string // e.g., 'application/pdf'
+}
+
 interface Email {
   to: string
   subject: string
   text: string
+  attachments?: EmailAttachment[]
 }
 
 interface Sms {
@@ -387,6 +394,7 @@ export type {
   RentalObject,
   ParkingSpace,
   Email,
+  EmailAttachment,
   Sms,
   WaitingList,
   Listing,
