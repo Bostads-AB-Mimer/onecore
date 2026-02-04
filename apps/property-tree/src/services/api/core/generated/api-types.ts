@@ -1395,6 +1395,25 @@ export interface paths {
         };
       };
     };
+    /** Delete home insurance for a lease */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Home insurance deleted. */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
   };
   "/leases/{leaseId}/home-insurance/offer": {
     /** Get home insurance offer for a lease */
@@ -1412,29 +1431,6 @@ export interface paths {
         };
         /** @description Lease or rental object not found. */
         404: {
-          content: never;
-        };
-        /** @description Internal server error. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/{leaseId}/rent-rows/{rentRowId}": {
-    /** Delete a rent row for a lease */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string;
-          /** @description The ID of the rent row. */
-          rentRowId: string;
-        };
-      };
-      responses: {
-        /** @description Rent row deleted. */
-        200: {
           content: never;
         };
         /** @description Internal server error. */

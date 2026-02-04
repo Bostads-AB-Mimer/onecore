@@ -1091,7 +1091,7 @@ export const routes = (router: KoaRouter) => {
 
     const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: ctx.params.leaseId,
-      invoiceRowId: homeInsuranceRow.article,
+      invoiceRowId: homeInsuranceRow._id,
     })
 
     if (!deleteLeaseInvoiceRow.ok) {
