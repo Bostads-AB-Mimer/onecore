@@ -6,6 +6,7 @@ import {
   ParkingSpaceAcceptOfferEmail,
   WorkOrderEmail,
   WorkOrderSms,
+  EmailAttachment,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -227,5 +228,46 @@ export const sendWorkOrderEmail = async ({
     return { ok: true, data: result.data.content }
   } catch {
     return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendNotificationToContactWithAttachment = async (
+  recipientContact: Contact,
+  subject: string,
+  message: string,
+  attachments: EmailAttachment[]
+) => {
+  try {
+    if (!recipientContact.emailAddress)
+      throw new Error('Recipient has no email address')
+
+    const axiosOptions = {
+      method: 'POST',
+      data: {
+        to:
+          process.env.NODE_ENV === 'production'
+            ? recipientContact.emailAddress
+            : config.emailAddresses.tenantDefault,
+        subject,
+        text: message,
+        attachments,
+      },
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendMessageWithAttachment`,
+      axiosOptions
+    )
+
+    return result.data.content
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending notification with attachment to contact ${recipientContact.contactCode}`
+    )
+    throw error
   }
 }
