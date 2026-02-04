@@ -1,7 +1,6 @@
 import { map } from 'lodash'
 import { Prisma } from '@prisma/client'
 import { logger } from '@onecore/utilities'
-import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
@@ -158,7 +157,7 @@ const searchBuildings = async (
   q: string
 ): Promise<
   (BuildingWithRelations & {
-    property: { name: string | null; code: string; id: string }
+    property: { name: string | null; code: string; id: string } | null
   })[]
 > => {
   try {
@@ -166,6 +165,13 @@ const searchBuildings = async (
       .findMany({
         where: {
           name: { contains: q },
+          propertyObject: {
+            propertyStructures: {
+              some: {
+                companyCode: '001',
+              },
+            },
+          },
         },
         include: {
           buildingType: true,
@@ -195,7 +201,6 @@ const searchBuildings = async (
       })
       .then(trimStrings)
 
-    assert(ps, 'Property structure not found')
     const properties = await prisma.property
       .findMany({
         where: {
@@ -214,14 +219,15 @@ const searchBuildings = async (
         (p) => p.propertyObjectId === propertyStructure?.propertyId
       )
 
-      assert(property, 'Property not found')
       return {
         ...b,
-        property: {
-          id: property.id,
-          code: property.code,
-          name: property.designation,
-        },
+        property: property
+          ? {
+              id: property.id,
+              code: property.code,
+              name: property.designation,
+            }
+          : null,
       }
     })
 
