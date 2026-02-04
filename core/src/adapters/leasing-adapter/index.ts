@@ -210,7 +210,8 @@ const getContactByContactCode = async (
 }
 
 const getContactCommentsByContactCode = async (
-  contactCode: string
+  contactCode: string,
+  commentType?: string
 ): Promise<
   AdapterResult<
     z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>,
@@ -218,9 +219,10 @@ const getContactCommentsByContactCode = async (
   >
 > => {
   try {
+    const params = commentType ? { commentType } : undefined
     const res = await axios.get<{
       content: z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>
-    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`)
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`, { params })
 
     if (res.status === 404) {
       return { ok: false, err: 'contact-not-found' }
