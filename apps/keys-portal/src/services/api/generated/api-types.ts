@@ -1183,6 +1183,43 @@ export interface paths {
       };
     };
   };
+  "/key-loans/{id}/activate": {
+    /**
+     * Activate a key loan
+     * @description Activates a key loan by setting pickedUpAt to now and completing
+     * any incomplete key events (ORDERED or RECEIVED → COMPLETED).
+     * This is typically called when a LOAN receipt file is uploaded.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The key loan ID */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Loan activated successfully */
+        200: {
+          content: {
+            "application/json": {
+              /** @description Whether the loan was activated (false if already activated) */
+              activated?: boolean;
+              /** @description Number of key events that were completed */
+              keyEventsCompleted?: number;
+            };
+          };
+        };
+        /** @description Key loan not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/key-notes/by-rental-object/{rentalObjectCode}": {
     /**
      * Get all key notes by rental object code
@@ -1471,7 +1508,7 @@ export interface paths {
     };
     /**
      * Delete a key system
-     * @description Delete a key system by ID (and associated schema file)
+     * @description Delete a key system by ID
      */
     delete: {
       parameters: {
@@ -1535,90 +1572,6 @@ export interface paths {
         };
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/{id}/upload-schema": {
-    /** Upload PDF schema file for a key system */
-    post: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Invalid file or key system not found */
-        400: {
-          content: never;
-        };
-        /** @description Key system not found */
-        404: {
-          content: never;
-        };
-        /** @description File too large */
-        413: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/{id}/download-schema": {
-    /** Get presigned download URL for key system schema PDF */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Download URL generated */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                url?: string;
-                expiresIn?: number;
-                fileId?: string;
-              };
-            };
-          };
-        };
-        /** @description Key system or schema file not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/key-systems/{id}/schema": {
-    /** Delete schema file for a key system */
-    delete: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Schema file deleted successfully */
-        204: {
-          content: never;
-        };
-        /** @description Key system not found */
-        404: {
           content: never;
         };
       };
@@ -2357,7 +2310,7 @@ export interface paths {
         };
       };
     };
-    /** Delete a receipt by id (and associated file) */
+    /** Delete a receipt by id */
     delete: {
       parameters: {
         path: {
@@ -2417,100 +2370,6 @@ export interface paths {
           content: never;
         };
         /** @description Receipt not found */
-        404: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload": {
-    /** Upload PDF file for a receipt */
-    post: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "multipart/form-data": {
-            /** Format: binary */
-            file?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Invalid file or receipt not found */
-        400: {
-          content: never;
-        };
-        /** @description Receipt not found */
-        404: {
-          content: never;
-        };
-        /** @description File too large */
-        413: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}/upload-base64": {
-    /** Upload PDF file for a receipt (base64 encoded - for Power Automate) */
-    post: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["UploadBase64Request"];
-        };
-      };
-      responses: {
-        /** @description File uploaded successfully */
-        200: {
-          content: never;
-        };
-        /** @description Invalid base64 content or receipt not found */
-        400: {
-          content: never;
-        };
-        /** @description Receipt not found */
-        404: {
-          content: never;
-        };
-        /** @description File too large (max 10MB) */
-        413: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/receipts/{id}/download": {
-    /** Get presigned download URL for receipt PDF */
-    get: {
-      parameters: {
-        path: {
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Download URL generated */
-        200: {
-          content: {
-            "application/json": {
-              url?: string;
-              expiresIn?: number;
-            };
-          };
-        };
-        /** @description Receipt or file not found */
         404: {
           content: never;
         };
@@ -2749,16 +2608,11 @@ export interface components {
       /** @enum {string} */
       type?: "DIGITAL" | "PHYSICAL";
       fileId?: string;
+      fileData?: string;
+      fileContentType?: string;
     };
     UpdateReceiptRequest: {
       fileId?: string;
-    };
-    UploadBase64Request: {
-      fileContent: string;
-      fileName?: string;
-      metadata?: {
-        [key: string]: string;
-      };
     };
     ErrorResponse: {
       error?: string;

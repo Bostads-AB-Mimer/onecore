@@ -309,19 +309,21 @@ export default function KeyLoans() {
         const receipts = await receiptService.getByKeyLoan(loanId)
         const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
 
-        // Create receipt record if it doesn't exist
-        let receiptId = loanReceipt?.id
-        if (!receiptId) {
-          const newReceipt = await receiptService.create({
-            keyLoanId: loanId,
-            receiptType: 'LOAN',
-            type: 'DIGITAL',
-          })
-          receiptId = newReceipt.id
+        // Create receipt with file or upload to existing receipt
+        if (!loanReceipt) {
+          // Create new receipt with file in single call
+          await receiptService.createWithFile(
+            {
+              keyLoanId: loanId,
+              receiptType: 'LOAN',
+              type: 'DIGITAL',
+            },
+            file
+          )
+        } else {
+          // Upload/replace file on existing receipt
+          await receiptService.uploadFile(loanReceipt.id, file)
         }
-
-        // Upload file to the receipt
-        await receiptService.uploadFile(receiptId, file)
 
         toast({
           title: loanReceipt?.fileId ? 'Kvittens ersatt' : 'Kvittens uppladdad',

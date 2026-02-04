@@ -1824,122 +1824,55 @@ describe('keys-service', () => {
     })
   })
 
-  describe('POST /receipts/:id/upload-base64', () => {
-    it('responds with 200 on successful file upload', async () => {
-      const receipt = factory.receipt.build()
-      const uploadResponse = {
-        fileId: 'file-123',
-        fileName: 'receipt.pdf',
-        size: 1024,
-        source: 'base64',
-      }
-
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: true, data: uploadResponse })
-
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'get')
-        .mockResolvedValue({ ok: true, data: receipt })
-
-      const res = await request(app.callback())
-        .post(`/receipts/${receipt.id}/upload-base64`)
-        .send({ fileContent: 'base64encodedpdfdata', fileName: 'receipt.pdf' })
-
-      expect(res.status).toBe(200)
-      expect(res.body.content.fileId).toBe(uploadResponse.fileId)
-    })
-
-    it('responds with 404 if receipt not found', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: false, err: 'not-found' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000999/upload-base64')
-        .send({ fileContent: 'base64data' })
-
-      expect(res.status).toBe(404)
-    })
-
-    it('responds with 400 on bad request', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: false, err: 'bad-request' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-        .send({ fileContent: 'invalidbase64' })
-
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFileBase64')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-        .send({ fileContent: 'base64data' })
-
-      expect(res.status).toBe(500)
-    })
-  })
-
   describe('POST /receipts/:id/upload', () => {
-    it('responds with 200 on successful file upload', async () => {
-      const receipt = factory.receipt.build()
-      const uploadResponse = {
-        fileId: 'file-123',
-        fileName: 'receipt.pdf',
-        size: 1024,
-      }
-
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
-        .mockResolvedValue({ ok: true, data: uploadResponse })
-
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'get')
-        .mockResolvedValue({ ok: true, data: receipt })
-
-      const res = await request(app.callback())
-        .post(`/receipts/${receipt.id}/upload`)
-        .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
-
-      expect(res.status).toBe(200)
-      expect(res.body.content.fileId).toBe(uploadResponse.fileId)
-    })
-
-    it('responds with 404 if receipt not found', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
-        .mockResolvedValue({ ok: false, err: 'not-found' })
-
-      const res = await request(app.callback())
-        .post('/receipts/00000000-0000-0000-0000-000000000999/upload')
-        .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
-
-      expect(res.status).toBe(404)
-    })
-
-    it('responds with 400 on bad request (missing file)', async () => {
-      const res = await request(app.callback()).post(
-        '/receipts/00000000-0000-0000-0000-000000000001/upload'
-      )
-
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(keysAdapter.ReceiptsApi, 'uploadFile')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
+    it('uploads file successfully and returns fileId', async () => {
+      jest.spyOn(keysAdapter.ReceiptsApi, 'uploadFile').mockResolvedValue({
+        ok: true,
+        data: { fileId: 'keys/receipt-123.pdf' },
+      })
 
       const res = await request(app.callback())
         .post('/receipts/00000000-0000-0000-0000-000000000001/upload')
-        .attach('file', Buffer.from('mock pdf content'), 'receipt.pdf')
+        .send({
+          fileData: Buffer.from('test pdf').toString('base64'),
+          fileContentType: 'application/pdf',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.fileId).toBe('keys/receipt-123.pdf')
+    })
+
+    it('responds with 400 if fileData is missing', async () => {
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000001/upload')
+        .send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toContain('Missing fileData')
+    })
+
+    it('responds with 404 if receipt not found', async () => {
+      jest.spyOn(keysAdapter.ReceiptsApi, 'uploadFile').mockResolvedValue({
+        ok: false,
+        err: 'not-found',
+      })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000999/upload')
+        .send({ fileData: 'base64data' })
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 if upload fails', async () => {
+      jest.spyOn(keysAdapter.ReceiptsApi, 'uploadFile').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback())
+        .post('/receipts/00000000-0000-0000-0000-000000000001/upload')
+        .send({ fileData: 'base64data' })
 
       expect(res.status).toBe(500)
     })
