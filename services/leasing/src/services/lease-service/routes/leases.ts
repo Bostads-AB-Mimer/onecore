@@ -717,7 +717,6 @@ export const routes = (router: KoaRouter) => {
         ctx.body = makeSuccessResponseBody(onecoreLease, metadata)
       }
     } catch (error) {
-      console.log(error)
       logger.error(error, 'Error when getting lease')
       ctx.status = 500
       ctx.body = {
