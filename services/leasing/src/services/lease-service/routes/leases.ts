@@ -685,12 +685,23 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!getLease.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: getLease.err,
-          ...metadata,
+        if (getLease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: getLease.err,
+            ...metadata,
+          }
+
+          return
         }
-        return
       }
 
       const onecoreLease = tenfastHelpers.mapToOnecoreLease(getLease.data)
@@ -921,7 +932,7 @@ export const routes = (router: KoaRouter) => {
         {
           leaseId: ctx.params.leaseId,
           invoiceRow: {
-            amount: config.tenfast.leaseRentRows.homeInsurance.amount,
+            amount: ctx.request.body.monthlyAmount,
             article: config.tenfast.leaseRentRows.homeInsurance.articleId,
             label: 'Hemförsäkring', // TODO: Where should label be decided?
             vat: 0, // TODO: No VAT on insurance?

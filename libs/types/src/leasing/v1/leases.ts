@@ -63,4 +63,5 @@ export const PreliminaryTerminateLeaseResponseSchema = z.object({
 
 export const AddLeaseHomeInsuranceRequestSchema = z.object({
   from: z.coerce.date(),
+  monthlyAmount: z.number(),
 })

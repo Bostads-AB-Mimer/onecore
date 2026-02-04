@@ -259,7 +259,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows/home-insurance')
-      .send({ from: new Date('2024-01-01') })
+      .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(404)
     expect(result.body.error).toBe('Lease not found')
@@ -272,7 +272,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows/home-insurance')
-      .send({ from: new Date('2024-01-01') })
+      .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(500)
   })
@@ -292,7 +292,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows/home-insurance')
-      .send({ from: new Date('2024-01-01') })
+      .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(422)
     expect(result.body.error).toBe(
@@ -315,7 +315,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows/home-insurance')
-      .send({ from: new Date('2024-01-01') })
+      .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(500)
   })
@@ -335,7 +335,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
 
     const result = await request(app.callback())
       .post('/leases/123/rent-rows/home-insurance')
-      .send({ from: new Date('2024-01-01') })
+      .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(201)
     expect(result.body.content).toEqual(null)
@@ -344,7 +344,7 @@ describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
       expect.objectContaining({
         leaseId: '123',
         invoiceRow: expect.objectContaining({
-          amount: config.tenfast.leaseRentRows.homeInsurance.amount,
+          amount: 100,
           article: config.tenfast.leaseRentRows.homeInsurance.articleId,
           label: 'Hemförsäkring',
           vat: 0,

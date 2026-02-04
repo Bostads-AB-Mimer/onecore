@@ -6,6 +6,7 @@ import { Lease } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 
@@ -211,6 +212,21 @@ describe('leases routes', () => {
 
   describe('POST /leases/:leaseId/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.residenceByRentalIdDetails.build({
+            type: {
+              roomCount: 1,
+            },
+          }),
+        })
+
       const addHomeInsuranceSpy = jest
         .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
         .mockResolvedValue({ ok: false, err: 'unknown' })
@@ -222,24 +238,41 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
       expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
         from: expect.any(Date),
+        monthlyAmount: 69,
       })
     })
 
     it('adds home insurance rent row', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
       const addHomeInsuranceSpy = jest
         .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
-        .mockResolvedValue({
+        .mockResolvedValueOnce({
           ok: true,
           data: null,
+        })
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.residenceByRentalIdDetails.build({
+            type: {
+              roomCount: 1,
+            },
+          }),
         })
 
       const res = await request(app.callback())
         .post('/leases/1337/home-insurance')
         .send({ from: new Date('2024-01-01') })
 
-      expect(res.status).toBe(201)
+      expect(res.status).toBe(200)
       expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
         from: expect.any(Date),
+        monthlyAmount: 69,
       })
       expect(res.body.content).toEqual(null)
     })

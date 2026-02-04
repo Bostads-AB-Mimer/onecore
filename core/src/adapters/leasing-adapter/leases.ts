@@ -22,7 +22,7 @@ type HomeInsuranceStatus = {
 export const getLease = async (
   leaseId: string,
   options: GetLeaseOptions
-): Promise<Lease> => {
+): Promise<Lease | null> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
   })
@@ -30,6 +30,10 @@ export const getLease = async (
   const leaseResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}?${queryParams.toString()}`
   )
+
+  if (leaseResponse.status === 404) {
+    return null
+  }
 
   return leaseResponse.data.content
 }
@@ -119,7 +123,9 @@ type AddLeaseHomeInsuranceParams = z.infer<
 export async function addLeaseHomeInsurance(
   leaseId: string,
   params: AddLeaseHomeInsuranceParams
-): Promise<AdapterResult<null, 'unknown'>> {
+): Promise<
+  AdapterResult<null, 'unknown' | 'not-found' | 'insurance-already-exists'>
+> {
   const result = await axios.post(
     `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`,
     params
@@ -127,6 +133,10 @@ export async function addLeaseHomeInsurance(
 
   if (result.status === 201) {
     return { ok: true, data: result.data.content }
+  } else if (result.status === 404) {
+    return { ok: false, err: 'not-found' }
+  } else if (result.status === 422) {
+    return { ok: false, err: 'insurance-already-exists' }
   } else {
     logger.error(
       { error: JSON.stringify(result.data) },

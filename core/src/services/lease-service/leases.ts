@@ -595,11 +595,10 @@ export const routes = (router: KoaRouter) => {
       const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
         includeContacts: false,
       })
-
-      if (!lease.rentalPropertyId) {
+      if (!lease) {
         ctx.status = 404
         ctx.body = {
-          error: 'Rental object not found',
+          error: 'Lease not found',
           ...metadata,
         }
         return
@@ -679,24 +678,104 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(AddLeaseHomeInsuranceRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const result = await leasingAdapter.addLeaseHomeInsurance(
-        ctx.params.leaseId,
-        ctx.request.body as z.infer<typeof AddLeaseHomeInsuranceRequestSchema>
-      )
 
-      if (!result.ok) {
+      try {
+        const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+          includeContacts: false,
+        })
+
+        if (!lease) {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        }
+
+        const residenceResponse =
+          await propertyBaseAdapter.getResidenceByRentalId(
+            lease.rentalPropertyId
+          )
+
+        if (!residenceResponse.ok) {
+          if (residenceResponse.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = {
+              error: 'Rental object not found',
+              ...metadata,
+            }
+            return
+          } else {
+            ctx.logger.error(
+              { err: residenceResponse.err, metadata },
+              'Error fetching residence'
+            )
+            ctx.status = 500
+            ctx.body = {
+              error: 'Internal error',
+              ...metadata,
+            }
+
+            return
+          }
+        }
+
+        const monthlyAmount = getHomeInsuranceOfferMonthlyAmount(
+          residenceResponse.data.type.roomCount
+        )
+
+        if (!monthlyAmount) {
+          throw {
+            error: 'No monthly amount found for residence',
+            residence: JSON.stringify(residenceResponse.data, null, 2),
+          }
+        }
+
+        const result = await leasingAdapter.addLeaseHomeInsurance(
+          ctx.params.leaseId,
+          { from: ctx.request.body.from, monthlyAmount }
+        )
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = {
+              error: 'Lease not found',
+              ...metadata,
+            }
+            return
+          }
+
+          if (result.err === 'insurance-already-exists') {
+            ctx.status = 422
+            ctx.body = {
+              error: 'Home insurance already exists',
+              ...metadata,
+            }
+            return
+          }
+
+          ctx.status = 500
+          ctx.body = {
+            error: result.err,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(null, metadata)
+      } catch (err) {
+        logger.error({ err, metadata }, 'Error adding home insurance')
         ctx.status = 500
         ctx.body = {
-          error: result.err,
+          error: 'Internal error',
           ...metadata,
         }
-        return
-      }
 
-      ctx.status = 201
-      ctx.body = {
-        content: result.data,
-        ...metadata,
+        return
       }
     }
   )
