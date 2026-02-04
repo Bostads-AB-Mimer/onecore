@@ -13,6 +13,28 @@ import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
 
+interface InfobipEmailAttachment {
+  name: string
+  data: Buffer
+  contentType: string
+}
+
+interface InfobipEmailPayload {
+  to: string
+  from: string
+  subject: string
+  text: string
+  attachment?: InfobipEmailAttachment[]
+}
+
+interface InfobipTemplateEmailPayload {
+  from: string
+  to: string
+  subject: string
+  text: string
+  templateId: number
+}
+
 const infobip = new Infobip({
   baseUrl: config.infobip.baseUrl,
   apiKey: config.infobip.apiKey,
@@ -31,7 +53,7 @@ export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
 
   try {
-    const emailPayload: any = {
+    const emailPayload: InfobipEmailPayload = {
       to: message.to,
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       subject: message.subject,
@@ -232,7 +254,7 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
         externalContractor: email.externalContractorName,
       },
     })
-    const emailPayload: any = {
+    const emailPayload: InfobipTemplateEmailPayload = {
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       to: toField,
       subject: email.subject,
