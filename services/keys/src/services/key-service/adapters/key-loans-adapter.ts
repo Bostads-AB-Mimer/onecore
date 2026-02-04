@@ -544,3 +544,57 @@ export async function getKeyLoansWithKeysByBundle(
 
   return loansWithKeys
 }
+
+/**
+ * Activate a key loan by setting pickedUpAt and completing any incomplete key events.
+ * This is called when a LOAN receipt file is uploaded.
+ *
+ * @param id - The key loan ID
+ * @param dbConnection - Database connection or transaction
+ * @returns Activation result or null if loan not found
+ */
+export async function activateKeyLoan(
+  id: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<{ activated: boolean; keyEventsCompleted: number } | null> {
+  // 1. Get the key loan
+  const keyLoan = await dbConnection(TABLE).where({ id }).first()
+  if (!keyLoan) {
+    return null
+  }
+
+  // 2. If already activated (has pickedUpAt), return early
+  if (keyLoan.pickedUpAt) {
+    return { activated: false, keyEventsCompleted: 0 }
+  }
+
+  // 3. Activate in a transaction for atomicity
+  const result = await dbConnection.transaction(async (trx) => {
+    // Set pickedUpAt to now
+    await trx(TABLE)
+      .where({ id })
+      .update({ pickedUpAt: trx.fn.now(), updatedAt: trx.fn.now() })
+
+    // Complete any incomplete key events for keys in this loan
+    let keyEventsCompleted = 0
+    if (keyLoan.keys) {
+      try {
+        const keyIds: string[] = JSON.parse(keyLoan.keys)
+        for (const keyId of keyIds) {
+          // Update key events that contain this key and are ORDERED or RECEIVED
+          const updated = await trx('key_events')
+            .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+            .whereIn('status', ['ORDERED', 'RECEIVED'])
+            .update({ status: 'COMPLETED', updatedAt: trx.fn.now() })
+          keyEventsCompleted += updated
+        }
+      } catch {
+        // Ignore JSON parse errors - keys field might be malformed
+      }
+    }
+
+    return { keyEventsCompleted }
+  })
+
+  return { activated: true, keyEventsCompleted: result.keyEventsCompleted }
+}

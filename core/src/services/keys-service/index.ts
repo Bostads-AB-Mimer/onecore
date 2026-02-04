@@ -1,5 +1,4 @@
 import KoaRouter from '@koa/router'
-import multer from '@koa/multer'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import {
   KeyLoansApi,
@@ -3717,6 +3716,109 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /receipts/{id}/upload:
+   *   post:
+   *     summary: Upload a file to an existing receipt
+   *     description: Upload a PDF file (base64 encoded) to an existing receipt
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The receipt ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - fileData
+   *             properties:
+   *               fileData:
+   *                 type: string
+   *                 description: Base64 encoded file content
+   *               fileContentType:
+   *                 type: string
+   *                 description: MIME type of the file (defaults to application/pdf)
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     fileId:
+   *                       type: string
+   *       400:
+   *         description: Missing fileData in request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/BadRequestResponse'
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/receipts/:id/upload', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { fileData, fileContentType } = ctx.request.body as {
+      fileData?: string
+      fileContentType?: string
+    }
+
+    if (!fileData) {
+      ctx.status = 400
+      ctx.body = { error: 'Missing fileData in request body', ...metadata }
+      return
+    }
+
+    const result = await ReceiptsApi.uploadFile(
+      ctx.params.id,
+      fileData,
+      fileContentType
+    )
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Receipt not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error uploading file to receipt'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /receipts/{id}:
    *   delete:
    *     summary: Delete a receipt
@@ -3814,22 +3916,6 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { ...metadata }
   })
 
-  // Configure multer for file uploads
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB max file size
-    },
-    fileFilter: (_req, file, cb) => {
-      // Only accept PDF files
-      if (file.mimetype === 'application/pdf') {
-        cb(null, true)
-      } else {
-        cb(new Error('Only PDF files are allowed'), false)
-      }
-    },
-  })
-
   // ==================== KEY SYSTEMS SCHEMA ROUTES ====================
 
   /**
@@ -3837,7 +3923,7 @@ export const routes = (router: KoaRouter) => {
    * /key-systems/{id}/upload-schema:
    *   post:
    *     summary: Upload PDF schema file for a key system
-   *     description: Upload a PDF schema file to attach to a key system
+   *     description: Upload a PDF schema file (base64 encoded) to attach to a key system
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -3850,18 +3936,36 @@ export const routes = (router: KoaRouter) => {
    *     requestBody:
    *       required: true
    *       content:
-   *         multipart/form-data:
+   *         application/json:
    *           schema:
    *             type: object
+   *             required:
+   *               - fileData
    *             properties:
-   *               file:
+   *               fileData:
    *                 type: string
-   *                 format: binary
+   *                 description: Base64 encoded file content
+   *               fileContentType:
+   *                 type: string
+   *                 description: MIME type of the file (defaults to application/pdf)
+   *               fileName:
+   *                 type: string
+   *                 description: Original filename (used for logging)
    *     responses:
    *       200:
    *         description: File uploaded successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     fileId:
+   *                       type: string
    *       400:
-   *         description: Invalid file or key system not found
+   *         description: Missing fileData in request body
    *         content:
    *           application/json:
    *             schema:
@@ -3872,12 +3976,6 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/NotFoundResponse'
-   *       413:
-   *         description: File too large
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
    *       500:
    *         description: Internal server error
    *         content:
@@ -3887,86 +3985,49 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post(
-    '/key-systems/:id/upload-schema',
-    upload.single('file'),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-
-      try {
-        // Check if file was provided
-        if (!ctx.file || !ctx.file.buffer) {
-          ctx.status = 400
-          ctx.body = { reason: 'No file provided', ...metadata }
-          return
-        }
-
-        // Forward the file buffer to microservice
-        const result = await KeySystemsApi.uploadSchemaFile(
-          ctx.params.id,
-          ctx.file.buffer,
-          ctx.file.originalname,
-          ctx.file.mimetype
-        )
-
-        if (!result.ok) {
-          if (result.err === 'not-found') {
-            ctx.status = 404
-            ctx.body = { reason: 'Key system not found', ...metadata }
-            return
-          }
-          if (result.err === 'bad-request') {
-            ctx.status = 400
-            ctx.body = { reason: 'Invalid file or key system', ...metadata }
-            return
-          }
-
-          logger.error(
-            { err: result.err, metadata },
-            'Error uploading schema file'
-          )
-          ctx.status = 500
-          ctx.body = { error: 'Internal server error', ...metadata }
-          return
-        }
-
-        // Create log entry after successful schema upload
-        const keySystemResult = await KeySystemsApi.get(ctx.params.id)
-        if (keySystemResult.ok) {
-          const fileSizeKB = (ctx.file.size / 1024).toFixed(2)
-          try {
-            await LogsApi.create({
-              userName:
-                ctx.state.user?.name ||
-                ctx.state.user?.preferred_username ||
-                'system',
-              eventType: 'update',
-              objectType: 'keySystem',
-              objectId: ctx.params.id,
-              description: `Laddade upp lås-schema: ${ctx.file.originalname} (${fileSizeKB} KB) för ${keySystemResult.data.systemCode}`,
-            })
-          } catch (error) {
-            logger.error(
-              {
-                error,
-                eventType: 'update',
-                objectType: 'keySystem',
-                objectId: ctx.params.id,
-              },
-              'Failed to create log entry'
-            )
-          }
-        }
-
-        ctx.status = 200
-        ctx.body = { content: result.data, ...metadata }
-      } catch (err) {
-        logger.error({ err }, 'Error uploading schema file')
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-      }
+  router.post('/key-systems/:id/upload-schema', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { fileData, fileContentType, fileName } = ctx.request.body as {
+      fileData?: string
+      fileContentType?: string
+      fileName?: string
     }
-  )
+
+    if (!fileData) {
+      ctx.status = 400
+      ctx.body = { error: 'Missing fileData in request body', ...metadata }
+      return
+    }
+
+    const result = await KeySystemsApi.uploadSchemaFile(
+      ctx.params.id,
+      fileData,
+      fileContentType,
+      {
+        userName:
+          ctx.state.user?.name ||
+          ctx.state.user?.preferred_username ||
+          'system',
+        originalFileName: fileName || 'schema.pdf',
+      }
+    )
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error uploading schema file')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
 
   /**
    * @swagger
@@ -4118,322 +4179,6 @@ export const routes = (router: KoaRouter) => {
   })
 
   // ==================== RECEIPTS ROUTES ====================
-
-  /**
-   * @swagger
-   * /receipts/{id}/upload:
-   *   post:
-   *     summary: Upload PDF file for a receipt
-   *     description: Upload a PDF file to attach to an existing receipt
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: The ID of the receipt to attach the file to
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         multipart/form-data:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               file:
-   *                 type: string
-   *                 format: binary
-   *     responses:
-   *       200:
-   *         description: File uploaded successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: object
-   *                   properties:
-   *                     fileId:
-   *                       type: string
-   *                     fileName:
-   *                       type: string
-   *                     size:
-   *                       type: number
-   *       400:
-   *         description: Invalid file or receipt not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       404:
-   *         description: Receipt not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/NotFoundResponse'
-   *       413:
-   *         description: File too large
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       500:
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('/receipts/:id/upload', upload.single('file'), async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      // Check if file was provided
-      if (!ctx.file || !ctx.file.buffer) {
-        ctx.status = 400
-        ctx.body = { reason: 'No file provided', ...metadata }
-        return
-      }
-
-      // Forward the file buffer to microservice
-      const result = await ReceiptsApi.uploadFile(
-        ctx.params.id,
-        ctx.file.buffer,
-        ctx.file.originalname,
-        ctx.file.mimetype
-      )
-
-      if (!result.ok) {
-        if (result.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { reason: 'Receipt not found', ...metadata }
-          return
-        }
-        if (result.err === 'bad-request') {
-          ctx.status = 400
-          ctx.body = { reason: 'Invalid file or receipt', ...metadata }
-          return
-        }
-
-        logger.error({ err: result.err, metadata }, 'Error uploading file')
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      // Log file upload
-      const receiptResult = await ReceiptsApi.get(ctx.params.id)
-      if (receiptResult.ok) {
-        const receipt = receiptResult.data
-
-        try {
-          await LogsApi.create({
-            userName:
-              ctx.state.user?.name ||
-              ctx.state.user?.preferred_username ||
-              'system',
-            eventType: 'update',
-            objectType: 'receipt',
-            objectId: ctx.params.id,
-            description: `Laddade upp signerad PDF för ${receipt.receiptType}-kvitto`,
-          })
-        } catch (error) {
-          logger.error(
-            {
-              error,
-              eventType: 'update',
-              objectType: 'receipt',
-              objectId: ctx.params.id,
-            },
-            'Failed to create log entry'
-          )
-        }
-      }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-    } catch (err) {
-      logger.error({ err }, 'Error uploading file')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /receipts/{id}/upload-base64:
-   *   post:
-   *     summary: Upload PDF file for a receipt (base64 encoded - for Power Automate)
-   *     description: Upload a PDF file as base64 encoded JSON to attach to an existing receipt
-   *     tags: [Keys Service]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: uuid
-   *         description: The ID of the receipt
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - fileContent
-   *             properties:
-   *               fileContent:
-   *                 type: string
-   *                 description: Base64 encoded PDF file content
-   *               fileName:
-   *                 type: string
-   *                 description: Optional file name (defaults to receipt-id-timestamp.pdf)
-   *               metadata:
-   *                 type: object
-   *                 additionalProperties:
-   *                   type: string
-   *                 description: Optional metadata for Power Automate workflow tracking
-   *     responses:
-   *       200:
-   *         description: File uploaded successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: object
-   *                   properties:
-   *                     fileId:
-   *                       type: string
-   *                     fileName:
-   *                       type: string
-   *                     size:
-   *                       type: number
-   *                     source:
-   *                       type: string
-   *       400:
-   *         description: Invalid base64 content or receipt not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/BadRequestResponse'
-   *       404:
-   *         description: Receipt not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/NotFoundResponse'
-   *       413:
-   *         description: File too large (max 10MB)
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *       500:
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('/receipts/:id/upload-base64', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      const {
-        fileContent,
-        fileName,
-        metadata: uploadMetadata,
-      } = ctx.request.body as {
-        fileContent: string
-        fileName?: string
-        metadata?: Record<string, string>
-      }
-
-      // Validate that fileContent is provided
-      if (!fileContent) {
-        ctx.status = 400
-        ctx.body = { reason: 'File content is required', ...metadata }
-        return
-      }
-
-      // Forward the base64 content to microservice
-      const result = await ReceiptsApi.uploadFileBase64(
-        ctx.params.id,
-        fileContent,
-        fileName,
-        uploadMetadata
-      )
-
-      if (!result.ok) {
-        if (result.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { reason: 'Receipt not found', ...metadata }
-          return
-        }
-        if (result.err === 'bad-request') {
-          ctx.status = 400
-          ctx.body = {
-            reason: 'Invalid base64 content or PDF file',
-            ...metadata,
-          }
-          return
-        }
-
-        logger.error(
-          { err: result.err, metadata },
-          'Error uploading base64 file'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      // Log file upload
-      const receiptResult = await ReceiptsApi.get(ctx.params.id)
-      if (receiptResult.ok) {
-        const receipt = receiptResult.data
-
-        try {
-          await LogsApi.create({
-            userName:
-              ctx.state.user?.name ||
-              ctx.state.user?.preferred_username ||
-              'system',
-            eventType: 'update',
-            objectType: 'receipt',
-            objectId: ctx.params.id,
-            description: `Laddade upp signerad PDF (base64) för ${receipt.receiptType}-kvitto`,
-          })
-        } catch (error) {
-          logger.error(
-            {
-              error,
-              eventType: 'update',
-              objectType: 'receipt',
-              objectId: ctx.params.id,
-            },
-            'Failed to create log entry'
-          )
-        }
-      }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-    } catch (err) {
-      logger.error({ err }, 'Error uploading base64 file')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
 
   /**
    * @swagger

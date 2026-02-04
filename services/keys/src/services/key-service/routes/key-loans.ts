@@ -1139,4 +1139,69 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /key-loans/{id}/activate:
+   *   post:
+   *     summary: Activate a key loan
+   *     description: |
+   *       Activates a key loan by setting pickedUpAt to now and completing
+   *       any incomplete key events (ORDERED or RECEIVED → COMPLETED).
+   *       This is typically called when a LOAN receipt file is uploaded.
+   *     tags:
+   *       - Key Loans
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The key loan ID
+   *     responses:
+   *       200:
+   *         description: Loan activated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 activated:
+   *                   type: boolean
+   *                   description: Whether the loan was activated (false if already activated)
+   *                 keyEventsCompleted:
+   *                   type: integer
+   *                   description: Number of key events that were completed
+   *       404:
+   *         description: Key loan not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/key-loans/:id/activate', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await keyLoansAdapter.activateKeyLoan(ctx.params.id, db)
+
+      if (result === null) {
+        ctx.status = 404
+        ctx.body = {
+          reason: `Key loan with id ${ctx.params.id} not found`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        ...result,
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error(err, `Error activating key loan with id ${ctx.params.id}`)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 }

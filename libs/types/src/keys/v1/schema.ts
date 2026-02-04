@@ -206,6 +206,7 @@ export const UpdateKeySystemRequestSchema = z.object({
   installationDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
   description: z.string().nullable().optional(),
+  schemaFileId: z.string().nullable().optional(),
 })
 
 // Request schemas for key loans
@@ -302,6 +303,10 @@ export const CreateReceiptRequestSchema = z.object({
   receiptType: ReceiptTypeSchema,
   type: ReceiptFormatSchema.optional(),
   fileId: z.string().optional(),
+  /** Base64 encoded file content (optional - if provided, file will be uploaded) */
+  fileData: z.string().optional(),
+  /** MIME type of the file (defaults to application/pdf) */
+  fileContentType: z.string().optional(),
 })
 
 export const UpdateReceiptRequestSchema = z.object({
