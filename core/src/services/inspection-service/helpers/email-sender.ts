@@ -134,13 +134,15 @@ export const sendProtocolToTenants = async (
     const errors: string[] = []
 
     for (const tenant of tenantsWithEmail) {
-      try {
+      const result =
         await communicationAdapter.sendNotificationToContactWithAttachment(
           tenant,
           subject,
           message,
           [attachment]
         )
+
+      if (result.ok) {
         sentEmails.push(tenant.emailAddress!)
         sentContactNames.push(tenant.fullName)
         logger.info(
@@ -152,10 +154,10 @@ export const sendProtocolToTenants = async (
           },
           'Sent inspection protocol to tenant'
         )
-      } catch (error) {
+      } else {
         logger.error(
           {
-            error,
+            error: result.err,
             inspectionId: inspection.id,
             contactCode: tenant.contactCode,
             email: tenant.emailAddress,

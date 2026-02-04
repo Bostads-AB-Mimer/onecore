@@ -401,7 +401,7 @@ describe('sendProtocolToTenants', () => {
   it('should send protocol to tenant with email address', async () => {
     const mockSendFn = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue({ ok: true, data: undefined })
 
     const pdfBuffer = Buffer.from('mock pdf content')
     const result = await sendProtocolToTenants(
@@ -473,7 +473,7 @@ describe('sendProtocolToTenants', () => {
   it('should send to multiple tenants on same lease', async () => {
     const mockSendFn = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue({ ok: true, data: undefined })
 
     const multipleTenants: Lease = {
       ...mockLease,
@@ -506,8 +506,8 @@ describe('sendProtocolToTenants', () => {
   it('should handle partial failures when sending to multiple tenants', async () => {
     const mockSendFn = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('Send failed'))
+      .mockResolvedValueOnce({ ok: true, data: undefined })
+      .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
 
     const multipleTenants: Lease = {
       ...mockLease,
