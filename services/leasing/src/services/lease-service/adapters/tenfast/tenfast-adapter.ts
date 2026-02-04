@@ -761,7 +761,7 @@ export async function getLeaseByExternalId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(externalId)}?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(externalId)}?hyresvard=${tenfastCompanyId}&populate=hyresgaster,hyresobjekt`,
     })
 
     if (res.status !== 200) {

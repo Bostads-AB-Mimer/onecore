@@ -6,6 +6,7 @@ import { Lease } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 
@@ -175,69 +176,155 @@ describe('leases routes', () => {
     })
   })
 
-  describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
-    it('returns 500 when adapter returns error', async () => {
-      const addHomeInsuranceSpy = jest
-        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
+  describe('GET /leases/:leaseId/home-insurance', () => {
+    it('responds with 404 when lease is missing', async () => {
+      const getHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
 
-      const res = await request(app.callback()).post(
-        '/leases/1337/rent-rows/home-insurance'
+      const res = await request(app.callback()).get(
+        '/leases/1337/home-insurance'
       )
 
+      expect(res.status).toBe(404)
+      expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+    })
+
+    it('responds with home insurance status', async () => {
+      const responsePayload = {
+        monthlyAmount: 123,
+        from: '2024-01',
+        to: '2024-12',
+      }
+      const getHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValue({ ok: true, data: responsePayload })
+
+      const res = await request(app.callback()).get(
+        '/leases/1337/home-insurance'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(res.body.content).toEqual(responsePayload)
+    })
+  })
+
+  describe('POST /leases/:leaseId/home-insurance', () => {
+    it('returns 500 when adapter returns error', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.residenceByRentalIdDetails.build({
+            type: {
+              roomCount: 1,
+            },
+          }),
+        })
+
+      const addHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback())
+        .post('/leases/1337/home-insurance')
+        .send({ from: new Date('2024-01-01') })
+
       expect(res.status).toBe(500)
-      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+        from: expect.any(Date),
+        monthlyAmount: 69,
+      })
     })
 
     it('adds home insurance rent row', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
       const addHomeInsuranceSpy = jest
-        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsuranceRentRow')
-        .mockResolvedValue({
+        .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
+        .mockResolvedValueOnce({
           ok: true,
           data: null,
         })
 
-      const res = await request(app.callback()).post(
-        '/leases/1337/rent-rows/home-insurance'
-      )
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.residenceByRentalIdDetails.build({
+            type: {
+              roomCount: 1,
+            },
+          }),
+        })
 
-      expect(res.status).toBe(201)
-      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      const res = await request(app.callback())
+        .post('/leases/1337/home-insurance')
+        .send({ from: new Date('2024-01-01') })
+
+      expect(res.status).toBe(200)
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+        from: expect.any(Date),
+        monthlyAmount: 69,
+      })
       expect(res.body.content).toEqual(null)
     })
   })
 
-  describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
+  describe('DELETE /leases/:leaseId/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
+        })
+
       const deleteRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
+        .spyOn(tenantLeaseAdapter, 'deleteLeaseHomeInsurance')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).delete(
-        '/leases/1337/rent-rows/row-1'
+        '/leases/1337/home-insurance'
       )
 
       expect(res.status).toBe(500)
-      expect(deleteRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRowId: 'row-1',
-      })
+      expect(deleteRentRowSpy).toHaveBeenCalledWith('1337')
     })
 
-    it('deletes rent row', async () => {
+    it('deletes home insurance', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValueOnce(leaseMock)
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
+        })
+
       const deleteRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'deleteLeaseRentRow')
-        .mockResolvedValue({ ok: true, data: null })
+        .spyOn(tenantLeaseAdapter, 'deleteLeaseHomeInsurance')
+        .mockResolvedValueOnce({ ok: true, data: null })
 
       const res = await request(app.callback()).delete(
-        '/leases/1337/rent-rows/row-1'
+        '/leases/1337/home-insurance'
       )
 
       expect(res.status).toBe(200)
-      expect(deleteRentRowSpy).toHaveBeenCalledWith({
-        leaseId: '1337',
-        rentRowId: 'row-1',
-      })
+      expect(deleteRentRowSpy).toHaveBeenCalledWith('1337')
       expect(res.body.content).toBeNull()
     })
   })

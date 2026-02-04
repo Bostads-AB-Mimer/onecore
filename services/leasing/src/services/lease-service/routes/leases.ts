@@ -680,17 +680,28 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const getLease = await tenfastAdapter.getLeaseByLeaseId(
+      const getLease = await tenfastAdapter.getLeaseByExternalId(
         ctx.params.leaseId
       )
 
       if (!getLease.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: getLease.err,
-          ...metadata,
+        if (getLease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: getLease.err,
+            ...metadata,
+          }
+
+          return
         }
-        return
       }
 
       const onecoreLease = tenfastHelpers.mapToOnecoreLease(getLease.data)
@@ -706,7 +717,6 @@ export const routes = (router: KoaRouter) => {
         ctx.body = makeSuccessResponseBody(onecoreLease, metadata)
       }
     } catch (error) {
-      console.log(error)
       logger.error(error, 'Error when getting lease')
       ctx.status = 500
       ctx.body = {
@@ -851,7 +861,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows/home-insurance:
+   * /leases/{leaseId}/home-insurance:
    *   post:
    *     summary: Add home insurance rent row to a lease
    *     description: Add a home insurance rent row. The article, VAT, amount, and label are determined by the service.
@@ -873,7 +883,103 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.post('(.*)/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
+  router.post(
+    '(.*)/leases/:leaseId/home-insurance',
+    parseRequestBody(leasing.v1.AddLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
+        ctx.params.leaseId
+      )
+
+      if (!getCurrentLease.ok) {
+        if (getCurrentLease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: getCurrentLease.err,
+            ...metadata,
+          }
+
+          return
+        }
+      }
+
+      const existingHomeInsurance = getCurrentLease.data.hyror.find(
+        (row) =>
+          row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+      )
+
+      if (existingHomeInsurance) {
+        ctx.status = 422
+        ctx.body = {
+          error: 'Home insurance rent row already exists for this lease',
+          ...metadata,
+        }
+
+        return
+      }
+
+      const addHomeInsuranceResult = await tenfastAdapter.createLeaseInvoiceRow(
+        {
+          leaseId: ctx.params.leaseId,
+          invoiceRow: {
+            amount: ctx.request.body.monthlyAmount,
+            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+            label: 'Hemförsäkring', // TODO: Where should label be decided?
+            vat: 0, // TODO: No VAT on insurance?
+            // TODO: Mimer.nu lets you pick day that home insurance starts
+            // but TenFAST only accepts yyyy-mm
+            from: toYearMonthString(ctx.request.body.from),
+          },
+        }
+      )
+
+      if (!addHomeInsuranceResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: addHomeInsuranceResult.err,
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(addHomeInsuranceResult.data, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance:
+   *   get:
+   *     summary: Get home insurance for a lease
+   *     description: Returns home insurance details for a lease.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved home insurance.
+   *       404:
+   *         description: Lease or home insurance not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
@@ -889,63 +995,48 @@ export const routes = (router: KoaRouter) => {
         }
 
         return
-      } else {
-        ctx.status = 500
-        ctx.body = {
-          error: getCurrentLease.err,
-          ...metadata,
-        }
-
-        return
       }
+
+      ctx.status = 500
+      ctx.body = {
+        error: getCurrentLease.err,
+        ...metadata,
+      }
+
+      return
     }
 
-    const existingHomeInsurance = getCurrentLease.data.hyror.find(
+    const homeInsuranceRow = getCurrentLease.data.hyror.find(
       (row) =>
         row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
     )
 
-    if (existingHomeInsurance) {
-      ctx.status = 422
+    if (!homeInsuranceRow) {
+      ctx.status = 404
       ctx.body = {
-        error: 'Home insurance rent row already exists for this lease',
+        error: 'Home insurance not found',
         ...metadata,
       }
-
       return
     }
 
-    const addHomeInsuranceResult = await tenfastAdapter.createLeaseInvoiceRow({
-      leaseId: ctx.params.leaseId,
-      invoiceRow: {
-        amount: config.tenfast.leaseRentRows.homeInsurance.amount,
-        article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-        label: 'Hemförsäkring', // TODO: Where should label be decided?
-        vat: 0, // TODO: No VAT on insurance?
-        from: toYearMonthString(new Date()), // TODO: From when?
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(
+      {
+        monthlyAmount: homeInsuranceRow.amount,
+        from: homeInsuranceRow.from ?? undefined,
+        to: homeInsuranceRow.to ?? undefined,
       },
-    })
-
-    if (!addHomeInsuranceResult.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: addHomeInsuranceResult.err,
-        ...metadata,
-      }
-
-      return
-    }
-
-    ctx.status = 201
-    ctx.body = makeSuccessResponseBody(addHomeInsuranceResult.data, metadata)
+      metadata
+    )
   })
 
   /**
    * @swagger
-   * /leases/{id}/rent-rows/{rentRowId}:
+   * /leases/{id}/home-insurance:
    *   delete:
-   *     summary: Delete a rent row
-   *     description: Delete a rent row.
+   *     summary: Delete lease home insurance
+   *     description: Delete lease home insurance.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -954,26 +1045,53 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *       - in: path
-   *         name: rentRowId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the rent row.
    *     responses:
    *       200:
-   *         description: Successfully deleted rent row.
+   *         description: Successfully deleted home insurance.
    *       404:
    *         description: Lease not found.
    *       500:
    *         description: Internal server error.
    */
-  router.delete('(.*)/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
+  router.delete('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    const lease = await tenfastAdapter.getLeaseByExternalId(ctx.params.leaseId)
+    if (!lease.ok) {
+      if (lease.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: lease.err,
+        ...metadata,
+      }
+      return
+    }
+
+    const homeInsuranceRow = lease.data.hyror.find(
+      (row) =>
+        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    )
+
+    if (!homeInsuranceRow || !homeInsuranceRow.article) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Home insurance not found',
+        ...metadata,
+      }
+      return
+    }
 
     const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
       leaseId: ctx.params.leaseId,
-      invoiceRowId: ctx.params.rentRowId,
+      invoiceRowId: homeInsuranceRow._id,
     })
 
     if (!deleteLeaseInvoiceRow.ok) {

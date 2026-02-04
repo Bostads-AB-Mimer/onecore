@@ -60,3 +60,8 @@ export const PreliminaryTerminateLeaseRequestSchema = z.object({
 export const PreliminaryTerminateLeaseResponseSchema = z.object({
   message: z.string(),
 })
+
+export const AddLeaseHomeInsuranceRequestSchema = z.object({
+  from: z.coerce.date(),
+  monthlyAmount: z.number(),
+})
