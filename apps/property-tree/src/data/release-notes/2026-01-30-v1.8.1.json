@@ -1,0 +1,37 @@
+[
+  {
+    "id": "rn-2026-01-30-v181-1",
+    "date": "2026-01-30",
+    "title": "Sidofältet fixat",
+    "description": "Åtgärdat ett problem där sidofältet inte gick att fälla ihop korrekt.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-01-30-v181-2",
+    "date": "2026-01-30",
+    "title": "Filter på kvartersvärdar",
+    "description": "Det går nu att filtrera hyreskontrakt på kvartersvärdar.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-01-30-v181-3",
+    "date": "2026-01-30",
+    "title": "Öppna länkar i nya flikar",
+    "description": "Du kan nu öppna länkar i nya flikar.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-01-30-v181-4",
+    "date": "2026-01-30",
+    "title": "Hyresobjekt med X borttagna",
+    "description": "Åtgärdat en bugg där hyresobjekt som slutar med X visades felaktigt.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-01-30-v181-5",
+    "date": "2026-01-30",
+    "title": "Dynamiska sidnamn",
+    "description": "Sidnamn uppdateras nu dynamiskt baserat på innehållet.",
+    "category": "improvement"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-02-03-v184-1",
+    "date": "2026-02-03",
+    "title": "Korrigerat utflyttningsdatum i kontraktsvyn",
+    "description": "Visar nu rätt utflyttningsdatum i kontraktsvyn för lägenhetskortet. Tidigare visades önskat avflyttningsdatum felaktigt.",
+    "category": "fix"
+  }
+]
