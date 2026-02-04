@@ -209,18 +209,20 @@ describe('leases routes', () => {
     })
   })
 
-  describe('POST /leases/:leaseId/rent-rows/home-insurance', () => {
+  describe('POST /leases/:leaseId/home-insurance', () => {
     it('returns 500 when adapter returns error', async () => {
       const addHomeInsuranceSpy = jest
         .spyOn(tenantLeaseAdapter, 'addLeaseHomeInsurance')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
-      const res = await request(app.callback()).post(
-        '/leases/1337/home-insurance'
-      )
+      const res = await request(app.callback())
+        .post('/leases/1337/home-insurance')
+        .send({ from: new Date('2024-01-01') })
 
       expect(res.status).toBe(500)
-      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+        from: expect.any(Date),
+      })
     })
 
     it('adds home insurance rent row', async () => {
@@ -231,12 +233,14 @@ describe('leases routes', () => {
           data: null,
         })
 
-      const res = await request(app.callback()).post(
-        '/leases/1337/home-insurance'
-      )
+      const res = await request(app.callback())
+        .post('/leases/1337/home-insurance')
+        .send({ from: new Date('2024-01-01') })
 
       expect(res.status).toBe(201)
-      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(addHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+        from: expect.any(Date),
+      })
       expect(res.body.content).toEqual(null)
     })
   })
