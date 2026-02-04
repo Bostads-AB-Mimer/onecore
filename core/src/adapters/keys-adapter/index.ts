@@ -3,6 +3,7 @@ import { AxiosError } from 'axios'
 import { keys } from '@onecore/types'
 import Config from '../../common/config'
 import { AdapterResult } from '../types'
+import * as fileStorageAdapter from '../file-storage-adapter'
 
 // ---- Import types from @onecore/types ---------------------------------------
 type Key = keys.v1.Key
@@ -395,6 +396,25 @@ export const KeyLoansApi = {
     const r = await getJSON<{ content: KeyLoanWithDetails[] }>(url)
     return r.ok ? ok(r.data.content) : r
   },
+
+  /**
+   * Activate a key loan by setting pickedUpAt and completing incomplete key events.
+   * This is called when a LOAN receipt file is uploaded.
+   */
+  activate: async (
+    id: string
+  ): Promise<
+    AdapterResult<
+      { activated: boolean; keyEventsCompleted: number },
+      'not-found' | CommonErr
+    >
+  > => {
+    const r = await postJSON<{
+      activated: boolean
+      keyEventsCompleted: number
+    }>(`${BASE}/key-loans/${id}/activate`, {})
+    return r.ok ? ok(r.data) : r
+  },
 }
 
 /**
@@ -485,44 +505,74 @@ export const KeySystemsApi = {
 
   uploadSchemaFile: async (
     id: string,
-    fileBuffer: Buffer,
-    fileName: string,
-    mimeType: string
-  ): Promise<
-    AdapterResult<
-      { fileId: string; fileName: string; size: number },
-      'not-found' | 'bad-request' | CommonErr
-    >
-  > => {
+    fileData: string,
+    fileContentType?: string,
+    options?: {
+      userName?: string
+      originalFileName?: string
+    }
+  ): Promise<AdapterResult<{ fileId: string }, 'not-found' | CommonErr>> => {
+    // 1. Verify key system exists
+    const keySystem = await KeySystemsApi.get(id)
+    if (!keySystem.ok) {
+      return fail(keySystem.err === 'not-found' ? 'not-found' : 'unknown')
+    }
+
+    // 2. Upload file to file-storage
+    const fileName = `keys/schema-${id}-${Date.now()}.pdf`
+    const fileBuffer = Buffer.from(fileData, 'base64')
+    const uploadResult = await fileStorageAdapter.uploadFile(
+      fileName,
+      fileBuffer,
+      fileContentType || 'application/pdf'
+    )
+    if (!uploadResult.ok) {
+      logger.error(
+        { err: uploadResult.err, keySystemId: id },
+        'Failed to upload schema file to file-storage'
+      )
+      return fail('unknown')
+    }
+    const fileId = uploadResult.data.fileName
+
+    // 3. Update key-system with schemaFileId
+    const updateResult = await KeySystemsApi.update(id, {
+      schemaFileId: fileId,
+    })
+    if (!updateResult.ok) {
+      // Compensation: delete uploaded file if update fails
+      logger.info(
+        { fileId, keySystemId: id },
+        'Key system update failed, deleting uploaded file (compensation)'
+      )
+      await fileStorageAdapter.deleteFile(fileId)
+      return fail('unknown')
+    }
+
+    // 4. Create log entry after successful schema upload
+    const fileSizeKB = (fileBuffer.length / 1024).toFixed(2)
     try {
-      // Create FormData to forward to microservice
-      const FormData = (await import('form-data')).default
-      const formData = new FormData()
-      formData.append('file', fileBuffer, {
-        filename: fileName,
-        contentType: mimeType,
+      await LogsApi.create({
+        userName: options?.userName || 'system',
+        eventType: 'update',
+        objectType: 'keySystem',
+        objectId: id,
+        description: `Laddade upp lås-schema: ${options?.originalFileName || 'schema.pdf'} (${fileSizeKB} KB) för ${keySystem.data.systemCode}`,
       })
-
-      const res = await axios.post<{
-        content: { fileId: string; fileName: string; size: number }
-      }>(`${BASE}/key-systems/${id}/upload-schema`, formData as any, {
-        headers: formData.getHeaders(),
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      })
-
-      return ok(res.data.content)
-    } catch (e) {
-      const err = mapAxiosError(e)
+    } catch (error) {
       logger.error(
         {
-          err: e,
-          response: (e as AxiosError)?.response?.data,
+          error,
+          eventType: 'update',
+          objectType: 'keySystem',
+          objectId: id,
         },
-        `POST ${BASE}/key-systems/${id}/upload-schema failed -> ${err}`
+        'Failed to create log entry for schema upload'
       )
-      return fail(err)
+      // Don't fail the operation if logging fails - file was uploaded successfully
     }
+
+    return ok({ fileId })
   },
 
   getSchemaDownloadUrl: async (
@@ -533,16 +583,72 @@ export const KeySystemsApi = {
       'not-found' | CommonErr
     >
   > => {
-    const r = await getJSON<{
-      content: { url: string; expiresIn: number; fileId: string }
-    }>(`${BASE}/key-systems/${id}/download-schema`)
-    return r.ok ? ok(r.data.content) : r
+    // 1. Get key-system to find schemaFileId
+    const keySystem = await KeySystemsApi.get(id)
+    if (!keySystem.ok) {
+      return fail(keySystem.err)
+    }
+    if (!keySystem.data.schemaFileId) {
+      return fail('not-found')
+    }
+
+    // 2. Get presigned URL from file-storage (1 hour expiry)
+    const urlResult = await fileStorageAdapter.getFileUrl(
+      keySystem.data.schemaFileId,
+      60 * 60 // 3600 seconds = 1 hour
+    )
+    if (!urlResult.ok) {
+      logger.error(
+        { err: urlResult.err, fileId: keySystem.data.schemaFileId },
+        'Failed to get schema download URL from file-storage'
+      )
+      return fail('unknown')
+    }
+
+    return ok({
+      url: urlResult.data.url,
+      expiresIn: urlResult.data.expiresIn,
+      fileId: keySystem.data.schemaFileId,
+    })
   },
 
   deleteSchemaFile: async (
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
-    return deleteJSON(`${BASE}/key-systems/${id}/schema`)
+    // 1. Get key-system to find schemaFileId
+    const keySystem = await KeySystemsApi.get(id)
+    if (!keySystem.ok) {
+      return fail(keySystem.err)
+    }
+
+    if (!keySystem.data.schemaFileId) {
+      // No file reference to delete
+      return ok(undefined)
+    }
+
+    // 2. Delete from file-storage
+    const deleteResult = await fileStorageAdapter.deleteFile(
+      keySystem.data.schemaFileId
+    )
+
+    // If file deletion fails for reasons other than "not found", keep DB reference
+    if (!deleteResult.ok && deleteResult.err !== 'not_found') {
+      logger.error(
+        { err: deleteResult.err, fileId: keySystem.data.schemaFileId },
+        'Failed to delete schema file from file-storage'
+      )
+      return fail('unknown')
+    }
+
+    // 3. Clear schemaFileId - either file was deleted or didn't exist (orphaned reference)
+    const updateResult = await KeySystemsApi.update(id, {
+      schemaFileId: null,
+    })
+    if (!updateResult.ok) {
+      return fail(updateResult.err)
+    }
+
+    return ok(undefined)
   },
 }
 
@@ -671,11 +777,67 @@ export const LogsApi = {
 
 export const ReceiptsApi = {
   create: async (
-    payload: CreateReceiptRequest
+    payload: CreateReceiptRequest & {
+      fileData?: string
+      fileContentType?: string
+    }
   ): Promise<
     AdapterResult<Receipt, 'bad-request' | 'conflict' | CommonErr>
   > => {
-    const r = await postJSON<{ content: Receipt }>(`${BASE}/receipts`, payload)
+    const { fileData, fileContentType, ...receiptPayload } = payload
+    let fileId: string | undefined
+
+    // 1. If file provided, upload first (more likely to fail)
+    if (fileData) {
+      const fileName = `keys/receipt-${Date.now()}.pdf`
+      const fileBuffer = Buffer.from(fileData, 'base64')
+      const uploadResult = await fileStorageAdapter.uploadFile(
+        fileName,
+        fileBuffer,
+        fileContentType || 'application/pdf'
+      )
+      if (!uploadResult.ok) {
+        logger.error(
+          { err: uploadResult.err },
+          'Failed to upload receipt file to file-storage'
+        )
+        return fail('unknown')
+      }
+      fileId = uploadResult.data.fileName
+    }
+
+    // 2. Create receipt with fileId (if file was uploaded)
+    const r = await postJSON<{ content: Receipt }>(`${BASE}/receipts`, {
+      ...receiptPayload,
+      ...(fileId && { fileId }),
+    })
+
+    // 3. Compensation: if receipt creation fails, delete uploaded file
+    if (!r.ok && fileId) {
+      logger.info(
+        { fileId },
+        'Receipt creation failed, deleting uploaded file (compensation)'
+      )
+      await fileStorageAdapter.deleteFile(fileId)
+    }
+
+    // 4. If LOAN receipt with file, activate key loan (set pickedUpAt and complete key events)
+    if (r.ok && fileId && receiptPayload.receiptType === 'LOAN') {
+      const activateResult = await KeyLoansApi.activate(
+        receiptPayload.keyLoanId
+      )
+      if (activateResult.ok && activateResult.data.activated) {
+        logger.info(
+          {
+            keyLoanId: receiptPayload.keyLoanId,
+            receiptId: r.data.content.id,
+            keyEventsCompleted: activateResult.data.keyEventsCompleted,
+          },
+          'Key loan activated after LOAN receipt created with file'
+        )
+      }
+    }
+
     return r.ok ? ok(r.data.content) : r
   },
 
@@ -714,47 +876,62 @@ export const ReceiptsApi = {
     return r.ok ? ok(r.data.content) : r
   },
 
-  // <-- Forward file buffer to microservice as multipart/form-data
   uploadFile: async (
     receiptId: string,
-    fileBuffer: Buffer,
-    fileName: string,
-    mimeType: string
-  ): Promise<
-    AdapterResult<
-      { fileId: string; fileName: string; size: number },
-      'bad-request' | 'not-found' | CommonErr
-    >
-  > => {
-    try {
-      // Create FormData to forward to microservice
-      const FormData = (await import('form-data')).default
-      const formData = new FormData()
-      formData.append('file', fileBuffer, {
-        filename: fileName,
-        contentType: mimeType,
-      })
-
-      const res = await axios.post<{
-        content: { fileId: string; fileName: string; size: number }
-      }>(`${BASE}/receipts/${receiptId}/upload`, formData as any, {
-        headers: formData.getHeaders(),
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      })
-
-      return ok(res.data.content)
-    } catch (e) {
-      const err = mapAxiosError(e)
-      logger.error(
-        {
-          err: e,
-          response: (e as AxiosError)?.response?.data,
-        },
-        `POST ${BASE}/receipts/${receiptId}/upload failed -> ${err}`
-      )
-      return fail(err)
+    fileData: string,
+    fileContentType?: string
+  ): Promise<AdapterResult<{ fileId: string }, 'not-found' | CommonErr>> => {
+    // 1. Get receipt to verify it exists
+    const receipt = await ReceiptsApi.get(receiptId)
+    if (!receipt.ok) {
+      return fail(receipt.err === 'not-found' ? 'not-found' : 'unknown')
     }
+
+    // 2. Upload file to file-storage
+    const fileName = `keys/receipt-${receiptId}-${Date.now()}.pdf`
+    const fileBuffer = Buffer.from(fileData, 'base64')
+    const uploadResult = await fileStorageAdapter.uploadFile(
+      fileName,
+      fileBuffer,
+      fileContentType || 'application/pdf'
+    )
+    if (!uploadResult.ok) {
+      logger.error(
+        { err: uploadResult.err, receiptId },
+        'Failed to upload receipt file to file-storage'
+      )
+      return fail('unknown')
+    }
+    const fileId = uploadResult.data.fileName
+
+    // 3. Update receipt with fileId
+    const updateResult = await ReceiptsApi.update(receiptId, { fileId })
+    if (!updateResult.ok) {
+      // Compensation: delete uploaded file if receipt update fails
+      logger.info(
+        { fileId, receiptId },
+        'Receipt update failed, deleting uploaded file (compensation)'
+      )
+      await fileStorageAdapter.deleteFile(fileId)
+      return fail('unknown')
+    }
+
+    // 4. If LOAN receipt, activate key loan (set pickedUpAt and complete key events)
+    if (receipt.data.receiptType === 'LOAN') {
+      const activateResult = await KeyLoansApi.activate(receipt.data.keyLoanId)
+      if (activateResult.ok && activateResult.data.activated) {
+        logger.info(
+          {
+            keyLoanId: receipt.data.keyLoanId,
+            receiptId,
+            keyEventsCompleted: activateResult.data.keyEventsCompleted,
+          },
+          'Key loan activated after file uploaded to LOAN receipt'
+        )
+      }
+    }
+
+    return ok({ fileId })
   },
 
   getDownloadUrl: async (
@@ -765,37 +942,33 @@ export const ReceiptsApi = {
       'not-found' | CommonErr
     >
   > => {
-    const r = await getJSON<{
-      content: { url: string; expiresIn: number; fileId: string }
-    }>(`${BASE}/receipts/${receiptId}/download`)
-    return r.ok ? ok(r.data.content) : r
-  },
+    // 1. Get receipt to find fileId
+    const receipt = await ReceiptsApi.get(receiptId)
+    if (!receipt.ok) {
+      return fail(receipt.err)
+    }
+    if (!receipt.data.fileId) {
+      return fail('not-found')
+    }
 
-  // <-- Upload file as base64 JSON (for Power Automate)
-  uploadFileBase64: async (
-    receiptId: string,
-    base64Content: string,
-    fileName?: string,
-    metadata?: Record<string, string>
-  ): Promise<
-    AdapterResult<
-      { fileId: string; fileName: string; size: number; source: string },
-      'bad-request' | 'not-found' | CommonErr
-    >
-  > => {
-    const r = await postJSON<{
-      content: {
-        fileId: string
-        fileName: string
-        size: number
-        source: string
-      }
-    }>(`${BASE}/receipts/${receiptId}/upload-base64`, {
-      fileContent: base64Content,
-      fileName,
-      metadata,
+    // 2. Get presigned URL from file-storage (1 hour expiry)
+    const urlResult = await fileStorageAdapter.getFileUrl(
+      receipt.data.fileId,
+      60 * 60 // 3600 seconds = 1 hour
+    )
+    if (!urlResult.ok) {
+      logger.error(
+        { err: urlResult.err, fileId: receipt.data.fileId },
+        'Failed to get download URL from file-storage'
+      )
+      return fail('unknown')
+    }
+
+    return ok({
+      url: urlResult.data.url,
+      expiresIn: urlResult.data.expiresIn,
+      fileId: receipt.data.fileId,
     })
-    return r.ok ? ok(r.data.content) : r
   },
 }
 

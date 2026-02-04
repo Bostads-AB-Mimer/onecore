@@ -1,23 +1,28 @@
 import { authConfig } from '@/auth-config'
+import { blobToBase64 } from '@/utils/fileUtils'
 
 import type { KeySystemSchemaDownloadUrlResponse } from '../types'
 import { GET, DELETE } from './core/base-api'
 
 export const keySystemSchemaService = {
   /**
-   * Upload a PDF schema file for a key system
-   * Note: Uses raw fetch() instead of POST helper because multipart/form-data
-   * is not supported by the type-safe base-api helpers (same pattern as receiptService)
+   * Upload a PDF schema file for a key system using base64 encoding
    */
   async uploadFile(keySystemId: string, file: File): Promise<void> {
-    const formData = new FormData()
-    formData.append('file', file)
+    const base64Content = await blobToBase64(file)
 
     const response = await fetch(
       `${authConfig.apiUrl}/key-systems/${keySystemId}/upload-schema`,
       {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileData: base64Content,
+          fileContentType: file.type || 'application/pdf',
+          fileName: file.name,
+        }),
         credentials: 'include',
       }
     )

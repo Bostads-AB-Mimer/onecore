@@ -229,52 +229,36 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
     })
 
-    // NOTE: uploadFile tests are skipped because nock has difficulty intercepting
-    // multipart/form-data requests. The uploadFileBase64 tests below provide
-    // equivalent coverage for the same API endpoints.
-    describe(keysAdapter.ReceiptsApi.uploadFile, () => {
-      it('returns unknown on 500', async () => {
-        const fileBuffer = Buffer.from('test')
-
-        nock(config.keysService.url)
-          .matchHeader('content-type', /multipart\/form-data/)
-          .post('/receipts/00000000-0000-0000-0000-000000000001/upload')
-          .reply(500)
-
-        const result = await keysAdapter.ReceiptsApi.uploadFile(
-          '00000000-0000-0000-0000-000000000001',
-          fileBuffer,
-          'receipt.pdf',
-          'application/pdf'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'unknown' })
-      })
-    })
-
     describe(keysAdapter.ReceiptsApi.getDownloadUrl, () => {
-      it('returns ok with download URL on 200', async () => {
-        const downloadInfo = {
-          url: 'https://storage.example.com/file-123',
-          expiresIn: 3600,
-          fileId: 'file-123',
-        }
-
+      it('returns ok with download URL when receipt has fileId', async () => {
+        // Mock getting receipt with fileId
         nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001/download')
-          .reply(200, { content: downloadInfo })
+          .get('/receipts/00000000-0000-0000-0000-000000000001')
+          .reply(200, {
+            content: { ...mockedReceipt, fileId: 'keys/receipt-file-123.pdf' },
+          })
+
+        // Mock file-storage service to return presigned URL
+        nock(config.fileStorageService.url)
+          .get('/files/keys%2Freceipt-file-123.pdf/url')
+          .query({ expirySeconds: 3600 })
+          .reply(200, {
+            url: 'https://storage.example.com/file-123',
+            expiresIn: 3600,
+          })
 
         const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(downloadInfo)
+        expect(result.data.url).toBe('https://storage.example.com/file-123')
+        expect(result.data.fileId).toBe('keys/receipt-file-123.pdf')
       })
 
-      it('returns not-found on 404', async () => {
+      it('returns not-found when receipt does not exist', async () => {
         nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000999/download')
+          .get('/receipts/00000000-0000-0000-0000-000000000999')
           .reply(404)
 
         const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
@@ -284,9 +268,31 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         expect(result).toEqual({ ok: false, err: 'not-found' })
       })
 
-      it('returns unknown on 500', async () => {
+      it('returns not-found when receipt has no fileId', async () => {
+        // Mock getting receipt without fileId
         nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001/download')
+          .get('/receipts/00000000-0000-0000-0000-000000000001')
+          .reply(200, { content: { ...mockedReceipt, fileId: null } })
+
+        const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
+          '00000000-0000-0000-0000-000000000001'
+        )
+
+        expect(result).toEqual({ ok: false, err: 'not-found' })
+      })
+
+      it('returns unknown when file-storage service fails', async () => {
+        // Mock getting receipt with fileId
+        nock(config.keysService.url)
+          .get('/receipts/00000000-0000-0000-0000-000000000001')
+          .reply(200, {
+            content: { ...mockedReceipt, fileId: 'keys/receipt-file-123.pdf' },
+          })
+
+        // Mock file-storage service error
+        nock(config.fileStorageService.url)
+          .get('/files/keys%2Freceipt-file-123.pdf/url')
+          .query({ expirySeconds: 3600 })
           .reply(500)
 
         const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
@@ -297,65 +303,100 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
     })
 
-    describe(keysAdapter.ReceiptsApi.uploadFileBase64, () => {
-      it('returns ok with file info on 200', async () => {
-        const base64Content = Buffer.from('test file').toString('base64')
-        const fileInfo = {
-          fileId: 'file-123',
-          fileName: 'receipt.pdf',
-          size: 1024,
-          source: 'base64',
-        }
+    describe(keysAdapter.ReceiptsApi.uploadFile, () => {
+      it('uploads file to existing receipt and updates fileId', async () => {
+        const receiptId = '00000000-0000-0000-0000-000000000001'
+        const fileData = Buffer.from('test pdf content').toString('base64')
 
+        // Mock getting receipt to verify it exists
         nock(config.keysService.url)
-          .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-          .reply(200, { content: fileInfo })
+          .get(`/receipts/${receiptId}`)
+          .reply(200, { content: mockedReceipt })
 
-        const result = await keysAdapter.ReceiptsApi.uploadFileBase64(
-          '00000000-0000-0000-0000-000000000001',
-          base64Content,
-          'receipt.pdf',
-          { source: 'power-automate' }
+        // Mock file-storage upload
+        nock(config.fileStorageService.url)
+          .post('/files/upload')
+          .reply(200, {
+            fileName: `keys/receipt-${receiptId}-123456.pdf`,
+            size: 100,
+          })
+
+        // Mock receipt update with fileId
+        nock(config.keysService.url)
+          .patch(`/receipts/${receiptId}`)
+          .reply(200, {
+            content: {
+              ...mockedReceipt,
+              fileId: `keys/receipt-${receiptId}-123456.pdf`,
+            },
+          })
+
+        const result = await keysAdapter.ReceiptsApi.uploadFile(
+          receiptId,
+          fileData
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(fileInfo)
+        expect(result.data.fileId).toContain('keys/receipt-')
       })
 
-      it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-          .reply(400)
+      it('returns not-found when receipt does not exist', async () => {
+        const receiptId = '00000000-0000-0000-0000-000000000999'
 
-        const result = await keysAdapter.ReceiptsApi.uploadFileBase64(
-          '00000000-0000-0000-0000-000000000001',
-          ''
-        )
+        nock(config.keysService.url).get(`/receipts/${receiptId}`).reply(404)
 
-        expect(result).toEqual({ ok: false, err: 'bad-request' })
-      })
-
-      it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .post('/receipts/00000000-0000-0000-0000-000000000999/upload-base64')
-          .reply(404)
-
-        const result = await keysAdapter.ReceiptsApi.uploadFileBase64(
-          '00000000-0000-0000-0000-000000000999',
-          'base64content'
+        const result = await keysAdapter.ReceiptsApi.uploadFile(
+          receiptId,
+          'base64data'
         )
 
         expect(result).toEqual({ ok: false, err: 'not-found' })
       })
 
-      it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .post('/receipts/00000000-0000-0000-0000-000000000001/upload-base64')
-          .reply(500)
+      it('returns unknown when file-storage upload fails', async () => {
+        const receiptId = '00000000-0000-0000-0000-000000000001'
 
-        const result = await keysAdapter.ReceiptsApi.uploadFileBase64(
-          '00000000-0000-0000-0000-000000000001',
-          'base64content'
+        // Mock getting receipt
+        nock(config.keysService.url)
+          .get(`/receipts/${receiptId}`)
+          .reply(200, { content: mockedReceipt })
+
+        // Mock file-storage upload failure
+        nock(config.fileStorageService.url).post('/files/upload').reply(500)
+
+        const result = await keysAdapter.ReceiptsApi.uploadFile(
+          receiptId,
+          'base64data'
+        )
+
+        expect(result).toEqual({ ok: false, err: 'unknown' })
+      })
+
+      it('deletes uploaded file if receipt update fails (compensation)', async () => {
+        const receiptId = '00000000-0000-0000-0000-000000000001'
+
+        // Mock getting receipt
+        nock(config.keysService.url)
+          .get(`/receipts/${receiptId}`)
+          .reply(200, { content: mockedReceipt })
+
+        // Mock file-storage upload success
+        nock(config.fileStorageService.url).post('/files/upload').reply(200, {
+          fileName: 'keys/receipt-test.pdf',
+          size: 100,
+        })
+
+        // Mock receipt update failure
+        nock(config.keysService.url).patch(`/receipts/${receiptId}`).reply(500)
+
+        // Mock file deletion (compensation)
+        nock(config.fileStorageService.url)
+          .delete('/files/keys%2Freceipt-test.pdf')
+          .reply(200)
+
+        const result = await keysAdapter.ReceiptsApi.uploadFile(
+          receiptId,
+          'base64data'
         )
 
         expect(result).toEqual({ ok: false, err: 'unknown' })

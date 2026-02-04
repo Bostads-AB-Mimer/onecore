@@ -10,14 +10,6 @@ export interface Config {
     port: number
     database: string
   }
-  minio: {
-    endpoint: string
-    port: number
-    useSsl: boolean
-    accessKey: string
-    secretKey: string
-    bucketName: string
-  }
   simpleSign: {
     apiUrl: string
     accessToken: string
@@ -45,14 +37,6 @@ const config = configPackage({
       port: 1438,
       database: 'keys-management',
     },
-    minio: {
-      endPoint: 'localhost',
-      port: 9000,
-      useSsl: false,
-      accessKey: '',
-      secretKey: '',
-      bucketName: 'receipts',
-    },
     simpleSign: {
       apiUrl: '',
       accessToken: '',
@@ -74,7 +58,6 @@ const config = configPackage({
 export default {
   port: config.get('port'),
   keysDatabase: config.get('keysDatabase'),
-  minio: config.get('minio'),
   simpleSign: config.get('simplesign'),
   alliera: config.get('alliera'),
 } as Config
