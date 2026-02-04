@@ -257,7 +257,8 @@ export interface ReceiptData {
 }
 
 export interface MaintenanceReceiptData {
-  contact: string
+  contact: string // Contact code (e.g., F088710)
+  contactName: string // Company name (from Contact.fullName)
   contactPerson: string | null
   description?: string | null
   keys: Key[] // For RETURN: keys that were returned (checked in dialog)

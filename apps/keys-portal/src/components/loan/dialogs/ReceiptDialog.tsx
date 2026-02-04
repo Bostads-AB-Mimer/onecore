@@ -11,8 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FileText, Printer, AlertCircle } from 'lucide-react'
 
 import type { ReceiptData, Lease } from '@/services/types'
-import { openPdfInNewTab } from '@/lib/receiptPdfUtils'
-import { fetchReceiptData } from '@/services/receiptHandlers'
+import { fetchReceiptData, openPdfInNewTab } from '@/services/receiptHandlers'
 
 export function ReceiptDialog({
   isOpen,
