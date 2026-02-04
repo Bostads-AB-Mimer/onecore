@@ -33,7 +33,10 @@ export const fetchEnrichedInspection = async (
   // Fetch lease data if available
   let lease = null
   if (rawInspection.leaseId) {
-    const rawLease = await leasingAdapter.getLease(rawInspection.leaseId, 'true')
+    const rawLease = await leasingAdapter.getLease(
+      rawInspection.leaseId,
+      'true'
+    )
     lease = mapLease(rawLease)
   }
 
