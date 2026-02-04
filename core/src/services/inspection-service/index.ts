@@ -34,6 +34,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRemark', schemas.DetailedInspectionSchema)
+  registerSchema('TenantContactsResponse', schemas.TenantContactsResponseSchema)
+  registerSchema('SendProtocolRequest', schemas.SendProtocolRequestSchema)
+  registerSchema('SendProtocolResponse', schemas.SendProtocolResponseSchema)
 
   /**
    * @swagger
@@ -490,10 +493,33 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Successfully retrieved tenant contacts
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/TenantContactsResponse'
    *       '404':
    *         description: Inspection or residence not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Inspection not found
    *       '500':
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
    *     security:
    *       - bearerAuth: []
    */
@@ -601,23 +627,47 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - recipient
-   *             properties:
-   *               recipient:
-   *                 type: string
-   *                 enum: [new-tenant, previous-tenant]
-   *                 description: Which tenant to send the protocol to
+   *             $ref: '#/components/schemas/SendProtocolRequest'
    *     responses:
    *       '200':
    *         description: Protocol sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SendProtocolResponse'
    *       '400':
    *         description: Invalid request or no contract found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid request body
    *       '404':
    *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Inspection not found
    *       '500':
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
    *     security:
    *       - bearerAuth: []
    */
