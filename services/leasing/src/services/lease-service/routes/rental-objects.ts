@@ -72,6 +72,9 @@ export const routes = (router: KoaRouter) => {
       tenfastAdapter.getRentalObjectRents(includeRentalObjectCodes, false),
     ])
 
+    //TODO: Hämta ev sista debiteringsdatum på aktiva avtal från tenfast
+    //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
+
     if (!parkingSpaceResult.ok) {
       logger.error(
         { err: parkingSpaceResult.err },
@@ -158,6 +161,9 @@ export const routes = (router: KoaRouter) => {
     const rentalObjectCode = ctx.params.rentalObjectCode
 
     const result = await xpandAdapter.getParkingSpace(rentalObjectCode)
+
+    //TODO: Hämta ev sista debiteringsdatum på aktiva avtal från tenfast
+    //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
 
     if (result.ok) {
       //get rent
@@ -251,6 +257,11 @@ export const routes = (router: KoaRouter) => {
       }
       return
     }
+
+    //TODO: Överväg att hämta vakanta parkeringsplatser (de utan aktiva kontrakt) från tenfast först och sedan rensa bort de med spärrar i xpand samt hämta detaljerna från xpand
+    //TODO: Alternativ: Hämta aktiva avtal för parkeringsplatserna från tenfast och filtrera bort de som har aktiva avtal
+
+    //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
 
     const rentalObjectRentsResponse = await tenfastAdapter.getRentalObjectRents(
       vacantParkingSpaces.data.map((ps) => ps.rentalObjectCode),
