@@ -518,7 +518,16 @@ export const KeySystemsApi = {
       return fail(keySystem.err === 'not-found' ? 'not-found' : 'unknown')
     }
 
-    // 2. Upload file to file-storage
+    // 2. Delete old file if exists (prevent orphans)
+    if (keySystem.data.schemaFileId) {
+      await fileStorageAdapter.deleteFile(keySystem.data.schemaFileId)
+      logger.info(
+        { oldFileId: keySystem.data.schemaFileId, keySystemId: id },
+        'Deleted old schema file before uploading new one'
+      )
+    }
+
+    // 3. Upload new file to file-storage
     const fileName = `keys/schema-${id}-${Date.now()}.pdf`
     const fileBuffer = Buffer.from(fileData, 'base64')
     const uploadResult = await fileStorageAdapter.uploadFile(
@@ -535,7 +544,7 @@ export const KeySystemsApi = {
     }
     const fileId = uploadResult.data.fileName
 
-    // 3. Update key-system with schemaFileId
+    // 4. Update key-system with schemaFileId
     const updateResult = await KeySystemsApi.update(id, {
       schemaFileId: fileId,
     })
@@ -549,7 +558,7 @@ export const KeySystemsApi = {
       return fail('unknown')
     }
 
-    // 4. Create log entry after successful schema upload
+    // 5. Create log entry after successful schema upload
     const fileSizeKB = (fileBuffer.length / 1024).toFixed(2)
     try {
       await LogsApi.create({
@@ -860,6 +869,26 @@ export const ReceiptsApi = {
   remove: async (
     id: string
   ): Promise<AdapterResult<unknown, 'not-found' | CommonErr>> => {
+    // 1. Get receipt to find fileId (if any)
+    const receipt = await ReceiptsApi.get(id)
+    if (!receipt.ok) {
+      // If not found, nothing to delete
+      if (receipt.err === 'not-found') {
+        return fail('not-found')
+      }
+      return fail('unknown')
+    }
+
+    // 2. Delete file from storage if exists (prevent orphans)
+    if (receipt.data.fileId) {
+      await fileStorageAdapter.deleteFile(receipt.data.fileId)
+      logger.info(
+        { fileId: receipt.data.fileId, receiptId: id },
+        'Deleted receipt file before removing receipt'
+      )
+    }
+
+    // 3. Delete receipt from database
     return deleteJSON(`${BASE}/receipts/${id}`)
   },
 
@@ -887,7 +916,16 @@ export const ReceiptsApi = {
       return fail(receipt.err === 'not-found' ? 'not-found' : 'unknown')
     }
 
-    // 2. Upload file to file-storage
+    // 2. Delete old file if exists (prevent orphans)
+    if (receipt.data.fileId) {
+      await fileStorageAdapter.deleteFile(receipt.data.fileId)
+      logger.info(
+        { oldFileId: receipt.data.fileId, receiptId },
+        'Deleted old receipt file before uploading new one'
+      )
+    }
+
+    // 3. Upload new file to file-storage
     const fileName = `keys/receipt-${receiptId}-${Date.now()}.pdf`
     const fileBuffer = Buffer.from(fileData, 'base64')
     const uploadResult = await fileStorageAdapter.uploadFile(
@@ -904,7 +942,7 @@ export const ReceiptsApi = {
     }
     const fileId = uploadResult.data.fileName
 
-    // 3. Update receipt with fileId
+    // 4. Update receipt with fileId
     const updateResult = await ReceiptsApi.update(receiptId, { fileId })
     if (!updateResult.ok) {
       // Compensation: delete uploaded file if receipt update fails
@@ -916,7 +954,7 @@ export const ReceiptsApi = {
       return fail('unknown')
     }
 
-    // 4. If LOAN receipt, activate key loan (set pickedUpAt and complete key events)
+    // 5. If LOAN receipt, activate key loan (set pickedUpAt and complete key events)
     if (receipt.data.receiptType === 'LOAN') {
       const activateResult = await KeyLoansApi.activate(receipt.data.keyLoanId)
       if (activateResult.ok && activateResult.data.activated) {
