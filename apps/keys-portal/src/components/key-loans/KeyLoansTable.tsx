@@ -90,7 +90,16 @@ export function KeyLoansTable({
   returnedDateFilter,
   onReturnedDateChange,
 }: KeyLoansTableProps) {
-  const [contactNames, setContactNames] = useState<Record<string, string>>({})
+  const [contactData, setContactData] = useState<
+    Record<
+      string,
+      {
+        fullName: string
+        contactCode: string
+        nationalRegistrationNumber?: string
+      }
+    >
+  >({})
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [returnDialogOpen, setReturnDialogOpen] = useState(false)
 
@@ -172,27 +181,27 @@ export function KeyLoansTable({
       })
 
       // Fetch contact info for each contact code
-      const names: Record<string, string> = {}
+      const data: typeof contactData = {}
       await Promise.all(
         Array.from(uniqueContactCodes).map(async (contactCode) => {
           try {
             const contact = await fetchContactByContactCode(contactCode)
             if (contact) {
-              // Format: Name · Code
-              const parts = [contact.fullName, contactCode]
-              if (contact.nationalRegistrationNumber) {
-                parts.push(contact.nationalRegistrationNumber)
+              data[contactCode] = {
+                fullName: contact.fullName ?? contactCode,
+                contactCode,
+                nationalRegistrationNumber:
+                  contact.nationalRegistrationNumber || undefined,
               }
-              names[contactCode] = parts.join(' · ')
             }
           } catch (error) {
             console.error(`Failed to fetch contact ${contactCode}:`, error)
-            names[contactCode] = contactCode
+            data[contactCode] = { fullName: contactCode, contactCode }
           }
         })
       )
 
-      setContactNames(names)
+      setContactData(data)
     }
 
     if (keyLoans.length > 0) {
@@ -215,21 +224,28 @@ export function KeyLoansTable({
     }
   }
 
-  const getContactDisplay = (loan: KeyLoan) => {
-    const contacts: string[] = []
-    if (loan.contact && contactNames[loan.contact]) {
-      contacts.push(contactNames[loan.contact])
-    } else if (loan.contact) {
-      contacts.push(loan.contact)
-    }
+  const getContactFieldDisplay = (
+    loan: KeyLoan,
+    field: 'fullName' | 'contactCode' | 'nationalRegistrationNumber'
+  ) => {
+    const codes = [loan.contact, loan.contact2].filter(Boolean) as string[]
+    if (codes.length === 0) return '-'
 
-    if (loan.contact2 && contactNames[loan.contact2]) {
-      contacts.push(contactNames[loan.contact2])
-    } else if (loan.contact2) {
-      contacts.push(loan.contact2)
-    }
+    const values = codes.map((code) => {
+      const data = contactData[code]
+      if (!data) return field === 'contactCode' ? code : '-'
+      return data[field] ?? '-'
+    })
 
-    return contacts.length > 0 ? contacts.join(', ') : '-'
+    if (values.length === 1) return values[0]
+
+    return (
+      <div className="flex flex-col gap-1">
+        {values.map((value, index) => (
+          <span key={index}>{value}</span>
+        ))}
+      </div>
+    )
   }
 
   return (
@@ -253,7 +269,10 @@ export function KeyLoansTable({
           <TableHeader>
             <TableRow className="hover:bg-transparent border-border">
               <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Kontakt</TableHead>
+              <TableHead>Namn</TableHead>
+              <TableHead>Kontaktkod</TableHead>
+              <TableHead>Personnummer</TableHead>
+              <TableHead>Kontaktperson</TableHead>
               <FilterableTableHeader label="Lånetyp">
                 <FilterDropdown
                   options={[
@@ -264,7 +283,7 @@ export function KeyLoansTable({
                   onSelectionChange={onLoanTypeFilterChange}
                 />
               </FilterableTableHeader>
-              <FilterableTableHeader label="Antal nycklar">
+              <FilterableTableHeader label="Nycklar" className="w-[80px]">
                 <NumberRangeFilterDropdown
                   minValue={minKeys}
                   maxValue={maxKeys}
@@ -334,7 +353,7 @@ export function KeyLoansTable({
           <TableBody>
             {isLoading || keyLoans.length === 0 ? (
               <TableEmptyState
-                colSpan={9}
+                colSpan={12}
                 isLoading={isLoading}
                 message="Inga nyckellån hittades"
               />
@@ -360,8 +379,18 @@ export function KeyLoansTable({
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {getContactDisplay(loan)}
+                        {getContactFieldDisplay(loan, 'fullName')}
                       </TableCell>
+                      <TableCell>
+                        {getContactFieldDisplay(loan, 'contactCode')}
+                      </TableCell>
+                      <TableCell>
+                        {getContactFieldDisplay(
+                          loan,
+                          'nationalRegistrationNumber'
+                        )}
+                      </TableCell>
+                      <TableCell>{loan.contactPerson ?? '-'}</TableCell>
                       <TableCell>
                         <LoanTypeBadge loanType={loan.loanType} />
                       </TableCell>
@@ -393,7 +422,7 @@ export function KeyLoansTable({
                     {/* Expanded keys section */}
                     {isExpanded && (
                       <ExpandedRowContent
-                        colSpan={9}
+                        colSpan={12}
                         isLoading={expansion.isLoading}
                         hasData={!!expansion.loadedData}
                         emptyMessage="Inga nycklar i detta lån"
