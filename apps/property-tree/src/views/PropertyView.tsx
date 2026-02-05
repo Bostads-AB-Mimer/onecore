@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { usePropertyDetail } from '@/hooks/usePropertyDetail'
+import { usePropertyDetail } from '@/features/properties/hooks/usePropertyDetail'
 //import { useToast } from '@/hooks/use-toast'
-import { PropertyDetailTabs } from '@/components/properties/PropertyDetailTabs'
+import { PropertyDetailTabs } from '@/widgets/property-detail-tabs'
 import { useIsMobile } from '@/hooks/useMobile'
-import { PropertyHeader } from '@/components/properties/PropertyHeader'
-import { PropertyBasicInfo } from '@/components/properties/PropertyBasicInfo'
+import { PropertyHeader } from '@/features/properties/components/PropertyHeader'
+import { PropertyBasicInfo } from '@/features/properties/components/PropertyBasicInfo'
 import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const PropertyView = () => {

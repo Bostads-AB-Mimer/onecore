@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { BuildingEntrances } from '@/features/buildings/components/BuildingEntrances'
-import { BuildingWorkOrdersTab } from '@/features/buildings/components/BuildingWorkOrdersTab'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 import { BuildingDetailTabsMobile } from './BuildingDetailTabsMobile'
 import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
 
@@ -62,7 +62,10 @@ export const BuildingDetailTabs = ({
       </TabsContent>
 
       <TabsContent value="orders">
-        <BuildingWorkOrdersTab building={building} />
+        <WorkOrdersManagement
+          contextType={ContextType.Building}
+          id={building.code}
+        />
       </TabsContent>
 
       <TabsContent value="documents">

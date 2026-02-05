@@ -1,4 +1,4 @@
-import { PropertyBasicInfo } from '@/components/properties/PropertyBasicInfo'
+import { PropertyBasicInfo } from '@/features/properties/components/PropertyBasicInfo'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { Info } from 'lucide-react'
 import type { PropertyDetail } from '@/types/api'

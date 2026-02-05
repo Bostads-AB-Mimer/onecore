@@ -1,4 +1,5 @@
-import { SearchResultsTable, SearchResult } from './SearchResultsTable'
+import { SearchResultsTable } from './SearchResultsTable'
+import type { SearchResult } from '../types'
 import { PropertiesTable } from './PropertiesTable'
 import type { Property } from '@/services/types'
 import { Badge } from '@/components/ui/v2/Badge'
