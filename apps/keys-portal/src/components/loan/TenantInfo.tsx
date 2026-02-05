@@ -8,6 +8,7 @@ import { ContractCard } from './ContractCard'
 import { KeyNoteDisplay } from './KeyNoteDisplay'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { getPriorityContractId } from '@/utils/contractPriority'
+import { getTenantViewLink } from '@/utils/externalLinks'
 
 function formatAddress(addr?: Address): string {
   if (!addr) return 'Okänd adress'
@@ -179,9 +180,20 @@ export function TenantInfo({
                           {isCompany ? 'Organisationsnummer' : 'Personnummer'}:{' '}
                           {t.nationalRegistrationNumber}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          Kundnummer: {t.contactCode}
-                        </p>
+                        {getTenantViewLink(t.contactCode) ? (
+                          <a
+                            href={getTenantViewLink(t.contactCode)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline block"
+                          >
+                            Kundnummer: {t.contactCode}
+                          </a>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Kundnummer: {t.contactCode}
+                          </p>
+                        )}
                         {t.emailAddress && (
                           <p className="text-sm text-muted-foreground">
                             E-post: {t.emailAddress}
