@@ -279,10 +279,7 @@ export const getAllRentalBlocksQueryParamsSchema = z.object({
 
 // Coerce query params to arrays (Koa parses single values as strings)
 const arrayQueryParam = z
-  .preprocess(
-    (v) => (typeof v === 'string' ? [v] : v),
-    z.array(z.string())
-  )
+  .preprocess((v) => (typeof v === 'string' ? [v] : v), z.array(z.string()))
   .optional()
 
 // Base filter schema (shared between search and export)
