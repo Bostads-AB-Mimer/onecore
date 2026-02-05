@@ -10,8 +10,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { KeyAutocomplete } from './KeyAutocomplete'
+import { CommentInput } from '@/components/shared/CommentInput'
+import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 import type { Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 
@@ -33,6 +34,7 @@ export function CreateMaintenanceLoanDialog({
   onSuccess,
 }: CreateMaintenanceLoanDialogProps) {
   const { toast } = useToast()
+  const { addSignature } = useCommentWithSignature()
   const [contactPerson, setContactPerson] = useState('')
   const [description, setDescription] = useState('')
   const [selectedKeys, setSelectedKeys] = useState<Key[]>(preSelectedKeys)
@@ -71,7 +73,7 @@ export function CreateMaintenanceLoanDialog({
         loanType: 'MAINTENANCE',
         contact: companyContactCode,
         contactPerson: contactPerson.trim() || null,
-        description: description.trim() || null,
+        description: addSignature(description) || null,
       })
 
       toast({
@@ -128,17 +130,13 @@ export function CreateMaintenanceLoanDialog({
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Beskrivning (valfritt)</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </div>
+          <CommentInput
+            value={description}
+            onChange={setDescription}
+            label="Beskrivning (valfritt)"
+            placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
+            rows={3}
+          />
 
           {/* Key Selection */}
           <div className="space-y-2">

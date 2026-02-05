@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react'
 import type { Key, CardDetails } from '@/services/types'
+
+// Store loan details for PDF generation
+type LoanDetails = {
+  contact: string
+  contactName: string
+  contactPerson: string | null
+  description: string | null | undefined
+}
 import {
   ReturnKeysDialogBase,
   type LoanGroup,
 } from '@/components/shared/dialogs/ReturnKeysDialogBase'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { receiptService } from '@/services/api/receiptService'
-import { keyService } from '@/services/api/keyService'
-import { generateMaintenanceReturnReceiptBlob } from '@/lib/pdf-receipts'
+import { fetchContactByContactCode } from '@/services/api/contactService'
+import { generateAndUploadMaintenanceReturnReceipt } from '@/services/receiptHandlers'
 import { useToast } from '@/hooks/use-toast'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { CommentInput } from '@/components/shared/CommentInput'
+import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 
 type Props = {
   open: boolean
@@ -36,8 +44,12 @@ export function ReturnMaintenanceKeysDialog({
   onSuccess,
 }: Props) {
   const { toast } = useToast()
+  const { addSignature } = useCommentWithSignature()
   const [isProcessing, setIsProcessing] = useState(false)
   const [loanGroups, setLoanGroups] = useState<LoanGroup[]>([])
+  const [loanDetailsMap, setLoanDetailsMap] = useState<
+    Map<string, LoanDetails>
+  >(new Map())
   const [loading, setLoading] = useState(true)
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set())
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set())
@@ -55,6 +67,7 @@ export function ReturnMaintenanceKeysDialog({
 
         // Build a map of unique active maintenance loans
         const loansMap = new Map<string, LoanGroup>()
+        const detailsMap = new Map<string, LoanDetails>()
 
         for (const key of keysToReturn) {
           const loans = await keyLoanService.getByKeyId(key.id)
@@ -73,11 +86,27 @@ export function ReturnMaintenanceKeysDialog({
                 disposedKeys: loanKeys.filter((k) => k.disposed),
                 nonDisposedKeys: loanKeys.filter((k) => !k.disposed),
               })
+
+              // Fetch contact info for company name
+              const contactInfo = activeLoan.contact
+                ? await fetchContactByContactCode(activeLoan.contact)
+                : null
+              const contactName =
+                contactInfo?.fullName || activeLoan.contact || 'Unknown'
+
+              // Store loan details for PDF generation
+              detailsMap.set(activeLoan.id, {
+                contact: activeLoan.contact || 'Unknown',
+                contactName,
+                contactPerson: activeLoan.contactPerson ?? null,
+                description: activeLoan.description,
+              })
             }
           }
         }
 
         setLoanGroups(Array.from(loansMap.values()))
+        setLoanDetailsMap(detailsMap)
 
         // Initialize selected keys - check all keys that were originally selected
         const initialSelectedKeys = new Set<string>()
@@ -114,16 +143,13 @@ export function ReturnMaintenanceKeysDialog({
       // Update all loans to mark them as returned and create return receipts
       await Promise.all(
         loanGroups.map(async (loanGroup) => {
-          // Get the loan details
-          const loan = await keyLoanService.get(loanGroup.loanId)
-
           // Update loan to mark as returned
           await keyLoanService.update(loanGroup.loanId, {
             returnedAt: new Date().toISOString(),
             description: returnNote.trim() || undefined,
           })
 
-          // Create return receipt
+          // Create return receipt and generate PDF
           try {
             const receipt = await receiptService.create({
               keyLoanId: loanGroup.loanId,
@@ -131,53 +157,26 @@ export function ReturnMaintenanceKeysDialog({
               type: 'PHYSICAL',
             })
 
-            // Generate and upload PDF automatically
-            try {
-              // Fetch all key objects for this loan
-              const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
-              const loanKeys: Key[] = await Promise.all(
-                loanKeyIds.map((keyId) => keyService.getKey(keyId))
-              )
-
-              // Categorize keys into returned/missing/disposed
-              const returned: Key[] = []
-              const missing: Key[] = []
-              const disposed: Key[] = []
-
-              loanKeys.forEach((key) => {
-                if (key.disposed) {
-                  disposed.push(key)
-                } else if (selectedKeyIds.has(key.id)) {
-                  returned.push(key)
-                } else {
-                  missing.push(key)
-                }
-              })
-
-              // Generate PDF
-              const { blob } = await generateMaintenanceReturnReceiptBlob(
-                {
-                  contact: loan.contact || 'Unknown',
-                  contactPerson: loan.contactPerson,
-                  description: loan.description,
-                  keys: returned,
-                  receiptType: 'RETURN',
-                  operationDate: new Date(),
-                  missingKeys: missing.length > 0 ? missing : undefined,
-                  disposedKeys: disposed.length > 0 ? disposed : undefined,
-                },
-                receipt.id
-              )
-
-              // Convert blob to File and upload
-              const fileName = `return-receipt-${receipt.id}.pdf`
-              const file = new File([blob], fileName, {
-                type: 'application/pdf',
-              })
-              await receiptService.uploadFile(receipt.id, file)
-            } catch (pdfErr) {
-              console.error('Failed to generate/upload PDF:', pdfErr)
-              // Don't fail the return if PDF generation fails
+            // Generate and upload return receipt PDF
+            const loanDetails = loanDetailsMap.get(loanGroup.loanId)
+            if (loanDetails && receipt.id) {
+              try {
+                // Use user-entered returnNote for the PDF (with signature), falls back to original description
+                const noteForPdf =
+                  addSignature(returnNote) || loanDetails.description
+                await generateAndUploadMaintenanceReturnReceipt(
+                  receipt.id,
+                  loanDetails.contact,
+                  loanDetails.contactName,
+                  loanDetails.contactPerson,
+                  noteForPdf,
+                  loanGroup.keys,
+                  selectedKeyIds
+                )
+              } catch (pdfErr) {
+                console.error('Failed to generate/upload PDF:', pdfErr)
+                // Don't fail the return if PDF generation fails
+              }
             }
           } catch (receiptErr) {
             console.error('Failed to create return receipt:', receiptErr)
@@ -207,14 +206,12 @@ export function ReturnMaintenanceKeysDialog({
   // Right side content - return note
   const rightContent = (
     <div className="space-y-3">
-      <Label htmlFor="returnNote">Anteckning vid återlämning (valfritt)</Label>
-      <Textarea
-        id="returnNote"
+      <CommentInput
         value={returnNote}
-        onChange={(e) => setReturnNote(e.target.value)}
+        onChange={setReturnNote}
+        label="Anteckning vid återlämning"
         placeholder="T.ex. Alla nycklar returnerade i gott skick"
         rows={4}
-        disabled={isProcessing}
       />
       <div className="text-xs text-muted-foreground">
         Anteckningen sparas tillsammans med återlämningsdatumet

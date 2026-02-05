@@ -5559,20 +5559,28 @@ export interface paths {
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.
+     * Use includeKeySystem=true to get keys with their keySystem data attached.
+     * Use includeCards=true to get cards from DAX attached (auto-implies key fetching).
      */
     get: {
       parameters: {
+        query?: {
+          /** @description When true, includes keysArray with keySystem data attached to each key. */
+          includeKeySystem?: boolean;
+          /** @description When true, includes keyCardsArray with card data from DAX. Auto-implies key fetching. */
+          includeCards?: boolean;
+        };
         path: {
           /** @description The unique ID of the key loan to retrieve. */
           id: string;
         };
       };
       responses: {
-        /** @description A key loan object. */
+        /** @description A key loan object. Returns KeyLoanWithDetails if includeKeySystem or includeCards is true. */
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["KeyLoan"];
+              content?: components["schemas"]["KeyLoan"] | components["schemas"]["KeyLoanWithDetails"];
             };
           };
         };
@@ -9246,6 +9254,60 @@ export interface components {
           createdAt: string;
           /** Format: date-time */
           updatedAt: string;
+          keySystem?: ({
+            /** Format: uuid */
+            id: string;
+            systemCode: string;
+            name: string;
+            manufacturer: string;
+            managingSupplier?: string | null;
+            /** @enum {string} */
+            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
+            propertyIds?: string;
+            /** Format: date-time */
+            installationDate?: string | null;
+            isActive?: boolean;
+            description?: string | null;
+            schemaFileId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            createdBy?: string | null;
+            updatedBy?: string | null;
+          }) | null;
+          loans?: {
+              id: components["schemas"]["KeyLoanWithDetails"]["id"];
+              keys: components["schemas"]["KeyLoanWithDetails"]["keys"];
+              keyCards: components["schemas"]["KeyLoanWithDetails"]["keyCards"];
+              loanType: components["schemas"]["KeyLoanWithDetails"]["loanType"];
+              contact?: components["schemas"]["KeyLoanWithDetails"]["contact"];
+              contact2?: components["schemas"]["KeyLoanWithDetails"]["contact2"];
+              contactPerson?: components["schemas"]["KeyLoanWithDetails"]["contactPerson"];
+              description?: components["schemas"]["KeyLoanWithDetails"]["description"];
+              returnedAt?: components["schemas"]["KeyLoanWithDetails"]["returnedAt"];
+              availableToNextTenantFrom?: components["schemas"]["KeyLoanWithDetails"]["availableToNextTenantFrom"];
+              pickedUpAt?: components["schemas"]["KeyLoanWithDetails"]["pickedUpAt"];
+              createdAt: components["schemas"]["KeyLoanWithDetails"]["createdAt"];
+              updatedAt: components["schemas"]["KeyLoanWithDetails"]["updatedAt"];
+              createdBy?: components["schemas"]["KeyLoanWithDetails"]["createdBy"];
+              updatedBy?: components["schemas"]["KeyLoanWithDetails"]["updatedBy"];
+            }[] | null;
+          events?: (({
+              /** Format: uuid */
+              id: string;
+              keys: string;
+              /** @enum {string} */
+              type: "FLEX" | "ORDER" | "LOST";
+              /** @enum {string} */
+              status: "ORDERED" | "RECEIVED" | "COMPLETED";
+              /** Format: uuid */
+              workOrderId?: string | null;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            })[]) | null;
         })[];
       keyCardsArray: ({
           cardId: string;

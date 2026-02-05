@@ -733,7 +733,10 @@ export const routes = (router: KoaRouter) => {
    * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID
-   *     description: Fetch a specific key loan by its ID.
+   *     description: |
+   *       Fetch a specific key loan by its ID.
+   *       Use includeKeySystem=true to get keys with their keySystem data attached.
+   *       Use includeCards=true to get cards from DAX attached (auto-implies key fetching).
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -743,16 +746,30 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: uuid
    *         description: The unique ID of the key loan to retrieve.
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, includes keysArray with keySystem data attached to each key.
+   *       - in: query
+   *         name: includeCards
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, includes keyCardsArray with card data from DAX. Auto-implies key fetching.
    *     responses:
    *       200:
-   *         description: A key loan object.
+   *         description: A key loan object. Returns KeyLoanWithDetails if includeKeySystem or includeCards is true.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/KeyLoan'
+   *                   oneOf:
+   *                     - $ref: '#/components/schemas/KeyLoan'
+   *                     - $ref: '#/components/schemas/KeyLoanWithDetails'
    *       404:
    *         description: Key loan not found.
    *         content:
@@ -769,9 +786,17 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, [
+      'includeKeySystem',
+      'includeCards',
+    ])
+    const includeKeySystem = ctx.query.includeKeySystem === 'true'
+    const includeCards = ctx.query.includeCards === 'true'
 
-    const result = await KeyLoansApi.get(ctx.params.id)
+    const result = await KeyLoansApi.get(ctx.params.id, {
+      includeKeySystem,
+      includeCards,
+    })
 
     if (!result.ok) {
       if (result.err === 'not-found') {

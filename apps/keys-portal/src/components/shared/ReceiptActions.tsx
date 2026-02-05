@@ -2,18 +2,22 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Printer, Upload, Eye } from 'lucide-react'
 import { receiptService } from '@/services/api/receiptService'
-import { keyLoanService } from '@/services/api/keyLoanService'
-import { keyService } from '@/services/api/keyService'
+import {
+  fetchReceiptData,
+  openPdfInNewTab,
+  openMaintenanceReceiptInNewTab,
+} from '@/services/receiptHandlers'
 import { useToast } from '@/hooks/use-toast'
-import type { MaintenanceReceiptData, Key } from '@/services/types'
-import { generateMaintenanceLoanReceiptBlob } from '@/lib/pdf-receipts'
+import type { Lease } from '@/services/types'
 
 type Props = {
   loanId: string
+  loanType: 'TENANT' | 'MAINTENANCE'
+  lease?: Lease // Required for TENANT
   onRefresh?: () => void
 }
 
-export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
+export function ReceiptActions({ loanId, loanType, lease, onRefresh }: Props) {
   const [loading, setLoading] = useState(false)
   const [loanReceipt, setLoanReceipt] = useState<any>(null)
   const [returnReceipt, setReturnReceipt] = useState<any>(null)
@@ -41,37 +45,9 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
   }, [loanId])
 
   /**
-   * Fetch receipt data for PDF generation
-   */
-  const fetchReceiptData = async (): Promise<MaintenanceReceiptData> => {
-    const loan = await keyLoanService.get(loanId)
-
-    let keyIds: string[] = []
-    try {
-      keyIds = JSON.parse(loan.keys)
-    } catch (error) {
-      console.error('Failed to parse keys from maintenance loan:', error)
-      throw new Error('Invalid keys data in maintenance loan')
-    }
-
-    const keysArray: Key[] = await Promise.all(
-      keyIds.map((keyId) => keyService.getKey(keyId))
-    )
-
-    return {
-      contact: loan.contact || 'Unknown',
-      contactPerson: loan.contactPerson,
-      description: loan.description,
-      keys: keysArray,
-      receiptType: loan.returnedAt ? 'RETURN' : 'LOAN',
-      operationDate: loan.returnedAt ? new Date(loan.returnedAt) : new Date(),
-    }
-  }
-
-  /**
    * Handles generating or downloading a loan receipt
    * If signed receipt exists (has fileId), downloads from MinIO
-   * Otherwise, generates PDF client-side and opens in new tab
+   * Otherwise, generates PDF client-side and opens in new tab (tenant only)
    */
   const handlePrintLoanReceipt = async () => {
     setLoading(true)
@@ -82,49 +58,18 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
         return
       }
 
-      // Otherwise, generate the receipt PDF client-side
-      const receiptData = await fetchReceiptData()
-
-      let receiptId = loanReceipt?.id
-      if (!receiptId) {
-        // Create receipt record if it doesn't exist
-        const newReceipt = await receiptService.create({
-          keyLoanId: loanId,
-          receiptType: 'LOAN',
-          type: 'PHYSICAL',
-        })
-        receiptId = newReceipt.id
-
-        // Refresh receipt state
-        const receipts = await receiptService.getByKeyLoan(loanId)
-        setLoanReceipt(receipts.find((r) => r.receiptType === 'LOAN') || null)
+      // For tenant loans: generate PDF client-side
+      if (loanType === 'TENANT' && lease) {
+        const receiptId = loanReceipt?.id
+        const receiptData = await fetchReceiptData(receiptId || loanId, lease)
+        await openPdfInNewTab(receiptData, receiptId)
+        return
       }
 
-      // Generate PDF blob and open in new tab with print dialog
-      const { blob } = await generateMaintenanceLoanReceiptBlob(
-        receiptData,
-        receiptId
-      )
-
-      const pdfUrl = URL.createObjectURL(blob)
-      const win = window.open(pdfUrl, '_blank')
-      if (win) {
-        // Trigger print after a short delay
-        setTimeout(() => {
-          try {
-            win.print()
-          } catch (e) {
-            console.error('Failed to trigger print:', e)
-          }
-        }, 400)
-
-        // Cleanup URL after 5 minutes
-        setTimeout(
-          () => {
-            URL.revokeObjectURL(pdfUrl)
-          },
-          5 * 60 * 1000
-        )
+      // For maintenance loans: generate PDF client-side
+      if (loanType === 'MAINTENANCE') {
+        await openMaintenanceReceiptInNewTab(loanId)
+        return
       }
     } catch (error) {
       console.error('Error generating receipt:', error)
@@ -270,6 +215,9 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
     return null
   }
 
+  // Button label - same for both loan types now that maintenance PDF is enabled
+  const printButtonLabel = 'Skriv ut lån'
+
   return (
     <>
       {/* Hidden file input */}
@@ -294,7 +242,7 @@ export function MaintenanceReceiptActions({ loanId, onRefresh }: Props) {
             disabled={loading}
           >
             <Printer className="h-3 w-3 mr-1" />
-            Skriv ut
+            {printButtonLabel}
           </Button>
         )}
 

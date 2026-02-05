@@ -50,12 +50,21 @@ export const keyLoanService = {
     return ensurePaginatedResponse<KeyLoan>(data)
   },
 
-  async get(id: string): Promise<KeyLoan> {
+  async get(
+    id: string,
+    options?: { includeKeySystem?: boolean; includeCards?: boolean }
+  ): Promise<KeyLoan | KeyLoanWithDetails> {
+    const query: Record<string, boolean> = {}
+    if (options?.includeKeySystem) query.includeKeySystem = true
+    if (options?.includeCards) query.includeCards = true
     const { data, error } = await GET('/key-loans/{id}', {
-      params: { path: { id } },
+      params: {
+        path: { id },
+        query: Object.keys(query).length > 0 ? query : undefined,
+      },
     })
     if (error) throw error
-    return data?.content as KeyLoan
+    return data?.content as KeyLoan | KeyLoanWithDetails
   },
 
   async getByKeyId(keyId: string): Promise<KeyLoan[]> {
