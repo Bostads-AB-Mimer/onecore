@@ -70,13 +70,13 @@ const ListingTextContentForm = () => {
 
   const handleSubmit = async () => {
     if (!objectCode.trim()) {
-      toast.error('Objektskod krävs')
+      toast.error('Objektsnummer krävs')
       return
     }
 
     // Check if rental object code is valid
     if (!isEditMode && validationQuery.data === false) {
-      toast.error('Objektskoden finns inte i systemet')
+      toast.error('Objektsnumret finns inte i systemet')
       return
     }
 
@@ -116,7 +116,7 @@ const ListingTextContentForm = () => {
     } catch (error) {
       if (error instanceof AxiosError) {
         if (error.response?.status === 409) {
-          toast.error('Annonsinnehåll finns redan för denna objektskod')
+          toast.error('Annonsinnehåll finns redan för detta objektsnummer')
         } else if (error.response?.status === 404) {
           toast.error('Annonsinnehåll hittades inte')
         } else {
@@ -245,7 +245,7 @@ const ListingTextContentForm = () => {
                   fullWidth
                   value={objectCode}
                   onChange={(e) => setObjectCode(e.target.value)}
-                  placeholder="Ange hyresid..."
+                  placeholder="Ange objektsnummer..."
                   disabled={isEditMode}
                   error={
                     !isEditMode &&
@@ -254,16 +254,16 @@ const ListingTextContentForm = () => {
                   }
                   helperText={
                     isEditMode
-                      ? 'Hyresid kan inte ändras efter att innehållet har skapats'
+                      ? 'Objektsnummer kan inte ändras efter att innehållet har skapats'
                       : !objectCode.trim()
-                        ? 'Ange ett hyresid'
+                        ? 'Ange ett objektsnummer'
                         : validationQuery.isLoading
-                          ? 'Verifierar hyresid...'
+                          ? 'Verifierar objektsnummer...'
                           : validationQuery.data === false
-                            ? 'Hyresidt hittas inte'
+                            ? 'Objektsnumret hittas inte'
                             : validationQuery.data === true
-                              ? 'Hyresidt är giltigt'
-                              : 'Ange ett hyresid'
+                              ? 'Objektsnumret är giltigt'
+                              : 'Ange ett objektsnummer'
                   }
                 />
               </Box>

@@ -30,11 +30,6 @@ const getByRentalObjectCode = async (
   rentalObjectCode: string,
   dbConnection = db
 ): Promise<ListingTextContent | undefined> => {
-  logger.info(
-    { rentalObjectCode },
-    'Getting listing text content from leasing DB'
-  )
-
   const result = await dbConnection
     .from('listing_text_content AS ltc')
     .select<DbListingTextContent>(
@@ -57,11 +52,6 @@ const getByRentalObjectCode = async (
     return undefined
   }
 
-  logger.info(
-    { rentalObjectCode },
-    'Getting listing text content from leasing DB complete'
-  )
-
   return transformFromDbListingTextContent(result)
 }
 
@@ -70,11 +60,6 @@ const create = async (
   dbConnection = db
 ): Promise<AdapterResult<ListingTextContent, Error>> => {
   try {
-    logger.info(
-      { rentalObjectCode: listingTextContent.rentalObjectCode },
-      'Creating listing text content in leasing DB'
-    )
-
     const [inserted] = await dbConnection
       .table('listing_text_content')
       .insert({
@@ -82,11 +67,6 @@ const create = async (
         ContentBlocks: JSON.stringify(listingTextContent.contentBlocks),
       })
       .returning('*')
-
-    logger.info(
-      { rentalObjectCode: listingTextContent.rentalObjectCode },
-      'Creating listing text content in leasing DB complete'
-    )
 
     return {
       ok: true,
@@ -130,11 +110,6 @@ const update = async (
   dbConnection = db
 ): Promise<AdapterResult<ListingTextContent, Error>> => {
   try {
-    logger.info(
-      { rentalObjectCode },
-      'Updating listing text content in leasing DB'
-    )
-
     const updateFields: Record<string, any> = {}
 
     if (updateData.contentBlocks !== undefined) {
@@ -163,11 +138,6 @@ const update = async (
       }
     }
 
-    logger.info(
-      { rentalObjectCode },
-      'Updating listing text content in leasing DB complete'
-    )
-
     return {
       ok: true,
       data: transformFromDbListingTextContent(updated),
@@ -189,11 +159,6 @@ const remove = async (
   dbConnection = db
 ): Promise<AdapterResult<void, Error>> => {
   try {
-    logger.info(
-      { rentalObjectCode },
-      'Deleting listing text content from leasing DB'
-    )
-
     const deletedCount = await dbConnection
       .table('listing_text_content')
       .where({ RentalObjectCode: rentalObjectCode })
@@ -211,11 +176,6 @@ const remove = async (
         ),
       }
     }
-
-    logger.info(
-      { rentalObjectCode },
-      'Deleting listing text content from leasing DB complete'
-    )
 
     return {
       ok: true,

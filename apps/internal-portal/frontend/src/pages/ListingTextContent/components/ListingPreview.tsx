@@ -193,7 +193,7 @@ export const ListingPreview = ({
               borderRadius: 1,
             }}
           >
-            Hyresid: {rentalObjectCode}
+            Objektsnummer: {rentalObjectCode}
           </Typography>
         )}
 

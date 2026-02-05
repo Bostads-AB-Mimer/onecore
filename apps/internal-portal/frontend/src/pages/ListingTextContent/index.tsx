@@ -50,7 +50,7 @@ const ListingTextContent = () => {
         <Stack spacing={3}>
           <Box>
             <Typography variant="h6" gutterBottom>
-              Sök med hyresid
+              Sök med objektsnummer
             </Typography>
             <Box
               display="flex"
@@ -61,7 +61,7 @@ const ListingTextContent = () => {
               <SearchBar
                 value={searchValue}
                 onChange={handleSearch}
-                placeholder="Ange hyresid..."
+                placeholder="Ange objektsnummer..."
               />
               <Button
                 variant="contained"
@@ -78,7 +78,7 @@ const ListingTextContent = () => {
               {error.response?.status === 404 ? (
                 <Stack spacing={2}>
                   <Typography color="text.secondary">
-                    Inget annonsinnehåll hittades för objektskod:{' '}
+                    Inget annonsinnehåll hittades för objektsnummer:{' '}
                     <strong>{searchedCode}</strong>
                   </Typography>
                   <Box>
@@ -110,7 +110,7 @@ const ListingTextContent = () => {
                   alignItems="center"
                 >
                   <Typography variant="h6">
-                    Hyresid: {data.rentalObjectCode}
+                    Objektsnummer: {data.rentalObjectCode}
                   </Typography>
                   <Link
                     to={`/annonsinnehall/${data.rentalObjectCode}/redigera`}
