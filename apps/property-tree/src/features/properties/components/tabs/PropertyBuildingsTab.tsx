@@ -1,4 +1,4 @@
-import { PropertyBuildingsList } from '@/components/properties/PropertyBuildingsList'
+import { PropertyBuildingsList } from '@/features/properties/components/PropertyBuildingsList'
 import { TabLayout } from '@/components/ui/TabLayout'
 import type { Building } from '@/types/api'
 

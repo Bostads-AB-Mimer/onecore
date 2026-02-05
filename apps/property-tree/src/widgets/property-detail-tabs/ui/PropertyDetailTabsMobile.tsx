@@ -1,14 +1,15 @@
 import { Info, Building, Home, BarChart3, Wrench } from 'lucide-react'
-import { PropertyInfoTab } from './tabs/PropertyInfoTab'
-import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
-import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
+import { PropertyInfoTab } from '@/features/properties/components/tabs/PropertyInfoTab'
+import { PropertyBuildingsTab } from '@/features/properties/components/tabs/PropertyBuildingsTab'
+import { PropertyStatisticsTab } from '@/features/properties/components/tabs/PropertyStatisticsTab'
 import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
-import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/components/ui/MobileAccordion'
 import type { PropertyDetail } from '@/types/api'
+import { ContextType } from '@/types/ui'
 
 interface PropertyDetailTabsMobileProps {
   propertyDetail: PropertyDetail
@@ -17,8 +18,6 @@ interface PropertyDetailTabsMobileProps {
 export const PropertyDetailTabsMobile = ({
   propertyDetail,
 }: PropertyDetailTabsMobileProps) => {
-  //const { features } = useFeatureToggles();
-
   const features = {
     showPropertyInfo: false,
     showPropertyStatistics: true,
@@ -61,42 +60,18 @@ export const PropertyDetailTabsMobile = ({
         />
       ),
     },
-    /*
-    features.showPropertyDocuments && {
-      id: 'documents',
-      icon: FileText,
-      title: 'Dokument',
-      content: <PropertyDocumentsTab />,
-    },
-    features.showPropertyPlanning && {
-      id: 'planning',
-      icon: Calendar,
-      title: 'Planerat underhåll',
-      content: <PropertyPlanningTab />,
-    },
-    */
-
     features.showPropertyOrders && {
       id: 'orders',
       icon: Home,
       title: 'Ärenden',
-      content: <PropertyOrdersTab propertyDetail={propertyDetail} />,
+      content: (
+        <WorkOrdersManagement
+          contextType={ContextType.Property}
+          metadata={{ propertyName: propertyDetail.designation }}
+          id={propertyDetail.code}
+        />
+      ),
     },
-
-    /*
-    features.showPropertyAccess && {
-      id: 'access',
-      icon: KeyRound,
-      title: 'Lås & passage',
-      content: <PropertyAccessTab />,
-    },
-    features.showPropertyMap && {
-      id: 'map',
-      icon: Map,
-      title: 'Ritningar',
-      content: <PropertyMapTab propertyDetail={propertyDetail} />,
-    },
-    */
   ].filter(Boolean) as MobileAccordionItem[]
 
   return (

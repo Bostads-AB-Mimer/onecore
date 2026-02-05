@@ -1,6 +1,6 @@
 import { Building, Wrench, FileText, MessageSquare } from 'lucide-react'
 import { BuildingEntrances } from '@/features/buildings/components/BuildingEntrances'
-import { BuildingWorkOrdersTab } from '@/features/buildings/components/BuildingWorkOrdersTab'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
 import {
   MobileAccordion,
@@ -66,7 +66,12 @@ export const BuildingDetailTabsMobile = ({
       disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
-      content: <BuildingWorkOrdersTab building={building} />,
+      content: (
+        <WorkOrdersManagement
+          contextType={ContextType.Building}
+          id={building.code}
+        />
+      ),
     },
     {
       id: 'documents',

@@ -1,16 +1,16 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
-import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
-import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
+import { PropertyBuildingsTab } from '@/features/properties/components/tabs/PropertyBuildingsTab'
+import { PropertyStatisticsTab } from '@/features/properties/components/tabs/PropertyStatisticsTab'
 import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
-import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
+import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
 import { PropertyDetailTabsMobile } from './PropertyDetailTabsMobile'
 import { useIsMobile } from '@/hooks/useMobile'
 import type { PropertyDetail } from '@/types/api'
-import { DocumentsTab } from '../documents/DocumentsTab'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
 import { ContextType } from '@/types/ui'
 
 interface PropertyDetailTabsProps {
-  propertyDetail: PropertyDetail // Replace 'any' with the actual type if available
+  propertyDetail: PropertyDetail
 }
 
 export const PropertyDetailTabs = ({
@@ -55,7 +55,11 @@ export const PropertyDetailTabs = ({
       </TabsContent>
 
       <TabsContent value="orders">
-        <PropertyOrdersTab propertyDetail={propertyDetail} />
+        <WorkOrdersManagement
+          contextType={ContextType.Property}
+          metadata={{ propertyName: propertyDetail.designation }}
+          id={propertyDetail.code}
+        />
       </TabsContent>
     </Tabs>
   )

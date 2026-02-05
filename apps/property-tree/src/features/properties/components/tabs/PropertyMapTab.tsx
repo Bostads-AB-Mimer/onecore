@@ -1,4 +1,4 @@
-import { PropertyMapView } from '@/components/properties/PropertyMapView'
+import { PropertyMapView } from '@/features/properties/components/PropertyMapView'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Map } from 'lucide-react'

@@ -1,4 +1,4 @@
-import { PropertyStatisticsSummary } from '@/components/properties/PropertyStatisticsSummary'
+import { PropertyStatisticsSummary } from '@/features/properties/components/PropertyStatisticsSummary'
 import { TabLayout } from '@/components/ui/TabLayout'
 import { PropertyDetail } from '@/types/api'
 
