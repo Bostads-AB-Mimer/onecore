@@ -293,7 +293,7 @@ export default function KeySystems() {
       toast({
         title: 'Fel',
         description: isConflict
-          ? 'Ett låssystem med denna systemkod finns redan.'
+          ? 'Ett låssystem med denna kod finns redan.'
           : error?.message || 'Kunde inte spara låssystemet.',
         variant: 'destructive',
       })

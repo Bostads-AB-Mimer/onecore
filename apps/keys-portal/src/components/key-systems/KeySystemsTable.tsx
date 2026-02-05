@@ -101,7 +101,7 @@ export function KeySystemsTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px]"></TableHead>
-            <TableHead>Systemkod</TableHead>
+            <TableHead>Låssystem</TableHead>
             <TableHead>Namn</TableHead>
             <TableHead>Tillverkare</TableHead>
             <TableHead>Fastigheter</TableHead>
