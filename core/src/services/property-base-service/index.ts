@@ -1181,17 +1181,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.RentalBlocksFilterQuerySchema.safeParse(ctx.query)
-
-    if (!params.success) {
-      ctx.status = 400
-      ctx.body = { error: params.error.errors, ...metadata }
-      return
-    }
 
     try {
       const result = await propertyBaseAdapter.exportRentalBlocksToExcel(
-        params.data
+        ctx.query
       )
 
       if (!result.ok) {
@@ -1337,16 +1330,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.SearchRentalBlocksQuerySchema.safeParse(ctx.query)
-
-    if (!params.success) {
-      ctx.status = 400
-      ctx.body = { error: params.error.errors, ...metadata }
-      return
-    }
 
     try {
-      const result = await propertyBaseAdapter.searchRentalBlocks(params.data)
+      const result = await propertyBaseAdapter.searchRentalBlocks(ctx.query)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Internal server error')

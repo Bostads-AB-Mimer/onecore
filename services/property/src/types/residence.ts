@@ -277,24 +277,21 @@ export const getAllRentalBlocksQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(1000).optional().default(100),
 })
 
-// Helper for array-or-string params (supports multi-select filters)
-// Normalizes to array, filters empty strings
-const stringOrArraySchema = z
-  .union([z.string(), z.array(z.string())])
-  .transform((val) => {
-    const asArray = Array.isArray(val) ? val : [val]
-    const cleaned = asArray.map((v) => v.trim()).filter((v) => v !== '')
-    return cleaned.length > 0 ? cleaned : undefined
-  })
+// Coerce query params to arrays (Koa parses single values as strings)
+const arrayQueryParam = z
+  .preprocess(
+    (v) => (typeof v === 'string' ? [v] : v),
+    z.array(z.string())
+  )
   .optional()
 
 // Base filter schema (shared between search and export)
 const rentalBlocksFilterSchema = z.object({
   q: z.string().optional(),
-  kategori: stringOrArraySchema,
-  distrikt: stringOrArraySchema,
-  blockReason: stringOrArraySchema,
-  fastighet: stringOrArraySchema,
+  kategori: arrayQueryParam,
+  distrikt: arrayQueryParam,
+  blockReason: arrayQueryParam,
+  fastighet: arrayQueryParam,
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
   active: booleanStringSchema.optional(),

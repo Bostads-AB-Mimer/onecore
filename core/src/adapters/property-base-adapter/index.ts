@@ -10,29 +10,7 @@ import config from '../../common/config'
 type RentalBlockWithRentalObject =
   components['schemas']['RentalBlockWithRentalObject']
 
-// Shared filter options for rental blocks (used by search and export)
-interface RentalBlocksFilterOptions {
-  q?: string
-  fields?: string
-  kategori?: string | string[]
-  distrikt?: string | string[]
-  blockReason?: string | string[]
-  fastighet?: string | string[]
-  fromDateGte?: string
-  toDateLte?: string
-  active?: boolean
-}
-
-interface SearchRentalBlocksOptions extends RentalBlocksFilterOptions {
-  page?: number
-  limit?: number
-}
-
-// Helper to normalize string | string[] to array (for API calls that expect arrays)
-function toArray<T>(val: T | T[] | undefined): T[] | undefined {
-  if (val === undefined) return undefined
-  return Array.isArray(val) ? val : [val]
-}
+type QueryParams = Record<string, string | string[] | undefined>
 
 const client = () =>
   createClient<paths>({
@@ -829,58 +807,30 @@ export async function getAllRentalBlocks(options?: {
 }
 
 export async function searchRentalBlocks(
-  options: SearchRentalBlocksOptions
+  queryParams: QueryParams
 ): Promise<
   AdapterResult<PaginatedResponse<RentalBlockWithRentalObject>, 'unknown'>
 > {
   try {
-    const {
-      q,
-      fields,
-      kategori,
-      distrikt,
-      blockReason,
-      fastighet,
-      fromDateGte,
-      toDateLte,
-      active,
-      page = 1,
-      limit = 50,
-    } = options
-
-    const fetchResponse = await client().GET(
-      '/residences/rental-blocks/search',
-      {
-        params: {
-          query: {
-            q,
-            fields,
-            kategori: toArray(kategori) as
-              | ('Bostad' | 'Bilplats' | 'Lokal' | 'Förråd' | 'Övrigt')[]
-              | undefined,
-            distrikt: toArray(distrikt),
-            blockReason: toArray(blockReason),
-            fastighet: toArray(fastighet),
-            fromDateGte,
-            toDateLte,
-            active,
-            page,
-            limit,
-          },
-        },
+    const params = new URLSearchParams()
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value === undefined) return
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(key, v))
+      } else {
+        params.append(key, value)
       }
+    })
+
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/residences/rental-blocks/search`,
+      { params }
     )
 
-    if (fetchResponse.data?.content) {
-      return {
-        ok: true,
-        data: fetchResponse.data as PaginatedResponse<RentalBlockWithRentalObject>,
-      }
+    return {
+      ok: true,
+      data: response.data as PaginatedResponse<RentalBlockWithRentalObject>,
     }
-
-    throw new Error(
-      `Unexpected response status: ${fetchResponse.response.status}`
-    )
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.searchRentalBlocks')
     return { ok: false, err: 'unknown' }
@@ -888,19 +838,16 @@ export async function searchRentalBlocks(
 }
 
 export async function exportRentalBlocksToExcel(
-  options: RentalBlocksFilterOptions
+  queryParams: QueryParams
 ): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
   try {
-    // Build URLSearchParams to properly handle arrays (repeated params)
     const params = new URLSearchParams()
-    Object.entries(options).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        if (Array.isArray(value)) {
-          // For arrays, append each value with the same key
-          value.forEach((v) => params.append(key, v))
-        } else {
-          params.append(key, String(value))
-        }
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value === undefined) return
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(key, v))
+      } else {
+        params.append(key, value)
       }
     })
 
