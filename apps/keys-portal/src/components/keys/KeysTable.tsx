@@ -217,8 +217,7 @@ export function KeysTable({
                       />
                     </TableCell>
                     <TableCell>
-                      {key.keySystemId &&
-                      keySystemMap[key.keySystemId] ? (
+                      {key.keySystemId && keySystemMap[key.keySystemId] ? (
                         <TableLink
                           to={`/key-systems?q=${keySystemMap[key.keySystemId]}&editKeySystemId=${key.keySystemId}`}
                         >
