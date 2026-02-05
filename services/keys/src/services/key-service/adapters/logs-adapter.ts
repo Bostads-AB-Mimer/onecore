@@ -425,7 +425,7 @@ const OBJECT_TYPE_LABELS: Record<string, string> = {
   keySystem: 'Låssystem',
   keyLoan: 'Nyckellån',
   keyBundle: 'Nyckelsamling',
-  receipt: 'Kvitto',
+  receipt: 'Kvittens',
   keyEvent: 'Nyckelhändelse',
   signature: 'Signatur',
   keyNote: 'Nyckelanteckning',

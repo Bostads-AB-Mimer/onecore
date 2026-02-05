@@ -3,6 +3,7 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 import * as daxAdapter from './dax-adapter'
 import type { Card } from 'dax-client'
+import { getKeyDetailsById } from './keys-adapter'
 
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
@@ -28,6 +29,77 @@ export async function getKeyLoanById(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan | undefined> {
   return await dbConnection(TABLE).where({ id }).first()
+}
+
+export interface KeyLoanIncludeOptions {
+  includeKeySystem?: boolean
+  includeCards?: boolean
+}
+
+/**
+ * Get a key loan by ID with optional enriched data
+ * - includeKeySystem: fetches keys and attaches keySystem to each
+ * - includeCards: fetches cards from DAX (auto-implies key fetching for rentalObjectCode)
+ */
+export async function getKeyLoanByIdWithDetails(
+  id: string,
+  dbConnection: Knex | Knex.Transaction = db,
+  options: KeyLoanIncludeOptions = {}
+): Promise<KeyLoanWithDetails | undefined> {
+  const loan = await dbConnection(TABLE).where({ id }).first()
+  if (!loan) return undefined
+
+  // Parse key IDs from JSON
+  let keyIds: string[] = []
+  try {
+    keyIds = JSON.parse(loan.keys || '[]')
+  } catch {
+    keyIds = []
+  }
+
+  // Fetch keys with optional keySystem enrichment using shared helper
+  const keysArray = await getKeyDetailsById(keyIds, dbConnection, {
+    includeKeySystem: options.includeKeySystem,
+  })
+
+  // Fetch cards from DAX if requested
+  let keyCardsArray: Card[] = []
+  if (options.includeCards) {
+    // Parse card IDs from loan
+    let cardIds: string[] = []
+    try {
+      cardIds = JSON.parse(loan.keyCards || '[]')
+    } catch {
+      cardIds = []
+    }
+
+    if (cardIds.length > 0 && keysArray.length > 0) {
+      // Get rentalObjectCode from the first key
+      const rentalObjectCode = keysArray[0].rentalObjectCode
+      if (rentalObjectCode) {
+        try {
+          const cardOwners = await daxAdapter.searchCardOwners({
+            nameFilter: rentalObjectCode,
+            expand: 'cards',
+          })
+          const allCards = cardOwners.flatMap((owner) => owner.cards || [])
+          const cardMap = new Map(allCards.map((c) => [c.cardId, c]))
+          keyCardsArray = cardIds
+            .map((cid) => cardMap.get(cid))
+            .filter((c): c is Card => c !== undefined)
+        } catch (error) {
+          console.error('Failed to fetch cards from DAX:', error)
+        }
+      }
+    }
+  }
+
+  return {
+    ...loan,
+    keysArray,
+    keyCardsArray,
+    receipts: [],
+  }
 }
 
 export async function getKeyLoansByKeyId(

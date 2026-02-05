@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { CommentInput } from '@/components/shared/CommentInput'
+import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 
 type KeysByLoan = {
   loanId: string
@@ -53,6 +55,7 @@ export function ReturnKeysDialog({
   onSuccess,
 }: Props) {
   const { toast } = useToast()
+  const { addSignature } = useCommentWithSignature()
   const [isProcessing, setIsProcessing] = useState(false)
   const [keysByLoan, setKeysByLoan] = useState<KeysByLoan[]>([])
   const [cardsByLoan, setCardsByLoan] = useState<CardsByLoan[]>([])
@@ -62,6 +65,7 @@ export function ReturnKeysDialog({
   const [availableDate, setAvailableDate] = useState<Date | undefined>(
     undefined
   )
+  const [comment, setComment] = useState('')
 
   // Initialize available date to lease end date
   useEffect(() => {
@@ -209,6 +213,7 @@ export function ReturnKeysDialog({
         selectedForReceipt: Array.from(selectedKeyIds),
         selectedCardsForReceipt: Array.from(selectedCardIds),
         lease,
+        comment: addSignature(comment),
       })
 
       if (result.success) {
@@ -387,43 +392,51 @@ export function ReturnKeysDialog({
     </div>
   )
 
-  // Right side content - date picker
+  // Right side content - date picker and comment
   const rightContent = (
-    <div className="space-y-3">
-      <div className="text-sm text-muted-foreground">
-        Välj datum när nycklarna blir tillgängliga för nästa hyresgäst:
-      </div>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              'w-full justify-start text-left font-normal',
-              !availableDate && 'text-muted-foreground'
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {availableDate ? (
-              format(availableDate, 'PPP')
-            ) : (
-              <span>Välj datum</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <Calendar
-            mode="single"
-            selected={availableDate}
-            onSelect={setAvailableDate}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
-      {!availableDate && (
-        <div className="text-xs text-muted-foreground">
-          Inget datum valt - nycklarna blir tillgängliga direkt
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <div className="text-sm text-muted-foreground">
+          Välj datum när nycklarna blir tillgängliga för nästa hyresgäst:
         </div>
-      )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'w-full justify-start text-left font-normal',
+                !availableDate && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {availableDate ? (
+                format(availableDate, 'PPP')
+              ) : (
+                <span>Välj datum</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={availableDate}
+              onSelect={setAvailableDate}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+        {!availableDate && (
+          <div className="text-xs text-muted-foreground">
+            Inget datum valt - nycklarna blir tillgängliga direkt
+          </div>
+        )}
+      </div>
+
+      <CommentInput
+        value={comment}
+        onChange={setComment}
+        placeholder="Lägg till en kommentar på kvittensen..."
+      />
     </div>
   )
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import type { KeyDetails, Contact } from '@/services/types'
+import { CommentInput } from '@/components/shared/CommentInput'
+import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 import { useToast } from '@/hooks/use-toast'
 import {
   searchContacts,
@@ -30,6 +31,7 @@ export function LoanMaintenanceKeysDialog({
   onSuccess,
 }: LoanMaintenanceKeysDialogProps) {
   const { toast } = useToast()
+  const { addSignature } = useCommentWithSignature()
 
   // Form state
   const [companySearch, setCompanySearch] = useState('')
@@ -114,7 +116,7 @@ export function LoanMaintenanceKeysDialog({
         loanType: 'MAINTENANCE' as const,
         contact: selectedCompany.contactCode,
         contactPerson: contactPerson.trim() || null,
-        description: description.trim() || null,
+        description: addSignature(description) || null,
       }
 
       await keyLoanService.create(payload)
@@ -194,17 +196,13 @@ export function LoanMaintenanceKeysDialog({
       </div>
 
       {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description">Beskrivning (valfritt)</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
-          rows={4}
-          disabled={isSubmitting}
-        />
-      </div>
+      <CommentInput
+        value={description}
+        onChange={setDescription}
+        label="Beskrivning (valfritt)"
+        placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
+        rows={4}
+      />
     </div>
   )
 

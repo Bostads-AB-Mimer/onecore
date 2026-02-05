@@ -15,7 +15,7 @@ import {
 import type { KeyLoanWithDetails, Lease } from '@/services/types'
 import { MaintenanceKeysTable } from '@/components/maintenance/MaintenanceKeysTable'
 import { MaintenanceCardsTable } from '@/components/maintenance/MaintenanceCardsTable'
-import { MaintenanceReceiptActions } from '@/components/maintenance/MaintenanceReceiptActions'
+import { ReceiptActions } from '@/components/shared/ReceiptActions'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 
@@ -238,9 +238,11 @@ export function LoanCard({
                 </Button>
               )}
 
-              {/* Receipt buttons */}
-              <MaintenanceReceiptActions
+              {/* Receipt buttons - unified component for both loan types */}
+              <ReceiptActions
                 loanId={loan.id}
+                loanType={loanType}
+                lease={lease}
                 onRefresh={onRefresh}
               />
             </div>
