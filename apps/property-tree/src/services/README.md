@@ -28,7 +28,7 @@ services/
 **Cannot import from:**
 
 - `features/`
-- `pages/`
+- `views/`
 - `components/`
 - `hooks/`
 - `store/`

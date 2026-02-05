@@ -37,5 +37,5 @@ features/
 **Cannot import from:**
 
 - Other features (this is critical - extract shared code instead)
-- `pages/`
+- `views/`
 - `layouts/`

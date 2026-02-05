@@ -31,5 +31,5 @@ layouts/
 **Cannot import from:**
 
 - `features/`
-- `pages/`
+- `views/`
 - `services/`

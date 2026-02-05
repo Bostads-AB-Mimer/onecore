@@ -29,7 +29,7 @@ hooks/
 **Cannot import from:**
 
 - `features/`
-- `pages/`
+- `views/`
 - `services/` (hooks here should not make API calls directly)
 - `store/` (global state hooks go in store folder)
 - `components/`

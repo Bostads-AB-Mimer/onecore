@@ -28,7 +28,7 @@ components/
 **Cannot import from:**
 
 - `features/`
-- `pages/`
+- `views/`
 - `services/`
 - `store/`
 - `hooks/` (shared hooks that use business logic)
