@@ -194,6 +194,14 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
     describe(keysAdapter.ReceiptsApi.remove, () => {
       it('returns ok on 200', async () => {
         nock(config.keysService.url)
+          .get('/receipts/00000000-0000-0000-0000-000000000001')
+          .reply(200, { content: mockedReceipt })
+
+        nock(config.fileStorageService.url)
+          .delete(`/files/${encodeURIComponent(mockedReceipt.fileId)}`)
+          .reply(200)
+
+        nock(config.keysService.url)
           .delete('/receipts/00000000-0000-0000-0000-000000000001')
           .reply(200)
 
@@ -206,7 +214,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
       it('returns not-found on 404', async () => {
         nock(config.keysService.url)
-          .delete('/receipts/00000000-0000-0000-0000-000000000999')
+          .get('/receipts/00000000-0000-0000-0000-000000000999')
           .reply(404)
 
         const result = await keysAdapter.ReceiptsApi.remove(
@@ -217,6 +225,14 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
+        nock(config.keysService.url)
+          .get('/receipts/00000000-0000-0000-0000-000000000001')
+          .reply(200, { content: mockedReceipt })
+
+        nock(config.fileStorageService.url)
+          .delete(`/files/${encodeURIComponent(mockedReceipt.fileId)}`)
+          .reply(200)
+
         nock(config.keysService.url)
           .delete('/receipts/00000000-0000-0000-0000-000000000001')
           .reply(500)
