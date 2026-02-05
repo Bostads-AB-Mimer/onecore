@@ -190,7 +190,7 @@ const renderKeysTableHeader = (doc: jsPDF, y: number): void => {
   doc.text('Typ', 145, y)
   doc.text('Status', 175, y)
 
-  doc.setDrawColor(0, 0, 0)
+  doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
   doc.setLineWidth(0.3)
   doc.line(MARGIN_X, y + 3, PAGE_W - MARGIN_X, y + 3)
 }
@@ -204,11 +204,10 @@ const renderCardsTableHeader = (doc: jsPDF, y: number): void => {
   doc.text('Namn', MARGIN_X, y)
   doc.text('System', 50, y)
   doc.text('ID', 100, y)
-  doc.text('-', 135, y)
   doc.text('Typ', 145, y)
   doc.text('Status', 175, y)
 
-  doc.setDrawColor(0, 0, 0)
+  doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
   doc.setLineWidth(0.3)
   doc.line(MARGIN_X, y + 3, PAGE_W - MARGIN_X, y + 3)
 }
@@ -244,7 +243,6 @@ const renderCardRow = (doc: jsPDF, c: Card, y: number): void => {
   doc.text(c.name || '-', MARGIN_X, y)
   doc.text(firstCode?.format || '-', 50, y)
   doc.text(firstCode?.number || '-', 100, y)
-  doc.text('-', 135, y)
   doc.text('Dropp', 145, y)
   doc.text(c.disabled ? 'Inaktiv' : 'Aktiv', 175, y)
 }
@@ -293,6 +291,7 @@ const renderItemsTableSection = (
       const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
 
       if (cy + spaceNeeded > bottom) {
+        doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
         cy = MARGIN_TOP
@@ -313,6 +312,7 @@ const renderItemsTableSection = (
     })
 
     // Bottom line for keys table
+    doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
     doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
     cy += 6
   }
@@ -334,6 +334,7 @@ const renderItemsTableSection = (
       const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
 
       if (cy + spaceNeeded > bottom) {
+        doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
         cy = MARGIN_TOP
@@ -354,6 +355,7 @@ const renderItemsTableSection = (
     })
 
     // Bottom line for cards table
+    doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
     doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
     cy += 6
   }
