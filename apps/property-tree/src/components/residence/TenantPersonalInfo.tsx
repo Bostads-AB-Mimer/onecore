@@ -5,7 +5,8 @@ interface TenantPersonalInfoProps {
   lastName: string
   fullName?: string
   moveInDate: string
-  moveOutDate?: string
+  lastDebitDate?: string
+  preferredMoveOutDate?: string
   personalNumber: string
   contactCode: string
 }
@@ -15,7 +16,8 @@ export function TenantPersonalInfo({
   lastName,
   fullName,
   moveInDate,
-  moveOutDate,
+  lastDebitDate,
+  preferredMoveOutDate,
   personalNumber,
   contactCode,
 }: TenantPersonalInfoProps) {
@@ -38,12 +40,25 @@ export function TenantPersonalInfo({
           <Calendar className="h-4 w-4 text-muted-foreground" />
         </div>
       </div>
-      {moveOutDate && (
+      {lastDebitDate && (
         <div>
           <p className="text-sm text-muted-foreground">Utflyttningsdatum</p>
           <div className="flex items-center gap-2">
             <p className="font-medium">
-              {new Date(moveOutDate).toLocaleDateString('sv-SE')}
+              {new Date(lastDebitDate).toLocaleDateString('sv-SE')}
+            </p>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </div>
+      )}
+      {preferredMoveOutDate && (
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Önskat avflyttningsdatum
+          </p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">
+              {new Date(preferredMoveOutDate).toLocaleDateString('sv-SE')}
             </p>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </div>
