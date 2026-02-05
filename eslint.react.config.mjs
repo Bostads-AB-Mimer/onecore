@@ -10,7 +10,6 @@ import onecoreBase from './eslint.config.mjs'
 export default defineConfig([
   onecoreBase,
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,

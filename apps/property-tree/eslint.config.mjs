@@ -16,7 +16,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       parser: typescriptEslint.parser,
       parserOptions: {
