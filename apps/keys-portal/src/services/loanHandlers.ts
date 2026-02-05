@@ -1,9 +1,8 @@
 import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
-import { cardService } from './api/cardService'
 import { generateAndUploadReturnReceipt } from './receiptHandlers'
-import type { Card, Key, Lease } from './types'
+import type { Card, KeyDetails, KeyLoanWithDetails, Lease } from './types'
 
 export type LoanKeysParams = {
   keyIds?: string[]
@@ -107,6 +106,7 @@ export type ReturnKeysParams = {
   selectedForReceipt?: string[] // Key IDs that were checked in dialog (for receipt PDF)
   selectedCardsForReceipt?: string[] // Card IDs that were checked in dialog (for receipt PDF)
   lease?: Lease // Lease information for PDF generation
+  comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
 export type ReturnKeysResult = {
@@ -132,6 +132,7 @@ export async function handleReturnKeys({
   selectedForReceipt,
   selectedCardsForReceipt,
   lease,
+  comment,
 }: ReturnKeysParams): Promise<ReturnKeysResult> {
   if (keyIds.length === 0 && cardIds.length === 0) {
     return {
@@ -211,25 +212,14 @@ export async function handleReturnKeys({
         // Generate and upload PDF if we have lease info
         if (lease && receiptId && selectedForReceipt) {
           try {
-            const keyPromises = loanKeyIds.map((keyId) =>
-              keyService.getKey(keyId)
-            )
-            const keyResults = await Promise.all(keyPromises)
-            const loanKeys: Key[] = keyResults.filter(
-              (key): key is Key => key !== null
-            )
+            // Fetch loan with keys (including keySystem) and cards in one call
+            const keyLoan = (await keyLoanService.get(loanId, {
+              includeKeySystem: true,
+              includeCards: true,
+            })) as KeyLoanWithDetails
 
-            // Fetch cards if there are any in the loan
-            let loanCards: Card[] = []
-            if (loanCardIds.length > 0) {
-              const cardPromises = loanCardIds.map((cardId) =>
-                cardService.getCard(cardId)
-              )
-              const cardResults = await Promise.all(cardPromises)
-              loanCards = cardResults.filter(
-                (card): card is Card => card !== null
-              )
-            }
+            const loanKeys = keyLoan.keysArray as KeyDetails[]
+            const loanCards = (keyLoan.keyCardsArray || []) as Card[]
 
             // Generate and upload the return receipt PDF
             const selectedKeySet = new Set(selectedForReceipt)
@@ -240,7 +230,8 @@ export async function handleReturnKeys({
               selectedKeySet,
               lease,
               loanCards,
-              selectedCardSet
+              selectedCardSet,
+              comment
             )
           } catch (pdfErr) {
             console.error('Failed to generate/upload PDF:', pdfErr)

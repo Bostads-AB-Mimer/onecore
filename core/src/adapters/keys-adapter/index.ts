@@ -327,9 +327,18 @@ export const KeyLoansApi = {
   },
 
   get: async (
-    id: string
-  ): Promise<AdapterResult<KeyLoan, 'not-found' | CommonErr>> => {
-    const r = await getJSON<{ content: KeyLoan }>(`${BASE}/key-loans/${id}`)
+    id: string,
+    options?: { includeKeySystem?: boolean; includeCards?: boolean }
+  ): Promise<
+    AdapterResult<KeyLoan | KeyLoanWithDetails, 'not-found' | CommonErr>
+  > => {
+    const params = new URLSearchParams()
+    if (options?.includeKeySystem) params.set('includeKeySystem', 'true')
+    if (options?.includeCards) params.set('includeCards', 'true')
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const r = await getJSON<{ content: KeyLoan | KeyLoanWithDetails }>(
+      `${BASE}/key-loans/${id}${query}`
+    )
     return r.ok ? ok(r.data.content) : r
   },
 

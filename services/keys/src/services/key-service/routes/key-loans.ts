@@ -698,7 +698,10 @@ export const routes = (router: KoaRouter) => {
    * /key-loans/{id}:
    *   get:
    *     summary: Get key loan by ID
-   *     description: Fetch a specific key loan by its ID.
+   *     description: |
+   *       Fetch a specific key loan by its ID.
+   *       Use includeKeySystem=true to get keys with their keySystem data attached.
+   *       Use includeCards=true to get cards from DAX attached (auto-implies key fetching).
    *     tags: [Key Loans]
    *     parameters:
    *       - in: path
@@ -707,9 +710,21 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The unique ID of the key loan to retrieve.
+   *       - in: query
+   *         name: includeKeySystem
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, includes keysArray with keySystem data attached to each key.
+   *       - in: query
+   *         name: includeCards
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, includes keyCardsArray with card data from DAX. Auto-implies key fetching.
    *     responses:
    *       200:
-   *         description: A key loan object.
+   *         description: A key loan object. Returns KeyLoanWithDetails if includeKeySystem or includeCards is true.
    *         content:
    *           application/json:
    *             schema:
@@ -778,8 +793,35 @@ export const routes = (router: KoaRouter) => {
    *                   example: Internal server error
    */
   router.get('/key-loans/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, [
+      'includeKeySystem',
+      'includeCards',
+    ])
     try {
+      const includeKeySystem = ctx.query.includeKeySystem === 'true'
+      const includeCards = ctx.query.includeCards === 'true'
+
+      // Use enriched function if any include options are set
+      if (includeKeySystem || includeCards) {
+        const row = await keyLoansAdapter.getKeyLoanByIdWithDetails(
+          ctx.params.id,
+          db,
+          { includeKeySystem, includeCards }
+        )
+        if (!row) {
+          ctx.status = 404
+          ctx.body = {
+            reason: `Key loan with id ${ctx.params.id} not found`,
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 200
+        ctx.body = { content: row, ...metadata }
+        return
+      }
+
+      // Original behavior
       const row = await keyLoansAdapter.getKeyLoanById(ctx.params.id, db)
       if (!row) {
         ctx.status = 404

@@ -1023,16 +1023,24 @@ export interface paths {
     /**
      * Get key loan by ID
      * @description Fetch a specific key loan by its ID.
+     * Use includeKeySystem=true to get keys with their keySystem data attached.
+     * Use includeCards=true to get cards from DAX attached (auto-implies key fetching).
      */
     get: {
       parameters: {
+        query?: {
+          /** @description When true, includes keysArray with keySystem data attached to each key. */
+          includeKeySystem?: boolean;
+          /** @description When true, includes keyCardsArray with card data from DAX. Auto-implies key fetching. */
+          includeCards?: boolean;
+        };
         path: {
           /** @description The unique ID of the key loan to retrieve. */
           id: string;
         };
       };
       responses: {
-        /** @description A key loan object. */
+        /** @description A key loan object. Returns KeyLoanWithDetails if includeKeySystem or includeCards is true. */
         200: {
           content: {
             "application/json": {

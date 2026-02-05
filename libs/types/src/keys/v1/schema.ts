@@ -507,8 +507,8 @@ export const QueryCardOwnersParamsSchema = z.object({
 
 // Key loan with enriched keys and receipts data (for optimized endpoint)
 export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
-  // Array of full key objects instead of just IDs
-  keysArray: z.array(KeySchema),
+  // Array of full key objects with optional keySystem (use includeKeySystem=true to populate)
+  keysArray: z.array(KeyDetailsSchema),
   // Array of full card objects from DAX
   keyCardsArray: z.array(CardSchema),
   // Array of receipts for this loan

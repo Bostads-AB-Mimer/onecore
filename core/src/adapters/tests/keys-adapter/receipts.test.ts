@@ -193,6 +193,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.ReceiptsApi.remove, () => {
       it('returns ok on 200', async () => {
+        // remove() first GETs the receipt to check for fileId, then DELETEs
+        nock(config.keysService.url)
+          .get('/receipts/00000000-0000-0000-0000-000000000001')
+          .reply(200, { content: { ...mockedReceipt, fileId: null } })
+
         nock(config.keysService.url)
           .get('/receipts/00000000-0000-0000-0000-000000000001')
           .reply(200, { content: mockedReceipt })
@@ -213,6 +218,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns not-found on 404', async () => {
+        // remove() first GETs the receipt - if not found, returns not-found immediately
         nock(config.keysService.url)
           .get('/receipts/00000000-0000-0000-0000-000000000999')
           .reply(404)
