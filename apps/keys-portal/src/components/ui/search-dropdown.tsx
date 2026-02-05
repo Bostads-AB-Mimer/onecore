@@ -187,9 +187,7 @@ export function SearchDropdown<T>({
 
   // Format items for display
   const formattedItems = useMemo(() => {
-    const preSuggestionKeys = new Set(
-      preSuggestions.map(getKeyRef.current)
-    )
+    const preSuggestionKeys = new Set(preSuggestions.map(getKeyRef.current))
 
     return allItems.map((item) => {
       const formatted = formatItemRef.current(item)
@@ -287,9 +285,7 @@ export function SearchDropdown<T>({
             </div>
           )}
         </div>
-        {itemSelected && (
-          <Check className="h-4 w-4 shrink-0 text-primary" />
-        )}
+        {itemSelected && <Check className="h-4 w-4 shrink-0 text-primary" />}
       </button>
     )
   }
