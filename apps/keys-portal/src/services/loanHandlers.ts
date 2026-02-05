@@ -3,7 +3,7 @@ import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
 import { cardService } from './api/cardService'
 import { generateAndUploadReturnReceipt } from './receiptHandlers'
-import type { Card, Key, Lease } from './types'
+import type { Card, KeyDetails, Lease } from './types'
 
 export type LoanKeysParams = {
   keyIds?: string[]
@@ -213,24 +213,23 @@ export async function handleReturnKeys({
         // Generate and upload PDF if we have lease info
         if (lease && receiptId && selectedForReceipt) {
           try {
-            const keyPromises = loanKeyIds.map((keyId) =>
-              keyService.getKey(keyId)
+            // Fetch keys with keySystem included for PDF generation
+            const keysResult = await keyService.searchKeys(
+              { id: loanKeyIds },
+              1,
+              loanKeyIds.length,
+              true
             )
-            const keyResults = await Promise.all(keyPromises)
-            const loanKeys: Key[] = keyResults.filter(
-              (key): key is Key => key !== null
-            )
+            const loanKeys = keysResult.content as KeyDetails[]
 
-            // Fetch cards if there are any in the loan
+            // Fetch cards with codes included (using getCardsByRentalObjectCode)
             let loanCards: Card[] = []
-            if (loanCardIds.length > 0) {
-              const cardPromises = loanCardIds.map((cardId) =>
-                cardService.getCard(cardId)
+            if (loanCardIds.length > 0 && lease.rentalPropertyId) {
+              const allCards = await cardService.getCardsByRentalObjectCode(
+                lease.rentalPropertyId
               )
-              const cardResults = await Promise.all(cardPromises)
-              loanCards = cardResults.filter(
-                (card): card is Card => card !== null
-              )
+              const loanCardIdSet = new Set(loanCardIds)
+              loanCards = allCards.filter((c) => loanCardIdSet.has(c.cardId))
             }
 
             // Generate and upload the return receipt PDF

@@ -244,17 +244,17 @@ export interface LogFilterParams {
 // Note: Receipt API types are already defined above (lines 39-75) from generated OpenAPI types
 
 // UI-only helper type for PDF generation
+// Uses KeyDetails to include keySystem directly (no separate keySystemMap needed)
 export interface ReceiptData {
   lease: Lease
   tenants: Tenant[]
-  keys: Key[] // For RETURN: keys that were returned (checked in dialog)
+  keys: KeyDetails[] // Keys with keySystem included for display
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
-  missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
-  disposedKeys?: Key[] // For RETURN: keys that were disposed
+  missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
+  disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
-  missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
-  keySystemMap?: Record<string, string> // keySystemId -> systemCode for display
+  missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
   comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
@@ -263,12 +263,11 @@ export interface MaintenanceReceiptData {
   contactName: string // Company name (from Contact.fullName)
   contactPerson: string | null
   description?: string | null
-  keys: Key[] // For RETURN: keys that were returned (checked in dialog)
+  keys: KeyDetails[] // Keys with keySystem included for display
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
-  missingKeys?: Key[] // For RETURN: keys that were not returned (unchecked in dialog, non-disposed)
-  disposedKeys?: Key[] // For RETURN: keys that were disposed
+  missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
+  disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
-  missingCards?: Card[] // For RETURN: cards that were not returned (unchecked in dialog)
-  keySystemMap?: Record<string, string> // keySystemId -> systemCode for display
+  missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
 }

@@ -6,6 +6,7 @@ import type {
   ReceiptData,
   MaintenanceReceiptData,
   Card,
+  KeyDetails,
 } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
@@ -177,21 +178,96 @@ const addTenantInfo = async (
 }
 
 /**
- * Renders a keys table section with custom header and color
+ * Renders table header row for keys table
  */
-const renderKeysTableSection = (
+const renderKeysTableHeader = (doc: jsPDF, y: number): void => {
+  doc.setFont(FONT_GRAPHIK, 'bold')
+  doc.setFontSize(FONT_SIZE.TABLE_HEADER)
+  doc.text('Namn', MARGIN_X, y)
+  doc.text('Låssystem', 50, y)
+  doc.text('Löp.nr', 90, y)
+  doc.text('Flex.nr', 115, y)
+  doc.text('Typ', 145, y)
+  doc.text('Status', 175, y)
+
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN_X, y + 3, PAGE_W - MARGIN_X, y + 3)
+}
+
+/**
+ * Renders table header row for cards table
+ */
+const renderCardsTableHeader = (doc: jsPDF, y: number): void => {
+  doc.setFont(FONT_GRAPHIK, 'bold')
+  doc.setFontSize(FONT_SIZE.TABLE_HEADER)
+  doc.text('Namn', MARGIN_X, y)
+  doc.text('System', 50, y)
+  doc.text('ID', 100, y)
+  doc.text('-', 135, y)
+  doc.text('Typ', 145, y)
+  doc.text('Status', 175, y)
+
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN_X, y + 3, PAGE_W - MARGIN_X, y + 3)
+}
+
+/**
+ * Renders a single key row
+ */
+const renderKeyRow = (doc: jsPDF, k: KeyDetails, y: number): void => {
+  doc.setFont(FONT_GRAPHIK, 'normal')
+  doc.setFontSize(FONT_SIZE.BODY)
+
+  doc.text(k.keyName, MARGIN_X, y)
+  const systemCode = k.keySystem?.systemCode || '-'
+  doc.text(systemCode, 50, y)
+  doc.text(k.keySequenceNumber ? String(k.keySequenceNumber) : '-', 90, y)
+  doc.text(k.flexNumber ? String(k.flexNumber) : '-', 115, y)
+  const labelForType =
+    (KeyTypeLabels as Record<string, string>)[k.keyType as unknown as string] ||
+    (k.keyType as string)
+  doc.text(labelForType, 145, y)
+  doc.text('-', 175, y)
+}
+
+/**
+ * Renders a single card row
+ */
+const renderCardRow = (doc: jsPDF, c: Card, y: number): void => {
+  doc.setFont(FONT_GRAPHIK, 'normal')
+  doc.setFontSize(FONT_SIZE.BODY)
+
+  const codes = c.codes as { format?: string; number?: string }[] | null
+  const firstCode = codes?.[0]
+  doc.text(c.name || '-', MARGIN_X, y)
+  doc.text(firstCode?.format || '-', 50, y)
+  doc.text(firstCode?.number || '-', 100, y)
+  doc.text('-', 135, y)
+  doc.text('Dropp', 145, y)
+  doc.text(c.disabled ? 'Inaktiv' : 'Aktiv', 175, y)
+}
+
+/**
+ * Renders keys and cards as two separate tables under one section header
+ */
+const renderItemsTableSection = (
   doc: jsPDF,
-  keys: ReceiptData['keys'],
+  keys: KeyDetails[],
+  cards: Card[] | undefined,
   y: number,
   headerText: string,
   headerColor: { r: number; g: number; b: number } = BLUE,
-  reserveAfter: number = 0,
-  keySystemMap?: Record<string, string>
+  reserveAfter: number = 0
 ): number => {
-  if (keys.length === 0) return y
+  const hasKeys = keys.length > 0
+  const hasCards = cards && cards.length > 0
+  if (!hasKeys && !hasCards) return y
 
   const bottom = contentBottom(doc)
   const minSpaceNeeded = 35
+  const rowH = 6
 
   if (y + minSpaceNeeded > bottom) {
     doc.addPage()
@@ -205,301 +281,197 @@ const renderKeysTableSection = (
   doc.text(headerText, MARGIN_X, y)
   doc.setTextColor(0, 0, 0)
 
-  // Table header in Graphik Semibold
-  const top = y + 10
-  doc.setFont(FONT_GRAPHIK, 'bold')
-  doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-  doc.text('Namn', MARGIN_X, top)
-  doc.text('Låssystem', 55, top)
-  doc.text('Typ', 95, top)
-  doc.text('Löp.nr', 130, top)
-  doc.text('Flex.nr', 165, top)
+  let cy = y + 10
 
-  // Header line
-  doc.setDrawColor(0, 0, 0)
-  doc.setLineWidth(0.3)
-  doc.line(MARGIN_X, top + 3, PAGE_W - MARGIN_X, top + 3)
+  // Keys table
+  if (hasKeys) {
+    renderKeysTableHeader(doc, cy)
+    cy += 9
 
-  let cy = top + 9
-  const rowH = 6
+    keys.forEach((key, index) => {
+      const isLast = index === keys.length - 1 && !hasCards
+      const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
 
-  // Table rows
-  keys.forEach((k, index) => {
-    const isLastKey = index === keys.length - 1
-    const spaceNeeded = isLastKey ? reserveAfter + 15 : rowH + 5
+      if (cy + spaceNeeded > bottom) {
+        doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
+        doc.addPage()
+        cy = MARGIN_TOP
 
-    if (cy + spaceNeeded > bottom) {
-      doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
+        doc.setFont(FONT_BISON, 'bold')
+        doc.setFontSize(FONT_SIZE.SECTION_HEADER)
+        doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+        doc.text(`${headerText} (fortsättning)`, MARGIN_X, cy)
+        doc.setTextColor(0, 0, 0)
+
+        cy += 10
+        renderKeysTableHeader(doc, cy)
+        cy += 9
+      }
+
+      renderKeyRow(doc, key, cy)
+      cy += rowH
+    })
+
+    // Bottom line for keys table
+    doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
+    cy += 6
+  }
+
+  // Cards table (with separator)
+  if (hasCards) {
+    cy += 4 // Small gap between tables
+
+    if (cy + minSpaceNeeded > bottom) {
       doc.addPage()
       cy = MARGIN_TOP
-
-      // Re-render header on new page
-      doc.setFont(FONT_BISON, 'bold')
-      doc.setFontSize(FONT_SIZE.SECTION_HEADER)
-      doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
-      doc.text(`${headerText} (fortsättning)`, MARGIN_X, cy)
-      doc.setTextColor(0, 0, 0)
-
-      doc.setFont(FONT_GRAPHIK, 'bold')
-      doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-      cy += 10
-      doc.text('Namn', MARGIN_X, cy)
-      doc.text('Låssystem', 55, cy)
-      doc.text('Typ', 95, cy)
-      doc.text('Löp.nr', 130, cy)
-      doc.text('Flex.nr', 165, cy)
-      doc.line(MARGIN_X, cy + 3, PAGE_W - MARGIN_X, cy + 3)
-      cy += 9
     }
 
-    doc.setFont(FONT_GRAPHIK, 'normal')
-    doc.setFontSize(FONT_SIZE.BODY)
-    doc.text(k.keyName, MARGIN_X, cy)
-    const systemCode = keySystemMap?.[k.keySystemId || ''] || '-'
-    doc.text(systemCode, 55, cy)
-    const labelForType =
-      (KeyTypeLabels as Record<string, string>)[
-        k.keyType as unknown as string
-      ] || (k.keyType as string)
-    doc.text(labelForType, 95, cy)
-    doc.text(k.keySequenceNumber ? String(k.keySequenceNumber) : '-', 130, cy)
-    doc.text(k.flexNumber ? String(k.flexNumber) : '-', 165, cy)
-    cy += rowH
-  })
+    renderCardsTableHeader(doc, cy)
+    cy += 9
 
-  // Bottom line
-  doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
-  cy += 8
+    cards.forEach((card, index) => {
+      const isLast = index === cards.length - 1
+      const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
 
-  // Total count - Semibold
+      if (cy + spaceNeeded > bottom) {
+        doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
+        doc.addPage()
+        cy = MARGIN_TOP
+
+        doc.setFont(FONT_BISON, 'bold')
+        doc.setFontSize(FONT_SIZE.SECTION_HEADER)
+        doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+        doc.text(`${headerText} (fortsättning)`, MARGIN_X, cy)
+        doc.setTextColor(0, 0, 0)
+
+        cy += 10
+        renderCardsTableHeader(doc, cy)
+        cy += 9
+      }
+
+      renderCardRow(doc, card, cy)
+      cy += rowH
+    })
+
+    // Bottom line for cards table
+    doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
+    cy += 6
+  }
+
+  cy += 2
+
+  // Total count
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.BODY)
-  doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
+  if (hasKeys && hasCards) {
+    doc.text(
+      `Totalt: ${keys.length} nycklar, ${cards.length} droppar`,
+      MARGIN_X,
+      cy
+    )
+  } else if (hasCards) {
+    doc.text(`Totalt antal droppar: ${cards.length}`, MARGIN_X, cy)
+  } else {
+    doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
+  }
 
   return cy + 10
 }
 
 /**
- * Renders keys table for loan receipts (simple, single section)
+ * Renders items table for loan receipts (simple, single section)
  */
-const renderKeysTable = (
+const renderItemsTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
+  cards: Card[] | undefined,
   y: number,
-  reserveAfter: number = 0,
-  keySystemMap?: Record<string, string>
+  reserveAfter: number = 0
 ): number => {
-  return renderKeysTableSection(
+  const hasCards = cards && cards.length > 0
+  const headerText = hasCards ? 'NYCKLAR OCH DROPPAR' : 'NYCKLAR'
+  return renderItemsTableSection(
     doc,
     keys,
+    cards,
     y,
-    'NYCKLAR',
+    headerText,
     BLUE,
-    reserveAfter,
-    keySystemMap
+    reserveAfter
   )
 }
 
 /**
- * Renders keys tables for return receipts (returned, missing, disposed sections)
+ * Renders items tables for return receipts (returned, missing, disposed sections)
  */
-const renderReturnKeysTable = (
+const renderReturnItemsTable = (
   doc: jsPDF,
   returnedKeys: ReceiptData['keys'],
+  returnedCards: Card[] | undefined,
   missingKeys: ReceiptData['keys'] | undefined,
+  missingCards: Card[] | undefined,
   disposedKeys: ReceiptData['keys'] | undefined,
   y: number,
-  reserveAfter: number = 0,
-  keySystemMap?: Record<string, string>
+  reserveAfter: number = 0
 ): number => {
-  const hasMissing = missingKeys && missingKeys.length > 0
+  const hasMissingKeys = missingKeys && missingKeys.length > 0
+  const hasMissingCards = missingCards && missingCards.length > 0
+  const hasMissing = hasMissingKeys || hasMissingCards
   const hasDisposed = disposedKeys && disposedKeys.length > 0
+  const hasCards =
+    (returnedCards && returnedCards.length > 0) || hasMissingCards
 
   // Determine header text based on what sections exist
-  const returnedHeader =
-    hasMissing || hasDisposed ? 'INLÄMNADE NYCKLAR' : 'NYCKLAR'
+  let returnedHeader = 'NYCKLAR'
+  if (hasCards) {
+    returnedHeader =
+      hasMissing || hasDisposed
+        ? 'INLÄMNADE NYCKLAR OCH DROPPAR'
+        : 'NYCKLAR OCH DROPPAR'
+  } else if (hasMissing || hasDisposed) {
+    returnedHeader = 'INLÄMNADE NYCKLAR'
+  }
 
-  // Returned keys section
+  // Returned items section
   const returnedReserve = hasMissing || hasDisposed ? 0 : reserveAfter
-  y = renderKeysTableSection(
+  y = renderItemsTableSection(
     doc,
     returnedKeys,
+    returnedCards,
     y,
     returnedHeader,
     BLUE,
-    returnedReserve,
-    keySystemMap
+    returnedReserve
   )
 
-  // Missing keys section (red)
+  // Missing items section (red)
   if (hasMissing) {
     y += 4
     const missingReserve = hasDisposed ? 0 : reserveAfter
-    y = renderKeysTableSection(
+    const missingHeader = hasCards
+      ? 'SAKNADE NYCKLAR OCH DROPPAR'
+      : 'SAKNADE NYCKLAR'
+    y = renderItemsTableSection(
       doc,
-      missingKeys,
+      missingKeys || [],
+      missingCards,
       y,
-      'SAKNADE NYCKLAR',
+      missingHeader,
       RED,
-      missingReserve,
-      keySystemMap
+      missingReserve
     )
   }
 
-  // Disposed keys section (blue - same as returned)
+  // Disposed items section (blue - same as returned)
   if (hasDisposed) {
     y += 4
-    y = renderKeysTableSection(
+    y = renderItemsTableSection(
       doc,
       disposedKeys,
+      undefined,
       y,
       'KASSERADE NYCKLAR',
       BLUE,
-      reserveAfter,
-      keySystemMap
-    )
-  }
-
-  return y
-}
-
-/**
- * Renders a cards table section with custom header and color
- */
-const renderCardsTableSection = (
-  doc: jsPDF,
-  cards: Card[],
-  y: number,
-  headerText: string,
-  headerColor: { r: number; g: number; b: number } = BLUE,
-  reserveAfter: number = 0
-): number => {
-  if (cards.length === 0) return y
-
-  const bottom = contentBottom(doc)
-  const minSpaceNeeded = 35
-
-  if (y + minSpaceNeeded > bottom) {
-    doc.addPage()
-    y = MARGIN_TOP
-  }
-
-  doc.setFont(FONT_BISON, 'bold')
-  doc.setFontSize(FONT_SIZE.SECTION_HEADER)
-  doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
-  doc.text(headerText, MARGIN_X, y)
-  doc.setTextColor(0, 0, 0)
-
-  const top = y + 10
-  doc.setFont(FONT_GRAPHIK, 'bold')
-  doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-  doc.text('Namn', MARGIN_X, top)
-  doc.text('Dropp-ID', 50, top)
-  doc.text('Status', 170, top)
-
-  doc.setDrawColor(0, 0, 0)
-  doc.setLineWidth(0.3)
-  doc.line(MARGIN_X, top + 3, PAGE_W - MARGIN_X, top + 3)
-
-  let cy = top + 9
-  const rowH = 6
-
-  cards.forEach((card, index) => {
-    const isLastCard = index === cards.length - 1
-    const spaceNeeded = isLastCard ? reserveAfter + 15 : rowH + 5
-
-    if (cy + spaceNeeded > bottom) {
-      doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
-      doc.addPage()
-      cy = MARGIN_TOP
-
-      doc.setFont(FONT_BISON, 'bold')
-      doc.setFontSize(FONT_SIZE.SECTION_HEADER)
-      doc.setTextColor(headerColor.r, headerColor.g, headerColor.b)
-      doc.text(`${headerText} (fortsättning)`, MARGIN_X, cy)
-      doc.setTextColor(0, 0, 0)
-
-      doc.setFont(FONT_GRAPHIK, 'bold')
-      doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-      cy += 10
-      doc.text('Namn', MARGIN_X, cy)
-      doc.text('Dropp-ID', 50, cy)
-      doc.text('Status', 170, cy)
-      doc.line(MARGIN_X, cy + 3, PAGE_W - MARGIN_X, cy + 3)
-      cy += 9
-    }
-
-    doc.setFont(FONT_GRAPHIK, 'normal')
-    doc.setFontSize(FONT_SIZE.BODY)
-    doc.text(card.name || '-', MARGIN_X, cy)
-    doc.text(card.cardId, 50, cy)
-    doc.text(card.disabled ? 'Inaktiv' : 'Aktiv', 170, cy)
-    cy += rowH
-  })
-
-  doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
-  cy += 8
-
-  // Total count - Semibold
-  doc.setFont(FONT_GRAPHIK, 'bold')
-  doc.setFontSize(FONT_SIZE.BODY)
-  doc.text(`Totalt antal droppar: ${cards.length}`, MARGIN_X, cy)
-
-  return cy + 10
-}
-
-/**
- * Renders cards table for loan receipts
- */
-const renderCardsTable = (
-  doc: jsPDF,
-  cards: Card[],
-  y: number,
-  reserveAfter: number = 0
-): number => {
-  return renderCardsTableSection(doc, cards, y, 'DROPPAR', BLUE, reserveAfter)
-}
-
-/**
- * Renders cards tables for return receipts (returned, missing sections)
- */
-const renderReturnCardsTable = (
-  doc: jsPDF,
-  returnedCards: Card[] | undefined,
-  missingCards: Card[] | undefined,
-  y: number,
-  reserveAfter: number = 0
-): number => {
-  const hasReturned = returnedCards && returnedCards.length > 0
-  const hasMissing = missingCards && missingCards.length > 0
-
-  if (!hasReturned && !hasMissing) return y
-
-  // Determine header text based on what sections exist
-  const returnedHeader = hasMissing ? 'INLÄMNADE DROPPAR' : 'DROPPAR'
-
-  // Returned cards section
-  if (hasReturned) {
-    const returnedReserve = hasMissing ? 0 : reserveAfter
-    y = renderCardsTableSection(
-      doc,
-      returnedCards,
-      y,
-      returnedHeader,
-      BLUE,
-      returnedReserve
-    )
-  }
-
-  // Missing cards section (red)
-  if (hasMissing) {
-    if (hasReturned) y += 4
-    y = renderCardsTableSection(
-      doc,
-      missingCards,
-      y,
-      'SAKNADE DROPPAR',
-      RED,
       reserveAfter
     )
   }
@@ -854,14 +826,8 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   y = addMeta(doc, y, 'loan')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
 
-  const hasCards = data.cards && data.cards.length > 0
-  const keysReserve = hasCards ? 0 : 55
-  y = renderKeysTable(doc, data.keys, y, keysReserve, data.keySystemMap)
-
-  if (hasCards) {
-    y += 4
-    y = renderCardsTable(doc, data.cards!, y, 55)
-  }
+  // Combined keys and cards table
+  y = renderItemsTable(doc, data.keys, data.cards, y, 55)
 
   y = addLoanConfirmation(doc, y, data.tenants)
   addComment(doc, y, data.comment)
@@ -883,31 +849,22 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   y = addMeta(doc, y, 'return')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
 
-  // Check what we have
-  const hasCards =
-    (data.cards && data.cards.length > 0) ||
-    (data.missingCards && data.missingCards.length > 0)
+  // Check for missing items
   const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
   const hasMissingCards = data.missingCards && data.missingCards.length > 0
   const hasMissingItems = hasMissingKeys || hasMissingCards
 
-  // Keys section
-  const keysReserve = hasCards ? 0 : 35
-  y = renderReturnKeysTable(
+  // Combined keys and cards table (returned, missing, disposed sections)
+  y = renderReturnItemsTable(
     doc,
     data.keys,
+    data.cards,
     data.missingKeys,
+    data.missingCards,
     data.disposedKeys,
     y,
-    keysReserve,
-    data.keySystemMap
+    35
   )
-
-  // Cards section
-  if (hasCards) {
-    y += 4
-    y = renderReturnCardsTable(doc, data.cards, data.missingCards, y, 35)
-  }
 
   y = addReturnConfirmation(doc, y, hasMissingItems)
   addComment(doc, y, data.comment)
@@ -936,14 +893,8 @@ async function buildMaintenanceLoanDoc(
   y = addMeta(doc, y, 'loan')
   y = addMaintenanceInfo(doc, data, y)
 
-  const hasCards = data.cards && data.cards.length > 0
-  const keysReserve = hasCards ? 0 : 55
-  y = renderKeysTable(doc, data.keys, y, keysReserve, data.keySystemMap)
-
-  if (hasCards) {
-    y += 4
-    y = renderCardsTable(doc, data.cards!, y, 55)
-  }
+  // Combined keys and cards table
+  y = renderItemsTable(doc, data.keys, data.cards, y, 55)
 
   y = addMaintenanceLoanConfirmation(doc, y)
   addComment(doc, y, data.description ?? undefined)
@@ -968,31 +919,22 @@ async function buildMaintenanceReturnDoc(
   y = addMeta(doc, y, 'return')
   y = addMaintenanceInfo(doc, data, y)
 
-  // Check what we have
-  const hasCards =
-    (data.cards && data.cards.length > 0) ||
-    (data.missingCards && data.missingCards.length > 0)
+  // Check for missing items
   const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
   const hasMissingCards = data.missingCards && data.missingCards.length > 0
   const hasMissingItems = hasMissingKeys || hasMissingCards
 
-  // Keys section
-  const keysReserve = hasCards ? 0 : 35
-  y = renderReturnKeysTable(
+  // Combined keys and cards table (returned, missing, disposed sections)
+  y = renderReturnItemsTable(
     doc,
     data.keys,
+    data.cards,
     data.missingKeys,
+    data.missingCards,
     data.disposedKeys,
     y,
-    keysReserve,
-    data.keySystemMap
+    35
   )
-
-  // Cards section
-  if (hasCards) {
-    y += 4
-    y = renderReturnCardsTable(doc, data.cards, data.missingCards, y, 35)
-  }
 
   y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
   addComment(doc, y, data.description ?? undefined)

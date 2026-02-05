@@ -125,11 +125,27 @@ export async function fetchEvents(
   return eventsByKeyId
 }
 
-export async function getKeyById(
+// Overload signatures
+export function getKeyById(
   id: string,
+  dbConnection?: Knex | Knex.Transaction
+): Promise<Key | undefined>
+
+export function getKeyById(
+  ids: string[],
+  dbConnection?: Knex | Knex.Transaction
+): Promise<Key[]>
+
+// Implementation
+export async function getKeyById(
+  idOrIds: string | string[],
   dbConnection: Knex | Knex.Transaction = db
-): Promise<Key | undefined> {
-  return await dbConnection(TABLE).where({ id }).first()
+): Promise<Key | Key[] | undefined> {
+  if (Array.isArray(idOrIds)) {
+    if (idOrIds.length === 0) return []
+    return await dbConnection(TABLE).whereIn('id', idOrIds).select('*')
+  }
+  return await dbConnection(TABLE).where({ id: idOrIds }).first()
 }
 
 export async function getAllKeys(

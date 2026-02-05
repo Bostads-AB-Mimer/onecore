@@ -43,10 +43,10 @@ describe('GET /keys/:id', () => {
       keyType: 'LGH',
     })
 
-    // Mock the adapter to return the key
+    // Mock the adapter to return the key (cast needed due to function overloads)
     const getKeyByIdSpy = jest
       .spyOn(keysAdapter, 'getKeyById')
-      .mockResolvedValueOnce(mockKey)
+      .mockResolvedValueOnce(mockKey as any)
 
     // Make HTTP request
     const res = await request(app.callback()).get('/keys/test-id-123')

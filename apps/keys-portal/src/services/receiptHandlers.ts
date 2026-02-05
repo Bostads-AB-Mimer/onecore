@@ -14,15 +14,14 @@ import {
 
 import { receiptService } from './api/receiptService'
 import { keyLoanService } from './api/keyLoanService'
-import { keyService } from './api/keyService'
-import { cardService } from './api/cardService'
 import { fetchContactByContactCode } from './api/contactService'
 import type {
   ReceiptData,
   MaintenanceReceiptData,
   Lease,
-  Key,
+  KeyDetails,
   Card,
+  KeyLoanWithDetails,
 } from './types'
 
 // ============================================================================
@@ -30,30 +29,15 @@ import type {
 // ============================================================================
 
 /**
- * Parses JSON array or comma-separated string to string array
- */
-function parseIds(value: string | null | undefined): string[] {
-  if (!value) return []
-  try {
-    return JSON.parse(value)
-  } catch {
-    return value
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean)
-  }
-}
-
-/**
  * Categorizes keys into returned/missing/disposed based on selection
  */
 function categorizeKeys(
-  keys: Key[],
+  keys: KeyDetails[],
   selectedIds: Set<string>
-): { returned: Key[]; missing: Key[]; disposed: Key[] } {
-  const returned: Key[] = []
-  const missing: Key[] = []
-  const disposed: Key[] = []
+): { returned: KeyDetails[]; missing: KeyDetails[]; disposed: KeyDetails[] } {
+  const returned: KeyDetails[] = []
+  const missing: KeyDetails[] = []
+  const disposed: KeyDetails[] = []
 
   keys.forEach((key) => {
     if (key.disposed) {
@@ -89,47 +73,6 @@ function categorizeCards(
   return { returned, missing }
 }
 
-/**
- * Builds a keySystemMap from a list of keys by fetching key system details
- * @param keys - Array of keys to extract keySystemIds from
- * @returns Map of keySystemId -> systemCode
- */
-async function buildKeySystemMap(keys: Key[]): Promise<Record<string, string>> {
-  // Collect unique keySystemIds
-  const keySystemIds = [
-    ...new Set(
-      keys
-        .map((k) => k.keySystemId)
-        .filter((id): id is string => id != null && id !== '')
-    ),
-  ]
-
-  if (keySystemIds.length === 0) {
-    return {}
-  }
-
-  // Fetch key systems in parallel
-  const keySystems = await Promise.all(
-    keySystemIds.map(async (id) => {
-      try {
-        return await keyService.getKeySystem(id)
-      } catch {
-        return null
-      }
-    })
-  )
-
-  // Build the map
-  const map: Record<string, string> = {}
-  keySystems.forEach((ks) => {
-    if (ks) {
-      map[ks.id] = ks.systemCode
-    }
-  })
-
-  return map
-}
-
 // ============================================================================
 // Data Assembly Functions
 // ============================================================================
@@ -142,26 +85,17 @@ async function assembleFromReceipt(
   receiptId: string,
   lease: Lease
 ): Promise<ReceiptData> {
-  // Fetch receipt and loan
+  // Fetch receipt
   const receipt = await receiptService.getById(receiptId)
-  const keyLoan = await keyLoanService.get(receipt.keyLoanId)
 
-  // Parse IDs
-  const keyIds = parseIds(keyLoan.keys)
-  const cardIds = parseIds(keyLoan.keyCards)
+  // Fetch loan with keys (including keySystem) and cards in one call
+  const keyLoan = (await keyLoanService.get(receipt.keyLoanId, {
+    includeKeySystem: true,
+    includeCards: true,
+  })) as KeyLoanWithDetails
 
-  // Fetch keys and cards in parallel
-  const [keys, cardResults] = await Promise.all([
-    Promise.all(keyIds.map((id) => keyService.getKey(id))),
-    cardIds.length > 0
-      ? Promise.all(cardIds.map((id) => cardService.getCard(id)))
-      : Promise.resolve([]),
-  ])
-
-  const cards = cardResults.filter((c): c is Card => c !== null)
-
-  // Build keySystemMap for displaying lock system codes
-  const keySystemMap = await buildKeySystemMap(keys)
+  const keys = keyLoan.keysArray as KeyDetails[]
+  const cards = keyLoan.keyCardsArray || []
 
   // Determine operation date based on receipt type
   const operationDate =
@@ -180,7 +114,6 @@ async function assembleFromReceipt(
     receiptType: receipt.receiptType,
     operationDate,
     cards: cards.length > 0 ? cards : undefined,
-    keySystemMap,
   }
 }
 
@@ -189,12 +122,11 @@ async function assembleFromReceipt(
  * Used for: generating return receipt PDFs (no additional API calls)
  */
 function assembleReturnReceipt(
-  loanKeys: Key[],
+  loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   lease: Lease,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set(),
-  keySystemMap?: Record<string, string>,
   comment?: string
 ): ReceiptData {
   const { returned, missing, disposed } = categorizeKeys(
@@ -216,7 +148,6 @@ function assembleReturnReceipt(
     disposedKeys: disposed.length > 0 ? disposed : undefined,
     cards: returnedCards.length > 0 ? returnedCards : undefined,
     missingCards: missingCards.length > 0 ? missingCards : undefined,
-    keySystemMap,
     comment,
   }
 }
@@ -228,26 +159,21 @@ function assembleReturnReceipt(
 async function assembleMaintenanceLoanReceipt(
   loanId: string
 ): Promise<MaintenanceReceiptData> {
-  const loan = await keyLoanService.get(loanId)
-  const keyIds = parseIds(loan.keys)
-  const cardIds = parseIds(loan.keyCards)
+  // Fetch loan with keys (including keySystem) in one call
+  // Fetch loan with keys (including keySystem) and cards in one call
+  const loan = (await keyLoanService.get(loanId, {
+    includeKeySystem: true,
+    includeCards: true,
+  })) as KeyLoanWithDetails
 
-  // Fetch keys, cards, and contact info in parallel
-  const [keys, cardResults, contactInfo] = await Promise.all([
-    Promise.all(keyIds.map((id) => keyService.getKey(id))),
-    cardIds.length > 0
-      ? Promise.all(cardIds.map((id) => cardService.getCard(id)))
-      : Promise.resolve([]),
-    loan.contact
-      ? fetchContactByContactCode(loan.contact)
-      : Promise.resolve(null),
-  ])
+  const keys = loan.keysArray as KeyDetails[]
+  const cards = loan.keyCardsArray || []
 
-  const cards = cardResults.filter((c): c is Card => c !== null)
+  // Fetch contact info
+  const contactInfo = loan.contact
+    ? await fetchContactByContactCode(loan.contact)
+    : null
   const contactName = contactInfo?.fullName || loan.contact || 'Unknown'
-
-  // Build keySystemMap for displaying lock system codes
-  const keySystemMap = await buildKeySystemMap(keys)
 
   return {
     contact: loan.contact || 'Unknown',
@@ -258,7 +184,6 @@ async function assembleMaintenanceLoanReceipt(
     receiptType: 'LOAN',
     operationDate: new Date(),
     cards: cards.length > 0 ? cards : undefined,
-    keySystemMap,
   }
 }
 
@@ -271,11 +196,10 @@ function assembleMaintenanceReturnReceipt(
   contactName: string,
   contactPerson: string | null,
   description: string | null | undefined,
-  loanKeys: Key[],
+  loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set(),
-  keySystemMap?: Record<string, string>
+  selectedCardIds: Set<string> = new Set()
 ): MaintenanceReceiptData {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
@@ -298,7 +222,6 @@ function assembleMaintenanceReturnReceipt(
     disposedKeys: disposed.length > 0 ? disposed : undefined,
     cards: returnedCards.length > 0 ? returnedCards : undefined,
     missingCards: missingCards.length > 0 ? missingCards : undefined,
-    keySystemMap,
   }
 }
 
@@ -383,7 +306,7 @@ export async function fetchReceiptData(
  * Generates and uploads a return receipt PDF to MinIO for a single loan
  *
  * @param receiptId - The receipt ID
- * @param loanKeys - All key objects in this specific loan
+ * @param loanKeys - All key objects in this specific loan (with keySystem included)
  * @param selectedKeyIds - Key IDs that were checked in the dialog (returned keys)
  * @param lease - The lease associated with the receipt
  * @param loanCards - All card objects in this specific loan (optional)
@@ -392,24 +315,20 @@ export async function fetchReceiptData(
  */
 export async function generateAndUploadReturnReceipt(
   receiptId: string,
-  loanKeys: Key[],
+  loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   lease: Lease,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set(),
   comment?: string
 ): Promise<void> {
-  // Build keySystemMap for displaying lock system codes
-  const keySystemMap = await buildKeySystemMap(loanKeys)
-
-  // Assemble receipt data (no API calls - uses pre-fetched data)
+  // Assemble receipt data (no API calls - uses pre-fetched data with keySystem)
   const receiptData = assembleReturnReceipt(
     loanKeys,
     selectedKeyIds,
     lease,
     loanCards,
     selectedCardIds,
-    keySystemMap,
     comment
   )
 
@@ -465,7 +384,7 @@ export async function openMaintenanceReceiptInNewTab(
  * @param contactName - Company name (from Contact.fullName)
  * @param contactPerson - Contact person name (optional)
  * @param description - Description (optional)
- * @param loanKeys - All key objects in this specific loan
+ * @param loanKeys - All key objects in this specific loan (with keySystem included)
  * @param selectedKeyIds - Key IDs that were checked in the dialog (returned keys)
  * @param loanCards - All card objects in this specific loan (optional)
  * @param selectedCardIds - Card IDs that were checked in the dialog (optional)
@@ -476,15 +395,12 @@ export async function generateAndUploadMaintenanceReturnReceipt(
   contactName: string,
   contactPerson: string | null,
   description: string | null | undefined,
-  loanKeys: Key[],
+  loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set()
 ): Promise<void> {
-  // Build keySystemMap for displaying lock system codes
-  const keySystemMap = await buildKeySystemMap(loanKeys)
-
-  // Assemble receipt data (no API calls - uses pre-fetched data)
+  // Assemble receipt data (no API calls - uses pre-fetched data with keySystem)
   const receiptData = assembleMaintenanceReturnReceipt(
     contact,
     contactName,
@@ -493,8 +409,7 @@ export async function generateAndUploadMaintenanceReturnReceipt(
     loanKeys,
     selectedKeyIds,
     loanCards,
-    selectedCardIds,
-    keySystemMap
+    selectedCardIds
   )
 
   // Generate PDF blob
