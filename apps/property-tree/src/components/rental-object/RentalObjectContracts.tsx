@@ -7,7 +7,7 @@ import {
   formatDate,
   getStatusBadge,
 } from '@/components/tenants/lease-helpers.tsx'
-import { useLeasesByRentalProperty } from '@/components/hooks/useLeasesByRentalProperty'
+import { useLeasesByRentalProperty } from '@/hooks/useLeasesByRentalProperty'
 import type { Lease } from '@/services/api/core/lease-service'
 import { Link } from 'react-router-dom'
 

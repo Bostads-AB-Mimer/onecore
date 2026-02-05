@@ -18,9 +18,9 @@ import {
   Loader2,
 } from 'lucide-react'
 import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
-import { useContactQueuePoints } from '@/components/hooks/useContactQueuePoints'
-import { useInterestApplications } from '@/components/hooks/useInterestApplications'
-import { useApplicationProfile } from '@/components/hooks/useApplicationProfile'
+import { useContactQueuePoints } from '@/hooks/useContactQueuePoints'
+import { useInterestApplications } from '@/hooks/useInterestApplications'
+import { useApplicationProfile } from '@/hooks/useApplicationProfile'
 import { resolve } from '@/utils/env'
 
 // Helper function to get status badge variant

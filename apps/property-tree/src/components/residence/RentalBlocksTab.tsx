@@ -3,7 +3,7 @@ import { ResponsiveTable } from '../ui/ResponsiveTable'
 import { TabLayout } from '../ui/TabLayout'
 import { useState } from 'react'
 import { Button } from '../ui/v2/Button'
-import { useRentalBlocks } from '../hooks/useRentalBlocks'
+import { useRentalBlocks } from '@/hooks/useRentalBlocks'
 import { Badge } from '../ui/v3/Badge'
 
 const INITIAL_DISPLAY_COUNT = 5

@@ -9,7 +9,7 @@ import type {
   InspectionSubmitData,
   TenantSnapshot,
 } from '@/types/inspections/index'
-import { useInspectionForm } from '@/features/inspections/hooks/useInspectionForm'
+import { useInspectionForm } from '../../hooks/useInspectionForm'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
 import { InspectorSelectionCard } from '../InspectorSelectionCard'

@@ -27,7 +27,7 @@ import {
   Eye,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useComponentImages } from '@/components/hooks/useComponentImages'
+import { useComponentImages } from '@/hooks/useComponentImages'
 import type { Component } from '@/services/types'
 
 interface InstanceDetailsDialogProps {

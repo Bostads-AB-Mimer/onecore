@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/v2/Dialog'
 import { Button } from '@/components/ui/v2/Button'
 import { cn } from '@/lib/utils'
-import { useComponentImages } from '@/components/hooks/useComponentImages'
+import { useComponentImages } from '@/hooks/useComponentImages'
 
 interface ComponentImageUploadProps {
   componentId: string

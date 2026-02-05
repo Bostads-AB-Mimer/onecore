@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/v2/Card'
 import { InvoicesTable } from './InvoicesTable'
-import { useTenantInvoices } from '../hooks/useTenantInvoices'
+import { useTenantInvoices } from '@/hooks/useTenantInvoices'
 
 interface TenantLedgerProps {
   contactCode: string

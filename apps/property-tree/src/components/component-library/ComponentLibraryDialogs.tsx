@@ -1,11 +1,11 @@
 import { GenericEntityDialog } from '@/components/component-library/dialogs/GenericEntityDialog'
 import { InstanceDetailsDialog } from '@/components/component-library/dialogs/InstanceDetailsDialog'
 import { DeinstallationDialog } from '@/components/residence/DeinstallationDialog'
-import type { ViewState } from '@/components/hooks/useComponentLibraryHandlers'
+import type { ViewState } from '@/hooks/useComponentLibraryHandlers'
 import type {
   UseDialogStateReturn,
   UseSimpleDialogStateReturn,
-} from '@/components/hooks/useDialogState'
+} from '@/hooks/useDialogState'
 import type {
   ComponentCategory,
   ComponentType,

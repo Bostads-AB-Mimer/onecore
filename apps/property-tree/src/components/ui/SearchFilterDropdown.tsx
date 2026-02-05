@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Filter, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDebounce } from '@/components/hooks/useDebounce'
+import { useDebounce } from '@/hooks/useDebounce'
 
 export interface SearchFilterOption {
   label: string

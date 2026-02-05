@@ -1,9 +1,6 @@
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/v2/Label'
-import {
-  ACTION_OPTIONS_BY_TYPE,
-  type ComponentType,
-} from '@/features/inspections/constants'
+import { ACTION_OPTIONS_BY_TYPE, type ComponentType } from '../constants'
 
 interface ActionChecklistProps {
   componentType: ComponentType

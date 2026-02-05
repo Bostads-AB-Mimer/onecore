@@ -4,7 +4,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 import { ReactNode } from 'react'
 
 interface TabLayoutProps {

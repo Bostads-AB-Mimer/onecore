@@ -4,8 +4,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
-import { useClipboardCopy } from '@/components/hooks/useClipboardCopy'
-import { useToast } from '@/components/hooks/useToast'
+import { useClipboardCopy } from '@/hooks/useClipboardCopy'
+import { useToast } from '@/hooks/useToast'
 import { Copy, Check } from 'lucide-react'
 
 interface ActionButton {

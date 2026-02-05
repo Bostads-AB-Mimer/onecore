@@ -10,13 +10,13 @@ import {
   getCompletedInspectionColumns,
   renderInspectionMobileCard,
   type InspectionTableColumn,
-} from '@/features/inspections/constants'
-import { INSPECTION_STATUS } from '@/features/inspections/constants'
+} from '../constants'
+import { INSPECTION_STATUS } from '../constants'
 
 type Inspection = components['schemas']['Inspection']
 type DetailedInspection = components['schemas']['DetailedInspection']
 
-interface InspectionTableProps {
+interface InspectionsTableProps {
   inspections: Inspection[]
   isCompleted?: boolean
   hiddenColumns?: string[]
@@ -24,13 +24,13 @@ interface InspectionTableProps {
   emptyMessage?: string
 }
 
-export function InspectionTable({
+export function InspectionsTable({
   inspections,
   isCompleted = false,
   hiddenColumns = [],
   columns,
   emptyMessage,
-}: InspectionTableProps) {
+}: InspectionsTableProps) {
   const [isResumeDialogOpen, setIsResumeDialogOpen] = useState(false)
   const [isProtocolDialogOpen, setIsProtocolDialogOpen] = useState(false)
   const [selectedInspection, setSelectedInspection] =

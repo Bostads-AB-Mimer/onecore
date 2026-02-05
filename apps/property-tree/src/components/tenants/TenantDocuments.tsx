@@ -17,7 +17,7 @@
 //   Trash2,
 // } from 'lucide-react'
 // import { useToast } from '@/hooks/use-toast'
-// import { useIsMobile } from '@/components/hooks/useMobile'
+// import { useIsMobile } from '@/hooks/useMobile'
 
 // interface Document {
 //   id: string

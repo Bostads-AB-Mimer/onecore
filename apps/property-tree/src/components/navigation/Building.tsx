@@ -3,9 +3,9 @@ import { Building, Property } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { ResidenceList } from './ResidenceList'
-import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
+import { useHierarchicalSelection } from '@/hooks/useHierarchicalSelection'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
+import { useScrollToSelected } from '@/hooks/useScrollToSelected'
 
 interface BuildingNavigationProps {
   building: Building

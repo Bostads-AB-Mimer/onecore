@@ -8,9 +8,9 @@ import {
 } from '@/components/ui/v2/Dialog'
 import { Button } from '@/components/ui/v2/Button'
 import { PlayCircle, RotateCcw } from 'lucide-react'
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
-import { DesktopInspectionForm } from './InspectionForm'
+import { InspectionForm } from './InspectionForm'
 
 import { components } from '@/services/api/core/generated/api-types'
 type Inspection = components['schemas']['Inspection']
@@ -142,7 +142,7 @@ export function InspectionFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <DesktopInspectionForm
+        <InspectionForm
           rooms={rooms}
           onSave={onSubmit}
           onCancel={onClose}

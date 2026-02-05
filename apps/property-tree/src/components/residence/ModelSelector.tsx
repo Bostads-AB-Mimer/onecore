@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Label } from '@/components/ui/v2/Label'
 import { Input } from '@/components/ui/Input'
-import { useComponentEntity } from '@/components/hooks/useComponentEntity'
-import { useDebounce } from '@/components/hooks/useDebounce'
+import { useComponentEntity } from '@/hooks/useComponentEntity'
+import { useDebounce } from '@/hooks/useDebounce'
 import type {
   ComponentModel,
   ComponentSubtype,

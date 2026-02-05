@@ -1,5 +1,5 @@
 /**
- * InspectionTable Column Configurations
+ * InspectionsTable Column Configurations
  *
  * Defines reusable column configurations for inspection tables.
  * Uses ResponsiveTable column format for mobile/desktop support.

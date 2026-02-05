@@ -7,7 +7,7 @@ import {
   type ComponentModelWithHierarchy,
 } from './ModelSelector'
 import { InstanceSelector } from './InstanceSelector'
-import { useInstallComponent } from '@/components/hooks/useInstallComponent'
+import { useInstallComponent } from '@/hooks/useInstallComponent'
 import { componentService } from '@/services/api/core/componentService'
 import { useQueryClient } from '@tanstack/react-query'
 

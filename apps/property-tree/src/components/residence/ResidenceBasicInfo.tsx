@@ -4,7 +4,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-import { useIsMobile } from '../hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 import { Building } from '@/services/types'
 import { components } from '@/services/api/core/generated/api-types'
 

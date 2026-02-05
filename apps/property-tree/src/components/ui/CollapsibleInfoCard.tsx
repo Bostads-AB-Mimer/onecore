@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/Collapsible'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 
 interface CollapsibleInfoCardProps {
   title: string

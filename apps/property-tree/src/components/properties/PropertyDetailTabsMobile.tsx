@@ -2,7 +2,7 @@ import { Info, Building, Home, BarChart3, Wrench } from 'lucide-react'
 import { PropertyInfoTab } from './tabs/PropertyInfoTab'
 import { PropertyBuildingsTab } from './tabs/PropertyBuildingsTab'
 import { PropertyStatisticsTab } from './tabs/PropertyStatisticsTab'
-import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
+import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
 import { PropertyOrdersTab } from './tabs/PropertyOrdersTab'
 import {
   MobileAccordion,

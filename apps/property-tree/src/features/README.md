@@ -9,6 +9,7 @@ features/
 └── [feature-name]/
     ├── components/      # UI specific to this feature
     ├── hooks/           # Hooks specific to this feature
+    ├── lib/             # Utility functions specific to this feature
     ├── constants/       # Domain constants
     ├── types/           # Feature-specific types
     └── index.ts         # Public exports

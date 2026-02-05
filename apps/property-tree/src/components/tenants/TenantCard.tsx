@@ -6,7 +6,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/v2/Collapsible'
 import { ChevronDown, ChevronUp, MapPin } from 'lucide-react'
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 import type { Tenant } from '@/services/types'
 import { CopyableField } from '@/components/ui/CopyableField'
 import { TooltipProvider } from '@/components/ui/Tooltip'
@@ -169,7 +169,7 @@ export function TenantCard({ tenant }: TenantCardProps) {
     <Card>
       <CardHeader className="pb-4">
         {/*
-        We cannot determine the customerType/role yet 
+        We cannot determine the customerType/role yet
         <CardTitle>
           {tenant.customerType === 'tenant' ? 'Hyresgäst' : 'Sökande'}
         </CardTitle> */}

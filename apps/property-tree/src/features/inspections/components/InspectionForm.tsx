@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/v2/Button'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 import { InspectorSelectionCard } from './InspectorSelectionCard'
-import { useInspectionForm } from '@/features/inspections/hooks/useInspectionForm'
+import { useInspectionForm } from '../hooks/useInspectionForm'
 import type { Room } from '@/services/types'
 import type {
   InspectionSubmitData,
@@ -21,7 +21,7 @@ import type { components } from '@/services/api/core/generated/api-types'
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
-interface DesktopInspectionFormProps {
+interface InspectionFormProps {
   rooms: Room[]
   onSave: (
     inspectorName: string,
@@ -36,13 +36,13 @@ interface DesktopInspectionFormProps {
 
 const currentUser = 'Anna Andersson'
 
-export function DesktopInspectionForm({
+export function InspectionForm({
   rooms,
   onSave,
   onCancel,
   tenant,
   existingInspection,
-}: DesktopInspectionFormProps) {
+}: InspectionFormProps) {
   const {
     inspectorName,
     setInspectorName,
