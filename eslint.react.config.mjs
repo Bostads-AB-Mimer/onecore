@@ -32,6 +32,8 @@ export default defineConfig([
       'no-redeclare': 'off',
       'no-shadow': 'off',
       'no-use-before-define': 'off',
+      // Let TypeScript handle undefined identifiers in TS/TSX
+      'no-undef': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
