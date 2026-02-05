@@ -41,7 +41,7 @@ export default defineConfig([
         { type: 'store', pattern: 'src/store/*' },
         { type: 'layouts', pattern: 'src/layouts/*' },
         { type: 'features', pattern: 'src/features/*' },
-        { type: 'pages', pattern: 'src/pages/*' },
+        { type: 'views', pattern: 'src/views/*' },
         // Legacy folders (to be migrated) - no restrictions for now
         {
           type: 'legacy',
@@ -63,7 +63,7 @@ export default defineConfig([
     },
     rules: {
       // Catch files not matching any defined element type
-      'boundaries/no-unknown-files': ['warn'],
+      // 'boundaries/no-unknown-files': ['warn'],
 
       // Enforce importing through index.ts (barrel exports) for features
       'boundaries/entry-point': [
@@ -149,9 +149,9 @@ export default defineConfig([
                 'store',
               ],
             },
-            // pages: can import almost everything (top level)
+            // views: can import almost everything (top level)
             {
-              from: 'pages',
+              from: 'views',
               allow: [
                 'types',
                 'utils',

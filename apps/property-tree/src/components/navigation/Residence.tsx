@@ -2,8 +2,8 @@ import { Residence } from '@/services/types'
 import { Hotel } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { useNavigate } from 'react-router-dom'
-import { useHierarchicalSelection } from '@/components/hooks/useHierarchicalSelection'
-import { useScrollToSelected } from '@/components/hooks/useScrollToSelected'
+import { useHierarchicalSelection } from '@/hooks/useHierarchicalSelection'
+import { useScrollToSelected } from '@/hooks/useScrollToSelected'
 import { toTitleCase } from '@/lib/text-utils'
 
 interface ResidenceNavigationProps {

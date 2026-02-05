@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/v2/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/v2/Label'
 import { FileText, Upload, Download, Trash2 } from 'lucide-react'
-import { useToast } from '@/components/hooks/useToast'
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useToast } from '@/hooks/useToast'
+import { useIsMobile } from '@/hooks/useMobile'
 import { ContextType } from '@/types/ui'
-import { useDocuments } from '@/components/hooks/useDocuments'
+import { useDocuments } from '@/hooks/useDocuments'
 
 interface DocumentsTabProps {
   contextType: ContextType

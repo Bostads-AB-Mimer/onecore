@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { SidebarContext, SidebarProviderProps } from './types'

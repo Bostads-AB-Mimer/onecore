@@ -1,4 +1,4 @@
-import { useIsMobile } from '@/components/hooks/useMobile'
+import { useIsMobile } from '@/hooks/useMobile'
 import {
   Table,
   TableBody,

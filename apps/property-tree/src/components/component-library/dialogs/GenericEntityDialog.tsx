@@ -14,7 +14,7 @@ import {
   parentIdFieldMap,
   type HierarchyData,
 } from './ParentHierarchySelector'
-import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
+import { useComponentEntityMutation } from '@/hooks/useComponentEntityMutation'
 import type { EntityType } from '@/services/types'
 
 interface GenericEntityDialogProps<T extends Record<string, any>> {

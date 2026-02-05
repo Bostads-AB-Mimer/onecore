@@ -16,9 +16,9 @@ import {
   SearchFilterOption,
 } from '@/components/ui/MultiSelectSearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
-import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
-import { useUrlPagination } from '@/components/hooks/useUrlPagination'
-import { useDebounce } from '@/components/hooks/useDebounce'
+import { useLeaseSearch } from '@/hooks/useLeaseSearch'
+import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import {

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/v2/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { ChevronRight, Camera, Wrench, MessageSquare } from 'lucide-react'
-import { PhotoCapture } from '@/features/inspections/components/PhotoCapture'
-import { CONDITION_OPTIONS } from '@/features/inspections/constants'
+import { PhotoCapture } from './PhotoCapture'
+import { CONDITION_OPTIONS } from '../constants'
 
 interface ComponentInspectionCardProps {
   componentKey: string

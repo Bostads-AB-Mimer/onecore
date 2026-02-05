@@ -16,8 +16,8 @@ import {
 } from 'lucide-react'
 import { match } from 'ts-pattern'
 
-import { useSearch } from './hooks/useSearch'
-import { useCommandPalette } from './hooks/useCommandPalette'
+import { useSearch } from '@/hooks/useSearch'
+import { useCommandPalette } from '@/hooks/useCommandPalette'
 import { debounce } from '@/utils/debounce'
 
 const routeMap = {

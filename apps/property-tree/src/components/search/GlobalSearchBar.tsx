@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
-import { useCommandPalette } from '../hooks/useCommandPalette'
+import { useCommandPalette } from '@/hooks/useCommandPalette'
 
 interface GlobalSearchBarProps {
   className?: string

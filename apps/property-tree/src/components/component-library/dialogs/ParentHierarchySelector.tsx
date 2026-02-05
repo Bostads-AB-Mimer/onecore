@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/v3/Select'
-import { useComponentEntity } from '@/components/hooks/useComponentEntity'
+import { useComponentEntity } from '@/hooks/useComponentEntity'
 import type { EntityType } from '@/services/types'
 
 export interface HierarchyData {

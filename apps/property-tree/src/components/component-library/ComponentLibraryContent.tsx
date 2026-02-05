@@ -6,7 +6,7 @@ import { SubtypesTable } from '@/components/component-library/SubtypesTable'
 import { ModelsTable } from '@/components/component-library/ModelsTable'
 import { InstancesTable } from '@/components/component-library/InstancesTable'
 import { TableToolbar } from '@/components/component-library/TableToolbar'
-import type { ViewState } from '@/components/hooks/useComponentLibraryHandlers'
+import type { ViewState } from '@/hooks/useComponentLibraryHandlers'
 import type {
   ComponentCategory,
   ComponentType,

@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/v2/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/v2/Label'
-import { useComponentEntityMutation } from '@/components/hooks/useComponentEntityMutation'
+import { useComponentEntityMutation } from '@/hooks/useComponentEntityMutation'
 import type { ComponentModel } from '@/services/types'
 
 interface CreateInstanceDialogProps {

@@ -9,7 +9,7 @@ import {
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/v2/Button'
 import { InspectionFormDialog } from '@/features/inspections/components/InspectionFormDialog'
-import { InspectionTable } from '@/features/inspections/components/InspectionsTable'
+import { InspectionsTable } from '@/features/inspections/components/InspectionsTable'
 import { roomService } from '@/services/api/core'
 import { Grid } from '@/components/ui/Grid'
 import { components } from '@/services/api/core/generated/api-types'
@@ -20,7 +20,7 @@ import type {
   ResidenceInfo,
   TenantSnapshot,
 } from '@/types/inspections'
-import { useToast } from '@/components/hooks/useToast'
+import { useToast } from '@/hooks/useToast'
 import { InspectionProtocol } from '@/features/inspections/components/InspectionProtocol'
 
 type Inspection = components['schemas']['Inspection']
@@ -156,7 +156,7 @@ export function InspectionsList({
 
   const renderInspectionsTable = (inspectionsData: Inspection[]) => {
     return (
-      <InspectionTable
+      <InspectionsTable
         inspections={inspectionsData}
         hiddenColumns={['address']}
       />

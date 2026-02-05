@@ -1,7 +1,7 @@
 import { Building, Wrench, FileText, MessageSquare } from 'lucide-react'
 import { BuildingEntrances } from './BuildingEntrances'
 import { BuildingWorkOrdersTab } from './BuildingWorkOrdersTab'
-import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
+import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
 import {
   MobileAccordion,
   MobileAccordionItem,

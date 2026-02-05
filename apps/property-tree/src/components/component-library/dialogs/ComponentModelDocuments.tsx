@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/v2/Dialog'
 import { Button } from '@/components/ui/v2/Button'
 import { cn } from '@/lib/utils'
-import { useComponentModelDocuments } from '@/components/hooks/useComponentModelDocuments'
+import { useComponentModelDocuments } from '@/hooks/useComponentModelDocuments'
 
 interface ComponentModelDocumentsProps {
   modelId: string
