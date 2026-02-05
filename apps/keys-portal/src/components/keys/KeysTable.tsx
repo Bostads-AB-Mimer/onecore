@@ -217,7 +217,16 @@ export function KeysTable({
                       />
                     </TableCell>
                     <TableCell>
-                      {keySystemMap[key.keySystemId || ''] || '-'}
+                      {key.keySystemId &&
+                      keySystemMap[key.keySystemId] ? (
+                        <TableLink
+                          to={`/key-systems?q=${keySystemMap[key.keySystemId]}&editKeySystemId=${key.keySystemId}`}
+                        >
+                          {keySystemMap[key.keySystemId]}
+                        </TableLink>
+                      ) : (
+                        '-'
+                      )}
                     </TableCell>
                     <TableCell>{key.keySequenceNumber || '-'}</TableCell>
                     <TableCell>{key.flexNumber || '-'}</TableCell>

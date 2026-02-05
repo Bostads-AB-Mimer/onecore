@@ -37,6 +37,8 @@ export default function KeySystems() {
     pagination.searchParams.get('installationDateAfter') || null
   const installationDateBefore =
     pagination.searchParams.get('installationDateBefore') || null
+  const editKeySystemId =
+    pagination.searchParams.get('editKeySystemId') || null
 
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
@@ -156,6 +158,18 @@ export default function KeySystems() {
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
+
+  // Handle auto-open edit form when editKeySystemId is in URL
+  useEffect(() => {
+    if (editKeySystemId && KeySystems.length > 0 && !editingKeySystem) {
+      const keySystemToEdit = KeySystems.find((ks) => ks.id === editKeySystemId)
+
+      if (keySystemToEdit) {
+        handleEdit(keySystemToEdit)
+        pagination.updateUrlParams({ editKeySystemId: null })
+      }
+    }
+  }, [editKeySystemId, KeySystems, editingKeySystem, pagination])
 
   // Filter update handlers
   const handleSearchChange = useCallback(
