@@ -72,7 +72,7 @@ describe('keys-adapter', () => {
       }))
   })
 
-  describe('getKeysDetails', () => {
+  describe('getKeyDetailsByRentalObject', () => {
     it('returns keys with active loan information aggregated', () =>
       withContext(async (ctx) => {
         // Create key
@@ -91,7 +91,7 @@ describe('keys-adapter', () => {
         })
 
         // Test the complex aggregation query
-        const result = await keysAdapter.getKeysDetails('A001', ctx.db, {
+        const result = await keysAdapter.getKeyDetailsByRentalObject('A001', ctx.db, {
           includeLoans: true,
         })
 
@@ -108,7 +108,7 @@ describe('keys-adapter', () => {
           ctx.db
         )
 
-        const result = await keysAdapter.getKeysDetails('A001', ctx.db, {
+        const result = await keysAdapter.getKeyDetailsByRentalObject('A001', ctx.db, {
           includeLoans: true,
         })
 

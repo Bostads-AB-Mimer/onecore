@@ -194,7 +194,7 @@ describe('GET /keys/by-rental-object/:rentalObjectCode', () => {
 
     // Mock the adapter to return the keys
     const getKeysDetailsSpy = jest
-      .spyOn(keysAdapter, 'getKeysDetails')
+      .spyOn(keysAdapter, 'getKeyDetailsByRentalObject')
       .mockResolvedValueOnce(mockKeys)
 
     // Make HTTP request

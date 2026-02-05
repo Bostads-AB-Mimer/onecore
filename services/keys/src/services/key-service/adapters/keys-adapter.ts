@@ -213,25 +213,11 @@ export interface KeyIncludeOptions {
 }
 
 /**
- * Get keys with optional related data enriched using Knex query builder.
- * This eliminates N+1 queries by fetching keys first, then related data in parallel.
- *
- * Performance: ~95% faster than fetching keys then looping to get related data.
- *
- * Returns:
- * - All non-disposed keys
- * - Disposed keys that have an active loan
- * - Optionally includes loans array (active + previous loans)
- * - Optionally includes events array (latest event)
- * - Optionally includes key system data
- *
- * @param rentalObjectCode - The rental object code to filter keys by
- * @param dbConnection - Database connection (optional, defaults to db)
- * @param options - Options for including related data
- * @returns Promise<KeyDetails[]> - Keys with nested loan/event/keySystem objects
+ * Core enrichment function: takes an array of keys and attaches optional related data.
+ * Fetches loans, events, and key systems in parallel to avoid N+1 queries.
  */
-export async function getKeysDetails(
-  rentalObjectCode: string,
+export async function getKeyDetails(
+  keys: Key[],
   dbConnection: Knex | Knex.Transaction = db,
   options: KeyIncludeOptions = {}
 ): Promise<KeyDetails[]> {
@@ -241,17 +227,6 @@ export async function getKeysDetails(
     includeKeySystem = false,
   } = options
 
-  // Step 1: Get base keys (non-disposed, or disposed with active loan)
-  let keysQuery = dbConnection(TABLE).where({ rentalObjectCode }).select('*')
-
-  // If not including loans, only get non-disposed keys
-  if (!includeLoans) {
-    keysQuery = keysQuery.where({ disposed: 0 })
-  }
-
-  const keys = await keysQuery.orderBy(['keyType', 'keySequenceNumber'])
-
-  // If nothing to enrich, return early
   if (
     keys.length === 0 ||
     (!includeLoans && !includeEvents && !includeKeySystem)
@@ -259,7 +234,6 @@ export async function getKeysDetails(
     return keys as KeyDetails[]
   }
 
-  // Step 2: Fetch related data in parallel using reusable helpers
   const [loansByKeyId, eventsByKeyId, keySystemsById] = await Promise.all([
     includeLoans ? fetchLoans(keys, dbConnection) : Promise.resolve(new Map()),
     includeEvents
@@ -270,11 +244,9 @@ export async function getKeysDetails(
       : Promise.resolve(new Map()),
   ])
 
-  // Step 3: Attach related data to keys
-  const enrichedKeys = keys.map((key) => {
-    const result: any = { ...key }
+  return keys.map((key) => {
+    const result: KeyDetails = { ...key } as KeyDetails
 
-    // Attach loans (active + previous, limit to 2)
     if (includeLoans) {
       const keyLoans = loansByKeyId.get(key.id) || []
       const activeLoan = keyLoans.find(
@@ -290,93 +262,66 @@ export async function getKeysDetails(
       if (previousLoan) loans.push(previousLoan)
 
       result.loans = loans.length > 0 ? loans : null
-
-      // Filter disposed keys: only include if they have an active loan
-      if (key.disposed && !activeLoan) {
-        return null // Will be filtered out
-      }
     }
 
-    // Attach events (latest only)
     if (includeEvents) {
       const keyEvents = eventsByKeyId.get(key.id) || []
       result.events = keyEvents.length > 0 ? [keyEvents[0]] : null
     }
 
-    // Attach key system
     if (includeKeySystem && key.keySystemId) {
       result.keySystem = keySystemsById.get(key.keySystemId) || null
     }
 
     return result
   })
-
-  // Filter out nulls (disposed keys without active loans)
-  return enrichedKeys.filter((k) => k !== null) as KeyDetails[]
 }
 
 /**
- * Get a single key with optional related data
- * Helper function that can be used by other adapters to build KeyDetails objects
- *
- * @param key - The base key object
- * @param dbConnection - Database connection
- * @param options - Options for including related data
- * @returns Promise<KeyDetails> - Key with optional related data
+ * Fetch keys by rental object code and enrich with details.
+ * Filters out disposed keys unless they have an active loan.
  */
-export async function getKeyDetails(
-  key: Key,
+export async function getKeyDetailsByRentalObject(
+  rentalObjectCode: string,
   dbConnection: Knex | Knex.Transaction = db,
   options: KeyIncludeOptions = {}
-): Promise<KeyDetails> {
-  const {
-    includeLoans = false,
-    includeEvents = false,
-    includeKeySystem = false,
-  } = options
-  const result: any = { ...key }
+): Promise<KeyDetails[]> {
+  const { includeLoans = false } = options
 
-  // Fetch all related data in parallel using reusable helpers
-  const [loansByKeyId, eventsByKeyId, keySystemsById] = await Promise.all([
-    includeLoans ? fetchLoans([key], dbConnection) : Promise.resolve(new Map()),
-    includeEvents
-      ? fetchEvents([key], dbConnection)
-      : Promise.resolve(new Map()),
-    includeKeySystem
-      ? fetchKeySystems([key], dbConnection)
-      : Promise.resolve(new Map()),
-  ])
+  let keysQuery = dbConnection(TABLE).where({ rentalObjectCode }).select('*')
 
-  // Attach loans (active + previous)
+  if (!includeLoans) {
+    keysQuery = keysQuery.where({ disposed: 0 })
+  }
+
+  const keys = await keysQuery.orderBy(['keyType', 'keySequenceNumber'])
+  const details = await getKeyDetails(keys, dbConnection, options)
+
   if (includeLoans) {
-    const keyLoans = loansByKeyId.get(key.id) || []
-    const activeLoan = keyLoans.find(
-      (loan: KeyLoan) => loan.returnedAt === null
+    return details.filter(
+      (d) =>
+        !d.disposed ||
+        (d.loans?.some((l: KeyLoan) => l.returnedAt === null) ?? false)
     )
-    const returnedLoans = keyLoans.filter(
-      (loan: KeyLoan) => loan.returnedAt !== null
-    )
-    const previousLoan = returnedLoans.length > 0 ? returnedLoans[0] : null
-
-    const loans: KeyLoan[] = []
-    if (activeLoan) loans.push(activeLoan)
-    if (previousLoan) loans.push(previousLoan)
-
-    result.loans = loans.length > 0 ? loans : null
   }
 
-  // Attach events (latest only)
-  if (includeEvents) {
-    const keyEvents = eventsByKeyId.get(key.id) || []
-    result.events = keyEvents.length > 0 ? [keyEvents[0]] : null
-  }
+  return details
+}
 
-  // Attach key system
-  if (includeKeySystem && key.keySystemId) {
-    result.keySystem = keySystemsById.get(key.keySystemId) || null
-  }
+/**
+ * Fetch keys by ID(s) and enrich with details.
+ * Accepts a single key ID or an array of key IDs.
+ */
+export async function getKeyDetailsById(
+  keyIds: string | string[],
+  dbConnection: Knex | Knex.Transaction = db,
+  options: KeyIncludeOptions = {}
+): Promise<KeyDetails[]> {
+  const ids = Array.isArray(keyIds) ? keyIds : [keyIds]
+  if (ids.length === 0) return []
 
-  return result as KeyDetails
+  const keys = await dbConnection(TABLE).whereIn('id', ids)
+  return getKeyDetails(keys, dbConnection, options)
 }
 
 /**
