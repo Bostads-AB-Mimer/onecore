@@ -392,9 +392,10 @@ export function KeyLoansTable({
                           const renderLink = (code: string) => {
                             const displayCode =
                               contactData[code]?.contactCode ?? code
-                            const to = code.startsWith('P')
-                              ? `/KeyLoan?tenant=${displayCode}`
-                              : `/maintenance-keys?contact=${displayCode}`
+                            const to =
+                              loan.loanType === 'MAINTENANCE'
+                                ? `/maintenance-keys?contact=${displayCode}`
+                                : `/KeyLoan?tenant=${displayCode}`
                             return (
                               <TableLink key={code} to={to}>
                                 {displayCode}
