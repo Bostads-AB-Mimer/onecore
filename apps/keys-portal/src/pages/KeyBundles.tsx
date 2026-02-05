@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ListPageLayout } from '@/components/shared/layout'
 import { KeyBundlesTable } from '@/components/key-bundles/KeyBundlesTable'
 import { AddKeyBundleForm } from '@/components/key-bundles/AddKeyBundleForm'
-
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { KeyBundle, KeyDetails } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import * as keyBundleService from '@/services/api/keyBundleService'
@@ -21,6 +21,7 @@ export default function KeyBundles() {
     KeyDetails[]
   >([])
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
+  const [deletingBundleId, setDeletingBundleId] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Read search query from URL
@@ -160,13 +161,18 @@ export default function KeyBundles() {
     setEditingKeyBundle(null)
   }
 
-  const handleDelete = async (id: string) => {
-    const keyBundle = keyBundles.find((kb) => kb.id === id)
+  const handleDelete = (id: string) => {
+    setDeletingBundleId(id)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingBundleId) return
+    const keyBundle = keyBundles.find((kb) => kb.id === deletingBundleId)
     if (!keyBundle) return
 
     try {
-      await keyBundleService.deleteKeyBundle(id)
-      setKeyBundles((prev) => prev.filter((kb) => kb.id !== id))
+      await keyBundleService.deleteKeyBundle(deletingBundleId)
+      setKeyBundles((prev) => prev.filter((kb) => kb.id !== deletingBundleId))
       toast({
         title: 'Nyckelsamling borttagen',
         description: `${keyBundle.name} har tagits bort.`,
@@ -179,8 +185,14 @@ export default function KeyBundles() {
         description: 'Kunde inte ta bort nyckelsamlingen.',
         variant: 'destructive',
       })
+    } finally {
+      setDeletingBundleId(null)
     }
   }
+
+  const deletingBundle = deletingBundleId
+    ? keyBundles.find((kb) => kb.id === deletingBundleId)
+    : null
 
   const handleToggleExpand = async (bundleId: string) => {
     if (expandedBundleId === bundleId) {
@@ -245,6 +257,23 @@ export default function KeyBundles() {
         isLoadingKeys={isLoadingKeys}
         isLoading={isLoading}
         onRefresh={loadKeyBundles}
+      />
+
+      <ConfirmDialog
+        open={!!deletingBundleId}
+        onOpenChange={(open) => {
+          if (!open) setDeletingBundleId(null)
+        }}
+        title="Ta bort nyckelsamling"
+        description={
+          <p>
+            Är du säker på att du vill ta bort nyckelsamlingen
+            {deletingBundle ? ` "${deletingBundle.name}"` : ''}? Denna åtgärd
+            kan inte ångras.
+          </p>
+        }
+        confirmLabel="Ta bort"
+        onConfirm={handleConfirmDelete}
       />
     </ListPageLayout>
   )

@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Minus } from 'lucide-react'
 import { handleDisposeKeys } from '@/services/loanHandlers'
 import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 
 interface KeyBundleKeysTableProps {
   keys: KeyDetails[]
@@ -32,6 +33,9 @@ export function KeyBundleKeysTable({
   // Split keys into disposed and non-disposed
   const nonDisposedKeys = useMemo(() => keys.filter((k) => !k.disposed), [keys])
   const disposedKeys = useMemo(() => keys.filter((k) => k.disposed), [keys])
+
+  // Alert dialog state for removing keys with active loans
+  const [showRemoveWarning, setShowRemoveWarning] = useState(false)
 
   // Dialog states
   const [showReturnDialog, setShowReturnDialog] = useState(false)
@@ -100,8 +104,22 @@ export function KeyBundleKeysTable({
     return activeLoan === null || activeLoan.loanType !== 'MAINTENANCE'
   })
 
+  // Keys with active loans among selected keys
+  const selectedKeysWithActiveLoans = selectedKeysData.filter(
+    (k) => getActiveLoan(k) !== null
+  )
+
   // Action handlers
+  const handleRemoveFromBundleClick = () => {
+    if (selectedKeysWithActiveLoans.length > 0) {
+      setShowRemoveWarning(true)
+    } else {
+      handleRemoveFromBundle()
+    }
+  }
+
   const handleRemoveFromBundle = async () => {
+    setShowRemoveWarning(false)
     setIsProcessing(true)
     try {
       // Get current bundle keys
@@ -192,7 +210,7 @@ export function KeyBundleKeysTable({
               label: 'Ta bort från samling',
               variant: 'outline',
               icon: <Minus className="h-3 w-3" />,
-              onClick: handleRemoveFromBundle,
+              onClick: handleRemoveFromBundleClick,
             },
           ]}
         />
@@ -303,6 +321,29 @@ export function KeyBundleKeysTable({
         selectedKeys={selectedKeysData}
         allKeys={keys}
         onSuccess={onRefresh}
+      />
+
+      <ConfirmDialog
+        open={showRemoveWarning}
+        onOpenChange={setShowRemoveWarning}
+        title="Nycklar med aktiva lån"
+        description={
+          <div className="space-y-2">
+            <p>
+              {selectedKeysWithActiveLoans.length === 1
+                ? 'En av de valda nycklarna har ett aktivt lån:'
+                : `${selectedKeysWithActiveLoans.length} av de valda nycklarna har aktiva lån:`}
+            </p>
+            <ul className="list-disc pl-5 text-sm">
+              {selectedKeysWithActiveLoans.map((k) => (
+                <li key={k.id}>{k.keyName}</li>
+              ))}
+            </ul>
+            <p>Vill du ändå ta bort dem från samlingen?</p>
+          </div>
+        }
+        confirmLabel="Ta bort ändå"
+        onConfirm={handleRemoveFromBundle}
       />
     </>
   )
