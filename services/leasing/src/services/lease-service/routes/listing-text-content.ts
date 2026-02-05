@@ -226,7 +226,6 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
-      // Check if this is a "not found" error
       if (result.err.message.includes('not found')) {
         ctx.status = 404
         ctx.body = { error: result.err.message, ...metadata }
