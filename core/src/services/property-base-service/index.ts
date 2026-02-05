@@ -1692,7 +1692,6 @@ export const routes = (router: KoaRouter) => {
         getResidence.data.propertyObject.rentalId,
         {
           includeContacts: false,
-          status: ['current', 'upcoming'], // Check this
           includeRentInfo: true,
         }
       )
