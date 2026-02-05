@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rn-2026-02-05-v187-1",
+    "date": "2026-02-05",
+    "title": "Stöd för fler noteringar",
+    "description": "Det går nu att se och lägga till både standardnoteringar och sökandenoteringar på kund",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-05-v187-2",
+    "date": "2026-02-05",
+    "title": "Skatteverkets lägenhetsnummer",
+    "description": "Nu visas rätt siffror för skatteverkets lägenhetsnummer på lägenhetskortet.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-02-05-v187-3",
+    "date": "2026-02-05",
+    "title": "Fastighetsnummer och byggnadsnummer på lägenhetskort",
+    "description": "Nu går det även att se vilken fastighet och byggnad en lägenhet tillhör direkt på lägenhetskortet ",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-05-v187-4",
+    "date": "2026-02-05",
+    "title": "Uppdaterad styling",
+    "description": "Uppdaterad styling på spärrlistan ",
+    "category": "fix"
+  }
+]
