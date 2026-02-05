@@ -35,6 +35,9 @@ export interface Config {
   economyService: {
     url: string
   }
+  fileStorageService: {
+    url: string
+  }
   auth: {
     secret: string
     expiresIn: ms.StringValue | number
@@ -104,6 +107,9 @@ const config = configPackage({
     economyService: {
       url: 'http://localhost:5080',
     },
+    fileStorageService: {
+      url: 'http://localhost:5091',
+    },
     auth: {
       secret: 'very secret. replace this',
       expiresIn: '3h', // format allowed by https://github.com/zeit/ms
@@ -161,4 +167,5 @@ export default {
   auth: config.get('auth'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
+  fileStorageService: config.get('fileStorageService'),
 } as Config

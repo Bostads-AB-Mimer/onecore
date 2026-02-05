@@ -750,6 +750,7 @@ export const routes = (router: KoaRouter) => {
         {
           status: ['current', 'upcoming'],
           includeContacts: false,
+          includeRentInfo: true,
         }
       )
       const promises = leases

@@ -1,4 +1,8 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  loggedAxios as axios,
+  logger,
+  PaginatedResponse,
+} from '@onecore/utilities'
 import { AxiosError } from 'axios'
 import {
   ConsumerReport,
@@ -6,6 +10,7 @@ import {
   WaitingListType,
   Tenant,
   leasing,
+  IdentityCheckContact,
 } from '@onecore/types'
 import { z } from 'zod'
 
@@ -52,6 +57,29 @@ const getContactsDataBySearchQuery = async (
   }
 }
 
+const getContactsForIdentityCheck = async (
+  page: number,
+  limit: number
+): Promise<
+  AdapterResult<PaginatedResponse<IdentityCheckContact>, 'unknown'>
+> => {
+  try {
+    const response = await axios.get<PaginatedResponse<IdentityCheckContact>>(
+      `${tenantsLeasesServiceUrl}/contacts/for-identity-check`,
+      { params: { page, limit } }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactsForIdentityCheck')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getContactByContactCode = async (
   contactCode: string
 ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> => {
@@ -65,6 +93,67 @@ const getContactByContactCode = async (
     return { ok: true, data: res.data.content }
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.getContactByContactCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getContactCommentsByContactCode = async (
+  contactCode: string
+): Promise<
+  AdapterResult<
+    z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>,
+    'contact-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const res = await axios.get<{
+      content: z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`)
+
+    if (res.status === 404) {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    if (res.status === 200) {
+      return { ok: true, data: res.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getContactCommentsByContactCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const createContactComment = async (
+  contactCode: string,
+  params: z.infer<typeof leasing.v1.CreateContactCommentRequestSchema>
+): Promise<
+  AdapterResult<
+    z.infer<typeof leasing.v1.ContactCommentSchema>,
+    'contact-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const res = await axios.post<{
+      content: z.infer<typeof leasing.v1.ContactCommentSchema>
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`, params)
+
+    if (res.status === 404) {
+      return { ok: false, err: 'contact-not-found' }
+    }
+
+    if (res.status === 200 || res.status === 201) {
+      return {
+        ok: true,
+        data: res.data.content,
+        statusCode: res.status,
+      }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.createContactComment')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -95,8 +184,12 @@ const getTenantByContactCode = async (
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.getTenantByContactCode')
 
-    if (err instanceof AxiosError)
+    if (err instanceof AxiosError) {
+      if (err.response?.data?.type === 'contact-leases-not-found') {
+        return { ok: false, err: 'contact-not-tenant' }
+      }
       return { ok: false, err: err.response?.data?.type }
+    }
     return { ok: false, err: 'unknown' }
   }
 }
@@ -246,16 +339,102 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
+export type PreliminaryTerminateLeaseRequestParams = z.infer<
+  typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+>
+
+export type PreliminaryTerminateLeaseResponseData = z.infer<
+  typeof leasing.v1.PreliminaryTerminateLeaseResponseSchema
+>
+
+const preliminaryTerminateLease = async (
+  leaseId: string,
+  params: PreliminaryTerminateLeaseRequestParams
+): Promise<
+  AdapterResult<
+    PreliminaryTerminateLeaseResponseData,
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-failed'
+    | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
+      params
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    const errorType = response.data?.error
+
+    if (response.status === 404) {
+      return {
+        ok: false,
+        err: 'lease-not-found',
+      }
+    }
+
+    if (response.status === 400 && errorType === 'tenant-email-missing') {
+      return {
+        ok: false,
+        err: 'tenant-email-missing',
+      }
+    }
+
+    logger.error(
+      { status: response.status, data: response.data },
+      'Failed to preliminary terminate lease'
+    )
+    return { ok: false, err: 'termination-failed' }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response) {
+      const errorType = err.response.data?.error
+      const status = err.response.status
+
+      if (status === 404) {
+        return {
+          ok: false,
+          err: 'lease-not-found',
+        }
+      }
+
+      if (status === 400 && errorType === 'tenant-email-missing') {
+        return {
+          ok: false,
+          err: 'tenant-email-missing',
+        }
+      }
+
+      logger.error(
+        { status, error: errorType, leaseId },
+        'Error preliminary terminating lease'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+
+    logger.error(err, `Error preliminary terminating lease: ${leaseId}`)
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   getApplicationProfileByContactCode,
   getContactByContactCode,
   getContactByPhoneNumber,
+  getContactCommentsByContactCode,
   getContactForPnr,
   getContactsDataBySearchQuery,
+  getContactsForIdentityCheck,
   getCreditInformation,
   getTenantByContactCode,
+  preliminaryTerminateLease,
   resetWaitingList,
+  createContactComment,
   createOrUpdateApplicationProfileByContactCode,
 }
 
@@ -279,6 +458,8 @@ export {
   getLeasesByRentalObjectCode,
   addLeaseHomeInsuranceRentRow,
   deleteLeaseRentRow,
+  getBuildingManagers,
+  searchLeases,
 } from './leases'
 
 export {

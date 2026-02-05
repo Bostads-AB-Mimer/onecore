@@ -12,17 +12,22 @@ import {
   MessageSquare,
   Users,
   FileText,
+  Map,
+  Folder,
+  Lock,
+  Wrench,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { RoomInfo } from '@/components/residence/RoomInfo'
 import { TenantInformation } from '@/components/residence/TenantInformation'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { Lease } from '@/services/api/core'
 import { ResidenceFloorplan } from '@/components/residence/ResidenceFloorplan'
 import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
+import { ContextType } from '@/types/ui'
+import { DocumentsTab } from '@/components/documents/DocumentsTab'
+import RentalBlocksTab from '@/components/residence/RentalBlocksTab'
+import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -39,10 +44,7 @@ export const ResidenceView = () => {
 
   const isMobile = useIsMobile()
 
-  // Get current lease
-  const currentLease: Lease | undefined = leases?.find(
-    (l) => l.status === 'Current'
-  ) as Lease
+  const currentLease: Lease | undefined = leases?.[0] as Lease
 
   const renderContent = () => {
     if (residenceIsLoading) {
@@ -75,13 +77,14 @@ export const ResidenceView = () => {
             <TabsList className="mb-4 bg-slate-100/70 p-1 rounded-lg">
               <TabsTrigger value="rooms" className="flex items-center gap-1.5">
                 <Info className="h-4 w-4" />
-                Rumsinformation
+                <span className="hidden sm:inline">Rumsinformation</span>
               </TabsTrigger>
               <TabsTrigger
                 value="floorplan"
                 className="flex items-center gap-1.5"
               >
-                Bofaktablad
+                <Map className="h-4 w-4" />
+                <span className="hidden sm:inline">Bofaktablad</span>
               </TabsTrigger>
               <TabsTrigger
                 disabled
@@ -89,25 +92,46 @@ export const ResidenceView = () => {
                 className="flex items-center gap-1.5"
               >
                 <ClipboardList className="h-4 w-4" />
-                Besiktningar
+                <span className="hidden sm:inline">Besiktningar</span>
               </TabsTrigger>
               <TabsTrigger value="tenant" className="flex items-center gap-1.5">
                 <Users className="h-4 w-4" />
-                Hyresgäst
+                <span className="hidden sm:inline">Hyresgäst</span>
               </TabsTrigger>
               <TabsTrigger
                 value="contracts"
                 className="flex items-center gap-1.5"
               >
                 <FileText className="h-4 w-4" />
-                Kontrakt
+                <span className="hidden sm:inline">Kontrakt</span>
               </TabsTrigger>
               <TabsTrigger
                 value="workorders"
                 className="flex items-center gap-1.5"
               >
                 <MessageSquare className="h-4 w-4" />
-                Ärenden
+                <span className="hidden sm:inline">Ärenden</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="documents"
+                className="flex items-center gap-1.5"
+              >
+                <Folder className="h-4 w-4" />
+                <span className="hidden sm:inline">Dokument</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="rental-blocks"
+                className="flex items-center gap-1.5"
+              >
+                <Lock className="h-4 w-4" />
+                <span className="hidden sm:inline">Spärrar</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="maintenance"
+                className="flex items-center gap-1.5"
+              >
+                <Wrench className="h-4 w-4" />
+                <span className="hidden sm:inline">Underhållsenheter</span>
               </TabsTrigger>
             </TabsList>
             <TabsContent value="rooms">
@@ -156,6 +180,24 @@ export const ResidenceView = () => {
                   id={residence?.propertyObject.rentalId}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="documents">
+              <DocumentsTab
+                contextType={ContextType.Residence}
+                id={residence.id}
+              />
+            </TabsContent>
+            <TabsContent value="rental-blocks">
+              <RentalBlocksTab
+                rentalId={residence.propertyObject.rentalId ?? ''}
+              />
+            </TabsContent>
+            <TabsContent value="maintenance">
+              <MaintenanceUnitsTab
+                contextType="residence"
+                identifier={residence.propertyObject.rentalId ?? undefined}
+                showFlatList
+              />
             </TabsContent>
           </Tabs>
         </div>

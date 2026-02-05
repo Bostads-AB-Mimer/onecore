@@ -274,6 +274,45 @@ export interface paths {
       };
     };
   };
+  "/workOrders/maintenanceUnitCode/{maintenanceUnitCode}": {
+    /**
+     * Get work orders by maintenance unit code
+     * @description Retrieves a list of work orders based on maintenance unit code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The maintenance unit code to filter work orders. */
+          maintenanceUnitCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                workOrders?: components["schemas"]["WorkOrder"][];
+              };
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
   "/workOrders/xpand/residenceId/{residenceId}": {
     /**
      * Get work orders by residence id from xpand
@@ -396,6 +435,64 @@ export interface paths {
               content?: {
                 workOrders?: components["schemas"]["XpandWorkOrder"][];
               };
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/workOrders/xpand/maintenanceUnitCode/{maintenanceUnitCode}": {
+    /**
+     * Get work orders by maintenance unit code from xpand
+     * @description Retrieves a list of work orders from xpand based on maintenance unit code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Number of records to skip for pagination. */
+          skip?: number;
+          /** @description Maximum number of records to return. */
+          limit?: number;
+          /** @description Sort results in ascending order by creation time. */
+          sortAscending?: boolean;
+        };
+        path: {
+          /** @description The maintenance unit code to filter work orders. */
+          maintenanceUnitCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                workOrders?: components["schemas"]["XpandWorkOrder"][];
+              };
+              /** @description Route metadata */
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Bad request. Invalid query parameters. */
+        400: {
+          content: {
+            "application/json": {
+              /** @description Validation error details */
+              error?: Record<string, never>;
               /** @description Route metadata */
               metadata?: Record<string, never>;
             };

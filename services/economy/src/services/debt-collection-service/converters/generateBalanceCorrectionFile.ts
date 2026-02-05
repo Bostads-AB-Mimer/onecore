@@ -1,4 +1,4 @@
-import { EnrichedXledgerBalanceCorrection } from '../types'
+import { EnrichedXledgerBalanceCorrection } from '../../common/types'
 import {
   formatNumber,
   getDateString,
@@ -61,11 +61,12 @@ const createPostsForBalanceCorrection = (
           getDateString(balanceCorrection.lastDebitDate),
           rightPad(balanceCorrection.rentalProperty.address, 36, ' '),
           rightPad(
-            balanceCorrection.rentalProperty.postalCode.replaceAll(' ', ''),
+            balanceCorrection.rentalProperty.postalCode?.replaceAll(' ', '') ??
+              '',
             5,
             ' '
           ),
-          rightPad(balanceCorrection.rentalProperty.city, 28, ' '),
+          rightPad(balanceCorrection.rentalProperty.city ?? '', 28, ' '),
           '99',
         ],
         ''

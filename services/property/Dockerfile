@@ -11,7 +11,7 @@ RUN apt-get update -y && apt-get install -y openssl
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 # Copy package files for dependency installation
 COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -22,8 +22,8 @@ COPY libs/utilities ./libs/utilities
 COPY services/property ./services/property
 
 RUN pnpm install
-
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run generate:static
 RUN pnpm run --filter @onecore/property build
 RUN pnpm deploy --filter @onecore/property --prod /out
@@ -36,7 +36,7 @@ RUN cd /out && pnpm generate:static
 FROM node:23-slim AS runner
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 # Run on the same version of openssl as the prisma build
 RUN apt-get update -y && apt-get install -y openssl

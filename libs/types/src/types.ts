@@ -20,6 +20,7 @@ import {
   InvoiceSchema,
   LeaseRentRowSchema,
 } from './schemas/v1'
+import { IdentityCheckContactSchema } from './leasing/v1'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -101,7 +102,7 @@ interface RentalProperty {
 }
 
 interface Address {
-  street: string
+  street?: string
   number: string
   postalCode: string
   city: string
@@ -383,6 +384,8 @@ type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
 type LeaseRentRow = z.infer<typeof LeaseRentRowSchema>
 
+type IdentityCheckContact = z.infer<typeof IdentityCheckContactSchema>
+
 export type {
   Contact,
   Lease,
@@ -426,4 +429,5 @@ export type {
   CommentType,
   Comment,
   LeaseRentRow,
+  IdentityCheckContact,
 }

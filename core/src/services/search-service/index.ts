@@ -31,6 +31,10 @@ export const routes = (router: KoaRouter) => {
     'ParkingSpaceSearchResult',
     schemas.ParkingSpaceSearchResultSchema
   )
+  registerSchema(
+    'MaintenanceUnitSearchResult',
+    schemas.MaintenanceUnitSearchResultSchema
+  )
   registerSchema('SearchResult', schemas.SearchResultSchema)
 
   /**
@@ -40,13 +44,20 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Search Service
    *     summary: Omni-search for different entities
-   *     description: Search for properties, buildings, residences, and parking spaces.
+   *     description: |
+   *       Search for properties, buildings, residences, parking spaces, and maintenance units.
+   *       - Properties: Matches on property name
+   *       - Buildings: Matches on building name
+   *       - Residences: Matches on rental ID or residence name
+   *       - Parking Spaces: Matches on rental ID or parking space name
+   *       - Maintenance Units: Matches on code
+   *       Returns up to 10 results per entity type (max 50 total results).
    *     parameters:
    *       - in: query
    *         name: q
    *         required: true
    *         type: string
-   *         description: The search query string. Matches on property name, building name or residence rental object id
+   *         description: The search query string
    *     responses:
    *       200:
    *         description: A list of search results
@@ -95,11 +106,15 @@ export const routes = (router: KoaRouter) => {
       queryParams.data.q
     )
 
+    const getMaintenanceUnits =
+      await propertyBaseAdapter.searchMaintenanceUnits(queryParams.data.q)
+
     if (
       !getProperties.ok ||
       !getBuildings.ok ||
       !getResidences.ok ||
-      !getParkingSpaces.ok
+      !getParkingSpaces.ok ||
+      !getMaintenanceUnits.ok
     ) {
       ctx.status = 500
       return
@@ -145,6 +160,18 @@ export const routes = (router: KoaRouter) => {
       })
     )
 
+    const mappedMaintenanceUnits = getMaintenanceUnits.data.map(
+      (unit): schemas.MaintenanceUnitSearchResult => ({
+        id: unit.id,
+        type: 'maintenance-unit',
+        code: unit.code,
+        caption: unit.caption,
+        maintenanceType: unit.type,
+        estateCode: unit.estateCode,
+        estate: unit.estate,
+      })
+    )
+
     ctx.body = {
       ...metadata,
       content: [
@@ -152,6 +179,7 @@ export const routes = (router: KoaRouter) => {
         ...mappedBuildings,
         ...mappedResidences,
         ...mappedParkingSpaces,
+        ...mappedMaintenanceUnits,
       ] satisfies SearchResultResponseContent,
     }
   })

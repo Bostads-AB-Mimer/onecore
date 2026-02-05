@@ -1,4 +1,8 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  loggedAxios as axios,
+  logger,
+  PaginatedResponse,
+} from '@onecore/utilities'
 import { Lease, leasing } from '@onecore/types'
 import z from 'zod'
 
@@ -7,15 +11,15 @@ import config from '../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
-type GetLeaseOptions = leasing.v1.GetLeaseOptions
-type GetLeasesOptions = leasing.v1.GetLeasesOptions
+type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
+type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 
 export const getLease = async (
   leaseId: string,
   options: GetLeaseOptions
 ): Promise<Lease> => {
   const queryParams = new URLSearchParams({
-    includeContacts: (options.includeContacts ?? false).toString(),
+    includeContacts: options.includeContacts.toString(),
     includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
@@ -31,7 +35,7 @@ export const getLeasesByContactCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeContacts: (options.includeContacts ?? false).toString(),
+    includeContacts: options.includeContacts.toString(),
     includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
@@ -51,8 +55,9 @@ export const getLeasesByRentalObjectCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
-    includeContacts: (options.includeContacts ?? false).toString(),
     includeRentalObject: (options.includeRentalObject ?? false).toString(),
+    includeContacts: options.includeContacts.toString(),
+    includeRentInfo: options.includeRentInfo.toString(),
   })
 
   if (options.status) {
@@ -142,4 +147,35 @@ export async function deleteLeaseRentRow(params: {
 
     return { ok: false, err: 'unknown' }
   }
+}
+
+// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+export const getBuildingManagers = async (): Promise<
+  { code: string; name: string; district: string }[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/building-managers`
+  )
+  return response.data.content
+}
+
+export const searchLeases = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  const params = new URLSearchParams()
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (Array.isArray(value)) {
+      value.forEach((v) => params.append(key, v))
+    } else {
+      params.append(key, value)
+    }
+  })
+
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
+  )
+
+  return response.data
 }

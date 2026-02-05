@@ -26,7 +26,7 @@ export const Lease = z.object({
       type: z.string(),
       address: z
         .object({
-          street: z.string(),
+          street: z.string().optional(),
           number: z.string(),
           postalCode: z.string(),
           city: z.string(),
@@ -63,7 +63,7 @@ export const Lease = z.object({
     .optional(),
   address: z
     .object({
-      street: z.string(),
+      street: z.string().optional(),
       number: z.string(),
       postalCode: z.string(),
       city: z.string(),
@@ -96,7 +96,7 @@ export const Lease = z.object({
         birthDate: z.coerce.date(),
         address: z
           .object({
-            street: z.string(),
+            street: z.string().optional(),
             number: z.string(),
             postalCode: z.string(),
             city: z.string(),

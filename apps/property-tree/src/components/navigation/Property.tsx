@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Property } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
@@ -17,7 +17,6 @@ export function PropertyNavigation({
   property,
   companyId,
 }: PropertyNavigationProps) {
-  const navigate = useNavigate()
   const location = useLocation()
   const { isPropertyInHierarchy, selectionState } = useHierarchicalSelection()
 
@@ -44,20 +43,19 @@ export function PropertyNavigation({
   return (
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton
-        onClick={() => {
-          setIsExpanded(!isExpanded)
-          navigate(`/properties/${property.id}`, {
-            state: {
-              companyId: companyId,
-            },
-          })
-        }}
+        asChild
         tooltip={property.designation}
         isActive={isDirectlySelected}
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
-        <Building />
-        <span>{toTitleCase(property.designation)}</span>
+        <Link
+          to={`/properties/${property.id}`}
+          state={{ companyId }}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <Building />
+          <span>{toTitleCase(property.designation)}</span>
+        </Link>
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">

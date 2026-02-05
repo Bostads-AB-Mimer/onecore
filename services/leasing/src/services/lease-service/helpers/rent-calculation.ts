@@ -62,6 +62,35 @@ export function calculateRentInfo(
 }
 
 /**
+ * Calculates full rent information structure from pre-summed total year rent
+ * Used by lease adapters that receive the total directly from SQL SUM aggregation
+ *
+ * @param totalYearRent - Total yearly rent already summed in SQL
+ * @returns RentInfo object with currentRent details, or undefined if no rent data
+ */
+export function calculateRentInfoFromTotal(
+  totalYearRent: number | null | undefined
+): RentInfo | undefined {
+  if (!totalYearRent || totalYearRent === 0) {
+    return undefined
+  }
+
+  const monthlyRent = totalYearRent / MONTHS_PER_YEAR
+
+  return {
+    currentRent: {
+      currentRent: monthlyRent,
+      vat: 0,
+      additionalChargeDescription: undefined,
+      additionalChargeAmount: undefined,
+      rentStartDate: undefined,
+      rentEndDate: undefined,
+    },
+    futureRents: undefined,
+  }
+}
+
+/**
  * Calculates monthly rent amount from XPand yearrentrows JSON string
  * Used by rental object adapters that only need the monthly rent number
  *

@@ -8,16 +8,6 @@ describe(filterByStatus, () => {
     const currentLease = factory.tenfastLease.build({
       startDate: sub(new Date(), { days: 1 }),
       endDate: null,
-      cancellation: {
-        cancelled: false,
-        doneAutomatically: false,
-        receivedCancellationAt: null,
-        notifiedAt: null,
-        handledAt: null,
-        handledBy: null,
-        preferredMoveOutDate: null,
-      },
-      simplesignTermination: undefined,
     })
     const upcomingLease = factory.tenfastLease.build({
       startDate: add(new Date(), { days: 1 }),

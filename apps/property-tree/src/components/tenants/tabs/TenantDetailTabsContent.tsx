@@ -1,11 +1,9 @@
 import { TabsContent } from '@/components/ui/v2/Tabs'
-import {
-  ContextType,
-  WorkOrdersManagement,
-} from '@/components/work-orders/WorkOrdersManagement'
+import { WorkOrdersManagement } from '@/components/work-orders/WorkOrdersManagement'
 import { TenantQueueSystem } from '@/components/tenants/TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
-// import { TenantNotes } from '@/components/tenants/TenantNotes'
+import { TenantNotes } from '@/components/tenants/TenantNotes'
+// import { TenantOrders } from '@/components/tenants/TenantOrders'
 // import { TenantEventLog } from '@/components/tenants/TenantEventLog'
 // import { TenantDocuments } from '@/components/tenants/TenantDocuments'
 // import { TenantLedger } from '@/components/tenants/TenantLedger'
@@ -15,6 +13,7 @@ import { StickyNote } from 'lucide-react'
 import { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { TenantLedger } from '../TenantLedger'
+import { ContextType } from '@/types/ui'
 
 interface TenantDetailTabsContentProps {
   leases: Lease[]
@@ -64,11 +63,11 @@ export const TenantDetailTabsContent = ({
         <TenantLedger contactCode={contactCode} />
       </TabsContent>
 
-      {/*
       <TabsContent value="notes">
-        <div>Placeholder Noteringar</div>
+        <TenantNotes contactCode={contactCode} />
       </TabsContent>
 
+      {/*
       <TabsContent value="keys">
         <div>Placeholder Nyckelknippa</div>
       </TabsContent>

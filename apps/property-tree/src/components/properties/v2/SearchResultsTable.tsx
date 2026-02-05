@@ -14,9 +14,7 @@ export type SearchResult =
   | {
       type: 'residence'
       id: string
-      code: string
       name: string | null
-      deleted: boolean
       rentalId: string | null
     }
   | { type: 'building'; id: string; code: string; name: string | null }
@@ -28,6 +26,22 @@ export type SearchResult =
       name: string | null
       property: { name: string | null; code: string | null }
     }
+  | {
+      type: 'facility'
+      id: string
+      rentalId: string
+      code: string
+      name: string | null
+      property: { name: string | null; code: string | null }
+    }
+  | {
+      type: 'maintenance-unit'
+      id: string
+      code: string
+      caption: string | null
+      maintenanceType: string | null
+      property: { name: string | null; code: string | null }
+    }
 
 interface SearchResultsTableProps {
   results: SearchResult[]
@@ -36,9 +50,12 @@ interface SearchResultsTableProps {
 export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
   const hasResidences = results.some((r) => r.type === 'residence')
   const hasProperties = results.some((r) => r.type === 'property')
+  const hasParkingSpaces = results.some((r) => r.type === 'parking-space')
+  const hasFacilities = results.some((r) => r.type === 'facility')
+  const hasMaintenanceUnits = results.some((r) => r.type === 'maintenance-unit')
 
-  const getTypeDisplay = (type: string) => {
-    switch (type) {
+  const getTypeDisplay = (result: SearchResult) => {
+    switch (result.type) {
       case 'property':
         return 'Fastighet'
       case 'building':
@@ -47,8 +64,10 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'Lägenhet'
       case 'parking-space':
         return 'Parkering'
-      default:
-        return type
+      case 'facility':
+        return 'Lokal'
+      case 'maintenance-unit':
+        return result.maintenanceType || 'Underhållsenhet'
     }
   }
 
@@ -62,6 +81,10 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return 'bg-green-100 text-green-800'
       case 'parking-space':
         return 'bg-orange-100 text-orange-800'
+      case 'facility':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'maintenance-unit':
+        return 'bg-teal-100 text-teal-800'
       default:
         return 'bg-slate-100'
     }
@@ -77,6 +100,10 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return `/residences/${result.id}`
       case 'parking-space':
         return `/parking-spaces/${result.rentalId}`
+      case 'facility':
+        return `/facilities/${result.rentalId}`
+      case 'maintenance-unit':
+        return `/maintenance-units/${result.code}`
       default:
         return '#'
     }
@@ -89,9 +116,13 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
       case 'building':
         return result.name || result.code
       case 'residence':
-        return result.name || result.code
+        return result.name || result.rentalId || '-'
       case 'parking-space':
         return result.name || result.code
+      case 'facility':
+        return result.name || result.code
+      case 'maintenance-unit':
+        return result.caption || result.code
       default:
         return ''
     }
@@ -107,6 +138,10 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         return result.rentalId || '-'
       case 'parking-space':
         return result.rentalId
+      case 'facility':
+        return result.rentalId
+      case 'maintenance-unit':
+        return result.code
       default:
         return ''
     }
@@ -128,36 +163,27 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
           label: 'Typ',
           render: (result) => (
             <Badge variant="outline" className={getTypeColorClass(result.type)}>
-              {getTypeDisplay(result.type)}
+              {getTypeDisplay(result)}
             </Badge>
           ),
         },
         {
           key: 'info',
-          label: hasResidences && !hasProperties ? 'Hyres ID' : 'Information',
+          label:
+            (hasResidences ||
+              hasParkingSpaces ||
+              hasFacilities ||
+              hasMaintenanceUnits) &&
+            !hasProperties
+              ? 'Objektsnummer'
+              : 'Information',
           render: (result) => getSecondaryInfo(result),
           hideOnMobile: true,
         },
         {
           key: 'status',
           label: 'Status',
-          render: (result) => (
-            <>
-              {result.type === 'residence' && (
-                <Badge
-                  variant="outline"
-                  className={
-                    result.deleted
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-green-100 text-green-800'
-                  }
-                >
-                  {result.deleted ? 'Borttagen' : 'Aktiv'}
-                </Badge>
-              )}
-              {result.type !== 'residence' && '-'}
-            </>
-          ),
+          render: () => '-',
           hideOnMobile: true,
         },
         {
@@ -183,21 +209,9 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
               </div>
             </div>
             <Badge variant="outline" className={getTypeColorClass(result.type)}>
-              {getTypeDisplay(result.type)}
+              {getTypeDisplay(result)}
             </Badge>
           </div>
-          {result.type === 'residence' && (
-            <Badge
-              variant="outline"
-              className={
-                result.deleted
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-green-100 text-green-800'
-              }
-            >
-              {result.deleted ? 'Borttagen' : 'Aktiv'}
-            </Badge>
-          )}
           <div className="flex justify-end">
             <Button asChild variant="link" size="sm">
               <Link to={getPath(result)}>Visa detaljer</Link>

@@ -298,6 +298,79 @@ export const getXpandWorkOrdersByBuildingId = async (
   }
 }
 
+export const getWorkOrdersByMaintenanceUnitCode = async (
+  maintenanceUnitCode: string
+): Promise<AdapterResult<OdooWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/maintenanceUnitCode/{maintenanceUnitCode}',
+      {
+        params: { path: { maintenanceUnitCode } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders,
+    }
+  } catch (error) {
+    logger.error(
+      { error },
+      'work-order-adapter.getWorkOrdersByMaintenanceUnitCode'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getXpandWorkOrdersByMaintenanceUnitCode = async (
+  maintenanceUnitCode: string,
+  {
+    skip = 0,
+    limit = 100,
+    sortAscending,
+  }: { skip?: number; limit?: number; sortAscending?: boolean } = {}
+): Promise<AdapterResult<XpandWorkOrder[], 'unknown'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/workOrders/xpand/maintenanceUnitCode/{maintenanceUnitCode}',
+      {
+        params: {
+          path: { maintenanceUnitCode },
+          query: { skip, limit, sortAscending },
+        },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data?.content?.workOrders) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrders,
+    }
+  } catch (error) {
+    logger.error(
+      { error },
+      'work-order-adapter.getXpandWorkOrdersByMaintenanceUnitCode'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const getXpandWorkOrderDetails = async (
   workOrderCode: string
 ): Promise<AdapterResult<XpandWorkOrderDetails, 'not-found' | 'unknown'>> => {

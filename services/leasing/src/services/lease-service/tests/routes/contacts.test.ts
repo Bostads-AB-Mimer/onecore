@@ -170,6 +170,90 @@ describe('GET /contacts/search', () => {
   })
 })
 
+describe('GET /contacts/for-identity-check', () => {
+  it('returns paginated contacts for identity check', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
+      .mockResolvedValueOnce({
+        content: [
+          {
+            contactCode: 'P12345',
+            nationalRegistrationNumber: '198501011234',
+          },
+          {
+            contactCode: 'P67890',
+            nationalRegistrationNumber: '197012315678',
+          },
+        ],
+        _meta: {
+          totalRecords: 2,
+          page: 1,
+          limit: 20,
+          count: 2,
+        },
+        _links: [
+          {
+            href: '/contacts/for-identity-check?page=1&limit=20',
+            rel: 'self',
+          },
+        ],
+      })
+
+    const res = await request(app.callback()).get(
+      '/contacts/for-identity-check'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(2)
+    expect(res.body.content[0]).toEqual({
+      contactCode: 'P12345',
+      nationalRegistrationNumber: '198501011234',
+    })
+    expect(res.body._meta.totalRecords).toBe(2)
+  })
+
+  it('responds with 500 on error', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
+      .mockRejectedValueOnce(new Error('Database error'))
+
+    const res = await request(app.callback()).get(
+      '/contacts/for-identity-check'
+    )
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Internal server error')
+  })
+
+  it('supports pagination parameters', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
+      .mockResolvedValueOnce({
+        content: [
+          {
+            contactCode: 'P12345',
+            nationalRegistrationNumber: '198501011234',
+          },
+        ],
+        _meta: {
+          totalRecords: 100,
+          page: 5,
+          limit: 10,
+          count: 1,
+        },
+        _links: [],
+      })
+
+    const res = await request(app.callback()).get(
+      '/contacts/for-identity-check?page=5&limit=10'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body._meta.page).toBe(5)
+    expect(res.body._meta.limit).toBe(10)
+  })
+})
+
 describe('GET /contacts/:contactCode/application-profile', () => {
   it('responds with 404 if not found', async () => {
     jest

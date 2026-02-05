@@ -1,12 +1,9 @@
 import { Factory } from 'fishery'
 
-import { TenfastLeaseSchema } from '../../adapters/tenfast/schemas'
+import { TenfastLease } from '../../adapters/tenfast/schemas'
 import { TenfastRentalObjectFactory } from './tenfast-rental-object'
-import { z } from 'zod'
 
-type TenfastLeaseInput = z.input<typeof TenfastLeaseSchema>
-
-export const TenfastLeaseFactory = Factory.define<TenfastLeaseInput>(
+export const TenfastLeaseFactory = Factory.define<TenfastLease>(
   ({ sequence }) => ({
     externalId: `externalId-${sequence}`,
     reference: sequence,
@@ -57,8 +54,8 @@ export const TenfastLeaseFactory = Factory.define<TenfastLeaseInput>(
     updatedBy: `user-${sequence}`,
     createdAt: new Date(),
     updatedAt: new Date(),
-    startInvoicingFrom: new Date().toISOString(),
-    signedAt: new Date().toISOString(),
+    startInvoicingFrom: new Date(),
+    signedAt: new Date(),
     tags: [],
   })
 )

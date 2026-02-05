@@ -222,46 +222,6 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
-  router.get('(.*)/contacts/:contactCode/contact-card', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const getContact = await coreAdapter.getContactByContactCode(
-      ctx.params.contactCode
-    )
-
-    if (!getContact.ok) {
-      ctx.status = getContact.statusCode
-      return
-    }
-
-    const getInvoices = await coreAdapter.getInvoicesByContactCode(
-      ctx.params.contactCode
-    )
-
-    if (!getInvoices.ok) {
-      ctx.status = getInvoices.statusCode
-      return
-    }
-
-    const getLeases = await coreAdapter.getLeasesByContactCode(
-      ctx.params.contactCode
-    )
-
-    if (!getLeases.ok) {
-      ctx.status = getLeases.statusCode ?? 500
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody(
-      {
-        ...getContact.data,
-        invoices: getInvoices.data,
-        leases: getLeases.data,
-      },
-      metadata
-    )
-  })
-
   router.get('(.*)/contacts/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const getContact = await coreAdapter.getContactByNationalRegistrationNumber(

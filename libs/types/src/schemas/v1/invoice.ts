@@ -25,6 +25,7 @@ export const InvoiceRowSchema = z.object({
 export const InvoicePaymentEventSchema = z.object({
   type: z.string(),
   invoiceId: z.string(),
+  matchId: z.number(),
   amount: z.number().min(0),
   paymentDate: z.coerce.date(),
   text: z.string().nullable(),
@@ -41,6 +42,7 @@ export const InvoiceSchema = z.object({
   toDate: z.coerce.date(),
   invoiceDate: z.coerce.date(),
   expirationDate: z.coerce.date().optional(),
+  defermentDate: z.coerce.date().optional(),
   debitStatus: z.number(),
   paymentStatus: PaymentStatusSchema,
   transactionType: InvoiceTransactionTypeSchema,
@@ -54,4 +56,5 @@ export const InvoiceSchema = z.object({
   invoiceRows: z.array(InvoiceRowSchema),
   invoiceFileUrl: z.string().optional(),
   remainingAmount: z.number().optional(),
+  credit: z.object({ originalInvoiceId: z.string() }).nullable(),
 })

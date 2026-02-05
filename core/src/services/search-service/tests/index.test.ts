@@ -38,6 +38,9 @@ describe('search-service', () => {
       const searchParkingSpacesSpy = jest
         .spyOn(propertyBaseAdapter, 'searchParkingSpaces')
         .mockResolvedValueOnce({ ok: true, data: [] })
+      const searchMaintenanceUnitsSpy = jest
+        .spyOn(propertyBaseAdapter, 'searchMaintenanceUnits')
+        .mockResolvedValueOnce({ ok: true, data: [] })
 
       const res = await request(app.callback()).get('/search?q=asdf')
 
@@ -46,6 +49,7 @@ describe('search-service', () => {
       expect(searchPropertiesSpy).toHaveBeenCalled()
       expect(searchResidencesSpy).toHaveBeenCalled()
       expect(searchParkingSpacesSpy).toHaveBeenCalled()
+      expect(searchMaintenanceUnitsSpy).toHaveBeenCalled()
 
       expect(() =>
         z.array(SearchResultSchema).parse(res.body.content)

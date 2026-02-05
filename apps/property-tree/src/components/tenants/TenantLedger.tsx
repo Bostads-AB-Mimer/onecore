@@ -1,3 +1,5 @@
+import { parseAsString, useQueryState } from 'nuqs'
+
 import {
   Card,
   CardContent,
@@ -14,6 +16,11 @@ interface TenantLedgerProps {
 export const TenantLedger = ({ contactCode }: TenantLedgerProps) => {
   const invoices = useTenantInvoices(contactCode)
 
+  const [expandedInvoiceId, setExpandedInvoiceId] = useQueryState(
+    'open',
+    parseAsString
+  )
+
   return (
     <div className="space-y-4">
       <Card>
@@ -22,7 +29,13 @@ export const TenantLedger = ({ contactCode }: TenantLedgerProps) => {
         </CardHeader>
         <CardContent>
           {invoices.isLoading && <p>Laddar fakturor...</p>}
-          {invoices.data && <InvoicesTable invoices={invoices.data} />}
+          {invoices.data && (
+            <InvoicesTable
+              onInvoiceRowClick={setExpandedInvoiceId}
+              expandedInvoiceId={expandedInvoiceId}
+              invoices={invoices.data}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

@@ -10,9 +10,8 @@ import {
 } from '@src/services/debt-collection-service/service'
 
 // Mock the database adapter
-jest.mock(
-  '@src/services/debt-collection-service/adapters/xpand-db-adapter',
-  () => require('./__mocks__/xpand-db-adapter')
+jest.mock('@src/services/common/adapters/xpand-db-adapter', () =>
+  require('./__mocks__/xpand-db-adapter')
 )
 
 // Mock the file generators

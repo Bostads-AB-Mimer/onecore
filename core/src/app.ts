@@ -38,7 +38,7 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser({ multipart: true }))
+app.use(bodyParser({ jsonLimit: '50mb' }))
 
 // Log the start and completion of all incoming requests
 app.use(loggerMiddlewares.pre)

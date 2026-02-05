@@ -1,0 +1,15 @@
+// Xpand API view for rental property debit rows (rent data)
+// Used to fetch yearly rent amounts for rental objects
+// Note: This is a view table - no writes allowed, read-only queries
+model DebitRowRentalProperty {
+  // Note: This view has no proper PK. We use an auto-generated id for Prisma.
+  // For queries, we filter by rentalPropertyId which matches the rental object code (hyresid)
+  id               Int       @id @default(autoincrement())
+  rentalPropertyId String    @map("rentalpropertyid") @db.VarChar(30)
+  yearRent         Float?    @map("yearrent") @db.Money
+  debitFromDate    DateTime? @map("debitfdate") @db.DateTime
+  debitToDate      DateTime? @map("debittodate") @db.DateTime
+
+  @@index([rentalPropertyId])
+  @@map("hy_debitrowrentalproperty_xpand_api")
+}

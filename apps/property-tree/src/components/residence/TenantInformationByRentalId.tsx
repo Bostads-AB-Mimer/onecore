@@ -13,6 +13,7 @@ export function TenantInformationByRentalId({ rentalPropertyId }: Props) {
       leaseService.getByRentalPropertyId(rentalPropertyId, {
         includeContacts: true,
         includeRentalObject: false,
+        includeRentInfo: true,
       }),
     enabled: !!rentalPropertyId,
   })

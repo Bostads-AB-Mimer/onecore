@@ -160,19 +160,16 @@ export function RoomView() {
 
   const Icon = roomIcons[roomIconKey]
 
-  const handleAddComponent = async (data: unknown) => {
-    // Implementation for adding a component
-    console.log('Adding component:', data)
+  const handleAddComponent = async (_data: unknown) => {
+    // TODO: Implementation for adding a component
   }
 
-  const handleEditComponent = async (id: string, data: unknown) => {
-    // Implementation for editing a component
-    console.log('Editing component:', id, data)
+  const handleEditComponent = async (_id: string, _data: unknown) => {
+    // TODO: Implementation for editing a component
   }
 
-  const handleViewComponent = (component: Component) => {
-    // Implementation for viewing a component
-    console.log('Viewing component:', component)
+  const handleViewComponent = (_component: Component) => {
+    // TODO: Implementation for viewing a component
   }
 
   return (
@@ -234,18 +231,11 @@ export function RoomView() {
           <Card title="Funktioner">
             <div className="flex flex-wrap gap-2">
               {Object.entries(room.features).map((feature, index) => (
-                <Badge
-                  key={index}
-                  variant="default"
-                  onClick={() => console.log('Feature clicked:', feature)}
-                >
+                <Badge key={index} variant="default">
                   {feature}
                 </Badge>
               ))}
-              <Button
-                variant="outline"
-                onClick={() => console.log('Add feature')}
-              >
+              <Button variant="outline" disabled>
                 Lägg till
               </Button>
             </div>
@@ -265,25 +255,13 @@ export function RoomView() {
         <div className="space-y-6">
           <Card title="Åtgärder">
             <div className="space-y-3">
-              <Button
-                variant="link"
-                className="w-full"
-                onClick={() => console.log('Add issue')}
-              >
+              <Button variant="link" className="w-full" disabled>
                 Registrera ärende
               </Button>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => console.log('Plan maintenance')}
-              >
+              <Button variant="secondary" className="w-full" disabled>
                 Planera underhåll
               </Button>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => console.log('Room settings')}
-              >
+              <Button variant="secondary" className="w-full" disabled>
                 Ruminställningar
               </Button>
             </div>

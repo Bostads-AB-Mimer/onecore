@@ -20,6 +20,7 @@ export const mockedInvoices: Invoice[] = [
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: null,
   },
   {
     amount: 456,
@@ -37,6 +38,7 @@ export const mockedInvoices: Invoice[] = [
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: null,
   },
   {
     amount: 789,
@@ -54,6 +56,7 @@ export const mockedInvoices: Invoice[] = [
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: null,
   },
   {
     amount: 456,
@@ -71,5 +74,6 @@ export const mockedInvoices: Invoice[] = [
     type: 'Regular',
     source: 'legacy',
     invoiceRows: [],
+    credit: null,
   },
 ]

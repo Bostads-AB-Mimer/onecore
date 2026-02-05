@@ -44,8 +44,8 @@ interface FeatureToggles {
   showBuildingInstallations: boolean
   showBuildingParking: boolean
   showBuildingDocuments: boolean
-  // Barriers (Spärrar)
-  showBarriers: boolean
+  // Rental Blocks (Spärrar)
+  showRentalBlocks: boolean
   // Turnover (In- och utflytt)
   showTurnover: boolean
   // Global inspections view
@@ -105,8 +105,8 @@ const DEFAULT_FEATURES: FeatureToggles = {
   showBuildingInstallations: false,
   showBuildingParking: false,
   showBuildingDocuments: true,
-  // Barriers (Spärrar)
-  showBarriers: false,
+  // Rental Blocks (Spärrar)
+  showRentalBlocks: true,
   // Turnover (In- och utflytt)
   showTurnover: false,
   // Global inspections view

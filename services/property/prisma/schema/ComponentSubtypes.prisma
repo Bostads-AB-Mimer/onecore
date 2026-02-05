@@ -1,0 +1,20 @@
+model ComponentSubtypes {
+  id                        String   @id @default(uuid()) @db.UniqueIdentifier
+  subTypeName               String   @db.NVarChar(255)
+  typeId                    String   @db.UniqueIdentifier
+  xpandCode                 String?  @db.NVarChar(50)
+  depreciationPrice         Float    @db.Money
+  technicalLifespan         Float
+  economicLifespan          Float
+  replacementIntervalMonths Int
+  quantityType              String   @db.NVarChar(20)
+  createdAt                 DateTime @default(now()) @db.DateTime
+  updatedAt                 DateTime @default(now()) @updatedAt @db.DateTime
+
+  // Relations
+  componentType   ComponentTypes    @relation(fields: [typeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  componentModels ComponentModels[]
+
+  @@index([typeId])
+  @@map("component_subtypes")
+}

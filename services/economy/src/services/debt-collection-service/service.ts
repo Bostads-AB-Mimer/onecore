@@ -4,7 +4,7 @@ import {
   getContacts,
   getRentalProperties,
   getInvoiceRows,
-} from './adapters/xpand-db-adapter'
+} from '../common/adapters/xpand-db-adapter'
 import generateBalanceCorrectionFile from './converters/generateBalanceCorrectionFile'
 import generateInkassoSergelFile from './converters/generateInkassoSergelFile'
 import { getDateString, joinStrings, rightPad } from './converters/utils'
@@ -20,7 +20,7 @@ import {
   RentalProperty,
   RentInvoice,
   EnrichedXledgerBalanceCorrection,
-} from './types'
+} from '../common/types'
 
 export const importInvoicesFromCsv = (
   csv: string,
@@ -551,7 +551,7 @@ const createRentInvoiceComment = (
     ' ',
     `${getDateString(invoice.fromDate)}-${getDateString(invoice.toDate)}`,
     ' Enhet:',
-    rightPad(rentalProperty.postalCode.replaceAll(' ', ''), 6, ' '),
+    rightPad(rentalProperty.postalCode?.replaceAll(' ', '') ?? '', 6, ' '),
     ' ',
     rightPad(rentalProperty.code, 4, ' '),
     ' ',

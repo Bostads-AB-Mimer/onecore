@@ -100,9 +100,9 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Search buildings
    *     description: |
-   *       Retrieves all buildings associated with a given name.
+   *       Searches for buildings by name. The search query is matched against the building name using a case-insensitive contains operation.
    *       Returns detailed information about each building including its code, name,
-   *       construction details, and associated property information.
+   *       construction details, and associated property information. Returns up to 10 results.
    *     tags:
    *       - Buildings
    *     parameters:
@@ -111,7 +111,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The search query.
+   *         description: The search query. Matches against building name.
    *     responses:
    *       200:
    *         description: Successfully retrieved the buildings.

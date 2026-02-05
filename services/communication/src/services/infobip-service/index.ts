@@ -8,16 +8,20 @@ import {
   sendParkingSpaceOfferSms,
   sendWorkOrderSms,
   sendWorkOrderEmail,
+  sendParkingSpaceAcceptOffer,
 } from './adapters/infobip-adapter'
 import {
   Email,
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
+  ParkingSpaceAcceptOfferEmail,
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,
 } from '@onecore/types'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
+import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
@@ -62,6 +66,44 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  const ParkingSpaceAcceptOfferEmailSchema = z.object({
+    to: z.string().email(),
+    subject: z.string(),
+    text: z.string(),
+    firstName: z.string(),
+    parkingSpaceId: z.string(),
+    address: z.string(),
+    availableFrom: z.string(),
+    rent: z.string(),
+    type: z.string(),
+    objectId: z.string(),
+  })
+  router.post(
+    '(.*)/sendParkingSpaceAcceptOffer',
+    parseRequestBody(ParkingSpaceAcceptOfferEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as ParkingSpaceAcceptOfferEmail
+
+      try {
+        const result = await sendParkingSpaceAcceptOffer(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendParkingSpaceAcceptOffer'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
+
   router.post('(.*)/sendNotification', async (ctx) => {
     const { applicants } = ctx.request.body as {
       applicants: ParkingSpaceNotificationEmail[]

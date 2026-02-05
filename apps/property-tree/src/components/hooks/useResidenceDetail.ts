@@ -33,6 +33,7 @@ export function useResidenceDetail(residenceId: string) {
           {
             includeContacts: true,
             includeRentalObject: false,
+            includeRentInfo: true,
           }
         )
       }

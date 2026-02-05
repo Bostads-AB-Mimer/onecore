@@ -36,7 +36,7 @@ import {
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
-} from './adapters/xledger-adapter'
+} from '../common/adapters/xledger-adapter'
 import { Contact, Invoice, InvoiceRow } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'

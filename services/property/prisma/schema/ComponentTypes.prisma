@@ -1,0 +1,15 @@
+model ComponentTypes {
+  id          String   @id @default(uuid()) @db.UniqueIdentifier
+  typeName    String   @db.NVarChar(255)
+  categoryId  String   @db.UniqueIdentifier
+  description String?  @db.NVarChar(255)
+  createdAt   DateTime @default(now()) @db.DateTime
+  updatedAt   DateTime @default(now()) @updatedAt @db.DateTime
+
+  // Relations
+  category          ComponentCategories @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  componentSubtypes ComponentSubtypes[]
+
+  @@index([categoryId])
+  @@map("component_types")
+}

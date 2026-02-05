@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { SidebarMenu } from '@/components/ui/Sidebar'
 import { StaircaseNavigation } from './Staircase'
 import { useQuery } from '@tanstack/react-query'
-import { GET } from '@/services/api/baseApi'
+import { GET } from '@/services/api/core/base-api'
 
 interface StaircaseListProps {
   building: Building

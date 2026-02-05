@@ -459,4 +459,243 @@ describe('work-order-adapter', () => {
       })
     })
   })
+
+  describe(workOrderAdapter.getWorkOrdersByMaintenanceUnitCode, () => {
+    const maintenanceUnitCode = 'UNIT-123'
+    const workOrderMock = factory.externalOdooWorkOrder.buildList(2)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/maintenanceUnitCode/${maintenanceUnitCode}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getWorkOrdersByMaintenanceUnitCode(
+          maintenanceUnitCode
+        )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/maintenanceUnitCode/${maintenanceUnitCode}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: workOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getWorkOrdersByMaintenanceUnitCode(
+          maintenanceUnitCode
+        )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: workOrderMock,
+      })
+    })
+  })
+
+  describe(workOrderAdapter.getXpandWorkOrdersByMaintenanceUnitCode, () => {
+    const maintenanceUnitCode = 'UNIT-456'
+    const xpandWorkOrderMock = factory.externalXpandWorkOrder.buildList(3)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/maintenanceUnitCode/${maintenanceUnitCode}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByMaintenanceUnitCode(
+          maintenanceUnitCode
+        )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/maintenanceUnitCode/${maintenanceUnitCode}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByMaintenanceUnitCode(
+          maintenanceUnitCode
+        )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+
+    it('returns work order data with query params', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/maintenanceUnitCode/${maintenanceUnitCode}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByMaintenanceUnitCode(
+          maintenanceUnitCode,
+          {
+            skip: 5,
+            limit: 25,
+            sortAscending: false,
+          }
+        )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+  })
+
+  describe(workOrderAdapter.getWorkOrdersByBuildingId, () => {
+    const buildingId = '789-012'
+    const workOrderMock = factory.externalOdooWorkOrder.buildList(2)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/buildingId/${buildingId}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getWorkOrdersByBuildingId(buildingId)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/buildingId/${buildingId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: workOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getWorkOrdersByBuildingId(buildingId)
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: workOrderMock,
+      })
+    })
+  })
+
+  describe(workOrderAdapter.getXpandWorkOrdersByBuildingId, () => {
+    const buildingId = '789-012'
+    const xpandWorkOrderMock = factory.externalXpandWorkOrder.buildList(3)
+
+    it('returns err if request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/buildingId/${buildingId}`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByBuildingId(buildingId)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.err).toBe('unknown')
+    })
+
+    it('returns work order data', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/buildingId/${buildingId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result =
+        await workOrderAdapter.getXpandWorkOrdersByBuildingId(buildingId)
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+
+    it('returns work order data with query params', async () => {
+      mockServer.use(
+        http.get(
+          `${config.workOrderService.url}/workOrders/xpand/buildingId/${buildingId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { workOrders: xpandWorkOrderMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await workOrderAdapter.getXpandWorkOrdersByBuildingId(
+        buildingId,
+        {
+          skip: 0,
+          limit: 100,
+          sortAscending: true,
+        }
+      )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: xpandWorkOrderMock,
+      })
+    })
+  })
 })

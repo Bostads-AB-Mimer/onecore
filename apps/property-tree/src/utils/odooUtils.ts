@@ -1,6 +1,6 @@
-import { ContextType } from '@/components/work-orders/WorkOrdersManagement'
 import { InternalWorkOrder } from '@/services/api/core'
 import { resolve } from '@/utils/env'
+import { ContextType } from '@/types/ui'
 
 const ODOO_URL = resolve('VITE_ODOO_URL', '')
 const CREATE_MAINTENANCE_REQUEST_URL = `${ODOO_URL}/web#action=onecore_maintenance_extension.action_maintenance_request_create`

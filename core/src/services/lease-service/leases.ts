@@ -8,6 +8,215 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
+   * /leases/search:
+   *   get:
+   *     summary: Search and filter leases
+   *     tags:
+   *       - Lease service
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types (e.g., residence, parking))
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: ['0', '1', '2', '3']
+   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property/estate names
+   *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: buildingManager
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building manager names (Kvartersvärd)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *         description: Sort direction
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseSearchResult'
+   *                 _meta:
+   *                   $ref: '#/components/schemas/PaginationMeta'
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PaginationLinks'
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+  /**
+   * @swagger
+   * /leases/building-managers:
+   *   get:
+   *     summary: Get all building managers
+   *     tags: [Leases]
+   *     description: Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+   *     responses:
+   *       '200':
+   *         description: List of building managers
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       name:
+   *                         type: string
+   *                       district:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('/leases/building-managers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.getBuildingManagers()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching building managers')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching building managers',
+        ...metadata,
+      }
+    }
+  })
+
+  router.get('/leases/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.searchLeases(ctx.query)
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error searching leases')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred during lease search',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get leases with related entities for a specific rental object code.

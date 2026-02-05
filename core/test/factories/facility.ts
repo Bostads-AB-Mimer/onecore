@@ -5,6 +5,7 @@ import { FacilityDetails } from '../../src/services/property-base-service/schema
 export const FacilityDetailsFactory = Factory.define<FacilityDetails>(
   ({ sequence }) => ({
     id: `WO${sequence}`,
+    propertyObjectId: `PO${sequence}`,
     code: `WO${sequence}`,
     name: 'Name',
     entrance: 'Entrance',

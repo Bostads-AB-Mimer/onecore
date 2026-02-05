@@ -461,6 +461,83 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /workOrders/maintenanceUnitCode/{maintenanceUnitCode}:
+   *   get:
+   *     summary: Get work orders by maintenance unit code
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves a list of work orders based on maintenance unit code.
+   *     parameters:
+   *       - in: path
+   *         name: maintenanceUnitCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The maintenance unit code to filter work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/workOrders/maintenanceUnitCode/:maintenanceUnitCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const workOrders = await odooAdapter.getWorkOrdersByMaintenanceUnitCode(
+          ctx.params.maintenanceUnitCode
+        )
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            workOrders: workOrders satisfies WorkOrder[],
+          },
+          ...metadata,
+        }
+      } catch (error: unknown) {
+        ctx.status = 500
+
+        if (error instanceof Error) {
+          ctx.body = {
+            error: error.message,
+            ...metadata,
+          }
+        }
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /workOrders/xpand/residenceId/{residenceId}:
    *   get:
    *     summary: Get work orders by residence id from xpand
@@ -818,6 +895,145 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /workOrders/xpand/maintenanceUnitCode/{maintenanceUnitCode}:
+   *   get:
+   *     summary: Get work orders by maintenance unit code from xpand
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves a list of work orders from xpand based on maintenance unit code.
+   *     parameters:
+   *       - in: path
+   *         name: maintenanceUnitCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The maintenance unit code to filter work orders.
+   *       - in: query
+   *         name: skip
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           default: 0
+   *         description: Number of records to skip for pagination.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           default: 100
+   *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: sortAscending
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: Sort results in ascending order by creation time.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandWorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '400':
+   *         description: Bad request. Invalid query parameters.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: object
+   *                   description: Validation error details
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/workOrders/xpand/maintenanceUnitCode/:maintenanceUnitCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const parsedQuery = GetWorkOrdersFromXpandQuerySchema.safeParse(ctx.query)
+      if (!parsedQuery.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: parsedQuery.error,
+          ...metadata,
+        }
+        return
+      }
+
+      const { skip, limit, sortAscending } = parsedQuery.data
+
+      try {
+        const xpandWorkOrders =
+          await xpandAdapter.getWorkOrdersByMaintenanceUnitCode(
+            ctx.params.maintenanceUnitCode,
+            {
+              skip,
+              limit,
+              sortAscending,
+            }
+          )
+
+        if (!xpandWorkOrders.ok) {
+          ctx.status = 500
+          ctx.body = {
+            error: `Failed to fetch work orders from Xpand: ${xpandWorkOrders.err}`,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            workOrders: xpandWorkOrders.data,
+          },
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(error, 'Error fetching work orders from Xpand')
+        ctx.status = 500
+
+        if (error instanceof Error) {
+          ctx.body = {
+            error: error.message,
+            ...metadata,
+          }
+        }
+      }
+    }
+  )
 
   /**
    * @swagger

@@ -18,7 +18,15 @@ export const IncludeRentalObjectQueryParamSchema = z.object({
   includeRentalObject: z
     .enum(['true', 'false'])
     .default('false')
-    .transform((value) => value === 'true'),
+    .transform((value) => value === 'true')
+    .optional(),
+})
+
+export const IncludeRentInfoQueryParamSchema = z.object({
+  includeRentInfo: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value !== 'false'), // defaults to true
 })
 
 export const FilterLeasesQueryParamsSchema = z.object({
@@ -47,12 +55,18 @@ export const FilterLeasesQueryParamsSchema = z.object({
 
 export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
   IncludeContactsQueryParamSchema
-).merge(IncludeRentalObjectQueryParamSchema)
-
-export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema.merge(
-  IncludeRentalObjectQueryParamSchema
 )
+  .merge(IncludeRentInfoQueryParamSchema)
+  .merge(IncludeRentalObjectQueryParamSchema)
 
-export type GetLeasesOptions = z.infer<typeof GetLeasesOptionsSchema>
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
 
-export type GetLeaseOptions = z.infer<typeof GetLeaseOptionsSchema>
+export const PreliminaryTerminateLeaseRequestSchema = z.object({
+  contactCode: z.string(),
+  lastDebitDate: z.string().datetime(),
+  desiredMoveDate: z.string().datetime(),
+})
+
+export const PreliminaryTerminateLeaseResponseSchema = z.object({
+  message: z.string(),
+})

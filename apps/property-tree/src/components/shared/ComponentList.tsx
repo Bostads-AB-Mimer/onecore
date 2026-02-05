@@ -27,10 +27,14 @@ const statusColors = {
   broken: 'text-red-500',
 } as const
 
-const getComponentType = (component: Component) =>
-  component.classification.componentType.code
-const getComponentStatus = (component: Component) =>
-  component.details.typeDesignation || 'operational'
+// TODO: These functions access properties that don't exist in Component
+// This is legacy/dummy code that needs refactoring
+const getComponentType = (
+  component: Component
+): 'appliance' | 'fixture' | 'furniture' | 'other' => 'other' // component.classification.componentType.code
+const getComponentStatus = (
+  component: Component
+): 'operational' | 'needs-service' | 'broken' => 'operational' // component.details.typeDesignation || 'operational'
 
 export function ComponentList({
   components,
@@ -99,7 +103,7 @@ export function ComponentList({
                       </div>
                       <div>
                         <h3 className="font-medium group-hover:text-blue-500 transition-colors">
-                          {component.name}
+                          {component.serialNumber || component.id}
                         </h3>
                         <p className="text-sm text-gray-500">? plats</p>
                       </div>

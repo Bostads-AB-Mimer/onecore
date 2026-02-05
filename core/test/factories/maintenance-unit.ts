@@ -5,6 +5,7 @@ export const MaintenanceUnitFactory = Factory.define<
   components['schemas']['MaintenanceUnit']
 >(({ sequence }) => ({
   id: `ABC${sequence}`,
+  propertyObjectId: `PO${sequence}`,
   rentalPropertyId: '123-456-789',
   code: '111111',
   caption: 'TVÄTTSTUGA Testgatan 1',
