@@ -91,9 +91,13 @@ describe('keys-adapter', () => {
         })
 
         // Test the complex aggregation query
-        const result = await keysAdapter.getKeyDetailsByRentalObject('A001', ctx.db, {
-          includeLoans: true,
-        })
+        const result = await keysAdapter.getKeyDetailsByRentalObject(
+          'A001',
+          ctx.db,
+          {
+            includeLoans: true,
+          }
+        )
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe(key.id)
@@ -108,9 +112,13 @@ describe('keys-adapter', () => {
           ctx.db
         )
 
-        const result = await keysAdapter.getKeyDetailsByRentalObject('A001', ctx.db, {
-          includeLoans: true,
-        })
+        const result = await keysAdapter.getKeyDetailsByRentalObject(
+          'A001',
+          ctx.db,
+          {
+            includeLoans: true,
+          }
+        )
 
         expect(result).toHaveLength(1)
         expect(result[0].loans).toBeNull()
