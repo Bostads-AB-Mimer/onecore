@@ -11,13 +11,24 @@ import { leasing } from '@onecore/types'
 
 type ContactComment = leasing.v1.ContactComment
 
+// Comment type to database id mapping
+const COMMENT_TYPE_IDS: Record<string, number> = {
+  Standard: 210,
+  Sökande: 0,
+}
+
+const getCommentTypeId = (commentType: string): number => {
+  return COMMENT_TYPE_IDS[commentType] ?? 210
+}
+
 export const getContactCommentsByContactCode = async (
-  contactCode: string
+  contactCode: string,
+  commentType?: string
 ): Promise<
   AdapterResult<ContactComment[], 'contact-not-found' | 'database-error'>
 > => {
   try {
-    const rows = await xpandDb
+    let query = xpandDb
       .from('cmctc')
       .select(
         'cmctc.keycmctc',
@@ -32,8 +43,19 @@ export const getContactCommentsByContactCode = async (
       .join('cmmem', xpandDb.raw('1=1'))
       .whereRaw('RTRIM(cmmem.[keycode]) = RTRIM(cmctc.[keycmctc])')
       .where('cmctc.cmctckod', '=', contactCode)
-      .where('cmmem.id', '=', 210) // Fixed filter for contact comments
-      .orderBy(['cmctc.keycmctc', 'cmmem.keycmmem'])
+
+    // Filter by comment type or include all contact comment types
+    if (commentType) {
+      const typeId = getCommentTypeId(commentType)
+      query = query
+        .where('cmmem.id', '=', typeId)
+        .where('cmmem.name', '=', commentType)
+    } else {
+      // Include both Standard (id=210) and Sökande (id=0) comments
+      query = query.whereIn('cmmem.id', [0, 210])
+    }
+
+    const rows = await query.orderBy(['cmctc.keycmctc', 'cmmem.keycmmem'])
 
     if (!rows || rows.length === 0) {
       // Check if contact exists to differentiate 404 from empty results
@@ -114,12 +136,14 @@ const generateXpandKey = async (): Promise<string> => {
  * @param contactCode - Contact code (e.g., "P000047")
  * @param content - Plain text content of the note
  * @param author - 6-letter uppercase author code
+ * @param commentType - Type of comment: 'Standard' or 'Sökande' (default: 'Standard')
  * @returns Result with operation type and updated comment
  */
 export const upsertContactComment = async (
   contactCode: string,
   content: string,
-  author: string
+  author: string,
+  commentType: string = 'Standard'
 ): Promise<
   AdapterResult<
     { operation: 'created' | 'updated'; comment: ContactComment },
@@ -139,12 +163,14 @@ export const upsertContactComment = async (
       }
 
       const contactKey = contact.keycmctc
+      const typeId = getCommentTypeId(commentType)
 
-      // 2. Check for existing comment
+      // 2. Check for existing comment of the same type
       const existing = await trx('cmmem')
         .select('*')
         .whereRaw('RTRIM([keycode]) = ?', [contactKey.trim()])
-        .where('id', '=', 210)
+        .where('id', '=', typeId)
+        .where('name', '=', commentType)
         .first()
 
       const newNoteText = formatNoteWithSignature(author, content)
@@ -169,21 +195,33 @@ export const upsertContactComment = async (
         await trx('cmmem').insert({
           keycmmem,
           keycode: contactKey,
-          id: 210,
-          name: 'Standard',
+          id: typeId,
+          name: commentType,
           text: newNoteText,
           priority: 0,
           kind: 0, // Use plain text format
+          timestamp: new Date(),
         })
 
         return { operation: 'created' as const, keycmmem }
       }
     })
 
-    // Fetch and return the complete comment
-    const commentResult = await getContactCommentsByContactCode(contactCode)
+    // Fetch and return the complete comment of the same type
+    const commentResult = await getContactCommentsByContactCode(
+      contactCode,
+      commentType
+    )
 
     if (!commentResult.ok) {
+      return { ok: false, err: 'database-error' }
+    }
+
+    const comment = commentResult.data.find(
+      (c) => c.commentType === commentType
+    )
+
+    if (!comment) {
       return { ok: false, err: 'database-error' }
     }
 
@@ -191,7 +229,7 @@ export const upsertContactComment = async (
       ok: true,
       data: {
         operation: result.operation,
-        comment: commentResult.data[0],
+        comment,
       },
     }
   } catch (err) {

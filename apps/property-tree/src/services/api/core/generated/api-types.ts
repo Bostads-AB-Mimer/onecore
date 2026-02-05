@@ -452,6 +452,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Filter by comment type. If omitted, returns all comment types. */
+          commentType?: "Standard" | "Sökande";
+        };
         path: {
           /**
            * @description The unique code identifying the contact.
@@ -528,6 +532,12 @@ export interface paths {
              * @example DAVLIN
              */
             author: string;
+            /**
+             * @description Type of comment. Defaults to 'Standard' if not specified.
+             * @default Standard
+             * @enum {string}
+             */
+            commentType?: "Standard" | "Sökande";
           };
         };
       };
@@ -5622,6 +5632,7 @@ export interface components {
         };
         rentalId: string | null;
         rentalInformation: ({
+          apartmentNumber: string | null;
           type: {
             code: string;
             name: string | null;

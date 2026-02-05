@@ -269,6 +269,7 @@ export const ResidenceDetailsSchema = z.object({
     rentalId: z.string().nullable(),
     rentalInformation: z
       .object({
+        apartmentNumber: z.string().nullable(),
         type: z.object({
           code: z.string(),
           name: z.string().nullable(),

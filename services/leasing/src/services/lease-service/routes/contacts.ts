@@ -853,6 +853,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The contact code
    *         example: "P086890"
+   *       - in: query
+   *         name: commentType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [Standard, Sökande]
+   *         description: Filter by comment type. If omitted, returns all comment types.
    *     responses:
    *       200:
    *         description: Successfully retrieved contact comments
@@ -910,11 +917,21 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Database error
    */
+  const getContactCommentsQuerySchema = z.object({
+    commentType: z.enum(['Standard', 'Sökande']).optional(),
+  })
+
   router.get('(.*)/contacts/:contactCode/comments', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const queryResult = getContactCommentsQuerySchema.safeParse(ctx.query)
+    const commentType = queryResult.success
+      ? queryResult.data.commentType
+      : undefined
+
     const result = await contactCommentsAdapter.getContactCommentsByContactCode(
-      ctx.params.contactCode
+      ctx.params.contactCode,
+      commentType
     )
 
     if (!result.ok) {
@@ -982,6 +999,11 @@ export const routes = (router: KoaRouter) => {
    *                 minLength: 1
    *                 maxLength: 50
    *                 example: DAVLIN
+   *               commentType:
+   *                 type: string
+   *                 enum: [Standard, Sökande]
+   *                 default: Standard
+   *                 description: Type of comment. Defaults to 'Standard' if not specified.
    *     responses:
    *       200:
    *         description: Comment updated successfully
@@ -999,12 +1021,13 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(leasing.v1.CreateContactCommentRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { content, author } = ctx.request.body
+      const { content, author, commentType } = ctx.request.body
 
       const result = await contactCommentsAdapter.upsertContactComment(
         ctx.params.contactCode,
         content,
-        author
+        author,
+        commentType
       )
 
       if (!result.ok) {

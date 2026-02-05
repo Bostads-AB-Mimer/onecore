@@ -1115,6 +1115,9 @@ export const routes = (router: KoaRouter) => {
           rentalInformation: !residence.propertyObject?.rentalInformation
             ? null
             : {
+                apartmentNumber:
+                  residence.propertyObject.rentalInformation.apartmentNumber ??
+                  null,
                 type: {
                   code: residence.propertyObject.rentalInformation
                     .rentalInformationType.code,

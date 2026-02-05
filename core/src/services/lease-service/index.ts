@@ -626,6 +626,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The unique code identifying the contact.
    *         example: "P086890"
+   *       - in: query
+   *         name: commentType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [Standard, Sökande]
+   *         description: Filter by comment type. If omitted, returns all comment types.
    *     responses:
    *       '200':
    *         description: Successfully retrieved comments
@@ -686,8 +693,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/contacts/:contactCode/comments', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const commentType = ctx.query.commentType as string | undefined
     const result = await leasingAdapter.getContactCommentsByContactCode(
-      ctx.params.contactCode
+      ctx.params.contactCode,
+      commentType
     )
 
     if (!result.ok) {
@@ -750,6 +759,11 @@ export const routes = (router: KoaRouter) => {
    *                 minLength: 1
    *                 maxLength: 50
    *                 example: "DAVLIN"
+   *               commentType:
+   *                 type: string
+   *                 enum: [Standard, Sökande]
+   *                 default: Standard
+   *                 description: Type of comment. Defaults to 'Standard' if not specified.
    *     responses:
    *       '200':
    *         description: Comment updated successfully (appended to existing comment)

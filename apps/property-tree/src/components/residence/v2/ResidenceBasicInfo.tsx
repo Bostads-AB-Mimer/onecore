@@ -143,6 +143,18 @@ export const ResidenceBasicInfo = ({
             <p className="font-medium">{residence.name}</p>
           </div>
           <div>
+            <p className="text-sm text-muted-foreground">Fastighet</p>
+            <p className="font-medium">
+              {residence.property?.name && residence.property?.code
+                ? `${residence.property.name}, ${residence.property.code}`
+                : '-'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Byggnad</p>
+            <p className="font-medium">{residence.building?.code ?? '-'}</p>
+          </div>
+          <div>
             <p className="text-sm text-muted-foreground">
               Objektsnummer/lägenhetskod
             </p>
@@ -152,7 +164,10 @@ export const ResidenceBasicInfo = ({
             <p className="text-sm text-muted-foreground">
               Skatteverkets lägenhetsnummer
             </p>
-            <p className="font-medium">{residence.code}</p>
+            <p className="font-medium">
+              {residence.propertyObject?.rentalInformation?.apartmentNumber ??
+                '-'}
+            </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Hyresobjektstyp</p>

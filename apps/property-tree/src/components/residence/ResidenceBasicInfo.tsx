@@ -57,7 +57,10 @@ export const ResidenceBasicInfo = ({
               <p className="text-sm text-muted-foreground">
                 Skatteverkets lägenhetsnummer
               </p>
-              <p className="font-medium">{residence.code}</p>
+              <p className="font-medium">
+                {residence.propertyObject?.rentalInformation?.apartmentNumber ??
+                  '-'}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
