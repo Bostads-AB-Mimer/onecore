@@ -1,17 +1,15 @@
 import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
-import { getKeyDetails, type KeyIncludeOptions } from './keys-adapter'
+import { getKeyDetailsById, type KeyIncludeOptions } from './keys-adapter'
 
 type KeyBundle = keys.v1.KeyBundle
 type KeyDetails = keys.v1.KeyDetails
-type Key = keys.v1.Key
 type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
 type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
 type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
 
 const TABLE = 'key_bundles'
-const KEYS_TABLE = 'keys'
 const KEY_LOANS_TABLE = 'key_loans'
 
 /**
@@ -125,25 +123,8 @@ export async function getKeyBundleDetails(
     return { bundle, keys: [] }
   }
 
-  // 3. For each key, fetch it and optionally enrich with related data
-  const keys: (KeyDetails | null)[] = await Promise.all(
-    keyIds.map(async (keyId) => {
-      // Fetch base key
-      const key = (await dbConnection(KEYS_TABLE)
-        .where({ id: keyId })
-        .first()) as Key | undefined
-
-      if (!key) {
-        return null
-      }
-
-      // Use centralized helper to enrich with optional relations
-      return await getKeyDetails(key, dbConnection, options)
-    })
-  )
-
-  // Filter out nulls (keys that weren't found)
-  const validKeys = keys.filter((k): k is KeyDetails => k !== null)
+  // 3. Fetch all keys and enrich with related data in one call
+  const validKeys = await getKeyDetailsById(keyIds, dbConnection, options)
 
   return { bundle, keys: validKeys }
 }

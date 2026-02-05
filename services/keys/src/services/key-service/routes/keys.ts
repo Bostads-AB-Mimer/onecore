@@ -367,7 +367,7 @@ export const routes = (router: KoaRouter) => {
       const includeLoans = ctx.query.includeLoans === 'true'
       const includeEvents = ctx.query.includeEvents === 'true'
       const includeKeySystem = ctx.query.includeKeySystem === 'true'
-      const rows = await keysAdapter.getKeysDetails(
+      const rows = await keysAdapter.getKeyDetailsByRentalObject(
         ctx.params.rentalObjectCode,
         db,
         { includeLoans, includeEvents, includeKeySystem }
