@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
   TableEmptyState,
+  TableLink,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -382,7 +383,33 @@ export function KeyLoansTable({
                         {getContactFieldDisplay(loan, 'fullName')}
                       </TableCell>
                       <TableCell>
-                        {getContactFieldDisplay(loan, 'contactCode')}
+                        {(() => {
+                          const codes = [loan.contact, loan.contact2].filter(
+                            Boolean
+                          ) as string[]
+                          if (codes.length === 0) return '-'
+
+                          const renderLink = (code: string) => {
+                            const displayCode =
+                              contactData[code]?.contactCode ?? code
+                            const to = code.startsWith('P')
+                              ? `/KeyLoan?tenant=${displayCode}`
+                              : `/maintenance-keys?contact=${displayCode}`
+                            return (
+                              <TableLink key={code} to={to}>
+                                {displayCode}
+                              </TableLink>
+                            )
+                          }
+
+                          if (codes.length === 1) return renderLink(codes[0])
+
+                          return (
+                            <div className="flex flex-col gap-1">
+                              {codes.map(renderLink)}
+                            </div>
+                          )
+                        })()}
                       </TableCell>
                       <TableCell>
                         {getContactFieldDisplay(
