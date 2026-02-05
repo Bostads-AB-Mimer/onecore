@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { components } from '@/services/api/core/generated/api-types'
 import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
+import { useSendInspectionProtocol } from '../hooks/useSendInspectionProtocol'
+import { inspectionService } from '@/services/api/core/inspectionService'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
@@ -21,10 +25,23 @@ import {
 import { format } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Badge } from '@/shared/ui/Badge'
-import { Camera, ChevronDown, Key, Home, User, Phone, Mail } from 'lucide-react'
+import {
+  Camera,
+  ChevronDown,
+  Key,
+  Home,
+  User,
+  Phone,
+  Mail,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react'
+import { Alert, AlertDescription } from '@/shared/ui/Alert'
+import { Button } from '@/shared/ui/Button'
 
 type DetailedInspection = components['schemas']['DetailedInspection']
 type DetailedInspectionRoomEntry = DetailedInspection['rooms'][number]
+type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 
 interface InspectionProtocolProps {
   inspection: DetailedInspection | null
@@ -40,6 +57,14 @@ export function InspectionProtocol({
   const [expandedPhotos, setExpandedPhotos] = useState<Record<string, boolean>>(
     {}
   )
+  const [showSendModal, setShowSendModal] = useState(false)
+  const [selectedRecipient, setSelectedRecipient] = useState<
+    'new-tenant' | 'previous-tenant' | null
+  >(null)
+  const [tenantContacts, setTenantContacts] =
+    useState<TenantContactsResponse | null>(null)
+  const [isFetchingContacts, setIsFetchingContacts] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   const togglePhotoExpansion = (key: string) => {
     setExpandedPhotos((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -47,11 +72,61 @@ export function InspectionProtocol({
 
   const { downloadPdf, isDownloading: isDownloadingPdf } =
     useInspectionPdfDownload()
+  const { sendProtocol, isSending } = useSendInspectionProtocol()
 
   const handleDownloadPdf = async () => {
     if (!inspection?.id) return
     await downloadPdf(inspection.id)
   }
+
+  const handleOpenSendModal = async (
+    recipient: 'new-tenant' | 'previous-tenant'
+  ) => {
+    if (!inspection?.id) return
+
+    setSelectedRecipient(recipient)
+    setTenantContacts(null)
+    setSendError(null)
+    setShowSendModal(true)
+    setIsFetchingContacts(true)
+
+    try {
+      const contacts = await inspectionService.getTenantContacts(inspection.id)
+      setTenantContacts(contacts)
+    } catch (error) {
+      console.error('Failed to fetch tenant contacts:', error)
+      setShowSendModal(false)
+    } finally {
+      setIsFetchingContacts(false)
+    }
+  }
+
+  const handleConfirmSend = async () => {
+    if (!inspection?.id || !selectedRecipient) return
+
+    setSendError(null)
+
+    try {
+      const result = await sendProtocol(inspection.id, selectedRecipient)
+
+      if (result.success) {
+        console.log('Protocol sent successfully to:', result.sentTo.emails)
+        setShowSendModal(false)
+      } else {
+        console.error('Failed to send protocol:', result.error)
+        setSendError(
+          result.error || 'Något gick fel när protokollet skulle skickas.'
+        )
+      }
+    } catch (error) {
+      console.error('Error sending protocol:', error)
+      setSendError('Något gick fel när protokollet skulle skickas.')
+    }
+  }
+
+  const hasValidRecipient =
+    (selectedRecipient === 'new-tenant' && tenantContacts?.new_tenant) ||
+    (selectedRecipient === 'previous-tenant' && tenantContacts?.previous_tenant)
 
   const renderHeader = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -325,7 +400,7 @@ export function InspectionProtocol({
 
   const renderContent = () => (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={handleDownloadPdf}
@@ -333,6 +408,26 @@ export function InspectionProtocol({
           className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
         >
           {isDownloadingPdf ? 'Genererar PDF…' : 'Generera PDF'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleOpenSendModal('new-tenant')}
+          disabled={!inspection || isSending}
+          className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50"
+        >
+          <Mail className="h-4 w-4 mr-1" />
+          Skicka till ny hyresgäst
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleOpenSendModal('previous-tenant')}
+          disabled={!inspection || isSending}
+          className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50"
+        >
+          <Mail className="h-4 w-4 mr-1" />
+          Skicka till tidigare hyresgäst
         </button>
       </div>
       {renderHeader()}
@@ -347,20 +442,258 @@ export function InspectionProtocol({
 
   if (isOpen !== undefined) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose!}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Besiktningsprotokoll</DialogTitle>
-          </DialogHeader>
-          {renderContent()}
-        </DialogContent>
-      </Dialog>
+      <>
+        <Dialog open={isOpen} onOpenChange={onClose!}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Besiktningsprotokoll</DialogTitle>
+            </DialogHeader>
+            {renderContent()}
+          </DialogContent>
+        </Dialog>
+
+        {showSendModal && (
+          <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Skicka protokoll
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedRecipient === 'new-tenant'
+                    ? 'Skicka besiktningsprotokoll till inflyttande hyresgäst'
+                    : 'Skicka besiktningsprotokoll till avflyttande hyresgäst'}
+                </DialogDescription>
+              </DialogHeader>
+
+              {isFetchingContacts ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : tenantContacts ? (
+                <>
+                  <div className="space-y-4 py-4">
+                    {/* Inspection info card */}
+                    <Card className="bg-muted/30">
+                      <CardContent className="pt-4 space-y-2">
+                        <div className="font-medium">
+                          Besiktning: {inspection?.id || '-'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {inspection?.address || '-'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Inkluderar kostnadsansvar och åtgärder
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Recipient section */}
+                    <div>
+                      <h4 className="font-medium mb-3">Mottagare</h4>
+                      {selectedRecipient === 'new-tenant' &&
+                      tenantContacts.new_tenant ? (
+                        <div className="space-y-2">
+                          {tenantContacts.new_tenant.contacts.map((contact) => (
+                            <Card
+                              key={contact.contactCode}
+                              className="bg-muted/20"
+                            >
+                              <CardContent className="pt-3 pb-3">
+                                <div className="font-medium text-sm">
+                                  {contact.fullName}
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                  <Mail className="h-3 w-3" />
+                                  {contact.emailAddress}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : selectedRecipient === 'previous-tenant' &&
+                        tenantContacts.previous_tenant ? (
+                        <div className="space-y-2">
+                          {tenantContacts.previous_tenant.contacts.map(
+                            (contact) => (
+                              <Card
+                                key={contact.contactCode}
+                                className="bg-muted/20"
+                              >
+                                <CardContent className="pt-3 pb-3">
+                                  <div className="font-medium text-sm">
+                                    {contact.fullName}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                    <Mail className="h-3 w-3" />
+                                    {contact.emailAddress}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Inga kontakter hittades för vald mottagare.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {sendError && (
+                    <Alert variant="destructive" className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{sendError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowSendModal(false)}
+                    >
+                      Avbryt
+                    </Button>
+                    <Button
+                      onClick={handleConfirmSend}
+                      disabled={isSending || !hasValidRecipient}
+                    >
+                      {isSending ? 'Skickar…' : 'Skicka protokoll'}
+                    </Button>
+                  </DialogFooter>
+                </>
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        )}
+      </>
     )
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">{renderContent()}</CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardContent className="pt-6">{renderContent()}</CardContent>
+      </Card>
+
+      {showSendModal && (
+        <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Skicka protokoll
+              </DialogTitle>
+              <DialogDescription>
+                {selectedRecipient === 'new-tenant'
+                  ? 'Skicka besiktningsprotokoll till inflyttande hyresgäst'
+                  : 'Skicka besiktningsprotokoll till avflyttande hyresgäst'}
+              </DialogDescription>
+            </DialogHeader>
+
+            {isFetchingContacts ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : tenantContacts ? (
+              <>
+                <div className="space-y-4 py-4">
+                  {/* Inspection info card */}
+                  <Card className="bg-muted/30">
+                    <CardContent className="pt-4 space-y-2">
+                      <div className="font-medium">
+                        Besiktning: {inspection?.id || '-'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {inspection?.address || '-'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Inkluderar kostnadsansvar och åtgärder
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recipient section */}
+                  <div>
+                    <h4 className="font-medium mb-3">Mottagare</h4>
+                    {selectedRecipient === 'new-tenant' &&
+                    tenantContacts.new_tenant ? (
+                      <div className="space-y-2">
+                        {tenantContacts.new_tenant.contacts.map((contact) => (
+                          <Card
+                            key={contact.contactCode}
+                            className="bg-muted/20"
+                          >
+                            <CardContent className="pt-3 pb-3">
+                              <div className="font-medium text-sm">
+                                {contact.fullName}
+                              </div>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                <Mail className="h-3 w-3" />
+                                {contact.emailAddress}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : selectedRecipient === 'previous-tenant' &&
+                      tenantContacts.previous_tenant ? (
+                      <div className="space-y-2">
+                        {tenantContacts.previous_tenant.contacts.map(
+                          (contact) => (
+                            <Card
+                              key={contact.contactCode}
+                              className="bg-muted/20"
+                            >
+                              <CardContent className="pt-3 pb-3">
+                                <div className="font-medium text-sm">
+                                  {contact.fullName}
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                  <Mail className="h-3 w-3" />
+                                  {contact.emailAddress}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Inga kontakter hittades för vald mottagare.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {sendError && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{sendError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSendModal(false)}
+                  >
+                    Avbryt
+                  </Button>
+                  <Button
+                    onClick={handleConfirmSend}
+                    disabled={isSending || !hasValidRecipient}
+                  >
+                    {isSending ? 'Skickar…' : 'Skicka protokoll'}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   )
 }
