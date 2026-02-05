@@ -45,7 +45,15 @@
     "package": "@onecore/keys-portal",
     "path": "apps/keys-portal",
     "docker": true,
-    "imageName": "onecore-keys-portal"
+    "imageName": "onecore-keys-portal",
+    "build_args": {
+      "test": {
+        "VITE_PROPERTY_TREE_URL": "https://property-tree-test.mimer.nu"
+      },
+      "release": {
+        "VITE_PROPERTY_TREE_URL": "https://property-tree.mimer.nu"
+      }
+    }
   },
   {
     "name": "property-management",

@@ -1,7 +1,7 @@
 import { TenantQueueSystem } from './TenantQueueSystem'
 import { TenantContracts } from '@/components/tenants/TenantContracts'
 import { TenantNotes } from './TenantNotes'
-// import { TenantOrders } from './TenantOrders'
+import { TenantKeyLoans } from './TenantKeyLoans'
 import { TenantLedger } from './TenantLedger'
 import {
   MobileAccordion as GenericMobileAccordion,
@@ -74,14 +74,12 @@ export function TenantMobileAccordion({
       title: 'Noteringar',
       content: <TenantNotes contactCode={contactCode} />,
     },
-    /*
-    
     {
       id: 'keys',
-      title: 'Nyckelknippa',
-      content: <div>Placeholder Nyckelknippa</div>,
-      // content: <TenantKeys />,
+      title: 'Nyckellån',
+      content: <TenantKeyLoans contactCode={contactCode} />,
     },
+    /*
     {
       id: 'events',
       title: 'Händelselogg',

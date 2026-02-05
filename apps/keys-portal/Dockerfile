@@ -20,6 +20,9 @@ COPY apps/keys-portal ./apps/keys-portal
 ARG BACKEND_URL
 ENV VITE_BACKEND_URL=${BACKEND_URL}
 
+ARG VITE_PROPERTY_TREE_URL
+ENV VITE_PROPERTY_TREE_URL=${VITE_PROPERTY_TREE_URL}
+
 RUN pnpm install
 RUN pnpm build:types
 RUN pnpm run --filter @onecore/keys-portal build
