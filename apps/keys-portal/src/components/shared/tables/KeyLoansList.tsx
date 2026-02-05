@@ -11,7 +11,14 @@ import { LoanTypeBadge, LoanStatusBadge } from './StatusBadges'
 
 interface KeyLoansListProps {
   loans: KeyLoan[]
-  contactNames?: Record<string, string>
+  contactData?: Record<
+    string,
+    {
+      fullName: string
+      contactCode: string
+      nationalRegistrationNumber?: string
+    }
+  >
 }
 
 function formatDate(dateString: string | null | undefined) {
@@ -19,28 +26,33 @@ function formatDate(dateString: string | null | undefined) {
   return new Date(dateString).toLocaleDateString('sv-SE')
 }
 
-function getContactDisplay(
+function getContactFieldDisplay(
   loan: KeyLoan,
-  contactNames: Record<string, string>
+  contactData: NonNullable<KeyLoansListProps['contactData']>,
+  field: 'fullName' | 'contactCode' | 'nationalRegistrationNumber'
 ) {
-  const contacts: string[] = []
-  if (loan.contact && contactNames[loan.contact]) {
-    contacts.push(contactNames[loan.contact])
-  } else if (loan.contact) {
-    contacts.push(loan.contact)
-  }
+  const codes = [loan.contact, loan.contact2].filter(Boolean) as string[]
+  if (codes.length === 0) return '-'
 
-  if (loan.contact2 && contactNames[loan.contact2]) {
-    contacts.push(contactNames[loan.contact2])
-  } else if (loan.contact2) {
-    contacts.push(loan.contact2)
-  }
+  const values = codes.map((code) => {
+    const data = contactData[code]
+    if (!data) return field === 'contactCode' ? code : '-'
+    return data[field] ?? '-'
+  })
 
-  return contacts.length > 0 ? contacts.join(', ') : '-'
+  if (values.length === 1) return values[0]
+
+  return (
+    <div className="flex flex-col gap-1">
+      {values.map((value, index) => (
+        <span key={index}>{value}</span>
+      ))}
+    </div>
+  )
 }
 
 /** Simple table for displaying a list of key loans */
-export function KeyLoansList({ loans, contactNames = {} }: KeyLoansListProps) {
+export function KeyLoansList({ loans, contactData = {} }: KeyLoansListProps) {
   if (loans.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-4">
@@ -53,7 +65,10 @@ export function KeyLoansList({ loans, contactNames = {} }: KeyLoansListProps) {
     <Table>
       <TableHeader className="border-b">
         <TableRow className="hover:bg-transparent">
-          <TableHead>Kontakt</TableHead>
+          <TableHead>Namn</TableHead>
+          <TableHead>Kontaktkod</TableHead>
+          <TableHead>Personnummer</TableHead>
+          <TableHead>Kontaktperson</TableHead>
           <TableHead>Lånetyp</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Skapad</TableHead>
@@ -65,8 +80,19 @@ export function KeyLoansList({ loans, contactNames = {} }: KeyLoansListProps) {
         {loans.map((loan) => (
           <TableRow key={loan.id} className="h-12 hover:bg-muted/50">
             <TableCell className="font-medium">
-              {getContactDisplay(loan, contactNames)}
+              {getContactFieldDisplay(loan, contactData, 'fullName')}
             </TableCell>
+            <TableCell>
+              {getContactFieldDisplay(loan, contactData, 'contactCode')}
+            </TableCell>
+            <TableCell>
+              {getContactFieldDisplay(
+                loan,
+                contactData,
+                'nationalRegistrationNumber'
+              )}
+            </TableCell>
+            <TableCell>{loan.contactPerson ?? '-'}</TableCell>
             <TableCell>
               <LoanTypeBadge loanType={loan.loanType} />
             </TableCell>

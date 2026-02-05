@@ -255,6 +255,7 @@ export function getKeyLoansSearchQuery(
         // OR search in contact fields
         .orWhere(`${TABLE}.contact`, 'like', searchTerm)
         .orWhere(`${TABLE}.contact2`, 'like', searchTerm)
+        .orWhere(`${TABLE}.contactPerson`, 'like', searchTerm)
     })
   }
 

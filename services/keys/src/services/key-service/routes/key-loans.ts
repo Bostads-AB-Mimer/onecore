@@ -301,7 +301,7 @@ export const routes = (router: KoaRouter) => {
 
       // Apply additional search filters using buildSearchQuery
       buildSearchQuery(query, ctx, {
-        defaultSearchFields: ['contact', 'contact2'],
+        defaultSearchFields: ['contact', 'contact2', 'contactPerson'],
         reservedParams: [
           'q',
           'fields',
