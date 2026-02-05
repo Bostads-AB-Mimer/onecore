@@ -9,13 +9,13 @@ src/
 ├── config/        # App configuration & environment
 ├── features/      # Feature-based modules (domain logic)
 ├── hooks/         # Shared custom hooks
-├── layouts/       # Page layout components
-├── pages/         # Route-level page components
+├── layouts/       # View layout components
 ├── services/      # API calls & external integrations
 ├── store/         # Global state management
 ├── styles/        # Global styles & CSS
 ├── types/         # Shared TypeScript types
-└── utils/         # Utility functions
+├── utils/         # Utility functions
+└── views/         # Route-level view components
 ```
 
 ---
@@ -94,24 +94,13 @@ hooks/
 
 ### `/layouts`
 
-Layout components that wrap pages (headers, sidebars, footers).
+Layout components that wrap views (headers, sidebars, footers).
 
 ```
 layouts/
 ├── MainLayout.tsx
 ├── AuthLayout.tsx
 └── DashboardLayout.tsx
-```
-
-### `/pages`
-
-Page-level components, one per route. Pages compose features and layouts.
-
-```
-pages/
-├── HomePage.tsx
-├── DetailPage.tsx
-└── NotFoundPage.tsx
 ```
 
 ### `/services`
@@ -168,6 +157,17 @@ utils/
 └── stringUtils.ts
 ```
 
+### `/views`
+
+View-level components, one per route. Views compose features and layouts.
+
+```
+views/
+├── HomeView.tsx
+├── DetailView.tsx
+└── NotFoundView.tsx
+```
+
 ---
 
 ## Import Guidelines
@@ -179,7 +179,7 @@ utils/
    - `utils/` (utilities)
    - `types/` (shared types)
 
-2. **Pages** compose features and layouts
+2. **Views** compose features and layouts
 
 3. **Components** should be pure UI - no API calls or business logic
 
