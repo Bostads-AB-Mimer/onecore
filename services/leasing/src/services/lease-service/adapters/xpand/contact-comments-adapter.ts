@@ -47,7 +47,9 @@ export const getContactCommentsByContactCode = async (
     // Filter by comment type or include all contact comment types
     if (commentType) {
       const typeId = getCommentTypeId(commentType)
-      query = query.where('cmmem.id', '=', typeId).where('cmmem.name', '=', commentType)
+      query = query
+        .where('cmmem.id', '=', typeId)
+        .where('cmmem.name', '=', commentType)
     } else {
       // Include both Standard (id=210) and Sökande (id=0) comments
       query = query.whereIn('cmmem.id', [0, 210])

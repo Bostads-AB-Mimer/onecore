@@ -384,6 +384,7 @@ export interface TenantComment {
   text: string
   author: string
   createdAt: string // ISO datetime combining date + time
+  commentType?: 'Standard' | 'Sökande'
 }
 
 /**
