@@ -5632,6 +5632,7 @@ export interface components {
         };
         rentalId: string | null;
         rentalInformation: ({
+          apartmentNumber: string | null;
           type: {
             code: string;
             name: string | null;
