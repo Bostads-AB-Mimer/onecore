@@ -4,7 +4,7 @@ import { useBuildingDetail } from '@/features/buildings/hooks/useBuildingDetail'
 //import { useToast } from '@/hooks/use-toast'
 import { BuildingHeader } from '@/features/buildings/components/BuildingHeader'
 import { BuildingBasicInfo } from '@/features/buildings/components/BuildingBasicInfo'
-import { BuildingDetailTabs } from '@/features/buildings/components/BuildingDetailTabs'
+import { BuildingDetailTabs } from '@/widgets/building-detail-tabs'
 import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const BuildingDetailPage = () => {
