@@ -15,7 +15,8 @@ src/
 ├── styles/        # Global styles & CSS
 ├── types/         # Shared TypeScript types
 ├── utils/         # Utility functions
-└── views/         # Route-level view components
+├── views/         # Route-level view components
+└── widgets/       # Compositional blocks (combine features)
 ```
 
 ---
@@ -167,6 +168,25 @@ views/
 ├── DetailView.tsx
 └── NotFoundView.tsx
 ```
+
+### `/widgets`
+
+Compositional layer that combines multiple features into larger, reusable UI blocks. Part of Feature Sliced Design (FSD).
+
+```
+widgets/
+└── [widget-name]/
+    ├── ui/              # Widget UI components
+    ├── lib/             # Widget-specific utilities
+    ├── types/           # Widget-specific types
+    └── index.ts         # Public exports
+```
+
+**When to use widgets:**
+
+- When multiple features need to work together as a cohesive UI block
+- When a composition of features is reused across multiple views
+- To avoid duplicating feature composition logic in views
 
 ---
 

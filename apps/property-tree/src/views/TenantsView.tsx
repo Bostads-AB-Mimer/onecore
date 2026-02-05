@@ -18,7 +18,7 @@ import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { ChevronDown } from 'lucide-react'
 import { useTenantSearch } from '@/hooks/useTenantSearch'
 
-const AllTenantsPage = () => {
+const TenantsView = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const {
     searchQuery,
@@ -160,4 +160,4 @@ const AllTenantsPage = () => {
   )
 }
 
-export default AllTenantsPage
+export default TenantsView

@@ -58,7 +58,7 @@ const formatDate = (date: Date | string | null | undefined) => {
 
 const PAGE_SIZE = 50
 
-const LeasesPage = () => {
+const LeasesView = () => {
   const { page, setPage, searchParams, setSearchParams, updateUrlParams } =
     useUrlPagination({
       defaultLimit: PAGE_SIZE,
@@ -584,4 +584,4 @@ const LeasesPage = () => {
   )
 }
 
-export default LeasesPage
+export default LeasesView

@@ -19,10 +19,10 @@ import { FacilityView } from './views/FacilityView'
 import { DashboardView } from './views/DashboardView'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './layouts/AppLayout'
-import AllTenantsPage from './components/tenants/AllTenantsPage'
+import TenantsView from './views/TenantsView'
 import InspectionsView from './views/InspectionsView'
-import RentalBlocksPage from './components/rental-blocks/RentalBlocksPage'
-import LeasesPage from './components/leases/LeasesPage'
+import RentalBlocksView from './views/RentalBlocksView'
+import LeasesView from './views/LeasesView'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,7 +113,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'tenants',
-        element: <AllTenantsPage />,
+        element: <TenantsView />,
         handle: { title: 'Kunder' },
       },
       {
@@ -123,12 +123,12 @@ const router = createBrowserRouter([
       },
       {
         path: 'rental-blocks',
-        element: <RentalBlocksPage />,
+        element: <RentalBlocksView />,
         handle: { title: 'Spärrar' },
       },
       {
         path: 'leases',
-        element: <LeasesPage />,
+        element: <LeasesView />,
         handle: { title: 'Hyreskontrakt' },
       },
       {

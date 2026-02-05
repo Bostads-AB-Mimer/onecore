@@ -58,7 +58,7 @@ const formatISODate = (isoDateString: string | null | undefined) => {
 
 const PAGE_SIZE = 50
 
-const RentalBlocksPage = () => {
+const RentalBlocksView = () => {
   const [isExporting, setIsExporting] = useState(false)
   const { data: blockReasons } = useBlockReasons()
 
@@ -562,4 +562,4 @@ const RentalBlocksPage = () => {
   )
 }
 
-export default RentalBlocksPage
+export default RentalBlocksView

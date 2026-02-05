@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
-import { BuildingEntrances } from './BuildingEntrances'
-import { BuildingWorkOrdersTab } from './BuildingWorkOrdersTab'
+import { BuildingEntrances } from '@/features/buildings/components/BuildingEntrances'
+import { BuildingWorkOrdersTab } from '@/features/buildings/components/BuildingWorkOrdersTab'
 import { BuildingDetailTabsMobile } from './BuildingDetailTabsMobile'
 import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
 
