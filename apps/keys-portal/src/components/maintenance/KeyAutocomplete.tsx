@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { keyService } from '@/services/api/keyService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ interface KeyAutocompleteProps {
   onAddKey: (key: Key) => void
   onRemoveKey: (keyId: string) => void
   disabled?: boolean
+  existingKeyIds?: Set<string>
 }
 
 /**
@@ -24,6 +25,7 @@ export function KeyAutocomplete({
   onAddKey,
   onRemoveKey,
   disabled = false,
+  existingKeyIds = new Set(),
 }: KeyAutocompleteProps) {
   const [searchValue, setSearchValue] = useState('')
   const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
@@ -55,18 +57,18 @@ export function KeyAutocomplete({
     [selectedKeys]
   )
 
-  // Wrap search function to filter out selected keys
-  const searchKeysFiltered = async (query: string): Promise<Key[]> => {
-    const results = await searchKeys(query)
-    return results.filter((key) => !selectedKeyIds.has(key.id))
-  }
-
   const handleSelect = (key: Key | null) => {
     if (key) {
-      onAddKey(key)
-      setSearchValue('') // Clear search after selection
+      if (selectedKeyIds.has(key.id)) {
+        onRemoveKey(key.id)
+      } else {
+        onAddKey(key)
+      }
     }
   }
+
+  const isKeyDisabled = (key: Key) => existingKeyIds.has(key.id)
+  const isKeySelected = (key: Key) => selectedKeyIds.has(key.id)
 
   return (
     <div className="space-y-3">
@@ -81,9 +83,9 @@ export function KeyAutocomplete({
             >
               <span className="text-sm">
                 {key.keyName}
-                {key.rentalObjectCode && (
+                {key.keySequenceNumber && (
                   <span className="text-muted-foreground ml-1">
-                    ({key.rentalObjectCode})
+                    · {key.keySequenceNumber}
                   </span>
                 )}
               </span>
@@ -129,7 +131,7 @@ export function KeyAutocomplete({
           <label className="text-sm font-medium">Sök nyckel</label>
           <SearchDropdown
             preSuggestions={[]}
-            searchFn={searchKeysFiltered}
+            searchFn={searchKeys}
             minSearchLength={3}
             debounceMs={300}
             formatItem={(key) => ({
@@ -152,14 +154,13 @@ export function KeyAutocomplete({
             onSelect={handleSelect}
             selectedValue={null}
             placeholder="Sök nyckelnamn eller hyresobjekt..."
-            emptyMessage={
-              selectedKeyIds.size > 0
-                ? 'Alla hittade nycklar är redan valda'
-                : 'Inga nycklar hittades'
-            }
+            emptyMessage="Inga nycklar hittades"
             loadingMessage="Söker nycklar..."
             disabled={disabled}
             showClearButton={false}
+            multiSelect
+            isItemDisabled={isKeyDisabled}
+            isItemSelected={isKeySelected}
           />
         </div>
       </div>

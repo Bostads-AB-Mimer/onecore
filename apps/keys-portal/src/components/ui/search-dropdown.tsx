@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { X } from 'lucide-react'
+import { X, Check, Search } from 'lucide-react'
 import { useDebounce } from '@/utils/debounce'
 
 export interface SearchDropdownDisplayFormat {
@@ -42,6 +42,10 @@ interface SearchDropdownProps<T> {
   showClearButton?: boolean // Default: true when selectedValue exists
   className?: string
   showSelectedInInput?: boolean // Show selected value's text in input (default: true)
+  multiSelect?: boolean // Keep dropdown open after selecting an item
+  isItemDisabled?: (item: T) => boolean // Grey out and prevent selection
+  isItemSelected?: (item: T) => boolean // Show checkmark on item
+  showSearchIcon?: boolean // Show a magnifying glass icon in the input
 }
 
 /**
@@ -75,12 +79,28 @@ export function SearchDropdown<T>({
   showClearButton = true,
   className = '',
   showSelectedInInput = true,
+  multiSelect = false,
+  isItemDisabled,
+  isItemSelected,
+  showSearchIcon = false,
 }: SearchDropdownProps<T>) {
   // Internal state
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [serverResults, setServerResults] = useState<T[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
+
+  // Stable refs for callback props used in effects/memos — prevents parent
+  // re-renders from triggering re-fetches or memo recalculations.
+  // Note: isItemDisabled/isItemSelected are NOT ref'd since they affect render output.
+  const searchFnRef = useRef(searchFn)
+  const formatItemRef = useRef(formatItem)
+  const getKeyRef = useRef(getKey)
+  useEffect(() => {
+    searchFnRef.current = searchFn
+    formatItemRef.current = formatItem
+    getKeyRef.current = getKey
+  })
 
   // Debounce the search query
   const updateDebouncedQuery = useDebounce((query: string) => {
@@ -108,7 +128,7 @@ export function SearchDropdown<T>({
     const search = async () => {
       setIsSearching(true)
       try {
-        const results = await searchFn(debouncedQuery)
+        const results = await searchFnRef.current(debouncedQuery)
         setServerResults(results)
       } catch (error) {
         console.error('SearchDropdown: Error fetching results', error)
@@ -119,7 +139,7 @@ export function SearchDropdown<T>({
     }
 
     search()
-  }, [debouncedQuery, selectedValue, minSearchLength, searchFn])
+  }, [debouncedQuery, selectedValue, minSearchLength])
 
   // Combine pre-suggestions with server results
   const { allItems, preSuggestionsCount } = useMemo(() => {
@@ -135,7 +155,7 @@ export function SearchDropdown<T>({
       trimmed.length === 0
         ? preSuggestions
         : preSuggestions.filter((item) => {
-            const formatted = formatItem(item)
+            const formatted = formatItemRef.current(item)
             const searchText = (
               formatted.searchableText || formatted.primaryText
             ).toLowerCase()
@@ -152,32 +172,28 @@ export function SearchDropdown<T>({
 
     // At or above min search length: combine pre-suggestions + server results
     // Deduplicate server results against pre-suggestions
-    const preSuggestionKeys = new Set(filteredPreSuggestions.map(getKey))
+    const preSuggestionKeys = new Set(
+      filteredPreSuggestions.map(getKeyRef.current)
+    )
     const uniqueServerResults = serverResults.filter(
-      (item) => !preSuggestionKeys.has(getKey(item))
+      (item) => !preSuggestionKeys.has(getKeyRef.current(item))
     )
 
     return {
       allItems: [...filteredPreSuggestions, ...uniqueServerResults],
       preSuggestionsCount: filteredPreSuggestions.length,
     }
-  }, [
-    value,
-    selectedValue,
-    preSuggestions,
-    serverResults,
-    minSearchLength,
-    formatItem,
-    getKey,
-  ])
+  }, [value, selectedValue, preSuggestions, serverResults, minSearchLength])
 
   // Format items for display
   const formattedItems = useMemo(() => {
-    const preSuggestionKeys = new Set(preSuggestions.map(getKey))
+    const preSuggestionKeys = new Set(
+      preSuggestions.map(getKeyRef.current)
+    )
 
     return allItems.map((item) => {
-      const formatted = formatItem(item)
-      const isPreSuggestion = preSuggestionKeys.has(getKey(item))
+      const formatted = formatItemRef.current(item)
+      const isPreSuggestion = preSuggestionKeys.has(getKeyRef.current(item))
 
       // Append pre-suggestion label if applicable
       let secondaryText = formatted.secondaryText
@@ -193,7 +209,7 @@ export function SearchDropdown<T>({
         secondaryText,
       }
     })
-  }, [allItems, preSuggestions, formatItem, getKey, preSuggestionLabel])
+  }, [allItems, preSuggestions, preSuggestionLabel])
 
   // Determine if we should show the dropdown
   const shouldShowDropdown = useMemo(() => {
@@ -229,9 +245,12 @@ export function SearchDropdown<T>({
   }
 
   const handleSelectItem = (item: T) => {
+    if (isItemDisabled?.(item)) return
     onSelect(item)
-    setShowDropdown(false)
-    setServerResults([])
+    if (!multiSelect) {
+      setShowDropdown(false)
+      setServerResults([])
+    }
   }
 
   const handleClear = () => {
@@ -239,6 +258,40 @@ export function SearchDropdown<T>({
     onSelect(null)
     setShowDropdown(false)
     setServerResults([])
+  }
+
+  const renderItem = (
+    item: { value: T; primaryText: string; secondaryText?: string },
+    index: number
+  ) => {
+    const itemDisabled = isItemDisabled?.(item.value) ?? false
+    const itemSelected = isItemSelected?.(item.value) ?? false
+
+    return (
+      <button
+        key={index}
+        type="button"
+        className={`w-full text-left px-3 py-2 text-sm rounded-sm flex items-center justify-between gap-2 ${
+          itemDisabled
+            ? 'opacity-40 cursor-not-allowed'
+            : 'hover:bg-accent cursor-pointer'
+        }`}
+        onClick={() => handleSelectItem(item.value)}
+        disabled={itemDisabled}
+      >
+        <div className="min-w-0">
+          <div className="font-medium">{item.primaryText}</div>
+          {item.secondaryText && (
+            <div className="text-xs text-muted-foreground">
+              {item.secondaryText}
+            </div>
+          )}
+        </div>
+        {itemSelected && (
+          <Check className="h-4 w-4 shrink-0 text-primary" />
+        )}
+      </button>
+    )
   }
 
   // Split items into pre-suggestions and server results for rendering
@@ -253,14 +306,14 @@ export function SearchDropdown<T>({
   // Get display value for the input
   const displayValue = useMemo(() => {
     if (selectedValue && showSelectedInInput) {
-      const formatted = formatItem(selectedValue)
+      const formatted = formatItemRef.current(selectedValue)
       // Show both primary and secondary text if available
       return formatted.secondaryText
         ? `${formatted.primaryText} - ${formatted.secondaryText}`
         : formatted.primaryText
     }
     return value
-  }, [selectedValue, showSelectedInInput, formatItem, value])
+  }, [selectedValue, showSelectedInInput, value])
 
   // Determine if filter is active (has selection)
   const isFilterActive = !!selectedValue
@@ -269,6 +322,9 @@ export function SearchDropdown<T>({
     <div className={`relative ${className}`}>
       {/* Input */}
       <div className="relative">
+        {showSearchIcon && (
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        )}
         <Input
           value={displayValue}
           onChange={(e) => onChange(e.target.value)}
@@ -277,11 +333,11 @@ export function SearchDropdown<T>({
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
-          className={
+          className={`${showSearchIcon ? 'pl-8' : ''} ${
             isFilterActive
               ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
               : ''
-          }
+          }`}
         />
         {/* Clear button */}
         {showClearButton && selectedValue && !disabled && (
@@ -299,7 +355,10 @@ export function SearchDropdown<T>({
 
       {/* Dropdown */}
       {shouldShowDropdown && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto">
+        <div
+          className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {/* Full loading state (no pre-suggestions) */}
           {isSearching && !hasPreSuggestions && (
             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -317,69 +376,26 @@ export function SearchDropdown<T>({
           {/* Results with pre-suggestions */}
           {hasPreSuggestions && (
             <div className="p-1">
-              {/* Pre-suggestions (always shown) */}
-              {preSuggestionItems.map((item, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-accent text-sm rounded-sm"
-                  onClick={() => handleSelectItem(item.value)}
-                >
-                  <div className="font-medium">{item.primaryText}</div>
-                  {item.secondaryText && (
-                    <div className="text-xs text-muted-foreground">
-                      {item.secondaryText}
-                    </div>
-                  )}
-                </button>
-              ))}
+              {preSuggestionItems.map((item, index) => renderItem(item, index))}
 
-              {/* Loading for server results */}
               {isSearching && (
                 <div className="py-4 text-center text-xs text-muted-foreground">
                   {loadingMessage}
                 </div>
               )}
 
-              {/* Server results (when loaded) */}
               {!isSearching &&
                 serverResultItems.length > 0 &&
-                serverResultItems.map((item, index) => (
-                  <button
-                    key={preSuggestionsCount + index}
-                    type="button"
-                    className="w-full text-left px-3 py-2 hover:bg-accent text-sm rounded-sm"
-                    onClick={() => handleSelectItem(item.value)}
-                  >
-                    <div className="font-medium">{item.primaryText}</div>
-                    {item.secondaryText && (
-                      <div className="text-xs text-muted-foreground">
-                        {item.secondaryText}
-                      </div>
-                    )}
-                  </button>
-                ))}
+                serverResultItems.map((item, index) =>
+                  renderItem(item, preSuggestionsCount + index)
+                )}
             </div>
           )}
 
           {/* Results without pre-suggestions */}
           {!isSearching && !hasPreSuggestions && formattedItems.length > 0 && (
             <div className="p-1">
-              {formattedItems.map((item, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-accent text-sm rounded-sm"
-                  onClick={() => handleSelectItem(item.value)}
-                >
-                  <div className="font-medium">{item.primaryText}</div>
-                  {item.secondaryText && (
-                    <div className="text-xs text-muted-foreground">
-                      {item.secondaryText}
-                    </div>
-                  )}
-                </button>
-              ))}
+              {formattedItems.map((item, index) => renderItem(item, index))}
             </div>
           )}
         </div>

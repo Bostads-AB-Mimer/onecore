@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { updateKeyBundle } from '@/services/api/keyBundleService'
@@ -20,6 +21,7 @@ export function AddKeysToBundleCard({
   onKeysAdded,
 }: AddKeysToBundleCardProps) {
   const { toast } = useToast()
+  const existingKeyIds = useMemo(() => new Set(currentKeyIds), [currentKeyIds])
 
   const handleValidateKey = (key: Key) => {
     // Don't add if already in the bundle
@@ -72,6 +74,7 @@ export function AddKeysToBundleCard({
       buttonIcon={Plus}
       onValidateKey={handleValidateKey}
       onAccept={handleAccept}
+      existingKeyIds={existingKeyIds}
     />
   )
 }
