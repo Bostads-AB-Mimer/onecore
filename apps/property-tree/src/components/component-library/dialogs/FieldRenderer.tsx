@@ -108,7 +108,7 @@ export function FieldRenderer({
         </div>
       )
 
-    case 'date':
+    case 'date': {
       // Convert ISO date string to yyyy-MM-dd format for HTML date input
       const dateValue = value
         ? value.includes('T')
@@ -130,6 +130,7 @@ export function FieldRenderer({
           {error && <p className="text-sm text-destructive mt-1">{error}</p>}
         </div>
       )
+    }
 
     default:
       return null

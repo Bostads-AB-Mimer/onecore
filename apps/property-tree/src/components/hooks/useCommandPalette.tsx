@@ -1,13 +1,13 @@
 import React from 'react'
 
-interface CommandPaletteContext {
+interface CommandPaletteContextValue {
   isOpen: boolean
   open: () => void
   close: () => void
   toggle: () => void
 }
 
-const CommandPaletteContext = React.createContext<CommandPaletteContext>({
+const CommandPaletteContext = React.createContext<CommandPaletteContextValue>({
   isOpen: false,
   open: () => {},
   close: () => {},
