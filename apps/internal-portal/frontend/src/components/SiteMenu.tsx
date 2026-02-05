@@ -72,11 +72,11 @@ const SiteMenu = () => (
                 <Typography>Sökandeprofil</Typography>
               </MenuItem>
             </Link>
-            <Link to="/annonsinnehall">
+            {/* <Link to="/annonsinnehall">
               <MenuItem onClick={popupState.close}>
                 <Typography>Annonsinnehåll</Typography>
               </MenuItem>
-            </Link>
+            </Link> */}
           </Menu>
         </Backdrop>
       </>
