@@ -6,6 +6,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableLink,
   TableEmptyState,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -80,7 +81,11 @@ export function KeyBundlesTable({
                         onClick={() => onToggleExpand(bundle.id)}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{bundle.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <TableLink to={`/maintenance-keys?bundle=${bundle.id}`}>
+                        {bundle.name}
+                      </TableLink>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {bundle.description || '-'}
                     </TableCell>
