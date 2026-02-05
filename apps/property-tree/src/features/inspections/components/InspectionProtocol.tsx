@@ -627,7 +627,10 @@ export function InspectionProtocol({
                     tenantContacts.new_tenant ? (
                       <div className="space-y-2">
                         {tenantContacts.new_tenant.contacts.map((contact) => (
-                          <Card key={contact.contactCode} className="bg-muted/20">
+                          <Card
+                            key={contact.contactCode}
+                            className="bg-muted/20"
+                          >
                             <CardContent className="pt-3 pb-3">
                               <div className="font-medium text-sm">
                                 {contact.fullName}
