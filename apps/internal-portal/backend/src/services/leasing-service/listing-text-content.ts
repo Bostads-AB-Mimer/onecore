@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 
 import * as coreAdapter from './adapters/core-adapter'
 
