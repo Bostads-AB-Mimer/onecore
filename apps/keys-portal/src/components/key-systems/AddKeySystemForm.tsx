@@ -208,7 +208,7 @@ export function AddKeySystemForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="system_code">Systemkod *</Label>
+              <Label htmlFor="system_code">Låssystem *</Label>
               <Input
                 id="system_code"
                 value={formData.systemCode}
