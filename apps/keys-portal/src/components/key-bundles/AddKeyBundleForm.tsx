@@ -34,10 +34,7 @@ export function AddKeyBundleForm({
   const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const existingKeyIds = useMemo(
-    () => new Set(formData.keys),
-    [formData.keys]
-  )
+  const existingKeyIds = useMemo(() => new Set(formData.keys), [formData.keys])
 
   useEffect(() => {
     if (editingKeyBundle) {
