@@ -229,7 +229,7 @@ const renderKeyRow = (doc: jsPDF, k: KeyDetails, y: number): void => {
     (KeyTypeLabels as Record<string, string>)[k.keyType as unknown as string] ||
     (k.keyType as string)
   doc.text(labelForType, 145, y)
-  doc.text('-', 175, y)
+  doc.text(k.disposed ? 'Kasserad' : 'Aktiv', 175, y)
 }
 
 /**

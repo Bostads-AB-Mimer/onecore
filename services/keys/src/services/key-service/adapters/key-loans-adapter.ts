@@ -3,11 +3,10 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 import * as daxAdapter from './dax-adapter'
 import type { Card } from 'dax-client'
-import { fetchKeySystems, getKeyById } from './keys-adapter'
+import { getKeyDetailsById } from './keys-adapter'
 
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
-type KeyDetails = keys.v1.KeyDetails
 type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
 
@@ -58,21 +57,10 @@ export async function getKeyLoanByIdWithDetails(
     keyIds = []
   }
 
-  // Fetch keys using overloaded getKeyById
-  const keys = await getKeyById(keyIds, dbConnection)
-
-  // Fetch key systems using existing helper
-  const keySystemsMap = options.includeKeySystem
-    ? await fetchKeySystems(keys, dbConnection)
-    : new Map()
-
-  // Attach keySystem to each key
-  const keysArray: KeyDetails[] = keys.map((key) => ({
-    ...key,
-    keySystem: key.keySystemId
-      ? keySystemsMap.get(key.keySystemId) || null
-      : null,
-  }))
+  // Fetch keys with optional keySystem enrichment using shared helper
+  const keysArray = await getKeyDetailsById(keyIds, dbConnection, {
+    includeKeySystem: options.includeKeySystem,
+  })
 
   // Fetch cards from DAX if requested
   let keyCardsArray: Card[] = []
@@ -85,9 +73,9 @@ export async function getKeyLoanByIdWithDetails(
       cardIds = []
     }
 
-    if (cardIds.length > 0 && keys.length > 0) {
+    if (cardIds.length > 0 && keysArray.length > 0) {
       // Get rentalObjectCode from the first key
-      const rentalObjectCode = keys[0].rentalObjectCode
+      const rentalObjectCode = keysArray[0].rentalObjectCode
       if (rentalObjectCode) {
         try {
           const cardOwners = await daxAdapter.searchCardOwners({

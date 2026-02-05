@@ -1,9 +1,8 @@
 import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
-import { cardService } from './api/cardService'
 import { generateAndUploadReturnReceipt } from './receiptHandlers'
-import type { Card, KeyDetails, Lease } from './types'
+import type { Card, KeyDetails, KeyLoanWithDetails, Lease } from './types'
 
 export type LoanKeysParams = {
   keyIds?: string[]
@@ -213,24 +212,14 @@ export async function handleReturnKeys({
         // Generate and upload PDF if we have lease info
         if (lease && receiptId && selectedForReceipt) {
           try {
-            // Fetch keys with keySystem included for PDF generation
-            const keysResult = await keyService.searchKeys(
-              { id: loanKeyIds },
-              1,
-              loanKeyIds.length,
-              true
-            )
-            const loanKeys = keysResult.content as KeyDetails[]
+            // Fetch loan with keys (including keySystem) and cards in one call
+            const keyLoan = (await keyLoanService.get(loanId, {
+              includeKeySystem: true,
+              includeCards: true,
+            })) as KeyLoanWithDetails
 
-            // Fetch cards with codes included (using getCardsByRentalObjectCode)
-            let loanCards: Card[] = []
-            if (loanCardIds.length > 0 && lease.rentalPropertyId) {
-              const allCards = await cardService.getCardsByRentalObjectCode(
-                lease.rentalPropertyId
-              )
-              const loanCardIdSet = new Set(loanCardIds)
-              loanCards = allCards.filter((c) => loanCardIdSet.has(c.cardId))
-            }
+            const loanKeys = keyLoan.keysArray as KeyDetails[]
+            const loanCards = (keyLoan.keyCardsArray || []) as Card[]
 
             // Generate and upload the return receipt PDF
             const selectedKeySet = new Set(selectedForReceipt)
