@@ -20,6 +20,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import KeyLoan from './pages/KeyLoan'
 import ActivityLog from './pages/ActivityLog'
 import MaintenanceKeys from './pages/MaintenanceKeys'
+import { PageTitle } from './components/PageTitle'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,7 @@ const queryClient = new QueryClient({
 
 const AppContent = () => (
   <SidebarProvider>
+    <PageTitle />
     <AppSidebar />
     <SidebarInset>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
