@@ -8,6 +8,10 @@ import {
   calculateYearlyRentFromYearRentRows,
   calculateEstimatedHyresbortfall,
 } from '../utils/rent-calculation'
+import {
+  analyzeRentalBlockSearchTerm,
+  getPrismaOperator,
+} from '../utils/rentalBlockSearchAnalyzer'
 
 import { prisma } from './db'
 //todo: add types
@@ -696,7 +700,7 @@ async function fetchRentDataBatched(
 
 /**
  * Fetches district values by management unit code (fencode).
- * Used as fallback when the direct keyobjfen → keybafen join fails.
+ * Used to enrich Prisma results with distrikt from bafen.code lookup.
  */
 async function fetchDistrictsByFencode(
   fencodes: string[]
@@ -752,7 +756,6 @@ async function fetchRentalBlocksRaw(
 ): Promise<RawRentalBlockRow[]> {
   const {
     q,
-    fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
     blockReason,
@@ -775,19 +778,25 @@ async function fetchRentalBlocksRaw(
     conditions.push('hyspt.tdate < GETDATE()')
   }
 
-  // Distrikt filter via fencode → bafen.code join
-  if (distrikt) {
-    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
+  // Distrikt filter via fencode → bafen.code join (supports multi-select)
+  const distrikter = toArray(distrikt)
+  if (distrikter.length > 0) {
+    const inClause = distrikter.map(escapeSqlString).join(', ')
+    conditions.push(`bafen.distrikt IN (${inClause})`)
   }
 
-  // Fastighet (property) filter
-  if (fastighet) {
-    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
+  // Fastighet (property) filter (supports multi-select)
+  const fastigheter = toArray(fastighet)
+  if (fastigheter.length > 0) {
+    const inClause = fastigheter.map(escapeSqlString).join(', ')
+    conditions.push(`babuf.fstcaption IN (${inClause})`)
   }
 
-  // Block reason filter
-  if (blockReason) {
-    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
+  // Block reason filter (supports multi-select)
+  const blockReasons = toArray(blockReason)
+  if (blockReasons.length > 0) {
+    const inClause = blockReasons.map(escapeSqlString).join(', ')
+    conditions.push(`hyspa.caption IN (${inClause})`)
   }
 
   // Date range filters
@@ -798,35 +807,47 @@ async function fetchRentalBlocksRaw(
     conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
   }
 
-  // Kategori filter
-  if (kategori === 'Bostad') {
-    conditions.push('babuf.lghcode IS NOT NULL')
-  } else if (kategori === 'Bilplats') {
-    conditions.push('babuf.bpscode IS NOT NULL')
-  } else if (kategori === 'Lokal') {
-    conditions.push('babuf.lokcode IS NOT NULL')
-  } else if (kategori === 'Förråd') {
-    conditions.push('babuf.hyrcode IS NOT NULL')
-  } else if (kategori === 'Övrigt') {
-    conditions.push(
-      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
-    )
+  // Kategori filter (supports multi-select)
+  const kategorier = toArray(kategori)
+  if (kategorier.length > 0) {
+    const kategoriConditions: string[] = []
+    for (const k of kategorier) {
+      if (k === 'Bostad') {
+        kategoriConditions.push('babuf.lghcode IS NOT NULL')
+      } else if (k === 'Bilplats') {
+        kategoriConditions.push('babuf.bpscode IS NOT NULL')
+      } else if (k === 'Lokal') {
+        kategoriConditions.push('babuf.lokcode IS NOT NULL')
+      } else if (k === 'Förråd') {
+        kategoriConditions.push('babuf.hyrcode IS NOT NULL')
+      } else if (k === 'Övrigt') {
+        kategoriConditions.push(
+          '(babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL)'
+        )
+      }
+    }
+    if (kategoriConditions.length > 0) {
+      conditions.push(`(${kategoriConditions.join(' OR ')})`)
+    }
   }
 
-  // Search filter (q param) - OR across fields
+  // Search filter (q param) - use smart search analyzer
   if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
+    const searchTargets = analyzeRentalBlockSearchTerm(q)
     const orClauses: string[] = []
 
-    if (searchFields.includes('rentalId')) {
-      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('address')) {
-      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('blockReason')) {
-      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    for (const target of searchTargets) {
+      const escapeFn = target.startsWith
+        ? escapeSqlLikeStartsWith
+        : escapeSqlLike
+
+      if (target.field === 'rentalId') {
+        orClauses.push(`babuf.hyresid LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'address') {
+        orClauses.push(`babuf.caption LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'blockReason') {
+        orClauses.push(`hyspa.caption LIKE ${escapeFn(target.pattern)}`)
+      }
     }
 
     if (orClauses.length > 0) {
@@ -880,7 +901,7 @@ function escapeSqlString(value: string): string {
   return `'${escaped}'`
 }
 
-/** Escape a string value for LIKE pattern with wildcards */
+/** Escape a string value for LIKE pattern with wildcards (contains) */
 function escapeSqlLike(value: string): string {
   // Escape special LIKE characters and single quotes
   const escaped = value
@@ -888,6 +909,15 @@ function escapeSqlLike(value: string): string {
     .replace(/%/g, '[%]')
     .replace(/_/g, '[_]')
   return `'%${escaped}%'`
+}
+
+/** Escape a string value for LIKE pattern with startsWith (trailing wildcard only) */
+function escapeSqlLikeStartsWith(value: string): string {
+  const escaped = value
+    .replace(/'/g, "''")
+    .replace(/%/g, '[%]')
+    .replace(/_/g, '[_]')
+  return `'${escaped}%'`
 }
 
 /** Transform raw SQL row to API response format */
@@ -1068,13 +1098,18 @@ export const getAllRentalBlocks = async (options?: {
   }
 }
 
+// Helper to normalize string | string[] to array
+function toArray(val: string | string[] | undefined): string[] {
+  if (!val) return []
+  return Array.isArray(val) ? val : [val]
+}
+
 interface RentalBlockFilterOptions {
   q?: string
-  fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string | string[]
+  distrikt?: string | string[]
+  blockReason?: string | string[]
+  fastighet?: string | string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -1091,7 +1126,6 @@ function buildRentalBlockWhereClause(
 ): Prisma.RentalBlockWhereInput {
   const {
     q,
-    fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
     blockReason,
@@ -1116,57 +1150,64 @@ function buildRentalBlockWhereClause(
     andConditions.push(activeFilter)
   }
 
-  // General search (q param) - OR across fields
+  // General search (q param) - use smart search analyzer
   if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
+    const searchTargets = analyzeRentalBlockSearchTerm(q)
 
-    const orConditions: Prisma.RentalBlockWhereInput[] = []
+    if (searchTargets.length > 0) {
+      const orConditions: Prisma.RentalBlockWhereInput[] = []
 
-    for (const field of searchFields) {
-      if (field === 'rentalId') {
-        orConditions.push({
-          propertyStructure: { rentalId: { contains: searchTerm } },
-        })
-      } else if (field === 'address') {
-        orConditions.push({
-          propertyStructure: { name: { contains: searchTerm } },
-        })
-      } else if (field === 'blockReason') {
-        orConditions.push({
-          blockReason: { caption: { contains: searchTerm } },
-        })
+      for (const target of searchTargets) {
+        const operator = getPrismaOperator(target)
+
+        if (target.field === 'rentalId') {
+          orConditions.push({
+            propertyStructure: { rentalId: { [operator]: target.pattern } },
+          })
+        } else if (target.field === 'address') {
+          orConditions.push({
+            propertyStructure: { name: { [operator]: target.pattern } },
+          })
+        } else if (target.field === 'blockReason') {
+          orConditions.push({
+            blockReason: { caption: { [operator]: target.pattern } },
+          })
+        }
+      }
+
+      if (orConditions.length > 0) {
+        andConditions.push({ OR: orConditions })
       }
     }
-
-    if (orConditions.length > 0) {
-      andConditions.push({ OR: orConditions })
-    }
   }
 
-  // Distrikt filter - note: when distrikt is set, searchRentalBlocks uses raw SQL instead
+  // Distrikt filter (supports multi-select)
+  // Note: when distrikt is set, searchRentalBlocks uses raw SQL instead
   // This is kept as a simple fallback but the raw SQL path handles fencode correctly
-  if (distrikt) {
+  const distrikter = toArray(distrikt)
+  if (distrikter.length > 0) {
     andConditions.push({
       propertyStructure: {
-        administrativeUnit: { district: distrikt },
+        administrativeUnit: { district: { in: distrikter } },
       },
     })
   }
 
-  // Fastighet (property) filter (AND)
-  if (fastighet) {
+  // Fastighet (property) filter (supports multi-select)
+  const fastigheter = toArray(fastighet)
+  if (fastigheter.length > 0) {
     andConditions.push({
       propertyStructure: {
-        propertyName: fastighet,
+        propertyName: { in: fastigheter },
       },
     })
   }
 
-  // Block reason filter (AND)
-  if (blockReason) {
+  // Block reason filter (supports multi-select)
+  const blockReasons = toArray(blockReason)
+  if (blockReasons.length > 0) {
     andConditions.push({
-      blockReason: { caption: blockReason },
+      blockReason: { caption: { in: blockReasons } },
     })
   }
 
@@ -1182,33 +1223,40 @@ function buildRentalBlockWhereClause(
     })
   }
 
-  // Kategori filter (derived from which code field is populated)
-  if (kategori) {
-    if (kategori === 'Bostad') {
-      andConditions.push({
-        propertyStructure: { residenceCode: { not: null } },
-      })
-    } else if (kategori === 'Bilplats') {
-      andConditions.push({
-        propertyStructure: { parkingSpaceCode: { not: null } },
-      })
-    } else if (kategori === 'Lokal') {
-      andConditions.push({
-        propertyStructure: { localeCode: { not: null } },
-      })
-    } else if (kategori === 'Förråd') {
-      andConditions.push({
-        propertyStructure: { rentalObjectCode: { not: null } },
-      })
-    } else if (kategori === 'Övrigt') {
-      andConditions.push({
-        propertyStructure: {
-          residenceCode: null,
-          parkingSpaceCode: null,
-          localeCode: null,
-          rentalObjectCode: null,
-        },
-      })
+  // Kategori filter (supports multi-select)
+  const kategorier = toArray(kategori)
+  if (kategorier.length > 0) {
+    const kategoriConditions: Prisma.RentalBlockWhereInput[] = []
+    for (const k of kategorier) {
+      if (k === 'Bostad') {
+        kategoriConditions.push({
+          propertyStructure: { residenceCode: { not: null } },
+        })
+      } else if (k === 'Bilplats') {
+        kategoriConditions.push({
+          propertyStructure: { parkingSpaceCode: { not: null } },
+        })
+      } else if (k === 'Lokal') {
+        kategoriConditions.push({
+          propertyStructure: { localeCode: { not: null } },
+        })
+      } else if (k === 'Förråd') {
+        kategoriConditions.push({
+          propertyStructure: { rentalObjectCode: { not: null } },
+        })
+      } else if (k === 'Övrigt') {
+        kategoriConditions.push({
+          propertyStructure: {
+            residenceCode: null,
+            parkingSpaceCode: null,
+            localeCode: null,
+            rentalObjectCode: null,
+          },
+        })
+      }
+    }
+    if (kategoriConditions.length > 0) {
+      andConditions.push({ OR: kategoriConditions })
     }
   }
 
@@ -1219,11 +1267,10 @@ function buildRentalBlockWhereClause(
 
 export interface SearchRentalBlocksOptions {
   q?: string
-  fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string | string[]
+  distrikt?: string | string[]
+  blockReason?: string | string[]
+  fastighet?: string | string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -1242,7 +1289,6 @@ async function searchRentalBlocksWithDistriktRaw(
 ): Promise<{ ids: string[]; totalCount: number }> {
   const {
     q,
-    fields = 'rentalId,address,blockReason',
     kategori,
     distrikt,
     blockReason,
@@ -1259,9 +1305,11 @@ async function searchRentalBlocksWithDistriktRaw(
   // Base filter: must have a rentalId
   conditions.push("babuf.hyresid IS NOT NULL AND babuf.hyresid <> ''")
 
-  // Distrikt filter via fencode → bafen.code join
-  if (distrikt) {
-    conditions.push(`bafen.distrikt = ${escapeSqlString(distrikt)}`)
+  // Distrikt filter via fencode → bafen.code join (supports multi-select)
+  const distrikter = toArray(distrikt)
+  if (distrikter.length > 0) {
+    const inClause = distrikter.map(escapeSqlString).join(', ')
+    conditions.push(`bafen.distrikt IN (${inClause})`)
   }
 
   // Active filter
@@ -1271,14 +1319,18 @@ async function searchRentalBlocksWithDistriktRaw(
     conditions.push('hyspt.tdate < GETDATE()')
   }
 
-  // Fastighet (property) filter
-  if (fastighet) {
-    conditions.push(`babuf.fstcaption = ${escapeSqlString(fastighet)}`)
+  // Fastighet (property) filter (supports multi-select)
+  const fastigheter = toArray(fastighet)
+  if (fastigheter.length > 0) {
+    const inClause = fastigheter.map(escapeSqlString).join(', ')
+    conditions.push(`babuf.fstcaption IN (${inClause})`)
   }
 
-  // Block reason filter
-  if (blockReason) {
-    conditions.push(`hyspa.caption = ${escapeSqlString(blockReason)}`)
+  // Block reason filter (supports multi-select)
+  const blockReasons = toArray(blockReason)
+  if (blockReasons.length > 0) {
+    const inClause = blockReasons.map(escapeSqlString).join(', ')
+    conditions.push(`hyspa.caption IN (${inClause})`)
   }
 
   // Date range filters
@@ -1289,35 +1341,47 @@ async function searchRentalBlocksWithDistriktRaw(
     conditions.push(`hyspt.tdate <= ${escapeSqlString(toDateLte)}`)
   }
 
-  // Kategori filter
-  if (kategori === 'Bostad') {
-    conditions.push('babuf.lghcode IS NOT NULL')
-  } else if (kategori === 'Bilplats') {
-    conditions.push('babuf.bpscode IS NOT NULL')
-  } else if (kategori === 'Lokal') {
-    conditions.push('babuf.lokcode IS NOT NULL')
-  } else if (kategori === 'Förråd') {
-    conditions.push('babuf.hyrcode IS NOT NULL')
-  } else if (kategori === 'Övrigt') {
-    conditions.push(
-      'babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL'
-    )
+  // Kategori filter (supports multi-select)
+  const kategorier = toArray(kategori)
+  if (kategorier.length > 0) {
+    const kategoriConditions: string[] = []
+    for (const k of kategorier) {
+      if (k === 'Bostad') {
+        kategoriConditions.push('babuf.lghcode IS NOT NULL')
+      } else if (k === 'Bilplats') {
+        kategoriConditions.push('babuf.bpscode IS NOT NULL')
+      } else if (k === 'Lokal') {
+        kategoriConditions.push('babuf.lokcode IS NOT NULL')
+      } else if (k === 'Förråd') {
+        kategoriConditions.push('babuf.hyrcode IS NOT NULL')
+      } else if (k === 'Övrigt') {
+        kategoriConditions.push(
+          '(babuf.lghcode IS NULL AND babuf.bpscode IS NULL AND babuf.lokcode IS NULL AND babuf.hyrcode IS NULL)'
+        )
+      }
+    }
+    if (kategoriConditions.length > 0) {
+      conditions.push(`(${kategoriConditions.join(' OR ')})`)
+    }
   }
 
-  // Search filter (q param) - OR across fields
+  // Search filter (q param) - use smart search analyzer
   if (q && q.trim().length >= 2) {
-    const searchTerm = q.trim()
-    const searchFields = fields.split(',').map((f) => f.trim())
+    const searchTargets = analyzeRentalBlockSearchTerm(q)
     const orClauses: string[] = []
 
-    if (searchFields.includes('rentalId')) {
-      orClauses.push(`babuf.hyresid LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('address')) {
-      orClauses.push(`babuf.caption LIKE ${escapeSqlLike(searchTerm)}`)
-    }
-    if (searchFields.includes('blockReason')) {
-      orClauses.push(`hyspa.caption LIKE ${escapeSqlLike(searchTerm)}`)
+    for (const target of searchTargets) {
+      const escapeFn = target.startsWith
+        ? escapeSqlLikeStartsWith
+        : escapeSqlLike
+
+      if (target.field === 'rentalId') {
+        orClauses.push(`babuf.hyresid LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'address') {
+        orClauses.push(`babuf.caption LIKE ${escapeFn(target.pattern)}`)
+      } else if (target.field === 'blockReason') {
+        orClauses.push(`hyspa.caption LIKE ${escapeFn(target.pattern)}`)
+      }
     }
 
     if (orClauses.length > 0) {
@@ -1417,16 +1481,17 @@ export const searchRentalBlocks = async (
       >
     >
 
-    if (distrikt) {
-      // When filtering by distrikt, use raw SQL to handle the COALESCE join logic
+    const distrikterArray = toArray(distrikt)
+    if (distrikterArray.length > 0) {
+      // When filtering by distrikt, use raw SQL to join fencode → bafen.code
       // This applies ALL filters and pagination in SQL, returning only paginated IDs
       // to avoid SQL Server's 2100 parameter limit
       const result = await searchRentalBlocksWithDistriktRaw(options)
       totalCount = result.totalCount
 
       logger.info(
-        { distrikt, totalCount, pageIds: result.ids.length },
-        'searchRentalBlocks: found rental blocks for distrikt via fencode fallback'
+        { distrikt: distrikterArray, totalCount, pageIds: result.ids.length },
+        'searchRentalBlocks: found rental blocks for distrikt via fencode'
       )
 
       if (result.ids.length === 0) {

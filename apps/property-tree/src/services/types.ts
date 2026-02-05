@@ -65,10 +65,10 @@ export type RentalBlockWithRentalObject =
 export interface RentalBlocksSearchParams {
   q?: string
   fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string[]
+  distrikt?: string[]
+  blockReason?: string[]
+  fastighet?: string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -384,6 +384,7 @@ export interface TenantComment {
   text: string
   author: string
   createdAt: string // ISO datetime combining date + time
+  commentType?: 'Standard' | 'Sökande'
 }
 
 /**

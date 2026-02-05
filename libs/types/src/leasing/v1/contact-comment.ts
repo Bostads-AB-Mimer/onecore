@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+// Contact comment types: 'Standard' or 'Sökande'
+export const ContactCommentTypeSchema = z.enum(['Standard', 'Sökande'])
+export type ContactCommentType = z.infer<typeof ContactCommentTypeSchema>
+
 export const NoteSchema = z.object({
   date: z.string().nullable(), // ISO date format YYYY-MM-DD
   time: z.string().nullable(), // Time format HH:MM
@@ -26,6 +30,7 @@ export const CreateContactCommentRequestSchema = z.object({
     .string()
     .min(1, 'Author cannot be empty')
     .max(50, 'Author must be 50 characters or less'),
+  commentType: ContactCommentTypeSchema.optional().default('Standard'),
 })
 
 export type Note = z.infer<typeof NoteSchema>

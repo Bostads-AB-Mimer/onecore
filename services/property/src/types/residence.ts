@@ -152,6 +152,7 @@ export const ResidenceDetailedSchema = z.object({
     rentalId: z.string().nullable(),
     rentalInformation: z
       .object({
+        apartmentNumber: z.string().nullable(),
         type: z.object({
           code: z.string(),
           name: z.string().nullable(),
@@ -277,14 +278,18 @@ export const getAllRentalBlocksQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(1000).optional().default(100),
 })
 
+// Coerce query params to arrays (Koa parses single values as strings)
+const arrayQueryParam = z
+  .preprocess((v) => (typeof v === 'string' ? [v] : v), z.array(z.string()))
+  .optional()
+
 // Base filter schema (shared between search and export)
 const rentalBlocksFilterSchema = z.object({
   q: z.string().optional(),
-  fields: z.string().optional(),
-  kategori: z.string().optional(),
-  distrikt: z.string().optional(),
-  blockReason: z.string().optional(),
-  fastighet: z.string().optional(),
+  kategori: arrayQueryParam,
+  distrikt: arrayQueryParam,
+  blockReason: arrayQueryParam,
+  fastighet: arrayQueryParam,
   fromDateGte: z.string().optional(),
   toDateLte: z.string().optional(),
   active: booleanStringSchema.optional(),

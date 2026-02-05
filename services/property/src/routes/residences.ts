@@ -528,20 +528,40 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (supports multiple values)
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -665,33 +685,44 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason
-   *       - in: query
-   *         name: fields
-   *         schema:
-   *           type: string
-   *         description: Comma-separated fields to search (default rentalId,address,propertyName,blockReason)
+   *         description: Search term (min 2 chars). Searches across rentalId, address, blockReason
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *           enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
-   *         description: Filter by category
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostad, Bilplats, Lokal, Förråd, Övrigt]
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (supports multiple values)
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
-   *         description: Filter by district
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
-   *         description: Filter by block reason
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
-   *         description: Filter by property code/name
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property code/name (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -774,33 +805,12 @@ export const routes = (router: KoaRouter) => {
           offset,
         })
 
-        // Build additional params for pagination links
-        const additionalParams: Record<string, string> = {}
-        if (active !== undefined) {
-          additionalParams.active = String(active)
-        }
-        if (searchParams.q) additionalParams.q = searchParams.q
-        if (searchParams.fields) additionalParams.fields = searchParams.fields
-        if (searchParams.kategori)
-          additionalParams.kategori = searchParams.kategori
-        if (searchParams.distrikt)
-          additionalParams.distrikt = searchParams.distrikt
-        if (searchParams.blockReason)
-          additionalParams.blockReason = searchParams.blockReason
-        if (searchParams.fastighet)
-          additionalParams.fastighet = searchParams.fastighet
-        if (searchParams.fromDateGte)
-          additionalParams.fromDateGte = searchParams.fromDateGte
-        if (searchParams.toDateLte)
-          additionalParams.toDateLte = searchParams.toDateLte
-
         ctx.status = 200
         ctx.body = {
           ...buildPaginatedResponse({
             content: rentalBlocks,
             totalRecords: totalCount,
             ctx,
-            additionalParams,
             defaultLimit: 50,
           }),
           ...metadata,
@@ -1105,6 +1115,9 @@ export const routes = (router: KoaRouter) => {
           rentalInformation: !residence.propertyObject?.rentalInformation
             ? null
             : {
+                apartmentNumber:
+                  residence.propertyObject.rentalInformation.apartmentNumber ??
+                  null,
                 type: {
                   code: residence.propertyObject.rentalInformation
                     .rentalInformationType.code,

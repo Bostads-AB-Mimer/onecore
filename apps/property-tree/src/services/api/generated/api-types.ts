@@ -1135,10 +1135,14 @@ export interface paths {
         query?: {
           /** @description Search term (min 2 chars) */
           q?: string;
-          kategori?: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
-          distrikt?: string;
-          blockReason?: string;
-          fastighet?: string;
+          /** @description Filter by category (supports multiple values) */
+          kategori?: ("Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt")[];
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[];
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[];
+          /** @description Filter by property (supports multiple values) */
+          fastighet?: string[];
           fromDateGte?: string;
           toDateLte?: string;
           /** @description Filter by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks. */
@@ -1167,18 +1171,16 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason */
+          /** @description Search term (min 2 chars). Searches across rentalId, address, blockReason */
           q?: string;
-          /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
-          fields?: string;
-          /** @description Filter by category */
-          kategori?: "Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt";
-          /** @description Filter by district */
-          distrikt?: string;
-          /** @description Filter by block reason */
-          blockReason?: string;
-          /** @description Filter by property code/name */
-          fastighet?: string;
+          /** @description Filter by category (supports multiple values) */
+          kategori?: ("Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt")[];
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[];
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[];
+          /** @description Filter by property code/name (supports multiple values) */
+          fastighet?: string[];
           /** @description Filter blocks starting on or after this date */
           fromDateGte?: string;
           /** @description Filter blocks ending on or before this date */
@@ -2269,6 +2271,7 @@ export interface components {
         };
         rentalId: string | null;
         rentalInformation: ({
+          apartmentNumber: string | null;
           type: {
             code: string;
             name: string | null;

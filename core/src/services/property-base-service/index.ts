@@ -1123,23 +1123,39 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *         description: Filter by category
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (supports multiple values)
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
-   *         description: Filter by district
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
-   *         description: Filter by block reason
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
-   *         description: Filter by property
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -1165,17 +1181,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.RentalBlocksFilterQuerySchema.safeParse(ctx.query)
-
-    if (!params.success) {
-      ctx.status = 400
-      ctx.body = { error: params.error.errors, ...metadata }
-      return
-    }
 
     try {
       const result = await propertyBaseAdapter.exportRentalBlocksToExcel(
-        params.data
+        ctx.query
       )
 
       if (!result.ok) {
@@ -1225,23 +1234,39 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *         description: Filter by category (Bostad, Bilplats, Lokal, Förråd)
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (Bostad, Bilplats, Lokal, Förråd) - supports multiple values
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
-   *         description: Filter by district
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
-   *         description: Filter by block reason
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
-   *         description: Filter by property code/name
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property code/name (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -1305,16 +1330,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.SearchRentalBlocksQuerySchema.safeParse(ctx.query)
-
-    if (!params.success) {
-      ctx.status = 400
-      ctx.body = { error: params.error.errors, ...metadata }
-      return
-    }
 
     try {
-      const result = await propertyBaseAdapter.searchRentalBlocks(params.data)
+      const result = await propertyBaseAdapter.searchRentalBlocks(ctx.query)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Internal server error')
