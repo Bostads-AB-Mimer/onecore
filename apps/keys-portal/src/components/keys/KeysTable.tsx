@@ -154,6 +154,7 @@ export function KeysTable({
                 onSelect={onKeySystemSelect}
                 selectedValue={selectedKeySystem}
                 placeholder="Låssystem"
+                showSearchIcon
               />
             </FilterableTableHeader>
             <TableHead>Löpnummer</TableHead>

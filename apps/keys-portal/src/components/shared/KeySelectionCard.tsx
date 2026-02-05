@@ -12,6 +12,7 @@ interface KeySelectionCardProps {
   onValidateKey?: (key: Key) => { valid: boolean; errorMessage?: string }
   onAccept: (selectedKeys: Key[]) => Promise<void>
   disabled?: boolean
+  existingKeyIds?: Set<string>
 }
 
 /**
@@ -25,6 +26,7 @@ export function KeySelectionCard({
   onValidateKey,
   onAccept,
   disabled = false,
+  existingKeyIds,
 }: KeySelectionCardProps) {
   const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -69,6 +71,7 @@ export function KeySelectionCard({
           onAddKey={handleAddKey}
           onRemoveKey={handleRemoveKey}
           disabled={disabled || isProcessing}
+          existingKeyIds={existingKeyIds}
         />
 
         {selectedKeys.length > 0 && (
