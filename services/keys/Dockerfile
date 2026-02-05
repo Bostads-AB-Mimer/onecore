@@ -21,6 +21,7 @@ COPY services/keys ./services/keys
 
 RUN pnpm install
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run --filter @onecore/keys build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/keys --prod /out
