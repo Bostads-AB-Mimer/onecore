@@ -7,12 +7,9 @@ import importPlugin from 'eslint-plugin-import';
 import prettier from 'eslint-config-prettier';
 
 export default defineConfig([
-  {
-    ignores: ['apps/internal-portal/frontend/**'],
-  },
   js.configs.recommended,
   {
-    files: ['**/*.{js,jsx,ts,tsx,cjs,mjs}'],
+    files: ['**/*.{js,ts,cjs,mjs}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
