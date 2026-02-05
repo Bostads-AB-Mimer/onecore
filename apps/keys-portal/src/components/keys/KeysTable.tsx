@@ -36,7 +36,14 @@ import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowConten
 interface KeyDetails {
   loans: KeyLoan[]
   bundles: KeyBundle[]
-  contactNames: Record<string, string>
+  contactData: Record<
+    string,
+    {
+      fullName: string
+      contactCode: string
+      nationalRegistrationNumber?: string
+    }
+  >
 }
 
 interface KeysTableProps {
@@ -95,26 +102,27 @@ export function KeysTable({
         if (loan.contact2) uniqueContactCodes.add(loan.contact2)
       })
 
-      const contactNames: Record<string, string> = {}
+      const contactData: KeyDetails['contactData'] = {}
       await Promise.all(
         Array.from(uniqueContactCodes).map(async (contactCode) => {
           try {
             const contact = await fetchContactByContactCode(contactCode)
             if (contact) {
-              const parts = [contact.fullName, contactCode]
-              if (contact.nationalRegistrationNumber) {
-                parts.push(contact.nationalRegistrationNumber)
+              contactData[contactCode] = {
+                fullName: contact.fullName ?? contactCode,
+                contactCode,
+                nationalRegistrationNumber:
+                  contact.nationalRegistrationNumber || undefined,
               }
-              contactNames[contactCode] = parts.join(' · ')
             }
           } catch (error) {
             console.error(`Failed to fetch contact ${contactCode}:`, error)
-            contactNames[contactCode] = contactCode
+            contactData[contactCode] = { fullName: contactCode, contactCode }
           }
         })
       )
 
-      return { loans: sortedLoans, bundles: sortedBundles, contactNames }
+      return { loans: sortedLoans, bundles: sortedBundles, contactData }
     },
   })
 
@@ -262,7 +270,7 @@ export function KeysTable({
                             <div className="rounded-lg border bg-card overflow-hidden">
                               <KeyLoansList
                                 loans={expansion.loadedData.loans}
-                                contactNames={expansion.loadedData.contactNames}
+                                contactData={expansion.loadedData.contactData}
                               />
                             </div>
                           </div>
