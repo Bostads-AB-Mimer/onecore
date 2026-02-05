@@ -27,6 +27,11 @@ export default defineConfig([
       ...Object.fromEntries(
         Object.keys(nPlugin.rules).map((r) => [`n/${r}`, 'off'])
       ),
+      // Prefer TypeScript equivalents over core rules
+      'no-unused-vars': 'off',
+      'no-redeclare': 'off',
+      'no-shadow': 'off',
+      'no-use-before-define': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
