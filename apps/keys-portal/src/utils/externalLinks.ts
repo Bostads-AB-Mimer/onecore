@@ -45,3 +45,21 @@ export function extractCardOwnerId(owner: unknown): string | null {
 
   return null
 }
+
+/**
+ * Get the base URL for Property Tree
+ */
+export function getPropertyTreeBaseUrl(): string {
+  return resolve('VITE_PROPERTY_TREE_URL', '')
+}
+
+/**
+ * Build a link to view a tenant in Property Tree
+ * @param contactCode - The contact code (e.g. P053602)
+ * @returns The full URL to the tenant view, or empty string if not configured
+ */
+export function getTenantViewLink(contactCode: string): string {
+  const baseUrl = getPropertyTreeBaseUrl()
+  if (!baseUrl) return ''
+  return `${baseUrl}/tenants/${contactCode}`
+}
