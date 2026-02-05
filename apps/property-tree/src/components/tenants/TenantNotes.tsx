@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTenantComments } from '@/hooks/useTenantComments'
 import { useCreateTenantComment } from '@/hooks/useCreateTenantComment'
 import { useUser } from '@/auth/useUser'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
+import { Badge } from '@/components/ui/v2/Badge'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/v2/Tabs'
 import { Textarea } from '@/components/ui/Textarea'
 import { Plus, Save } from 'lucide-react'
 import { generateAuthorAbbreviation } from '@/utils/formatters'
@@ -12,13 +14,34 @@ interface TenantNotesProps {
   contactCode: string | undefined
 }
 
+type CommentType = 'Standard' | 'Sökande'
+type CommentTypeFilter = CommentType | 'all'
+
 export function TenantNotes({ contactCode }: TenantNotesProps) {
+  // Filter state
+  const [commentTypeFilter, setCommentTypeFilter] =
+    useState<CommentTypeFilter>('all')
+
+  // Form state
   const [isAddingNote, setIsAddingNote] = useState(false)
   const [newNoteContent, setNewNoteContent] = useState('')
+  const [newNoteType, setNewNoteType] = useState<CommentType>('Standard')
 
-  const { data: comments, isLoading, error } = useTenantComments(contactCode)
+  // Hooks
+  const { data: allComments, isLoading, error } = useTenantComments(contactCode)
   const createComment = useCreateTenantComment()
   const userState = useUser()
+
+  // Frontend filtering: We fetch all comments and filter in the browser
+  // since the number of comments per contact is typically small.
+  const filteredComments = useMemo(() => {
+    if (commentTypeFilter === 'all') {
+      return allComments
+    }
+    return allComments.filter(
+      (comment) => comment.commentType === commentTypeFilter
+    )
+  }, [allComments, commentTypeFilter])
 
   const formatDate = (dateString: string): string => {
     const options: Intl.DateTimeFormatOptions = {
@@ -46,10 +69,12 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
         contactCode,
         content: newNoteContent.trim(),
         author,
+        commentType: newNoteType,
       })
 
       // Reset form on success
       setNewNoteContent('')
+      setNewNoteType('Standard')
       setIsAddingNote(false)
     } catch (err) {
       // Error is handled by the mutation hook
@@ -64,6 +89,7 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
   const cancelAddingNote = () => {
     setIsAddingNote(false)
     setNewNoteContent('')
+    setNewNoteType('Standard')
   }
 
   if (error) {
@@ -84,9 +110,30 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
 
   return (
     <div className="space-y-4">
-      {/* Add note button */}
-      {!isAddingNote && (
-        <div className="flex justify-start">
+      {/* Header with filter and add button */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Filter tabs (smaller variant) */}
+        <Tabs
+          value={commentTypeFilter}
+          onValueChange={(value) =>
+            setCommentTypeFilter(value as CommentTypeFilter)
+          }
+        >
+          <TabsList className="h-8">
+            <TabsTrigger value="all" className="px-2 py-1 text-xs">
+              Alla
+            </TabsTrigger>
+            <TabsTrigger value="Standard" className="px-2 py-1 text-xs">
+              Standard
+            </TabsTrigger>
+            <TabsTrigger value="Sökande" className="px-2 py-1 text-xs">
+              Sökande
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Add note button */}
+        {!isAddingNote && (
           <Button
             variant="outline"
             size="sm"
@@ -96,12 +143,43 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
             <Plus className="h-4 w-4" />
             Ny notering
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Add note form */}
       {isAddingNote && (
         <div className="border p-3 rounded-md bg-muted/20 space-y-3">
+          {/* Comment type selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Typ av notering</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="noteType"
+                  value="Standard"
+                  checked={newNoteType === 'Standard'}
+                  onChange={() => setNewNoteType('Standard')}
+                  className="w-4 h-4"
+                  disabled={createComment.isPending}
+                />
+                <span className="text-sm">Standard</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="noteType"
+                  value="Sökande"
+                  checked={newNoteType === 'Sökande'}
+                  onChange={() => setNewNoteType('Sökande')}
+                  className="w-4 h-4"
+                  disabled={createComment.isPending}
+                />
+                <span className="text-sm">Sökande</span>
+              </label>
+            </div>
+          </div>
+
           <Textarea
             placeholder="Skriv din notering här..."
             className="min-h-[80px] text-sm"
@@ -143,18 +221,44 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
       )}
 
       {/* Notes list */}
-      {comments.length === 0 ? (
+      {filteredComments.length === 0 ? (
         <p className="text-muted-foreground text-center py-4 text-sm">
-          Inga noteringar har lagts till för denna kontakt ännu.
+          {commentTypeFilter === 'all'
+            ? 'Inga noteringar har lagts till för denna kontakt ännu.'
+            : `Inga ${commentTypeFilter}-noteringar hittades.`}
         </p>
       ) : (
         <div className="space-y-3">
-          {comments.map((comment) => (
-            <Card key={comment.id}>
+          {filteredComments.map((comment) => (
+            <Card
+              key={comment.id}
+              className={
+                comment.commentType === 'Sökande'
+                  ? 'border-l-4 border-l-blue-400'
+                  : comment.commentType === 'Standard'
+                    ? 'border-l-4 border-l-emerald-400'
+                    : ''
+              }
+            >
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground mb-2">
-                  {formatDate(comment.createdAt)} av {comment.author}
-                </p>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(comment.createdAt)} av {comment.author}
+                  </p>
+                  {/* Show badge for comment type when viewing all */}
+                  {commentTypeFilter === 'all' && comment.commentType && (
+                    <Badge
+                      variant={
+                        comment.commentType === 'Sökande'
+                          ? 'secondary'
+                          : 'outline'
+                      }
+                      className="text-xs"
+                    >
+                      {comment.commentType}
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-sm whitespace-pre-wrap break-words">
                   {comment.text}
                 </p>

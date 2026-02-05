@@ -11,6 +11,10 @@ export interface UseTenantCommentsReturn {
 /**
  * Hook to fetch tenant comments for a specific contact
  * Automatically sorts by date (most recent first)
+ *
+ * Note: This hook fetches all comments without server-side filtering.
+ * Filtering by comment type is done in the frontend since the number
+ * of comments per contact is typically small.
  */
 export const useTenantComments = (
   contactCode: string | undefined
