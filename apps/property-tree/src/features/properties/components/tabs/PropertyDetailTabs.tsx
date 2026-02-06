@@ -7,16 +7,14 @@ import { PropertyStatisticsTab } from './PropertyStatisticsTab'
 import { PropertyMapTab } from './PropertyMapTab'
 //import { PropertyMaintenanceUnitsTab } from './PropertyMaintenanceUnitsTab'
 import type { PropertyDetail } from '@/types/api'
-import { DocumentsTab } from '@/components/documents/DocumentsTab'
+import { DocumentsTab } from '@/features/documents/components/DocumentsTab'
 import { ContextType } from '@/types/ui'
 
-interface PropertyDetailTabsProps {
+interface PropertyTabsProps {
   propertyDetail: PropertyDetail
 }
 
-export const PropertyDetailTabs = ({
-  propertyDetail,
-}: PropertyDetailTabsProps) => {
+export const PropertyTabs = ({ propertyDetail }: PropertyTabsProps) => {
   return (
     <Tabs defaultValue="info" className="space-y-6">
       <TabsList>

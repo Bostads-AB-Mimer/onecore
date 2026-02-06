@@ -17,7 +17,7 @@ import { WorkOrdersManagement } from '../features/work-orders/components/WorkOrd
 import { ObjectPageLayout } from '../layouts/ObjectPageLayout'
 import { ObjectPageTabs } from '../layouts/ObjectPageTabs'
 import { RentalObjectContracts } from '../components/rental-object/RentalObjectContracts'
-import { RoomInfo } from '../components/residence/RoomInfo'
+import { RoomInfo } from '../features/residences/components/RoomInfo'
 
 import { ContextType } from '@/types/ui'
 

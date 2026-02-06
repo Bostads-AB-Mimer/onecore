@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { useTenant } from '@/hooks/useTenant'
-import { useLeases } from '@/hooks/useLeases'
+import { useTenant } from '@/features/tenants/hooks/useTenant'
+import { useLeases } from '@/features/leases/hooks/useLeases'
 import { useRentalProperties } from '@/hooks/useRentalProperties'
-import { TenantCard } from '@/components/tenants/TenantCard'
+import { TenantCard } from '@/features/tenants/components/TenantCard'
 import {
   Tooltip,
   TooltipContent,
@@ -13,9 +13,9 @@ import {
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { AlertTriangle } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useMobile'
-import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
-import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
-import { TenantMobileAccordion } from '@/components/tenants/TenantMobileAccordion'
+import { TenantDetailTabs } from '@/features/tenants/components/tabs/TenantDetailTabs'
+import { TenantDetailTabsContent } from '@/features/tenants/components/tabs/TenantDetailTabsContent'
+import { TenantMobileAccordion } from '@/features/tenants/components/TenantMobileAccordion'
 import type { Tenant } from '@/services/types'
 import type { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'

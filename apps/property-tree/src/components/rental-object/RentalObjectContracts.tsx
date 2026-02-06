@@ -6,8 +6,8 @@ import type { ReactNode } from 'react'
 import {
   formatDate,
   getStatusBadge,
-} from '@/components/tenants/lease-helpers.tsx'
-import { useLeasesByRentalProperty } from '@/hooks/useLeasesByRentalProperty'
+} from '@/features/tenants/components/lease-helpers'
+import { useLeasesByRentalProperty } from '@/features/leases/hooks/useLeasesByRentalProperty'
 import type { Lease } from '@/services/api/core/lease-service'
 import { Link } from 'react-router-dom'
 

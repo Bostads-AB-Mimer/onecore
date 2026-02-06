@@ -13,7 +13,7 @@ export { PropertiesTable } from './components/PropertiesTable'
 export { SearchResultsTable } from './components/SearchResultsTable'
 
 // Tab Components
-export { PropertyDetailTabs } from './components/tabs/PropertyDetailTabs'
+export { PropertyTabs } from './components/tabs/PropertyDetailTabs'
 export { PropertyApartmentsTab } from './components/tabs/PropertyApartmentsTab'
 export { PropertyBuildingsTab } from './components/tabs/PropertyBuildingsTab'
 export { PropertyInfoTab } from './components/tabs/PropertyInfoTab'

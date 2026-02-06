@@ -1,9 +1,9 @@
-import { useComponentLibraryViewState } from '@/hooks/useComponentLibraryViewState'
-import { useComponentLibraryHandlers } from '@/hooks/useComponentLibraryHandlers'
-import { ComponentLibraryBreadcrumb } from '@/components/component-library/ComponentLibraryBreadcrumb'
-import { ComponentLibraryContent } from '@/components/component-library/ComponentLibraryContent'
-import { ComponentLibraryDialogs } from '@/components/component-library/ComponentLibraryDialogs'
-import { ComponentImageGallery } from '@/components/residence/ComponentImageGallery'
+import { useComponentLibraryViewState } from '@/features/components/hooks/useComponentLibraryViewState'
+import { useComponentLibraryHandlers } from '@/features/components/hooks/useComponentLibraryHandlers'
+import { ComponentLibraryBreadcrumb } from '@/features/components/components/ComponentLibraryBreadcrumb'
+import { ComponentLibraryContent } from '@/features/components/components/ComponentLibraryContent'
+import { ComponentLibraryDialogs } from '@/features/components/components/ComponentLibraryDialogs'
+import { ComponentImageGallery } from '@/features/residences/components/ComponentImageGallery'
 
 const ComponentLibraryView = () => {
   const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =
