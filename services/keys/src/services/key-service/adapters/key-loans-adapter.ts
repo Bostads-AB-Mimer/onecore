@@ -350,7 +350,7 @@ export async function getKeyLoansByRentalObject(
         this.orWhere(function () {
           // Check if any of the loan's card IDs match cards from this rental object
           for (const cardId of cardIdsForRentalObject) {
-            this.orWhereRaw("kl.keyCards LIKE ?", [`%"${cardId}"%`])
+            this.orWhereRaw('kl.keyCards LIKE ?', [`%"${cardId}"%`])
           }
         })
       }
