@@ -197,7 +197,7 @@ export async function handleReturnKeys({
       lastProcessedLoanId = loanId
       await keyLoanService.update(loanId, {
         returnedAt: now,
-        availableToNextTenantFrom: availableToNextTenantFrom || now,
+        availableToNextTenantFrom: availableToNextTenantFrom ?? null,
       } as any)
 
       // Create return receipt for this loan
