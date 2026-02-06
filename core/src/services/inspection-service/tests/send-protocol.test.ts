@@ -37,11 +37,18 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [],
+    })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
@@ -76,7 +83,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease])
+      .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const sendSpy = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
@@ -110,18 +117,11 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
-
-    const newTenantLease = LeaseFactory.build({
-      leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
-      leaseStartDate: new Date('2024-01-01'),
-      tenants: [],
-    })
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
@@ -144,6 +144,13 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
       ],
     })
 
+    const newTenantLease = LeaseFactory.build({
+      leaseId: 'lease-new',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2024-01-01'),
+      tenants: [],
+    })
+
     jest
       .spyOn(inspectionAdapter, 'getXpandInspectionById')
       .mockResolvedValue({ ok: true, data: mockInspection })
@@ -156,7 +163,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease, previousTenantLease])
+      .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const sendSpy = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
@@ -177,11 +184,18 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [],
+    })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
@@ -229,7 +243,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease])
+      .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const sendSpy = jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
@@ -251,14 +265,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
 
-    const newTenantLease = LeaseFactory.build({
-      leaseId: 'lease-new',
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
       type: 'Bostadskontrakt',
       leaseStartDate: new Date('2024-01-01'),
       tenants: [],
@@ -276,11 +290,11 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease])
+      .mockResolvedValue([previousTenantLease])
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
-      .send({ recipient: 'previous-tenant' })
+      .send({ recipient: 'new-tenant' })
 
     expect(res.status).toBe(400)
     expect(res.body.content.success).toBe(false)
@@ -291,11 +305,18 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [],
+    })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
@@ -330,7 +351,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease])
+      .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -366,11 +387,18 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [],
+    })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
@@ -405,7 +433,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease])
+      .mockResolvedValue([previousTenantLease, newTenantLease])
 
     jest
       .spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
@@ -424,11 +452,18 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
-      leaseId: 'lease-current',
+      leaseId: 'lease-previous',
     })
 
     const mockLease = LeaseFactory.build()
     const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [],
+    })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
@@ -463,7 +498,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     jest
       .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-      .mockResolvedValue([newTenantLease])
+      .mockResolvedValue([previousTenantLease, newTenantLease])
 
     jest
       .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')

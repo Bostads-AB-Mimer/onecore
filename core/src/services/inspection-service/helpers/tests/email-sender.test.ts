@@ -11,10 +11,10 @@ import type { DetailedInspection } from '../../schemas'
 jest.mock('../../../../adapters/communication-adapter')
 
 describe('identifyTenantContracts', () => {
-  it('should identify new and previous tenant from housing contracts', () => {
+  it('should identify previous tenant by inspectionLeaseId and new tenant as the next lease', () => {
     const leases: Lease[] = [
       {
-        leaseId: 'lease-1',
+        leaseId: 'lease-new',
         leaseNumber: '001',
         leaseStartDate: new Date('2024-01-01'),
         leaseEndDate: undefined,
@@ -50,7 +50,7 @@ describe('identifyTenantContracts', () => {
         approvalDate: undefined,
       },
       {
-        leaseId: 'lease-2',
+        leaseId: 'lease-previous',
         leaseNumber: '002',
         leaseStartDate: new Date('2023-01-01'),
         leaseEndDate: new Date('2023-12-31'),
@@ -87,20 +87,20 @@ describe('identifyTenantContracts', () => {
       },
     ]
 
-    const result = identifyTenantContracts(leases)
+    const result = identifyTenantContracts(leases, 'lease-previous')
 
-    expect(result.newTenant).toBeDefined()
-    expect(result.newTenant?.leaseId).toBe('lease-1')
     expect(result.previousTenant).toBeDefined()
-    expect(result.previousTenant?.leaseId).toBe('lease-2')
+    expect(result.previousTenant?.leaseId).toBe('lease-previous')
+    expect(result.newTenant).toBeDefined()
+    expect(result.newTenant?.leaseId).toBe('lease-new')
   })
 
   it('should filter out parking space contracts', () => {
     const leases: Lease[] = [
       {
-        leaseId: 'lease-1',
+        leaseId: 'lease-previous',
         leaseNumber: '001',
-        leaseStartDate: new Date('2024-01-01'),
+        leaseStartDate: new Date('2023-01-01'),
         leaseEndDate: undefined,
         status: 'Active' as any,
         type: 'Bostadskontrakt',
@@ -120,7 +120,7 @@ describe('identifyTenantContracts', () => {
         approvalDate: undefined,
       },
       {
-        leaseId: 'lease-2',
+        leaseId: 'lease-parking',
         leaseNumber: '002',
         leaseStartDate: new Date('2024-01-01'),
         leaseEndDate: undefined,
@@ -143,13 +143,13 @@ describe('identifyTenantContracts', () => {
       },
     ]
 
-    const result = identifyTenantContracts(leases)
+    const result = identifyTenantContracts(leases, 'lease-previous')
 
-    expect(result.newTenant?.leaseId).toBe('lease-1')
-    expect(result.previousTenant).toBeNull()
+    expect(result.previousTenant?.leaseId).toBe('lease-previous')
+    expect(result.newTenant).toBeNull()
   })
 
-  it('should return null when no housing contracts exist', () => {
+  it('should return null for both when inspectionLeaseId does not match any housing contract', () => {
     const leases: Lease[] = [
       {
         leaseId: 'lease-1',
@@ -175,16 +175,16 @@ describe('identifyTenantContracts', () => {
       },
     ]
 
-    const result = identifyTenantContracts(leases)
+    const result = identifyTenantContracts(leases, 'non-existent-lease')
 
     expect(result.newTenant).toBeNull()
     expect(result.previousTenant).toBeNull()
   })
 
-  it('should return only new tenant when only one housing contract exists', () => {
+  it('should return only previous tenant when no lease comes after it', () => {
     const leases: Lease[] = [
       {
-        leaseId: 'lease-1',
+        leaseId: 'lease-previous',
         leaseNumber: '001',
         leaseStartDate: new Date('2024-01-01'),
         leaseEndDate: undefined,
@@ -207,13 +207,13 @@ describe('identifyTenantContracts', () => {
       },
     ]
 
-    const result = identifyTenantContracts(leases)
+    const result = identifyTenantContracts(leases, 'lease-previous')
 
-    expect(result.newTenant?.leaseId).toBe('lease-1')
-    expect(result.previousTenant).toBeNull()
+    expect(result.previousTenant?.leaseId).toBe('lease-previous')
+    expect(result.newTenant).toBeNull()
   })
 
-  it('should sort by leaseStartDate descending (newest first)', () => {
+  it('should find the correct next lease regardless of input order', () => {
     const leases: Lease[] = [
       {
         leaseId: 'lease-old',
@@ -283,10 +283,10 @@ describe('identifyTenantContracts', () => {
       },
     ]
 
-    const result = identifyTenantContracts(leases)
+    const result = identifyTenantContracts(leases, 'lease-middle')
 
-    expect(result.newTenant?.leaseId).toBe('lease-newest')
     expect(result.previousTenant?.leaseId).toBe('lease-middle')
+    expect(result.newTenant?.leaseId).toBe('lease-newest')
   })
 })
 

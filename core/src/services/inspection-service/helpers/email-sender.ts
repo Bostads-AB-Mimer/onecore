@@ -7,11 +7,16 @@ import type { DetailedInspection } from '../schemas'
  * Identifies new and previous tenant contracts from a list of leases.
  * Shared helper function used by both GET /tenant-contacts and POST /send-protocol endpoints.
  *
+ * The previous tenant is identified by the inspection's leaseId (the lease active during inspection).
+ * The new tenant is the next chronological housing lease after the previous tenant's lease.
+ *
  * @param leases - All leases for a property
+ * @param inspectionLeaseId - The leaseId from the inspection (identifies the previous tenant)
  * @returns Object with newTenant and previousTenant lease contracts
  */
 export const identifyTenantContracts = (
-  leases: Lease[]
+  leases: Lease[],
+  inspectionLeaseId: string
 ): { newTenant: Lease | null; previousTenant: Lease | null } => {
   // Filter for housing contracts only (exclude parking spaces)
   const housingContracts = leases
@@ -21,17 +26,24 @@ export const identifyTenantContracts = (
         lease.type.includes('Kooperativ hyresrätt')
     )
     .sort((a, b) => {
-      // Sort by leaseStartDate descending (newest first)
+      // Sort by leaseStartDate ascending (oldest first)
       return (
-        new Date(b.leaseStartDate).getTime() -
-        new Date(a.leaseStartDate).getTime()
+        new Date(a.leaseStartDate).getTime() -
+        new Date(b.leaseStartDate).getTime()
       )
     })
 
-  // Latest contract is the new tenant
-  const newTenant = housingContracts[0] || null
-  // Second-to-latest contract is the previous tenant
-  const previousTenant = housingContracts[1] || null
+  // Previous tenant is the lease that was active during the inspection
+  const previousTenant =
+    housingContracts.find((lease) => lease.leaseId === inspectionLeaseId) ??
+    null
+
+  // New tenant is the next chronological housing lease after the previous tenant
+  let newTenant: Lease | null = null
+  if (previousTenant) {
+    const previousIndex = housingContracts.indexOf(previousTenant)
+    newTenant = housingContracts[previousIndex + 1] ?? null
+  }
 
   return { newTenant, previousTenant }
 }
