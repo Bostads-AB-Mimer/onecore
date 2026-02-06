@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Lease, KeyDetails, CardDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { ToastAction } from '@/components/ui/toast'
 import { Loader2 } from 'lucide-react'
 import { keyService } from '@/services/api/keyService'
@@ -308,25 +307,6 @@ export function LeaseKeyStatusList({
 
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2">
-          {/* Select all / Deselect all button */}
-          {visibleKeys.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (selectedKeys.length === visibleKeys.length) {
-                  setSelectedKeys([])
-                } else {
-                  setSelectedKeys(visibleKeys.map((k) => k.id))
-                }
-              }}
-              disabled={isProcessing}
-            >
-              {selectedKeys.length === visibleKeys.length
-                ? 'Avmarkera alla'
-                : 'Markera alla'}
-            </Button>
-          )}
           <KeyActionButtons
             selectedKeys={selectedKeys}
             selectedCards={selectedCards}
@@ -379,6 +359,20 @@ export function LeaseKeyStatusList({
           }}
           onRefresh={refreshStatuses}
           onReturn={onReturn}
+          onSelectAll={() => {
+            const visibleKeyIds = visibleKeys
+              .filter((k) => !k.disposed || getActiveLoan(k))
+              .map((k) => k.id)
+            const visibleCardIds = cards
+              .filter((c) => !c.disabled || getActiveLoan(c))
+              .map((c) => c.cardId)
+            setSelectedKeys(visibleKeyIds)
+            setSelectedCards(visibleCardIds)
+          }}
+          onDeselectAll={() => {
+            setSelectedKeys([])
+            setSelectedCards([])
+          }}
         />
       </div>
 

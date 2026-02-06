@@ -43,6 +43,32 @@ export function KeyBundleKeysTable({
   const [showFlexMenu, setShowFlexMenu] = useState(false)
   const [showIncomingFlexMenu, setShowIncomingFlexMenu] = useState(false)
 
+  // Track key IDs for return from action menu (separate from selection-based return)
+  const [pendingReturnKeyIds, setPendingReturnKeyIds] = useState<string[]>([])
+
+  // Handler for returning keys from the loan action menu
+  const handleReturnFromMenu = (keyIds: string[]) => {
+    // Check if keys have active MAINTENANCE loans
+    const keysToReturn = keys.filter((k) => keyIds.includes(k.id))
+    const hasReturnableMaintenance = keysToReturn.some((k) => {
+      const activeLoan = getActiveLoan(k)
+      return activeLoan !== null && activeLoan.loanType === 'MAINTENANCE'
+    })
+
+    if (!hasReturnableMaintenance) {
+      toast({
+        title: 'Kan inte återlämna här',
+        description:
+          'Detta är inte ett servicelån. Gå till utlåningssidan för kontraktet för att återlämna.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setPendingReturnKeyIds(keyIds)
+    setShowReturnDialog(true)
+  }
+
   // Fetch company names for all unique company codes
   useEffect(() => {
     const fetchCompanyNames = async () => {
@@ -98,10 +124,10 @@ export function KeyBundleKeysTable({
     return activeLoan !== null && activeLoan.loanType === 'MAINTENANCE'
   })
 
-  // Determine which keys can be loaned (not currently loaned or not a maintenance loan)
+  // Determine which keys can be loaned (not currently loaned)
   const loanableKeys = selectedKeysData.filter((k) => {
     const activeLoan = getActiveLoan(k)
-    return activeLoan === null || activeLoan.loanType !== 'MAINTENANCE'
+    return activeLoan === null
   })
 
   // Keys with active loans among selected keys
@@ -213,12 +239,6 @@ export function KeyBundleKeysTable({
               onClick: handleRemoveFromBundleClick,
             },
           ]}
-          selectAllAction={{
-            totalCount: nonDisposedKeys.length,
-            onSelectAll: () =>
-              setSelectedKeys(nonDisposedKeys.map((k) => k.id)),
-            onDeselectAll: () => setSelectedKeys([]),
-          }}
         />
       </div>
 
@@ -239,6 +259,12 @@ export function KeyBundleKeysTable({
                   checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
                 )
               }}
+              onSelectAll={() =>
+                setSelectedKeys(nonDisposedKeys.map((k) => k.id))
+              }
+              onDeselectAll={() => setSelectedKeys([])}
+              onRefresh={onRefresh}
+              onReturn={handleReturnFromMenu}
             />
           </div>
         )}
@@ -259,6 +285,10 @@ export function KeyBundleKeysTable({
                   checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
                 )
               }}
+              onSelectAll={() => setSelectedKeys(disposedKeys.map((k) => k.id))}
+              onDeselectAll={() => setSelectedKeys([])}
+              onRefresh={onRefresh}
+              onReturn={handleReturnFromMenu}
             />
           </div>
         ) : (
@@ -282,11 +312,19 @@ export function KeyBundleKeysTable({
 
       <ReturnMaintenanceKeysDialog
         open={showReturnDialog}
-        onOpenChange={setShowReturnDialog}
-        keyIds={returnableKeys.map((k) => k.id)}
+        onOpenChange={(open) => {
+          setShowReturnDialog(open)
+          if (!open) setPendingReturnKeyIds([])
+        }}
+        keyIds={
+          pendingReturnKeyIds.length > 0
+            ? pendingReturnKeyIds
+            : returnableKeys.map((k) => k.id)
+        }
         allKeys={keys}
         onSuccess={() => {
           setSelectedKeys([])
+          setPendingReturnKeyIds([])
           onRefresh()
         }}
       />
