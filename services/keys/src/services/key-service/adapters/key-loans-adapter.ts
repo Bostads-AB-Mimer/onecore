@@ -318,6 +318,21 @@ export async function getKeyLoansByRentalObject(
   returned?: boolean,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoanWithDetails[]> {
+  // Step 0: Fetch cards from DAX first so we can filter loans by card ownership
+  let allCards: Card[] = []
+  try {
+    const cardOwners = await daxAdapter.searchCardOwners({
+      nameFilter: rentalObjectCode,
+      expand: 'cards',
+    })
+    allCards = cardOwners.flatMap((owner) => owner.cards || [])
+  } catch (error) {
+    // If DAX is unavailable, continue without cards
+    console.error('Failed to fetch cards from DAX:', error)
+  }
+
+  const cardIdsForRentalObject = allCards.map((c) => c.cardId)
+
   // Step 1: Get all key loans for the rental object (filtered by contacts if provided)
   // This includes loans with keys from this object OR cards from this object
   let loansQuery = dbConnection('key_loans as kl')
@@ -330,8 +345,15 @@ export async function getKeyLoansByRentalObject(
           .whereRaw("kl.keys LIKE '%\"' + CAST(k.id AS NVARCHAR(36)) + '\"%'")
           .where('k.rentalObjectCode', rentalObjectCode)
       })
-        // OR loans with cards from this rental object (we'll verify card ownership via DAX below)
-        .orWhereRaw("kl.keyCards IS NOT NULL AND kl.keyCards != '[]'")
+      // OR loans with cards from this rental object (using actual card IDs from DAX)
+      if (cardIdsForRentalObject.length > 0) {
+        this.orWhere(function () {
+          // Check if any of the loan's card IDs match cards from this rental object
+          for (const cardId of cardIdsForRentalObject) {
+            this.orWhereRaw("kl.keyCards LIKE ?", [`%"${cardId}"%`])
+          }
+        })
+      }
     })
     .orderBy('kl.createdAt', 'desc')
 
@@ -389,21 +411,7 @@ export async function getKeyLoansByRentalObject(
 
   const keyMap = new Map(keys.map((k) => [k.id, k]))
 
-  // Step 3: Get all cards for this rental object from DAX
-  let allCards: Card[] = []
-  try {
-    const cardOwners = await daxAdapter.searchCardOwners({
-      nameFilter: rentalObjectCode,
-      expand: 'cards',
-    })
-
-    // Extract all cards from card owners
-    allCards = cardOwners.flatMap((owner) => owner.cards || [])
-  } catch (error) {
-    // If DAX is unavailable, continue without cards (cards will be empty arrays)
-    console.error('Failed to fetch cards from DAX:', error)
-  }
-
+  // Step 3: Build card map from cards fetched in Step 0
   const cardMap = new Map(allCards.map((c) => [c.cardId, c]))
 
   // Step 4: Get receipts for these loans (max 2 per loan: LOAN and RETURN) - only if requested
