@@ -134,4 +134,147 @@ describe('generateInspectionProtocolPdf', () => {
       expect(result.length).toBeGreaterThan(0)
     })
   })
+
+  describe('includeCosts option', () => {
+    it('should generate valid PDF with includeCosts: false', async () => {
+      const inspection = createInspection({
+        rooms: [
+          {
+            room: 'Kök',
+            remarks: [
+              {
+                remarkId: 'R1',
+                location: 'Kök',
+                buildingComponent: 'Golv',
+                notes: 'Repor i golvet',
+                remarkGrade: 2,
+                remarkStatus: 'Open',
+                cost: 1500,
+                invoice: true,
+                quantity: 1,
+                isMissing: false,
+                fixedDate: new Date().toISOString(),
+                workOrderCreated: false,
+                workOrderStatus: null,
+              },
+            ],
+          },
+        ],
+      })
+      const result = await generateInspectionProtocolPdf(inspection, {
+        includeCosts: false,
+      })
+
+      expect(result).toBeInstanceOf(Buffer)
+      expect(result.length).toBeGreaterThan(0)
+
+      const pdfHeader = result.toString('utf-8', 0, 5)
+      expect(pdfHeader).toBe('%PDF-')
+    })
+
+    it('should not contain cost-related text when includeCosts is false', async () => {
+      const inspection = createInspection({
+        rooms: [
+          {
+            room: 'Kök',
+            remarks: [
+              {
+                remarkId: 'R1',
+                location: 'Kök',
+                buildingComponent: 'Golv',
+                notes: 'Repor i golvet',
+                remarkGrade: 2,
+                remarkStatus: 'Open',
+                cost: 1500,
+                invoice: true,
+                quantity: 1,
+                isMissing: false,
+                fixedDate: new Date().toISOString(),
+                workOrderCreated: false,
+                workOrderStatus: null,
+              },
+            ],
+          },
+        ],
+      })
+      const result = await generateInspectionProtocolPdf(inspection, {
+        includeCosts: false,
+      })
+      const pdfContent = result.toString('utf-8')
+
+      expect(pdfContent).not.toContain('Kostnad (Kr)')
+      expect(pdfContent).not.toContain('SUMMA')
+      expect(pdfContent).not.toContain('vad det kommer kosta')
+    })
+
+    it('should generate a larger PDF when includeCosts is true (includes cost column and summary)', async () => {
+      const inspection = createInspection({
+        rooms: [
+          {
+            room: 'Kök',
+            remarks: [
+              {
+                remarkId: 'R1',
+                location: 'Kök',
+                buildingComponent: 'Golv',
+                notes: 'Repor i golvet',
+                remarkGrade: 2,
+                remarkStatus: 'Open',
+                cost: 1500,
+                invoice: true,
+                quantity: 1,
+                isMissing: false,
+                fixedDate: new Date().toISOString(),
+                workOrderCreated: false,
+                workOrderStatus: null,
+              },
+            ],
+          },
+        ],
+      })
+      const withCosts = await generateInspectionProtocolPdf(inspection, {
+        includeCosts: true,
+      })
+      const withoutCosts = await generateInspectionProtocolPdf(inspection, {
+        includeCosts: false,
+      })
+
+      // PDF with costs should be larger than without (extra column + summary row)
+      expect(withCosts.length).toBeGreaterThan(withoutCosts.length)
+    })
+
+    it('should default to including costs when no options provided', async () => {
+      const inspection = createInspection({
+        rooms: [
+          {
+            room: 'Kök',
+            remarks: [
+              {
+                remarkId: 'R1',
+                location: 'Kök',
+                buildingComponent: 'Golv',
+                notes: 'Repor i golvet',
+                remarkGrade: 2,
+                remarkStatus: 'Open',
+                cost: 1500,
+                invoice: true,
+                quantity: 1,
+                isMissing: false,
+                fixedDate: new Date().toISOString(),
+                workOrderCreated: false,
+                workOrderStatus: null,
+              },
+            ],
+          },
+        ],
+      })
+      const defaultResult = await generateInspectionProtocolPdf(inspection)
+      const withCosts = await generateInspectionProtocolPdf(inspection, {
+        includeCosts: true,
+      })
+
+      // Default should produce same size as explicit includeCosts: true
+      expect(defaultResult.length).toBe(withCosts.length)
+    })
+  })
 })
