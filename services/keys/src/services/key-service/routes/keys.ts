@@ -179,7 +179,7 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         schema:
    *           type: string
-   *           minLength: 3
+   *           minLength: 2
    *         description: Search query for OR search across fields specified in 'fields' parameter
    *       - in: query
    *         name: fields
