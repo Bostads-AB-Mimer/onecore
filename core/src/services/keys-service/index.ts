@@ -737,6 +737,8 @@ export const routes = (router: KoaRouter) => {
    *       Fetch a specific key loan by its ID.
    *       Use includeKeySystem=true to get keys with their keySystem data attached.
    *       Use includeCards=true to get cards from DAX attached (auto-implies key fetching).
+   *       Use includeLoans=true to get loan history attached to each key.
+   *       Use includeEvents=true to get event history attached to each key.
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path
@@ -758,6 +760,18 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: When true, includes keyCardsArray with card data from DAX. Auto-implies key fetching.
+   *       - in: query
+   *         name: includeLoans
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, includes loan history attached to each key in keysArray.
+   *       - in: query
+   *         name: includeEvents
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, includes event history attached to each key in keysArray.
    *     responses:
    *       200:
    *         description: A key loan object. Returns KeyLoanWithDetails if includeKeySystem or includeCards is true.
@@ -789,13 +803,19 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, [
       'includeKeySystem',
       'includeCards',
+      'includeLoans',
+      'includeEvents',
     ])
     const includeKeySystem = ctx.query.includeKeySystem === 'true'
     const includeCards = ctx.query.includeCards === 'true'
+    const includeLoans = ctx.query.includeLoans === 'true'
+    const includeEvents = ctx.query.includeEvents === 'true'
 
     const result = await KeyLoansApi.get(ctx.params.id, {
       includeKeySystem,
       includeCards,
+      includeLoans,
+      includeEvents,
     })
 
     if (!result.ok) {
