@@ -46,7 +46,7 @@ const Index = () => {
         const searchParams: Record<string, string | string[]> = {}
 
         // Add search query if present
-        if (searchQuery.trim().length >= 3) {
+        if (searchQuery.trim().length >= 2) {
           searchParams.q = searchQuery.trim()
           searchParams.fields = 'keyName,rentalObjectCode,keySystemId'
         }
@@ -161,7 +161,7 @@ const Index = () => {
     (query: string) => {
       setSearchInput(query)
       // Only update URL if query is empty or has 3+ characters
-      if (query.trim().length === 0 || query.trim().length >= 3) {
+      if (query.trim().length === 0 || query.trim().length >= 2) {
         pagination.updateUrlParams({ q: query.trim() || null, page: '1' })
       }
     },
