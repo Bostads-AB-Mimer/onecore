@@ -289,8 +289,8 @@ export function getPickupAvailability(
   const availableFrom = previousLoan?.availableToNextTenantFrom
 
   if (!availableFrom) {
-    // No previous loan or no restriction - item can be picked up
-    return { type: 'available', label: 'Får utlämnas', variant: 'default' }
+    // No previous loan or no date set - availability not specified
+    return { type: 'available', label: 'Ej angivet', variant: 'outline' }
   }
 
   const availableDate = new Date(availableFrom)
