@@ -558,7 +558,7 @@ export const routes = (router: KoaRouter) => {
       )
 
       // Identify tenant contracts using inspection's leaseId
-      const { newTenant, previousTenant } = identifyTenantContracts(
+      const { newTenant, tenant } = identifyTenantContracts(
         leases,
         inspection.leaseId
       )
@@ -585,16 +585,16 @@ export const routes = (router: KoaRouter) => {
         }
       }
 
-      if (previousTenant && previousTenant.tenants) {
-        response.previous_tenant = {
-          contacts: previousTenant.tenants
+      if (tenant && tenant.tenants) {
+        response.tenant = {
+          contacts: tenant.tenants
             .filter((t) => t.emailAddress)
             .map((t) => ({
               fullName: t.fullName,
               emailAddress: t.emailAddress!,
               contactCode: t.contactCode,
             })),
-          contractId: previousTenant.leaseId,
+          contractId: tenant.leaseId,
         }
       }
 
@@ -725,14 +725,13 @@ export const routes = (router: KoaRouter) => {
       )
 
       // Identify tenant contracts using inspection's leaseId
-      const { newTenant, previousTenant } = identifyTenantContracts(
+      const { newTenant, tenant } = identifyTenantContracts(
         leases,
         inspection.leaseId
       )
 
       // Select the requested contract
-      const selectedContract =
-        recipient === 'new-tenant' ? newTenant : previousTenant
+      const selectedContract = recipient === 'new-tenant' ? newTenant : tenant
 
       if (!selectedContract) {
         ctx.status = 400

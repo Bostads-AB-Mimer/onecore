@@ -23,7 +23,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
     jest.restoreAllMocks()
   })
 
-  it('should return both new and previous tenant contacts', async () => {
+  it('should return both new tenant and tenant contacts', async () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
@@ -99,18 +99,16 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
       'new@example.com'
     )
 
-    expect(res.body.content.previous_tenant).toBeDefined()
-    expect(res.body.content.previous_tenant.contractId).toBe('lease-previous')
-    expect(res.body.content.previous_tenant.contacts).toHaveLength(1)
-    expect(res.body.content.previous_tenant.contacts[0].fullName).toBe(
-      'Previous Tenant'
-    )
-    expect(res.body.content.previous_tenant.contacts[0].emailAddress).toBe(
+    expect(res.body.content.tenant).toBeDefined()
+    expect(res.body.content.tenant.contractId).toBe('lease-previous')
+    expect(res.body.content.tenant.contacts).toHaveLength(1)
+    expect(res.body.content.tenant.contacts[0].fullName).toBe('Previous Tenant')
+    expect(res.body.content.tenant.contacts[0].emailAddress).toBe(
       'previous@example.com'
     )
   })
 
-  it('should return only previous tenant when no new tenant lease exists yet', async () => {
+  it('should return only tenant when no new tenant lease exists yet', async () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
@@ -151,7 +149,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.previous_tenant).toBeDefined()
+    expect(res.body.content.tenant).toBeDefined()
     expect(res.body.content.new_tenant).toBeUndefined()
   })
 
@@ -181,7 +179,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.content.new_tenant).toBeUndefined()
-    expect(res.body.content.previous_tenant).toBeUndefined()
+    expect(res.body.content.tenant).toBeUndefined()
   })
 
   it('should filter out contacts without email addresses', async () => {
@@ -238,10 +236,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.previous_tenant.contacts).toHaveLength(1)
-    expect(res.body.content.previous_tenant.contacts[0].fullName).toBe(
-      'With Email'
-    )
+    expect(res.body.content.tenant.contacts).toHaveLength(1)
+    expect(res.body.content.tenant.contacts[0].fullName).toBe('With Email')
   })
 
   it('should return multiple contacts per lease', async () => {
@@ -298,7 +294,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.previous_tenant.contacts).toHaveLength(2)
+    expect(res.body.content.tenant.contacts).toHaveLength(2)
   })
 
   it('should return 404 when inspection not found', async () => {
@@ -311,6 +307,102 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
     )
 
     expect(res.status).toBe(404)
+  })
+
+  it('should pick the latest lease as new tenant when 3+ leases exist', async () => {
+    const mockInspection = DetailedXpandInspectionFactory.build({
+      id: 'inspection-123',
+      residenceId: 'res-1',
+      address: 'Testgatan 1',
+      apartmentCode: 'A101',
+      leaseId: 'lease-oldest',
+    })
+
+    const oldestLease = LeaseFactory.build({
+      leaseId: 'lease-oldest',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2020-01-01'),
+      tenants: [
+        {
+          contactCode: 'contact-1',
+          contactKey: 'key-1',
+          firstName: 'Old',
+          lastName: 'Tenant',
+          fullName: 'Old Tenant',
+          nationalRegistrationNumber: '1111111111',
+          birthDate: new Date('1980-01-01'),
+          address: undefined,
+          phoneNumbers: undefined,
+          emailAddress: 'old@example.com',
+          isTenant: true,
+        },
+      ],
+    })
+
+    const middleLease = LeaseFactory.build({
+      leaseId: 'lease-middle',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2022-01-01'),
+      tenants: [
+        {
+          contactCode: 'contact-2',
+          contactKey: 'key-2',
+          firstName: 'Middle',
+          lastName: 'Tenant',
+          fullName: 'Middle Tenant',
+          nationalRegistrationNumber: '2222222222',
+          birthDate: new Date('1985-01-01'),
+          address: undefined,
+          phoneNumbers: undefined,
+          emailAddress: 'middle@example.com',
+          isTenant: true,
+        },
+      ],
+    })
+
+    const newestLease = LeaseFactory.build({
+      leaseId: 'lease-newest',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2024-01-01'),
+      tenants: [
+        {
+          contactCode: 'contact-3',
+          contactKey: 'key-3',
+          firstName: 'Newest',
+          lastName: 'Tenant',
+          fullName: 'Newest Tenant',
+          nationalRegistrationNumber: '3333333333',
+          birthDate: new Date('1990-01-01'),
+          address: undefined,
+          phoneNumbers: undefined,
+          emailAddress: 'newest@example.com',
+          isTenant: true,
+        },
+      ],
+    })
+
+    jest
+      .spyOn(inspectionAdapter, 'getXpandInspectionById')
+      .mockResolvedValue({ ok: true, data: mockInspection })
+
+    jest
+      .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+      .mockResolvedValue([oldestLease, middleLease, newestLease])
+
+    const res = await request(app.callback()).get(
+      '/inspections/inspection-123/tenant-contacts'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.tenant).toBeDefined()
+    expect(res.body.content.tenant.contractId).toBe('lease-oldest')
+
+    // New tenant should be the latest lease, not just the next one after the inspection lease
+    expect(res.body.content.new_tenant).toBeDefined()
+    expect(res.body.content.new_tenant.contractId).toBe('lease-newest')
+    expect(res.body.content.new_tenant.contacts[0].fullName).toBe(
+      'Newest Tenant'
+    )
   })
 
   it('should return 500 on error fetching leases', async () => {

@@ -1,23 +1,23 @@
-import { Lease, EmailAttachment } from '@onecore/types'
+import { Lease, LeaseStatus, EmailAttachment } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import type { DetailedInspection } from '../schemas'
 
 /**
- * Identifies new and previous tenant contracts from a list of leases.
+ * Identifies tenant and new tenant contracts from a list of leases.
  * Shared helper function used by both GET /tenant-contacts and POST /send-protocol endpoints.
  *
- * The previous tenant is identified by the inspection's leaseId (the lease active during inspection).
- * The new tenant is the next chronological housing lease after the previous tenant's lease.
+ * The tenant is identified by the inspection's leaseId (the lease active during inspection).
+ * The new tenant is the latest non-ended housing contract (most recent start date), if different from the tenant.
  *
  * @param leases - All leases for a property
- * @param inspectionLeaseId - The leaseId from the inspection (identifies the previous tenant)
- * @returns Object with newTenant and previousTenant lease contracts
+ * @param inspectionLeaseId - The leaseId from the inspection (identifies the tenant)
+ * @returns Object with newTenant and tenant lease contracts
  */
 export const identifyTenantContracts = (
   leases: Lease[],
   inspectionLeaseId: string
-): { newTenant: Lease | null; previousTenant: Lease | null } => {
+): { newTenant: Lease | null; tenant: Lease | null } => {
   // Filter for housing contracts only (exclude parking spaces)
   const housingContracts = leases
     .filter(
@@ -33,31 +33,37 @@ export const identifyTenantContracts = (
       )
     })
 
-  // Previous tenant is the lease that was active during the inspection
-  const previousTenant =
+  // Tenant is the lease that was active during the inspection
+  const tenant =
     housingContracts.find((lease) => lease.leaseId === inspectionLeaseId) ??
     null
 
-  // New tenant is the next chronological housing lease after the previous tenant
+  // New tenant is the latest non-ended housing contract (if different from tenant)
   let newTenant: Lease | null = null
-  if (previousTenant) {
-    const previousIndex = housingContracts.indexOf(previousTenant)
-    newTenant = housingContracts[previousIndex + 1] ?? null
+  if (tenant) {
+    const activeContracts = housingContracts.filter(
+      (lease) =>
+        lease.leaseId !== tenant.leaseId && lease.status !== LeaseStatus.Ended
+    )
+    newTenant =
+      activeContracts.length > 0
+        ? activeContracts[activeContracts.length - 1]
+        : null
   }
 
-  return { newTenant, previousTenant }
+  return { newTenant, tenant }
 }
 
 /**
  * Generates email content for inspection protocol.
  *
  * @param inspection - The inspection details
- * @param type - Type of recipient (new-tenant or previous-tenant)
+ * @param type - Type of recipient (new-tenant or tenant)
  * @returns Object with subject and message text in Swedish
  */
 export const generateInspectionEmailContent = (
   inspection: DetailedInspection,
-  type: 'new-tenant' | 'previous-tenant'
+  type: 'new-tenant' | 'tenant'
 ): { subject: string; message: string } => {
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const formattedDate = dateFormatter.format(new Date(inspection.date))
@@ -86,14 +92,14 @@ Mimer`
  * @param inspection - The inspection details
  * @param pdfBuffer - The PDF protocol as a Buffer
  * @param contract - The lease contract with tenant contacts
- * @param recipientType - Type of recipient (new-tenant or previous-tenant)
+ * @param recipientType - Type of recipient (new-tenant or tenant)
  * @returns Object with success status and details of sent emails
  */
 export const sendProtocolToTenants = async (
   inspection: DetailedInspection,
   pdfBuffer: Buffer,
   contract: Lease,
-  recipientType: 'new-tenant' | 'previous-tenant'
+  recipientType: 'new-tenant' | 'tenant'
 ): Promise<{
   success: boolean
   emails: string[]

@@ -7,7 +7,7 @@ type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 export interface UseSendInspectionProtocolReturn {
   sendProtocol: (
     inspectionId: string,
-    recipient: 'new-tenant' | 'previous-tenant'
+    recipient: 'new-tenant' | 'tenant'
   ) => Promise<SendProtocolResponse>
   isSending: boolean
   error: Error | null
@@ -19,7 +19,7 @@ export function useSendInspectionProtocol(): UseSendInspectionProtocolReturn {
 
   const sendProtocol = async (
     inspectionId: string,
-    recipient: 'new-tenant' | 'previous-tenant'
+    recipient: 'new-tenant' | 'tenant'
   ): Promise<SendProtocolResponse> => {
     try {
       setIsSending(true)
