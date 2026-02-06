@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Button, type ButtonProps } from '@/components/ui/button'
-import { Plus, Copy, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Copy, Trash2, Loader2, CheckSquare, Square } from 'lucide-react'
 
 type ActionButton = {
   label: string
@@ -9,6 +9,12 @@ type ActionButton = {
   variant?: ButtonProps['variant']
   icon?: ReactNode
   enabled?: boolean
+}
+
+type SelectAllAction = {
+  totalCount: number
+  onSelectAll: () => void
+  onDeselectAll: () => void
 }
 
 type Props = {
@@ -21,6 +27,7 @@ type Props = {
   disposeAction?: ActionButton
   customActions?: ActionButton[]
   bulkActions?: ActionButton[]
+  selectAllAction?: SelectAllAction
 }
 
 /**
@@ -38,11 +45,41 @@ export function KeyActionButtons({
   disposeAction,
   customActions = [],
   bulkActions = [],
+  selectAllAction,
 }: Props) {
   const hasSelectedKeys = selectedCount > 0
+  const allSelected =
+    selectAllAction && selectedCount === selectAllAction.totalCount
 
   return (
     <div className="flex flex-wrap gap-2">
+      {/* Select All / Deselect All button */}
+      {selectAllAction && selectAllAction.totalCount > 0 && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={
+            allSelected
+              ? selectAllAction.onDeselectAll
+              : selectAllAction.onSelectAll
+          }
+          disabled={isProcessing}
+          className="flex items-center gap-1"
+        >
+          {allSelected ? (
+            <>
+              <Square className="h-3 w-3" />
+              Avmarkera alla
+            </>
+          ) : (
+            <>
+              <CheckSquare className="h-3 w-3" />
+              Markera alla ({selectAllAction.totalCount})
+            </>
+          )}
+        </Button>
+      )}
+
       {/* Selected keys buttons */}
       {hasSelectedKeys && (
         <>

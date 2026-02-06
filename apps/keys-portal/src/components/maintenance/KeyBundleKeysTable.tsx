@@ -213,6 +213,12 @@ export function KeyBundleKeysTable({
               onClick: handleRemoveFromBundleClick,
             },
           ]}
+          selectAllAction={{
+            totalCount: nonDisposedKeys.length,
+            onSelectAll: () =>
+              setSelectedKeys(nonDisposedKeys.map((k) => k.id)),
+            onDeselectAll: () => setSelectedKeys([]),
+          }}
         />
       </div>
 
