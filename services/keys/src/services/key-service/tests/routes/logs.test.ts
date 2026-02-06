@@ -182,7 +182,7 @@ describe('GET /logs/search', () => {
   })
 
   it('returns 400 when q parameter is too short', async () => {
-    const res = await request(app.callback()).get('/logs/search?q=ab')
+    const res = await request(app.callback()).get('/logs/search?q=a')
 
     expect(res.status).toBe(400)
     expect(res.body.reason).toContain(
