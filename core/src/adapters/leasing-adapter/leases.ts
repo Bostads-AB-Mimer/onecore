@@ -20,6 +20,7 @@ export const getLease = async (
 ): Promise<Lease> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
+    includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
   const leaseResponse = await axios(
@@ -35,6 +36,7 @@ export const getLeasesByContactCode = async (
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
+    includeRentalObject: (options.includeRentalObject ?? false).toString(),
   })
 
   if (options.status) {
@@ -53,6 +55,7 @@ export const getLeasesByRentalObjectCode = async (
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
+    includeRentalObject: (options.includeRentalObject ?? false).toString(),
     includeContacts: options.includeContacts.toString(),
     includeRentInfo: options.includeRentInfo.toString(),
   })

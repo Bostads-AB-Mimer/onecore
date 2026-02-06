@@ -10,8 +10,16 @@ export const GetLeasesStatusSchema = z.enum([
 export const IncludeContactsQueryParamSchema = z.object({
   includeContacts: z
     .enum(['true', 'false'])
-    .optional()
+    .default('false')
     .transform((value) => value === 'true'),
+})
+
+export const IncludeRentalObjectQueryParamSchema = z.object({
+  includeRentalObject: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true')
+    .optional(),
 })
 
 export const IncludeRentInfoQueryParamSchema = z.object({
@@ -47,9 +55,13 @@ export const FilterLeasesQueryParamsSchema = z.object({
 
 export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
   IncludeContactsQueryParamSchema
-).merge(IncludeRentInfoQueryParamSchema)
+)
+  .merge(IncludeRentInfoQueryParamSchema)
+  .merge(IncludeRentalObjectQueryParamSchema)
 
-export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema.merge(
+  IncludeRentalObjectQueryParamSchema
+)
 
 export const PreliminaryTerminateLeaseRequestSchema = z.object({
   contactCode: z.string(),

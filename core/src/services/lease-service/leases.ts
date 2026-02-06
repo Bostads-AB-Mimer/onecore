@@ -402,6 +402,12 @@ export const routes = (router: KoaRouter) => {
    *         required: false
    *         description: Whether to include related contacts in the response.
    *       - in: query
+   *         name: includeRentalObject
+   *         schema:
+   *           type: boolean
+   *         required: false
+   *         description: Whether to include rental object information in the response.
+   *       - in: query
    *         name: status
    *         schema:
    *           type: string
