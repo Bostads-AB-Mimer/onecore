@@ -19,7 +19,7 @@ app.use(loggerMiddlewares.post)
 
 app.use(errorHandler())
 
-app.use(bodyParser())
+app.use(bodyParser({ jsonLimit: '50mb' }))
 app.use(api.routes())
 
 export default app

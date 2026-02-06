@@ -58,3 +58,5 @@ lib-cov
 *.sln
 *.sw?
 .turbo
+
+.claude

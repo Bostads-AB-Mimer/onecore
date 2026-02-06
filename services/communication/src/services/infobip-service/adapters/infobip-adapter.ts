@@ -8,10 +8,33 @@ import {
   WorkOrderEmail,
   WorkOrderSms,
   ParkingSpaceAcceptOfferEmail,
+  InspectionProtocolEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
+
+interface InfobipEmailAttachment {
+  name: string
+  data: Buffer
+  contentType: string
+}
+
+interface InfobipEmailPayload {
+  to: string
+  from: string
+  subject: string
+  text: string
+  attachment?: InfobipEmailAttachment[]
+}
+
+interface InfobipTemplateEmailPayload {
+  from: string
+  to: string
+  subject: string
+  text: string
+  templateId: number
+}
 
 const infobip = new Infobip({
   baseUrl: config.infobip.baseUrl,
@@ -27,16 +50,40 @@ const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
 const WorkOrderExternalContractorEmailTemplateId = 200000000173744
 
+// TODO: Update with correct template ID when available
+const InspectionProtocolEmailTemplateId = 0
+
 export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
 
   try {
-    const response = await infobip.channels.email.send({
+    const emailPayload: InfobipEmailPayload = {
       to: message.to,
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       subject: message.subject,
       text: message.text,
-    })
+    }
+
+    // Add attachments if provided
+    if (message.attachments && message.attachments.length > 0) {
+      emailPayload.attachment = message.attachments.map((att) => ({
+        name: att.filename,
+        data: Buffer.from(att.content, 'base64'),
+        contentType: att.contentType,
+      }))
+    }
+
+    const response = await infobip.channels.email.send(emailPayload)
+
+    // Infobip SDK can return an Error object directly
+    if (response instanceof Error) {
+      logger.error(
+        { errorMessage: response.message },
+        'Infobip SDK returned error'
+      )
+      throw response
+    }
+
     if (response.status === 200) {
       logger.info(
         { to: message.to, subject: message.subject },
@@ -44,7 +91,17 @@ export const sendEmail = async (message: Email) => {
       )
       return response.data
     } else {
-      throw new Error(response.body)
+      const errorMessage =
+        typeof response.body === 'string'
+          ? response.body
+          : JSON.stringify(response.body)
+      logger.error(
+        { status: response.status, body: response.body },
+        'Infobip API error response'
+      )
+      throw new Error(
+        errorMessage || `Infobip API returned status ${response.status}`
+      )
     }
   } catch (error) {
     logger.error(error)
@@ -201,7 +258,7 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
         externalContractor: email.externalContractorName,
       },
     })
-    const emailPayload: any = {
+    const emailPayload: InfobipTemplateEmailPayload = {
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
       to: toField,
       subject: email.subject,
@@ -249,6 +306,55 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
     }
   } catch (error) {
     logger.error(error, 'Error sending SMS')
+    throw error
+  }
+}
+
+export const sendInspectionProtocolEmail = async (
+  email: InspectionProtocolEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending inspection protocol email'
+  )
+  try {
+    const toField = JSON.stringify({
+      to: email.to,
+      placeholders: {
+        address: email.address,
+        inspectionType: email.inspectionType,
+        inspectionDate: email.inspectionDate,
+        apartmentCode: email.apartmentCode,
+      },
+    })
+
+    const emailPayload: InfobipEmailPayload = {
+      to: toField,
+      from: 'Bostads Mimer AB <noreply@mimer.nu>',
+      subject: email.subject,
+      text: email.text,
+    }
+
+    if (email.attachments && email.attachments.length > 0) {
+      emailPayload.attachment = email.attachments.map((att) => ({
+        name: att.filename,
+        data: Buffer.from(att.content, 'base64'),
+        contentType: att.contentType,
+      }))
+    }
+
+    const response = await infobip.channels.email.send({
+      ...emailPayload,
+      templateId: InspectionProtocolEmailTemplateId,
+    })
+
+    if (response.status === 200) {
+      return response.data
+    } else {
+      throw new Error(response.body)
+    }
+  } catch (error) {
+    logger.error(error)
     throw error
   }
 }
