@@ -138,15 +138,9 @@ export function KeysTable({
           <TableRow className="hover:bg-transparent border-border">
             <TableHead className="w-[50px]"></TableHead>
             <TableHead>Nyckelnamn</TableHead>
-            <TableHead>Objekt</TableHead>
-            <FilterableTableHeader label="Typ">
-              <FilterDropdown
-                options={getKeyTypeFilterOptions()}
-                selectedValue={selectedType}
-                onSelectionChange={onTypeFilterChange}
-              />
-            </FilterableTableHeader>
-            <FilterableTableHeader label="">
+            <TableHead>Löpnr</TableHead>
+            <TableHead>Flexnr</TableHead>
+            <FilterableTableHeader label="" className="w-[150px]">
               <SearchDropdown
                 preSuggestions={[]}
                 searchFn={onKeySystemSearch}
@@ -165,8 +159,14 @@ export function KeysTable({
                 showSearchIcon
               />
             </FilterableTableHeader>
-            <TableHead>Löpnummer</TableHead>
-            <TableHead>Flexnr</TableHead>
+            <TableHead>Objekt</TableHead>
+            <FilterableTableHeader label="Typ">
+              <FilterDropdown
+                options={getKeyTypeFilterOptions()}
+                selectedValue={selectedType}
+                onSelectionChange={onTypeFilterChange}
+              />
+            </FilterableTableHeader>
             <FilterableTableHeader label="Kasserad">
               <FilterDropdown
                 options={[
@@ -206,6 +206,19 @@ export function KeysTable({
                       />
                     </TableCell>
                     <TableCell className="font-medium">{key.keyName}</TableCell>
+                    <TableCell>{key.keySequenceNumber || '-'}</TableCell>
+                    <TableCell>{key.flexNumber || '-'}</TableCell>
+                    <TableCell>
+                      {key.keySystemId && keySystemMap[key.keySystemId] ? (
+                        <TableLink
+                          to={`/key-systems?q=${keySystemMap[key.keySystemId]}&editKeySystemId=${key.keySystemId}`}
+                        >
+                          {keySystemMap[key.keySystemId]}
+                        </TableLink>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
                     <TableCell>
                       {key.rentalObjectCode ? (
                         <TableLink
@@ -224,19 +237,6 @@ export function KeysTable({
                         className="text-xs"
                       />
                     </TableCell>
-                    <TableCell>
-                      {key.keySystemId && keySystemMap[key.keySystemId] ? (
-                        <TableLink
-                          to={`/key-systems?q=${keySystemMap[key.keySystemId]}&editKeySystemId=${key.keySystemId}`}
-                        >
-                          {keySystemMap[key.keySystemId]}
-                        </TableLink>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>{key.keySequenceNumber || '-'}</TableCell>
-                    <TableCell>{key.flexNumber || '-'}</TableCell>
                     <TableCell>
                       <DisposedBadge
                         disposed={key.disposed ?? false}
