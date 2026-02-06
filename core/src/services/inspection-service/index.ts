@@ -777,7 +777,9 @@ export const routes = (router: KoaRouter) => {
       // Generate PDF protocol
       let pdfBuffer: Buffer
       try {
-        pdfBuffer = await generateInspectionProtocolPdf(inspection)
+        pdfBuffer = await generateInspectionProtocolPdf(inspection, {
+          includeCosts: recipient !== 'new-tenant',
+        })
       } catch (pdfError) {
         logger.error(
           {

@@ -33,6 +33,140 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     jest.restoreAllMocks()
   })
 
+  it('should call PDF generator with includeCosts: false for new-tenant', async () => {
+    const mockInspection = DetailedXpandInspectionFactory.build({
+      id: 'inspection-123',
+      residenceId: 'res-1',
+      leaseId: 'lease-previous',
+    })
+
+    const mockLease = LeaseFactory.build()
+    const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [],
+    })
+
+    const newTenantLease = LeaseFactory.build({
+      leaseId: 'lease-new',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2024-01-01'),
+      tenants: [
+        {
+          contactCode: 'contact-1',
+          contactKey: 'key-1',
+          firstName: 'New',
+          lastName: 'Tenant',
+          fullName: 'New Tenant',
+          nationalRegistrationNumber: '1234567890',
+          birthDate: new Date('1990-01-01'),
+          address: undefined,
+          phoneNumbers: undefined,
+          emailAddress: 'new@example.com',
+          isTenant: true,
+        },
+      ],
+    })
+
+    jest
+      .spyOn(inspectionAdapter, 'getXpandInspectionById')
+      .mockResolvedValue({ ok: true, data: mockInspection })
+
+    jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
+
+    jest
+      .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+      .mockResolvedValue({ ok: true, data: mockResidence })
+
+    jest
+      .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+      .mockResolvedValue([previousTenantLease, newTenantLease])
+
+    jest
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    const pdfSpy = jest.spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
+
+    await request(app.callback())
+      .post('/inspections/inspection-123/send-protocol')
+      .send({ recipient: 'new-tenant' })
+
+    expect(pdfSpy).toHaveBeenCalledWith(expect.anything(), {
+      includeCosts: false,
+    })
+  })
+
+  it('should call PDF generator with includeCosts: true for tenant', async () => {
+    const mockInspection = DetailedXpandInspectionFactory.build({
+      id: 'inspection-123',
+      residenceId: 'res-1',
+      leaseId: 'lease-previous',
+    })
+
+    const mockLease = LeaseFactory.build()
+    const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+
+    const previousTenantLease = LeaseFactory.build({
+      leaseId: 'lease-previous',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2023-01-01'),
+      tenants: [
+        {
+          contactCode: 'contact-2',
+          contactKey: 'key-2',
+          firstName: 'Previous',
+          lastName: 'Tenant',
+          fullName: 'Previous Tenant',
+          nationalRegistrationNumber: '0987654321',
+          birthDate: new Date('1985-01-01'),
+          address: undefined,
+          phoneNumbers: undefined,
+          emailAddress: 'previous@example.com',
+          isTenant: true,
+        },
+      ],
+    })
+
+    const newTenantLease = LeaseFactory.build({
+      leaseId: 'lease-new',
+      type: 'Bostadskontrakt',
+      leaseStartDate: new Date('2024-01-01'),
+      tenants: [],
+    })
+
+    jest
+      .spyOn(inspectionAdapter, 'getXpandInspectionById')
+      .mockResolvedValue({ ok: true, data: mockInspection })
+
+    jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
+
+    jest
+      .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+      .mockResolvedValue({ ok: true, data: mockResidence })
+
+    jest
+      .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+      .mockResolvedValue([previousTenantLease, newTenantLease])
+
+    jest
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    const pdfSpy = jest.spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
+
+    await request(app.callback())
+      .post('/inspections/inspection-123/send-protocol')
+      .send({ recipient: 'tenant' })
+
+    expect(pdfSpy).toHaveBeenCalledWith(expect.anything(), {
+      includeCosts: true,
+    })
+  })
+
   it('should send protocol to new tenant successfully', async () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
