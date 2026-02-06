@@ -36,6 +36,8 @@ interface LeaseItemsListProps {
   onCardSelectionChange?: (cardId: string, checked: boolean) => void
   onRefresh?: () => void
   onReturn?: (keyIds: string[], cardIds: string[]) => void
+  onSelectAll?: () => void
+  onDeselectAll?: () => void
 }
 
 export function LeaseItemsList({
@@ -49,6 +51,8 @@ export function LeaseItemsList({
   onCardSelectionChange,
   onRefresh,
   onReturn,
+  onSelectAll,
+  onDeselectAll,
 }: LeaseItemsListProps) {
   const getKeyUrl = (key: KeyDetails) => {
     const params = new URLSearchParams({
@@ -71,6 +75,20 @@ export function LeaseItemsList({
   }, [keys, cards])
 
   const columnCount = selectable ? 9 : 8
+
+  // Calculate selection state for header checkbox
+  const allItemIds = useMemo(
+    () =>
+      items.map((item) =>
+        item.itemType === 'key' ? item.data.id : item.data.cardId
+      ),
+    [items]
+  )
+  const selectedIds = [...selectedKeys, ...selectedCards]
+  const allSelected =
+    allItemIds.length > 0 && allItemIds.every((id) => selectedIds.includes(id))
+  const someSelected = selectedIds.length > 0
+  const isIndeterminate = someSelected && !allSelected
 
   return (
     <CollapsibleGroupTable
@@ -95,7 +113,20 @@ export function LeaseItemsList({
       sectionOrder={['loaned', 'unloaned']}
       renderHeader={() => (
         <TableRow className="bg-background">
-          {selectable && <TableHead className="w-[50px]"></TableHead>}
+          {selectable && (
+            <TableHead className="w-[50px] pl-8">
+              <Checkbox
+                checked={isIndeterminate ? 'indeterminate' : allSelected}
+                onCheckedChange={() => {
+                  if (allSelected) {
+                    onDeselectAll?.()
+                  } else {
+                    onSelectAll?.()
+                  }
+                }}
+              />
+            </TableHead>
+          )}
           <TableHead className="w-[18%]">Namn</TableHead>
           <TableHead className="w-[6%]">Löpnr</TableHead>
           <TableHead className="w-[6%]">Flex</TableHead>

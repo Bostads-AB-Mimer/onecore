@@ -6,14 +6,19 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { receiptService } from '@/services/api/receiptService'
-import { fetchReceiptData, openPdfInNewTab } from '@/services/receiptHandlers'
+import {
+  fetchReceiptData,
+  openPdfInNewTab,
+  openMaintenanceReceiptInNewTab,
+} from '@/services/receiptHandlers'
 import { useToast } from '@/hooks/use-toast'
 import type { KeyLoan, Lease } from '@/services/types'
 
 export interface LoanActionMenuProps {
   loan: KeyLoan
-  lease: Lease
+  lease?: Lease
   onRefresh?: () => void
   onReturn?: (keyIds: string[], cardIds: string[]) => void
 }
@@ -36,6 +41,8 @@ export function LoanActionMenu({
     id: string
     fileId?: string
   } | null>(null)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [showReplaceWarning, setShowReplaceWarning] = useState(false)
 
   // Check if loan can be returned (not already returned)
   const canReturn = !loan.returnedAt
@@ -82,12 +89,26 @@ export function LoanActionMenu({
   const handlePrintLoanReceipt = async () => {
     setLoading(true)
     try {
+      // If there's an uploaded receipt, download it
       if (loanReceipt?.fileId) {
         await receiptService.downloadFile(loanReceipt.id)
-      } else {
+      } else if (loan.loanType === 'MAINTENANCE') {
+        // Maintenance loans have their own receipt generation
+        await openMaintenanceReceiptInNewTab(loan.id)
+      } else if (lease) {
+        // Regular loans need lease context
         const receiptId = loanReceipt?.id
         const receiptData = await fetchReceiptData(receiptId || loan.id, lease)
         await openPdfInNewTab(receiptData, receiptId)
+      } else {
+        // Non-maintenance loan without lease - show error
+        toast({
+          title: 'Kan inte generera kvittens',
+          description:
+            'För att generera en lånkvittens, gå till utlåningssidan för kontraktet.',
+          variant: 'destructive',
+        })
+        return
       }
     } catch (error) {
       console.error('Error generating receipt:', error)
@@ -149,6 +170,7 @@ export function LoanActionMenu({
         description: 'Endast PDF-filer är tillåtna',
         variant: 'destructive',
       })
+      if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
 
@@ -158,21 +180,20 @@ export function LoanActionMenu({
         description: 'Filen är för stor (max 10 MB)',
         variant: 'destructive',
       })
+      if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
 
     if (loanReceipt?.fileId) {
-      const confirmed = confirm(
-        'Obs! Det finns redan en uppladdad kvittens. ' +
-          'Om du fortsätter kommer den befintliga kvittensen att ersättas. ' +
-          'Är du säker?'
-      )
-      if (!confirmed) {
-        if (fileInputRef.current) fileInputRef.current.value = ''
-        return
-      }
+      setPendingFile(file)
+      setShowReplaceWarning(true)
+      return
     }
 
+    await uploadFile(file)
+  }
+
+  const uploadFile = async (file: File) => {
     setLoading(true)
     try {
       if (!loanReceipt) {
@@ -213,6 +234,20 @@ export function LoanActionMenu({
     }
   }
 
+  const handleConfirmReplace = async () => {
+    if (pendingFile) {
+      await uploadFile(pendingFile)
+    }
+    setPendingFile(null)
+    setShowReplaceWarning(false)
+  }
+
+  const handleCancelReplace = () => {
+    setPendingFile(null)
+    setShowReplaceWarning(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const editLoanUrl = `/key-loans?editLoanId=${loan.id}`
 
   return (
@@ -224,6 +259,26 @@ export function LoanActionMenu({
         accept="application/pdf"
         className="hidden"
         onChange={handleFileChange}
+      />
+
+      <ConfirmDialog
+        open={showReplaceWarning}
+        onOpenChange={(open) => {
+          if (!open) handleCancelReplace()
+        }}
+        title="Ersätt kvittens"
+        description={
+          <p>
+            Det finns redan en uppladdad kvittens.
+            <br />
+            <br />
+            <strong>
+              Om du fortsätter kommer den befintliga kvittensen att ersättas.
+            </strong>
+          </p>
+        }
+        confirmLabel="Ersätt"
+        onConfirm={handleConfirmReplace}
       />
 
       <ActionMenu
