@@ -1,9 +1,5 @@
 import { Lease, LeaseStatus, Contact } from '@onecore/types'
-import {
-  identifyTenantContracts,
-  generateInspectionEmailContent,
-  sendProtocolToTenants,
-} from '../email-sender'
+import { identifyTenantContracts, sendProtocolToTenants } from '../email-sender'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import type { DetailedInspection } from '../../schemas'
 
@@ -498,47 +494,6 @@ describe('identifyTenantContracts', () => {
   })
 })
 
-describe('generateInspectionEmailContent', () => {
-  it('should generate email content in Swedish', () => {
-    const inspection: DetailedInspection = {
-      id: '123',
-      status: 'Completed',
-      date: new Date('2024-01-15'),
-      startedAt: new Date('2024-01-15T10:00:00Z'),
-      endedAt: new Date('2024-01-15T11:00:00Z'),
-      inspector: 'Inspector Name',
-      type: 'Inflyttningsbesiktning',
-      residenceId: 'res-1',
-      address: 'Testgatan 1',
-      apartmentCode: 'A101',
-      isFurnished: false,
-      leaseId: 'lease-1',
-      isTenantPresent: true,
-      isNewTenantPresent: true,
-      masterKeyAccess: null,
-      hasRemarks: false,
-      notes: null,
-      totalCost: 0,
-      remarkCount: 0,
-      rooms: [],
-      lease: null,
-      residence: null,
-    }
-
-    const result = generateInspectionEmailContent(inspection, 'new-tenant')
-
-    expect(result.subject).toContain('Besiktningsprotokoll')
-    expect(result.subject).toContain('Inflyttningsbesiktning')
-    expect(result.subject).toContain('Testgatan 1')
-    expect(result.message).toContain('Hej,')
-    expect(result.message).toContain('Testgatan 1')
-    expect(result.message).toContain('Inflyttningsbesiktning')
-    expect(result.message).toContain('A101')
-    expect(result.message).toContain('Med vänlig hälsning,')
-    expect(result.message).toContain('Mimer')
-  })
-})
-
 describe('sendProtocolToTenants', () => {
   const mockInspection: DetailedInspection = {
     id: '123',
@@ -608,8 +563,8 @@ describe('sendProtocolToTenants', () => {
 
   it('should send protocol to tenant with email address', async () => {
     const mockSendFn = jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue({ ok: true, data: undefined })
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     const pdfBuffer = Buffer.from('mock pdf content')
     const result = await sendProtocolToTenants(
@@ -624,16 +579,21 @@ describe('sendProtocolToTenants', () => {
     expect(result.contactNames).toContain('Test Tenant')
     expect(result.contractId).toBe('lease-1')
     expect(mockSendFn).toHaveBeenCalledWith(
-      mockContact,
-      expect.stringContaining('Besiktningsprotokoll'),
-      expect.any(String),
-      expect.arrayContaining([
-        expect.objectContaining({
-          filename: expect.stringContaining('.pdf'),
-          content: pdfBuffer.toString('base64'),
-          contentType: 'application/pdf',
-        }),
-      ])
+      expect.objectContaining({
+        to: 'test@example.com',
+        subject: expect.stringContaining('Besiktningsprotokoll'),
+        address: 'Testgatan 1',
+        inspectionType: 'Inflyttningsbesiktning',
+        inspectionDate: expect.any(String),
+        apartmentCode: 'A101',
+        attachments: expect.arrayContaining([
+          expect.objectContaining({
+            filename: expect.stringContaining('.pdf'),
+            content: pdfBuffer.toString('base64'),
+            contentType: 'application/pdf',
+          }),
+        ]),
+      })
     )
   })
 
@@ -680,8 +640,8 @@ describe('sendProtocolToTenants', () => {
 
   it('should send to multiple tenants on same lease', async () => {
     const mockSendFn = jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue({ ok: true, data: undefined })
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     const multipleTenants: Lease = {
       ...mockLease,
@@ -713,8 +673,8 @@ describe('sendProtocolToTenants', () => {
 
   it('should handle partial failures when sending to multiple tenants', async () => {
     const mockSendFn = jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValueOnce({ ok: true, data: undefined })
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
 
     const multipleTenants: Lease = {

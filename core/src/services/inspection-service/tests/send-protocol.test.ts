@@ -86,8 +86,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
       .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const sendSpy = jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue({ ok: true, data: undefined })
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -100,16 +100,21 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     expect(res.body.content.sentTo.contactNames).toContain('New Tenant')
     expect(res.body.content.sentTo.contractId).toBe('lease-new')
     expect(sendSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ emailAddress: 'new@example.com' }),
-      expect.stringContaining('Besiktningsprotokoll'),
-      expect.any(String),
-      expect.arrayContaining([
-        expect.objectContaining({
-          filename: expect.stringContaining('.pdf'),
-          content: mockPdfBuffer.toString('base64'),
-          contentType: 'application/pdf',
-        }),
-      ])
+      expect.objectContaining({
+        to: 'new@example.com',
+        subject: expect.stringContaining('Besiktningsprotokoll'),
+        address: expect.any(String),
+        inspectionType: expect.any(String),
+        inspectionDate: expect.any(String),
+        apartmentCode: expect.any(String),
+        attachments: expect.arrayContaining([
+          expect.objectContaining({
+            filename: expect.stringContaining('.pdf'),
+            content: mockPdfBuffer.toString('base64'),
+            contentType: 'application/pdf',
+          }),
+        ]),
+      })
     )
   })
 
@@ -166,8 +171,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
       .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const sendSpy = jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue({ ok: true, data: undefined })
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -246,8 +251,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
       .mockResolvedValue([previousTenantLease, newTenantLease])
 
     const sendSpy = jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
-      .mockResolvedValue({ ok: true, data: undefined })
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
@@ -501,7 +506,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
       .mockResolvedValue([previousTenantLease, newTenantLease])
 
     jest
-      .spyOn(communicationAdapter, 'sendNotificationToContactWithAttachment')
+      .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
       .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
 
     const res = await request(app.callback())

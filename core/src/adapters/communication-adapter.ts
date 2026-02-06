@@ -7,6 +7,7 @@ import {
   WorkOrderEmail,
   WorkOrderSms,
   EmailAttachment,
+  InspectionProtocolEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -268,6 +269,44 @@ export const sendNotificationToContactWithAttachment = async (
     logger.error(
       error,
       `Error sending notification with attachment to contact ${recipientContact.contactCode}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendInspectionProtocolEmail = async (
+  email: InspectionProtocolEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    if (process.env.NODE_ENV !== 'production')
+      email.to = config.emailAddresses.tenantDefault
+
+    const axiosOptions = {
+      method: 'POST',
+      data: email,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendInspectionProtocolEmail`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending inspection protocol email to ${email.to}`
     )
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
