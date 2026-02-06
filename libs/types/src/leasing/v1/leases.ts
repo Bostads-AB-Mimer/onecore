@@ -59,7 +59,9 @@ export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
   .merge(IncludeRentInfoQueryParamSchema)
   .merge(IncludeRentalObjectQueryParamSchema)
 
-export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema.merge(
+  IncludeRentalObjectQueryParamSchema
+)
 
 export const PreliminaryTerminateLeaseRequestSchema = z.object({
   contactCode: z.string(),

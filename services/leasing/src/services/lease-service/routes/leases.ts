@@ -533,7 +533,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const onecoreLeases = getLeases.data.map(tenfastHelpers.mapToOnecoreLease)
+      const onecoreLeases = getLeases.data.map((lease) =>
+        tenfastHelpers.mapToOnecoreLease(
+          lease,
+          queryParams.data.includeRentalObject
+        )
+      )
 
       // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
       if (!queryParams.data.includeContacts) {

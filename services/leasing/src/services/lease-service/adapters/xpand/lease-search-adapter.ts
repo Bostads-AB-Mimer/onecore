@@ -4,7 +4,7 @@ import { leasing, LeaseStatus } from '@onecore/types'
 import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
-import { calculateStatus } from '../../helpers/transformFromXPandDb'
+import xpandDbHelpers from '../../helpers/xpand-db'
 import { analyzeSearchTerm } from '../../helpers/searchTermAnalyzer'
 
 /** Maps enum values to normalized status keys */
@@ -528,7 +528,7 @@ const transformRow = (
 ): Omit<leasing.v1.LeaseSearchResult, 'contacts'> => {
   const trimmedRow = trimRow(row)
 
-  const status = calculateStatus(
+  const status = xpandDbHelpers.calculateLeaseStatus(
     trimmedRow.lastDebitDate ? String(trimmedRow.lastDebitDate) : '',
     trimmedRow.startDate ? String(trimmedRow.startDate) : ''
   )
