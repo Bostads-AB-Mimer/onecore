@@ -94,7 +94,6 @@ export function TenantKeyLoans({ contactCode }: TenantKeyLoansProps) {
     }
   }
 
-
   if (isLoading) {
     return (
       <Card>
