@@ -557,8 +557,11 @@ export const routes = (router: KoaRouter) => {
         }
       )
 
-      // Identify tenant contracts
-      const { newTenant, previousTenant } = identifyTenantContracts(leases)
+      // Identify tenant contracts using inspection's leaseId
+      const { newTenant, previousTenant } = identifyTenantContracts(
+        leases,
+        inspection.leaseId
+      )
 
       // Build response
       const response: schemas.TenantContactsResponse = {
@@ -721,8 +724,11 @@ export const routes = (router: KoaRouter) => {
         }
       )
 
-      // Identify tenant contracts
-      const { newTenant, previousTenant } = identifyTenantContracts(leases)
+      // Identify tenant contracts using inspection's leaseId
+      const { newTenant, previousTenant } = identifyTenantContracts(
+        leases,
+        inspection.leaseId
+      )
 
       // Select the requested contract
       const selectedContract =
