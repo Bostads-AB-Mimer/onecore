@@ -171,17 +171,20 @@ export default function KeyLoans() {
         setShowEditForm(true)
       } else {
         // Loan not in current page - fetch it directly
-        keyLoanService.get(editLoanIdFromUrl).then((loan) => {
-          setEditingKeyLoan(loan)
-          setShowEditForm(true)
-        }).catch((error) => {
-          console.error('Failed to load loan for editing:', error)
-          toast({
-            title: 'Fel',
-            description: 'Kunde inte ladda lånet för redigering',
-            variant: 'destructive',
+        keyLoanService
+          .get(editLoanIdFromUrl)
+          .then((loan) => {
+            setEditingKeyLoan(loan)
+            setShowEditForm(true)
           })
-        })
+          .catch((error) => {
+            console.error('Failed to load loan for editing:', error)
+            toast({
+              title: 'Fel',
+              description: 'Kunde inte ladda lånet för redigering',
+              variant: 'destructive',
+            })
+          })
       }
       // Clear the URL param after opening
       pagination.updateUrlParams({ editLoanId: null })
