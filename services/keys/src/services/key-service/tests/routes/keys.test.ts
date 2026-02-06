@@ -516,10 +516,10 @@ describe('GET /keys/search', () => {
   })
 
   it('returns 400 when q parameter is too short', async () => {
-    // Make request with q less than 3 characters
-    const res = await request(app.callback()).get('/keys/search?q=ab')
+    // Make request with q less than 2 characters
+    const res = await request(app.callback()).get('/keys/search?q=a')
 
-    // Should fail validation (q must be at least 3 characters)
+    // Should fail validation (q must be at least 2 characters)
     expect(res.status).toBe(400)
     expect(res.body).toHaveProperty(
       'reason',
