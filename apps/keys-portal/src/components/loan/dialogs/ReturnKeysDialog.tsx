@@ -426,9 +426,7 @@ export function ReturnKeysDialog({
           </PopoverContent>
         </Popover>
         {!availableDate && (
-          <div className="text-xs text-muted-foreground">
-            Inget datum valt - nycklarna blir tillgängliga direkt
-          </div>
+          <div className="text-xs text-muted-foreground">Inget datum valt</div>
         )}
       </div>
 
