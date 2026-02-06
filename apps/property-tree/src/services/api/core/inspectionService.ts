@@ -87,7 +87,7 @@ export const inspectionService = {
 
   async sendProtocol(
     inspectionId: string,
-    recipient: 'new-tenant' | 'previous-tenant'
+    recipient: 'new-tenant' | 'tenant'
   ): Promise<SendProtocolResponse> {
     const response = await POST('/inspections/{inspectionId}/send-protocol', {
       params: { path: { inspectionId } },

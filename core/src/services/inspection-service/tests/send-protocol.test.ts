@@ -113,7 +113,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
     )
   })
 
-  it('should send protocol to previous tenant successfully', async () => {
+  it('should send protocol to tenant successfully', async () => {
     const mockInspection = DetailedXpandInspectionFactory.build({
       id: 'inspection-123',
       residenceId: 'res-1',
@@ -171,11 +171,11 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const res = await request(app.callback())
       .post('/inspections/inspection-123/send-protocol')
-      .send({ recipient: 'previous-tenant' })
+      .send({ recipient: 'tenant' })
 
     expect(res.status).toBe(200)
     expect(res.body.content.success).toBe(true)
-    expect(res.body.content.recipient).toBe('previous-tenant')
+    expect(res.body.content.recipient).toBe('tenant')
     expect(res.body.content.sentTo.emails).toContain('previous@example.com')
     expect(sendSpy).toHaveBeenCalled()
   })

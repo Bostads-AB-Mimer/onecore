@@ -59,7 +59,7 @@ export function InspectionProtocol({
   )
   const [showSendModal, setShowSendModal] = useState(false)
   const [selectedRecipient, setSelectedRecipient] = useState<
-    'new-tenant' | 'previous-tenant' | null
+    'new-tenant' | 'tenant' | null
   >(null)
   const [tenantContacts, setTenantContacts] =
     useState<TenantContactsResponse | null>(null)
@@ -82,7 +82,9 @@ export function InspectionProtocol({
     const fetchContacts = async () => {
       setIsFetchingContacts(true)
       try {
-        const contacts = await inspectionService.getTenantContacts(inspection.id)
+        const contacts = await inspectionService.getTenantContacts(
+          inspection.id
+        )
         if (!cancelled) setTenantContacts(contacts)
       } catch (error) {
         console.error('Failed to fetch tenant contacts:', error)
@@ -100,16 +102,15 @@ export function InspectionProtocol({
 
   const hasNewTenantContacts =
     tenantContacts?.new_tenant && tenantContacts.new_tenant.contacts.length > 0
-  const hasPreviousTenantContacts =
-    tenantContacts?.previous_tenant &&
-    tenantContacts.previous_tenant.contacts.length > 0
+  const hasTenantContacts =
+    tenantContacts?.tenant && tenantContacts.tenant.contacts.length > 0
 
   const handleDownloadPdf = async () => {
     if (!inspection?.id) return
     await downloadPdf(inspection.id)
   }
 
-  const handleOpenSendModal = (recipient: 'new-tenant' | 'previous-tenant') => {
+  const handleOpenSendModal = (recipient: 'new-tenant' | 'tenant') => {
     if (!inspection?.id) return
 
     setSelectedRecipient(recipient)
@@ -142,7 +143,7 @@ export function InspectionProtocol({
 
   const hasValidRecipient =
     (selectedRecipient === 'new-tenant' && tenantContacts?.new_tenant) ||
-    (selectedRecipient === 'previous-tenant' && tenantContacts?.previous_tenant)
+    (selectedRecipient === 'tenant' && tenantContacts?.tenant)
 
   const renderHeader = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -460,25 +461,23 @@ export function InspectionProtocol({
         <div className="relative group">
           <button
             type="button"
-            onClick={() => handleOpenSendModal('previous-tenant')}
+            onClick={() => handleOpenSendModal('tenant')}
             disabled={
               !inspection ||
               isSending ||
               isFetchingContacts ||
-              !hasPreviousTenantContacts
+              !hasTenantContacts
             }
             className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Mail className="h-4 w-4 mr-1" />
-            Skicka till tidigare hyresgäst
+            Skicka till hyresgäst
           </button>
-          {!isFetchingContacts &&
-            !hasPreviousTenantContacts &&
-            tenantContacts && (
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-foreground text-background rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                Kontaktuppgifter saknas för tidigare hyresgäst
-              </span>
-            )}
+          {!isFetchingContacts && !hasTenantContacts && tenantContacts && (
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-foreground text-background rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Kontaktuppgifter saknas för hyresgäst
+            </span>
+          )}
         </div>
       </div>
       {renderHeader()}
@@ -525,7 +524,7 @@ export function InspectionProtocol({
                 <DialogDescription>
                   {selectedRecipient === 'new-tenant'
                     ? 'Skicka besiktningsprotokoll till inflyttande hyresgäst'
-                    : 'Skicka besiktningsprotokoll till avflyttande hyresgäst'}
+                    : 'Skicka besiktningsprotokoll till hyresgäst'}
                 </DialogDescription>
               </DialogHeader>
 
@@ -570,27 +569,25 @@ export function InspectionProtocol({
                             </Card>
                           ))}
                         </div>
-                      ) : selectedRecipient === 'previous-tenant' &&
-                        tenantContacts.previous_tenant ? (
+                      ) : selectedRecipient === 'tenant' &&
+                        tenantContacts.tenant ? (
                         <div className="space-y-2">
-                          {tenantContacts.previous_tenant.contacts.map(
-                            (contact) => (
-                              <Card
-                                key={contact.contactCode}
-                                className="bg-muted/20"
-                              >
-                                <CardContent className="pt-3 pb-3">
-                                  <div className="font-medium text-sm">
-                                    {contact.fullName}
-                                  </div>
-                                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                    <Mail className="h-3 w-3" />
-                                    {contact.emailAddress}
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            )
-                          )}
+                          {tenantContacts.tenant.contacts.map((contact) => (
+                            <Card
+                              key={contact.contactCode}
+                              className="bg-muted/20"
+                            >
+                              <CardContent className="pt-3 pb-3">
+                                <div className="font-medium text-sm">
+                                  {contact.fullName}
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                  <Mail className="h-3 w-3" />
+                                  {contact.emailAddress}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">
@@ -647,7 +644,7 @@ export function InspectionProtocol({
               <DialogDescription>
                 {selectedRecipient === 'new-tenant'
                   ? 'Skicka besiktningsprotokoll till inflyttande hyresgäst'
-                  : 'Skicka besiktningsprotokoll till avflyttande hyresgäst'}
+                  : 'Skicka besiktningsprotokoll till hyresgäst'}
               </DialogDescription>
             </DialogHeader>
 
@@ -692,27 +689,25 @@ export function InspectionProtocol({
                           </Card>
                         ))}
                       </div>
-                    ) : selectedRecipient === 'previous-tenant' &&
-                      tenantContacts.previous_tenant ? (
+                    ) : selectedRecipient === 'tenant' &&
+                      tenantContacts.tenant ? (
                       <div className="space-y-2">
-                        {tenantContacts.previous_tenant.contacts.map(
-                          (contact) => (
-                            <Card
-                              key={contact.contactCode}
-                              className="bg-muted/20"
-                            >
-                              <CardContent className="pt-3 pb-3">
-                                <div className="font-medium text-sm">
-                                  {contact.fullName}
-                                </div>
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                  <Mail className="h-3 w-3" />
-                                  {contact.emailAddress}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )
-                        )}
+                        {tenantContacts.tenant.contacts.map((contact) => (
+                          <Card
+                            key={contact.contactCode}
+                            className="bg-muted/20"
+                          >
+                            <CardContent className="pt-3 pb-3">
+                              <div className="font-medium text-sm">
+                                {contact.fullName}
+                              </div>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                <Mail className="h-3 w-3" />
+                                {contact.emailAddress}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">

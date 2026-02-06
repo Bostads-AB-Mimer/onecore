@@ -146,16 +146,16 @@ export const TenantContactsResponseSchema = z.object({
     apartmentCode: z.string(),
   }),
   new_tenant: TenantInfoSchema.optional(),
-  previous_tenant: TenantInfoSchema.optional(),
+  tenant: TenantInfoSchema.optional(),
 })
 
 export const SendProtocolRequestSchema = z.object({
-  recipient: z.enum(['previous-tenant', 'new-tenant']),
+  recipient: z.enum(['tenant', 'new-tenant']),
 })
 
 export const SendProtocolResponseSchema = z.object({
   success: z.boolean(),
-  recipient: z.enum(['previous-tenant', 'new-tenant']),
+  recipient: z.enum(['tenant', 'new-tenant']),
   sentTo: z.object({
     emails: z.array(z.string()),
     contactNames: z.array(z.string()),
