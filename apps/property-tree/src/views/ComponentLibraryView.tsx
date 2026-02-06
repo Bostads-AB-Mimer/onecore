@@ -1,9 +1,11 @@
-import { useComponentLibraryViewState } from '@/features/components/hooks/useComponentLibraryViewState'
-import { useComponentLibraryHandlers } from '@/features/components/hooks/useComponentLibraryHandlers'
-import { ComponentLibraryBreadcrumb } from '@/features/components/components/ComponentLibraryBreadcrumb'
-import { ComponentLibraryContent } from '@/features/components/components/ComponentLibraryContent'
-import { ComponentLibraryDialogs } from '@/features/components/components/ComponentLibraryDialogs'
-import { ComponentImageGallery } from '@/features/residences/components/ComponentImageGallery'
+import {
+  useComponentLibraryViewState,
+  useComponentLibraryHandlers,
+  ComponentLibraryBreadcrumb,
+  ComponentLibraryContent,
+  ComponentLibraryDialogs,
+  ComponentImageGallery,
+} from '@/features/rooms'
 
 const ComponentLibraryView = () => {
   const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =

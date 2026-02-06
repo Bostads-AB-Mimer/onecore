@@ -1,14 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 
 import { maintenanceUnitService } from '@/services/api/core'
-import { MaintenanceUnitBasicInfo } from '../features/maintenance-units/components/MaintenanceUnitBasicInfo'
-import { MaintenanceUnitComponents } from '../features/maintenance-units/components/MaintenanceUnitComponents'
+import { MaintenanceUnitBasicInfo } from '@/features/maintenance-units'
 import { ObjectPageLayout } from '../layouts/ObjectPageLayout'
-import { ObjectPageTabs } from '../layouts/ObjectPageTabs'
-import { WorkOrdersManagement } from '../features/work-orders/components/WorkOrdersManagement'
-import { ContextType } from '@/types/ui'
+import { MaintenanceUnitTabs } from '@/widgets/maintenance-unit-tabs'
 
 export function MaintenanceUnitView() {
   const { code } = useParams()
@@ -47,41 +43,9 @@ export function MaintenanceUnitView() {
         <MaintenanceUnitBasicInfo maintenanceUnit={maintenanceUnit} />
       </div>
 
-      <ObjectPageTabs
-        defaultTab="workorders"
-        tabs={[
-          {
-            value: 'components',
-            label: 'Komponenter',
-            icon: Wrench,
-            content: (
-              <MaintenanceUnitComponents
-                propertyObjectId={maintenanceUnit.propertyObjectId}
-                maintenanceUnitName={
-                  maintenanceUnit.caption || maintenanceUnit.code
-                }
-              />
-            ),
-          },
-          {
-            value: 'inspections',
-            label: 'Besiktningar',
-            icon: ClipboardList,
-            disabled: true,
-          },
-          {
-            value: 'workorders',
-            label: 'Ärenden',
-            icon: MessageSquare,
-            content: (
-              <WorkOrdersManagement
-                contextType={ContextType.MaintenanceUnit}
-                id={maintenanceUnit.code}
-              />
-            ),
-          },
-        ]}
-      />
+      <div className="lg:col-span-3">
+        <MaintenanceUnitTabs maintenanceUnit={maintenanceUnit} />
+      </div>
     </ObjectPageLayout>
   )
 }

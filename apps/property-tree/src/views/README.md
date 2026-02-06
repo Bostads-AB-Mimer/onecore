@@ -2,6 +2,10 @@
 
 View-level components, one per route. Views compose features and layouts.
 
+## How this layer fits in
+
+A view answers the question: **What does the user _see_ on this page?** The full tenant page, wired up with routing and layout. Views are the top layer — they compose widgets and features into complete pages.
+
 ## Structure
 
 ```

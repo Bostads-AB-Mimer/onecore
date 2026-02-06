@@ -1,8 +1,7 @@
 // Components
 export { BuildingBasicInfo } from './components/BuildingBasicInfo'
 export { BuildingEntranceHierarchy } from './components/BuildingEntrancesHierarchy'
-export { BuildingEntrances } from './components/BuildingEntrances'
-export { BuildingHeader } from './components/BuildingHeader'
+export { BuildingEntrancesTabContent } from './components/BuildingEntrancesTabContent'
 
 // Hooks
 export { useBuildingDetail } from './hooks/useBuildingDetail'

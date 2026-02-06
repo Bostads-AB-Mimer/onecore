@@ -13,10 +13,12 @@ import {
 import { Button } from '@/components/ui/v2/Button'
 import { Badge } from '@/components/ui/v2/Badge'
 import { ChevronDown } from 'lucide-react'
-import { PropertySearch } from '@/features/properties/components/PropertySearch'
-import { PropertyTypeFilters } from '@/features/properties/components/PropertyTypeFilters'
-import { PropertyFilteredResults } from '@/features/properties/components/PropertyFilteredResults'
-import { usePropertyFilters } from '@/features/properties/hooks/usePropertyFilters'
+import {
+  usePropertyFilters,
+  PropertySearch,
+  PropertyTypeFilters,
+  PropertyFilteredResults,
+} from '@/features/properties'
 
 const SearchView = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)

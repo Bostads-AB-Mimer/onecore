@@ -16,7 +16,7 @@ import {
   SearchFilterOption,
 } from '@/components/ui/MultiSelectSearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
-import { useLeaseSearch } from '@/features/leases/hooks/useLeaseSearch'
+import { useLeaseSearch } from '@/features/leases'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Pagination } from '@/components/ui/Pagination'
@@ -26,7 +26,8 @@ import {
   type LeaseSearchResult,
   type BuildingManager,
 } from '@/services/api/core/leaseSearchService'
-import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
+import { ObjectTypeBadge } from '@/components/ui/StatusBadges'
+import { formatDate, LeaseStatusBadge } from '@/entities/lease'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -49,12 +50,6 @@ const districtOptions = [
   'Distrikt Mitt',
   'Mimer Student',
 ] as const
-
-const formatDate = (date: Date | string | null | undefined) => {
-  if (!date) return '-'
-  const d = typeof date === 'string' ? new Date(date) : date
-  return d.toLocaleDateString('sv-SE')
-}
 
 const PAGE_SIZE = 50
 

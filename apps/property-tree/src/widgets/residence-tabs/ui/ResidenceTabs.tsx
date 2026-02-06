@@ -1,11 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/components/ui/v2/Tabs'
-import { Card, CardContent } from '@/components/ui/v2/Card'
 import {
   ClipboardList,
   Info,
@@ -19,26 +17,25 @@ import {
 } from 'lucide-react'
 
 import { useIsMobile } from '@/hooks/useMobile'
-import { useToast } from '@/hooks/useToast'
-import { Lease, inspectionService } from '@/services/api/core'
+import { Lease } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
 import { ContextType } from '@/types/ui'
 
-import { RoomInfo } from '@/features/residences/components/RoomInfo'
-import { TenantInformation } from '@/features/residences/components/TenantInformation'
-import { ResidenceFloorplan } from '@/features/residences/components/ResidenceFloorplan'
-import { InspectionsList } from '@/features/residences/components/InspectionsList'
-import { RentalBlocksTab } from '@/features/residences'
-
-import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
-import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
-import { RentalObjectContracts } from '@/components/rental-object/RentalObjectContracts'
-import { DocumentsTab } from '@/features/documents/components/DocumentsTab'
+import {
+  ResidenceFloorplanTabsContent,
+  RentalBlocksTabContent,
+} from '@/features/residences'
+import { ResidenceRoomsTabContent } from '@/features/rooms'
+import { TenantsTabContent } from '@/features/tenants'
+import { InspectionsTabContent } from '@/features/inspections'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { LeasesTabContent } from '@/features/leases'
+import { DocumentsTabContent } from '@/features/documents'
 
 import { ResidenceTabsMobile } from './ResidenceTabsMobile'
 
 type Residence = components['schemas']['ResidenceDetails']
-type Tenant = NonNullable<components['schemas']['Lease']['tenants']>[number]
 
 interface ResidenceTabsProps {
   residence: Residence
@@ -54,26 +51,6 @@ export const ResidenceTabs = ({
   leasesError,
 }: ResidenceTabsProps) => {
   const isMobile = useIsMobile()
-  const { toast } = useToast()
-
-  const inspectionsQuery = useQuery({
-    queryKey: ['inspections', residence.propertyObject.rentalId],
-    queryFn: () =>
-      inspectionService.getInspectionsForResidence(
-        residence.propertyObject.rentalId!
-      ),
-    enabled: !!residence.propertyObject.rentalId,
-  })
-
-  const inspections = inspectionsQuery.data ?? []
-  const tenant: Tenant | null = null
-
-  const handleInspectionCreated = () => {
-    toast({
-      description: 'Besiktningen har skapats',
-    })
-  }
-
   const rentalId = residence.propertyObject.rentalId ?? ''
 
   if (isMobile) {
@@ -83,9 +60,6 @@ export const ResidenceTabs = ({
         currentLease={currentLease}
         leasesIsLoading={leasesIsLoading}
         leasesError={leasesError}
-        inspections={inspections}
-        tenant={tenant}
-        onInspectionCreated={handleInspectionCreated}
       />
     )
   }
@@ -105,15 +79,11 @@ export const ResidenceTabs = ({
           <ClipboardList className="h-4 w-4" />
           <span className="hidden sm:inline">Besiktningar</span>
         </TabsTrigger>
-        <TabsTrigger value="tenant" className="flex items-center gap-1.5">
+        <TabsTrigger value="tenants" className="flex items-center gap-1.5">
           <Users className="h-4 w-4" />
           <span className="hidden sm:inline">Hyresgäst</span>
         </TabsTrigger>
-        <TabsTrigger value="contracts" className="flex items-center gap-1.5">
-          <FileText className="h-4 w-4" />
-          <span className="hidden sm:inline">Kontrakt</span>
-        </TabsTrigger>
-        <TabsTrigger value="workorders" className="flex items-center gap-1.5">
+        <TabsTrigger value="work-orders" className="flex items-center gap-1.5">
           <MessageSquare className="h-4 w-4" />
           <span className="hidden sm:inline">Ärenden</span>
         </TabsTrigger>
@@ -128,57 +98,42 @@ export const ResidenceTabs = ({
           <Lock className="h-4 w-4" />
           <span className="hidden sm:inline">Spärrar</span>
         </TabsTrigger>
-        <TabsTrigger value="maintenance" className="flex items-center gap-1.5">
+        <TabsTrigger
+          value="maintenance-units"
+          className="flex items-center gap-1.5"
+        >
           <Wrench className="h-4 w-4" />
           <span className="hidden sm:inline">Underhållsenheter</span>
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="rooms">
-        <Card>
-          <CardContent className="p-4">
-            <RoomInfo residenceId={residence.id} />
-          </CardContent>
-        </Card>
+        <ResidenceRoomsTabContent residenceId={residence.id} />
       </TabsContent>
 
       <TabsContent value="floorplan">
-        <ResidenceFloorplan rentalId={rentalId} />
+        <ResidenceFloorplanTabsContent rentalId={rentalId} />
       </TabsContent>
 
       <TabsContent value="inspections">
-        <Card>
-          <CardContent className="p-4">
-            <InspectionsList
-              residenceId={residence.id}
-              inspections={inspections}
-              onInspectionCreated={handleInspectionCreated}
-              tenant={tenant}
-              residence={residence}
-            />
-          </CardContent>
-        </Card>
+        <InspectionsTabContent
+          residenceId={residence.id}
+          rentalId={residence.propertyObject.rentalId ?? undefined}
+          residence={residence}
+        />
       </TabsContent>
 
-      <TabsContent value="tenant">
-        <Card>
-          <CardContent className="p-4">
-            <TenantInformation
-              isLoading={leasesIsLoading}
-              error={leasesError}
-              lease={currentLease}
-            />
-          </CardContent>
-        </Card>
+      <TabsContent value="tenants">
+        <TenantsTabContent
+          isLoading={leasesIsLoading}
+          error={leasesError}
+          lease={currentLease}
+        />
       </TabsContent>
 
-      <TabsContent value="contracts">
-        {rentalId && <RentalObjectContracts rentalPropertyId={rentalId} />}
-      </TabsContent>
-
-      <TabsContent value="workorders">
+      <TabsContent value="work-orders">
         {rentalId && (
-          <WorkOrdersManagement
+          <WorkOrdersTabContent
             contextType={ContextType.Residence}
             id={rentalId}
           />
@@ -186,15 +141,18 @@ export const ResidenceTabs = ({
       </TabsContent>
 
       <TabsContent value="documents">
-        <DocumentsTab contextType={ContextType.Residence} id={residence.id} />
+        <DocumentsTabContent
+          contextType={ContextType.Residence}
+          id={residence.id}
+        />
       </TabsContent>
 
       <TabsContent value="rental-blocks">
-        <RentalBlocksTab rentalId={rentalId} />
+        <RentalBlocksTabContent rentalId={rentalId} />
       </TabsContent>
 
-      <TabsContent value="maintenance">
-        <MaintenanceUnitsTab
+      <TabsContent value="maintenance-units">
+        <MaintenanceUnitsTabContent
           contextType="residence"
           identifier={rentalId || undefined}
           showFlatList

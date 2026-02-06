@@ -30,9 +30,11 @@ import {
 import { ChevronsUpDown, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-import { InspectionsTable } from '@/features/inspections/components/InspectionsTable'
-import { useInspectionFilters } from '@/features/inspections/hooks/useInspectionFilters'
-import { useInspectionSorting } from '@/features/inspections/hooks/useInspectionSorting'
+import {
+  InspectionsTable,
+  useInspectionFilters,
+  useInspectionSorting,
+} from '@/features/inspections'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import { useQuery } from '@tanstack/react-query'
 

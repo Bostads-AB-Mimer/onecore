@@ -1,7 +1,7 @@
 // Components
 export { MaintenanceUnitBasicInfo } from './components/MaintenanceUnitBasicInfo'
 export { MaintenanceUnitComponents } from './components/MaintenanceUnitComponents'
-export { MaintenanceUnitsTab } from './components/MaintenanceUnitsTab'
+export { MaintenanceUnitsTabContent } from './components/MaintenanceUnitsTabContent'
 
 // Hooks
 export {

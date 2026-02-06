@@ -1,15 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
 import { parkingSpaceService, leaseService } from '@/services/api/core'
-import { ParkingSpaceBasicInfo } from '../features/parking-spaces/components/ParkingSpaceBasicInfo'
-import { CurrentTenant } from '../components/rental-object/CurrentTenant'
-import { WorkOrdersManagement } from '../features/work-orders/components/WorkOrdersManagement'
+import { ParkingSpaceBasicInfo } from '@/features/parking-spaces'
 import { ObjectPageLayout } from '../layouts/ObjectPageLayout'
-import { ObjectPageTabs } from '../layouts/ObjectPageTabs'
-import { RentalObjectContracts } from '../components/rental-object/RentalObjectContracts'
-import { ContextType } from '@/types/ui'
+import { ParkingSpaceTabs } from '@/widgets/parking-space-tabs'
 
 export function ParkingSpaceView() {
   const { rentalId } = useParams()
@@ -67,48 +62,13 @@ export function ParkingSpaceView() {
         />
       </div>
 
-      <ObjectPageTabs
-        defaultTab="tenant"
-        tabs={[
-          {
-            value: 'tenant',
-            label: 'Hyresgäst',
-            icon: Users,
-            content: (
-              <CurrentTenant
-                rentalPropertyId={parkingSpace.rentalId}
-                leases={leasesQuery.data}
-                isLoading={leasesQuery.isLoading}
-              />
-            ),
-          },
-          {
-            value: 'contracts',
-            label: 'Kontrakt',
-            icon: FileText,
-            content: (
-              <RentalObjectContracts rentalPropertyId={parkingSpace.rentalId} />
-            ),
-          },
-          {
-            value: 'inspections',
-            label: 'Besiktningar',
-            icon: ClipboardList,
-            disabled: true,
-          },
-          {
-            value: 'workorders',
-            label: 'Ärenden',
-            icon: MessageSquare,
-            content: (
-              <WorkOrdersManagement
-                contextType={ContextType.Residence}
-                id={parkingSpace.rentalId}
-              />
-            ),
-          },
-        ]}
-      />
+      <div className="lg:col-span-3">
+        <ParkingSpaceTabs
+          parkingSpace={parkingSpace}
+          leases={leasesQuery.data}
+          leasesIsLoading={leasesQuery.isLoading}
+        />
+      </div>
     </ObjectPageLayout>
   )
 }

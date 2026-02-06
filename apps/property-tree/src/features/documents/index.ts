@@ -1,5 +1,5 @@
 // Components
-export { DocumentsTab } from './components/DocumentsTab'
+export { DocumentsTabContent } from './components/DocumentsTabContent'
 
 // Hooks
 export { useDocuments } from './hooks/useDocuments'

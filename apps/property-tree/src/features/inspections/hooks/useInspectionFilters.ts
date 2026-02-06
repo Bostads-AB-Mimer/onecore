@@ -42,8 +42,8 @@ export function useInspectionFilters(inspections: Inspection[]) {
   //   { value: 'inflytt', label: 'Inflytt' },
   // ]
 
-  const filterInspections = (inspectionsList: Inspection[]) => {
-    let filtered = [...inspectionsList]
+  const filterInspections = (InspectionsTabContent: Inspection[]) => {
+    let filtered = [...InspectionsTabContent]
 
     if (selectedInspector) {
       filtered = filtered.filter((i) => i.inspector === selectedInspector)

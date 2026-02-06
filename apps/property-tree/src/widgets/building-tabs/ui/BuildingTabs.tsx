@@ -1,13 +1,20 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
-import { BuildingEntrances } from '@/features/buildings/components/BuildingEntrances'
-import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/v2/Tabs'
+import { BuildingEntrancesTabContent } from '@/features/buildings'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+import { DocumentsTabContent } from '@/features/documents'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+
 import { BuildingTabsMobile } from './BuildingTabsMobile'
-import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
 
 import { useIsMobile } from '@/hooks/useMobile'
 import { Building, Staircase } from '@/services/types'
-import { useResidenceStaircaseLookupMap } from '@/features/residences/hooks/useResidenceStaircaseLookupMap'
-import { DocumentsTab } from '@/features/documents/components/DocumentsTab'
+import { useResidenceStaircaseLookupMap } from '@/features/residences'
+
 import { ContextType } from '@/types/ui'
 
 interface BuildingTabsProps {
@@ -41,35 +48,38 @@ export const BuildingTabs = ({
     <Tabs defaultValue="entrances" className="space-y-6">
       <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
         <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
-        <TabsTrigger value="maintenance">Underhållsenheter</TabsTrigger>
-        <TabsTrigger value="orders">Ärenden</TabsTrigger>
+        <TabsTrigger value="maintenance-units">Underhållsenheter</TabsTrigger>
+        <TabsTrigger value="work-orders">Ärenden</TabsTrigger>
         <TabsTrigger value="documents">Dokument</TabsTrigger>
       </TabsList>
 
       <TabsContent value="entrances">
-        <BuildingEntrances
+        <BuildingEntrancesTabContent
           isLoading={isStaircasesLoading}
           residenceStaircaseLookupMap={residenceStaircaseLookupMap}
           basePath={basePath}
         />
       </TabsContent>
 
-      <TabsContent value="maintenance">
-        <MaintenanceUnitsTab
+      <TabsContent value="maintenance-units">
+        <MaintenanceUnitsTabContent
           contextType="building"
           identifier={building.code}
         />
       </TabsContent>
 
-      <TabsContent value="orders">
-        <WorkOrdersManagement
+      <TabsContent value="work-orders">
+        <WorkOrdersTabContent
           contextType={ContextType.Building}
           id={building.code}
         />
       </TabsContent>
 
       <TabsContent value="documents">
-        <DocumentsTab contextType={ContextType.Building} id={building.id} />
+        <DocumentsTabContent
+          contextType={ContextType.Building}
+          id={building.id}
+        />
       </TabsContent>
     </Tabs>
   )

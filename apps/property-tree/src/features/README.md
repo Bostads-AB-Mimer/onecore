@@ -2,6 +2,10 @@
 
 **The core of the app.** Each feature is a self-contained module organized by domain/functionality.
 
+## How this layer fits in
+
+A feature answers the question: **What can I _do_ with tenants?** Search for them, list their leases, add comments. Features use entities for domain knowledge and add business logic and user-facing workflows on top.
+
 ## Structure
 
 ```
