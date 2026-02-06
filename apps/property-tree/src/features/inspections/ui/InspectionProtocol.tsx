@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { components } from '@/services/api/core/generated/api-types'
 import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
 import { useSendInspectionProtocol } from '../hooks/useSendInspectionProtocol'
@@ -33,8 +33,8 @@ import {
   User,
   Phone,
   Mail,
-  Loader2,
   AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
@@ -74,31 +74,47 @@ export function InspectionProtocol({
     useInspectionPdfDownload()
   const { sendProtocol, isSending } = useSendInspectionProtocol()
 
+  // Fetch tenant contacts eagerly when inspection loads
+  useEffect(() => {
+    if (!inspection?.id) return
+
+    let cancelled = false
+    const fetchContacts = async () => {
+      setIsFetchingContacts(true)
+      try {
+        const contacts = await inspectionService.getTenantContacts(inspection.id)
+        if (!cancelled) setTenantContacts(contacts)
+      } catch (error) {
+        console.error('Failed to fetch tenant contacts:', error)
+      } finally {
+        if (!cancelled) setIsFetchingContacts(false)
+      }
+    }
+
+    fetchContacts()
+
+    return () => {
+      cancelled = true
+    }
+  }, [inspection?.id])
+
+  const hasNewTenantContacts =
+    tenantContacts?.new_tenant && tenantContacts.new_tenant.contacts.length > 0
+  const hasPreviousTenantContacts =
+    tenantContacts?.previous_tenant &&
+    tenantContacts.previous_tenant.contacts.length > 0
+
   const handleDownloadPdf = async () => {
     if (!inspection?.id) return
     await downloadPdf(inspection.id)
   }
 
-  const handleOpenSendModal = async (
-    recipient: 'new-tenant' | 'previous-tenant'
-  ) => {
+  const handleOpenSendModal = (recipient: 'new-tenant' | 'previous-tenant') => {
     if (!inspection?.id) return
 
     setSelectedRecipient(recipient)
-    setTenantContacts(null)
     setSendError(null)
     setShowSendModal(true)
-    setIsFetchingContacts(true)
-
-    try {
-      const contacts = await inspectionService.getTenantContacts(inspection.id)
-      setTenantContacts(contacts)
-    } catch (error) {
-      console.error('Failed to fetch tenant contacts:', error)
-      setShowSendModal(false)
-    } finally {
-      setIsFetchingContacts(false)
-    }
   }
 
   const handleConfirmSend = async () => {
@@ -223,7 +239,8 @@ export function InspectionProtocol({
   )
 
   const renderTenantSnapshot = () => {
-    if (inspection?.lease?.tenants?.length === 0) return null
+    const hasTenants =
+      inspection?.lease?.tenants && inspection.lease.tenants.length > 0
 
     return (
       <Card className="mb-6">
@@ -234,43 +251,51 @@ export function InspectionProtocol({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground block">Namn</span>
-              <span className="font-medium">
-                {inspection?.lease?.tenants?.[0]?.fullName ||
-                  inspection?.lease?.tenants?.[0]?.firstName +
-                    ' ' +
-                    inspection?.lease?.tenants?.[0]?.lastName ||
-                  '-'}
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground block">Personnummer</span>
-              {inspection?.lease?.tenants?.[0]?.nationalRegistrationNumber ||
-                '-'}
-            </div>
-            {inspection?.lease?.tenants?.[0]?.phoneNumbers?.find(
-              (number) => number.isMainNumber
-            )?.phoneNumber && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-3 w-3 text-muted-foreground" />
-                <span>
-                  {
-                    inspection?.lease?.tenants?.[0]?.phoneNumbers?.find(
-                      (number) => number.isMainNumber
-                    )?.phoneNumber
-                  }
+          {hasTenants ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground block">Namn</span>
+                <span className="font-medium">
+                  {inspection?.lease?.tenants?.[0]?.fullName ||
+                    inspection?.lease?.tenants?.[0]?.firstName +
+                      ' ' +
+                      inspection?.lease?.tenants?.[0]?.lastName ||
+                    '-'}
                 </span>
               </div>
-            )}
-            {inspection?.lease?.tenants?.[0]?.emailAddress && (
-              <div className="flex items-center gap-2">
-                <Mail className="h-3 w-3 text-muted-foreground" />
-                <span>{inspection?.lease?.tenants?.[0]?.emailAddress}</span>
+              <div>
+                <span className="text-muted-foreground block">
+                  Personnummer
+                </span>
+                {inspection?.lease?.tenants?.[0]?.nationalRegistrationNumber ||
+                  '-'}
               </div>
-            )}
-          </div>
+              {inspection?.lease?.tenants?.[0]?.phoneNumbers?.find(
+                (number) => number.isMainNumber
+              )?.phoneNumber && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3 w-3 text-muted-foreground" />
+                  <span>
+                    {
+                      inspection?.lease?.tenants?.[0]?.phoneNumbers?.find(
+                        (number) => number.isMainNumber
+                      )?.phoneNumber
+                    }
+                  </span>
+                </div>
+              )}
+              {inspection?.lease?.tenants?.[0]?.emailAddress && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3 w-3 text-muted-foreground" />
+                  <span>{inspection?.lease?.tenants?.[0]?.emailAddress}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Ingen hyresgästinformation tillgänglig för denna besiktning
+            </p>
+          )}
         </CardContent>
       </Card>
     )
@@ -400,7 +425,7 @@ export function InspectionProtocol({
 
   const renderContent = () => (
     <div className="space-y-6">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2 items-center">
         <button
           type="button"
           onClick={handleDownloadPdf}
@@ -410,25 +435,51 @@ export function InspectionProtocol({
           {isDownloadingPdf ? 'Genererar PDF…' : 'Generera PDF'}
         </button>
 
-        <button
-          type="button"
-          onClick={() => handleOpenSendModal('new-tenant')}
-          disabled={!inspection || isSending}
-          className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50"
-        >
-          <Mail className="h-4 w-4 mr-1" />
-          Skicka till ny hyresgäst
-        </button>
+        <div className="relative group">
+          <button
+            type="button"
+            onClick={() => handleOpenSendModal('new-tenant')}
+            disabled={
+              !inspection ||
+              isSending ||
+              isFetchingContacts ||
+              !hasNewTenantContacts
+            }
+            className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Mail className="h-4 w-4 mr-1" />
+            Skicka till ny hyresgäst
+          </button>
+          {!isFetchingContacts && !hasNewTenantContacts && tenantContacts && (
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-foreground text-background rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Kontaktuppgifter saknas för ny hyresgäst
+            </span>
+          )}
+        </div>
 
-        <button
-          type="button"
-          onClick={() => handleOpenSendModal('previous-tenant')}
-          disabled={!inspection || isSending}
-          className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50"
-        >
-          <Mail className="h-4 w-4 mr-1" />
-          Skicka till tidigare hyresgäst
-        </button>
+        <div className="relative group">
+          <button
+            type="button"
+            onClick={() => handleOpenSendModal('previous-tenant')}
+            disabled={
+              !inspection ||
+              isSending ||
+              isFetchingContacts ||
+              !hasPreviousTenantContacts
+            }
+            className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Mail className="h-4 w-4 mr-1" />
+            Skicka till tidigare hyresgäst
+          </button>
+          {!isFetchingContacts &&
+            !hasPreviousTenantContacts &&
+            tenantContacts && (
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-foreground text-background rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                Kontaktuppgifter saknas för tidigare hyresgäst
+              </span>
+            )}
+        </div>
       </div>
       {renderHeader()}
       <Card>
@@ -444,11 +495,22 @@ export function InspectionProtocol({
     return (
       <>
         <Dialog open={isOpen} onOpenChange={onClose!}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent
+            className="max-w-4xl max-h-[90vh] overflow-y-auto"
+            onOpenAutoFocus={(e) => {
+              if (!inspection) e.preventDefault()
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Besiktningsprotokoll</DialogTitle>
             </DialogHeader>
-            {renderContent()}
+            {!inspection || isFetchingContacts ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              renderContent()
+            )}
           </DialogContent>
         </Dialog>
 
@@ -467,11 +529,7 @@ export function InspectionProtocol({
                 </DialogDescription>
               </DialogHeader>
 
-              {isFetchingContacts ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : tenantContacts ? (
+              {tenantContacts && (
                 <>
                   <div className="space-y-4 py-4">
                     {/* Inspection info card */}
@@ -564,7 +622,7 @@ export function InspectionProtocol({
                     </Button>
                   </DialogFooter>
                 </>
-              ) : null}
+              )}
             </DialogContent>
           </Dialog>
         )}
@@ -593,11 +651,7 @@ export function InspectionProtocol({
               </DialogDescription>
             </DialogHeader>
 
-            {isFetchingContacts ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : tenantContacts ? (
+            {tenantContacts && (
               <>
                 <div className="space-y-4 py-4">
                   {/* Inspection info card */}
@@ -690,7 +744,7 @@ export function InspectionProtocol({
                   </Button>
                 </DialogFooter>
               </>
-            ) : null}
+            )}
           </DialogContent>
         </Dialog>
       )}

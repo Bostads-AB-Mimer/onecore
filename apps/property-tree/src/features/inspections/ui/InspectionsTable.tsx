@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
@@ -33,8 +33,6 @@ export function InspectionsTable({
 }: InspectionsTableProps) {
   const [isResumeDialogOpen, setIsResumeDialogOpen] = useState(false)
   const [isProtocolDialogOpen, setIsProtocolDialogOpen] = useState(false)
-  const [selectedInspection, setSelectedInspection] =
-    useState<DetailedInspection | null>(null)
   const [selectedInspectionId, setSelectedInspectionId] = useState<
     string | null
   >(null)
@@ -47,22 +45,16 @@ export function InspectionsTable({
     enabled: !!selectedInspectionId,
   })
 
-  // Handle detailed inspection data and open appropriate dialog
-  useEffect(() => {
-    if (!detailedInspection) return
+  const handleInspectionClick = (inspection: Inspection) => {
+    setSelectedInspectionId(inspection.id)
 
-    setSelectedInspection(detailedInspection)
-    if (detailedInspection.status === INSPECTION_STATUS.COMPLETED) {
+    if (inspection.status === INSPECTION_STATUS.COMPLETED) {
       setIsProtocolDialogOpen(true)
       setIsResumeDialogOpen(false)
     } else {
       setIsResumeDialogOpen(true)
       setIsProtocolDialogOpen(false)
     }
-  }, [detailedInspection])
-
-  const handleInspectionClick = (inspection: Inspection) => {
-    setSelectedInspectionId(inspection.id)
   }
 
   // Determine which columns to use
@@ -97,9 +89,9 @@ export function InspectionsTable({
         />
       )}
 
-      {isProtocolDialogOpen && selectedInspection && (
+      {isProtocolDialogOpen && (
         <InspectionProtocol
-          inspection={selectedInspection}
+          inspection={detailedInspection ?? null}
           isOpen={isProtocolDialogOpen}
           onClose={() => setIsProtocolDialogOpen(false)}
         />
