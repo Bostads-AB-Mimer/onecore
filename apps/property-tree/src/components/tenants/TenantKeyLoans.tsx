@@ -94,11 +94,6 @@ export function TenantKeyLoans({ contactCode }: TenantKeyLoansProps) {
     }
   }
 
-  const openAllInKeysPortal = () => {
-    if (keysUrl) {
-      window.open(`${keysUrl}/key-loans?q=${contactCode}`, '_blank')
-    }
-  }
 
   if (isLoading) {
     return (
@@ -221,17 +216,11 @@ export function TenantKeyLoans({ contactCode }: TenantKeyLoansProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Key className="h-5 w-5" />
           Nyckellån
         </CardTitle>
-        {keysUrl && loans.length > 0 && (
-          <Button variant="outline" size="sm" onClick={openAllInKeysPortal}>
-            <ExternalLink className="h-4 w-4 mr-1" />
-            Öppna i Nyckelportalen
-          </Button>
-        )}
       </CardHeader>
       <CardContent>
         <ResponsiveTable
