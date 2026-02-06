@@ -34,12 +34,16 @@ export async function getKeyLoanById(
 export interface KeyLoanIncludeOptions {
   includeKeySystem?: boolean
   includeCards?: boolean
+  includeLoans?: boolean
+  includeEvents?: boolean
 }
 
 /**
  * Get a key loan by ID with optional enriched data
  * - includeKeySystem: fetches keys and attaches keySystem to each
  * - includeCards: fetches cards from DAX (auto-implies key fetching for rentalObjectCode)
+ * - includeLoans: attaches loan history to each key
+ * - includeEvents: attaches event history to each key
  */
 export async function getKeyLoanByIdWithDetails(
   id: string,
@@ -57,9 +61,11 @@ export async function getKeyLoanByIdWithDetails(
     keyIds = []
   }
 
-  // Fetch keys with optional keySystem enrichment using shared helper
+  // Fetch keys with optional enrichment using shared helper
   const keysArray = await getKeyDetailsById(keyIds, dbConnection, {
     includeKeySystem: options.includeKeySystem,
+    includeLoans: options.includeLoans,
+    includeEvents: options.includeEvents,
   })
 
   // Fetch cards from DAX if requested
