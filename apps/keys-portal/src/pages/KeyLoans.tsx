@@ -21,6 +21,7 @@ export default function KeyLoans() {
   // Read search query from URL
   const searchQuery = pagination.searchParams.get('q') || ''
   const loanTypeFilter = pagination.searchParams.get('loanType') || null
+  const editLoanIdFromUrl = pagination.searchParams.get('editLoanId')
   const minKeys = pagination.searchParams.get('minKeys')
     ? parseInt(pagination.searchParams.get('minKeys')!, 10)
     : null
@@ -160,6 +161,32 @@ export default function KeyLoans() {
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
+
+  // Auto-open edit form when editLoanId is in URL
+  useEffect(() => {
+    if (editLoanIdFromUrl && keyLoans.length > 0) {
+      const loanToEdit = keyLoans.find((loan) => loan.id === editLoanIdFromUrl)
+      if (loanToEdit) {
+        setEditingKeyLoan(loanToEdit)
+        setShowEditForm(true)
+      } else {
+        // Loan not in current page - fetch it directly
+        keyLoanService.get(editLoanIdFromUrl).then((loan) => {
+          setEditingKeyLoan(loan)
+          setShowEditForm(true)
+        }).catch((error) => {
+          console.error('Failed to load loan for editing:', error)
+          toast({
+            title: 'Fel',
+            description: 'Kunde inte ladda lånet för redigering',
+            variant: 'destructive',
+          })
+        })
+      }
+      // Clear the URL param after opening
+      pagination.updateUrlParams({ editLoanId: null })
+    }
+  }, [editLoanIdFromUrl, keyLoans, pagination, toast])
 
   // Fetch data whenever filters or pagination changes
   useEffect(() => {
