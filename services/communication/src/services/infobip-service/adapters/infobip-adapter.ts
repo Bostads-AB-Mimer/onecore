@@ -8,6 +8,7 @@ import {
   WorkOrderEmail,
   WorkOrderSms,
   ParkingSpaceAcceptOfferEmail,
+  InspectionProtocolEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
@@ -48,6 +49,9 @@ const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
 const WorkOrderExternalContractorEmailTemplateId = 200000000173744
+
+// TODO: Update with correct template ID when available
+const InspectionProtocolEmailTemplateId = 0
 
 export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
@@ -302,6 +306,55 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
     }
   } catch (error) {
     logger.error(error, 'Error sending SMS')
+    throw error
+  }
+}
+
+export const sendInspectionProtocolEmail = async (
+  email: InspectionProtocolEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending inspection protocol email'
+  )
+  try {
+    const toField = JSON.stringify({
+      to: email.to,
+      placeholders: {
+        address: email.address,
+        inspectionType: email.inspectionType,
+        inspectionDate: email.inspectionDate,
+        apartmentCode: email.apartmentCode,
+      },
+    })
+
+    const emailPayload: InfobipEmailPayload = {
+      to: toField,
+      from: 'Bostads Mimer AB <noreply@mimer.nu>',
+      subject: email.subject,
+      text: email.text,
+    }
+
+    if (email.attachments && email.attachments.length > 0) {
+      emailPayload.attachment = email.attachments.map((att) => ({
+        name: att.filename,
+        data: Buffer.from(att.content, 'base64'),
+        contentType: att.contentType,
+      }))
+    }
+
+    const response = await infobip.channels.email.send({
+      ...emailPayload,
+      templateId: InspectionProtocolEmailTemplateId,
+    })
+
+    if (response.status === 200) {
+      return response.data
+    } else {
+      throw new Error(response.body)
+    }
+  } catch (error) {
+    logger.error(error)
     throw error
   }
 }

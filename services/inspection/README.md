@@ -21,6 +21,26 @@ JSDoc comments and tags for comprehensive documentation. The Swagger document is
 - **GET /health**
   - Retrieves the health status of the system and its subsystems.
 
+## Email Templates
+
+### Inspection Protocol Email
+
+The inspection protocol email is sent via an Infobip template. The template ID constant is defined in `services/communication/src/services/infobip-service/adapters/infobip-adapter.ts` as `InspectionProtocolEmailTemplateId`.
+
+The template must be created in the Infobip dashboard with the following placeholders:
+
+- `address` - The property address (e.g. "Testgatan 1")
+- `inspectionType` - The type of inspection (e.g. "Inflyttningsbesiktning", "Avflyttningsbesiktning")
+- `inspectionDate` - The date of the inspection formatted as sv-SE (e.g. "2024-01-15")
+- `apartmentCode` - The apartment code (e.g. "A101")
+
+Expected email content (Swedish):
+
+- **Subject:** Besiktningsprotokoll - {inspectionType} {address}
+- **Body:** A message informing the tenant that the inspection protocol for {address} is attached as a PDF, including the inspection type, date, and apartment code.
+
+The protocol PDF is included as an email attachment.
+
 ## Development
 
 ### Requirements
@@ -51,6 +71,7 @@ $ cp .env.template .env
 Configure the required environment variables in the `.env` file:
 
 **Inspection Database** (service's own database):
+
 - `INSPECTION_DATABASE__HOST` - Database host
 - `INSPECTION_DATABASE__USER` - Database user
 - `INSPECTION_DATABASE__PASSWORD` - Database password
@@ -58,6 +79,7 @@ Configure the required environment variables in the `.env` file:
 - `INSPECTION_DATABASE__DATABASE` - Database name
 
 **XPAND Database** (legacy system integration):
+
 - `XPAND_DATABASE__HOST` - XPAND database host
 - `XPAND_DATABASE__USER` - XPAND database user
 - `XPAND_DATABASE__PASSWORD` - XPAND database password
@@ -65,6 +87,7 @@ Configure the required environment variables in the `.env` file:
 - `XPAND_DATABASE__DATABASE` - XPAND database name
 
 **Other Configuration**:
+
 - `ELASTICSEARCH_LOGGING_HOST` - Elasticsearch host for logging
 - `APPLICATION_NAME` - Application identifier
 

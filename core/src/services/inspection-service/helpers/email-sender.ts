@@ -1,4 +1,9 @@
-import { Lease, LeaseStatus, EmailAttachment } from '@onecore/types'
+import {
+  Lease,
+  LeaseStatus,
+  EmailAttachment,
+  InspectionProtocolEmail,
+} from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import type { DetailedInspection } from '../schemas'
@@ -55,38 +60,6 @@ export const identifyTenantContracts = (
 }
 
 /**
- * Generates email content for inspection protocol.
- *
- * @param inspection - The inspection details
- * @param type - Type of recipient (new-tenant or tenant)
- * @returns Object with subject and message text in Swedish
- */
-export const generateInspectionEmailContent = (
-  inspection: DetailedInspection,
-  type: 'new-tenant' | 'tenant'
-): { subject: string; message: string } => {
-  const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
-  const formattedDate = dateFormatter.format(new Date(inspection.date))
-
-  const subject = `Besiktningsprotokoll - ${inspection.type} ${inspection.address}`
-
-  const message = `Hej,
-
-Härmed bifogas besiktningsprotokollet för ${inspection.address}.
-
-Besiktningstyp: ${inspection.type}
-Datum: ${formattedDate}
-Lägenhetskod: ${inspection.apartmentCode}
-
-Protokollet finns bifogat som PDF.
-
-Med vänlig hälsning,
-Mimer`
-
-  return { subject, message }
-}
-
-/**
  * Sends inspection protocol PDF to tenant contacts.
  *
  * @param inspection - The inspection details
@@ -133,11 +106,8 @@ export const sendProtocolToTenants = async (
       }
     }
 
-    // Generate email content
-    const { subject, message } = generateInspectionEmailContent(
-      inspection,
-      recipientType
-    )
+    const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
+    const formattedDate = dateFormatter.format(new Date(inspection.date))
 
     // Create attachment (convert Buffer to base64 string)
     const attachment: EmailAttachment = {
@@ -152,13 +122,19 @@ export const sendProtocolToTenants = async (
     const errors: string[] = []
 
     for (const tenant of tenantsWithEmail) {
+      const email: InspectionProtocolEmail = {
+        to: tenant.emailAddress!,
+        subject: `Besiktningsprotokoll - ${inspection.type} ${inspection.address}`,
+        text: `Besiktningsprotokoll för ${inspection.address}`,
+        address: inspection.address,
+        inspectionType: inspection.type,
+        inspectionDate: formattedDate,
+        apartmentCode: inspection.apartmentCode,
+        attachments: [attachment],
+      }
+
       const result =
-        await communicationAdapter.sendNotificationToContactWithAttachment(
-          tenant,
-          subject,
-          message,
-          [attachment]
-        )
+        await communicationAdapter.sendInspectionProtocolEmail(email)
 
       if (result.ok) {
         sentEmails.push(tenant.emailAddress!)

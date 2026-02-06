@@ -9,6 +9,7 @@ import {
   sendWorkOrderSms,
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
+  sendInspectionProtocolEmail,
 } from './adapters/infobip-adapter'
 import {
   Email,
@@ -18,6 +19,7 @@ import {
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,
+  InspectionProtocolEmail,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -237,6 +239,49 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  const InspectionProtocolEmailSchema = z.object({
+    to: z.string().email(),
+    subject: z.string(),
+    text: z.string(),
+    address: z.string(),
+    inspectionType: z.string(),
+    inspectionDate: z.string(),
+    apartmentCode: z.string(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string(),
+          content: z.string(),
+          contentType: z.string(),
+        })
+      )
+      .optional(),
+  })
+  router.post(
+    '(.*)/sendInspectionProtocolEmail',
+    parseRequestBody(InspectionProtocolEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as InspectionProtocolEmail
+
+      try {
+        const result = await sendInspectionProtocolEmail(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendInspectionProtocolEmail'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
 }
 
 export const isParkingSpaceOfferEmail = (
