@@ -32,6 +32,7 @@ export function useResidenceDetail(residenceId: string) {
           residence?.propertyObject.rentalId,
           {
             includeContacts: true,
+            includeRentInfo: true,
           }
         )
       }

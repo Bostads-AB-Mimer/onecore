@@ -18,7 +18,9 @@ import {
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
   InvoiceSchema,
+  LeaseRentRowSchema,
 } from './schemas/v1'
+import { IdentityCheckContactSchema } from './leasing/v1'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -68,10 +70,7 @@ interface Lease {
   tenantContactIds: string[] | undefined
   tenants: Contact[] | undefined
   rentalPropertyId: string
-  rentalProperty: RentalProperty | undefined
   type: string
-  rentInfo: RentInfo | undefined
-  address: Address | undefined
   noticeGivenBy: string | undefined
   noticeDate: Date | undefined
   noticeTimeTenant: string | undefined
@@ -327,7 +326,7 @@ interface ParkingSpace {
 interface RentalObject {
   rentalObjectCode: string
   address: string
-  monthlyRent: number
+  rent?: RentalObjectRent
   districtCaption?: string
   districtCode?: string
   propertyCaption?: string
@@ -342,6 +341,22 @@ interface RentalObject {
   boaArea?: number
   isSpecialResidentialArea?: boolean
   isSpecialProperty?: boolean
+}
+
+interface RentalObjectRent {
+  rentalObjectCode: string
+  amount: number
+  vat: number
+  rows: Array<RentalObjectRentRow>
+}
+
+interface RentalObjectRentRow {
+  code: string
+  description: string
+  amount: number
+  vatPercentage: number
+  fromDate?: Date
+  toDate?: Date
 }
 
 interface MaintenanceUnitInfo {
@@ -366,6 +381,9 @@ type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type LeaseRentRow = z.infer<typeof LeaseRentRowSchema>
+
+type IdentityCheckContact = z.infer<typeof IdentityCheckContactSchema>
 
 export type {
   Contact,
@@ -385,6 +403,8 @@ export type {
   InvoiceRow,
   InvoicePaymentEvent,
   RentalObject,
+  RentalObjectRent,
+  RentalObjectRentRow as RentRow,
   ParkingSpace,
   Email,
   Sms,
@@ -407,4 +427,6 @@ export type {
   CommentThread,
   CommentType,
   Comment,
+  LeaseRentRow,
+  IdentityCheckContact,
 }

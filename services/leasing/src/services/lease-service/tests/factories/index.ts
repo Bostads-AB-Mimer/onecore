@@ -4,6 +4,7 @@ export { LeaseFactory as lease } from './lease'
 export { ListingFactory as listing } from './listing'
 export { ListingWithoutRentalObjectFactory as listingWithoutRentalObject } from './listing-without-rental-object'
 export { RentalObjectFactory as rentalObject } from './rental-object'
+export { RentalObjectRentFactory as rentalObjectRent } from './rental-object-rent'
 export { OfferFactory as offer } from './offer'
 export { OfferWithRentalObjectCodeFactory as offerWithRentalObjectCode } from './offer'
 export { DetailedOfferFactory as detailedOffer } from './offer'
@@ -15,3 +16,10 @@ export {
   ApplicationProfileFactory as applicationProfile,
   ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
 } from './application-profile'
+export { TenfastLeaseTemplateFactory as tenfastTemplate } from './tenfast-template'
+export { TenfastLeaseFactory as tenfastLease } from './tenfast-lease'
+export { TenfastTenantFactory as tenfastTenant } from './tenfast-tenant'
+export { TenfastRentalObjectFactory as tenfastRentalObject } from './tenfast-rental-object'
+export { TenfastInvoiceRowFactory as tenfastInvoiceRow } from './tenfast-rental-object'
+export { TenfastRentalObjectByRentalObjectCodeResponseFactory as tenfastRentalObjectResponse } from './tenfast-rental-object'
+export { TenfastTenantByContactCodeResponseFactory as tenfastTenantByContactCodeResponse } from './tenfast-tenant-by-contact-code-response'

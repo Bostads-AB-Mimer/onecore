@@ -9,9 +9,7 @@ export function useLeasesByRentalProperty(
     queryFn: () =>
       leaseService.getByRentalPropertyId(rentalPropertyId!, {
         includeContacts: true,
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: true,
-        includeRentInfo: false,
+        includeRentInfo: true,
       }),
     enabled: !!rentalPropertyId,
   })
