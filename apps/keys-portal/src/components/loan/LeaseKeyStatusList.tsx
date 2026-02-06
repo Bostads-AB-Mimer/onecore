@@ -363,6 +363,7 @@ export function LeaseKeyStatusList({
         <LeaseItemsList
           keys={visibleKeys}
           cards={cards}
+          lease={lease}
           selectable={true}
           selectedKeys={selectedKeys}
           selectedCards={selectedCards}
@@ -376,6 +377,8 @@ export function LeaseKeyStatusList({
               checked ? [...prev, cardId] : prev.filter((id) => id !== cardId)
             )
           }}
+          onRefresh={refreshStatuses}
+          onReturn={onReturn}
         />
       </div>
 

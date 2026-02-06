@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
+import { LoanActionMenu } from './LoanActionMenu'
 import {
   KeyEventBadge,
   PickupAvailabilityBadge,
@@ -16,7 +17,7 @@ import {
   ItemDisposedBadge,
   getLatestActiveEvent,
 } from '@/components/shared/tables/StatusBadges'
-import type { KeyDetails, CardDetails } from '@/services/types'
+import type { KeyDetails, CardDetails, Lease } from '@/services/types'
 import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
 import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
 
@@ -27,21 +28,27 @@ type LeaseItem =
 interface LeaseItemsListProps {
   keys: KeyDetails[]
   cards: CardDetails[]
+  lease: Lease
   selectable?: boolean
   selectedKeys?: string[]
   selectedCards?: string[]
   onKeySelectionChange?: (keyId: string, checked: boolean) => void
   onCardSelectionChange?: (cardId: string, checked: boolean) => void
+  onRefresh?: () => void
+  onReturn?: (keyIds: string[], cardIds: string[]) => void
 }
 
 export function LeaseItemsList({
   keys,
   cards,
+  lease,
   selectable = true,
   selectedKeys = [],
   selectedCards = [],
   onKeySelectionChange,
   onCardSelectionChange,
+  onRefresh,
+  onReturn,
 }: LeaseItemsListProps) {
   const getKeyUrl = (key: KeyDetails) => {
     const params = new URLSearchParams({
@@ -164,7 +171,19 @@ export function LeaseItemsList({
           )
         }
         const latestLoan = getLatestLoan(groupItems[0].data)
-        return latestLoan ? <DefaultLoanHeader loan={latestLoan} /> : null
+        return latestLoan ? (
+          <div className="flex items-center justify-between flex-1">
+            <DefaultLoanHeader loan={latestLoan} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <LoanActionMenu
+                loan={latestLoan}
+                lease={lease}
+                onRefresh={onRefresh}
+                onReturn={onReturn}
+              />
+            </div>
+          </div>
+        ) : null
       }}
       renderSectionHeader={(section) =>
         section === 'loaned' ? null : (
