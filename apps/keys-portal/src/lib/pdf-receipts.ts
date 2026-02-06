@@ -243,7 +243,7 @@ const renderCardRow = (doc: jsPDF, c: Card, y: number): void => {
   doc.text(c.name || '-', MARGIN_X, y)
   doc.text(firstCode?.format || '-', 50, y)
   doc.text(firstCode?.number || '-', 100, y)
-  doc.text('Dropp', 145, y)
+  doc.text('Droppe', 145, y)
   doc.text(c.disabled ? 'Inaktiv' : 'Aktiv', 175, y)
 }
 
