@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   TableCell,
   TableHead,
@@ -7,6 +8,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { CollapsibleGroupTable } from './tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from './tables/DefaultLoanHeader'
+import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
   KeyTypeBadge,
   KeyEventBadge,
@@ -23,6 +25,10 @@ interface KeyBundleKeysListProps {
   selectable?: boolean
   selectedKeys?: string[]
   onKeySelectionChange?: (keyId: string, checked: boolean) => void
+  onSelectAll?: () => void
+  onDeselectAll?: () => void
+  onRefresh?: () => void
+  onReturn?: (keyIds: string[], cardIds: string[]) => void
 }
 
 /**
@@ -38,6 +44,10 @@ export function KeyBundleKeysList({
   selectable = false,
   selectedKeys = [],
   onKeySelectionChange,
+  onSelectAll,
+  onDeselectAll,
+  onRefresh,
+  onReturn,
 }: KeyBundleKeysListProps) {
   // Build URL for key details page
   const getKeyUrl = (key: KeyDetails) => {
@@ -53,6 +63,13 @@ export function KeyBundleKeysList({
   }
 
   const columnCount = selectable ? 9 : 8
+
+  // Calculate selection state for header checkbox
+  const allKeyIds = useMemo(() => keys.map((key) => key.id), [keys])
+  const allSelected =
+    allKeyIds.length > 0 && allKeyIds.every((id) => selectedKeys.includes(id))
+  const someSelected = selectedKeys.length > 0
+  const isIndeterminate = someSelected && !allSelected
 
   return (
     <CollapsibleGroupTable
@@ -76,7 +93,20 @@ export function KeyBundleKeysList({
       sectionOrder={['loaned', 'unloaned']}
       renderHeader={() => (
         <TableRow className="bg-background">
-          {selectable && <TableHead className="w-[50px]"></TableHead>}
+          {selectable && (
+            <TableHead className="w-[50px] pl-8">
+              <Checkbox
+                checked={isIndeterminate ? 'indeterminate' : allSelected}
+                onCheckedChange={() => {
+                  if (allSelected) {
+                    onDeselectAll?.()
+                  } else {
+                    onSelectAll?.()
+                  }
+                }}
+              />
+            </TableHead>
+          )}
           <TableHead className="w-[18%]">Nyckelnamn</TableHead>
           <TableHead className="w-[6%]">Löpnr</TableHead>
           <TableHead className="w-[6%]">Flex</TableHead>
@@ -142,11 +172,22 @@ export function KeyBundleKeysList({
         const latestLoan = getLatestLoan(firstKey)
 
         return (
-          <div className="flex items-center gap-3">
-            <span className="font-semibold">
-              {companyNames[contactCode] || contactCode}
-            </span>
-            {latestLoan && <DefaultLoanHeader loan={latestLoan} />}
+          <div className="flex items-center justify-between flex-1">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold">
+                {companyNames[contactCode] || contactCode}
+              </span>
+              {latestLoan && <DefaultLoanHeader loan={latestLoan} />}
+            </div>
+            {latestLoan && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <LoanActionMenu
+                  loan={latestLoan}
+                  onRefresh={onRefresh}
+                  onReturn={onReturn}
+                />
+              </div>
+            )}
           </div>
         )
       }}
