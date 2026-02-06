@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ListPageLayout } from '@/components/shared/layout'
 import { KeysTable } from '@/components/keys/KeysTable'
 import { AddKeyForm } from '@/components/keys/AddKeyForm'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { Key, KeySystem, KeyWithSystem } from '@/services/types'
@@ -17,6 +18,7 @@ const Index = () => {
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingKey, setEditingKey] = useState<Key | null>(null)
+  const [deletingKey, setDeletingKey] = useState<KeyWithSystem | null>(null)
   const { toast } = useToast()
 
   // Read all filters from URL
@@ -436,17 +438,21 @@ const Index = () => {
     }
   }
 
-  const handleDelete = async (keyId: string) => {
+  const handleDelete = (keyId: string) => {
     const key = keys.find((k) => k.id === keyId)
     if (!key) return
+    setDeletingKey(key)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingKey) return
 
     try {
-      await keyService.deleteKey(keyId)
-      setKeys((prev) => prev.filter((k) => k.id !== keyId))
+      await keyService.deleteKey(deletingKey.id)
+      setKeys((prev) => prev.filter((k) => k.id !== deletingKey.id))
       toast({
         title: 'Nyckel borttagen',
-        description: `${key.keyName} har tagits bort.`,
-        variant: 'destructive',
+        description: `${deletingKey.keyName} har tagits bort.`,
       })
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
@@ -455,6 +461,8 @@ const Index = () => {
         description: msg,
         variant: 'destructive',
       })
+    } finally {
+      setDeletingKey(null)
     }
   }
 
@@ -509,6 +517,29 @@ const Index = () => {
         selectedKeySystem={selectedKeySystem}
         onKeySystemSelect={handleKeySystemSelect}
         onKeySystemSearch={searchKeySystems}
+      />
+
+      <ConfirmDialog
+        open={!!deletingKey}
+        onOpenChange={(open) => {
+          if (!open) setDeletingKey(null)
+        }}
+        title="Ta bort nyckel"
+        description={
+          <p>
+            Är du säker på att du vill ta bort nyckeln
+            {deletingKey ? ` "${deletingKey.keyName}"` : ''}?
+            <br />
+            <br />
+            <strong>
+              Att radera innebär att all historik och data tas bort permanent.
+            </strong>
+            <br />
+            Detta är inte samma sak som en kassering.
+          </p>
+        }
+        confirmLabel="Ta bort"
+        onConfirm={handleConfirmDelete}
       />
     </ListPageLayout>
   )
