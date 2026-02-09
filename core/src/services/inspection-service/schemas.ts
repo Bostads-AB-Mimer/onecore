@@ -125,8 +125,8 @@ export const DetailedInspectionSchema = DetailedXpandInspectionSchema.extend({
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({
-  page: z.coerce.number().optional(),
-  limit: z.coerce.number().optional(),
+  page: z.coerce.number().min(1).optional(),
+  limit: z.coerce.number().min(1).max(100).optional(),
   statusFilter: z
     .enum([
       INSPECTION_STATUS_FILTER.ONGOING,
