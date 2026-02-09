@@ -18,9 +18,7 @@ const {
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
   BulkDeleteKeysRequestSchema,
-  BulkDeleteKeysResponseSchema,
   BulkUpdateKeysRequestSchema,
-  BulkUpdateKeysResponseSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
@@ -52,9 +50,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
   registerSchema('BulkDeleteKeysRequest', BulkDeleteKeysRequestSchema)
-  registerSchema('BulkDeleteKeysResponse', BulkDeleteKeysResponseSchema)
   registerSchema('BulkUpdateKeysRequest', BulkUpdateKeysRequestSchema)
-  registerSchema('BulkUpdateKeysResponse', BulkUpdateKeysResponseSchema)
   registerSchema('Key', KeySchema)
   registerSchema('KeyDetails', KeyDetailsSchema, {
     KeySystem: KeySystemSchema,
@@ -541,7 +537,8 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/BulkUpdateKeysResponse'
+   *                   type: number
+   *                   description: Number of keys updated
    *       400:
    *         description: Invalid request body.
    *         content:
@@ -578,7 +575,7 @@ export const routes = (router: KoaRouter) => {
         )
 
         ctx.status = 200
-        ctx.body = { content: { updatedCount }, ...metadata }
+        ctx.body = { content: updatedCount, ...metadata }
       } catch (err) {
         logger.error(err, 'Error bulk updating keys')
         ctx.status = 500
@@ -756,11 +753,8 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     updatedCount:
-   *                       type: integer
-   *                       description: Number of keys updated
+   *                   type: number
+   *                   description: Number of keys updated
    *       400:
    *         description: Invalid request body.
    *         content:
@@ -797,7 +791,7 @@ export const routes = (router: KoaRouter) => {
         )
 
         ctx.status = 200
-        ctx.body = { content: { updatedCount }, ...metadata }
+        ctx.body = { content: updatedCount, ...metadata }
       } catch (err) {
         logger.error(err, 'Error bulk updating flex number')
         ctx.status = 500
@@ -828,7 +822,8 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/BulkDeleteKeysResponse'
+   *                   type: number
+   *                   description: Number of keys deleted
    *       400:
    *         description: Invalid request body.
    *         content:
@@ -894,7 +889,7 @@ export const routes = (router: KoaRouter) => {
         )
 
         ctx.status = 200
-        ctx.body = { content: { deletedCount }, ...metadata }
+        ctx.body = { content: deletedCount, ...metadata }
       } catch (err) {
         logger.error(err, 'Error bulk deleting keys')
         ctx.status = 500

@@ -242,10 +242,8 @@ export const KeysApi = {
   bulkUpdateFlex: async (
     rentalObjectCode: string,
     flexNumber: number
-  ): Promise<
-    AdapterResult<{ updatedCount: number }, 'bad-request' | CommonErr>
-  > => {
-    const r = await postJSON<{ content: { updatedCount: number } }>(
+  ): Promise<AdapterResult<number, 'bad-request' | CommonErr>> => {
+    const r = await postJSON<{ content: number }>(
       `${BASE}/keys/bulk-update-flex`,
       { rentalObjectCode, flexNumber }
     )
@@ -254,13 +252,10 @@ export const KeysApi = {
 
   bulkDelete: async (
     keyIds: string[]
-  ): Promise<
-    AdapterResult<{ deletedCount: number }, 'bad-request' | CommonErr>
-  > => {
-    const r = await postJSON<{ content: { deletedCount: number } }>(
-      `${BASE}/keys/bulk-delete`,
-      { keyIds }
-    )
+  ): Promise<AdapterResult<number, 'bad-request' | CommonErr>> => {
+    const r = await postJSON<{ content: number }>(`${BASE}/keys/bulk-delete`, {
+      keyIds,
+    })
     return r.ok ? ok(r.data.content) : r
   },
 
@@ -273,13 +268,11 @@ export const KeysApi = {
       rentalObjectCode?: string
       disposed?: boolean
     }
-  ): Promise<
-    AdapterResult<{ updatedCount: number }, 'bad-request' | CommonErr>
-  > => {
-    const r = await patchJSON<{ content: { updatedCount: number } }>(
-      `${BASE}/keys/bulk-update`,
-      { keyIds, updates }
-    )
+  ): Promise<AdapterResult<number, 'bad-request' | CommonErr>> => {
+    const r = await patchJSON<{ content: number }>(`${BASE}/keys/bulk-update`, {
+      keyIds,
+      updates,
+    })
     return r.ok ? ok(r.data.content) : r
   },
 }

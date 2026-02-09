@@ -111,21 +111,21 @@ export const keyService = {
   async bulkUpdateFlex(
     rentalObjectCode: string,
     flexNumber: number
-  ): Promise<{ updatedCount: number }> {
+  ): Promise<number> {
     const { data, error } = await POST('/keys/bulk-update-flex', {
       body: { rentalObjectCode, flexNumber },
     })
     if (error) throw error
-    return data?.content as { updatedCount: number }
+    return data?.content as number
   },
 
   // Note: These endpoints use type assertions until OpenAPI types are regenerated
-  async bulkDeleteKeys(keyIds: string[]): Promise<{ deletedCount: number }> {
+  async bulkDeleteKeys(keyIds: string[]): Promise<number> {
     const { data, error } = await (POST as any)('/keys/bulk-delete', {
       body: { keyIds },
     })
     if (error) throw error
-    return data?.content as { deletedCount: number }
+    return data?.content as number
   },
 
   async bulkUpdateKeys(
@@ -137,12 +137,12 @@ export const keyService = {
       rentalObjectCode?: string
       disposed?: boolean
     }
-  ): Promise<{ updatedCount: number }> {
+  ): Promise<number> {
     const { data, error } = await (PATCH as any)('/keys/bulk-update', {
       body: { keyIds, updates },
     })
     if (error) throw error
-    return data?.content as { updatedCount: number }
+    return data?.content as number
   },
 
   // ------- KEY SYSTEMS -------

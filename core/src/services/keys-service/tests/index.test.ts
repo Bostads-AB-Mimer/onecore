@@ -323,18 +323,16 @@ describe('keys-service', () => {
 
   describe('POST /keys/bulk-update-flex', () => {
     it('responds with updated keys count on success', async () => {
-      const result = { updatedCount: 5 }
-
       jest
         .spyOn(keysAdapter.KeysApi, 'bulkUpdateFlex')
-        .mockResolvedValue({ ok: true, data: result })
+        .mockResolvedValue({ ok: true, data: 5 })
 
       const res = await request(app.callback())
         .post('/keys/bulk-update-flex')
         .send({ rentalObjectCode: '123-456-789', flexNumber: 2 })
 
       expect(res.status).toBe(200)
-      expect(res.body.content.updatedCount).toBe(5)
+      expect(res.body.content).toBe(5)
     })
 
     it('responds with 400 on bad request', async () => {
