@@ -1,41 +1,64 @@
 import { GET, POST } from './baseApi'
 import { components } from './generated/api-types'
+import { InspectionStatusFilter } from '../../../features/inspections/constants/inspectionTypes'
 
 type Inspection = components['schemas']['Inspection']
 type DetailedInspection = components['schemas']['DetailedInspection']
 type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 type SendProtocolRequest = components['schemas']['SendProtocolRequest']
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
-// export type InternalInspection = {
-//   _tag: 'internal'
-// } & components['schemas']['Inspection']
-// export type ExternalInspection = {
-//   _tag: 'external'
-// } & components['schemas']['XpandInspection']
-// // export type Inspection = InternalInspection | ExternalInspection
-// export type Inspection = ExternalInspection
+
+export interface PaginatedInspectionsResponse {
+  content: Inspection[]
+  _meta?: components['schemas']['PaginationMeta']
+  _links?: components['schemas']['PaginationLinks'][]
+}
 
 export const inspectionService = {
-  async getAllInspections(): Promise<Inspection[]> {
+  async getAllInspections(params?: {
+    page?: number
+    limit?: number
+    statusFilter?: InspectionStatusFilter
+    inspector?: string
+    address?: string
+  }): Promise<PaginatedInspectionsResponse> {
     const externalInspections = await GET('/inspections/xpand', {
-      params: { query: { skip: 0, limit: 25 } },
+      params: {
+        query: {
+          page: params?.page,
+          limit: params?.limit ?? 25,
+          statusFilter: params?.statusFilter,
+          inspector: params?.inspector,
+          address: params?.address,
+        },
+      },
     })
 
     if (externalInspections.error) throw externalInspections.error
     if (!externalInspections.data.content)
       throw new Error('No data returned from API')
 
-    return (externalInspections.data.content.inspections ?? []).map((v) => ({
-      _tag: 'external' as const,
-      ...v,
-    }))
+    return {
+      content: externalInspections.data.content.map((v) => ({
+        _tag: 'external' as const,
+        ...v,
+      })),
+      _meta: externalInspections.data._meta!,
+      _links: externalInspections.data._links!,
+    }
   },
 
-  async getInspectionsForResidence(residenceId: string): Promise<Inspection[]> {
+  async getInspectionsForResidence(
+    residenceId: string,
+    statusFilter?: InspectionStatusFilter
+  ): Promise<Inspection[]> {
     const externalInspections = await GET(
       '/inspections/xpand/residence/{residenceId}',
       {
-        params: { path: { residenceId } },
+        params: {
+          path: { residenceId },
+          query: { statusFilter },
+        },
       }
     )
     if (externalInspections.error) throw externalInspections.error

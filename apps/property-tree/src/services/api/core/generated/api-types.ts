@@ -5063,17 +5063,23 @@ export interface paths {
   "/inspections/xpand": {
     /**
      * Retrieve inspections from Xpand
-     * @description Retrieves inspections from Xpand with pagination support.
+     * @description Retrieves inspections from Xpand with pagination and status filtering support.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Number of records to skip for pagination. */
-          skip?: number;
+          /** @description Page number for pagination. */
+          page?: number;
           /** @description Maximum number of records to return. */
           limit?: number;
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: "ongoing" | "completed";
           /** @description Whether to sort the results in ascending order. */
           sortAscending?: true | false;
+          /** @description Filter inspections by inspector name. */
+          inspector?: string;
+          /** @description Filter inspections by address. */
+          address?: string;
         };
       };
       responses: {
@@ -5081,9 +5087,17 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                inspections?: components["schemas"]["Inspection"][];
+              content?: components["schemas"]["Inspection"][];
+              _meta?: {
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
               };
+              _links?: {
+                  href?: string;
+                  rel?: string;
+                }[];
             };
           };
         };
@@ -5115,6 +5129,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: "ongoing" | "completed";
+        };
         path: {
           /** @description The ID of the residence to retrieve inspections for. */
           residenceId: string;

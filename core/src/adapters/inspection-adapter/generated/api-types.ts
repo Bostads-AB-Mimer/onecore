@@ -48,24 +48,36 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Number of records to skip for pagination. */
-          skip?: number
+          /** @description Page number for pagination. */
+          page?: number
           /** @description Maximum number of records to return. */
           limit?: number
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: 'ongoing' | 'completed'
           /** @description Whether to sort the results in ascending order. */
           sortAscending?: true | false
+          /** @description Filter inspections by inspector name. */
+          inspector?: string
+          /** @description Filter inspections by address. */
+          address?: string
         }
       }
       responses: {
-        /** @description A list of inspections from Xpand */
+        /** @description A paginated list of inspections from Xpand */
         200: {
           content: {
             'application/json': {
-              content?: {
-                inspections?: components['schemas']['XpandInspection'][]
+              content?: components['schemas']['XpandInspection'][]
+              _meta?: {
+                totalRecords: number
+                page: number
+                limit: number
+                count: number
               }
-              /** @description Route metadata */
-              metadata?: Record<string, never>
+              _links?: {
+                href: string
+                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
             }
           }
         }
@@ -86,6 +98,10 @@ export interface paths {
     /** Get inspections from Xpand by residence ID */
     get: {
       parameters: {
+        query?: {
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: 'ongoing' | 'completed'
+        }
         path: {
           /** @description The ID of the residence to fetch inspections for */
           residenceId: string

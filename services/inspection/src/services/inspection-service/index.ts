@@ -1,9 +1,14 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  buildPaginatedResponse,
+} from '@onecore/utilities'
 import { registerSchema } from '../../middlewares/swagger-middleware'
 import {
   DetailedXpandInspectionSchema,
   GetInspectionsFromXpandQuerySchema,
+  GetInspectionsByResidenceIdQuerySchema,
   XpandInspectionSchema,
 } from './schemas'
 import * as xpandAdapter from './adapters/xpand-adapter'
@@ -31,41 +36,71 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get inspections from Xpand
    *     parameters:
    *       - in: query
-   *         name: skip
+   *         name: page
    *         schema:
    *           type: integer
-   *           default: 0
-   *         description: Number of records to skip for pagination.
+   *           default: 1
+   *         description: Page number for pagination.
    *       - in: query
    *         name: limit
    *         schema:
    *           type: integer
-   *           default: 100
+   *           default: 25
    *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
    *       - in: query
    *         name: sortAscending
    *         schema:
    *           type: string
    *           enum: [true, false]
    *         description: Whether to sort the results in ascending order.
+   *       - in: query
+   *         name: inspector
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by inspector name.
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by address.
    *     responses:
    *       200:
-   *         description: A list of inspections from Xpand
+   *         description: A paginated list of inspections from Xpand
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/XpandInspection'
+   *                 _meta:
    *                   type: object
    *                   properties:
-   *                     inspections:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/XpandInspection'
-   *                 metadata:
-   *                   type: object
-   *                   description: Route metadata
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
    *       500:
    *         description: Internal Server Error - Failed to fetch inspections from Xpand
    *         content:
@@ -91,13 +126,17 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { skip, limit, sortAscending } = parsedQuery.data
+    const { page, limit, statusFilter, sortAscending, inspector, address } =
+      parsedQuery.data
 
     try {
       const xpandInspections = await xpandAdapter.getInspections({
-        skip,
+        page,
         limit,
+        statusFilter,
         sortAscending,
+        inspector,
+        address,
       })
 
       if (!xpandInspections.ok) {
@@ -109,13 +148,23 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      const { inspections, totalRecords } = xpandInspections.data
+
+      const additionalParams: Record<string, string> = {}
+      if (statusFilter) additionalParams.statusFilter = statusFilter
+      if (sortAscending !== undefined)
+        additionalParams.sortAscending = String(sortAscending)
+      if (inspector) additionalParams.inspector = inspector
+      if (address) additionalParams.address = address
+
       ctx.status = 200
-      ctx.body = {
-        content: {
-          inspections: xpandInspections.data,
-        },
-        ...metadata,
-      }
+      ctx.body = buildPaginatedResponse({
+        content: inspections,
+        totalRecords,
+        ctx,
+        additionalParams,
+        defaultLimit: 25,
+      })
     } catch (error) {
       logger.error(error, 'Error fetching inspections from Xpand')
       ctx.status = 500
@@ -143,6 +192,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the residence to fetch inspections for
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
    *     responses:
    *       200:
    *         description: A list of inspections for the specified residence from Xpand
@@ -178,9 +233,18 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { residenceId } = ctx.params
 
+    const parsedQuery = GetInspectionsByResidenceIdQuerySchema.safeParse(
+      ctx.query
+    )
+    const statusFilter = parsedQuery.success
+      ? parsedQuery.data.statusFilter
+      : undefined
+
     try {
-      const xpandInspections =
-        await xpandAdapter.getInspectionsByResidenceId(residenceId)
+      const xpandInspections = await xpandAdapter.getInspectionsByResidenceId(
+        residenceId,
+        statusFilter
+      )
 
       if (!xpandInspections.ok) {
         ctx.status = 500

@@ -45,26 +45,42 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Inspection Service
    *     summary: Retrieve inspections from Xpand
-   *     description: Retrieves inspections from Xpand with pagination support.
+   *     description: Retrieves inspections from Xpand with pagination and status filtering support.
    *     parameters:
    *       - in: query
-   *         name: skip
+   *         name: page
    *         schema:
    *           type: integer
-   *           default: 0
-   *         description: Number of records to skip for pagination.
+   *           default: 1
+   *         description: Page number for pagination.
    *       - in: query
    *         name: limit
    *         schema:
    *           type: integer
-   *           default: 100
+   *           default: 25
    *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
    *       - in: query
    *         name: sortAscending
    *         schema:
    *           type: string
    *           enum: [true, false]
    *         description: Whether to sort the results in ascending order.
+   *       - in: query
+   *         name: inspector
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by inspector name.
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by address.
    *     responses:
    *       '200':
    *         description: Successfully retrieved inspections.
@@ -74,12 +90,29 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Inspection'
+   *                 _meta:
    *                   type: object
    *                   properties:
-   *                     inspections:
-   *                       type: array
-   *                       items:
-   *                         $ref: '#/components/schemas/Inspection'
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
    *       '400':
    *         description: Invalid query parameters.
    *         content:
@@ -117,17 +150,21 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { skip, limit, sortAscending } = parsedParams.data
+    const { page, limit, statusFilter, sortAscending, inspector, address } =
+      parsedParams.data
 
     try {
       const result = await inspectionAdapter.getXpandInspections({
-        skip,
+        page,
         limit,
+        statusFilter,
         sortAscending,
+        inspector,
+        address,
       })
 
       if (result.ok) {
-        const inspections = result.data ?? []
+        const inspections = result.data.content ?? []
 
         const leaseIds = inspections
           .filter(
@@ -148,10 +185,9 @@ export const routes = (router: KoaRouter) => {
 
         ctx.status = 200
         ctx.body = {
-          content: {
-            inspections: inspectionsWithLeaseData,
-          },
-          ...metadata,
+          content: inspectionsWithLeaseData,
+          _meta: result.data._meta,
+          _links: result.data._links,
         }
       } else {
         logger.error(
@@ -187,6 +223,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the residence to retrieve inspections for.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
    *     responses:
    *       '200':
    *         description: Successfully retrieved inspections for the specified residence ID.
@@ -229,9 +271,17 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { residenceId } = ctx.params
 
+    const parsedQuery =
+      schemas.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+    const statusFilter = parsedQuery.success
+      ? parsedQuery.data.statusFilter
+      : undefined
+
     try {
-      const result =
-        await inspectionAdapter.getXpandInspectionsByResidenceId(residenceId)
+      const result = await inspectionAdapter.getXpandInspectionsByResidenceId(
+        residenceId,
+        statusFilter
+      )
 
       if (result.ok) {
         const leaseIds = result.data

@@ -8,6 +8,7 @@ import * as pdfGenerator from '../helpers/pdf-generator'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import * as schemas from '../schemas'
+import { INSPECTION_STATUS_FILTER } from '../schemas'
 import {
   DetailedXpandInspectionFactory,
   XpandInspectionFactory,
@@ -33,50 +34,98 @@ describe('inspection-service index', () => {
   describe('GET /inspections/xpand', () => {
     const mockInspections = XpandInspectionFactory.buildList(2)
 
-    it('should return inspections from Xpand', async () => {
+    const mockPaginatedResponse = {
+      content: mockInspections,
+      _meta: { totalRecords: 2, page: 1, limit: 25, count: 2 },
+      _links: [
+        { href: '/inspections/xpand?page=1&limit=25', rel: 'self' as const },
+      ],
+    }
+
+    it('should return paginated inspections from Xpand', async () => {
       const getXpandInspectionsSpy = jest
         .spyOn(inspectionAdapter, 'getXpandInspections')
         .mockResolvedValue({
           ok: true,
-          data: mockInspections,
+          data: mockPaginatedResponse,
         })
 
       const res = await request(app.callback()).get('/inspections/xpand')
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toHaveProperty('inspections')
-      expect(res.body.content.inspections).toHaveLength(2)
+      expect(res.body).toHaveProperty('content')
+      expect(res.body).toHaveProperty('_meta')
+      expect(res.body).toHaveProperty('_links')
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body._meta.totalRecords).toBe(2)
       expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
-        skip: undefined,
+        page: undefined,
         limit: undefined,
+        statusFilter: undefined,
         sortAscending: undefined,
+        inspector: undefined,
+        address: undefined,
       })
     })
 
-    it('should handle pagination parameters', async () => {
+    it('should handle pagination and status filter parameters', async () => {
       const getXpandInspectionsSpy = jest
         .spyOn(inspectionAdapter, 'getXpandInspections')
         .mockResolvedValue({
           ok: true,
-          data: [mockInspections[0]],
+          data: {
+            content: [mockInspections[0]],
+            _meta: { totalRecords: 10, page: 2, limit: 5, count: 1 },
+            _links: [],
+          },
         })
 
       const res = await request(app.callback()).get(
-        '/inspections/xpand?skip=10&limit=5&sortAscending=true'
+        `/inspections/xpand?page=2&limit=5&statusFilter=${INSPECTION_STATUS_FILTER.ONGOING}&sortAscending=true`
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toHaveProperty('inspections')
+      expect(res.body.content).toHaveLength(1)
       expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
-        skip: 10,
+        page: 2,
         limit: 5,
+        statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
         sortAscending: true,
+        inspector: undefined,
+        address: undefined,
+      })
+    })
+
+    it('should handle statusFilter=completed', async () => {
+      const getXpandInspectionsSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            content: mockInspections,
+            _meta: { totalRecords: 2, page: 1, limit: 25, count: 2 },
+            _links: [],
+          },
+        })
+
+      const res = await request(app.callback()).get(
+        `/inspections/xpand?statusFilter=${INSPECTION_STATUS_FILTER.COMPLETED}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
+        page: undefined,
+        limit: undefined,
+        statusFilter: INSPECTION_STATUS_FILTER.COMPLETED,
+        sortAscending: undefined,
+        inspector: undefined,
+        address: undefined,
       })
     })
 
     it('should return 400 on invalid query params', async () => {
       const res = await request(app.callback()).get(
-        '/inspections/xpand?skip=invalid'
+        '/inspections/xpand?page=invalid'
       )
 
       expect(res.status).toBe(400)
@@ -117,7 +166,7 @@ describe('inspection-service index', () => {
         .spyOn(inspectionAdapter, 'getXpandInspections')
         .mockResolvedValue({
           ok: true,
-          data: mockInspections,
+          data: mockPaginatedResponse,
         })
 
       const resTrue = await request(app.callback()).get(
@@ -126,9 +175,12 @@ describe('inspection-service index', () => {
 
       expect(resTrue.status).toBe(200)
       expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
-        skip: undefined,
+        page: undefined,
         limit: undefined,
+        statusFilter: undefined,
         sortAscending: true,
+        inspector: undefined,
+        address: undefined,
       })
 
       getXpandInspectionsSpy.mockClear()
@@ -139,44 +191,114 @@ describe('inspection-service index', () => {
 
       expect(resFalse.status).toBe(200)
       expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
-        skip: undefined,
+        page: undefined,
         limit: undefined,
+        statusFilter: undefined,
         sortAscending: false,
+        inspector: undefined,
+        address: undefined,
       })
     })
 
-    it('should validate response schema matches CoreInspectionSchema', async () => {
-      const getXpandInspectionsSpy = jest
-        .spyOn(inspectionAdapter, 'getXpandInspections')
-        .mockResolvedValue({
-          ok: true,
-          data: mockInspections,
-        })
+    it('should validate response contains inspections in content array', async () => {
+      jest.spyOn(inspectionAdapter, 'getXpandInspections').mockResolvedValue({
+        ok: true,
+        data: mockPaginatedResponse,
+      })
 
       const res = await request(app.callback()).get('/inspections/xpand')
 
       expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.content)).toBe(true)
       expect(() =>
-        schemas.XpandInspectionSchema.array().parse(
-          res.body.content.inspections
-        )
+        schemas.XpandInspectionSchema.array().parse(res.body.content)
       ).not.toThrow()
-      expect(getXpandInspectionsSpy).toHaveBeenCalled()
+    })
+
+    it('should pass inspector query param to adapter', async () => {
+      const getXpandInspectionsSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({
+          ok: true,
+          data: mockPaginatedResponse,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand?inspector=John%20Doe'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
+        page: undefined,
+        limit: undefined,
+        statusFilter: undefined,
+        sortAscending: undefined,
+        inspector: 'John Doe',
+        address: undefined,
+      })
+    })
+
+    it('should pass address query param to adapter', async () => {
+      const getXpandInspectionsSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({
+          ok: true,
+          data: mockPaginatedResponse,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand?address=Main%20Street%201'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
+        page: undefined,
+        limit: undefined,
+        statusFilter: undefined,
+        sortAscending: undefined,
+        inspector: undefined,
+        address: 'Main Street 1',
+      })
+    })
+
+    it('should pass both inspector and address filters together', async () => {
+      const getXpandInspectionsSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({
+          ok: true,
+          data: mockPaginatedResponse,
+        })
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand?inspector=John%20Doe&address=Main%20Street%201'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getXpandInspectionsSpy).toHaveBeenCalledWith({
+        page: undefined,
+        limit: undefined,
+        statusFilter: undefined,
+        sortAscending: undefined,
+        inspector: 'John Doe',
+        address: 'Main Street 1',
+      })
     })
 
     it('should return empty array when no inspections found', async () => {
-      const getXpandInspectionsSpy = jest
-        .spyOn(inspectionAdapter, 'getXpandInspections')
-        .mockResolvedValue({
-          ok: true,
-          data: [],
-        })
+      jest.spyOn(inspectionAdapter, 'getXpandInspections').mockResolvedValue({
+        ok: true,
+        data: {
+          content: [],
+          _meta: { totalRecords: 0, page: 1, limit: 25, count: 0 },
+          _links: [],
+        },
+      })
 
       const res = await request(app.callback()).get('/inspections/xpand')
 
       expect(res.status).toBe(200)
-      expect(res.body.content.inspections).toEqual([])
-      expect(getXpandInspectionsSpy).toHaveBeenCalled()
+      expect(res.body.content).toEqual([])
+      expect(res.body._meta.totalRecords).toBe(0)
     })
   })
 
@@ -199,7 +321,27 @@ describe('inspection-service index', () => {
       expect(res.body.content).toHaveProperty('inspections')
       expect(res.body.content.inspections).toHaveLength(2)
       expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
-        'residence-123'
+        'residence-123',
+        undefined
+      )
+    })
+
+    it('should pass statusFilter to adapter when provided', async () => {
+      const getXpandInspectionsByResidenceIdSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockInspections,
+        })
+
+      const res = await request(app.callback()).get(
+        `/inspections/xpand/residence/residence-123?statusFilter=${INSPECTION_STATUS_FILTER.ONGOING}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        'residence-123',
+        INSPECTION_STATUS_FILTER.ONGOING
       )
     })
 
@@ -220,7 +362,8 @@ describe('inspection-service index', () => {
       expect(res.body).toHaveProperty('error')
       expect(res.body.error).toBe('not-found')
       expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
-        'residence-123'
+        'residence-123',
+        undefined
       )
     })
 
@@ -308,7 +451,8 @@ describe('inspection-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getXpandInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
-        'residence-abc-123'
+        'residence-abc-123',
+        undefined
       )
     })
   })
