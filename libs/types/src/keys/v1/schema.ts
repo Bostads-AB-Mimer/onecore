@@ -390,6 +390,33 @@ export const BulkUpdateFlexRequestSchema = z.object({
   flexNumber: z.number().int().min(1).max(3),
 })
 
+// Bulk delete keys request schema
+export const BulkDeleteKeysRequestSchema = z.object({
+  keyIds: z.array(z.string().uuid()).min(1).max(100),
+})
+
+// Bulk delete keys response schema
+export const BulkDeleteKeysResponseSchema = z.object({
+  deletedCount: z.number(),
+})
+
+// Bulk update keys request schema
+export const BulkUpdateKeysRequestSchema = z.object({
+  keyIds: z.array(z.string().uuid()).min(1).max(100),
+  updates: z.object({
+    keyName: z.string().optional(),
+    flexNumber: z.number().int().min(1).max(3).nullable().optional(),
+    keySystemId: z.string().uuid().nullable().optional(),
+    rentalObjectCode: z.string().optional(),
+    disposed: z.boolean().optional(),
+  }),
+})
+
+// Bulk update keys response schema
+export const BulkUpdateKeysResponseSchema = z.object({
+  updatedCount: z.number(),
+})
+
 // Signature schemas (polymorphic - supports any document type)
 
 export const SignatureResourceTypeSchema = z.enum([

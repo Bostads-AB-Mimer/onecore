@@ -44,6 +44,10 @@ import {
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
   BulkUpdateFlexRequestSchema,
+  BulkDeleteKeysRequestSchema,
+  BulkDeleteKeysResponseSchema,
+  BulkUpdateKeysRequestSchema,
+  BulkUpdateKeysResponseSchema,
   CreateSignatureRequestSchema,
   UpdateSignatureRequestSchema,
   SendSignatureRequestSchema,
@@ -138,6 +142,14 @@ export type UpdateKeyEventRequest = z.infer<typeof UpdateKeyEventRequestSchema>
 
 // Bulk update request types
 export type BulkUpdateFlexRequest = z.infer<typeof BulkUpdateFlexRequestSchema>
+export type BulkDeleteKeysRequest = z.infer<typeof BulkDeleteKeysRequestSchema>
+export type BulkDeleteKeysResponse = z.infer<
+  typeof BulkDeleteKeysResponseSchema
+>
+export type BulkUpdateKeysRequest = z.infer<typeof BulkUpdateKeysRequestSchema>
+export type BulkUpdateKeysResponse = z.infer<
+  typeof BulkUpdateKeysResponseSchema
+>
 
 // Signature types
 export type SignatureResourceType = z.infer<typeof SignatureResourceTypeSchema>

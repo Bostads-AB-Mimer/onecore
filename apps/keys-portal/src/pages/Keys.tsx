@@ -1,14 +1,19 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ListPageLayout } from '@/components/shared/layout'
 import { KeysTable } from '@/components/keys/KeysTable'
 import { AddKeyForm } from '@/components/keys/AddKeyForm'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { BulkEditKeysForm } from '@/components/keys/BulkEditKeysForm'
+import { BulkDeleteKeysDialog } from '@/components/keys/dialogs/BulkDeleteKeysDialog'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { Key, KeySystem, KeyWithSystem } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
+import { keyLoanService } from '@/services/api/keyLoanService'
+import { Pencil, Trash2 } from 'lucide-react'
 
 const Index = () => {
   const pagination = useUrlPagination()
@@ -38,6 +43,13 @@ const Index = () => {
   const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
     null
   )
+
+  // Bulk selection state
+  const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set())
+  const [showBulkEditForm, setShowBulkEditForm] = useState(false)
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [bulkLoading, setBulkLoading] = useState(false)
+  const [keysWithActiveLoans, setKeysWithActiveLoans] = useState<Key[]>([])
 
   const fetchKeys = useCallback(
     async (page: number = 1, limit: number = 60) => {
@@ -144,6 +156,20 @@ const Index = () => {
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
+
+  // Clear selection when page or filters change
+  useEffect(() => {
+    setSelectedKeyIds(new Set())
+  }, [
+    pagination.currentPage,
+    searchQuery,
+    selectedTypeFilter,
+    selectedDisposedFilter,
+    rentalObjectCode,
+    keySystemIdFilter,
+    createdAtAfter,
+    createdAtBefore,
+  ])
 
   // Handle auto-open edit form when editKeyId is in URL
   useEffect(() => {
@@ -471,6 +497,114 @@ const Index = () => {
     setEditingKey(null)
   }
 
+  // Selection handlers
+  const handleSelectionChange = useCallback(
+    (keyId: string, checked: boolean) => {
+      setSelectedKeyIds((prev) => {
+        const next = new Set(prev)
+        if (checked) {
+          next.add(keyId)
+        } else {
+          next.delete(keyId)
+        }
+        return next
+      })
+    },
+    []
+  )
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedKeyIds(new Set())
+  }, [])
+
+  // Get selected keys as array
+  const selectedKeys = useMemo(
+    () => keys.filter((k) => selectedKeyIds.has(k.id)),
+    [keys, selectedKeyIds]
+  )
+
+  // Bulk delete handler - check for active loans first
+  const handleBulkDeleteClick = async () => {
+    setBulkLoading(true)
+    try {
+      // Check which selected keys have active loans
+      const keysWithLoans: Key[] = []
+
+      for (const key of selectedKeys) {
+        try {
+          const loans = await keyLoanService.getByKeyId(key.id)
+          const hasActiveLoan = loans.some((loan) => !loan.returnedAt)
+          if (hasActiveLoan) {
+            keysWithLoans.push(key)
+          }
+        } catch {
+          // If we can't check, assume it's safe to delete
+        }
+      }
+
+      setKeysWithActiveLoans(keysWithLoans)
+      setShowBulkDeleteDialog(true)
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const handleBulkDeleteConfirm = async () => {
+    try {
+      const result = await keyService.bulkDeleteKeys(Array.from(selectedKeyIds))
+
+      // Remove deleted keys from local state
+      setKeys((prev) => prev.filter((k) => !selectedKeyIds.has(k.id)))
+      setSelectedKeyIds(new Set())
+      setShowBulkDeleteDialog(false)
+
+      toast({
+        title: 'Nycklar borttagna',
+        description: `${result.deletedCount} nycklar har tagits bort.`,
+        variant: 'destructive',
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
+      toast({
+        title: 'Kunde inte ta bort nycklar',
+        description: msg,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Bulk edit handler
+  const handleBulkEditConfirm = async (updates: {
+    flexNumber?: number | null
+    keySystemId?: string | null
+    rentalObjectCode?: string
+    disposed?: boolean
+  }) => {
+    try {
+      const result = await keyService.bulkUpdateKeys(
+        Array.from(selectedKeyIds),
+        updates
+      )
+
+      // Refetch to get updated data
+      await fetchKeys(pagination.currentPage, pagination.currentLimit)
+      setSelectedKeyIds(new Set())
+      setShowBulkEditForm(false)
+
+      toast({
+        title: 'Nycklar uppdaterade',
+        description: `${result.updatedCount} nycklar har uppdaterats.`,
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Okänt fel vid uppdatering'
+      toast({
+        title: 'Kunde inte uppdatera nycklar',
+        description: msg,
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <ListPageLayout
       title="Nycklar"
@@ -491,6 +625,14 @@ const Index = () => {
             editingKey={editingKey}
           />
         </div>
+      )}
+
+      {showBulkEditForm && (
+        <BulkEditKeysForm
+          selectedCount={selectedKeyIds.size}
+          onSave={handleBulkEditConfirm}
+          onCancel={() => setShowBulkEditForm(false)}
+        />
       )}
 
       {loading && (
@@ -517,6 +659,38 @@ const Index = () => {
         selectedKeySystem={selectedKeySystem}
         onKeySystemSelect={handleKeySystemSelect}
         onKeySystemSearch={searchKeySystems}
+        selectable
+        selectedKeyIds={selectedKeyIds}
+        onSelectionChange={handleSelectionChange}
+      />
+
+      {/* Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selectedKeyIds.size}
+        onClear={handleDeselectAll}
+        isLoading={bulkLoading}
+        actions={[
+          {
+            label: 'Redigera',
+            icon: <Pencil className="mr-2 h-4 w-4" />,
+            onClick: () => setShowBulkEditForm(true),
+          },
+          {
+            label: 'Ta bort',
+            icon: <Trash2 className="mr-2 h-4 w-4" />,
+            onClick: handleBulkDeleteClick,
+            variant: 'destructive',
+          },
+        ]}
+      />
+
+      {/* Bulk Delete Dialog */}
+      <BulkDeleteKeysDialog
+        open={showBulkDeleteDialog}
+        onOpenChange={setShowBulkDeleteDialog}
+        selectedKeys={selectedKeys}
+        keysWithActiveLoans={keysWithActiveLoans}
+        onConfirm={handleBulkDeleteConfirm}
       />
 
       <ConfirmDialog
