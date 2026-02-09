@@ -6006,10 +6006,8 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                /** @description Number of keys updated */
-                updatedCount?: number;
-              };
+              /** @description Number of keys updated */
+              content?: number;
             };
           };
         };
@@ -6044,10 +6042,8 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                /** @description Number of keys updated */
-                updatedCount?: number;
-              };
+              /** @description Number of keys updated */
+              content?: number;
             };
           };
         };
@@ -6084,10 +6080,8 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                /** @description Number of keys deleted */
-                deletedCount?: number;
-              };
+              /** @description Number of keys deleted */
+              content?: number;
             };
           };
         };

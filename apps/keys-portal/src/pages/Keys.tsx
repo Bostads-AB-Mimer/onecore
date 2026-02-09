@@ -560,7 +560,7 @@ const Index = () => {
 
       toast({
         title: 'Nycklar borttagna',
-        description: `${result.deletedCount} nycklar har tagits bort.`,
+        description: `${result} nycklar har tagits bort.`,
         variant: 'destructive',
       })
     } catch (e) {
@@ -593,7 +593,7 @@ const Index = () => {
 
       toast({
         title: 'Nycklar uppdaterade',
-        description: `${result.updatedCount} nycklar har uppdaterats.`,
+        description: `${result} nycklar har uppdaterats.`,
       })
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Okänt fel vid uppdatering'
