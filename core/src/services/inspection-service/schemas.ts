@@ -2,6 +2,17 @@ import { z } from 'zod'
 import { Lease } from '../lease-service/schemas/lease'
 import { ResidenceByRentalIdSchema } from '../property-base-service/schemas'
 
+/**
+ * Inspection status filter constants
+ */
+export const INSPECTION_STATUS_FILTER = {
+  ONGOING: 'ongoing',
+  COMPLETED: 'completed',
+} as const
+
+export type InspectionStatusFilter =
+  (typeof INSPECTION_STATUS_FILTER)[keyof typeof INSPECTION_STATUS_FILTER]
+
 export const XpandInspectionSchema = z.object({
   id: z.string(),
   status: z.string(),
@@ -9,7 +20,7 @@ export const XpandInspectionSchema = z.object({
   inspector: z.string(),
   type: z.string(),
   address: z.string(),
-  apartmentCode: z.string(),
+  apartmentCode: z.string().nullable(),
   leaseId: z.string(),
   masterKeyAccess: z.string().nullable(),
 })
@@ -95,7 +106,7 @@ export const DetailedXpandInspectionSchema = z.object({
   type: z.string(),
   residenceId: z.string(),
   address: z.string(),
-  apartmentCode: z.string(),
+  apartmentCode: z.string().nullable(),
   isFurnished: z.boolean(),
   leaseId: z.string(),
   isTenantPresent: z.boolean(),
@@ -114,11 +125,28 @@ export const DetailedInspectionSchema = DetailedXpandInspectionSchema.extend({
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({
-  skip: z.coerce.number().optional(),
+  page: z.coerce.number().optional(),
   limit: z.coerce.number().optional(),
+  statusFilter: z
+    .enum([
+      INSPECTION_STATUS_FILTER.ONGOING,
+      INSPECTION_STATUS_FILTER.COMPLETED,
+    ])
+    .optional(),
   sortAscending: z
     .string()
     .transform((s) => (s === 'true' ? true : false))
+    .optional(),
+  inspector: z.string().optional(),
+  address: z.string().optional(),
+})
+
+export const GetInspectionsByResidenceIdQuerySchema = z.object({
+  statusFilter: z
+    .enum([
+      INSPECTION_STATUS_FILTER.ONGOING,
+      INSPECTION_STATUS_FILTER.COMPLETED,
+    ])
     .optional(),
 })
 

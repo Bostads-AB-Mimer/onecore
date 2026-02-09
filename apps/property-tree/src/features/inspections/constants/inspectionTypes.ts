@@ -44,3 +44,14 @@ export function getInspectionTypeLabel(type?: string): string {
 export function isValidInspectionType(type: string): type is InspectionType {
   return Object.values(INSPECTION_TYPE).includes(type as InspectionType)
 }
+
+/**
+ * Inspection status filter constants
+ */
+export const INSPECTION_STATUS_FILTER = {
+  ONGOING: 'ongoing',
+  COMPLETED: 'completed',
+} as const
+
+export type InspectionStatusFilter =
+  (typeof INSPECTION_STATUS_FILTER)[keyof typeof INSPECTION_STATUS_FILTER]
