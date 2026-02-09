@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { leasing } from '@onecore/types'
+import { leasing, schemas } from '@onecore/types'
 import z from 'zod'
 
 import { mapLease } from './schemas/lease'
@@ -560,10 +560,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
+    ctx.body = makeSuccessResponseBody<
+      z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+    >(result.data, metadata)
   })
 
   /**
@@ -635,9 +634,10 @@ export const routes = (router: KoaRouter) => {
           residence: JSON.stringify(residenceResponse.data, null, 2),
         }
       }
-
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody({ monthlyAmount }, metadata)
+      ctx.body = makeSuccessResponseBody<
+        z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+      >({ monthlyAmount }, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching home insurance offer')
       ctx.status = 500

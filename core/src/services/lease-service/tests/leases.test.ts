@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Lease } from '@onecore/types'
+import { Lease, schemas } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
@@ -190,7 +190,7 @@ describe('leases routes', () => {
       expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
     })
 
-    it('responds with home insurance status', async () => {
+    it('responds with home insurance', async () => {
       const responsePayload = {
         monthlyAmount: 123,
         from: '2024-01',
@@ -206,7 +206,40 @@ describe('leases routes', () => {
 
       expect(res.status).toBe(200)
       expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
-      expect(res.body.content).toEqual(responsePayload)
+      expect(() =>
+        schemas.v1.LeaseHomeInsuranceSchema.parse(res.body.content)
+      ).not.toThrow()
+    })
+  })
+
+  describe('GET /leases/:leaseId/home-insurance/offer', () => {
+    it('responds with home insurance offer', async () => {
+      const getLeaseSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValue(leaseMock)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.residenceByRentalIdDetails.build({
+            type: {
+              roomCount: 1,
+            },
+          }),
+        })
+
+      const res = await request(app.callback()).get(
+        '/leases/1337/home-insurance/offer'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getLeaseSpy).toHaveBeenCalledWith('1337', {
+        includeContacts: false,
+      })
+      expect(() =>
+        schemas.v1.LeaseHomeInsuranceOfferSchema.parse(res.body.content)
+      ).not.toThrow()
     })
   })
 

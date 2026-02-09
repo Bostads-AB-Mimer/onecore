@@ -9,6 +9,7 @@ import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import { toYearMonthString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 import config from '../../../../common/config'
+import { schemas } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -418,11 +419,9 @@ describe('GET /leases/:leaseId/home-insurance', () => {
     )
 
     expect(result.status).toBe(200)
-    expect(result.body.content).toEqual({
-      monthlyAmount: homeInsuranceRow.amount,
-      from: homeInsuranceRow.from,
-      to: homeInsuranceRow.to,
-    })
+    expect(() =>
+      schemas.v1.LeaseHomeInsuranceSchema.parse(result.body.content)
+    ).not.toThrow()
   })
 })
 

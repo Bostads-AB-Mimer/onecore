@@ -5,7 +5,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { Contact, Lease, leasing } from '@onecore/types'
+import { Contact, Lease, leasing, schemas } from '@onecore/types'
 
 import {
   getContactByContactCode,
@@ -1029,7 +1029,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.body = makeSuccessResponseBody(
+    ctx.body = makeSuccessResponseBody<
+      z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+    >(
       {
         monthlyAmount: homeInsuranceRow.amount,
         from: homeInsuranceRow.from ?? undefined,

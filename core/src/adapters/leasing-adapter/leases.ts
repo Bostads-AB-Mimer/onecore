@@ -3,7 +3,7 @@ import {
   logger,
   PaginatedResponse,
 } from '@onecore/utilities'
-import { Lease, leasing } from '@onecore/types'
+import { Lease, leasing, schemas } from '@onecore/types'
 import z from 'zod'
 
 import { AdapterResult } from '../types'
@@ -13,11 +13,7 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
-type HomeInsuranceStatus = {
-  monthlyAmount: number
-  from?: string
-  to?: string
-}
+type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
 
 export const getLease = async (
   leaseId: string,
@@ -149,7 +145,7 @@ export async function addLeaseHomeInsurance(
 
 export async function getLeaseHomeInsurance(
   leaseId: string
-): Promise<AdapterResult<HomeInsuranceStatus, 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<LeaseHomeInsurance, 'not-found' | 'unknown'>> {
   const result = await axios.get(
     `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
   )
