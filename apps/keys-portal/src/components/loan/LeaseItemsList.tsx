@@ -106,9 +106,7 @@ export function LeaseItemsList({
           onCardSelectionChange?.(id, checked)
         }
       }}
-      groupBy={(item) =>
-        getLatestLoan(item.data)?.contact || '__never_loaned__'
-      }
+      groupBy={(item) => getLatestLoan(item.data)?.id || '__never_loaned__'}
       sectionBy={(item) => (getActiveLoan(item.data) ? 'loaned' : 'unloaned')}
       sectionOrder={['loaned', 'unloaned']}
       renderHeader={() => (
@@ -193,15 +191,17 @@ export function LeaseItemsList({
           </TableRow>
         )
       }
-      renderGroupHeader={(contactCode, groupItems) => {
-        if (contactCode === '__never_loaned__') {
+      renderGroupHeader={(loanId, groupItems) => {
+        if (loanId === '__never_loaned__') {
           return (
             <span className="font-semibold text-muted-foreground">
               Aldrig utlånad
             </span>
           )
         }
-        const latestLoan = getLatestLoan(groupItems[0].data)
+        const latestLoan = groupItems[0].data.loans?.find(
+          (l) => l.id === loanId
+        )
         return latestLoan ? (
           <div className="flex items-center justify-between flex-1">
             <DefaultLoanHeader loan={latestLoan} />
