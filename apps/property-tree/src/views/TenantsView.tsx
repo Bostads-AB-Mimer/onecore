@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/v3/Badge'
 import { Input } from '@/components/ui/Input'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { ChevronDown } from 'lucide-react'
-import { useTenantSearch } from '@/features/tenants/hooks/useTenantSearch'
+import { useTenantSearch } from '@/features/tenants'
 
 const TenantsView = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)

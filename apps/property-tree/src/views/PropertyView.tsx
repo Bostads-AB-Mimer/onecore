@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { usePropertyDetail } from '@/features/properties/hooks/usePropertyDetail'
+import { usePropertyDetail, PropertyBasicInfo } from '@/features/properties'
 //import { useToast } from '@/hooks/use-toast'
 import { PropertyTabs } from '@/widgets/property-tabs'
 import { useIsMobile } from '@/hooks/useMobile'
-import { PropertyHeader } from '@/features/properties/components/PropertyHeader'
-import { PropertyBasicInfo } from '@/features/properties/components/PropertyBasicInfo'
 import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
 const PropertyView = () => {
@@ -81,7 +79,11 @@ const PropertyView = () => {
           companyId={companyId}
         />
         */}
-        <PropertyHeader propertyDetail={propertyDetail} />
+        <div>
+          <h1 className="text-3xl font-bold mb-2">
+            {propertyDetail.designation}
+          </h1>
+        </div>
 
         <PropertyBasicInfo
           propertyDetail={propertyDetail}

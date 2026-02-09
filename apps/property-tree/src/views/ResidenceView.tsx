@@ -1,8 +1,10 @@
 import { useParams } from 'react-router-dom'
-import { LoadingState } from '@/features/residences/components/LoadingState'
-import { ErrorState } from '@/features/residences/components/ErrorState'
-import { useResidenceDetail } from '@/features/residences/hooks/useResidenceDetail'
-import { ResidenceBasicInfo } from '@/features/residences/components/ResidenceBasicInfo'
+import {
+  useResidenceDetail,
+  ResidenceBasicInfo,
+  LoadingState,
+  ErrorState,
+} from '@/features/residences'
 import { ResidenceTabs } from '@/widgets/residence-tabs'
 import { Lease } from '@/services/api/core'
 

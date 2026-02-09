@@ -1,7 +1,8 @@
 import { Building, Wrench, FileText, MessageSquare } from 'lucide-react'
-import { BuildingEntrances } from '@/features/buildings/components/BuildingEntrances'
-import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
-import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
+import { BuildingEntrancesTabContent } from '@/features/buildings'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { DocumentsTabContent } from '@/features/documents'
 import {
   MobileAccordion,
   MobileAccordionItem,
@@ -10,7 +11,7 @@ import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
 import { Building as BuildingType, ResidenceSummary } from '@/services/types'
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { UseQueryResult } from '@tanstack/react-query'
-import { DocumentsTab } from '@/features/documents/components/DocumentsTab'
+
 import { ContextType } from '@/types/ui'
 
 interface BuildingTabsMobileProps {
@@ -36,7 +37,7 @@ export const BuildingTabsMobile = ({
       icon: Building,
       title: 'Uppgångar',
       content: features.showBuildingEntrances ? (
-        <BuildingEntrances
+        <BuildingEntrancesTabContent
           isLoading={isLoading}
           residenceStaircaseLookupMap={residenceStaircaseLookupMap}
           basePath={basePath}
@@ -51,23 +52,23 @@ export const BuildingTabsMobile = ({
       ),
     },
     {
-      id: 'maintenance',
+      id: 'maintenance-units',
       icon: Wrench,
       title: 'Underhållsenheter',
       content: (
-        <MaintenanceUnitsTab
+        <MaintenanceUnitsTabContent
           contextType="building"
           identifier={building.code}
         />
       ),
     },
     {
-      id: 'orders',
+      id: 'work-orders',
       disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
       content: (
-        <WorkOrdersManagement
+        <WorkOrdersTabContent
           contextType={ContextType.Building}
           id={building.code}
         />
@@ -79,7 +80,10 @@ export const BuildingTabsMobile = ({
       icon: FileText,
       title: 'Dokument',
       content: (
-        <DocumentsTab contextType={ContextType.Building} id={building.id} />
+        <DocumentsTabContent
+          contextType={ContextType.Building}
+          id={building.id}
+        />
       ),
     },
   ].filter(Boolean) as MobileAccordionItem[]

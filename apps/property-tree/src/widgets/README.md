@@ -2,6 +2,10 @@
 
 Compositional layer that combines multiple features into larger, reusable UI blocks.
 
+## How this layer fits in
+
+A widget answers the question: **How do I _compose_ features together?** Put the leases tab, notes tab, and invoices tab into a tabbed layout. Widgets don't add business logic — they arrange features into cohesive UI blocks that views can use.
+
 ## Structure
 
 ```

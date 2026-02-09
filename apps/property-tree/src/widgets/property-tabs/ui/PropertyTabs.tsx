@@ -1,12 +1,19 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
-import { PropertyBuildingsTab } from '@/features/properties/components/tabs/PropertyBuildingsTab'
-import { PropertyStatisticsTab } from '@/features/properties/components/tabs/PropertyStatisticsTab'
-import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
-import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/v2/Tabs'
+
+import { PropertyBuildingsTabContent } from '@/features/properties'
+import { PropertyStatisticsTabContent } from '@/features/properties'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { DocumentsTabContent } from '@/features/documents'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
 import { PropertyTabsMobile } from './PropertyTabsMobile'
 import { useIsMobile } from '@/hooks/useMobile'
 import type { PropertyDetail } from '@/types/api'
-import { DocumentsTab } from '@/features/documents/components/DocumentsTab'
 import { ContextType } from '@/types/ui'
 
 interface PropertyTabsProps {
@@ -26,34 +33,34 @@ export const PropertyTabs = ({ propertyDetail }: PropertyTabsProps) => {
         <TabsTrigger value="statistics">Fastighetssammanställning</TabsTrigger>
         <TabsTrigger value="documents">Dokument</TabsTrigger>
         <TabsTrigger value="buildings">Byggnader</TabsTrigger>
-        <TabsTrigger value="maintenance">Underhållsenheter</TabsTrigger>
-        <TabsTrigger value="orders">Ärenden</TabsTrigger>
+        <TabsTrigger value="maintenance-units">Underhållsenheter</TabsTrigger>
+        <TabsTrigger value="work-orders">Ärenden</TabsTrigger>
       </TabsList>
 
       <TabsContent value="statistics">
-        <PropertyStatisticsTab property={propertyDetail} />
+        <PropertyStatisticsTabContent property={propertyDetail} />
       </TabsContent>
 
       <TabsContent value="documents">
-        <DocumentsTab
+        <DocumentsTabContent
           contextType={ContextType.Property}
           id={propertyDetail.id}
         />
       </TabsContent>
 
       <TabsContent value="buildings">
-        <PropertyBuildingsTab buildings={propertyDetail.buildings} />
+        <PropertyBuildingsTabContent buildings={propertyDetail.buildings} />
       </TabsContent>
 
-      <TabsContent value="maintenance">
-        <MaintenanceUnitsTab
+      <TabsContent value="maintenance-units">
+        <MaintenanceUnitsTabContent
           contextType="property"
           identifier={propertyDetail.code}
         />
       </TabsContent>
 
-      <TabsContent value="orders">
-        <WorkOrdersManagement
+      <TabsContent value="work-orders">
+        <WorkOrdersTabContent
           contextType={ContextType.Property}
           metadata={{ propertyName: propertyDetail.designation }}
           id={propertyDetail.code}

@@ -1,9 +1,11 @@
-import { Info, Building, Home, BarChart3, Wrench } from 'lucide-react'
-import { PropertyInfoTab } from '@/features/properties/components/tabs/PropertyInfoTab'
-import { PropertyBuildingsTab } from '@/features/properties/components/tabs/PropertyBuildingsTab'
-import { PropertyStatisticsTab } from '@/features/properties/components/tabs/PropertyStatisticsTab'
-import { MaintenanceUnitsTab } from '@/features/maintenance-units/components/MaintenanceUnitsTab'
-import { WorkOrdersManagement } from '@/features/work-orders/components/WorkOrdersManagement'
+import { Building, Home, BarChart3, Wrench } from 'lucide-react'
+
+import { PropertyBuildingsTabContent } from '@/features/properties'
+import { PropertyStatisticsTabContent } from '@/features/properties'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { DocumentsTabContent } from '@/features/documents'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
 import {
   MobileAccordion,
   MobileAccordionItem,
@@ -19,53 +21,56 @@ export const PropertyTabsMobile = ({
   propertyDetail,
 }: PropertyTabsMobileProps) => {
   const features = {
-    showPropertyInfo: false,
-    showPropertyStatistics: true,
-    showPropertyDocuments: false,
-    showPropertyPlanning: false,
-    showPropertyBuildings: true,
-    showPropertyMaintenance: true,
-    showPropertyOrders: true,
-    showPropertyAccess: false,
-    showPropertyMap: false,
+    showStatistics: true,
+    showBuildings: true,
+    showDocuments: true,
+    showMaintenanceUnits: true,
+    showWorkOrders: true,
   }
 
   const accordionItems: MobileAccordionItem[] = [
-    features.showPropertyInfo && {
-      id: 'info',
-      icon: Info,
-      title: 'Fastighet',
-      content: <PropertyInfoTab property={propertyDetail} />,
-    },
-    features.showPropertyStatistics && {
+    features.showStatistics && {
       id: 'statistics',
       icon: BarChart3,
       title: 'Fastighetssammanställning',
-      content: <PropertyStatisticsTab property={propertyDetail} />,
+      content: <PropertyStatisticsTabContent property={propertyDetail} />,
     },
-    features.showPropertyBuildings && {
+    features.showBuildings && {
       id: 'buildings',
       icon: Building,
       title: 'Byggnader',
-      content: <PropertyBuildingsTab buildings={propertyDetail.buildings} />,
+      content: (
+        <PropertyBuildingsTabContent buildings={propertyDetail.buildings} />
+      ),
     },
-    features.showPropertyMaintenance && {
-      id: 'maintenance',
+    features.showMaintenanceUnits && {
+      id: 'maintenance-units',
       icon: Wrench,
       title: 'Underhållsenheter',
       content: (
-        <MaintenanceUnitsTab
+        <MaintenanceUnitsTabContent
           contextType="property"
           identifier={propertyDetail.code}
         />
       ),
     },
-    features.showPropertyOrders && {
-      id: 'orders',
+    features.showDocuments && {
+      id: 'documents',
+      icon: Home,
+      title: 'Dokument',
+      content: (
+        <DocumentsTabContent
+          contextType={ContextType.Property}
+          id={propertyDetail.id}
+        />
+      ),
+    },
+    features.showWorkOrders && {
+      id: 'work-orders',
       icon: Home,
       title: 'Ärenden',
       content: (
-        <WorkOrdersManagement
+        <WorkOrdersTabContent
           contextType={ContextType.Property}
           metadata={{ propertyName: propertyDetail.designation }}
           id={propertyDetail.code}

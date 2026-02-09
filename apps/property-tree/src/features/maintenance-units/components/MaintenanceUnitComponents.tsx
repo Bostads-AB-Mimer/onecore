@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/v2/Button'
-import { ComponentCard } from '@/features/residences/components/ComponentCard'
-import { ManageComponentsDialog } from '@/features/residences/components/ManageRoomComponentsDialog'
+import { ComponentCard, ManageComponentsDialog } from '@/features/rooms'
 import { useMaintenanceUnitComponents } from '../hooks/useMaintenanceUnitComponents'
 
 interface MaintenanceUnitComponentsProps {

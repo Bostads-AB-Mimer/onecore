@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useBuildingDetail } from '@/features/buildings/hooks/useBuildingDetail'
+import { useBuildingDetail } from '@/features/buildings'
 //import { useToast } from '@/hooks/use-toast'
-import { BuildingHeader } from '@/features/buildings/components/BuildingHeader'
-import { BuildingBasicInfo } from '@/features/buildings/components/BuildingBasicInfo'
+import { BuildingBasicInfo } from '@/features/buildings'
 import { BuildingTabs } from '@/widgets/building-tabs'
 import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
 
@@ -77,10 +76,15 @@ const BuildingDetailPage = () => {
           companyId={companyId}
         />
         */}
-        <BuildingHeader
-          building={data.building}
-          propertyName={data.property?.designation}
-        />
+        <div className="space-y-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight break-words">
+                {data.building.name}
+              </h1>
+            </div>
+          </div>
+        </div>
         <BuildingBasicInfo
           building={data.building}
           property={data?.property}

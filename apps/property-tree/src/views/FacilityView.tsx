@@ -1,25 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-  ClipboardList,
-  Users,
-  MessageSquare,
-  FileText,
-  Wrench,
-  Info,
-} from 'lucide-react'
 
 import { facilityService, leaseService } from '@/services/api/core'
-import { FacilityBasicInfo } from '../features/facilities/components/FacilityBasicInfo'
-import { FacilityComponents } from '../features/facilities/components/FacilityComponents'
-import { CurrentTenant } from '../components/rental-object/CurrentTenant'
-import { WorkOrdersManagement } from '../features/work-orders/components/WorkOrdersManagement'
+import { FacilityBasicInfo } from '../features/facilities'
 import { ObjectPageLayout } from '../layouts/ObjectPageLayout'
-import { ObjectPageTabs } from '../layouts/ObjectPageTabs'
-import { RentalObjectContracts } from '../components/rental-object/RentalObjectContracts'
-import { RoomInfo } from '../features/residences/components/RoomInfo'
-
-import { ContextType } from '@/types/ui'
+import { FacilityTabs } from '@/widgets/facility-tabs'
 
 export function FacilityView() {
   const { rentalId } = useParams()
@@ -79,67 +64,13 @@ export function FacilityView() {
         />
       </div>
 
-      <ObjectPageTabs
-        defaultTab="components"
-        tabs={[
-          {
-            value: 'components',
-            label: 'Komponenter',
-            icon: Wrench,
-            content: (
-              <FacilityComponents
-                propertyObjectId={facility.propertyObjectId}
-                facilityName={facility.name || facility.code}
-              />
-            ),
-          },
-          {
-            value: 'rooms',
-            label: 'Rumsinformation',
-            icon: Info,
-            content: <RoomInfo facilityId={facility.id} />,
-          },
-          {
-            value: 'tenant',
-            label: 'Hyresgäst',
-            icon: Users,
-            content: (
-              <CurrentTenant
-                rentalPropertyId={facility.rentalInformation?.rentalId!}
-                leases={leasesQuery.data}
-                isLoading={leasesQuery.isLoading}
-              />
-            ),
-          },
-          {
-            value: 'contracts',
-            label: 'Kontrakt',
-            icon: FileText,
-            content: (
-              <RentalObjectContracts
-                rentalPropertyId={facility.rentalInformation?.rentalId!}
-              />
-            ),
-          },
-          {
-            value: 'inspections',
-            label: 'Besiktningar',
-            icon: ClipboardList,
-            disabled: true,
-          },
-          {
-            value: 'workorders',
-            label: 'Ärenden',
-            icon: MessageSquare,
-            content: (
-              <WorkOrdersManagement
-                contextType={ContextType.Residence}
-                id={facility.rentalInformation?.rentalId!}
-              />
-            ),
-          },
-        ]}
-      />
+      <div className="lg:col-span-3">
+        <FacilityTabs
+          facility={facility}
+          leases={leasesQuery.data}
+          leasesIsLoading={leasesQuery.isLoading}
+        />
+      </div>
     </ObjectPageLayout>
   )
 }

@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { useTenant } from '@/features/tenants/hooks/useTenant'
-import { useLeases } from '@/features/leases/hooks/useLeases'
+import { useTenant } from '@/features/tenants'
+import { useLeases } from '@/features/leases'
 import { useRentalProperties } from '@/hooks/useRentalProperties'
-import { TenantCard } from '@/features/tenants/components/TenantCard'
+import { TenantCard } from '@/entities/tenant'
 import {
   Tooltip,
   TooltipContent,
@@ -12,10 +12,7 @@ import {
 } from '@/components/ui/Tooltip'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { AlertTriangle } from 'lucide-react'
-import { useIsMobile } from '@/hooks/useMobile'
-import { TenantDetailTabs } from '@/features/tenants/components/tabs/TenantDetailTabs'
-import { TenantDetailTabsContent } from '@/features/tenants/components/tabs/TenantDetailTabsContent'
-import { TenantMobileAccordion } from '@/features/tenants/components/TenantMobileAccordion'
+import { TenantTabs } from '@/widgets/tenant-tabs'
 import type { Tenant } from '@/services/types'
 import type { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
@@ -56,7 +53,6 @@ interface TenantTabsSectionProps {
   leasesLoading: boolean
   leasesError: unknown
   rentalPropertiesLoading: boolean
-  isMobile: boolean
 }
 
 function TenantTabsSection({
@@ -66,7 +62,6 @@ function TenantTabsSection({
   leasesLoading,
   leasesError,
   rentalPropertiesLoading,
-  isMobile,
 }: TenantTabsSectionProps) {
   // Show error state for leases
   if (leasesError) {
@@ -84,31 +79,15 @@ function TenantTabsSection({
     )
   }
 
-  if (isMobile) {
-    return (
-      <TenantMobileAccordion
-        leases={leases ?? []}
-        rentalProperties={rentalProperties ?? {}}
-        contactCode={tenant.contactCode}
-        customerName={`${tenant.firstName} ${tenant.lastName}`}
-        isLoadingLeases={leasesLoading}
-        isLoadingProperties={rentalPropertiesLoading}
-      />
-    )
-  }
-
   return (
-    <TenantDetailTabs>
-      <TenantDetailTabsContent
-        leases={leases ?? []}
-        rentalProperties={rentalProperties ?? {}}
-        personalNumber={tenant.nationalRegistrationNumber}
-        contactCode={tenant.contactCode}
-        customerName={`${tenant.firstName} ${tenant.lastName}`}
-        isLoadingLeases={leasesLoading}
-        isLoadingProperties={rentalPropertiesLoading}
-      />
-    </TenantDetailTabs>
+    <TenantTabs
+      leases={leases ?? []}
+      rentalProperties={rentalProperties ?? {}}
+      contactCode={tenant.contactCode}
+      tenantName={`${tenant.firstName} ${tenant.lastName}`}
+      isLoadingLeases={leasesLoading}
+      isLoadingProperties={rentalPropertiesLoading}
+    />
   )
 }
 
@@ -140,13 +119,6 @@ const TenantView = () => {
     isLoading: rentalPropertiesLoading,
     error: rentalPropertiesError,
   } = useRentalProperties(rentalPropertyIds)
-
-  const isMobile = useIsMobile()
-
-  // Let the PageLayout handle sidebar state based on route
-  useEffect(() => {
-    // Default sidebar state is handled in PageLayout based on route
-  }, [isMobile])
 
   useEffect(() => {
     if (tenantError) {
@@ -193,7 +165,6 @@ const TenantView = () => {
           leasesLoading={leasesLoading}
           leasesError={leasesError}
           rentalPropertiesLoading={rentalPropertiesLoading}
-          isMobile={isMobile}
         />
       </div>
     )

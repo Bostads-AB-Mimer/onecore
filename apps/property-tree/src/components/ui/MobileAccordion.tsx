@@ -10,6 +10,7 @@ export interface MobileAccordionItem {
   id: string
   title: string
   content: React.ReactNode
+  icon?: React.ComponentType<{ className?: string }>
   disabled?: boolean
 }
 interface MobileAccordionProps {
@@ -43,6 +44,9 @@ export function MobileAccordion({
           >
             <AccordionTrigger className="px-2 py-2">
               <div className="flex items-center gap-2">
+                {item.icon && (
+                  <item.icon className="h-4 w-4 text-muted-foreground" />
+                )}
                 <span className="text-base font-medium">{item.title}</span>
               </div>
             </AccordionTrigger>
