@@ -204,6 +204,58 @@ export async function bulkUpdateFlexNumber(
 }
 
 /**
+ * Delete multiple keys by ID
+ * @param keyIds - Array of key IDs to delete
+ * @param dbConnection - Database connection
+ * @returns Number of deleted keys
+ */
+export async function bulkDeleteKeys(
+  keyIds: string[],
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<number> {
+  if (keyIds.length === 0) return 0
+  return await dbConnection(TABLE).whereIn('id', keyIds).del()
+}
+
+/**
+ * Update multiple keys by ID with the same values
+ * @param keyIds - Array of key IDs to update
+ * @param updates - Fields to update (flexNumber, keySystemId, rentalObjectCode, disposed)
+ * @param dbConnection - Database connection
+ * @returns Number of updated keys
+ */
+export async function bulkUpdateKeys(
+  keyIds: string[],
+  updates: {
+    keyName?: string
+    flexNumber?: number | null
+    keySystemId?: string | null
+    rentalObjectCode?: string
+    disposed?: boolean
+  },
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<number> {
+  if (keyIds.length === 0) return 0
+
+  // Filter out undefined values to only update fields that are provided
+  const updateData: Record<string, unknown> = {}
+  if (updates.keyName !== undefined) updateData.keyName = updates.keyName
+  if (updates.flexNumber !== undefined)
+    updateData.flexNumber = updates.flexNumber
+  if (updates.keySystemId !== undefined)
+    updateData.keySystemId = updates.keySystemId
+  if (updates.rentalObjectCode !== undefined)
+    updateData.rentalObjectCode = updates.rentalObjectCode
+  if (updates.disposed !== undefined) updateData.disposed = updates.disposed
+
+  if (Object.keys(updateData).length === 0) return 0
+
+  updateData.updatedAt = dbConnection.fn.now()
+
+  return await dbConnection(TABLE).whereIn('id', keyIds).update(updateData)
+}
+
+/**
  * Options for including related data when fetching keys
  */
 export interface KeyIncludeOptions {

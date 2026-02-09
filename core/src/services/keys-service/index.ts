@@ -1671,6 +1671,109 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /keys/bulk-update:
+   *   patch:
+   *     summary: Bulk update keys
+   *     description: Update multiple keys with the same values. Maximum 100 keys per request.
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - keyIds
+   *               - updates
+   *             properties:
+   *               keyIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: uuid
+   *                 minItems: 1
+   *                 maxItems: 100
+   *               updates:
+   *                 type: object
+   *                 properties:
+   *                   keyName:
+   *                     type: string
+   *                   flexNumber:
+   *                     type: integer
+   *                     minimum: 1
+   *                     maximum: 3
+   *                     nullable: true
+   *                   keySystemId:
+   *                     type: string
+   *                     format: uuid
+   *                     nullable: true
+   *                   rentalObjectCode:
+   *                     type: string
+   *                   disposed:
+   *                     type: boolean
+   *     responses:
+   *       200:
+   *         description: Keys updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     updatedCount:
+   *                       type: integer
+   *                       description: Number of keys updated
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch('/keys/bulk-update', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const payload = ctx.request.body as {
+      keyIds: string[]
+      updates: {
+        keyName?: string
+        flexNumber?: number | null
+        keySystemId?: string | null
+        rentalObjectCode?: string
+        disposed?: boolean
+      }
+    }
+
+    const result = await KeysApi.bulkUpdate(payload.keyIds, payload.updates)
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error bulk updating keys')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /keys/{id}:
    *   patch:
    *     summary: Update a key (partial)
@@ -1929,6 +2032,81 @@ export const routes = (router: KoaRouter) => {
       }
 
       logger.error({ err: result.err, metadata }, 'Error bulk updating flex')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /keys/bulk-delete:
+   *   post:
+   *     summary: Bulk delete keys
+   *     description: Delete multiple keys by their IDs. Maximum 100 keys per request.
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - keyIds
+   *             properties:
+   *               keyIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                   format: uuid
+   *                 minItems: 1
+   *                 maxItems: 100
+   *     responses:
+   *       200:
+   *         description: Keys deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     deletedCount:
+   *                       type: integer
+   *                       description: Number of keys deleted
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/keys/bulk-delete', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const payload = ctx.request.body as { keyIds: string[] }
+
+    const result = await KeysApi.bulkDelete(payload.keyIds)
+
+    if (!result.ok) {
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid request data', ...metadata }
+        return
+      }
+
+      logger.error({ err: result.err, metadata }, 'Error bulk deleting keys')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
       return
