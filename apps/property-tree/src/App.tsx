@@ -1,6 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CommandPaletteProvider } from '@/hooks/useCommandPalette'
+import { CommandPaletteProvider } from '@/features/search'
 import { AuthCallback } from './auth/AuthCallback'
 import { NuqsAdapter } from 'nuqs/adapters/react-router/v6'
 

@@ -1,6 +1,6 @@
-import { Button } from '../ui/Button'
+import { Button } from '@/components/ui/Button'
 import { useState } from 'react'
-import { GlobalSearchBar } from '../search/GlobalSearchBar'
+import { GlobalSearchBar } from '@/features/search'
 import { Menu, Search } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useUser } from '@/auth/useUser'

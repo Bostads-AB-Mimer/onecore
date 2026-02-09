@@ -1,7 +1,7 @@
+import { Link } from 'react-router-dom'
 import { Residence } from '@/services/types'
 import { Hotel } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
-import { useNavigate } from 'react-router-dom'
 import { useHierarchicalSelection } from '@/hooks/useHierarchicalSelection'
 import { useScrollToSelected } from '@/hooks/useScrollToSelected'
 import { toTitleCase } from '@/lib/text-utils'
@@ -21,34 +21,25 @@ export function ResidenceNavigation({
   propertyId,
   companyId,
 }: ResidenceNavigationProps) {
-  const navigate = useNavigate()
   const { isResidenceSelected } = useHierarchicalSelection()
 
   const isSelected = isResidenceSelected(residence.id)
 
   const scrollRef = useScrollToSelected<HTMLLIElement>({
-    isSelected: isSelected,
+    isSelected,
     itemType: 'residence',
   })
 
   return (
     <SidebarMenuItem ref={scrollRef}>
-      <SidebarMenuButton
-        onClick={() => {
-          navigate(`/residences/${residence.id}`, {
-            state: {
-              buildingCode,
-              staircaseCode,
-              propertyId: propertyId,
-              companyId: companyId,
-            },
-          })
-        }}
-        tooltip={residence.name}
-        isActive={isSelected}
-      >
-        <Hotel />
-        <span>LGH-{toTitleCase(residence.code)}</span>
+      <SidebarMenuButton asChild tooltip={residence.name} isActive={isSelected}>
+        <Link
+          to={`/residences/${residence.id}`}
+          state={{ buildingCode, staircaseCode, propertyId, companyId }}
+        >
+          <Hotel />
+          <span>LGH-{toTitleCase(residence.code)}</span>
+        </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

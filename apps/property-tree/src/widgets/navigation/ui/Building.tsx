@@ -1,10 +1,10 @@
 import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Building, Property } from '@/services/types'
 import { Warehouse } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { ResidenceList } from './ResidenceList'
 import { useHierarchicalSelection } from '@/hooks/useHierarchicalSelection'
-import { useNavigate, useLocation } from 'react-router-dom'
 import { useScrollToSelected } from '@/hooks/useScrollToSelected'
 
 interface BuildingNavigationProps {
@@ -18,7 +18,6 @@ export function BuildingNavigation({
   property,
   companyId,
 }: BuildingNavigationProps) {
-  const navigate = useNavigate()
   const location = useLocation()
   const { isBuildingInHierarchy, selectionState } = useHierarchicalSelection()
 
@@ -34,7 +33,6 @@ export function BuildingNavigation({
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
 
-  // Auto-expand when this building is in the selection hierarchy
   React.useEffect(() => {
     if (shouldAutoExpand) {
       setIsExpanded(true)
@@ -48,26 +46,25 @@ export function BuildingNavigation({
 
   return (
     <SidebarMenuItem ref={scrollRef}>
-      <div className="flex items-center justify-between pr-2">
-        <SidebarMenuButton
-          onClick={() => {
-            setIsExpanded(!isExpanded)
-            navigate(`/buildings/${building.id}`, {
-              state: {
-                propertyId: property.id,
-                buildingCode: building.code,
-                companyId: companyId,
-              },
-            })
+      <SidebarMenuButton
+        asChild
+        tooltip={building.code}
+        isActive={isDirectlySelected}
+        isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
+      >
+        <Link
+          to={`/buildings/${building.id}`}
+          state={{
+            propertyId: property.id,
+            buildingCode: building.code,
+            companyId,
           }}
-          tooltip={building.code}
-          isActive={isDirectlySelected}
-          isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
+          onClick={() => setIsExpanded(!isExpanded)}
         >
           <Warehouse />
           <span>{building.code}</span>
-        </SidebarMenuButton>
-      </div>
+        </Link>
+      </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">
           <ResidenceList
