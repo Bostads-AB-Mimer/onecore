@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTenantComments } from '../hooks/useTenantComments'
 import { useCreateTenantComment } from '../hooks/useCreateTenantComment'
-import { useUser } from '@/auth/useUser'
+import { useUser } from '@/entities/user'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { Button } from '@/components/ui/v2/Button'
 import { Textarea } from '@/components/ui/Textarea'

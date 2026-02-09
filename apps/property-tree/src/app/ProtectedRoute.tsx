@@ -1,8 +1,8 @@
 import React from 'react'
 import { match } from 'ts-pattern'
 
-import { useAuth } from './useAuth'
-import { useUser } from './useUser'
+import { useAuth } from '@/features/auth'
+import { useUser } from '@/entities/user'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { login } = useAuth()
