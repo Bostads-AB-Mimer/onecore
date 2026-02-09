@@ -80,6 +80,35 @@ export const getTenantByContactCode = async (
   }
 }
 
+const getTenantById = async (
+  id: string
+): Promise<AdapterResult<TenfastTenant | null, string>> => {
+  try {
+    const tenantResponse = await makeTenfastRequest(
+      `/v1/hyresvard/hyresgaster/${id}`
+    )
+    if (tenantResponse.status !== 200) {
+      return { ok: false, err: tenantResponse.statusText }
+    }
+
+    const parsedResponse = TenfastTenantByContactCodeResponseSchema.safeParse(
+      tenantResponse.data
+    )
+    if (!parsedResponse.success) {
+      console.error(parsedResponse.error)
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data.records[0] ?? null,
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
 export const getInvoicesForTenant = async (
   tenantId: string
 ): Promise<AdapterResult<Invoice[], string>> => {
@@ -145,11 +174,24 @@ export const getInvoiceByOcr = async (
       return { ok: false, err: 'schema-error' }
     }
 
+    const invoice = parsedResponse.data.records[0]
+      ? transformToInvoice(parsedResponse.data.records[0])
+      : null
+
+    if (invoice && parsedResponse.data.records[0].recipientId) {
+      const tenantResult = await getTenantById(
+        parsedResponse.data.records[0].recipientId
+      )
+
+      console.log(
+        'tenant',
+        tenantResult.ok ? tenantResult.data : tenantResult.err
+      )
+    }
+
     return {
       ok: true,
-      data: parsedResponse.data.records[0]
-        ? transformToInvoice(parsedResponse.data.records[0])
-        : null,
+      data: invoice,
     }
   } catch (err: any) {
     logger.error(err)
@@ -261,10 +303,6 @@ export const getInvoicesNotExported = async (
     '2003625123130',
     '2003525123131',
     '2003425123132',
-    '2003325123133',
-    '2003225123134',
-    '2003125123135',
-    '2003025123136',
   ]
 
   for (const ocrNumber of ocrNumbers) {

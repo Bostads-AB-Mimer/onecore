@@ -88,6 +88,7 @@ export type ExportedInvoiceRow = {
   contactCode?: string
   tenantName?: string
   company?: string
+  counterPartCode?: string | undefined
 
   // remove?
   roundoff?: number
@@ -106,6 +107,7 @@ export type AggregatedRow = {
   projectCode?: string
   freeCode?: string
   totalAccount: string
+  counterPartCode?: string
 }
 
 export type LedgerRow = {
