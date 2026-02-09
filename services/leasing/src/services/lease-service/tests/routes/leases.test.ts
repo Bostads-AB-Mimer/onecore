@@ -277,7 +277,7 @@ describe('POST /leases/:leaseId/home-insurance', () => {
     expect(result.status).toBe(500)
   })
 
-  it('returns 422 when home insurance already exists', async () => {
+  it('returns 422 when home insurance already exists and is not cancelled', async () => {
     const leaseWithHomeInsurance = factory.tenfastLease.build({
       hyror: [
         factory.tenfastInvoiceRow.build({
@@ -296,7 +296,7 @@ describe('POST /leases/:leaseId/home-insurance', () => {
 
     expect(result.status).toBe(422)
     expect(result.body.error).toBe(
-      'Home insurance rent row already exists for this lease'
+      'Home insurance already exists and is not cancelled for this lease'
     )
   })
 
@@ -310,7 +310,7 @@ describe('POST /leases/:leaseId/home-insurance', () => {
       .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
 
     jest
-      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback())
@@ -330,7 +330,7 @@ describe('POST /leases/:leaseId/home-insurance', () => {
       .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
 
     const createInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'createLeaseInvoiceRow')
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
       .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback())
@@ -342,14 +342,15 @@ describe('POST /leases/:leaseId/home-insurance', () => {
     expect(createInvoiceRowSpy).toHaveBeenCalledTimes(1)
     expect(createInvoiceRowSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        leaseId: '123',
-        invoiceRow: expect.objectContaining({
-          amount: 100,
-          article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-          label: 'Hemförsäkring',
-          vat: 0,
-          from: expect.any(String),
-        }),
+        rowsToAdd: expect.arrayContaining([
+          expect.objectContaining({
+            amount: 100,
+            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+            label: 'Hemförsäkring',
+            vat: 0,
+          }),
+        ]),
+        rowsToDelete: [],
       })
     )
   })
@@ -426,7 +427,7 @@ describe('GET /leases/:leaseId/home-insurance', () => {
 })
 
 describe('POST /leases/:leaseId/home-insurance/cancel', () => {
-  it('deletes and returns null', async () => {
+  it('cancels and returns null', async () => {
     const homeInsuranceRow = factory.tenfastInvoiceRow.build({
       article: config.tenfast.leaseRentRows.homeInsurance.articleId,
     })
@@ -438,7 +439,7 @@ describe('POST /leases/:leaseId/home-insurance/cancel', () => {
     })
 
     const replaceInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'replaceLeaseInvoiceRow')
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
       .mockResolvedValueOnce({ ok: true, data: null })
 
     const endDate = new Date('2024-10-01')
@@ -450,15 +451,17 @@ describe('POST /leases/:leaseId/home-insurance/cancel', () => {
     expect(result.body.content).toEqual(null)
     expect(replaceInvoiceRowSpy).toHaveBeenCalledWith({
       leaseId: '123',
-      invoiceRowId: homeInsuranceRow._id,
-      invoiceRow: {
-        amount: homeInsuranceRow.amount,
-        vat: homeInsuranceRow.vat,
-        article: homeInsuranceRow.article,
-        label: homeInsuranceRow.label,
-        from: homeInsuranceRow.from ?? undefined,
-        to: toYearMonthString(endDate),
-      },
+      rowsToDelete: [homeInsuranceRow._id],
+      rowsToAdd: [
+        {
+          amount: homeInsuranceRow.amount,
+          vat: homeInsuranceRow.vat,
+          article: homeInsuranceRow.article,
+          label: homeInsuranceRow.label,
+          from: homeInsuranceRow.from ?? undefined,
+          to: toYearMonthString(endDate),
+        },
+      ],
     })
   })
 
@@ -475,7 +478,7 @@ describe('POST /leases/:leaseId/home-insurance/cancel', () => {
     })
 
     const replaceInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'replaceLeaseInvoiceRow')
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await request(app.callback())

@@ -903,68 +903,6 @@ describe(tenfastAdapter.createLease, () => {
   })
 })
 
-describe(tenfastAdapter.createLeaseInvoiceRow, () => {
-  it('creates and returns null', async () => {
-    const invoiceRow = factory.tenfastInvoiceRow.build()
-
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 200,
-      data: invoiceRow,
-    })
-
-    const result = await tenfastAdapter.createLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRow: invoiceRow,
-    })
-
-    expect(result).toEqual({ ok: true, data: null })
-  })
-
-  it('returns ok false on error', async () => {
-    const invoiceRow = factory.tenfastInvoiceRow.build()
-
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 500,
-      data: invoiceRow,
-    })
-
-    const result = await tenfastAdapter.createLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRow: invoiceRow,
-    })
-
-    expect(result).toEqual({ ok: false, err: 'unknown' })
-  })
-})
-
-describe(tenfastAdapter.deleteLeaseInvoiceRow, () => {
-  it('deletes and returns null', async () => {
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 200,
-    })
-
-    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRowId: 'invoice-row-id',
-    })
-
-    expect(result).toEqual({ ok: true, data: null })
-  })
-
-  it('returns ok false on error', async () => {
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 500,
-      data: null,
-    })
-
-    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRowId: 'invoice-row-id',
-    })
-    expect(result).toEqual({ ok: false, err: 'unknown' })
-  })
-})
-
 describe(tenfastAdapter.preliminaryTerminateLease, () => {
   const leaseId = '216-704-00-0022/02'
   const contactCode = 'P12345'

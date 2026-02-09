@@ -1395,25 +1395,6 @@ export interface paths {
         };
       };
     };
-    /** Delete home insurance for a lease */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string;
-        };
-      };
-      responses: {
-        /** @description Home insurance deleted. */
-        200: {
-          content: never;
-        };
-        /** @description Internal server error. */
-        500: {
-          content: never;
-        };
-      };
-    };
   };
   "/leases/{leaseId}/home-insurance/offer": {
     /** Get home insurance offer for a lease */
@@ -1431,6 +1412,38 @@ export interface paths {
         };
         /** @description Lease or rental object not found. */
         404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/home-insurance/cancel": {
+    /** Cancel home insurance for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date-time
+             * @description Desired end date for home insurance.
+             */
+            endDate: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Home insurance cancelled. */
+        200: {
           content: never;
         };
         /** @description Internal server error. */

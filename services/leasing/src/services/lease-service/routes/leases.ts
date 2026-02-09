@@ -917,35 +917,40 @@ export const routes = (router: KoaRouter) => {
           row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
       )
 
-      if (existingHomeInsurance) {
+      if (existingHomeInsurance && existingHomeInsurance.to == null) {
         ctx.status = 422
         ctx.body = {
-          error: 'Home insurance rent row already exists for this lease',
+          error:
+            'Home insurance already exists and is not cancelled for this lease',
           ...metadata,
         }
 
         return
       }
 
-      const addHomeInsuranceResult = await tenfastAdapter.createLeaseInvoiceRow(
-        {
+      const updateHomeInsuranceResult =
+        await tenfastAdapter.updateLeaseInvoiceRows({
           leaseId: ctx.params.leaseId,
-          invoiceRow: {
-            amount: ctx.request.body.monthlyAmount,
-            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-            label: 'Hemförsäkring', // TODO: Where should label be decided?
-            vat: 0, // TODO: No VAT on insurance?
-            // TODO: Mimer.nu lets you pick day that home insurance starts
-            // but TenFAST only accepts yyyy-mm
-            from: toYearMonthString(ctx.request.body.from),
-          },
-        }
-      )
+          rowsToDelete: existingHomeInsurance?._id
+            ? [existingHomeInsurance._id]
+            : [],
+          rowsToAdd: [
+            {
+              amount: ctx.request.body.monthlyAmount,
+              article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+              label: 'Hemförsäkring', // TODO: Where should label be decided?
+              vat: 0, // TODO: No VAT on insurance?
+              // TODO: Mimer.nu lets you pick day that home insurance starts
+              // but TenFAST only accepts yyyy-mm
+              from: toYearMonthString(ctx.request.body.from),
+            },
+          ],
+        })
 
-      if (!addHomeInsuranceResult.ok) {
+      if (!updateHomeInsuranceResult.ok) {
         ctx.status = 500
         ctx.body = {
-          error: addHomeInsuranceResult.err,
+          error: updateHomeInsuranceResult.err,
           ...metadata,
         }
 
@@ -953,7 +958,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 201
-      ctx.body = makeSuccessResponseBody(addHomeInsuranceResult.data, metadata)
+      ctx.body = makeSuccessResponseBody(
+        updateHomeInsuranceResult.data,
+        metadata
+      )
     }
   )
 
@@ -1107,20 +1115,20 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const endMonth = toYearMonthString(ctx.request.body.endDate)
-
       const replaceLeaseInvoiceRow =
-        await tenfastAdapter.replaceLeaseInvoiceRow({
+        await tenfastAdapter.updateLeaseInvoiceRows({
           leaseId: ctx.params.leaseId,
-          invoiceRowId: homeInsuranceRow._id,
-          invoiceRow: {
-            amount: homeInsuranceRow.amount,
-            vat: homeInsuranceRow.vat,
-            article: homeInsuranceRow.article,
-            label: homeInsuranceRow.label,
-            from: homeInsuranceRow.from ?? undefined,
-            to: endMonth,
-          },
+          rowsToDelete: [homeInsuranceRow._id],
+          rowsToAdd: [
+            {
+              amount: homeInsuranceRow.amount,
+              vat: homeInsuranceRow.vat,
+              article: homeInsuranceRow.article,
+              label: homeInsuranceRow.label,
+              from: homeInsuranceRow.from ?? undefined,
+              to: toYearMonthString(ctx.request.body.endDate),
+            },
+          ],
         })
 
       if (!replaceLeaseInvoiceRow.ok) {
