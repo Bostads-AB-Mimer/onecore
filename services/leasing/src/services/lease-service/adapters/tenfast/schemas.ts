@@ -139,9 +139,9 @@ export const NotificationTypeSchema = z.enum([
   'none',
 ])
 
-// Helper to handle optional date fields that might be empty strings, null, or undefined
+// Helper to handle optional date fields that might be empty strings, null, undefined, or Date objects
 const optionalDateField = z
-  .union([z.string(), z.null(), z.undefined()])
+  .union([z.string(), z.date(), z.null(), z.undefined()])
   .transform((val) => {
     if (!val || val === '') return null
     return val
