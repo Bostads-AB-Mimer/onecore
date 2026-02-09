@@ -170,11 +170,13 @@ export async function getLeaseHomeInsurance(
   return { ok: false, err: 'unknown' }
 }
 
-export async function deleteLeaseHomeInsurance(
-  leaseId: string
+export async function cancelLeaseHomeInsurance(
+  leaseId: string,
+  params: { endDate: Date }
 ): Promise<AdapterResult<null, 'unknown' | 'not-found'>> {
-  const result = await axios.delete(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
+  const result = await axios.post(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance/cancel`,
+    params
   )
 
   if (result.status === 404) {

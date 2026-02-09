@@ -458,7 +458,7 @@ export {
   getLeasesByRentalObjectCode,
   addLeaseHomeInsurance,
   getLeaseHomeInsurance,
-  deleteLeaseHomeInsurance,
+  cancelLeaseHomeInsurance,
   getBuildingManagers,
   searchLeases,
 } from './leases'

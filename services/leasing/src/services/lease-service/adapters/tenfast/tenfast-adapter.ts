@@ -846,6 +846,34 @@ export async function deleteLeaseInvoiceRow(params: {
   }
 }
 
+export async function replaceLeaseInvoiceRow(params: {
+  leaseId: string
+  invoiceRowId: string
+  invoiceRow: Omit<TenfastInvoiceRow, '_id'>
+}): Promise<AdapterResult<null, 'unknown'>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(params.leaseId)}/rows?hyresvard=${tenfastCompanyId}`,
+      data: {
+        // TODO: How to handle vatEnabled?
+        vatEnabled: true,
+        rowsToDelete: [params.invoiceRowId],
+        rowsToAdd: [params.invoiceRow],
+      },
+    })
+
+    if (res.status === 200) {
+      return { ok: true, data: null }
+    } else {
+      throw { status: res.status, data: res.data }
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.replaceLeaseInvoiceRow')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // TODO: maybe move to utilities and rework
 function mapHttpError(err: unknown): { err: string } {
   if (isAxiosError(err)) {

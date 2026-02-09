@@ -782,9 +782,9 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/home-insurance:
-   *   delete:
-   *     summary: Delete home insurance for a lease
+   * /leases/{leaseId}/home-insurance/cancel:
+   *   post:
+   *     summary: Cancel home insurance for a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -794,53 +794,90 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Desired end date for home insurance.
    *     responses:
    *       200:
-   *         description: Home insurance deleted.
+   *         description: Home insurance cancelled.
    *       500:
    *         description: Internal server error.
    */
-  router.delete('/leases/:leaseId/home-insurance', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
-      includeContacts: false,
-    })
+  router.post(
+    '/leases/:leaseId/home-insurance/cancel',
+    parseRequestBody(leasing.v1.CancelLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+        includeContacts: false,
+      })
 
-    if (!lease) {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Lease not found',
-        ...metadata,
+      if (!lease) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    const homeInsurance = leasingAdapter.getLeaseHomeInsurance(
-      ctx.params.leaseId
-    )
+      const homeInsurance = await leasingAdapter.getLeaseHomeInsurance(
+        ctx.params.leaseId
+      )
 
-    if (!homeInsurance) {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Home insurance not found',
-        ...metadata,
+      if (!homeInsurance.ok) {
+        if (homeInsurance.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Home insurance not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: homeInsurance.err,
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    const deleteLeaseHomeInsuranceResult =
-      await leasingAdapter.deleteLeaseHomeInsurance(ctx.params.leaseId)
-
-    if (!deleteLeaseHomeInsuranceResult.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: deleteLeaseHomeInsuranceResult.err,
-        ...metadata,
+      if (!homeInsurance.data) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Home insurance not found',
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody(null, metadata)
-  })
+      const cancelLeaseHomeInsuranceResult =
+        await leasingAdapter.cancelLeaseHomeInsurance(ctx.params.leaseId, {
+          endDate: ctx.request.body.endDate,
+        })
+
+      if (!cancelLeaseHomeInsuranceResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: cancelLeaseHomeInsuranceResult.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(null, metadata)
+    }
+  )
 }

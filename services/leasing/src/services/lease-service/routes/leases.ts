@@ -1033,10 +1033,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{id}/home-insurance:
-   *   delete:
-   *     summary: Delete lease home insurance
-   *     description: Delete lease home insurance.
+   * /leases/{id}/home-insurance/cancel:
+   *   post:
+   *     summary: Cancel lease home insurance
+   *     description: Cancel lease home insurance.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -1045,6 +1045,19 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Desired end date for home insurance.
    *     responses:
    *       200:
    *         description: Successfully deleted home insurance.
@@ -1053,59 +1066,76 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.delete('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+  router.post(
+    '(.*)/leases/:leaseId/home-insurance/cancel',
+    parseRequestBody(leasing.v1.CancelLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
 
-    const lease = await tenfastAdapter.getLeaseByExternalId(ctx.params.leaseId)
-    if (!lease.ok) {
-      if (lease.err === 'not-found') {
-        ctx.status = 404
+      const lease = await tenfastAdapter.getLeaseByExternalId(
+        ctx.params.leaseId
+      )
+      if (!lease.ok) {
+        if (lease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
         ctx.body = {
-          error: 'Lease not found',
+          error: lease.err,
           ...metadata,
         }
         return
       }
 
-      ctx.status = 500
-      ctx.body = {
-        error: lease.err,
-        ...metadata,
+      const homeInsuranceRow = lease.data.hyror.find(
+        (row) =>
+          row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+      )
+
+      if (!homeInsuranceRow || !homeInsuranceRow.article) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Home insurance not found',
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    const homeInsuranceRow = lease.data.hyror.find(
-      (row) =>
-        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
-    )
+      const endMonth = toYearMonthString(ctx.request.body.endDate)
 
-    if (!homeInsuranceRow || !homeInsuranceRow.article) {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Home insurance not found',
-        ...metadata,
+      const replaceLeaseInvoiceRow =
+        await tenfastAdapter.replaceLeaseInvoiceRow({
+          leaseId: ctx.params.leaseId,
+          invoiceRowId: homeInsuranceRow._id,
+          invoiceRow: {
+            amount: homeInsuranceRow.amount,
+            vat: homeInsuranceRow.vat,
+            article: homeInsuranceRow.article,
+            label: homeInsuranceRow.label,
+            from: homeInsuranceRow.from ?? undefined,
+            to: endMonth,
+          },
+        })
+
+      if (!replaceLeaseInvoiceRow.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: replaceLeaseInvoiceRow.err,
+          ...metadata,
+        }
+        return
       }
-      return
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(null, metadata)
     }
-
-    const deleteLeaseInvoiceRow = await tenfastAdapter.deleteLeaseInvoiceRow({
-      leaseId: ctx.params.leaseId,
-      invoiceRowId: homeInsuranceRow._id,
-    })
-
-    if (!deleteLeaseInvoiceRow.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: deleteLeaseInvoiceRow.err,
-        ...metadata,
-      }
-      return
-    }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody(null, metadata)
-  })
+  )
 
   /**
    * @swagger

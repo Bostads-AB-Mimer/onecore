@@ -65,3 +65,7 @@ export const AddLeaseHomeInsuranceRequestSchema = z.object({
   from: z.coerce.date(),
   monthlyAmount: z.number(),
 })
+
+export const CancelLeaseHomeInsuranceRequestSchema = z.object({
+  endDate: z.coerce.date(),
+})

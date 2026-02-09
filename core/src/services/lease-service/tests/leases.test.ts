@@ -278,7 +278,7 @@ describe('leases routes', () => {
     })
   })
 
-  describe('DELETE /leases/:leaseId/home-insurance', () => {
+  describe('POST /leases/:leaseId/home-insurance/cancel', () => {
     it('returns 500 when adapter returns error', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'getLease')
@@ -291,16 +291,18 @@ describe('leases routes', () => {
           data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
         })
 
-      const deleteRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'deleteLeaseHomeInsurance')
+      const cancelHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'cancelLeaseHomeInsurance')
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
-      const res = await request(app.callback()).delete(
-        '/leases/1337/home-insurance'
-      )
+      const res = await request(app.callback())
+        .post('/leases/1337/home-insurance/cancel')
+        .send({ endDate: new Date('2024-10-01') })
 
       expect(res.status).toBe(500)
-      expect(deleteRentRowSpy).toHaveBeenCalledWith('1337')
+      expect(cancelHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+        endDate: expect.any(Date),
+      })
     })
 
     it('deletes home insurance', async () => {
@@ -315,16 +317,18 @@ describe('leases routes', () => {
           data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
         })
 
-      const deleteRentRowSpy = jest
-        .spyOn(tenantLeaseAdapter, 'deleteLeaseHomeInsurance')
+      const cancelHomeInsuranceSpy = jest
+        .spyOn(tenantLeaseAdapter, 'cancelLeaseHomeInsurance')
         .mockResolvedValueOnce({ ok: true, data: null })
 
-      const res = await request(app.callback()).delete(
-        '/leases/1337/home-insurance'
-      )
+      const res = await request(app.callback())
+        .post('/leases/1337/home-insurance/cancel')
+        .send({ endDate: new Date('2024-10-01') })
 
       expect(res.status).toBe(200)
-      expect(deleteRentRowSpy).toHaveBeenCalledWith('1337')
+      expect(cancelHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+        endDate: expect.any(Date),
+      })
       expect(res.body.content).toBeNull()
     })
   })

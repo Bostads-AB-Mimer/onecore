@@ -425,30 +425,41 @@ describe('GET /leases/:leaseId/home-insurance', () => {
   })
 })
 
-describe('DELETE /leases/:leaseId/home-insurance', () => {
+describe('POST /leases/:leaseId/home-insurance/cancel', () => {
   it('deletes and returns null', async () => {
+    const homeInsuranceRow = factory.tenfastInvoiceRow.build({
+      article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+    })
     jest.spyOn(tenfastAdapter, 'getLeaseByExternalId').mockResolvedValueOnce({
       ok: true,
       data: factory.tenfastLease.build({
-        hyror: [
-          factory.tenfastInvoiceRow.build({
-            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-          }),
-        ],
+        hyror: [homeInsuranceRow],
       }),
     })
 
-    const deleteInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
+    const replaceInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'replaceLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: true, data: null })
 
-    const result = await request(app.callback()).delete(
-      '/leases/123/home-insurance'
-    )
+    const endDate = new Date('2024-10-01')
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate })
 
     expect(result.status).toBe(200)
     expect(result.body.content).toEqual(null)
-    expect(deleteInvoiceRowSpy).toHaveBeenCalled()
+    expect(replaceInvoiceRowSpy).toHaveBeenCalledWith({
+      leaseId: '123',
+      invoiceRowId: homeInsuranceRow._id,
+      invoiceRow: {
+        amount: homeInsuranceRow.amount,
+        vat: homeInsuranceRow.vat,
+        article: homeInsuranceRow.article,
+        label: homeInsuranceRow.label,
+        from: homeInsuranceRow.from ?? undefined,
+        to: toYearMonthString(endDate),
+      },
+    })
   })
 
   it('returns 500 on error', async () => {
@@ -463,16 +474,16 @@ describe('DELETE /leases/:leaseId/home-insurance', () => {
       }),
     })
 
-    const deleteInvoiceRowSpy = jest
-      .spyOn(tenfastAdapter, 'deleteLeaseInvoiceRow')
+    const replaceInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'replaceLeaseInvoiceRow')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const result = await request(app.callback()).delete(
-      '/leases/123/home-insurance'
-    )
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: new Date('2024-10-01') })
 
     expect(result.status).toBe(500)
 
-    expect(deleteInvoiceRowSpy).toHaveBeenCalled()
+    expect(replaceInvoiceRowSpy).toHaveBeenCalled()
   })
 })
