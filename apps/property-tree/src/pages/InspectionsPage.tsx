@@ -1,16 +1,12 @@
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Check, ChevronsUpDown, X } from 'lucide-react'
-
-import {
-  InspectionsTable,
-  useInspectionFilters,
-  useInspectionSorting,
-} from '@/features/inspections'
+import { useState } from 'react'
+import { ChevronsUpDown, Check, X } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
-import { inspectionService } from '@/services/api/core/inspectionService'
-
+import { useInspectionFilters } from '@/features/inspections/hooks/useInspectionFilters'
+import { useInspections } from '@/features/inspections/hooks/useInspections'
+import { INSPECTION_STATUS_FILTER } from '@/features/inspections/constants/inspectionTypes'
+import { InspectionsTable } from '@/features/inspections'
+import { useUrlPagination } from '@/shared/hooks'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -24,114 +20,102 @@ import {
   CommandList,
 } from '@/shared/ui/Command'
 import { ViewLayout } from '@/shared/ui/layout'
+import { Pagination } from '@/shared/ui/Pagination'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 type Inspection = components['schemas']['Inspection']
 
 export default function InspectionsPage() {
-  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
-  const inspectionsQuery = useQuery({
-    queryKey: ['inspections'],
-    queryFn: () => inspectionService.getAllInspections(),
-  })
+  const [activeTab, setActiveTab] = useState<string>(
+    INSPECTION_STATUS_FILTER.ONGOING
+  )
 
-  const [inspections, setInspections] = useState<Inspection[]>([])
-
-  const [selectedInspection, setSelectedInspection] =
-    useState<Inspection | null>(null)
-
-  // Update inspections when query data changes
-  useEffect(() => {
-    if (inspectionsQuery.data) {
-      setInspections(inspectionsQuery.data)
-    }
-  }, [inspectionsQuery.data])
-
-  // Use custom hooks BEFORE conditional returns
   const {
+    page: ongoingPage,
+    setPage: setOngoingPage,
+    limit,
+  } = useUrlPagination({ defaultLimit: 25 })
+
+  const [completedPage, setCompletedPage] = useState(1)
+
+  // Filter state needs to be initialized before queries so we can pass filter
+  // values as server-side query params. The dropdown options are derived from
+  // whichever tab's data is currently visible (populated after the queries run).
+  const [selectedInspector, setSelectedInspectorRaw] = useState('')
+  const [selectedAddress, setSelectedAddressRaw] = useState('')
+
+  const ongoingQuery = useInspections(
+    INSPECTION_STATUS_FILTER.ONGOING,
+    ongoingPage,
+    limit,
     selectedInspector,
-    setSelectedInspector,
-    selectedAddress,
-    setSelectedAddress,
-    selectedDistrict,
-    setSelectedDistrict,
-    selectedPriority,
-    setSelectedPriority,
+    selectedAddress
+  )
+  const completedQuery = useInspections(
+    INSPECTION_STATUS_FILTER.COMPLETED,
+    completedPage,
+    limit,
+    selectedInspector,
+    selectedAddress
+  )
+
+  const ongoingInspections = ongoingQuery.data ?? []
+  const completedInspections = completedQuery.data ?? []
+
+  const currentInspections =
+    activeTab === INSPECTION_STATUS_FILTER.COMPLETED
+      ? completedInspections
+      : ongoingInspections
+
+  const {
     openInspectorDropdown,
     setOpenInspectorDropdown,
     openAddressDropdown,
     setOpenAddressDropdown,
-    openDistrictDropdown,
-    setOpenDistrictDropdown,
-    openPriorityDropdown,
-    setOpenPriorityDropdown,
     uniqueInspectors,
     uniqueAddresses,
-    // uniqueDistricts,
-    // priorityOptions,
-    filterInspections,
-    clearFilters,
-    hasActiveFilters,
-  } = useInspectionFilters(inspections)
+    clearFilters: rawClearFilters,
+  } = useInspectionFilters(currentInspections)
 
-  const { sortInspections } = useInspectionSorting()
+  // Wrap filter setters to reset page to 1 when filters change
+  const setSelectedInspector = (value: string) => {
+    setSelectedInspectorRaw(value)
+    setOngoingPage(1)
+    setCompletedPage(1)
+  }
 
-  if (inspectionsQuery.isLoading) {
+  const setSelectedAddress = (value: string) => {
+    setSelectedAddressRaw(value)
+    setOngoingPage(1)
+    setCompletedPage(1)
+  }
+
+  const clearFilters = () => {
+    rawClearFilters()
+    setSelectedInspectorRaw('')
+    setSelectedAddressRaw('')
+    setOngoingPage(1)
+    setCompletedPage(1)
+  }
+
+  const myInspections: Inspection[] = []
+
+  const ongoingTotalRecords = ongoingQuery.meta?.totalRecords ?? 0
+  const completedTotalRecords = completedQuery.meta?.totalRecords ?? 0
+
+  const isLoading = ongoingQuery.isLoading && completedQuery.isLoading
+
+  if (isLoading) {
     return <div>Loading inspections...</div>
   }
 
-  if (inspectionsQuery.error) {
+  if (ongoingQuery.error && completedQuery.error) {
     return <div>Error loading inspections</div>
   }
 
-  const ongoingInspections = sortInspections(
-    filterInspections(
-      inspections.filter((inspection) => inspection.status !== 'Genomförd')
-    )
-  )
-  // const myInspections = sortInspections(
-  //   filterInspections(
-  //     inspections.filter(
-  //       (inspection) =>
-  //         inspection.inspector === CURRENT_USER &&
-  //         inspection.status !== 'Genomförd'
-  //     )
-  //   )
-  // )
-  const myInspections: Inspection[] = []
-
-  const completedInspections = filterInspections(
-    inspections.filter((inspection) => inspection.status === 'Genomförd')
-  )
-
-  const renderInspectionTable = (
-    data: Inspection[],
-    title: string,
-    isCompleted: boolean = false
-  ) => {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            {title}
-            <Badge variant="outline">{data.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.length > 0 ? (
-            <InspectionsTable inspections={data} isCompleted={isCompleted} />
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Inga besiktningar i denna kategori
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    )
-  }
+  const ongoingTotalPages = Math.ceil(ongoingTotalRecords / limit)
+  const completedTotalPages = Math.ceil(completedTotalRecords / limit)
 
   return (
     <ViewLayout>
@@ -256,118 +240,7 @@ export default function InspectionsPage() {
               </PopoverContent>
             </Popover>
 
-            {/* District Filter */}
-            {/* <Popover
-              open={openDistrictDropdown}
-              onOpenChange={setOpenDistrictDropdown}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openDistrictDropdown}
-                  className="w-full sm:w-[250px] justify-between"
-                >
-                  {selectedDistrict ? selectedDistrict : 'Välj distrikt...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-[300px] p-0 bg-background z-50"
-                align="start"
-              >
-                <Command>
-                  <CommandInput placeholder="Sök distrikt..." />
-                  <CommandList>
-                    <CommandEmpty>Inget distrikt hittades.</CommandEmpty>
-                    <CommandGroup>
-                      {uniqueDistricts.map((district) => (
-                        <CommandItem
-                          key={district}
-                          value={district}
-                          onSelect={() => {
-                            setSelectedDistrict(
-                              selectedDistrict === district ? '' : district
-                            )
-                            setOpenDistrictDropdown(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              selectedDistrict === district
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {district}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover> */}
-
-            {/* Priority Filter */}
-            {/* <Popover
-              open={openPriorityDropdown}
-              onOpenChange={setOpenPriorityDropdown}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openPriorityDropdown}
-                  className="w-full sm:w-[250px] justify-between"
-                >
-                  {selectedPriority
-                    ? priorityOptions.find((p) => p.value === selectedPriority)
-                        ?.label
-                    : 'Välj prioritet...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-[300px] p-0 bg-background z-50"
-                align="start"
-              >
-                <Command>
-                  <CommandInput placeholder="Sök prioritet..." />
-                  <CommandList>
-                    <CommandEmpty>Ingen prioritet hittades.</CommandEmpty>
-                    <CommandGroup>
-                      {priorityOptions.map((option) => (
-                        <CommandItem
-                          key={option.value}
-                          value={option.value}
-                          onSelect={() => {
-                            setSelectedPriority(
-                              selectedPriority === option.value
-                                ? ''
-                                : option.value
-                            )
-                            setOpenPriorityDropdown(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              selectedPriority === option.value
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {option.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover> */}
-
-            {hasActiveFilters && (
+            {(selectedInspector || selectedAddress) && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-2" />
                 Rensa filter
@@ -376,53 +249,123 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="ongoing" className="space-y-6">
+        <Tabs
+          defaultValue={INSPECTION_STATUS_FILTER.ONGOING}
+          className="space-y-6"
+          onValueChange={setActiveTab}
+        >
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="ongoing">
-              Pågående ({ongoingInspections.length})
+            <TabsTrigger value={INSPECTION_STATUS_FILTER.ONGOING}>
+              Pågående ({ongoingTotalRecords})
             </TabsTrigger>
             <TabsTrigger value="mine">
               Mina besiktningar ({myInspections.length})
             </TabsTrigger>
-            <TabsTrigger value="completed">
-              Avslutade ({completedInspections.length})
+            <TabsTrigger value={INSPECTION_STATUS_FILTER.COMPLETED}>
+              Avslutade ({completedTotalRecords})
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="ongoing" className="space-y-4">
-            {renderInspectionTable(
-              ongoingInspections,
-              'Alla pågående registrerade besiktningar'
-            )}
+          <TabsContent
+            value={INSPECTION_STATUS_FILTER.ONGOING}
+            className="space-y-4"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Alla pågående registrerade besiktningar
+                  <Badge variant="outline">{ongoingTotalRecords}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ongoingQuery.isLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Laddar besiktningar...
+                    </p>
+                  </div>
+                ) : ongoingInspections.length > 0 ? (
+                  <InspectionsTable inspections={ongoingInspections} />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Inga besiktningar i denna kategori
+                    </p>
+                  </div>
+                )}
+                <Pagination
+                  currentPage={ongoingPage}
+                  totalPages={ongoingTotalPages}
+                  totalRecords={ongoingTotalRecords}
+                  pageSize={limit}
+                  onPageChange={setOngoingPage}
+                  isFetching={ongoingQuery.isFetching}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="mine" className="space-y-4">
-            {renderInspectionTable(myInspections, 'Mina besiktningar')}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Mina besiktningar
+                  <Badge variant="outline">{myInspections.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    Inga besiktningar i denna kategori
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="completed" className="space-y-4">
-            {renderInspectionTable(
-              completedInspections,
-              'Skickade/avslutade besiktningar',
-              true
-            )}
+          <TabsContent
+            value={INSPECTION_STATUS_FILTER.COMPLETED}
+            className="space-y-4"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Skickade/avslutade besiktningar
+                  <Badge variant="outline">{completedTotalRecords}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {completedQuery.isLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Laddar besiktningar...
+                    </p>
+                  </div>
+                ) : completedInspections.length > 0 ? (
+                  <InspectionsTable
+                    inspections={completedInspections}
+                    isCompleted
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Inga besiktningar i denna kategori
+                    </p>
+                  </div>
+                )}
+                <Pagination
+                  currentPage={completedPage}
+                  totalPages={completedTotalPages}
+                  totalRecords={completedTotalRecords}
+                  pageSize={limit}
+                  onPageChange={setCompletedPage}
+                  isFetching={completedQuery.isFetching}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* <Dialog
-        open={selectedInspection !== null}
-        onOpenChange={(open: boolean) => !open && setSelectedInspection(null)}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedInspection && (
-            <InspectionProtocol
-              inspection={selectedInspection}
-              onClose={() => setSelectedInspection(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog> */}
     </ViewLayout>
   )
 }
