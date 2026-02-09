@@ -75,7 +75,6 @@ export default function InspectionsPage() {
     setOpenAddressDropdown,
     uniqueInspectors,
     uniqueAddresses,
-    clearFilters: rawClearFilters,
   } = useInspectionFilters(currentInspections)
 
   // Wrap filter setters to reset page to 1 when filters change
@@ -92,7 +91,6 @@ export default function InspectionsPage() {
   }
 
   const clearFilters = () => {
-    rawClearFilters()
     setSelectedInspectorRaw('')
     setSelectedAddressRaw('')
     setOngoingPage(1)
