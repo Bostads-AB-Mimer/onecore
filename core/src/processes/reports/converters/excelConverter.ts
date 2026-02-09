@@ -6,6 +6,7 @@ const ColumnWidth = 20
 
 type PaymentRow = {
   invoiceId: string
+  reference: string
   invoiceDate: Date
   expirationDate: Date | undefined
   invoiceAmount: number
@@ -37,6 +38,7 @@ export const convertInvoicePaymentSummariesToXlsx = async (
 
   worksheet.columns = [
     { header: 'Fakturanummer', key: 'invoiceId' },
+    { header: 'Kundnummer', key: 'reference' },
     {
       header: 'Fakturadatum',
       key: 'invoiceDate',
@@ -83,6 +85,7 @@ const transformInvoicePaymentSummary = (
 ): PaymentRow => {
   return {
     invoiceId: summary.invoiceId,
+    reference: summary.reference,
     invoiceDate: summary.invoiceDate,
     expirationDate: summary.expirationDate,
     invoiceAmount: summary.amount,
