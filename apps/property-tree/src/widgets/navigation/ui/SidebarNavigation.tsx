@@ -15,6 +15,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { CompanyList } from './CompanyList'
+import { SidebarNavLink } from './SidebarNavLink'
 import {
   Sidebar,
   SidebarContent,
@@ -48,13 +49,7 @@ function SidebarNavigationContent() {
     React.useState(true)
   const [isForetagExpanded, setIsForetagExpanded] = React.useState(false)
 
-  // Route detection for active states
-  const isHomeActive = location.pathname === '/' || location.pathname === '/sv'
   const isPropertiesActive = location.pathname === '/properties'
-  const isTenantsActive = location.pathname === '/tenants'
-  const isRentalBlocksActive = location.pathname === '/rental-blocks'
-  const isLeasesActive = location.pathname === '/leases'
-  const isComponentsActive = location.pathname === '/components'
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -86,23 +81,7 @@ function SidebarNavigationContent() {
   return (
     <Sidebar>
       <SidebarContent className="gap-0">
-        {/* STARTSIDA - Home navigation item */}
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isHomeActive}
-                tooltip="Startsida"
-              >
-                <Link to="/">
-                  <Home />
-                  <span>Startsida</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+        <SidebarNavLink to="/" icon={Home} label="Startsida" />
 
         {/* FASTIGHETSDATA - Parent collapsible section */}
         <Collapsible
@@ -155,77 +134,14 @@ function SidebarNavigationContent() {
           </SidebarGroup>
         </Collapsible>
 
-        {/* KUNDER - Simple navigation item */}
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isTenantsActive}
-                tooltip="Kunder"
-              >
-                <Link to="/tenants">
-                  <Contact />
-                  <span>Kunder</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* SPÄRRAR - Simple navigation item */}
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isRentalBlocksActive}
-                tooltip="Spärrar"
-              >
-                <Link to="/rental-blocks">
-                  <ShieldX />
-                  <span>Spärrar</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* HYRESKONTRAKT - Simple navigation item */}
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isLeasesActive}
-                tooltip="Hyreskontrakt"
-              >
-                <Link to="/leases">
-                  <FileText />
-                  <span>Hyreskontrakt</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* ADMINISTRERA KOMPONENTER - Simple navigation item */}
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isComponentsActive}
-                tooltip="Administrera Komponenter"
-              >
-                <Link to="/components">
-                  <Settings />
-                  <span>Administrera Komponenter</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+        <SidebarNavLink to="/tenants" icon={Contact} label="Kunder" />
+        <SidebarNavLink to="/rental-blocks" icon={ShieldX} label="Spärrar" />
+        <SidebarNavLink to="/leases" icon={FileText} label="Hyreskontrakt" />
+        <SidebarNavLink
+          to="/components"
+          icon={Settings}
+          label="Administrera Komponenter"
+        />
       </SidebarContent>
     </Sidebar>
   )

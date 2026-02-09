@@ -6,5 +6,6 @@ export { ResidenceBasicInfo } from './components/ResidenceBasicInfo'
 export { ResidenceFloorplanTabsContent } from './components/ResidenceFloorplanTabsContent'
 
 // Hooks
+export { useResidences } from './hooks/useResidences'
 export { useResidenceDetail } from './hooks/useResidenceDetail'
 export { useResidenceStaircaseLookupMap } from './hooks/useResidenceStaircaseLookupMap'

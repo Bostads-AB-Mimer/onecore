@@ -4,7 +4,7 @@ import { useBuildingDetail } from '@/features/buildings'
 //import { useToast } from '@/hooks/use-toast'
 import { BuildingBasicInfo } from '@/features/buildings'
 import { BuildingTabs } from '@/widgets/building-tabs'
-import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
+import { PropertyBreadcrumb } from '@/components/shared/Breadcrumb'
 
 const BuildingDetailPage = () => {
   const { buildingId } = useParams()

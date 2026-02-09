@@ -4,7 +4,7 @@ import { usePropertyDetail, PropertyBasicInfo } from '@/features/properties'
 //import { useToast } from '@/hooks/use-toast'
 import { PropertyTabs } from '@/widgets/property-tabs'
 import { useIsMobile } from '@/hooks/useMobile'
-import { PropertyBreadcrumb } from '@/components/navigation/Breadcrumb'
+import { PropertyBreadcrumb } from '@/components/shared/Breadcrumb'
 
 const PropertyView = () => {
   const { propertyId } = useParams<{ propertyId: string }>()

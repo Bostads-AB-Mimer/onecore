@@ -1,8 +1,7 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { GitGraph } from 'lucide-react'
-
+import { Link } from 'react-router-dom'
 import { Building, Staircase } from '@/services/types'
+import { GitGraph } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
 import { ResidenceList } from './ResidenceList'
 
@@ -15,20 +14,18 @@ export function StaircaseNavigation({
   staircase,
   building,
 }: StaircaseNavigationProps) {
-  const navigate = useNavigate()
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        onClick={() => {
-          setIsExpanded(!isExpanded)
-          navigate(`/staircases/${building.code}/${staircase.id}`)
-        }}
-        tooltip={staircase.name || staircase.code}
-      >
-        <GitGraph />
-        <span>{staircase.code}</span>
+      <SidebarMenuButton asChild tooltip={staircase.name || staircase.code}>
+        <Link
+          to={`/staircases/${building.code}/${staircase.id}`}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <GitGraph />
+          <span>{staircase.code}</span>
+        </Link>
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">

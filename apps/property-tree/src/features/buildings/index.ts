@@ -4,7 +4,9 @@ export { BuildingEntranceHierarchy } from './components/BuildingEntrancesHierarc
 export { BuildingEntrancesTabContent } from './components/BuildingEntrancesTabContent'
 
 // Hooks
+export { useBuildings } from './hooks/useBuildings'
 export { useBuildingDetail } from './hooks/useBuildingDetail'
+export { useStaircases } from './hooks/useStaircases'
 
 // Lib
 export { getQuantityValue } from './lib/quantity'

@@ -13,6 +13,7 @@ export { PropertyBuildingsTabContent } from './components/PropertyBuildingsTabCo
 export { PropertyStatisticsTabContent } from './components/PropertyStatisticsTabContent'
 
 // Hooks
+export { useProperties } from './hooks/useProperties'
 export { usePropertyDetail } from './hooks/usePropertyDetail'
 export { usePropertyFilters } from './hooks/usePropertyFilters'
 
