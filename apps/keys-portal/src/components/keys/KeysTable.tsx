@@ -18,6 +18,7 @@ import {
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
+import { Checkbox } from '@/components/ui/checkbox'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
 import { fetchContactByContactCode } from '@/services/api/contactService'
@@ -63,6 +64,10 @@ interface KeysTableProps {
   selectedKeySystem: any | null
   onKeySystemSelect: (keySystem: any | null) => void
   onKeySystemSearch: (query: string) => Promise<any[]>
+  // Selection props
+  selectable?: boolean
+  selectedKeyIds?: Set<string>
+  onSelectionChange?: (keyId: string, checked: boolean) => void
 }
 
 export function KeysTable({
@@ -82,6 +87,9 @@ export function KeysTable({
   selectedKeySystem,
   onKeySystemSelect,
   onKeySystemSearch,
+  selectable = false,
+  selectedKeyIds = new Set(),
+  onSelectionChange,
 }: KeysTableProps) {
   const expansion = useExpandableRows<KeyDetails>({
     onExpand: async (keyId) => {
@@ -131,11 +139,15 @@ export function KeysTable({
     return new Date(dateString).toLocaleDateString('sv-SE')
   }
 
+  // Column count for expanded rows (base 10 + 1 if selectable)
+  const columnCount = selectable ? 11 : 10
+
   return (
     <div className="rounded-md border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border">
+            {selectable && <TableHead className="w-[50px]"></TableHead>}
             <TableHead className="w-[50px]"></TableHead>
             <TableHead>Nyckelnamn</TableHead>
             <TableHead>Löpnr</TableHead>
@@ -189,15 +201,33 @@ export function KeysTable({
         </TableHeader>
         <TableBody>
           {keys.length === 0 ? (
-            <TableEmptyState colSpan={10} message="Inga nycklar hittades" />
+            <TableEmptyState
+              colSpan={columnCount}
+              message="Inga nycklar hittades"
+            />
           ) : (
             keys.map((key) => {
               const isExpanded = expansion.isExpanded(key.id)
               const isLoadingThis =
                 expansion.isLoading && expansion.expandedId === key.id
+              const isSelected = selectedKeyIds.has(key.id)
               return (
                 <React.Fragment key={key.id}>
-                  <TableRow className="hover:bg-muted/50">
+                  <TableRow
+                    className="hover:bg-muted/50"
+                    data-state={isSelected ? 'selected' : undefined}
+                  >
+                    {selectable && (
+                      <TableCell>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) =>
+                            onSelectionChange?.(key.id, checked === true)
+                          }
+                          aria-label={`Markera ${key.keyName}`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
                       <ExpandButton
                         isExpanded={isExpanded}
@@ -256,7 +286,7 @@ export function KeysTable({
 
                   {isExpanded && (
                     <ExpandedRowContent
-                      colSpan={10}
+                      colSpan={columnCount}
                       isLoading={expansion.isLoading}
                       hasData={!!expansion.loadedData}
                       emptyMessage="Kunde inte ladda detaljer för denna nyckel"
