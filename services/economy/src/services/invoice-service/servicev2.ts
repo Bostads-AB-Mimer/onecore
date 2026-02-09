@@ -69,6 +69,7 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
 
     const invoices = invoicesResult.data
     const counterPartCustomers = await getCounterPartCustomers()
+    console.table(counterPartCustomers)
 
     for (const invoice of invoices) {
       await enrichInvoiceWithAccounting(invoice)
@@ -112,35 +113,34 @@ export const createAggregateAccounting = async (
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
   const aggregateAccountingCsv = await createAggregateCsv(invoiceRowsForExport)
   const ledgerAccountingCsv = await createLedgerCsv(invoices)
+  //onst contactsCsv = await getContacts(invoices)
 
   console.log('--- AGGREGATE CSV ---')
   console.log(aggregateAccountingCsv.join('\n'))
+  console.log('---------')
+
+  console.log('\n--- LEDGER CSV ---')
+  console.log(ledgerAccountingCsv.join('\n'))
+  console.log('---------')
+
+  /*console.log('\n--- CONTACT CSV ---')
+  console.log(contactsCsv.join('\n'))
+  console.log('---------')*/
 
   return invoiceRowsForExport
 }
 
 const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
   const exportInvoiceRows: ExportedInvoiceRow[] = []
-  const counterPartCustomers = await getCounterPartCustomers()
 
   for (const invoice of invoices) {
-    let totalAccount = TOTAL_ACCOUNT
-    let ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
-    const tenantName = invoice.recipientName
-
-    const counterPartCustomer = counterPartCustomers.find(
-      counterPartCustomers.customers,
-      tenantName
-    )
-
-    if (counterPartCustomer) {
-      totalAccount = counterPartCustomer.totalAccount
-      ledgerAccount = counterPartCustomer.ledgerAccount
-    }
-
     if (invoice.roundoff && invoice.roundoff !== 0) {
       exportInvoiceRows.push(
-        await createRoundOffRow(invoice, totalAccount, ledgerAccount)
+        await createRoundOffRow(
+          invoice,
+          invoice.totalAccount!!,
+          invoice.ledgerAccount!!
+        )
       )
     }
 
@@ -162,8 +162,9 @@ const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
         property: invoiceRow.property,
         freeCode: invoiceRow.freeCode,
         projectCode: invoiceRow.projectCode,
-        totalAccount,
-        ledgerAccount,
+        totalAccount: invoice.totalAccount,
+        ledgerAccount: invoice.ledgerAccount,
+        counterPartCode: invoice.counterPartCode,
         contactCode: invoice.recipientContactCode,
         tenantName: invoice.recipientName,
       })
@@ -194,6 +195,7 @@ const createRoundOffRow = async (
     contractCode: invoice.leaseId,
     totalAccount,
     ledgerAccount,
+    counterPartCode: invoice.counterPartCode,
     contactCode: invoice.recipientContactCode,
     tenantName: invoice.recipientName,
   }
@@ -230,7 +232,7 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
   const finishChunk = (invoiceRow: ExportedInvoiceRow) => {
     const voucherNumber =
       '1' +
-      '123'.toString().padStart(5, '0') +
+      Date.now().toString().substring(6, 12) +
       voucherIndex.toString().padStart(3, '0')
     voucherIndex++
     // create aggregate rows, reset current values, add row as first new batch
@@ -373,22 +375,28 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
 
   aggregateRows.forEach((row) => {
     const taxRule = '2'
+    const periodInfo = getPeriodInformationFromDateStrings(
+      row.voucherDate,
+      row.fromDate,
+      row.toDate
+    )
     csvRows.push(
-      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${''};${''};${''};${''};${''};${''};${''};${xledgerDateString('')};${''};${taxRule};${row.amount}`
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${''};${taxRule};${row.amount}`
     )
   })
 
   return csvRows
 }
-
 //#endregion
 
+//#region Ledger
 const createLedgerCsv = async (invoices: InvoiceWithAccounting[]) => {
-  const ledgerRows = createLedgerRows(invoices)
-  // TODO: Create csv
+  const ledgerRows = await createLedgerRows(invoices)
+  const ledgerCsvRows = convertToLedgerCsvRows(ledgerRows)
+
+  return ledgerCsvRows
 }
 
-//#region Ledger
 export const createLedgerRows = async (
   invoices: InvoiceWithAccounting[]
 ): Promise<LedgerRow[]> => {
@@ -400,8 +408,8 @@ export const createLedgerRows = async (
 
   const finishChunk = (invoice: InvoiceWithAccounting) => {
     const voucherNumber =
-      '1' +
-      '123'.toString().padStart(5, '0') +
+      '2' +
+      Date.now().toString().substring(6, 12) +
       voucherIndex.toString().padStart(3, '0')
     voucherIndex++
     // create aggregate rows, reset current values, add row as first new batch
@@ -449,6 +457,7 @@ const convertToLedgerRows = (
       invoiceDate: dateString(invoice.invoiceDate),
       invoiceNumber: invoice.invoiceId,
       recipientContactCode: invoice.recipientContactCode,
+      counterPartCode: invoice.counterPartCode,
     }
   })
 }
@@ -480,6 +489,22 @@ const createLedgerTotalRow = (
     vat: totalVat ?? 0,
     amount: -Math.round(((totalAmount as number) + Number.EPSILON) * 100) / 100,
   }
+}
+
+const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
+  const csvRows: string[] = []
+
+  csvRows.push(
+    'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
+  )
+
+  ledgerRows.forEach((row) => {
+    csvRows.push(
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${''};${''};${''};${''};${row.counterPartCode ?? ''};${''};${''};${row.recipientContactCode ?? ''};${xledgerDateString(row.invoiceDate)};${row.invoiceNumber ?? ''};${row.invoiceNumber ?? ''};${xledgerDateString(row.invoiceDueDate)};${''};${''};${row.amount}`
+    )
+  })
+
+  return csvRows
 }
 //#endregion
 

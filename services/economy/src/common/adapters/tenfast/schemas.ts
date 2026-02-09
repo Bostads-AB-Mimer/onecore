@@ -150,6 +150,7 @@ export const TenfastInvoicesByOcrResponseSchema = z.object({
     }).transform((data) => ({
       ...data,
       avtal: data.avtal.map((x) => x.id),
+      recipientId: data.snapshot?.hyresgaster[0]?.originalId,
       contractCode: data.snapshot?.avtal[0]?.externalId,
       recipientContactCode: '', // TODO: Add
       recipientName:
