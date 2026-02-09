@@ -3,6 +3,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import * as keysAdapter from '../adapters/keys-adapter'
+import { checkActiveKeyLoans } from '../adapters/key-loans-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
@@ -16,6 +17,10 @@ const {
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
+  BulkDeleteKeysRequestSchema,
+  BulkDeleteKeysResponseSchema,
+  BulkUpdateKeysRequestSchema,
+  BulkUpdateKeysResponseSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
@@ -23,6 +28,8 @@ const {
 type CreateKeyRequest = keys.v1.CreateKeyRequest
 type UpdateKeyRequest = keys.v1.UpdateKeyRequest
 type BulkUpdateFlexRequest = keys.v1.BulkUpdateFlexRequest
+type BulkDeleteKeysRequest = keys.v1.BulkDeleteKeysRequest
+type BulkUpdateKeysRequest = keys.v1.BulkUpdateKeysRequest
 type Key = keys.v1.Key
 
 /**
@@ -44,6 +51,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
+  registerSchema('BulkDeleteKeysRequest', BulkDeleteKeysRequestSchema)
+  registerSchema('BulkDeleteKeysResponse', BulkDeleteKeysResponseSchema)
+  registerSchema('BulkUpdateKeysRequest', BulkUpdateKeysRequestSchema)
+  registerSchema('BulkUpdateKeysResponse', BulkUpdateKeysResponseSchema)
   registerSchema('Key', KeySchema)
   registerSchema('KeyDetails', KeyDetailsSchema, {
     KeySystem: KeySystemSchema,
@@ -510,6 +521,74 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /keys/bulk-update:
+   *   patch:
+   *     summary: Update multiple keys by ID
+   *     description: Update multiple keys with the same values in a single request. Maximum 100 keys per request. Only provided fields will be updated.
+   *     tags: [Keys]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/BulkUpdateKeysRequest'
+   *     responses:
+   *       200:
+   *         description: Keys updated successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkUpdateKeysResponse'
+   *       400:
+   *         description: Invalid request body.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid request body
+   *       500:
+   *         description: An error occurred while updating keys.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
+  router.patch(
+    '/keys/bulk-update',
+    parseRequestBody(BulkUpdateKeysRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: BulkUpdateKeysRequest = ctx.request.body
+
+        const updatedCount = await keysAdapter.bulkUpdateKeys(
+          payload.keyIds,
+          payload.updates,
+          db
+        )
+
+        ctx.status = 200
+        ctx.body = { content: { updatedCount }, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error bulk updating keys')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /keys/{id}:
    *   patch:
    *     summary: Update a key
@@ -721,6 +800,103 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { content: { updatedCount }, ...metadata }
       } catch (err) {
         logger.error(err, 'Error bulk updating flex number')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /keys/bulk-delete:
+   *   post:
+   *     summary: Delete multiple keys by ID
+   *     description: Delete multiple keys in a single request. Maximum 100 keys per request.
+   *     tags: [Keys]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/BulkDeleteKeysRequest'
+   *     responses:
+   *       200:
+   *         description: Keys deleted successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkDeleteKeysResponse'
+   *       400:
+   *         description: Invalid request body.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid request body
+   *       409:
+   *         description: One or more keys have active loans and cannot be deleted.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Cannot delete keys with active loans
+   *                 conflictingKeys:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   *       500:
+   *         description: An error occurred while deleting keys.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   */
+  router.post(
+    '/keys/bulk-delete',
+    parseRequestBody(BulkDeleteKeysRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const payload: BulkDeleteKeysRequest = ctx.request.body
+
+        const { hasConflict, conflictingKeys } = await checkActiveKeyLoans(
+          payload.keyIds,
+          undefined,
+          db
+        )
+
+        if (hasConflict) {
+          ctx.status = 409
+          ctx.body = {
+            error: 'Cannot delete keys with active loans',
+            conflictingKeys,
+            ...metadata,
+          }
+          return
+        }
+
+        const deletedCount = await keysAdapter.bulkDeleteKeys(
+          payload.keyIds,
+          db
+        )
+
+        ctx.status = 200
+        ctx.body = { content: { deletedCount }, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error bulk deleting keys')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
       }

@@ -251,6 +251,37 @@ export const KeysApi = {
     )
     return r.ok ? ok(r.data.content) : r
   },
+
+  bulkDelete: async (
+    keyIds: string[]
+  ): Promise<
+    AdapterResult<{ deletedCount: number }, 'bad-request' | CommonErr>
+  > => {
+    const r = await postJSON<{ content: { deletedCount: number } }>(
+      `${BASE}/keys/bulk-delete`,
+      { keyIds }
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
+
+  bulkUpdate: async (
+    keyIds: string[],
+    updates: {
+      keyName?: string
+      flexNumber?: number | null
+      keySystemId?: string | null
+      rentalObjectCode?: string
+      disposed?: boolean
+    }
+  ): Promise<
+    AdapterResult<{ updatedCount: number }, 'bad-request' | CommonErr>
+  > => {
+    const r = await patchJSON<{ content: { updatedCount: number } }>(
+      `${BASE}/keys/bulk-update`,
+      { keyIds, updates }
+    )
+    return r.ok ? ok(r.data.content) : r
+  },
 }
 
 /**

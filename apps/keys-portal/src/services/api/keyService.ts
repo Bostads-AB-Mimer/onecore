@@ -119,6 +119,32 @@ export const keyService = {
     return data?.content as { updatedCount: number }
   },
 
+  // Note: These endpoints use type assertions until OpenAPI types are regenerated
+  async bulkDeleteKeys(keyIds: string[]): Promise<{ deletedCount: number }> {
+    const { data, error } = await (POST as any)('/keys/bulk-delete', {
+      body: { keyIds },
+    })
+    if (error) throw error
+    return data?.content as { deletedCount: number }
+  },
+
+  async bulkUpdateKeys(
+    keyIds: string[],
+    updates: {
+      keyName?: string
+      flexNumber?: number | null
+      keySystemId?: string | null
+      rentalObjectCode?: string
+      disposed?: boolean
+    }
+  ): Promise<{ updatedCount: number }> {
+    const { data, error } = await (PATCH as any)('/keys/bulk-update', {
+      body: { keyIds, updates },
+    })
+    if (error) throw error
+    return data?.content as { updatedCount: number }
+  },
+
   // ------- KEY SYSTEMS -------
   async getAllKeySystems(
     page: number = 1,

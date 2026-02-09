@@ -5561,6 +5561,8 @@ export interface paths {
      * @description Fetch a specific key loan by its ID.
      * Use includeKeySystem=true to get keys with their keySystem data attached.
      * Use includeCards=true to get cards from DAX attached (auto-implies key fetching).
+     * Use includeLoans=true to get loan history attached to each key.
+     * Use includeEvents=true to get event history attached to each key.
      */
     get: {
       parameters: {
@@ -5569,6 +5571,10 @@ export interface paths {
           includeKeySystem?: boolean;
           /** @description When true, includes keyCardsArray with card data from DAX. Auto-implies key fetching. */
           includeCards?: boolean;
+          /** @description When true, includes loan history attached to each key in keysArray. */
+          includeLoans?: boolean;
+          /** @description When true, includes event history attached to each key in keysArray. */
+          includeEvents?: boolean;
         };
         path: {
           /** @description The unique ID of the key loan to retrieve. */
@@ -5974,6 +5980,54 @@ export interface paths {
       };
     };
   };
+  "/keys/bulk-update": {
+    /**
+     * Bulk update keys
+     * @description Update multiple keys with the same values. Maximum 100 keys per request.
+     */
+    patch: {
+      requestBody: {
+        content: {
+          "application/json": {
+            keyIds: string[];
+            updates: {
+              keyName?: string;
+              flexNumber?: number | null;
+              /** Format: uuid */
+              keySystemId?: string | null;
+              rentalObjectCode?: string;
+              disposed?: boolean;
+            };
+          };
+        };
+      };
+      responses: {
+        /** @description Keys updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Number of keys updated */
+                updatedCount?: number;
+              };
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
   "/keys/bulk-update-flex": {
     /**
      * Bulk update flex number for all keys on a rental object
@@ -5993,6 +6047,46 @@ export interface paths {
               content?: {
                 /** @description Number of keys updated */
                 updatedCount?: number;
+              };
+            };
+          };
+        };
+        /** @description Invalid request data */
+        400: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": components["schemas"]["ErrorResponse"];
+          };
+        };
+      };
+    };
+  };
+  "/keys/bulk-delete": {
+    /**
+     * Bulk delete keys
+     * @description Delete multiple keys by their IDs. Maximum 100 keys per request.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            keyIds: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Keys deleted successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Number of keys deleted */
+                deletedCount?: number;
               };
             };
           };
