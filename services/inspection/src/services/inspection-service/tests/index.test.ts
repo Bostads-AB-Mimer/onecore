@@ -19,25 +19,29 @@ app.use(router.routes())
 describe('inspection-service', () => {
   describe('GET /inspections/xpand', () => {
     it('responds with an array of inspections', async () => {
+      const mockInspections = [
+        XpandInspectionFactory.build({
+          id: 'INS001',
+          status: 'Registrerad',
+        }),
+        XpandInspectionFactory.build({ id: 'INS002', status: 'Genomförd' }),
+      ]
       const getInspectionsSpy = jest
         .spyOn(xpandAdapter, 'getInspections')
         .mockResolvedValueOnce({
           ok: true,
-          data: [
-            XpandInspectionFactory.build({
-              id: 'INS001',
-              status: 'Registrerad',
-            }),
-            XpandInspectionFactory.build({ id: 'INS002', status: 'Genomförd' }),
-          ],
+          data: {
+            inspections: mockInspections,
+            totalRecords: 2,
+          },
         })
 
       const res = await request(app.callback()).get('/inspections/xpand')
 
       expect(res.status).toBe(200)
-      expect(res.body.content.inspections).toBeInstanceOf(Array)
+      expect(res.body.content).toBeInstanceOf(Array)
       expect(getInspectionsSpy).toHaveBeenCalled()
-      expect(res.body.content.inspections.length).toBe(2)
+      expect(res.body.content.length).toBe(2)
     })
 
     it('handles adapter errors', async () => {
@@ -94,7 +98,10 @@ describe('inspection-service', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content.inspections).toBeInstanceOf(Array)
-      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalledWith(residenceId)
+      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        residenceId,
+        undefined
+      )
       expect(res.body.content.inspections.length).toBe(2)
     })
 
@@ -108,7 +115,10 @@ describe('inspection-service', () => {
         `/inspections/xpand/residence/${residenceId}`
       )
 
-      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalledWith(residenceId)
+      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        residenceId,
+        undefined
+      )
       expect(res.status).toBe(500)
       expect(res.body.error).toBe(
         'Failed to fetch inspections from Xpand: schema-error'
@@ -127,7 +137,10 @@ describe('inspection-service', () => {
         `/inspections/xpand/residence/${residenceId}`
       )
 
-      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalledWith(residenceId)
+      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalledWith(
+        residenceId,
+        undefined
+      )
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Database connection failed')
     })
