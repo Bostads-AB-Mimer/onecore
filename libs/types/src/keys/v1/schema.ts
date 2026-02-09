@@ -395,11 +395,6 @@ export const BulkDeleteKeysRequestSchema = z.object({
   keyIds: z.array(z.string().uuid()).min(1).max(100),
 })
 
-// Bulk delete keys response schema
-export const BulkDeleteKeysResponseSchema = z.object({
-  deletedCount: z.number(),
-})
-
 // Bulk update keys request schema
 export const BulkUpdateKeysRequestSchema = z.object({
   keyIds: z.array(z.string().uuid()).min(1).max(100),
@@ -410,11 +405,6 @@ export const BulkUpdateKeysRequestSchema = z.object({
     rentalObjectCode: z.string().optional(),
     disposed: z.boolean().optional(),
   }),
-})
-
-// Bulk update keys response schema
-export const BulkUpdateKeysResponseSchema = z.object({
-  updatedCount: z.number(),
 })
 
 // Signature schemas (polymorphic - supports any document type)

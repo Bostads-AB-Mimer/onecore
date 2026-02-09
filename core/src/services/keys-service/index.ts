@@ -1720,11 +1720,8 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     updatedCount:
-   *                       type: integer
-   *                       description: Number of keys updated
+   *                   type: number
+   *                   description: Number of keys updated
    *       400:
    *         description: Invalid request data
    *         content:
@@ -1995,11 +1992,8 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     updatedCount:
-   *                       type: integer
-   *                       description: Number of keys updated
+   *                   type: number
+   *                   description: Number of keys updated
    *       400:
    *         description: Invalid request data
    *         content:
@@ -2073,11 +2067,8 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     deletedCount:
-   *                       type: integer
-   *                       description: Number of keys deleted
+   *                   type: number
+   *                   description: Number of keys deleted
    *       400:
    *         description: Invalid request data
    *         content:

@@ -302,7 +302,7 @@ describe('keys-adapter', () => {
 
         nock(config.keysService.url)
           .post('/keys/bulk-update-flex', payload)
-          .reply(200, { content: { updatedCount: 3 } })
+          .reply(200, { content: 3 })
 
         const result = await keysAdapter.KeysApi.bulkUpdateFlex(
           '123-456-789/1',
@@ -310,7 +310,7 @@ describe('keys-adapter', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual({ updatedCount: 3 })
+        expect(result.data).toBe(3)
       })
 
       it('returns bad-request on 400', async () => {
