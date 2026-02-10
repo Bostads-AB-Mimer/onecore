@@ -22,6 +22,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import AllTenantsPage from './components/tenants/AllTenantsPage'
 import RentalBlocksPage from './components/rental-blocks/RentalBlocksPage'
 import LeasesPage from './components/leases/LeasesPage'
+import EconomyPage from './components/economy/EconomyPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -128,6 +129,11 @@ const router = createBrowserRouter([
       {
         path: 'leases',
         element: <LeasesPage />,
+        handle: { title: 'Hyreskontrakt' },
+      },
+      {
+        path: 'economy',
+        element: <EconomyPage />,
         handle: { title: 'Hyreskontrakt' },
       },
     ],

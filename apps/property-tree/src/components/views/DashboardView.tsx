@@ -85,11 +85,20 @@ export function DashboardView() {
 
     {
       id: 'xledger',
-      title: 'Ekonomi',
+      title: 'Xledger',
       icon: DollarSign,
       description: 'Ekonomi och redovisning',
       path: resolve('VITE_XLEDGER_URL', ''),
       isExternal: true,
+      isDisabled: false,
+    },
+    {
+      id: 'economy',
+      title: 'Ekonomi',
+      icon: DollarSign,
+      description: 'Skapa ströfakturor',
+      path: '/economy/invoices',
+      isExternal: false,
       isDisabled: false,
     },
     {
