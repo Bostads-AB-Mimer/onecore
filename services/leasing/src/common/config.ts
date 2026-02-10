@@ -39,7 +39,6 @@ export interface Config {
     leaseRentRows: {
       homeInsurance: {
         articleId: string
-        amount: number
       }
     }
   }
