@@ -16,13 +16,11 @@ import { MiscellaneousInvoiceArticles } from '@/data/articles/MiscellaneousInvoi
 import { InvoiceRow } from '../types'
 
 interface ArticleSectionProps {
-  selectedArticle: string
   artikelnummer: string
   avserObjektnummer: string
   invoiceRows: InvoiceRow[]
   administrativaKostnader: boolean
   hanteringsavgift: boolean
-  onArticleSelect: (artikelnummer: string) => void
   onInvoiceRowsChange: (rows: InvoiceRow[]) => void
   onAdministrativaKostnaderChange: (checked: boolean) => void
   onHanteringsavgiftChange: (checked: boolean) => void
@@ -32,13 +30,13 @@ interface ArticleSectionProps {
 }
 
 export function ArticleSection({
-  selectedArticle,
+  // selectedArticle,
   artikelnummer,
   avserObjektnummer,
   invoiceRows,
   administrativaKostnader,
   hanteringsavgift,
-  onArticleSelect,
+  // onArticleSelect,
   onInvoiceRowsChange,
   onAdministrativaKostnaderChange,
   onHanteringsavgiftChange,
@@ -56,12 +54,18 @@ export function ArticleSection({
       newRows[index] = { ...newRows[index], amount: Number(value) || 1 }
     } else if (field === 'price') {
       newRows[index] = { ...newRows[index], price: Number(value) || 0 }
+    } else if (field === 'articleId') {
+      newRows[index] = { ...newRows[index], articleId: value as string }
     }
+
     onInvoiceRowsChange(newRows)
   }
 
   const handleAddRow = () => {
-    onInvoiceRowsChange([...invoiceRows, { text: '', amount: 1, price: 0 }])
+    onInvoiceRowsChange([
+      ...invoiceRows,
+      { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
+    ])
   }
 
   const handleRemoveRow = (index: number) => {
@@ -84,42 +88,6 @@ export function ArticleSection({
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="artikel">Artikel</Label>
-          <Select value={selectedArticle} onValueChange={onArticleSelect}>
-            <SelectTrigger
-              id="artikel"
-              className={cn(errors?.artikel && 'border-destructive')}
-            >
-              <SelectValue placeholder="Välj artikel" />
-            </SelectTrigger>
-            <SelectContent>
-              {MiscellaneousInvoiceArticles.map((article) => (
-                <SelectItem key={article.id} value={article.id}>
-                  {article.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors?.artikel && (
-            <p className="text-sm text-destructive">{errors.artikel}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="artikelnummer">Artikelnummer</Label>
-          <Input
-            id="artikelnummer"
-            value={artikelnummer}
-            readOnly
-            disabled
-            placeholder="Fylls i automatiskt"
-            className="bg-muted"
-          />
-        </div>
-      </div>
-
       {/* Fakturarader - grupperat */}
       <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
         <Label>Fakturarader</Label>
@@ -137,6 +105,43 @@ export function ArticleSection({
             key={index}
             className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_80px_100px_40px] gap-2"
           >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="artikel">Artikel</Label>
+                <Select
+                  onValueChange={(e) => handleRowChange(index, 'articleId', e)}
+                >
+                  <SelectTrigger
+                    id="artikel"
+                    className={cn(errors?.artikel && 'border-destructive')}
+                  >
+                    <SelectValue placeholder="Välj artikel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MiscellaneousInvoiceArticles.map((article) => (
+                      <SelectItem key={article.id} value={article.id}>
+                        {article.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors?.artikel && (
+                  <p className="text-sm text-destructive">{errors.artikel}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="artikelnummer">Artikelnummer</Label>
+                <Input
+                  id="artikelnummer"
+                  value={row.articleId}
+                  readOnly
+                  disabled
+                  placeholder="Fylls i automatiskt"
+                  className="bg-muted"
+                />
+              </div>
+            </div>
             <div className="space-y-1 sm:space-y-0">
               <Label className="sm:hidden text-xs text-muted-foreground">
                 Text

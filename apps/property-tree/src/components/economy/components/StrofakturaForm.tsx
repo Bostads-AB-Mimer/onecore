@@ -21,7 +21,6 @@ import { LeaseContractSection } from './LeaseContractSection'
 import { ArticleSection } from './ArticleSection'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { InvoiceRow } from '../types'
-import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
 import { TenantSearchResult } from '@/hooks/useTenantSearch'
 import { useLeases } from '@/components/hooks/useLeases'
 import { useUser } from '@/auth/useUser'
@@ -62,7 +61,7 @@ export function StrofakturaForm() {
   const [artikel, setArtikel] = useState('')
   const [artikelnummer, setArtikelnummer] = useState('')
   const [invoiceRows, setInvoiceRows] = useState<InvoiceRow[]>([
-    { text: '', amount: 1, price: 0 },
+    { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
   ])
   const [projekt, setProjekt] = useState('')
   const [internInfo, setInternInfo] = useState('')
@@ -98,23 +97,6 @@ export function StrofakturaForm() {
       setAvserObjektnummer(selectedLease?.leaseId)
     }
     setErrors((prev) => ({ ...prev, hyreskontrakt: undefined }))
-  }
-
-  const handleArticleSelect = (artikelnr: string) => {
-    setArtikel(artikelnr)
-    setArtikelnummer(artikelnr)
-    const articleData = getArticleById(artikelnr)
-    if (articleData && articleData.standardPrice > 0) {
-      // Update first row price with article standard price
-      setInvoiceRows((prev) => {
-        const newRows = [...prev]
-        if (newRows.length > 0) {
-          newRows[0] = { ...newRows[0], price: articleData.standardPrice }
-        }
-        return newRows
-      })
-    }
-    setErrors((prev) => ({ ...prev, artikel: undefined }))
   }
 
   const validateForm = (): boolean => {
@@ -190,13 +172,14 @@ export function StrofakturaForm() {
   const handleReset = () => {
     setDatum(new Date())
     setSelectedTenant(null)
-    // setLeaseContracts([])
     setHyreskontrakt('')
     setKst('')
     setFastighet('')
     setArtikel('')
     setArtikelnummer('')
-    setInvoiceRows([{ text: '', amount: 1, price: 0 }])
+    setInvoiceRows([
+      { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
+    ])
     setProjekt('')
     setInternInfo('')
     setAvserObjektnummer('')
@@ -293,13 +276,11 @@ export function StrofakturaForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Artikelinformation</h3>
             <ArticleSection
-              selectedArticle={artikel}
               artikelnummer={artikelnummer}
               avserObjektnummer={avserObjektnummer}
               invoiceRows={invoiceRows}
               administrativaKostnader={administrativaKostnader}
               hanteringsavgift={hanteringsavgift}
-              onArticleSelect={handleArticleSelect}
               onInvoiceRowsChange={setInvoiceRows}
               onAdministrativaKostnaderChange={setAdministrativaKostnader}
               onHanteringsavgiftChange={setHanteringsavgift}
