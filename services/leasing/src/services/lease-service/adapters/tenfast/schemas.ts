@@ -57,6 +57,7 @@ export const TenfastRentalObjectSchema = z.object({
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
   kvm: z.number().nullish(),
+  displayName: z.string().optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
