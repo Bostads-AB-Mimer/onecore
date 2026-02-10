@@ -2,6 +2,7 @@ import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
 
 import {
+  ContactSchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
@@ -67,6 +68,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
       encodeError(ctx, result, metadata)
     }
   }
+
+  router.addEntities({
+    ContactV1: ContactSchema,
+  })
 
   router.get(
     '/v1/contacts',
