@@ -21,7 +21,7 @@ import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import { AdapterResult } from '../adapters/types'
 import config from '../../../common/config'
-import { toYearMonthString } from '../adapters/tenfast/schemas'
+import { toYearMonthDayString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
@@ -940,9 +940,7 @@ export const routes = (router: KoaRouter) => {
               article: config.tenfast.leaseRentRows.homeInsurance.articleId,
               label: 'Hemförsäkring', // TODO: Where should label be decided?
               vat: 0, // TODO: No VAT on insurance?
-              // TODO: Mimer.nu lets you pick day that home insurance starts
-              // but TenFAST only accepts yyyy-mm
-              from: toYearMonthString(ctx.request.body.from),
+              from: toYearMonthDayString(ctx.request.body.from),
             },
           ],
         })
@@ -1128,7 +1126,7 @@ export const routes = (router: KoaRouter) => {
               article: homeInsuranceRow.article,
               label: homeInsuranceRow.label,
               from: homeInsuranceRow.from ?? undefined,
-              to: toYearMonthString(ctx.request.body.endDate),
+              to: toYearMonthDayString(ctx.request.body.endDate),
             },
           ],
         })

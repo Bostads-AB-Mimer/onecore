@@ -6,7 +6,7 @@ import nock from 'nock'
 
 import { routes } from '../../index'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
-import { toYearMonthString } from '../../adapters/tenfast/schemas'
+import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 import config from '../../../../common/config'
 import { schemas } from '@onecore/types'
@@ -403,8 +403,8 @@ describe('GET /leases/:leaseId/home-insurance', () => {
   it('returns home insurance with dates', async () => {
     const homeInsuranceRow = factory.tenfastInvoiceRow.build({
       article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-      from: toYearMonthString(new Date('2024-01-01')),
-      to: toYearMonthString(new Date('2024-12-01')),
+      from: toYearMonthDayString(new Date('2024-01-01')),
+      to: toYearMonthDayString(new Date('2024-12-01')),
     })
     const leaseWithHomeInsurance = factory.tenfastLease.build({
       hyror: [homeInsuranceRow],
@@ -458,7 +458,7 @@ describe('POST /leases/:leaseId/home-insurance/cancel', () => {
           article: homeInsuranceRow.article,
           label: homeInsuranceRow.label,
           from: homeInsuranceRow.from ?? undefined,
-          to: toYearMonthString(endDate),
+          to: toYearMonthDayString(endDate),
         },
       ],
     })

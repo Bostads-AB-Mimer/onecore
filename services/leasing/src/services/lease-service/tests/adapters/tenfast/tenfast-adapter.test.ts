@@ -6,7 +6,7 @@ import assert from 'node:assert'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
-import { toYearMonthString } from '../../../adapters/tenfast/schemas'
+import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
 
 describe(tenfastAdapter.getLeaseTemplate, () => {
   it('should return template when response is valid and status is 200', async () => {
@@ -1261,8 +1261,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: toYearMonthString(new Date('2023-01-01')),
-          to: toYearMonthString(new Date('2023-12-31')),
+          from: toYearMonthDayString(new Date('2023-01-01')),
+          to: toYearMonthDayString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1299,8 +1299,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: toYearMonthString(new Date('2023-01-01')),
-          to: toYearMonthString(new Date('2023-12-31')),
+          from: toYearMonthDayString(new Date('2023-01-01')),
+          to: toYearMonthDayString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
