@@ -331,10 +331,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'status',
-      'includeContacts',
-    ])
+    const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
     const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
@@ -459,10 +456,7 @@ export const routes = (router: KoaRouter) => {
   router.get(
     '(.*)/leases/by-rental-object-code/:rentalObjectCode',
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, [
-        'status',
-        'includeContacts',
-      ])
+      const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
 
       const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
