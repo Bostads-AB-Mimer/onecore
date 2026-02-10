@@ -88,6 +88,8 @@ export default defineConfig([
         'error',
         {
           default: 'disallow',
+          message:
+            '${file.type}/ cannot import from ${dependency.type}/. Check the layer hierarchy: shared → services → entities → features → widgets → views.',
           rules: [
             // shared: lowest level - can only import from itself
             {
@@ -110,11 +112,23 @@ export default defineConfig([
               from: 'features',
               allow: ['shared', 'services', 'entities'],
             },
+            {
+              from: 'features',
+              disallow: ['features'],
+              message:
+                'Features cannot import other features. Extract shared code into entities/ or shared/.',
+            },
             // widgets: can import features, entities, shared, services
             // CANNOT import other widgets, views, layouts
             {
               from: 'widgets',
               allow: ['shared', 'services', 'entities', 'features'],
+            },
+            {
+              from: 'widgets',
+              disallow: ['widgets'],
+              message:
+                'Widgets cannot import other widgets. Extract shared code into features/ or shared/.',
             },
             // layouts: can import shared
             // CANNOT import features, views, services, entities, widgets
@@ -134,6 +148,12 @@ export default defineConfig([
                 'widgets',
                 'layouts',
               ],
+            },
+            {
+              from: 'views',
+              disallow: ['views'],
+              message:
+                'Views cannot import other views.',
             },
             // legacy: no restrictions during migration
             {
