@@ -15,3 +15,7 @@ export { TenantLeasesTabContent } from './components/TenantLeasesTabContent'
 // Hooks
 export { useTenant } from './hooks/useTenant'
 export { useTenantSearch } from './hooks/useTenantSearch'
+export { useApplicationProfile } from './hooks/useApplicationProfile'
+export { useContactQueuePoints } from './hooks/useContactQueuePoints'
+export { useInterestApplications } from './hooks/useInterestApplications'
+export { useInvoicePaymentEvents } from './hooks/useInvoicePaymentEvents'

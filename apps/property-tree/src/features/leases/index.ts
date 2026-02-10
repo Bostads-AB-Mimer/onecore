@@ -2,5 +2,6 @@
 export { LeasesTabContent } from './components/LeasesTabContent'
 
 // Hooks
-export { useLeases } from './hooks/useLeases'
+export { useLeasesByContactCode } from './hooks/useLeasesByContactCode'
 export { useLeaseSearch } from './hooks/useLeaseSearch'
+export { useRentalProperties } from './hooks/useRentalProperties'

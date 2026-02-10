@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useBuildingDetail } from '@/features/buildings'
+import { useBuilding } from '@/features/buildings'
 //import { useToast } from '@/hooks/use-toast'
 import { BuildingBasicInfo } from '@/features/buildings'
 import { BuildingTabs } from '@/widgets/building-tabs'
@@ -18,7 +18,7 @@ const BuildingDetailPage = () => {
   //const propertyKey = property
 
   // Fetch building data
-  const { data, isLoading, error } = useBuildingDetail(propertyId, buildingId)
+  const { data, isLoading, error } = useBuilding(propertyId, buildingId)
 
   // Base path for apartment links
   const basePath = `/residences`

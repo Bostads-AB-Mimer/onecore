@@ -7,5 +7,5 @@ export { ResidenceFloorplanTabsContent } from './components/ResidenceFloorplanTa
 
 // Hooks
 export { useResidences } from './hooks/useResidences'
-export { useResidenceDetail } from './hooks/useResidenceDetail'
+export { useResidence } from './hooks/useResidence'
 export { useResidenceStaircaseLookupMap } from './hooks/useResidenceStaircaseLookupMap'

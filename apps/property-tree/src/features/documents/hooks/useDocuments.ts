@@ -4,7 +4,6 @@ import { POST } from '@/services/api/core/base-api'
 import { ContextType } from '@/types/ui'
 import { fileToBase64 } from '@/utils/file'
 import { extractFileName, getFileTypeFromName } from '../lib/file-utils'
-import type { Document } from '../types'
 
 export function useDocuments(contextType: ContextType, id: string | undefined) {
   const queryClient = useQueryClient()

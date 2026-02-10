@@ -9,6 +9,7 @@ import {
 } from '../../../components/ui/Accordion'
 import { Copy, Ticket, Images, FileText } from 'lucide-react'
 import type { Component } from '@/services/types'
+import { formatISODate } from '@/utils/formatters'
 import { useState } from 'react'
 import { ComponentImageGallery } from './ComponentImageGallery'
 import { ComponentModelDocuments } from './dialogs/ComponentModelDocuments'
@@ -21,12 +22,6 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [showGallery, setShowGallery] = useState(false)
   const [showDocuments, setShowDocuments] = useState(false)
-
-  // Helper: Format dates
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('sv-SE')
-  }
 
   // Helper: Format currency
   const formatCurrency = (value: number | null | undefined) => {
@@ -208,7 +203,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
 
             {/* Installation info */}
             <div className="text-sm text-muted-foreground">
-              Installerad: {formatDate(installation?.installationDate)}
+              Installerad: {formatISODate(installation?.installationDate)}
               {installationYear && ` (Byggår ${installationYear})`}
             </div>
           </div>
@@ -391,7 +386,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                         Installation:
                       </span>
                       <span className="font-medium">
-                        {formatDate(installation?.installationDate)}
+                        {formatISODate(installation?.installationDate)}
                       </span>
                     </div>
 
@@ -423,7 +418,7 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                           Garanti t.o.m:
                         </span>
                         <span className="font-medium">
-                          {formatDate(warrantyStatus.expiryDate.toISOString())}
+                          {formatISODate(warrantyStatus.expiryDate.toISOString())}
                         </span>
                       </div>
                     )}

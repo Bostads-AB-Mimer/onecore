@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import {
-  useResidenceDetail,
+  useResidence,
   ResidenceBasicInfo,
   LoadingState,
   ErrorState,
@@ -19,7 +19,7 @@ export const ResidenceView = () => {
     leases,
     leasesIsLoading,
     leasesError,
-  } = useResidenceDetail(residenceId!)
+  } = useResidence(residenceId!)
 
   const currentLease: Lease | undefined = leases?.[0] as Lease
 

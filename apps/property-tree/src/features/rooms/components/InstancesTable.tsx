@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/v2/Badge'
 import { Button } from '@/components/ui/v2/Button'
 import { DataTable, type Column, type DataTableAction } from './DataTable'
 import type { Component } from '@/services/types'
+import { formatISODate } from '@/utils/formatters'
 
 interface InstancesTableProps {
   instances: Component[]
@@ -166,9 +167,7 @@ export const InstancesTable = ({
       label: 'Garantistart',
       render: (item) => (
         <span className="text-muted-foreground">
-          {item.warrantyStartDate
-            ? new Date(item.warrantyStartDate).toLocaleDateString('sv-SE')
-            : '-'}
+          {formatISODate(item.warrantyStartDate)}
         </span>
       ),
     },

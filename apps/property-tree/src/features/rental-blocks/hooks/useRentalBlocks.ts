@@ -7,25 +7,6 @@ import {
 } from '@tanstack/react-query'
 import type { RentalBlocksSearchParams } from '@/services/types'
 
-export type { RentalBlocksSearchParams }
-
-export function useRentalBlocks(rentalId: string | undefined) {
-  const rentalBlocksQuery = useQuery({
-    queryKey: ['rentalBlocks', rentalId],
-    queryFn: () => residenceService.getRentalBlocksByRentalId(rentalId!),
-    enabled: !!rentalId,
-  })
-
-  const isLoading = rentalBlocksQuery.isLoading
-  const error = rentalBlocksQuery.error
-
-  return {
-    data: rentalBlocksQuery.data,
-    isLoading,
-    error,
-  }
-}
-
 const hasSearchFilters = (params: RentalBlocksSearchParams) =>
   Boolean(
     params.q ||
@@ -46,7 +27,7 @@ const fetchRentalBlocks = (
     ? residenceService.searchRentalBlocks(params, page, limit)
     : residenceService.getAllRentalBlocks(params.active, page, limit)
 
-export function useAllRentalBlocks(
+export function useRentalBlocks(
   params: RentalBlocksSearchParams,
   page = 1,
   limit = 50
