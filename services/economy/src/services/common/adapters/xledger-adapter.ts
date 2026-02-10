@@ -213,6 +213,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     invoiceRows: [],
     invoiceFileUrl: invoiceData.node.invoiceFile?.url,
     credit: getInvoiceCredit(invoiceData.node),
+    accountCode: invoiceData.node.account?.code,
   }
 
   // TODO? handle overpaid invoices (negative remainingAmount)?
@@ -363,6 +364,9 @@ const invoiceNodeFragment = `
   period {
     fromDate
     toDate
+  }
+  account {
+    code
   }
   slTransactionType {
     name
