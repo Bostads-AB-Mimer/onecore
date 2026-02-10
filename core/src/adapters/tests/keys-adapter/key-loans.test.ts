@@ -168,7 +168,8 @@ describe('keys-adapter - KeyLoans & Logs', () => {
     describe(keysAdapter.KeyLoansApi.create, () => {
       it('returns ok with created key loan on 201', async () => {
         const createPayload = {
-          keys: JSON.stringify(['key-1', 'key-2']),
+          keys: ['key-1', 'key-2'],
+          loanType: 'TENANT' as const,
           contact: 'P123456',
         }
 
@@ -185,7 +186,9 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       it('returns bad-request on 400', async () => {
         nock(config.keysService.url).post('/key-loans').reply(400)
 
-        const result = await keysAdapter.KeyLoansApi.create({})
+        const result = await keysAdapter.KeyLoansApi.create({
+          loanType: 'TENANT',
+        })
 
         expect(result).toEqual({ ok: false, err: 'bad-request' })
       })
@@ -194,7 +197,8 @@ describe('keys-adapter - KeyLoans & Logs', () => {
         nock(config.keysService.url).post('/key-loans').reply(409)
 
         const result = await keysAdapter.KeyLoansApi.create({
-          keys: JSON.stringify(['key-1']),
+          keys: ['key-1'],
+          loanType: 'TENANT',
           contact: 'P123456',
         })
 
@@ -205,7 +209,8 @@ describe('keys-adapter - KeyLoans & Logs', () => {
         nock(config.keysService.url).post('/key-loans').reply(500)
 
         const result = await keysAdapter.KeyLoansApi.create({
-          keys: JSON.stringify(['key-1']),
+          keys: ['key-1'],
+          loanType: 'TENANT',
           contact: 'P123456',
         })
 
@@ -269,7 +274,7 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
         const result = await keysAdapter.KeyLoansApi.update(
           '00000000-0000-0000-0000-000000000001',
-          { keys: JSON.stringify(['key-2']) }
+          { keys: ['key-2'] }
         )
 
         expect(result).toEqual({ ok: false, err: 'conflict' })
