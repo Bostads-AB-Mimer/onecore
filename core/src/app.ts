@@ -88,7 +88,7 @@ const apiRouter = makeOkapiRouter(new KoaRouter(), {
   },
 })
 
-apiRoutes(apiRouter)
+apiRoutes(apiRouter, config)
 
 app.use(apiRouter.routes())
 
