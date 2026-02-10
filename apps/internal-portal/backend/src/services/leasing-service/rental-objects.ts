@@ -95,4 +95,27 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  router.get('(.*)/rental-objects/by-code/:rentalObjectCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { rentalObjectCode } = ctx.params
+
+    const result = await coreAdapter.getRentalPropertyByCode(rentalObjectCode)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Rental object not found', ...metadata }
+      } else {
+        ctx.status = result.statusCode
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  })
 }
