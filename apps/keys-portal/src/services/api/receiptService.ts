@@ -128,15 +128,11 @@ export const receiptService = {
 
   /**
    * Get all receipts for a specific lease's rental object
-   * Fetches keyLoans for the rental object, then fetches receipts for each keyLoan
    */
   async listByLease(rentalObjectCode: string): Promise<Receipt[]> {
     const { keyLoanService } = await import('./keyLoanService')
 
-    // Get all keyLoans for this rental object
-    const { loaned, returned } =
-      await keyLoanService.listByLease(rentalObjectCode)
-    const allKeyLoans = [...loaned, ...returned]
+    const allKeyLoans = await keyLoanService.getByRentalObject(rentalObjectCode)
 
     // Fetch receipts for each keyLoan
     const receiptsArrays = await Promise.all(
