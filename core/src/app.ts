@@ -15,7 +15,6 @@ import { routes as apiRoutes } from './api/index'
 import { routes as swaggerRoutes } from './services/swagger'
 import { requireAuth } from './middlewares/keycloak-auth'
 import { makeOkapiRouter } from 'koa-okapi-router'
-import { updateSwaggerSchemas } from './swagger'
 
 const app = new Koa()
 
@@ -72,7 +71,7 @@ const apiRouter = makeOkapiRouter(new KoaRouter(), {
   },
 })
 
-apiRoutes(apiRouter)
+apiRoutes(apiRouter, config)
 
 app.use(apiRouter.routes())
 
