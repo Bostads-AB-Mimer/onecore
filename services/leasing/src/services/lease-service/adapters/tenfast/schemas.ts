@@ -52,6 +52,10 @@ export const TenfastRentalObjectSchema = z.object({
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
   contractTemplate: z.string().optional(),
+  // Fields populated when included in lease response
+  postadress: z.string().optional(),
+  subType: z.string().optional(),
+  displayName: z.string().optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
