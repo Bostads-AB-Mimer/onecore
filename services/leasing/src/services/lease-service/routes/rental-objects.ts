@@ -5,6 +5,7 @@ import * as xpandAdapter from '../adapters/xpand/rental-object-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import z from 'zod'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { TenfastLease } from '../adapters/tenfast/schemas'
 
 /**
  * @swagger
@@ -243,11 +244,43 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(metadata, 'Fetching all vacant parking spaces')
 
-    const vacantParkingSpaces = await xpandAdapter.getAllVacantParkingSpaces()
+    const leasesResult = await tenfastAdapter.getLeases()
 
-    if (!vacantParkingSpaces.ok) {
+    if (!leasesResult.ok) {
       logger.error(
-        { err: vacantParkingSpaces.err },
+        { err: leasesResult.err },
+        'Error fetching leases from tenfast parking spaces:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error:
+          'An error occurred while fetching leases from tenfast parking spaces.',
+        ...metadata,
+      }
+      return
+    }
+
+    console.log('Antal avtal från tenfast:', leasesResult.data.length)
+
+    const activeRentalObjectCodes = new Set(
+      leasesResult.data
+        .filter(
+          (lease) => !lease.endDate || new Date(lease.endDate) > new Date()
+        ) // Avtal utan endDate eller slutdatum i framtiden = aktivt
+        .flatMap((lease) => lease.hyresobjekt.map((obj) => obj.externalId)) // eller rentalObjectCode beroende på din struktur
+    )
+
+    console.log(
+      'Aktiva eller uppsagda hyresobjekt från tenfast: ',
+      activeRentalObjectCodes.values.length
+    )
+
+    const parkingSpacesWithoutBlocks =
+      await xpandAdapter.getAllVacantParkingSpaces()
+
+    if (!parkingSpacesWithoutBlocks.ok) {
+      logger.error(
+        { err: parkingSpacesWithoutBlocks.err },
         'Error fetching vacant parking spaces:'
       )
       ctx.status = 500
@@ -258,13 +291,27 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    console.log(
+      'Antal parkeringsplatser utan spärrar från xpand:',
+      parkingSpacesWithoutBlocks.data.length
+    )
+
     //TODO: Överväg att hämta vakanta parkeringsplatser (de utan aktiva kontrakt) från tenfast först och sedan rensa bort de med spärrar i xpand samt hämta detaljerna från xpand
     //TODO: Alternativ: Hämta aktiva avtal för parkeringsplatserna från tenfast och filtrera bort de som har aktiva avtal
 
     //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
 
+    const vacantParkingSpaces = parkingSpacesWithoutBlocks.data.filter(
+      (ps) => !activeRentalObjectCodes.has(ps.rentalObjectCode)
+    )
+
+    console.log(
+      'Antal vakanta parkeringsplatser efter filtrering av aktiva avtal:',
+      vacantParkingSpaces.length
+    )
+
     const rentalObjectRentsResponse = await tenfastAdapter.getRentalObjectRents(
-      vacantParkingSpaces.data.map((ps) => ps.rentalObjectCode),
+      vacantParkingSpaces.map((ps) => ps.rentalObjectCode),
       false
     )
 
@@ -282,17 +329,91 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    vacantParkingSpaces.data.forEach((ps) => {
+    vacantParkingSpaces.forEach((ps) => {
       const rent = rentalObjectRentsResponse.data.find(
         (rent) => rent.rentalObjectCode === ps.rentalObjectCode
       )
       if (rent) {
         ps.rent = rent
       }
+      const leaseEndDate = getLastLeaseEndDate(
+        leasesResult.data,
+        ps.rentalObjectCode
+      )
+      ps.vacantFrom = determineVacantFrom(
+        leaseEndDate,
+        ps.blockStartDate,
+        ps.blockEndDate
+      )
     })
     ctx.status = 200
-    ctx.body = { content: vacantParkingSpaces.data, ...metadata }
+    ctx.body = { content: vacantParkingSpaces, ...metadata }
   })
+
+  function getLastLeaseEndDate(
+    leases: Array<TenfastLease>,
+    rentalObjectCode: string
+  ): Date | null {
+    // Filtrera ut alla leases för rätt rentalObject
+    const relevantLeases = leases.filter((lease) =>
+      lease.hyresobjekt.some((obj) => obj.externalId === rentalObjectCode)
+    )
+
+    if (relevantLeases.length === 0) return null
+
+    // Sortera: först på endDate (om finns), annars på startDate
+    relevantLeases.sort((a, b) => {
+      const aDate = a.endDate
+        ? new Date(a.endDate)
+        : a.startDate
+          ? new Date(a.startDate)
+          : new Date(0)
+      const bDate = b.endDate
+        ? new Date(b.endDate)
+        : b.startDate
+          ? new Date(b.startDate)
+          : new Date(0)
+      return bDate.getTime() - aDate.getTime()
+    })
+
+    // Returnera endDate om finns
+    return relevantLeases[0].endDate
+      ? new Date(relevantLeases[0].endDate)
+      : null
+  }
+
+  function determineVacantFrom(
+    lastDebitDate?: Date | null,
+    blockStartDate?: string | Date | null,
+    blockEndDate?: string | Date | null
+  ): Date | undefined {
+    const toDate = (d: string | Date | undefined | null) =>
+      d ? new Date(d) : undefined
+
+    const lastBlockStartDate = toDate(blockStartDate)
+    const lastBlockEndDate = toDate(blockEndDate)
+    const lastDebit = toDate(lastDebitDate)
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+
+    let vacantFrom: Date | undefined
+
+    if (lastBlockEndDate && lastBlockEndDate >= today) {
+      vacantFrom = new Date(lastBlockEndDate)
+      vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+      vacantFrom.setUTCHours(0, 0, 0, 0)
+    } else if (lastBlockStartDate && !lastBlockEndDate) {
+      vacantFrom = undefined
+    } else if (lastDebit) {
+      vacantFrom = new Date(lastDebit)
+      vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+      vacantFrom.setUTCHours(0, 0, 0, 0)
+    } else {
+      vacantFrom = today
+    }
+
+    return vacantFrom
+  }
 
   /**
    * @swagger

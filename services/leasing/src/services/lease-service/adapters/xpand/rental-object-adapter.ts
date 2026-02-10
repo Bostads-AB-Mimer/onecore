@@ -74,33 +74,33 @@ function transformFromXpandRentalObject(row: any): RentalObject {
   const isSpecialProperty = ['24104', '23001', '23002', '23003'].includes(
     row.estatecode?.trim() || ''
   )
-  // Determine vacantFrom date
-  const lastDebitDate = row.lastdebitdate
-  const lastBlockStartDate = row.blockstartdate?.length
-    ? row.blockstartdate[row.blockstartdate.length - 1]
-    : row.blockstartdate
-  const lastBlockEndDate = row.blockenddate?.length
-    ? row.blockenddate[row.blockenddate.length - 1]
-    : row.blockenddate
-  let vacantFrom
-  if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
-    //if the object is blocked to a date in the future, vacantFrom should be the day after
-    vacantFrom = new Date(lastBlockEndDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  } else if (lastBlockStartDate && !lastBlockEndDate) {
-    //if there is a block but no end date, vacantFrom should be undefined
-    vacantFrom = undefined
-  } else if (lastDebitDate) {
-    //if there is no block but a last debit date, vacantFrom should be the day after
-    vacantFrom = new Date(lastDebitDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  } else {
-    //there is no block and no last debit date, the parking space is vacant as of today
-    vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  }
+  // // Determine vacantFrom date
+  // const lastDebitDate = row.lastdebitdate
+  // const lastBlockStartDate = row.blockstartdate?.length
+  //   ? row.blockstartdate[row.blockstartdate.length - 1]
+  //   : row.blockstartdate
+  // const lastBlockEndDate = row.blockenddate?.length
+  //   ? row.blockenddate[row.blockenddate.length - 1]
+  //   : row.blockenddate
+  // let vacantFrom
+  // if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
+  //   //if the object is blocked to a date in the future, vacantFrom should be the day after
+  //   vacantFrom = new Date(lastBlockEndDate)
+  //   vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+  //   vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  // } else if (lastBlockStartDate && !lastBlockEndDate) {
+  //   //if there is a block but no end date, vacantFrom should be undefined
+  //   vacantFrom = undefined
+  // } else if (lastDebitDate) {
+  //   //if there is no block but a last debit date, vacantFrom should be the day after
+  //   vacantFrom = new Date(lastDebitDate)
+  //   vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+  //   vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  // } else {
+  //   //there is no block and no last debit date, the parking space is vacant as of today
+  //   vacantFrom = new Date()
+  //   vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  // }
 
   return {
     rentalObjectCode: row.rentalObjectCode,
@@ -111,7 +111,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     residentialAreaCaption: row.residentialareacaption,
     objectTypeCaption: row.vehiclespacetypecaption,
     objectTypeCode: row.vehiclespacetypecode,
-    vacantFrom: vacantFrom,
+    blockEndDate: row.blockenddate,
+    // vacantFrom: vacantFrom,
     districtCaption: district,
     districtCode: districtCode,
     braArea: row.braarea,
@@ -279,13 +280,13 @@ const getAllVacantParkingSpaces = async (): Promise<
   try {
     const {
       parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
+      // latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
     const results = await buildMainQuery({
       parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
+      // latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     })
       //exclude parking spaces with a blocks that has no end date
@@ -293,9 +294,9 @@ const getAllVacantParkingSpaces = async (): Promise<
         this.whereNull('orb.keycmobj').orWhereNotNull('orb.blockenddate')
       })
       // Exkludera parkeringsplatser som har ett aktivt kontrakt utan lastdebitdate
-      .where(function () {
-        this.whereNull('ac.keycmobj').orWhereNotNull('ac.lastdebitdate')
-      })
+      // .where(function () {
+      //   this.whereNull('ac.keycmobj').orWhereNotNull('ac.lastdebitdate')
+      // })
       .orderBy('ps.rentalObjectCode', 'asc')
 
     const listings: RentalObject[] = results.map((row) =>
