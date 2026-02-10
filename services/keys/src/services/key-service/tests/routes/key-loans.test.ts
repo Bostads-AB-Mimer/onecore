@@ -10,10 +10,13 @@ jest.mock('../../key-loan-service', () => ({
   parseKeysArray: jest.fn(),
 }))
 
+import { keys } from '@onecore/types'
 import { routes } from '../../routes/key-loans'
 import * as factory from '../factories'
 import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
 import * as keyLoanService from '../../key-loan-service'
+
+type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
 
 // Set up a Koa app with the key-loans routes for testing
 const app = new Koa()
@@ -60,7 +63,6 @@ describe('GET /key-loans/:id', () => {
   it('responds with 200 and key loan data when found', async () => {
     const mockLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1', 'key-2']),
       contact: 'john@example.com',
     })
 
@@ -95,11 +97,9 @@ describe('GET /key-loans/by-key/:keyId', () => {
     const mockLoans = [
       factory.keyLoan.build({
         id: 'loan-1',
-        keys: JSON.stringify(['key-abc']),
       }),
       factory.keyLoan.build({
         id: 'loan-2',
-        keys: JSON.stringify(['key-abc', 'key-xyz']),
       }),
     ]
 
@@ -145,7 +145,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
 
     const getKeyLoansByRentalObjectSpy = jest
       .spyOn(keyLoansAdapter, 'getKeyLoansByRentalObject')
-      .mockResolvedValueOnce(mockLoans as any)
+      .mockResolvedValueOnce(mockLoans as KeyLoanWithDetails[])
 
     const res = await request(app.callback()).get(
       '/key-loans/by-rental-object/A001'
@@ -172,7 +172,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
 
     const getKeyLoansByRentalObjectSpy = jest
       .spyOn(keyLoansAdapter, 'getKeyLoansByRentalObject')
-      .mockResolvedValueOnce(mockLoans as any)
+      .mockResolvedValueOnce(mockLoans as KeyLoanWithDetails[])
 
     const res = await request(app.callback()).get(
       '/key-loans/by-rental-object/B002?contact=john@example.com'
@@ -198,7 +198,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
 
     const getKeyLoansByRentalObjectSpy = jest
       .spyOn(keyLoansAdapter, 'getKeyLoansByRentalObject')
-      .mockResolvedValueOnce(mockLoans as any)
+      .mockResolvedValueOnce(mockLoans as KeyLoanWithDetails[])
 
     const res = await request(app.callback()).get(
       '/key-loans/by-rental-object/C003?contact2=jane@example.com'
@@ -225,7 +225,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
 
     const getKeyLoansByRentalObjectSpy = jest
       .spyOn(keyLoansAdapter, 'getKeyLoansByRentalObject')
-      .mockResolvedValueOnce(mockLoansWithReceipts as any)
+      .mockResolvedValueOnce(mockLoansWithReceipts as KeyLoanWithDetails[])
 
     const res = await request(app.callback()).get(
       '/key-loans/by-rental-object/D004?includeReceipts=true'
@@ -253,7 +253,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
 
     const getKeyLoansByRentalObjectSpy = jest
       .spyOn(keyLoansAdapter, 'getKeyLoansByRentalObject')
-      .mockResolvedValueOnce(mockLoans as any)
+      .mockResolvedValueOnce(mockLoans as KeyLoanWithDetails[])
 
     const res = await request(app.callback()).get(
       '/key-loans/by-rental-object/E005?contact=john@example.com&contact2=jane@example.com&includeReceipts=true'
@@ -289,7 +289,7 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
 
     const getKeyLoansByRentalObjectSpy = jest
       .spyOn(keyLoansAdapter, 'getKeyLoansByRentalObject')
-      .mockResolvedValueOnce(mockLoans as any)
+      .mockResolvedValueOnce(mockLoans as KeyLoanWithDetails[])
 
     const res = await request(app.callback()).get(
       '/key-loans/by-rental-object/F006?includeReceipts=false'
@@ -312,8 +312,6 @@ describe('GET /key-loans/by-rental-object/:rentalObjectCode', () => {
  *
  * Testing key loan creation with various scenarios:
  * - Successful creation
- * - Invalid JSON in keys field
- * - Keys not an array
  * - Conflict with active loan (409)
  * - Validation errors
  * - Database errors
@@ -322,7 +320,6 @@ describe('POST /key-loans', () => {
   it('creates key loan successfully and returns 201', async () => {
     const createdLoan = factory.keyLoan.build({
       id: 'new-loan-123',
-      keys: JSON.stringify(['key-1', 'key-2']),
       contact: 'jane@example.com',
     })
 
@@ -338,14 +335,13 @@ describe('POST /key-loans', () => {
     const res = await request(app.callback())
       .post('/key-loans')
       .send({
-        keys: JSON.stringify(['key-1', 'key-2']),
+        keys: ['key-1', 'key-2'],
         loanType: 'TENANT',
         contact: 'jane@example.com',
       })
 
     expect(createKeyLoanSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        keys: JSON.stringify(['key-1', 'key-2']),
         contact: 'jane@example.com',
       }),
       expect.anything()
@@ -356,40 +352,6 @@ describe('POST /key-loans', () => {
       id: 'new-loan-123',
       contact: 'jane@example.com',
     })
-  })
-
-  it('validates invalid JSON in keys field and returns 400', async () => {
-    // Mock service validation error
-    jest
-      .spyOn(keyLoanService, 'validateKeyLoanCreation')
-      .mockResolvedValueOnce({ ok: false, err: 'invalid-keys-format' })
-
-    const res = await request(app.callback()).post('/key-loans').send({
-      keys: 'not-valid-json',
-      loanType: 'TENANT',
-      contact: 'jane@example.com',
-    })
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('Invalid keys format')
-  })
-
-  it('validates keys must be an array and returns 400', async () => {
-    // Mock service validation error
-    jest
-      .spyOn(keyLoanService, 'validateKeyLoanCreation')
-      .mockResolvedValueOnce({ ok: false, err: 'keys-not-array' })
-
-    const res = await request(app.callback())
-      .post('/key-loans')
-      .send({
-        keys: JSON.stringify({ notAnArray: true }),
-        loanType: 'TENANT',
-        contact: 'jane@example.com',
-      })
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('must be a JSON array')
   })
 
   it('returns 409 when key has active loan (conflict)', async () => {
@@ -405,7 +367,7 @@ describe('POST /key-loans', () => {
     const res = await request(app.callback())
       .post('/key-loans')
       .send({
-        keys: JSON.stringify(['key-1', 'key-2']),
+        keys: ['key-1', 'key-2'],
         loanType: 'TENANT',
         contact: 'jane@example.com',
       })
@@ -421,13 +383,11 @@ describe('POST /key-loans', () => {
       .spyOn(keyLoanService, 'validateKeyLoanCreation')
       .mockResolvedValueOnce({ ok: false, err: 'empty-keys-array' })
 
-    const res = await request(app.callback())
-      .post('/key-loans')
-      .send({
-        keys: JSON.stringify([]),
-        loanType: 'TENANT',
-        contact: 'jane@example.com',
-      })
+    const res = await request(app.callback()).post('/key-loans').send({
+      keys: [],
+      loanType: 'TENANT',
+      contact: 'jane@example.com',
+    })
 
     expect(res.status).toBe(400)
     expect(res.body.reason).toContain('cannot be empty')
@@ -435,7 +395,6 @@ describe('POST /key-loans', () => {
 
   it('creates loan with optional fields', async () => {
     const createdLoan = factory.keyLoan.build({
-      keys: JSON.stringify(['key-1']),
       contact: 'jane@example.com',
       contact2: 'john@example.com',
       pickedUpAt: new Date(),
@@ -453,7 +412,7 @@ describe('POST /key-loans', () => {
     const res = await request(app.callback())
       .post('/key-loans')
       .send({
-        keys: JSON.stringify(['key-1']),
+        keys: ['key-1'],
         loanType: 'TENANT',
         contact: 'jane@example.com',
         contact2: 'john@example.com',
@@ -472,8 +431,6 @@ describe('POST /key-loans', () => {
  * - Successful update
  * - Successful partial update
  * - Not found (404)
- * - Invalid JSON in keys field
- * - Keys not an array
  * - Conflict with active loan (409)
  * - Database errors
  */
@@ -481,7 +438,6 @@ describe('PATCH /key-loans/:id', () => {
   it('updates key loan successfully and returns 200', async () => {
     const updatedLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-3', 'key-4']),
       contact: 'updated@example.com',
     })
 
@@ -497,14 +453,13 @@ describe('PATCH /key-loans/:id', () => {
     const res = await request(app.callback())
       .patch('/key-loans/loan-123')
       .send({
-        keys: JSON.stringify(['key-3', 'key-4']),
+        keys: ['key-3', 'key-4'],
         contact: 'updated@example.com',
       })
 
     expect(updateKeyLoanSpy).toHaveBeenCalledWith(
       'loan-123',
       expect.objectContaining({
-        keys: JSON.stringify(['key-3', 'key-4']),
         contact: 'updated@example.com',
       }),
       expect.anything()
@@ -543,38 +498,6 @@ describe('PATCH /key-loans/:id', () => {
     expect(res.status).toBe(200)
   })
 
-  it('validates invalid JSON in keys field and returns 400', async () => {
-    // Mock service validation error
-    jest
-      .spyOn(keyLoanService, 'validateKeyLoanUpdate')
-      .mockResolvedValueOnce({ ok: false, err: 'invalid-keys-format' })
-
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        keys: 'invalid-json',
-      })
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('Invalid keys format')
-  })
-
-  it('validates keys must be an array and returns 400', async () => {
-    // Mock service validation error
-    jest
-      .spyOn(keyLoanService, 'validateKeyLoanUpdate')
-      .mockResolvedValueOnce({ ok: false, err: 'keys-not-array' })
-
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        keys: JSON.stringify('not-an-array'),
-      })
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('must be a JSON array')
-  })
-
   it('returns 409 when updated keys have active loan (conflict)', async () => {
     // Mock service validation with conflict
     jest.spyOn(keyLoanService, 'validateKeyLoanUpdate').mockResolvedValueOnce({
@@ -586,7 +509,7 @@ describe('PATCH /key-loans/:id', () => {
     const res = await request(app.callback())
       .patch('/key-loans/loan-123')
       .send({
-        keys: JSON.stringify(['key-5']),
+        keys: ['key-5'],
       })
 
     expect(res.status).toBe(409)
@@ -602,20 +525,19 @@ describe('PATCH /key-loans/:id', () => {
     jest.spyOn(keyLoansAdapter, 'updateKeyLoan').mockResolvedValueOnce(
       factory.keyLoan.build({
         id: 'loan-123',
-        keys: JSON.stringify(['key-1']),
       })
     )
 
     await request(app.callback())
       .patch('/key-loans/loan-123')
       .send({
-        keys: JSON.stringify(['key-1']),
+        keys: ['key-1'],
       })
 
     // Verify that service was called with the loan ID
     expect(validateUpdateSpy).toHaveBeenCalledWith(
       'loan-123',
-      JSON.stringify(['key-1']),
+      ['key-1'],
       expect.anything()
     )
   })
@@ -711,7 +633,6 @@ describe('Key Loans Lifecycle', () => {
   it('creates a pending loan without pickedUpAt', async () => {
     const pendingLoan = factory.keyLoan.build({
       id: 'pending-loan-123',
-      keys: JSON.stringify(['key-1']),
       contact: 'pending@example.com',
       pickedUpAt: undefined, // Not yet picked up
       returnedAt: undefined,
@@ -728,7 +649,7 @@ describe('Key Loans Lifecycle', () => {
     const res = await request(app.callback())
       .post('/key-loans')
       .send({
-        keys: JSON.stringify(['key-1']),
+        keys: ['key-1'],
         loanType: 'TENANT',
         contact: 'pending@example.com',
         // Explicitly not providing pickedUpAt
@@ -742,7 +663,6 @@ describe('Key Loans Lifecycle', () => {
     const now = new Date().toISOString()
     const activatedLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       contact: 'activated@example.com',
       pickedUpAt: new Date(now),
     })
@@ -767,7 +687,6 @@ describe('Key Loans Lifecycle', () => {
     // Mock existing active loan (has pickedUpAt, no returnedAt)
     const activeLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       contact: 'returned@example.com',
       pickedUpAt: new Date(Date.now() - 86400000), // Picked up yesterday
       returnedAt: undefined, // Not yet returned (active loan)
@@ -779,7 +698,6 @@ describe('Key Loans Lifecycle', () => {
 
     const returnedLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       contact: 'returned@example.com',
       pickedUpAt: new Date(Date.now() - 86400000),
       returnedAt: new Date(now), // Returned now
@@ -807,7 +725,6 @@ describe('Key Loans Lifecycle', () => {
     // Mock existing active loan (has pickedUpAt, no returnedAt)
     const activeLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       pickedUpAt: new Date(now - 86400000), // Picked up yesterday
       returnedAt: undefined, // Not yet returned
     })
@@ -818,7 +735,6 @@ describe('Key Loans Lifecycle', () => {
 
     const earlyReturnLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       returnedAt: new Date(returnedNow),
       availableToNextTenantFrom: new Date(futureDate),
     })
@@ -853,7 +769,7 @@ describe('Key Loans Lifecycle', () => {
     const res = await request(app.callback())
       .post('/key-loans')
       .send({
-        keys: JSON.stringify(['key-1']),
+        keys: ['key-1'],
         loanType: 'TENANT',
         contact: 'newcustomer@example.com',
       })
@@ -905,7 +821,6 @@ describe('Key Loans Lifecycle', () => {
     // Mock existing returned loan (has both pickedUpAt and returnedAt)
     const returnedLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       pickedUpAt: new Date(Date.now() - 86400000), // Picked up yesterday
       returnedAt: new Date(), // Already returned
     })
@@ -916,7 +831,6 @@ describe('Key Loans Lifecycle', () => {
 
     const undoReturnLoan = factory.keyLoan.build({
       id: 'loan-123',
-      keys: JSON.stringify(['key-1']),
       pickedUpAt: new Date(),
       returnedAt: undefined, // Cleared
     })
@@ -938,7 +852,6 @@ describe('Key Loans Lifecycle', () => {
     // Step 1: Create pending loan
     const pendingLoan = factory.keyLoan.build({
       id: 'workflow-loan-123',
-      keys: JSON.stringify(['key-workflow']),
       contact: 'workflow@example.com',
       pickedUpAt: undefined,
       returnedAt: undefined,
@@ -955,7 +868,7 @@ describe('Key Loans Lifecycle', () => {
     const createRes = await request(app.callback())
       .post('/key-loans')
       .send({
-        keys: JSON.stringify(['key-workflow']),
+        keys: ['key-workflow'],
         loanType: 'TENANT',
         contact: 'workflow@example.com',
       })

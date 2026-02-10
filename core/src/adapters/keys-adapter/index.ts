@@ -10,6 +10,8 @@ type Key = keys.v1.Key
 type KeyDetails = keys.v1.KeyDetails
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
+type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
+type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
 type KeySystem = keys.v1.KeySystem
 type Log = keys.v1.Log
 type CreateLogRequest = keys.v1.CreateLogRequest
@@ -374,7 +376,7 @@ export const KeyLoansApi = {
   },
 
   create: async (
-    payload: Partial<KeyLoan>
+    payload: CreateKeyLoanRequest
   ): Promise<
     AdapterResult<KeyLoan, 'bad-request' | 'conflict' | CommonErr>
   > => {
@@ -384,7 +386,7 @@ export const KeyLoansApi = {
 
   update: async (
     id: string,
-    payload: Partial<KeyLoan>
+    payload: UpdateKeyLoanRequest
   ): Promise<
     AdapterResult<KeyLoan, 'not-found' | 'bad-request' | 'conflict' | CommonErr>
   > => {

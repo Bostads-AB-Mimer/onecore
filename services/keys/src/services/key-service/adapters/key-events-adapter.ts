@@ -45,8 +45,10 @@ export async function getKeyEventsByKey(
   limit?: number
 ): Promise<KeyEvent[]> {
   let query = db(TABLE)
-    .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-    .orderBy('createdAt', 'desc')
+    .join('key_event_keys', `${TABLE}.id`, 'key_event_keys.keyEventId')
+    .where('key_event_keys.keyId', keyId)
+    .select(`${TABLE}.*`)
+    .orderBy(`${TABLE}.createdAt`, 'desc')
 
   if (limit) {
     query = query.limit(limit)
@@ -66,8 +68,24 @@ export async function createKeyEvent(
   data: CreateKeyEventRequest,
   db: Knex
 ): Promise<KeyEvent> {
-  const [row] = await db(TABLE).insert(data).returning('*')
-  return row
+  const { keys: keyIds, ...eventData } = data
+
+  const execute = async (trx: Knex.Transaction) => {
+    const [row] = await trx(TABLE).insert(eventData).returning('*')
+
+    if (keyIds?.length) {
+      await trx('key_event_keys').insert(
+        keyIds.map((keyId) => ({ keyEventId: row.id, keyId }))
+      )
+    }
+
+    return row
+  }
+
+  if (db.isTransaction) {
+    return execute(db as Knex.Transaction)
+  }
+  return db.transaction(execute)
 }
 
 /**
@@ -83,8 +101,30 @@ export async function updateKeyEvent(
   data: UpdateKeyEventRequest,
   db: Knex
 ): Promise<KeyEvent | undefined> {
-  const [row] = await db(TABLE).where({ id }).update(data).returning('*')
-  return row
+  const { keys: keyIds, ...eventData } = data
+
+  const execute = async (trx: Knex.Transaction) => {
+    const [row] = await trx(TABLE)
+      .where({ id })
+      .update({ ...eventData, updatedAt: trx.fn.now() })
+      .returning('*')
+
+    if (keyIds !== undefined) {
+      await trx('key_event_keys').where({ keyEventId: id }).del()
+      if (keyIds.length) {
+        await trx('key_event_keys').insert(
+          keyIds.map((keyId) => ({ keyEventId: id, keyId }))
+        )
+      }
+    }
+
+    return row
+  }
+
+  if (db.isTransaction) {
+    return execute(db as Knex.Transaction)
+  }
+  return db.transaction(execute)
 }
 
 /**
@@ -101,20 +141,14 @@ export async function checkIncompleteKeyEvents(
     return { hasConflict: false, conflictingKeys: [] }
   }
 
-  const conflictingKeys: string[] = []
+  const rows = await db('key_event_keys')
+    .join(TABLE, `${TABLE}.id`, 'key_event_keys.keyEventId')
+    .whereIn('key_event_keys.keyId', keyIds)
+    .whereNot(`${TABLE}.status`, 'COMPLETED')
+    .select('key_event_keys.keyId')
+    .distinct()
 
-  // Check each key ID for incomplete events
-  for (const keyId of keyIds) {
-    const incompleteEvent = await db(TABLE)
-      .select('id')
-      .whereNot('status', 'COMPLETED')
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-      .first()
-
-    if (incompleteEvent) {
-      conflictingKeys.push(keyId)
-    }
-  }
+  const conflictingKeys = rows.map((r) => r.keyId)
 
   return {
     hasConflict: conflictingKeys.length > 0,

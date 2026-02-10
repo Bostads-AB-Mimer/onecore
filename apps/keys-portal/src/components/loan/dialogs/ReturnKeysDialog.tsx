@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon, AlertCircle } from 'lucide-react'
-import type { Key, Lease, CardDetails } from '@/services/types'
+import type {
+  Key,
+  Lease,
+  CardDetails,
+  KeyLoanWithDetails,
+} from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { BeforeAfterDialogBase } from './BeforeAfterDialogBase'
 import { handleReturnKeys } from '@/services/loanHandlers'
@@ -86,7 +91,7 @@ export function ReturnKeysDialog({
       try {
         const remainingKeyIds = new Set(keyIds)
         const remainingCardIds = new Set(cardIds)
-        const uniqueActiveLoans = new Map<string, any>()
+        const uniqueActiveLoans = new Map<string, KeyLoanWithDetails>()
 
         // Process until all IDs are accounted for
         while (remainingKeyIds.size > 0 || remainingCardIds.size > 0) {
@@ -105,13 +110,16 @@ export function ReturnKeysDialog({
           const activeLoan = loans.find((loan) => !loan.returnedAt)
 
           if (activeLoan && !uniqueActiveLoans.has(activeLoan.id)) {
-            uniqueActiveLoans.set(activeLoan.id, activeLoan)
+            // Fetch with details to get key/card arrays
+            const enriched = (await keyLoanService.get(activeLoan.id, {
+              includeCards: true,
+            })) as KeyLoanWithDetails
+            uniqueActiveLoans.set(activeLoan.id, enriched)
 
             // Remove all keys/cards from this loan from remaining sets
-            const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
-            const loanCardIds: string[] = JSON.parse(
-              activeLoan.keyCards || '[]'
-            )
+            const loanKeyIds = enriched.keysArray?.map((k) => k.id) || []
+            const loanCardIds =
+              enriched.keyCardsArray?.map((c) => c.cardId) || []
             loanKeyIds.forEach((id) => remainingKeyIds.delete(id))
             loanCardIds.forEach((id) => remainingCardIds.delete(id))
           } else {
@@ -124,33 +132,34 @@ export function ReturnKeysDialog({
           }
         }
 
-        // Now parse ALL keys and cards from each unique loan
+        // Build keysLoansMap and cardsLoansMap from enriched loans
         const keysLoansMap = new Map<string, KeysByLoan>()
         const cardsLoansMap = new Map<string, CardsByLoan>()
 
-        uniqueActiveLoans.forEach((activeLoan, loanId) => {
-          // Parse keys from this loan
-          const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
+        uniqueActiveLoans.forEach((enrichedLoan, loanId) => {
+          // Use keysArray from enriched loan, match against allKeys for consistent objects
+          const loanKeyIds = enrichedLoan.keysArray?.map((k) => k.id) || []
           if (loanKeyIds.length > 0) {
             const loanKeys = allKeys.filter((k) => loanKeyIds.includes(k.id))
             keysLoansMap.set(loanId, {
               loanId,
-              contact: activeLoan.contact || null,
+              contact: enrichedLoan.contact || null,
               keys: loanKeys,
               disposedKeys: loanKeys.filter((k) => k.disposed),
               nonDisposedKeys: loanKeys.filter((k) => !k.disposed),
             })
           }
 
-          // Parse cards from this loan
-          const loanCardIds: string[] = JSON.parse(activeLoan.keyCards || '[]')
+          // Use keyCardsArray from enriched loan
+          const loanCardIds =
+            enrichedLoan.keyCardsArray?.map((c) => c.cardId) || []
           if (loanCardIds.length > 0) {
             const loanCards = allCards.filter((c) =>
               loanCardIds.includes(c.cardId)
             )
             cardsLoansMap.set(loanId, {
               loanId,
-              contact: activeLoan.contact || null,
+              contact: enrichedLoan.contact || null,
               cards: loanCards,
             })
           }

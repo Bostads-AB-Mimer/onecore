@@ -30,15 +30,13 @@ describe('GET /key-events', () => {
     const mockEvents = [
       factory.keyEvent.build({
         id: 'event-1',
-        keys: JSON.stringify(['key-1']),
-        type: 'FLEX' as any,
-        status: 'COMPLETED' as any,
+        type: 'FLEX',
+        status: 'COMPLETED',
       }),
       factory.keyEvent.build({
         id: 'event-2',
-        keys: JSON.stringify(['key-2']),
-        type: 'FLEX' as any,
-        status: 'ORDERED' as any,
+        type: 'FLEX',
+        status: 'ORDERED',
       }),
     ]
 
@@ -68,15 +66,13 @@ describe('GET /key-events/by-key/:keyId', () => {
     const mockEvents = [
       factory.keyEvent.build({
         id: 'event-1',
-        keys: JSON.stringify(['key-abc']),
-        type: 'FLEX' as any,
-        status: 'COMPLETED' as any,
+        type: 'FLEX',
+        status: 'COMPLETED',
       }),
       factory.keyEvent.build({
         id: 'event-2',
-        keys: JSON.stringify(['key-abc', 'key-def']),
-        type: 'FLEX' as any,
-        status: 'COMPLETED' as any,
+        type: 'FLEX',
+        status: 'COMPLETED',
       }),
     ]
 
@@ -99,9 +95,8 @@ describe('GET /key-events/by-key/:keyId', () => {
     const mockEvents = [
       factory.keyEvent.build({
         id: 'latest-event',
-        keys: JSON.stringify(['key-abc']),
-        type: 'FLEX' as any,
-        status: 'ORDERED' as any,
+        type: 'FLEX',
+        status: 'ORDERED',
       }),
     ]
 
@@ -135,9 +130,8 @@ describe('GET /key-events/:id', () => {
   it('responds with 200 and key event data when found', async () => {
     const mockEvent = factory.keyEvent.build({
       id: 'event-123',
-      keys: JSON.stringify(['key-1', 'key-2']),
-      type: 'FLEX' as any,
-      status: 'COMPLETED' as any,
+      type: 'FLEX',
+      status: 'COMPLETED',
     })
 
     const getKeyEventByIdSpy = jest
@@ -172,9 +166,8 @@ describe('POST /key-events', () => {
   it('creates key event successfully and returns 201', async () => {
     const createdEvent = factory.keyEvent.build({
       id: 'new-event-123',
-      keys: JSON.stringify(['key-1', 'key-2']),
-      type: 'FLEX' as any,
-      status: 'ORDERED' as any,
+      type: 'FLEX',
+      status: 'ORDERED',
     })
 
     // Mock no conflicts
@@ -189,14 +182,13 @@ describe('POST /key-events', () => {
     const res = await request(app.callback())
       .post('/key-events')
       .send({
-        keys: JSON.stringify(['key-1', 'key-2']),
+        keys: ['key-1', 'key-2'],
         type: 'FLEX',
         status: 'ORDERED',
       })
 
     expect(createKeyEventSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        keys: JSON.stringify(['key-1', 'key-2']),
         type: 'FLEX',
         status: 'ORDERED',
       }),
@@ -223,7 +215,7 @@ describe('POST /key-events', () => {
     const res = await request(app.callback())
       .post('/key-events')
       .send({
-        keys: JSON.stringify(['key-1', 'key-2']),
+        keys: ['key-1', 'key-2'],
         type: 'FLEX',
         status: 'ORDERED',
       })
@@ -234,13 +226,11 @@ describe('POST /key-events', () => {
   })
 
   it('rejects event with empty keys array', async () => {
-    const res = await request(app.callback())
-      .post('/key-events')
-      .send({
-        keys: JSON.stringify([]),
-        type: 'FLEX',
-        status: 'COMPLETED',
-      })
+    const res = await request(app.callback()).post('/key-events').send({
+      keys: [],
+      type: 'FLEX',
+      status: 'COMPLETED',
+    })
 
     expect(res.status).toBe(400)
     expect(res.body.reason).toContain('empty')
@@ -271,7 +261,7 @@ describe('PATCH /key-events/:id', () => {
   it('updates key event successfully and returns 200', async () => {
     const updatedEvent = factory.keyEvent.build({
       id: 'event-123',
-      status: 'COMPLETED' as any,
+      status: 'COMPLETED',
     })
 
     const updateKeyEventSpy = jest

@@ -11,7 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { KeyLoan, UpdateKeyLoanRequest } from '@/services/types'
+import {
+  KeyLoan,
+  KeyLoanWithDetails,
+  UpdateKeyLoanRequest,
+  Receipt,
+} from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
 import { X, FileText, Download, Trash2, Upload } from 'lucide-react'
 import { format } from 'date-fns'
@@ -60,7 +65,7 @@ export function EditKeyLoanForm({
     null
   )
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
-  const [loanReceipt, setLoanReceipt] = useState<any>(null)
+  const [loanReceipt, setLoanReceipt] = useState<Receipt | null>(null)
   const [loadingReceipt, setLoadingReceipt] = useState(true)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -231,14 +236,13 @@ export function EditKeyLoanForm({
     }
   }
 
-  // Get key count
+  // Get key count from keysArray if available
   const getKeyCount = () => {
-    try {
-      const keys = JSON.parse(editingKeyLoan.keys || '[]')
-      return Array.isArray(keys) ? keys.length : 0
-    } catch {
-      return 0
+    const withDetails = editingKeyLoan as KeyLoanWithDetails
+    if (withDetails.keysArray) {
+      return withDetails.keysArray.length
     }
+    return '-'
   }
 
   return (

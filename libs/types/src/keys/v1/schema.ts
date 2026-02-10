@@ -57,8 +57,6 @@ export const KeySchema = z.object({
 
 export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
-  keys: z.string(),
-  keyCards: z.string(),
   loanType: LoanTypeSchema,
   contact: z.string().optional(),
   contact2: z.string().optional(),
@@ -134,7 +132,6 @@ export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
 
 export const KeyEventSchema = z.object({
   id: z.string().uuid(),
-  keys: z.string(),
   type: KeyEventTypeSchema,
   status: KeyEventStatusSchema,
   workOrderId: z.string().uuid().nullable().optional(),
@@ -212,8 +209,8 @@ export const UpdateKeySystemRequestSchema = z.object({
 // Request schemas for key loans
 
 export const CreateKeyLoanRequestSchema = z.object({
-  keys: z.string().optional(),
-  keyCards: z.string().optional(),
+  keys: z.array(z.string()).optional(),
+  keyCards: z.array(z.string()).optional(),
   loanType: LoanTypeSchema,
   contact: z.string().optional(),
   contact2: z.string().optional(),
@@ -226,8 +223,8 @@ export const CreateKeyLoanRequestSchema = z.object({
 })
 
 export const UpdateKeyLoanRequestSchema = z.object({
-  keys: z.string().optional(),
-  keyCards: z.string().optional(),
+  keys: z.array(z.string()).optional(),
+  keyCards: z.array(z.string()).optional(),
   loanType: LoanTypeSchema.optional(),
   contact: z.string().optional(),
   contact2: z.string().optional(),
@@ -371,14 +368,14 @@ export const UpdateKeyBundleRequestSchema = z.object({
 // Request schemas for key events
 
 export const CreateKeyEventRequestSchema = z.object({
-  keys: z.string(),
+  keys: z.array(z.string()),
   type: KeyEventTypeSchema,
   status: KeyEventStatusSchema,
   workOrderId: z.string().uuid().nullable().optional(),
 })
 
 export const UpdateKeyEventRequestSchema = z.object({
-  keys: z.string().optional(),
+  keys: z.array(z.string()).optional(),
   type: KeyEventTypeSchema.optional(),
   status: KeyEventStatusSchema.optional(),
   workOrderId: z.string().uuid().nullable().optional(),

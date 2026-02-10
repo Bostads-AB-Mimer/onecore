@@ -255,40 +255,18 @@ export const keyLoanService = {
       // Fetch loans for this key
       const loans = await this.getByKeyId(key.id)
 
-      // Add loans to the map and mark keys/cards as processed ONLY for active loans
-      // (We can skip redundant API calls only if we already found an active loan containing that key)
+      // Add loans to the map
       loans.forEach((loan) => {
         loanMap.set(loan.id, loan)
-
-        // Only mark keys/cards as processed if this is an ACTIVE loan
-        // This prevents skipping keys that share historical (returned) loans
-        if (!loan.returnedAt) {
-          // Mark all keys in this active loan as processed to avoid redundant API calls
-          try {
-            const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
-            loanKeyIds.forEach((id) => processedKeyIds.add(id))
-          } catch {
-            // If parsing fails, just mark the current key
-            processedKeyIds.add(key.id)
-          }
-
-          // Mark all cards in this active loan as processed
-          try {
-            const loanCardIds: string[] = JSON.parse(loan.keyCards || '[]')
-            loanCardIds.forEach((id) => processedCardIds.add(id))
-          } catch {
-            // Ignore parse errors for cards
-          }
-        }
       })
 
-      // Also mark the current key as processed (in case it has no loans)
+      // Mark the current key as processed
       processedKeyIds.add(key.id)
     }
 
     // Process cards to find card-only loans (loans without keys)
     for (const card of cards) {
-      // Skip if we've already processed this card (from a key loan)
+      // Skip if we've already processed this card
       if (processedCardIds.has(card.cardId)) {
         continue
       }
@@ -296,32 +274,12 @@ export const keyLoanService = {
       // Fetch loans for this card
       const loans = await this.getByCardId(card.cardId)
 
-      // Add loans to the map and mark keys/cards as processed ONLY for active loans
+      // Add loans to the map
       loans.forEach((loan) => {
         loanMap.set(loan.id, loan)
-
-        // Only mark keys/cards as processed if this is an ACTIVE loan
-        if (!loan.returnedAt) {
-          // Mark all keys in this active loan as processed
-          try {
-            const loanKeyIds: string[] = JSON.parse(loan.keys || '[]')
-            loanKeyIds.forEach((id) => processedKeyIds.add(id))
-          } catch {
-            // Ignore parse errors
-          }
-
-          // Mark all cards in this active loan as processed
-          try {
-            const loanCardIds: string[] = JSON.parse(loan.keyCards || '[]')
-            loanCardIds.forEach((id) => processedCardIds.add(id))
-          } catch {
-            // If parsing fails, just mark the current card
-            processedCardIds.add(card.cardId)
-          }
-        }
       })
 
-      // Also mark the current card as processed (in case it has no loans)
+      // Mark the current card as processed
       processedCardIds.add(card.cardId)
     }
 

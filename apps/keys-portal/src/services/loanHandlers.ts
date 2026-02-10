@@ -2,7 +2,15 @@ import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
 import { generateAndUploadReturnReceipt } from './receiptHandlers'
-import type { Card, KeyDetails, KeyLoanWithDetails, Lease } from './types'
+import type {
+  Card,
+  CreateKeyLoanRequest,
+  KeyDetails,
+  KeyLoan,
+  KeyLoanWithDetails,
+  Lease,
+  UpdateKeyLoanRequest,
+} from './types'
 
 export type LoanKeysParams = {
   keyIds?: string[]
@@ -43,19 +51,13 @@ export async function handleLoanKeys({
 
   try {
     // Create the key loan in pending state (pickedUpAt will be set when receipt is signed)
-    const payload: any = {
+    const payload: CreateKeyLoanRequest = {
+      loanType: 'TENANT', // Tenant loans from regular key-loans menu
       contact,
       contact2,
-      loanType: 'TENANT', // Tenant loans from regular key-loans menu
+      ...(keyIds.length > 0 ? { keys: keyIds } : {}),
+      ...(cardIds.length > 0 ? { keyCards: cardIds } : {}),
       // createdBy is set automatically by backend from authenticated user
-    }
-
-    // Add keys and/or cards to the payload
-    if (keyIds.length > 0) {
-      payload.keys = JSON.stringify(keyIds)
-    }
-    if (cardIds.length > 0) {
-      payload.keyCards = JSON.stringify(cardIds)
     }
 
     const created = await keyLoanService.create(payload)
@@ -150,7 +152,7 @@ export async function handleReturnKeys({
     let receiptId: string | undefined
 
     // Build a map of unique active loans first to avoid duplicate fetches
-    const uniqueActiveLoans = new Map<string, any>()
+    const uniqueActiveLoans = new Map<string, KeyLoan>()
 
     // Fetch loans for both keys and cards
     const keyLoansPromises = keyIds.map((keyId) =>
@@ -171,9 +173,13 @@ export async function handleReturnKeys({
       }
     })
 
-    for (const [loanId, activeLoan] of uniqueActiveLoans.entries()) {
-      const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
-      const loanCardIds: string[] = JSON.parse(activeLoan.keyCards || '[]')
+    for (const [loanId] of uniqueActiveLoans.entries()) {
+      // Fetch loan with details to get key and card IDs
+      const enrichedLoan = (await keyLoanService.get(loanId, {
+        includeCards: true,
+      })) as KeyLoanWithDetails
+      const loanKeyIds = enrichedLoan.keysArray?.map((k) => k.id) || []
+      const loanCardIds = enrichedLoan.keyCardsArray?.map((c) => c.cardId) || []
 
       const missingKeys = loanKeyIds.filter((id) => !keyIdSet.has(id))
       const missingCards = loanCardIds.filter((id) => !cardIdSet.has(id))
@@ -198,7 +204,7 @@ export async function handleReturnKeys({
       await keyLoanService.update(loanId, {
         returnedAt: now,
         availableToNextTenantFrom: availableToNextTenantFrom ?? null,
-      } as any)
+      } as UpdateKeyLoanRequest)
 
       // Create return receipt for this loan
       try {

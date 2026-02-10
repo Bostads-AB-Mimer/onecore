@@ -145,16 +145,12 @@ export async function getKeyBundlesByContactWithLoanedKeys(
     return []
   }
 
-  // Collect all key IDs from all active loans
-  const loanedKeyIds = new Set<string>()
-  for (const loan of activeLoans) {
-    try {
-      const keyIds: string[] = JSON.parse(loan.keys)
-      keyIds.forEach((id) => loanedKeyIds.add(id))
-    } catch (_e) {
-      // Skip invalid JSON
-    }
-  }
+  // Collect all key IDs from all active loans via junction table
+  const loanIds = activeLoans.map((l) => l.id)
+  const loanKeyRows = await dbConnection('key_loan_keys')
+    .whereIn('keyLoanId', loanIds)
+    .select('keyId')
+  const loanedKeyIds = new Set<string>(loanKeyRows.map((r) => r.keyId))
 
   if (loanedKeyIds.size === 0) {
     return []

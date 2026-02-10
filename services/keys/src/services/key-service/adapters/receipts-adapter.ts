@@ -98,7 +98,6 @@ export async function getKeyLoanById(
 ): Promise<
   | {
       id: string
-      keys: string
       pickedUpAt: string | null
       loanType: 'TENANT' | 'MAINTENANCE'
     }
@@ -141,10 +140,15 @@ export async function completeKeyEventsForKeys(
   keyIds: string[],
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<void> {
-  for (const keyId of keyIds) {
-    await dbConnection('key_events')
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-      .whereIn('status', ['ORDERED', 'RECEIVED'])
-      .update({ status: 'COMPLETED', updatedAt: dbConnection.fn.now() })
-  }
+  if (keyIds.length === 0) return
+
+  await dbConnection('key_events')
+    .whereExists(function () {
+      this.select(dbConnection.raw(1))
+        .from('key_event_keys')
+        .whereRaw('key_event_keys.keyEventId = key_events.id')
+        .whereIn('key_event_keys.keyId', keyIds)
+    })
+    .whereIn('status', ['ORDERED', 'RECEIVED'])
+    .update({ status: 'COMPLETED', updatedAt: dbConnection.fn.now() })
 }

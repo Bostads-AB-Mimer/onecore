@@ -1,4 +1,5 @@
 import * as keysAdapter from '../../adapters/keys-adapter'
+import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
 import * as factory from '../factories'
 import { withContext } from '../testUtils'
 
@@ -81,14 +82,15 @@ describe('keys-adapter', () => {
           ctx.db
         )
 
-        // Create active loan for the key
-        await ctx.db('key_loans').insert({
-          keys: JSON.stringify([key.id]),
-          contact: 'john@example.com',
-          returnedAt: null, // Active loan
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
+        // Create active loan for the key using adapter (handles junction table)
+        await keyLoansAdapter.createKeyLoan(
+          {
+            keys: [key.id],
+            loanType: 'TENANT',
+            contact: 'john@example.com',
+          },
+          ctx.db
+        )
 
         // Test the complex aggregation query
         const result = await keysAdapter.getKeyDetailsByRentalObject(
