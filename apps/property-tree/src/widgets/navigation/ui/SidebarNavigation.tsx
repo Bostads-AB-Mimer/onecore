@@ -24,8 +24,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from '@/components/ui/Sidebar'
-import { useHierarchicalSelection } from '@/hooks/useHierarchicalSelection'
+} from '@/shared/ui/Sidebar'
+import { useHierarchicalSelection } from '@/shared/hooks/useHierarchicalSelection'
 import {
   CompanyExpansionProvider,
   useCompanyExpansion,

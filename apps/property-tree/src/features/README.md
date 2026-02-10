@@ -30,16 +30,14 @@ features/
 
 **Can import from:**
 
-- `components/` (shared UI)
-- `hooks/` (shared hooks)
+- `entities/` (domain models and basic UI)
+- `shared/*` (UI, hooks, lib, types, assets)
 - `services/` (API calls)
-- `utils/` (utilities)
-- `types/` (shared types)
 - `config/` (configuration)
-- `store/` (global state)
+- Global state (store/app shell) when needed
 
 **Cannot import from:**
 
-- Other features (this is critical - extract shared code instead)
+- Other features (extract shared parts into `entities/` or `shared/`)
 - `views/`
 - `layouts/`

@@ -1,15 +1,10 @@
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
-import { useIsMobile } from '@/hooks/useMobile'
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/lease-service'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
 import { CurrentTenant } from '@/features/tenants'
 import { LeasesTabContent } from '@/features/leases'

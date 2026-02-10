@@ -18,16 +18,11 @@ import {
   Home,
   Calendar,
 } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { useUser } from '@/entities/user'
 import type { DashboardCard } from '@/services/types'
-import { resolve } from '@/utils/env'
-import onecoreLogo from '@/assets/logos/stacked/onecore_logo_stacked_black.svg'
+import { resolve } from '@/shared/lib/env'
+import onecoreLogo from '@/shared/assets/logos/stacked/onecore_logo_stacked_black.svg'
 
 export function DashboardView() {
   const navigate = useNavigate()

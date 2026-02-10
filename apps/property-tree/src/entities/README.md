@@ -27,13 +27,9 @@ entities/
 
 **Can import from:**
 
-- `components/` (shared UI)
-- `hooks/` (shared hooks)
-- `services/` (API calls)
-- `utils/` (utilities)
-- `types/` (shared types)
-- `config/` (configuration)
-- `store/` (global state)
+- `shared/*` (UI, hooks, lib, types, assets)
+- `services/` (API calls and data access)
+- Other entities when it makes domain sense (for example, `component` using `document` helpers)
 
 **Cannot import from:**
 
@@ -41,4 +37,5 @@ entities/
 - `widgets/`
 - `views/`
 - `layouts/`
-- Other entities (keep entities independent)
+
+Avoid deep coupling and circular dependencies between entities – prefer small, well-defined helpers.

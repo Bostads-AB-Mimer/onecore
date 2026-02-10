@@ -1,16 +1,16 @@
-// Components
-export { PropertyBasicInfo } from './components/PropertyBasicInfo'
-export { PropertyBuildingCard } from './components/PropertyBuildingCard'
-export { PropertyFilteredResults } from './components/PropertyFilteredResults'
-export { PropertyMap } from './components/PropertyMap'
-export { PropertySearch } from './components/PropertySearch'
-export { PropertyTypeFilters } from './components/PropertyTypeFilters'
-export { PropertiesTable } from './components/PropertiesTable'
-export { SearchResultsTable } from './components/SearchResultsTable'
+// UI
+export { PropertyBasicInfo } from './ui/PropertyBasicInfo'
+export { PropertyBuildingCard } from './ui/PropertyBuildingCard'
+export { PropertyFilteredResults } from './ui/PropertyFilteredResults'
+export { PropertyMap } from './ui/PropertyMap'
+export { PropertySearch } from './ui/PropertySearch'
+export { PropertyTypeFilters } from './ui/PropertyTypeFilters'
+export { PropertiesTable } from './ui/PropertiesTable'
+export { SearchResultsTable } from './ui/SearchResultsTable'
 
 // Tab Components
-export { PropertyBuildingsTabContent } from './components/PropertyBuildingsTabContent'
-export { PropertyStatisticsTabContent } from './components/PropertyStatisticsTabContent'
+export { PropertyBuildingsTabContent } from './ui/PropertyBuildingsTabContent'
+export { PropertyStatisticsTabContent } from './ui/PropertyStatisticsTabContent'
 
 // Hooks
 export { useProperties } from './hooks/useProperties'

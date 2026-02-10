@@ -10,18 +10,16 @@ import {
   Maximize2,
   DoorOpen,
   Wrench,
-  Settings,
-  AlertCircle,
 } from 'lucide-react'
 
 import { Room, Component, Issue } from '../services/types'
-import { ViewHeader } from '../components/shared/ViewHeader'
-import { Card } from '@/components/ui/Card'
-import { Grid } from '@/components/ui/Grid'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
-import { ComponentList } from '../components/shared/ComponentList'
-import { ActiveIssues } from '../components/shared/ActiveIssues'
+import { ViewHeader } from '../shared/ui/ViewHeader'
+import { Card } from '@/shared/ui/Card'
+import { Grid } from '@/shared/ui/Grid'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { ComponentList } from '../features/component-library'
+import { ActiveIssues } from '../features/rooms/ui/ActiveIssues'
 
 const roomIcons = {
   bedroom: BedDouble,

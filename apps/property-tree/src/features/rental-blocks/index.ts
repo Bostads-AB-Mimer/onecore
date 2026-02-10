@@ -1,5 +1,6 @@
-// Components
-export { RentalBlockMobileCard } from './components/RentalBlockMobileCard'
+// UI
+export { RentalBlockMobileCard } from './ui/RentalBlockMobileCard'
+export { RentalBlocksTabContent } from './ui/RentalBlocksTabContent'
 
 // Hooks
 export { useBlockReasons } from './hooks/useBlockReasons'

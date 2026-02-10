@@ -1,9 +1,8 @@
-// Components
-export { ErrorState } from './components/ErrorState'
-export { LoadingState } from './components/LoadingState'
-export { RentalBlocksTabContent } from './components/RentalBlocksTabContent'
-export { ResidenceBasicInfo } from './components/ResidenceBasicInfo'
-export { ResidenceFloorplanTabsContent } from './components/ResidenceFloorplanTabsContent'
+// UI
+export { ErrorState } from './ui/ErrorState'
+export { LoadingState } from './ui/LoadingState'
+export { ResidenceBasicInfo } from './ui/ResidenceBasicInfo'
+export { ResidenceFloorplanTabsContent } from './ui/ResidenceFloorplanTabsContent'
 
 // Hooks
 export { useResidences } from './hooks/useResidences'

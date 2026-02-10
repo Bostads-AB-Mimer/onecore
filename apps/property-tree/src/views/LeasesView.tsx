@@ -1,32 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
-import { Input } from '@/components/ui/Input'
-import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
-import { Button } from '@/components/ui/Button'
-import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { Input } from '@/shared/ui/Input'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+import { Button } from '@/shared/ui/Button'
+import { MultiSelectFilterDropdown } from '@/shared/ui/MultiSelectFilterDropdown'
 import {
   MultiSelectSearchFilterDropdown,
   SearchFilterOption,
-} from '@/components/ui/MultiSelectSearchFilterDropdown'
-import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
+} from '@/shared/ui/MultiSelectSearchFilterDropdown'
+import { DateRangeFilterDropdown } from '@/shared/ui/DateRangeFilterDropdown'
 import { useLeaseSearch } from '@/features/leases'
-import { useUrlPagination } from '@/hooks/useUrlPagination'
-import { useDebounce } from '@/hooks/useDebounce'
-import { Pagination } from '@/components/ui/Pagination'
+import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
+import { useDebounce } from '@/shared/hooks/useDebounce'
+import { Pagination } from '@/shared/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import {
   leaseSearchService,
   type LeaseSearchResult,
   type BuildingManager,
 } from '@/services/api/core/leaseSearchService'
-import { ObjectTypeBadge } from '@/components/ui/StatusBadges'
+import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 import { formatDate, LeaseStatusBadge } from '@/entities/lease'
 
 const objectTypeOptions = [

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Badge } from '@/components/ui/v2/Badge'
+import { Badge } from '@/shared/ui/Badge'
 import { Lease } from '@/services/api/core/lease-service'
 
 export const LeaseStatus = {

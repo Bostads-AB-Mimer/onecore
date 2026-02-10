@@ -1,24 +1,10 @@
 import { useState, useEffect } from 'react'
 import { components } from '@/services/api/core/generated/api-types'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
-import { Badge } from '@/components/ui/v2/Badge'
-import { Button } from '@/components/ui/v2/Button'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/Popover'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import {
   Command,
   CommandEmpty,
@@ -26,9 +12,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/Command'
+} from '@/shared/ui/Command'
 import { ChevronsUpDown, Check, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 import {
   InspectionsTable,

@@ -3,10 +3,10 @@ import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 import {
   MobileAccordion,
   MobileAccordionItem,
-} from '@/components/ui/MobileAccordion'
+} from '@/shared/ui/MobileAccordion'
 import { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/lease-service'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
 import { CurrentTenant } from '@/features/tenants'
 import { LeasesTabContent } from '@/features/leases'

@@ -8,8 +8,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/Tooltip'
-import { Card, CardContent } from '@/components/ui/v2/Card'
+} from '@/shared/ui/Tooltip'
+import { Card, CardContent } from '@/shared/ui/Card'
 import { AlertTriangle } from 'lucide-react'
 import { TenantTabs } from '@/widgets/tenant-tabs'
 import type { Tenant } from '@/services/types'

@@ -1,5 +1,5 @@
 import { Property } from '@/services/types'
-import { SidebarMenu } from '@/components/ui/Sidebar'
+import { SidebarMenu } from '@/shared/ui/Sidebar'
 import { BuildingNavigation } from './Building'
 import { NavigationSkeleton } from './NavigationSkeleton'
 import { NavigationError } from './NavigationError'

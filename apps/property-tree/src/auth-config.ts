@@ -1,4 +1,4 @@
-import { resolve } from '@/utils/env'
+import { resolve } from '@/shared/lib/env'
 
 export const authConfig = {
   keycloakUrl: resolve(

@@ -1,5 +1,5 @@
 import { CompanyNavigation } from './Company'
-import { SidebarMenu } from '@/components/ui/Sidebar'
+import { SidebarMenu } from '@/shared/ui/Sidebar'
 import { NavigationSkeleton } from './NavigationSkeleton'
 import { NavigationError } from './NavigationError'
 import { useCompanies } from '@/features/companies'

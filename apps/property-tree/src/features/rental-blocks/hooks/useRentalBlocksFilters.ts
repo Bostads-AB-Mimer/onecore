@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useUrlPagination } from '@/hooks/useUrlPagination'
-import { useDebounce } from '@/hooks/useDebounce'
+import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
+import { useDebounce } from '@/shared/hooks/useDebounce'
 import type { RentalBlocksSearchParams } from '@/services/types'
 
 const PAGE_SIZE = 50

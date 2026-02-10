@@ -1,6 +1,6 @@
 import { buildingService, propertyService } from '@/services/api/core'
 import { useQuery } from '@tanstack/react-query'
-import type { PropertyDetail } from '@/types/api'
+import type { PropertyDetail } from '@/shared/types/api'
 
 export function useProperty(propertyId: string | undefined) {
   const propertyQuery = useQuery({

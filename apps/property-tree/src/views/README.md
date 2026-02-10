@@ -26,14 +26,13 @@ views/
 
 **Can import from:**
 
-- `features/` (this is where views get their content)
+- `widgets/` (preferred for complex compositions)
+- `features/` (this is where views get most of their content)
+- `entities/` (for simple cases or small entity blocks)
 - `layouts/` (view structure)
-- `components/` (shared UI)
-- `hooks/` (shared hooks)
-- `utils/`
-- `types/`
-- `store/`
-- `config/`
+- `shared/*` (UI, hooks, lib, types)
+- `services/` (rarely – prefer going through features/entities)
+- Global state / config as needed
 
 **Cannot import from:**
 
