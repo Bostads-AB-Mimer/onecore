@@ -6,7 +6,7 @@ import assert from 'node:assert'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
-import { toYearMonthString } from '../../../adapters/tenfast/schemas'
+import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
 
 describe(tenfastAdapter.getLeaseTemplate, () => {
   it('should return template when response is valid and status is 200', async () => {
@@ -903,68 +903,6 @@ describe(tenfastAdapter.createLease, () => {
   })
 })
 
-describe(tenfastAdapter.createLeaseInvoiceRow, () => {
-  it('creates and returns null', async () => {
-    const invoiceRow = factory.tenfastInvoiceRow.build()
-
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 200,
-      data: invoiceRow,
-    })
-
-    const result = await tenfastAdapter.createLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRow: invoiceRow,
-    })
-
-    expect(result).toEqual({ ok: true, data: null })
-  })
-
-  it('returns ok false on error', async () => {
-    const invoiceRow = factory.tenfastInvoiceRow.build()
-
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 500,
-      data: invoiceRow,
-    })
-
-    const result = await tenfastAdapter.createLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRow: invoiceRow,
-    })
-
-    expect(result).toEqual({ ok: false, err: 'unknown' })
-  })
-})
-
-describe(tenfastAdapter.deleteLeaseInvoiceRow, () => {
-  it('deletes and returns null', async () => {
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 200,
-    })
-
-    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRowId: 'invoice-row-id',
-    })
-
-    expect(result).toEqual({ ok: true, data: null })
-  })
-
-  it('returns ok false on error', async () => {
-    ;(request as jest.Mock).mockResolvedValue({
-      status: 500,
-      data: null,
-    })
-
-    const result = await tenfastAdapter.deleteLeaseInvoiceRow({
-      leaseId: 'lease-id',
-      invoiceRowId: 'invoice-row-id',
-    })
-    expect(result).toEqual({ ok: false, err: 'unknown' })
-  })
-})
-
 describe(tenfastAdapter.preliminaryTerminateLease, () => {
   const leaseId = '216-704-00-0022/02'
   const contactCode = 'P12345'
@@ -1323,8 +1261,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: toYearMonthString(new Date('2023-01-01')),
-          to: toYearMonthString(new Date('2023-12-31')),
+          from: toYearMonthDayString(new Date('2023-01-01')),
+          to: toYearMonthDayString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1361,8 +1299,8 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
           amount: 800,
           vat: 200,
           label: 'Hyra',
-          from: toYearMonthString(new Date('2023-01-01')),
-          to: toYearMonthString(new Date('2023-12-31')),
+          from: toYearMonthDayString(new Date('2023-01-01')),
+          to: toYearMonthDayString(new Date('2023-12-31')),
           article: 'A1',
         },
       ],
@@ -1593,5 +1531,34 @@ describe(tenfastAdapter.getLeaseByExternalId, () => {
     const result = await tenfastAdapter.getLeaseByExternalId('123-456/01')
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  describe(tenfastAdapter.updateLeaseInvoiceRows, () => {
+    it('returns unknown when request throws an exception', async () => {
+      ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+      const result = await tenfastAdapter.updateLeaseInvoiceRows({
+        leaseId: '123-456/01',
+        rowsToDelete: [],
+        rowsToAdd: [],
+      })
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns null when request is successful', async () => {
+      ;(request as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: null,
+      })
+
+      const result = await tenfastAdapter.updateLeaseInvoiceRows({
+        leaseId: '123-456/01',
+        rowsToDelete: ['foo'],
+        rowsToAdd: [],
+      })
+
+      expect(result).toEqual({ ok: true, data: null })
+    })
   })
 })
