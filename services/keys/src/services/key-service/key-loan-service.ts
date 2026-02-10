@@ -26,7 +26,7 @@ export type Result<T, E = string> =
  * Validate keys array (already parsed by Zod schema)
  *
  * @param keys - Array of key IDs
- * @returns Result with deduplicated key IDs or error
+ * @returns Result with validated key IDs or error
  */
 export function parseKeysArray(
   keys: string[]
@@ -35,10 +35,7 @@ export function parseKeysArray(
     return { ok: false, err: 'empty-keys-array' }
   }
 
-  // Deduplicate key IDs to prevent duplicate keys in loan
-  const uniqueKeyIds = Array.from(new Set(keys))
-
-  return { ok: true, data: uniqueKeyIds }
+  return { ok: true, data: keys }
 }
 
 /**
