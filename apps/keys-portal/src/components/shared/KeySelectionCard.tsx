@@ -9,7 +9,7 @@ interface KeySelectionCardProps {
   title: string
   buttonText: string
   buttonIcon: LucideIcon
-  onValidateKey?: (key: Key) => { valid: boolean; errorMessage?: string }
+  onValidateKey?: (key: Key) => { valid: boolean } | Promise<{ valid: boolean }>
   onAccept: (selectedKeys: Key[]) => Promise<void>
   disabled?: boolean
   existingKeyIds?: Set<string>
@@ -31,10 +31,10 @@ export function KeySelectionCard({
   const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleAddKey = (key: Key) => {
-    // Run validation if provided
+  const handleAddKey = async (key: Key) => {
+    // Run validation if provided (supports both sync and async validators)
     if (onValidateKey) {
-      const validation = onValidateKey(key)
+      const validation = await onValidateKey(key)
       if (!validation.valid) {
         // Validation error will be shown via toast by the parent
         return

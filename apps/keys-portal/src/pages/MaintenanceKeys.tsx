@@ -47,6 +47,9 @@ export default function MaintenanceKeys() {
   const [preSelectedCompany, setPreSelectedCompany] = useState<Contact | null>(
     null
   )
+  const [contactLoanedKeyIds, setContactLoanedKeyIds] = useState<Set<string>>(
+    new Set()
+  )
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
 
@@ -77,8 +80,38 @@ export default function MaintenanceKeys() {
     setHasLoadedReturned(false)
     setActiveLoansOpen(false)
     setReturnedLoansOpen(false)
+    setContactLoanedKeyIds(new Set())
     setSearchParams({})
   }
+
+  // Eagerly fetch loaned key IDs when a contact is selected
+  useEffect(() => {
+    if (
+      !searchResult ||
+      searchResult.type !== 'contact' ||
+      !searchResult.contact
+    ) {
+      setContactLoanedKeyIds(new Set())
+      return
+    }
+
+    const fetchLoanedKeyIds = async () => {
+      try {
+        const loans = await keyLoanService.getByContactWithKeys(
+          searchResult.contact!.contactCode,
+          undefined,
+          false
+        )
+        setContactLoanedKeyIds(
+          new Set(loans.flatMap((loan) => loan.keysArray.map((k) => k.id)))
+        )
+      } catch {
+        setContactLoanedKeyIds(new Set())
+      }
+    }
+
+    fetchLoanedKeyIds()
+  }, [searchResult])
 
   // Fetch active loans when the section is opened
   useEffect(() => {
@@ -308,6 +341,7 @@ export default function MaintenanceKeys() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ContactInfoCard contacts={[searchResult.contact]} />
                   <CreateLoanWithKeysCard
+                    loanedKeyIds={contactLoanedKeyIds}
                     onKeysSelected={(keys) => {
                       // Cast keys to KeyDetails[] - they don't have loan status since they're being selected for a new loan
                       const keysWithStatus = keys.map((k) => ({

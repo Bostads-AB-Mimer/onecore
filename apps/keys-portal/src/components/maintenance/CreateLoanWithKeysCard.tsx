@@ -1,10 +1,12 @@
 import { Check } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { KeySelectionCard } from '@/components/shared/KeySelectionCard'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import type { Key } from '@/services/types'
 
 interface CreateLoanWithKeysCardProps {
   onKeysSelected: (selectedKeys: Key[]) => void
+  loanedKeyIds?: Set<string>
 }
 
 /**
@@ -14,20 +16,25 @@ interface CreateLoanWithKeysCardProps {
  */
 export function CreateLoanWithKeysCard({
   onKeysSelected,
+  loanedKeyIds,
 }: CreateLoanWithKeysCardProps) {
   const { toast } = useToast()
 
-  const handleValidateKey = (key: Key) => {
-    // Check if key has any active loan (regardless of type)
-    // Note: We check loan status if available (from KeyDetails type)
-    const keyWithStatus = key as any
-    if (keyWithStatus.loan && !keyWithStatus.loan?.returnedAt) {
-      toast({
-        title: 'Nyckeln är redan utlånad',
-        description: `${key.keyName} har ett aktivt lån`,
-        variant: 'destructive',
-      })
-      return { valid: false }
+  const handleValidateKey = async (key: Key) => {
+    try {
+      const loans = await keyLoanService.getByKeyId(key.id)
+      const activeLoan = loans.find((loan) => !loan.returnedAt)
+      if (activeLoan) {
+        toast({
+          title: 'Nyckeln är redan utlånad',
+          description: `${key.keyName} har ett aktivt lån`,
+          variant: 'destructive',
+        })
+        return { valid: false }
+      }
+    } catch {
+      // If we can't verify loan status, allow selection
+      // (backend will still reject on 409 if there's a conflict)
     }
     return { valid: true }
   }
@@ -45,6 +52,7 @@ export function CreateLoanWithKeysCard({
       buttonIcon={Check}
       onValidateKey={handleValidateKey}
       onAccept={handleAccept}
+      existingKeyIds={loanedKeyIds}
     />
   )
 }
