@@ -128,42 +128,39 @@ export async function getKeyLoansByCardId(
 
 export async function createKeyLoan(
   keyLoanData: CreateKeyLoanRequest,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex = db
 ): Promise<KeyLoan> {
   const { keys: keyIds, keyCards: cardIds, ...loanData } = keyLoanData
 
-  const execute = async (trx: Knex.Transaction) => {
+  return dbConnection.transaction(async (trx) => {
     const [row] = await trx(TABLE).insert(loanData).returning('*')
 
     if (keyIds?.length) {
+      const uniqueKeyIds = [...new Set(keyIds)]
       await trx('key_loan_keys').insert(
-        keyIds.map((keyId) => ({ keyLoanId: row.id, keyId }))
+        uniqueKeyIds.map((keyId) => ({ keyLoanId: row.id, keyId }))
       )
     }
 
     if (cardIds?.length) {
+      const uniqueCardIds = [...new Set(cardIds)]
       await trx('key_loan_cards').insert(
-        cardIds.map((cardId) => ({ keyLoanId: row.id, cardId }))
+        uniqueCardIds.map((cardId) => ({ keyLoanId: row.id, cardId }))
       )
     }
 
     return row
-  }
-
-  if (dbConnection.isTransaction) {
-    return execute(dbConnection as Knex.Transaction)
-  }
-  return dbConnection.transaction(execute)
+  })
 }
 
 export async function updateKeyLoan(
   id: string,
   keyLoanData: UpdateKeyLoanRequest,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex = db
 ): Promise<KeyLoan | undefined> {
   const { keys: keyIds, keyCards: cardIds, ...loanData } = keyLoanData
 
-  const execute = async (trx: Knex.Transaction) => {
+  return dbConnection.transaction(async (trx) => {
     const [row] = await trx(TABLE)
       .where({ id })
       .update({ ...loanData, updatedAt: trx.fn.now() })
@@ -172,8 +169,9 @@ export async function updateKeyLoan(
     if (keyIds !== undefined) {
       await trx('key_loan_keys').where({ keyLoanId: id }).del()
       if (keyIds.length) {
+        const uniqueKeyIds = [...new Set(keyIds)]
         await trx('key_loan_keys').insert(
-          keyIds.map((keyId) => ({ keyLoanId: id, keyId }))
+          uniqueKeyIds.map((keyId) => ({ keyLoanId: id, keyId }))
         )
       }
     }
@@ -181,19 +179,15 @@ export async function updateKeyLoan(
     if (cardIds !== undefined) {
       await trx('key_loan_cards').where({ keyLoanId: id }).del()
       if (cardIds.length) {
+        const uniqueCardIds = [...new Set(cardIds)]
         await trx('key_loan_cards').insert(
-          cardIds.map((cardId) => ({ keyLoanId: id, cardId }))
+          uniqueCardIds.map((cardId) => ({ keyLoanId: id, cardId }))
         )
       }
     }
 
     return row
-  }
-
-  if (dbConnection.isTransaction) {
-    return execute(dbConnection as Knex.Transaction)
-  }
-  return dbConnection.transaction(execute)
+  })
 }
 
 export async function deleteKeyLoan(
