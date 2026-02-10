@@ -19,10 +19,7 @@ export const rentalBlockColumns = [
         href = `/residences/${residenceId}`
       } else if (category === 'Bilplats' && rentalId) {
         href = `/parking-spaces/${rentalId}`
-      } else if (
-        (category === 'Lokal' || category === 'Förråd') &&
-        rentalId
-      ) {
+      } else if ((category === 'Lokal' || category === 'Förråd') && rentalId) {
         href = `/facilities/${rentalId}`
       }
 
@@ -68,8 +65,7 @@ export const rentalBlockColumns = [
     key: 'fastighet',
     label: 'Fastighet',
     className: 'px-2',
-    render: (block: RentalBlockWithRentalObject) =>
-      block.property?.name || '-',
+    render: (block: RentalBlockWithRentalObject) => block.property?.name || '-',
     hideOnMobile: true,
   },
   {

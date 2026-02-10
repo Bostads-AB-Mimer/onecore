@@ -451,18 +451,14 @@ export function TenantQueueSystemTabContent({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Anmäld: </span>
-                        <span>
-                          {formatISODate(interest.applicationDate)}
-                        </span>
+                        <span>{formatISODate(interest.applicationDate)}</span>
                       </div>
                       {interest.publishedTo && (
                         <div>
                           <span className="text-muted-foreground">
                             Publicerad tom:{' '}
                           </span>
-                          <span>
-                            {formatISODate(interest.publishedTo)}
-                          </span>
+                          <span>{formatISODate(interest.publishedTo)}</span>
                         </div>
                       )}
                       {interest.vacantFrom && (
@@ -470,9 +466,7 @@ export function TenantQueueSystemTabContent({
                           <span className="text-muted-foreground">
                             Ledigt från:{' '}
                           </span>
-                          <span>
-                            {formatISODate(interest.vacantFrom)}
-                          </span>
+                          <span>{formatISODate(interest.vacantFrom)}</span>
                         </div>
                       )}
                     </div>

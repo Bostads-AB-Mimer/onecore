@@ -418,7 +418,9 @@ export const ComponentCard = ({ component }: ComponentCardProps) => {
                           Garanti t.o.m:
                         </span>
                         <span className="font-medium">
-                          {formatISODate(warrantyStatus.expiryDate.toISOString())}
+                          {formatISODate(
+                            warrantyStatus.expiryDate.toISOString()
+                          )}
                         </span>
                       </div>
                     )}
