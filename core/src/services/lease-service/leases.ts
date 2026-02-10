@@ -1,9 +1,17 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { leasing } from '@onecore/types'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
+import { leasing, schemas } from '@onecore/types'
+import z from 'zod'
 
 import { mapLease } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -507,9 +515,144 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows/home-insurance:
+   * /leases/{leaseId}/home-insurance:
+   *   get:
+   *     summary: Get home insurance for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Home insurance retrieved.
+   *       404:
+   *         description: Lease or home insurance not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/leases/:leaseId/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await leasingAdapter.getLeaseHomeInsurance(
+      ctx.params.leaseId
+    )
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Not found',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: result.err,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody<
+      z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+    >(result.data, metadata)
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance/offer:
+   *   get:
+   *     summary: Get home insurance offer for a lease
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Home insurance offer retrieved.
+   *       404:
+   *         description: Lease or rental object not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/leases/:leaseId/home-insurance/offer', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+        includeContacts: false,
+      })
+      if (!lease) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+        return
+      }
+
+      const residenceResponse =
+        await propertyBaseAdapter.getResidenceByRentalId(lease.rentalPropertyId)
+
+      if (!residenceResponse.ok) {
+        if (residenceResponse.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Rental object not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: residenceResponse.err,
+          ...metadata,
+        }
+        return
+      }
+
+      const monthlyAmount = getHomeInsuranceOfferMonthlyAmount(
+        residenceResponse.data.type.roomCount
+      )
+
+      if (!monthlyAmount) {
+        throw {
+          error: 'No monthly amount found for residence',
+          residence: JSON.stringify(residenceResponse.data, null, 2),
+        }
+      }
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody<
+        z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+      >({ monthlyAmount }, metadata)
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching home insurance offer')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance:
    *   post:
-   *     summary: Add home insurance rent row to a lease
+   *     summary: Add home insurance to a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -521,37 +664,127 @@ export const routes = (router: KoaRouter) => {
    *         description: The ID of the lease.
    *     responses:
    *       201:
-   *         description: Successfully added home insurance rent row.
+   *         description: Successfully added home insurance.
    *       500:
    *         description: Internal server error.
    */
-  router.post('/leases/:leaseId/rent-rows/home-insurance', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await leasingAdapter.addLeaseHomeInsuranceRentRow(
-      ctx.params.leaseId
-    )
 
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: result.err,
-        ...metadata,
-      }
-      return
-    }
-
-    ctx.status = 201
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
+  const AddLeaseHomeInsuranceRequestSchema = z.object({
+    from: z.coerce.date(),
   })
+
+  router.post(
+    '/leases/:leaseId/home-insurance',
+    parseRequestBody(AddLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+          includeContacts: false,
+        })
+
+        if (!lease) {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        }
+
+        const residenceResponse =
+          await propertyBaseAdapter.getResidenceByRentalId(
+            lease.rentalPropertyId
+          )
+
+        if (!residenceResponse.ok) {
+          if (residenceResponse.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = {
+              error: 'Rental object not found',
+              ...metadata,
+            }
+            return
+          } else {
+            ctx.logger.error(
+              { err: residenceResponse.err, metadata },
+              'Error fetching residence'
+            )
+            ctx.status = 500
+            ctx.body = {
+              error: 'Internal error',
+              ...metadata,
+            }
+
+            return
+          }
+        }
+
+        const monthlyAmount = getHomeInsuranceOfferMonthlyAmount(
+          residenceResponse.data.type.roomCount
+        )
+
+        if (!monthlyAmount) {
+          throw {
+            error: 'No monthly amount found for residence',
+            residence: JSON.stringify(residenceResponse.data, null, 2),
+          }
+        }
+
+        const result = await leasingAdapter.addLeaseHomeInsurance(
+          ctx.params.leaseId,
+          { from: ctx.request.body.from, monthlyAmount }
+        )
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = {
+              error: 'Lease not found',
+              ...metadata,
+            }
+            return
+          }
+
+          if (result.err === 'insurance-already-exists') {
+            ctx.status = 422
+            ctx.body = {
+              error: 'Home insurance already exists',
+              ...metadata,
+            }
+            return
+          }
+
+          ctx.status = 500
+          ctx.body = {
+            error: result.err,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(null, metadata)
+      } catch (err) {
+        logger.error({ err, metadata }, 'Error adding home insurance')
+        ctx.status = 500
+        ctx.body = {
+          error: 'Internal error',
+          ...metadata,
+        }
+
+        return
+      }
+    }
+  )
 
   /**
    * @swagger
-   * /leases/{leaseId}/rent-rows/{rentRowId}:
-   *   delete:
-   *     summary: Delete a rent row for a lease
+   * /leases/{leaseId}/home-insurance/cancel:
+   *   post:
+   *     summary: Cancel home insurance for a lease
    *     tags:
    *       - Lease service
    *     parameters:
@@ -561,39 +794,90 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *       - in: path
-   *         name: rentRowId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the rent row.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Desired end date for home insurance.
    *     responses:
    *       200:
-   *         description: Rent row deleted.
+   *         description: Home insurance cancelled.
    *       500:
    *         description: Internal server error.
    */
+  router.post(
+    '/leases/:leaseId/home-insurance/cancel',
+    parseRequestBody(leasing.v1.CancelLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
+        includeContacts: false,
+      })
 
-  router.delete('/leases/:leaseId/rent-rows/:rentRowId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const deleteRentRowResult = await leasingAdapter.deleteLeaseRentRow({
-      leaseId: ctx.params.leaseId,
-      rentRowId: ctx.params.rentRowId,
-    })
-
-    if (!deleteRentRowResult.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: deleteRentRowResult.err,
-        ...metadata,
+      if (!lease) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    ctx.status = 200
-    ctx.body = {
-      content: deleteRentRowResult.data,
-      ...metadata,
+      const homeInsurance = await leasingAdapter.getLeaseHomeInsurance(
+        ctx.params.leaseId
+      )
+
+      if (!homeInsurance.ok) {
+        if (homeInsurance.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Home insurance not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: homeInsurance.err,
+          ...metadata,
+        }
+        return
+      }
+
+      if (!homeInsurance.data) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Home insurance not found',
+          ...metadata,
+        }
+        return
+      }
+
+      const cancelLeaseHomeInsuranceResult =
+        await leasingAdapter.cancelLeaseHomeInsurance(ctx.params.leaseId, {
+          endDate: ctx.request.body.endDate,
+        })
+
+      if (!cancelLeaseHomeInsuranceResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: cancelLeaseHomeInsuranceResult.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(null, metadata)
     }
-  })
+  )
 }

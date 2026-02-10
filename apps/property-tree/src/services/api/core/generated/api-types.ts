@@ -1356,8 +1356,31 @@ export interface paths {
       };
     };
   };
-  "/leases/{leaseId}/rent-rows/home-insurance": {
-    /** Add home insurance rent row to a lease */
+  "/leases/{leaseId}/home-insurance": {
+    /** Get home insurance for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Home insurance retrieved. */
+        200: {
+          content: never;
+        };
+        /** @description Lease or home insurance not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /** Add home insurance to a lease */
     post: {
       parameters: {
         path: {
@@ -1366,7 +1389,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Successfully added home insurance rent row. */
+        /** @description Successfully added home insurance. */
         201: {
           content: never;
         };
@@ -1377,19 +1400,53 @@ export interface paths {
       };
     };
   };
-  "/leases/{leaseId}/rent-rows/{rentRowId}": {
-    /** Delete a rent row for a lease */
-    delete: {
+  "/leases/{leaseId}/home-insurance/offer": {
+    /** Get home insurance offer for a lease */
+    get: {
       parameters: {
         path: {
           /** @description The ID of the lease. */
           leaseId: string;
-          /** @description The ID of the rent row. */
-          rentRowId: string;
         };
       };
       responses: {
-        /** @description Rent row deleted. */
+        /** @description Home insurance offer retrieved. */
+        200: {
+          content: never;
+        };
+        /** @description Lease or rental object not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/home-insurance/cancel": {
+    /** Cancel home insurance for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date-time
+             * @description Desired end date for home insurance.
+             */
+            endDate: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Home insurance cancelled. */
         200: {
           content: never;
         };
