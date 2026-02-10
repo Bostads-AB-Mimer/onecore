@@ -1917,7 +1917,8 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["BulkUpdateKeysResponse"];
+              /** @description Number of keys updated */
+              content?: number;
             };
           };
         };
@@ -1958,10 +1959,8 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                /** @description Number of keys updated */
-                updatedCount?: number;
-              };
+              /** @description Number of keys updated */
+              content?: number;
             };
           };
         };
@@ -2002,7 +2001,8 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: components["schemas"]["BulkDeleteKeysResponse"];
+              /** @description Number of keys deleted */
+              content?: number;
             };
           };
         };
@@ -2634,9 +2634,6 @@ export interface components {
     BulkDeleteKeysRequest: {
       keyIds: string[];
     };
-    BulkDeleteKeysResponse: {
-      deletedCount: number;
-    };
     BulkUpdateKeysRequest: {
       keyIds: string[];
       updates: {
@@ -2647,9 +2644,6 @@ export interface components {
         rentalObjectCode?: string;
         disposed?: boolean;
       };
-    };
-    BulkUpdateKeysResponse: {
-      updatedCount: number;
     };
     Key: components["schemas"]["Key"];
     KeySystem: components["schemas"]["KeySystem"];
