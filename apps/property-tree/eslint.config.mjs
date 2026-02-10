@@ -29,23 +29,24 @@ export default defineConfig([
       '@typescript-eslint': typescriptEslint.plugin,
     },
     settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          project: './tsconfig.json',
+        },
+      },
       'boundaries/elements': [
-        { type: 'types', pattern: 'src/types/*' },
-        { type: 'config', pattern: 'src/config/*' },
-        { type: 'utils', pattern: 'src/utils/*' },
-        { type: 'styles', pattern: 'src/styles/*' },
-        { type: 'assets', pattern: 'src/assets/*' },
+        { type: 'shared', pattern: 'src/shared/*' },
         { type: 'services', pattern: 'src/services/*' },
-        { type: 'hooks', pattern: 'src/hooks/*' },
-        { type: 'components', pattern: 'src/components/*' },
-        { type: 'store', pattern: 'src/store/*' },
-        { type: 'layouts', pattern: 'src/layouts/*' },
+        { type: 'entities', pattern: 'src/entities/*' },
         { type: 'features', pattern: 'src/features/*' },
+        { type: 'widgets', pattern: 'src/widgets/*' },
+        { type: 'layouts', pattern: 'src/layouts/*' },
         { type: 'views', pattern: 'src/views/*' },
         // Legacy folders (to be migrated) - no restrictions for now
         {
           type: 'legacy',
-          pattern: ['src/lib/*', 'src/contexts/*', 'src/auth/*'],
+          pattern: ['src/contexts/*', 'src/app/*'],
         },
       ],
       'boundaries/ignore': [
@@ -65,15 +66,18 @@ export default defineConfig([
       // Catch files not matching any defined element type
       // 'boundaries/no-unknown-files': ['warn'],
 
-      // Enforce importing through index.ts (barrel exports) for features
+      // Enforce importing through index.ts (barrel exports) for features and entities
       'boundaries/entry-point': [
-        'warn',
+        'error',
         {
           default: 'allow',
           rules: [
             {
-              // Only allow importing features through their index.ts
               target: ['features'],
+              allow: 'index.(ts|tsx)',
+            },
+            {
+              target: ['entities'],
               allow: 'index.(ts|tsx)',
             },
           ],
@@ -81,88 +85,68 @@ export default defineConfig([
       ],
 
       'boundaries/element-types': [
-        //CHANGE THIS TO 'error' WHEN REFACTORING IS COMPLETE
-        'warn',
+        'error',
         {
           default: 'disallow',
           rules: [
-            // types: can import nothing (only other types)
+            // shared: lowest level - can only import from itself
             {
-              from: 'types',
-              allow: ['types'],
+              from: 'shared',
+              allow: ['shared'],
             },
-            // config: can import types
-            {
-              from: 'config',
-              allow: ['types', 'config'],
-            },
-            // utils: can import types, config
-            {
-              from: 'utils',
-              allow: ['types', 'config', 'utils'],
-            },
-            // services: can import types, utils, config
+            // services: can import shared
             {
               from: 'services',
-              allow: ['types', 'utils', 'config', 'services'],
+              allow: ['shared', 'services'],
             },
-            // hooks: can import types, utils, config
+            // entities: can import shared, services, other entities
             {
-              from: 'hooks',
-              allow: ['types', 'utils', 'config', 'hooks'],
+              from: 'entities',
+              allow: ['shared', 'services', 'entities'],
             },
-            // components: can import types, utils, styles, components
-            {
-              from: 'components',
-              allow: ['types', 'utils', 'styles', 'components'],
-            },
-            // store: can import types, utils, config, services
-            {
-              from: 'store',
-              allow: ['types', 'utils', 'config', 'services', 'store'],
-            },
-            // layouts: can import components, hooks, utils, types, styles, store
-            {
-              from: 'layouts',
-              allow: [
-                'types',
-                'utils',
-                'styles',
-                'components',
-                'hooks',
-                'store',
-                'layouts',
-              ],
-            },
-            // features: can import components, hooks, services, utils, types, config, store
-            // CANNOT import other features
+            // features: can import entities, shared, services
+            // CANNOT import other features, widgets, views, layouts
             {
               from: 'features',
-              allow: [
-                'types',
-                'utils',
-                'config',
-                'styles',
-                'services',
-                'hooks',
-                'components',
-                'store',
-              ],
+              allow: ['shared', 'services', 'entities'],
+            },
+            // widgets: can import features, entities, shared, services
+            // CANNOT import other widgets, views, layouts
+            {
+              from: 'widgets',
+              allow: ['shared', 'services', 'entities', 'features'],
+            },
+            // layouts: can import shared
+            // CANNOT import features, views, services, entities, widgets
+            {
+              from: 'layouts',
+              allow: ['shared'],
             },
             // views: can import almost everything (top level)
+            // CANNOT import other views
             {
               from: 'views',
               allow: [
-                'types',
-                'utils',
-                'config',
-                'styles',
+                'shared',
                 'services',
-                'hooks',
-                'components',
-                'store',
-                'layouts',
+                'entities',
                 'features',
+                'widgets',
+                'layouts',
+              ],
+            },
+            // legacy: no restrictions during migration
+            {
+              from: 'legacy',
+              allow: [
+                'shared',
+                'services',
+                'entities',
+                'features',
+                'widgets',
+                'layouts',
+                'views',
+                'legacy',
               ],
             },
           ],
