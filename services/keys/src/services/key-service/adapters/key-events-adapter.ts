@@ -61,7 +61,7 @@ export async function getKeyEventsByKey(
  * Create a new key event.
  *
  * @param data - The key event data to insert
- * @param db - Knex instance or transaction
+ * @param db - Knex instance
  * @returns The created key event
  */
 export async function createKeyEvent(
@@ -89,7 +89,7 @@ export async function createKeyEvent(
  *
  * @param id - The key event ID to update
  * @param data - The updated key event data
- * @param db - Knex instance or transaction
+ * @param db - Knex instance
  * @returns The updated key event if found, undefined otherwise
  */
 export async function updateKeyEvent(
