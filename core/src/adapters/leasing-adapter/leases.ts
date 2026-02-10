@@ -3,7 +3,7 @@ import {
   logger,
   PaginatedResponse,
 } from '@onecore/utilities'
-import { Lease, leasing } from '@onecore/types'
+import { Lease, leasing, schemas } from '@onecore/types'
 import z from 'zod'
 
 import { AdapterResult } from '../types'
@@ -13,11 +13,12 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
+type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
 
 export const getLease = async (
   leaseId: string,
   options: GetLeaseOptions
-): Promise<Lease> => {
+): Promise<Lease | null> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
   })
@@ -25,6 +26,10 @@ export const getLease = async (
   const leaseResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}?${queryParams.toString()}`
   )
+
+  if (leaseResponse.status === 404) {
+    return null
+  }
 
   return leaseResponse.data.content
 }
@@ -107,15 +112,27 @@ export const createLease = async (
   }
 }
 
-export async function addLeaseHomeInsuranceRentRow(
-  leaseId: string
-): Promise<AdapterResult<null, 'unknown'>> {
+type AddLeaseHomeInsuranceParams = z.infer<
+  typeof leasing.v1.AddLeaseHomeInsuranceRequestSchema
+>
+
+export async function addLeaseHomeInsurance(
+  leaseId: string,
+  params: AddLeaseHomeInsuranceParams
+): Promise<
+  AdapterResult<null, 'unknown' | 'not-found' | 'insurance-already-exists'>
+> {
   const result = await axios.post(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance`
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`,
+    params
   )
 
   if (result.status === 201) {
     return { ok: true, data: result.data.content }
+  } else if (result.status === 404) {
+    return { ok: false, err: 'not-found' }
+  } else if (result.status === 422) {
+    return { ok: false, err: 'insurance-already-exists' }
   } else {
     logger.error(
       { error: JSON.stringify(result.data) },
@@ -126,20 +143,48 @@ export async function addLeaseHomeInsuranceRentRow(
   }
 }
 
-export async function deleteLeaseRentRow(params: {
+export async function getLeaseHomeInsurance(
   leaseId: string
-  rentRowId: string
-}): Promise<AdapterResult<null, 'unknown'>> {
-  const result = await axios.delete(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(params.leaseId)}/rent-rows/${params.rentRowId}`
+): Promise<AdapterResult<LeaseHomeInsurance, 'not-found' | 'unknown'>> {
+  const result = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
   )
+
+  if (result.status === 200) {
+    return { ok: true, data: result.data.content }
+  }
+
+  if (result.status === 404) {
+    return { ok: false, err: 'not-found' }
+  }
+
+  logger.error(
+    { error: JSON.stringify(result.data) },
+    'Unknown error when fetching home insurance'
+  )
+
+  return { ok: false, err: 'unknown' }
+}
+
+export async function cancelLeaseHomeInsurance(
+  leaseId: string,
+  params: { endDate: Date }
+): Promise<AdapterResult<null, 'unknown' | 'not-found'>> {
+  const result = await axios.post(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance/cancel`,
+    params
+  )
+
+  if (result.status === 404) {
+    return { ok: false, err: 'not-found' }
+  }
 
   if (result.status === 200) {
     return { ok: true, data: null }
   } else {
     logger.error(
-      { error: JSON.stringify(result.data) },
-      'Unknown error when deleting rent row'
+      { err: JSON.stringify(result.data) },
+      'Unknown error when deleting home insurance'
     )
 
     return { ok: false, err: 'unknown' }
