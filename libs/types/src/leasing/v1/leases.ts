@@ -14,13 +14,6 @@ export const IncludeContactsQueryParamSchema = z.object({
     .transform((value) => value === 'true'),
 })
 
-export const IncludeRentalObjectQueryParamSchema = z.object({
-  includeRentalObject: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((value) => value === 'true'),
-})
-
 export const IncludeRentInfoQueryParamSchema = z.object({
   includeRentInfo: z
     .enum(['true', 'false'])

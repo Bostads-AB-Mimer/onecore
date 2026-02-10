@@ -401,12 +401,6 @@ export const routes = (router: KoaRouter) => {
    *           default: false
    *         description: Whether to include upcoming leases in the response
    *       - in: query
-   *         name: includeRentalObject
-   *         schema:
-   *           type: boolean
-   *         required: false
-   *         description: Whether to include rental object information in the response.
-   *       - in: query
    *         name: status
    *         schema:
    *           type: boolean
