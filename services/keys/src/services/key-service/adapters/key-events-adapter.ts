@@ -70,22 +70,18 @@ export async function createKeyEvent(
 ): Promise<KeyEvent> {
   const { keys: keyIds, ...eventData } = data
 
-  const execute = async (trx: Knex.Transaction) => {
+  return db.transaction(async (trx) => {
     const [row] = await trx(TABLE).insert(eventData).returning('*')
 
     if (keyIds?.length) {
+      const uniqueKeyIds = [...new Set(keyIds)]
       await trx('key_event_keys').insert(
-        keyIds.map((keyId) => ({ keyEventId: row.id, keyId }))
+        uniqueKeyIds.map((keyId) => ({ keyEventId: row.id, keyId }))
       )
     }
 
     return row
-  }
-
-  if (db.isTransaction) {
-    return execute(db as Knex.Transaction)
-  }
-  return db.transaction(execute)
+  })
 }
 
 /**
@@ -103,7 +99,7 @@ export async function updateKeyEvent(
 ): Promise<KeyEvent | undefined> {
   const { keys: keyIds, ...eventData } = data
 
-  const execute = async (trx: Knex.Transaction) => {
+  return db.transaction(async (trx) => {
     const [row] = await trx(TABLE)
       .where({ id })
       .update({ ...eventData, updatedAt: trx.fn.now() })
@@ -112,19 +108,15 @@ export async function updateKeyEvent(
     if (keyIds !== undefined) {
       await trx('key_event_keys').where({ keyEventId: id }).del()
       if (keyIds.length) {
+        const uniqueKeyIds = [...new Set(keyIds)]
         await trx('key_event_keys').insert(
-          keyIds.map((keyId) => ({ keyEventId: id, keyId }))
+          uniqueKeyIds.map((keyId) => ({ keyEventId: id, keyId }))
         )
       }
     }
 
     return row
-  }
-
-  if (db.isTransaction) {
-    return execute(db as Knex.Transaction)
-  }
-  return db.transaction(execute)
+  })
 }
 
 /**
