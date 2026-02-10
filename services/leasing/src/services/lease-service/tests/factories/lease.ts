@@ -33,4 +33,5 @@ export const LeaseFactory = Factory.define<Lease>(({ sequence }) => ({
     code: 'MAL',
     caption: 'Malmaberg',
   },
+  rentRows: [],
 }))

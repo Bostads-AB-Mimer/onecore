@@ -126,6 +126,7 @@ export const mockedLease: Lease = {
   tenants: undefined,
   terminationDate: undefined,
   type: '',
+  rentRows: [],
 }
 
 export const mockedPaidInvoice: Invoice = {

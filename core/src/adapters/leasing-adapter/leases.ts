@@ -59,7 +59,6 @@ export const getLeasesByRentalObjectCode = async (
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams({
     includeContacts: options.includeContacts.toString(),
-    includeRentInfo: options.includeRentInfo.toString(),
   })
 
   if (options.status) {
