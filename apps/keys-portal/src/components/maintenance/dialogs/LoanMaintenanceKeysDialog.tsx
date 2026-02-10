@@ -59,9 +59,11 @@ export function LoanMaintenanceKeysDialog({
       // Get unique company codes from keys that have active maintenance loans
       const companyCodes = new Set<string>()
       keysToCheck.forEach((key) => {
-        if (key.loan?.loanType === 'MAINTENANCE' && key.loan?.contact) {
-          companyCodes.add(key.loan.contact)
-        }
+        key.loans?.forEach((loan) => {
+          if (loan.loanType === 'MAINTENANCE' && loan.contact) {
+            companyCodes.add(loan.contact)
+          }
+        })
       })
 
       // Fetch full contact info for each unique company
@@ -112,7 +114,7 @@ export function LoanMaintenanceKeysDialog({
     try {
       const keyIds = keys.map((k) => k.id)
       const payload = {
-        keys: JSON.stringify(keyIds),
+        keys: keyIds,
         loanType: 'MAINTENANCE' as const,
         contact: selectedCompany.contactCode,
         contactPerson: contactPerson.trim() || null,

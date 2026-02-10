@@ -8,7 +8,7 @@ import { withContext } from '../testUtils'
  *
  * These tests verify complex business logic including:
  * - Active loan conflict detection
- * - JSON key array handling
+ * - Junction table key/card associations
  * - Multi-table aggregation queries
  * - Transaction-safe operations
  *
@@ -17,7 +17,7 @@ import { withContext } from '../testUtils'
 
 describe('key-loans-adapter', () => {
   describe('createKeyLoan', () => {
-    it('creates a key loan with JSON keys array', () =>
+    it('creates a key loan with keys array', () =>
       withContext(async (ctx) => {
         const key1 = await keysAdapter.createKey(
           factory.key.build({ rentalObjectCode: 'A001' }),
@@ -29,7 +29,7 @@ describe('key-loans-adapter', () => {
         )
 
         const loanData = {
-          keys: JSON.stringify([key1.id, key2.id]),
+          keys: [key1.id, key2.id],
           loanType: 'TENANT' as const,
           contact: 'john@example.com',
         }
@@ -38,7 +38,6 @@ describe('key-loans-adapter', () => {
 
         expect(loan.id).toBeDefined()
         expect(loan.contact).toBe('john@example.com')
-        expect(JSON.parse(loan.keys)).toEqual([key1.id, key2.id])
         expect(loan.returnedAt).toBeNull()
         expect(loan.pickedUpAt).toBeNull()
       }))
@@ -50,7 +49,7 @@ describe('key-loans-adapter', () => {
         const key = await keysAdapter.createKey(factory.key.build(), ctx.db)
         const createdLoan = await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key.id]),
+            keys: [key.id],
             loanType: 'TENANT' as const,
             contact: 'test@example.com',
           },
@@ -76,7 +75,7 @@ describe('key-loans-adapter', () => {
         // Create loan and activate it (must set pickedUpAt)
         const loan = await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key.id]),
+            keys: [key.id],
             loanType: 'TENANT' as const,
             contact: 'existing@example.com',
           },
@@ -106,7 +105,7 @@ describe('key-loans-adapter', () => {
 
         const loan = await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key.id]),
+            keys: [key.id],
             loanType: 'TENANT' as const,
             contact: 'test@example.com',
           },
@@ -137,7 +136,7 @@ describe('key-loans-adapter', () => {
         const key = await keysAdapter.createKey(factory.key.build(), ctx.db)
         const loan = await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key.id]),
+            keys: [key.id],
             loanType: 'TENANT' as const,
             contact: 'original@example.com',
           },
@@ -174,7 +173,7 @@ describe('key-loans-adapter', () => {
 
         await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key1.id]),
+            keys: [key1.id],
             loanType: 'TENANT' as const,
             contact: 'tenant1@example.com',
           },
@@ -182,7 +181,7 @@ describe('key-loans-adapter', () => {
         )
         await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key2.id]),
+            keys: [key2.id],
             loanType: 'TENANT' as const,
             contact: 'tenant2@example.com',
           },
@@ -209,7 +208,7 @@ describe('key-loans-adapter', () => {
         const key = await keysAdapter.createKey(factory.key.build(), ctx.db)
         const loan = await keyLoansAdapter.createKeyLoan(
           {
-            keys: JSON.stringify([key.id]),
+            keys: [key.id],
             loanType: 'TENANT' as const,
             contact: 'test@example.com',
           },

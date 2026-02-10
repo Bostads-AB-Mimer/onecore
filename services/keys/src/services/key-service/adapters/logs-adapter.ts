@@ -137,7 +137,7 @@ export function getLogsByRentalObjectCodeQuery(
     })
     .where('keys.rentalObjectCode', rentalObjectCode)
 
-  // 2. objectType='keyLoan' - Extract first key from JSON array
+  // 2. objectType='keyLoan' - Via junction table to keys
   const keyLoanLogs = db(`${TABLE} as logs`)
     .select('logs.*')
     .innerJoin('key_loans as kl', function () {
@@ -147,8 +147,13 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyLoan'])
       )
     })
-    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`))
-    .where('keys.rentalObjectCode', rentalObjectCode)
+    .whereExists(function () {
+      this.select(db.raw('1'))
+        .from('key_loan_keys as klk')
+        .join('keys', 'keys.id', 'klk.keyId')
+        .whereRaw('klk.keyLoanId = kl.id')
+        .where('keys.rentalObjectCode', rentalObjectCode)
+    })
 
   // 3. objectType='receipt' - Via keyLoan chain
   const receiptLogs = db(`${TABLE} as logs`)
@@ -161,10 +166,15 @@ export function getLogsByRentalObjectCodeQuery(
       )
     })
     .innerJoin('key_loans as kl', 'r.keyLoanId', 'kl.id')
-    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`))
-    .where('keys.rentalObjectCode', rentalObjectCode)
+    .whereExists(function () {
+      this.select(db.raw('1'))
+        .from('key_loan_keys as klk')
+        .join('keys', 'keys.id', 'klk.keyId')
+        .whereRaw('klk.keyLoanId = kl.id')
+        .where('keys.rentalObjectCode', rentalObjectCode)
+    })
 
-  // 4. objectType='keyEvent' - Extract first key from JSON
+  // 4. objectType='keyEvent' - Via junction table to keys
   const keyEventLogs = db(`${TABLE} as logs`)
     .select('logs.*')
     .innerJoin('key_events as ke', function () {
@@ -174,8 +184,13 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyEvent'])
       )
     })
-    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(ke.keys, '$[0]')`))
-    .where('keys.rentalObjectCode', rentalObjectCode)
+    .whereExists(function () {
+      this.select(db.raw('1'))
+        .from('key_event_keys as kek')
+        .join('keys', 'keys.id', 'kek.keyId')
+        .whereRaw('kek.keyEventId = ke.id')
+        .where('keys.rentalObjectCode', rentalObjectCode)
+    })
 
   // 5. objectType='keyNote' - Direct rentalObjectCode field
   const keyNoteLogs = db(`${TABLE} as logs`)
@@ -220,8 +235,13 @@ export function getLogsByRentalObjectCodeQuery(
       )
     })
     .innerJoin('key_loans as kl', 'r.keyLoanId', 'kl.id')
-    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kl.keys, '$[0]')`))
-    .where('keys.rentalObjectCode', rentalObjectCode)
+    .whereExists(function () {
+      this.select(db.raw('1'))
+        .from('key_loan_keys as klk')
+        .join('keys', 'keys.id', 'klk.keyId')
+        .whereRaw('klk.keyLoanId = kl.id')
+        .where('keys.rentalObjectCode', rentalObjectCode)
+    })
 
   // NOTE: objectType='keySystem' is explicitly excluded - keySystem logs are
   // infrastructure-level and don't have a single rental object relationship
@@ -330,7 +350,6 @@ export function getLogsByContactIdQuery(contactId: string, db: Knex) {
     })
 
   // 4. objectType='key' - Find keys that are in active loans for this contact
-  // This uses LIKE pattern to search for key ID in JSON array
   const keyLogs = db(`${TABLE} as logs`)
     .select('logs.*')
     .innerJoin('keys as k', function () {
@@ -341,13 +360,14 @@ export function getLogsByContactIdQuery(contactId: string, db: Knex) {
       )
     })
     .whereExists(function () {
-      this.select('*')
-        .from('key_loans as kl')
-        .whereRaw(`kl.keys LIKE '%"' + CAST(k.id AS NVARCHAR(36)) + '"%'`)
+      this.select(db.raw('1'))
+        .from('key_loan_keys as klk')
+        .join('key_loans as kl', 'kl.id', 'klk.keyLoanId')
+        .whereRaw('klk.keyId = k.id')
         .andWhere(function () {
           this.where('kl.contact', contactId).orWhere('kl.contact2', contactId)
         })
-        .whereNull('kl.returnedAt') // Only active loans
+        .whereNull('kl.returnedAt')
     })
 
   // NOTE: Other objectTypes (keyEvent, keyBundle, keyNote, keySystem)
@@ -380,11 +400,12 @@ export function getAllLogsWithKeyEventsQuery(db: Knex) {
       key_events.workOrderId as keyEventWorkOrderId
     FROM logs
     OUTER APPLY (
-      SELECT TOP 1 id, type, status, workOrderId
-      FROM key_events ke
+      SELECT TOP 1 ke.id, ke.type, ke.status, ke.workOrderId
+      FROM key_event_keys kek
+      JOIN key_events ke ON ke.id = kek.keyEventId
       WHERE
         logs.objectType = 'key'
-        AND ke.keys LIKE '%"' + CAST(logs.objectId AS NVARCHAR(36)) + '"%'
+        AND kek.keyId = logs.objectId
       ORDER BY ke.createdAt DESC
     ) key_events
   `
@@ -594,23 +615,21 @@ export async function buildReceiptDescription(
   try {
     const loan = await db('key_loans')
       .where({ id: receipt.keyLoanId })
-      .select('contact', 'keys')
+      .select('contact')
       .first()
 
     if (loan) {
-      // Add contact
       if (loan.contact) {
         parts.push(`för ${loan.contact}`)
       }
 
-      // Add key count
-      try {
-        const keyIds = JSON.parse(loan.keys)
-        const keyCount = Array.isArray(keyIds) ? keyIds.length : 0
-        parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
-      } catch (_error) {
-        // Skip if parsing fails
-      }
+      // Count keys from junction table
+      const result = await db('key_loan_keys')
+        .where({ keyLoanId: receipt.keyLoanId })
+        .count('* as count')
+        .first()
+      const keyCount = Number(result?.count || 0)
+      parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
     }
   } catch (error) {
     logger.warn(
@@ -728,8 +747,9 @@ export async function buildKeyBundleDescription(
  */
 export async function buildKeyLoanDescription(
   keyLoan: {
+    id?: string
     contact?: string
-    keys: string
+    keys?: string[]
     lease?: string
   },
   action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad',
@@ -742,10 +762,17 @@ export async function buildKeyLoanDescription(
     parts.push(`för kontakt ${keyLoan.contact}`)
   }
 
+  // Get key IDs: from request array or from junction table
+  let keyIds = keyLoan.keys || []
+  if (keyIds.length === 0 && keyLoan.id) {
+    keyIds = (
+      await db('key_loan_keys').where({ keyLoanId: keyLoan.id }).select('keyId')
+    ).map((r) => r.keyId)
+  }
+
   // Fetch key names from key IDs (DIRECT DB QUERY)
   try {
-    const keyIds = JSON.parse(keyLoan.keys) as string[]
-    if (Array.isArray(keyIds) && keyIds.length > 0) {
+    if (keyIds.length > 0) {
       const keys = await db('keys')
         .whereIn('id', keyIds)
         .select('keyName', 'keySequenceNumber')
@@ -764,7 +791,7 @@ export async function buildKeyLoanDescription(
     }
   } catch (error) {
     logger.warn(
-      { error, keyLoanKeys: keyLoan.keys },
+      { error, keyLoanId: keyLoan.id },
       'Failed to fetch keys for loan log description'
     )
   }

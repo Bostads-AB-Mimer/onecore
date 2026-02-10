@@ -1,5 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
-import type { Key, KeyType, KeyEvent } from '@/services/types'
+import type {
+  Key,
+  KeyType,
+  KeyEvent,
+  KeyLoanWithDetails,
+} from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyLoanService } from '@/services/api/keyLoanService'
@@ -202,27 +207,13 @@ export function IncomingFlexMenu({
 
         // For each key loan, check if all keys are now disposed
         for (const loanId of keyLoansToCheck) {
-          const loan = await keyLoanService.get(loanId)
+          // Fetch loan with key details
+          const loan = (await keyLoanService.get(loanId, {
+            includeKeySystem: true,
+          })) as KeyLoanWithDetails
 
-          // Parse the keys field - it could be a JSON array string or comma-separated string
-          let keyIds: string[] = []
-          if (loan.keys) {
-            try {
-              // Try parsing as JSON array first
-              const parsed = JSON.parse(loan.keys)
-              keyIds = Array.isArray(parsed) ? parsed : []
-            } catch {
-              // Fall back to comma-separated string
-              keyIds = loan.keys.split(',').map((id) => id.trim())
-            }
-          }
-
-          if (keyIds.length === 0) continue
-
-          // Get all keys in this loan
-          const keysInLoan = await Promise.all(
-            keyIds.map((keyId) => keyService.getKey(keyId))
-          )
+          const keysInLoan = loan.keysArray || []
+          if (keysInLoan.length === 0) continue
 
           // Check if all keys are disposed
           const allDisposed = keysInLoan.every((key) => key.disposed === true)

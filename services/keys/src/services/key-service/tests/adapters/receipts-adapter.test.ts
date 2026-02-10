@@ -1,9 +1,12 @@
+import { keys } from '@onecore/types'
 import * as receiptsAdapter from '../../adapters/receipts-adapter'
 import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
 import * as keyEventsAdapter from '../../adapters/key-events-adapter'
 import * as keysAdapter from '../../adapters/keys-adapter'
 import * as factory from '../factories'
 import { withContext } from '../testUtils'
+
+type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
 
 /**
  * Integration tests for receipts-adapter
@@ -208,13 +211,16 @@ describe('receipts-adapter', () => {
   })
 
   describe('getKeyLoanById', () => {
-    it('returns key loan with keys field', () =>
+    it('returns key loan by id', () =>
       withContext(async (ctx) => {
+        const key = await keysAdapter.createKey(factory.key.build(), ctx.db)
         const keyLoan = await keyLoansAdapter.createKeyLoan(
-          factory.keyLoan.build({
-            keys: JSON.stringify(['key-1', 'key-2']),
+          {
+            keys: [key.id],
+            loanType: 'TENANT' as const,
+            contact: 'test@example.com',
             pickedUpAt: null,
-          }),
+          },
           ctx.db
         )
 
@@ -222,7 +228,6 @@ describe('receipts-adapter', () => {
 
         expect(loan).toBeDefined()
         expect(loan?.id).toBe(keyLoan.id)
-        expect(loan?.keys).toBe(JSON.stringify(['key-1', 'key-2']))
         expect(loan?.pickedUpAt).toBeNull()
       }))
   })
@@ -275,7 +280,7 @@ describe('receipts-adapter', () => {
         )
 
         // Create key events with ORDERED status
-        function buildEventData(overrides: any = {}) {
+        function buildEventData(overrides: any = {}): CreateKeyEventRequest {
           const base = factory.keyEvent.build(overrides)
           const {
             id: _id,
@@ -283,12 +288,12 @@ describe('receipts-adapter', () => {
             updatedAt: _updatedAt,
             ...data
           } = base
-          return data
+          return { ...data, ...overrides }
         }
 
         const event1 = await keyEventsAdapter.createKeyEvent(
           buildEventData({
-            keys: JSON.stringify([key1.id]),
+            keys: [key1.id],
             status: 'ORDERED',
           }),
           ctx.db
@@ -296,7 +301,7 @@ describe('receipts-adapter', () => {
 
         const event2 = await keyEventsAdapter.createKeyEvent(
           buildEventData({
-            keys: JSON.stringify([key2.id]),
+            keys: [key2.id],
             status: 'RECEIVED',
           }),
           ctx.db

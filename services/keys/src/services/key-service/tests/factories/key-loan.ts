@@ -6,17 +6,15 @@ type KeyLoan = keys.v1.KeyLoan
 /**
  * Factory for generating KeyLoan test data.
  *
- * The `keys` field is a JSON string array of key IDs.
- * By default, it generates a single key ID, but you can override with multiple:
+ * Note: keys and keyCards are stored in junction tables (key_loan_keys, key_loan_cards)
+ * and are not part of the KeyLoan response schema. Pass them in CreateKeyLoanRequest
+ * when creating loans.
  *
  * @example
- * // Single key (default)
- * const loan = KeyLoanFactory.build()
- *
- * @example
- * // Multiple keys
- * const loan = KeyLoanFactory.build({
- *   keys: JSON.stringify(['key-id-1', 'key-id-2', 'key-id-3'])
+ * // Create a loan with keys
+ * const loan = await keyLoansAdapter.createKeyLoan({
+ *   ...KeyLoanFactory.build(),
+ *   keys: [key1.id, key2.id],
  * })
  */
 export const KeyLoanFactory = Factory.define<KeyLoan>(({ sequence }) => {
@@ -24,8 +22,6 @@ export const KeyLoanFactory = Factory.define<KeyLoan>(({ sequence }) => {
 
   return {
     id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
-    keys: JSON.stringify([`key-${sequence}`]), // JSON string array with single key by default
-    keyCards: JSON.stringify([]), // JSON string array of card IDs
     loanType: 'TENANT',
     contact: `contact-${sequence}@example.com`,
     contact2: undefined,

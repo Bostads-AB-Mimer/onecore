@@ -12,9 +12,6 @@
  * const customKey = factory.key.build({ keyName: 'Master Key' })
  *
  * const keyLoan = factory.keyLoan.build()
- * const keyLoanWithMultipleKeys = factory.keyLoan.build({
- *   keys: JSON.stringify(['key-1', 'key-2'])
- * })
  */
 
 export { KeyFactory as key } from './key'
