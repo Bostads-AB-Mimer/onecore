@@ -803,8 +803,9 @@ export {
   getLease,
   getLeasesByContactCode,
   getLeasesByRentalObjectCode,
-  addLeaseHomeInsuranceRentRow,
-  deleteLeaseRentRow,
+  addLeaseHomeInsurance,
+  getLeaseHomeInsurance,
+  cancelLeaseHomeInsurance,
   getBuildingManagers,
   searchLeases,
 } from './leases'

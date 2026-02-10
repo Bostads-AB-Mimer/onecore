@@ -1,13 +1,13 @@
 import z from 'zod'
 
-export const YearMonthStringSchema = z.string().brand<'yyyy-mm'>()
+export const YearMonthDayStringSchema = z.string().brand<'yyyy-mm-dd'>()
 
 export const LeaseRentRowSchema = z.object({
   amount: z.number(),
   articleId: z.string(),
-  from: YearMonthStringSchema.optional(),
+  from: YearMonthDayStringSchema.optional(),
   id: z.string(),
   label: z.string(),
-  to: YearMonthStringSchema.optional(),
+  to: YearMonthDayStringSchema.optional(),
   vat: z.number(),
 })

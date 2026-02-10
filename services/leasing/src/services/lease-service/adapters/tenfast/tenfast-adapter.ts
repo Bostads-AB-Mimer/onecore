@@ -761,7 +761,7 @@ export async function getLeaseByExternalId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(externalId)}?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(externalId)}?hyresvard=${tenfastCompanyId}&populate=hyresgaster,hyresobjekt`,
     })
 
     if (res.status !== 200) {
@@ -796,9 +796,10 @@ export async function getLeaseByExternalId(
   }
 }
 
-export async function createLeaseInvoiceRow(params: {
+export async function updateLeaseInvoiceRows(params: {
   leaseId: string
-  invoiceRow: Omit<TenfastInvoiceRow, '_id'>
+  rowsToDelete: string[]
+  rowsToAdd: Omit<TenfastInvoiceRow, '_id'>[]
 }): Promise<AdapterResult<null, 'unknown'>> {
   try {
     const res = await tenfastApi.request({
@@ -807,7 +808,8 @@ export async function createLeaseInvoiceRow(params: {
       data: {
         // TODO: How to handle vatEnabled?
         vatEnabled: true,
-        rowsToAdd: [params.invoiceRow],
+        rowsToDelete: params.rowsToDelete,
+        rowsToAdd: params.rowsToAdd,
       },
     })
 
@@ -817,31 +819,7 @@ export async function createLeaseInvoiceRow(params: {
       throw { status: res.status, data: res.data }
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.createLeaseInvoiceRow')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-export async function deleteLeaseInvoiceRow(params: {
-  leaseId: string
-  invoiceRowId: string
-}): Promise<AdapterResult<null, 'unknown'>> {
-  try {
-    const res = await tenfastApi.request({
-      method: 'patch',
-      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(params.leaseId)}/rows?hyresvard=${tenfastCompanyId}`,
-      data: {
-        rowsToDelete: [params.invoiceRowId],
-      },
-    })
-
-    if (res.status === 200) {
-      return { ok: true, data: null }
-    } else {
-      throw { status: res.status, data: res.data }
-    }
-  } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.deleteInvoiceRow')
+    logger.error(mapHttpError(err), 'tenfast-adapter.updateLeaseInvoiceRows')
     return { ok: false, err: 'unknown' }
   }
 }
