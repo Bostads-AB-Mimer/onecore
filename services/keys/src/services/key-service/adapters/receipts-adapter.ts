@@ -90,7 +90,7 @@ export async function updateReceiptFileId(
 }
 
 /**
- * Get key loan by ID with keys and loanType fields
+ * Get key loan by ID with loanType and pickedUpAt fields
  */
 export async function getKeyLoanById(
   keyLoanId: string,
