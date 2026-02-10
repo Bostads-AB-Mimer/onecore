@@ -705,7 +705,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
     describe(keysAdapter.KeyEventsApi.create, () => {
       it('returns ok with created key event on 201', async () => {
         const createPayload = {
-          keys: JSON.stringify(['key-1']),
+          keys: ['key-1'],
           type: 'FLEX' as const,
           status: 'ORDERED' as const,
         }
@@ -732,7 +732,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         nock(config.keysService.url).post('/key-events').reply(409)
 
         const result = await keysAdapter.KeyEventsApi.create({
-          keys: JSON.stringify(['key-1']),
+          keys: ['key-1'],
           type: 'FLEX',
           status: 'ORDERED',
         })
@@ -744,7 +744,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         nock(config.keysService.url).post('/key-events').reply(500)
 
         const result = await keysAdapter.KeyEventsApi.create({
-          keys: JSON.stringify(['key-1']),
+          keys: ['key-1'],
           type: 'FLEX',
           status: 'ORDERED',
         })
