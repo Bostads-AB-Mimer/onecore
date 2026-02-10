@@ -938,8 +938,8 @@ export const routes = (router: KoaRouter) => {
             {
               amount: ctx.request.body.monthlyAmount,
               article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-              label: 'Hemförsäkring', // TODO: Where should label be decided?
-              vat: 0, // TODO: No VAT on insurance?
+              label: 'Hemförsäkring',
+              vat: 0, // No VAT on insurance
               from: toYearMonthDayString(ctx.request.body.from),
             },
           ],
