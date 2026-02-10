@@ -3,16 +3,11 @@ import { ResponsiveTable } from '../../../components/ui/ResponsiveTable'
 import { TabLayout } from '../../../components/ui/TabLayout'
 import { useState } from 'react'
 import { Button } from '../../../components/ui/v2/Button'
-import { useRentalBlocks } from '@/hooks/useRentalBlocks'
+import { useRentalBlocksByRentalId } from '@/features/rental-blocks/hooks/useRentalBlocksByRentalId'
 import { Badge } from '../../../components/ui/v3/Badge'
+import { formatISODate } from '@/utils/formatters'
 
 const INITIAL_DISPLAY_COUNT = 5
-
-const formatISODate = (isoDateString: string | null | undefined) => {
-  if (!isoDateString) return '-'
-  const date = new Date(isoDateString)
-  return date.toLocaleDateString('sv-SE')
-}
 
 type BlockStatus = 'active' | 'expired' | 'upcoming'
 
@@ -54,7 +49,7 @@ const StatusBadge = ({ status }: { status: BlockStatus }) => {
 export const RentalBlocksTabContent = ({ rentalId }: { rentalId: string }) => {
   const [showAll, setShowAll] = useState(false)
 
-  const { data: rentalBlocks, isLoading } = useRentalBlocks(rentalId)
+  const { data: rentalBlocks, isLoading } = useRentalBlocksByRentalId(rentalId)
 
   if (isLoading) {
     return (

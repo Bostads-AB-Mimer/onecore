@@ -7,7 +7,7 @@ import {
 } from '@/services/api/core'
 import { Staircase } from '@/services/types'
 
-export const useBuildingDetail = (propertyId: string, buildingId?: string) => {
+export const useBuilding = (propertyId: string, buildingId?: string) => {
   const buildingQuery = useQuery({
     queryKey: ['building', buildingId],
     queryFn: () => buildingService.getById(buildingId!),

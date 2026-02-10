@@ -19,10 +19,13 @@ import {
   Loader2,
 } from 'lucide-react'
 import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
-import { useContactQueuePoints } from '@/hooks/useContactQueuePoints'
-import { useInterestApplications } from '@/hooks/useInterestApplications'
-import { useApplicationProfile } from '@/hooks/useApplicationProfile'
+import {
+  useApplicationProfile,
+  useContactQueuePoints,
+  useInterestApplications,
+} from '@/features/tenants'
 import { resolve } from '@/utils/env'
+import { formatISODate } from '@/utils/formatters'
 
 // Helper function to get status badge variant
 // Handles both numeric ApplicantStatus enum values and string values
@@ -448,22 +451,14 @@ export function TenantQueueSystemTabContent({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Anmäld: </span>
-                        <span>
-                          {new Date(
-                            interest.applicationDate
-                          ).toLocaleDateString('sv-SE')}
-                        </span>
+                        <span>{formatISODate(interest.applicationDate)}</span>
                       </div>
                       {interest.publishedTo && (
                         <div>
                           <span className="text-muted-foreground">
                             Publicerad tom:{' '}
                           </span>
-                          <span>
-                            {new Date(interest.publishedTo).toLocaleDateString(
-                              'sv-SE'
-                            )}
-                          </span>
+                          <span>{formatISODate(interest.publishedTo)}</span>
                         </div>
                       )}
                       {interest.vacantFrom && (
@@ -471,11 +466,7 @@ export function TenantQueueSystemTabContent({
                           <span className="text-muted-foreground">
                             Ledigt från:{' '}
                           </span>
-                          <span>
-                            {new Date(interest.vacantFrom).toLocaleDateString(
-                              'sv-SE'
-                            )}
-                          </span>
+                          <span>{formatISODate(interest.vacantFrom)}</span>
                         </div>
                       )}
                     </div>

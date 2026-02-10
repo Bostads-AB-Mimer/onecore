@@ -7,7 +7,7 @@ import {
 import { Building } from '@/services/types'
 import { useQuery } from '@tanstack/react-query'
 
-export function useResidenceDetail(residenceId: string) {
+export function useResidence(residenceId: string) {
   const residenceQuery = useQuery({
     queryKey: ['residence', residenceId],
     queryFn: () => residenceService.getById(residenceId!),

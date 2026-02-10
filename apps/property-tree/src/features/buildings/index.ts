@@ -5,7 +5,7 @@ export { BuildingEntrancesTabContent } from './components/BuildingEntrancesTabCo
 
 // Hooks
 export { useBuildings } from './hooks/useBuildings'
-export { useBuildingDetail } from './hooks/useBuildingDetail'
+export { useBuilding } from './hooks/useBuilding'
 export { useStaircases } from './hooks/useStaircases'
 
 // Lib

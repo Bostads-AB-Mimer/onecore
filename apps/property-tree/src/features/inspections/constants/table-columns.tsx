@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/v2/Button'
 import { Eye } from 'lucide-react'
 import { components } from '@/services/api/core/generated/api-types'
 import { getStatusConfig } from './statuses'
+import { formatISODate } from '@/utils/formatters'
 import type { ReactNode } from 'react'
 
 type Inspection = components['schemas']['Inspection']
@@ -23,14 +24,6 @@ export interface InspectionTableColumn {
   render: (inspection: Inspection) => ReactNode
   className?: string
   hideOnMobile?: boolean
-}
-
-/**
- * Helper: Format Swedish date
- */
-function formatSwedishDate(date: string | null | undefined): string {
-  if (!date) return 'N/A'
-  return new Date(date).toLocaleDateString('sv-SE')
 }
 
 /**
@@ -98,7 +91,7 @@ export const INSPECTION_TABLE_COLUMNS = {
     label: 'Uppsägning',
     render: (inspection: Inspection) => (
       <span className="whitespace-nowrap">
-        {formatSwedishDate(inspection.lease?.lastDebitDate)}
+        {formatISODate(inspection.lease?.lastDebitDate)}
       </span>
     ),
     hideOnMobile: true,
@@ -108,7 +101,7 @@ export const INSPECTION_TABLE_COLUMNS = {
     label: 'Planerat datum/tid',
     render: (inspection: Inspection) => (
       <span className="whitespace-nowrap">
-        {formatSwedishDate(inspection.date)}
+        {formatISODate(inspection.date)}
       </span>
     ),
     hideOnMobile: true,
@@ -118,7 +111,7 @@ export const INSPECTION_TABLE_COLUMNS = {
     label: 'Utfört',
     render: (inspection: Inspection) => (
       <span className="whitespace-nowrap">
-        {formatSwedishDate(inspection.date)}
+        {formatISODate(inspection.date)}
       </span>
     ),
     hideOnMobile: true,
@@ -230,7 +223,7 @@ export function renderInspectionMobileCard(
       </div>
       <div className="flex justify-between items-center">
         <span className="text-sm text-muted-foreground">
-          {formatSwedishDate(inspection.date)}
+          {formatISODate(inspection.date)}
         </span>
         <Button variant="ghost" size="sm" onClick={() => onAction(inspection)}>
           <Eye className="h-4 w-4 mr-1" />

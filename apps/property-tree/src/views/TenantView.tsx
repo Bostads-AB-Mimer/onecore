@@ -1,8 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenants'
-import { useLeases } from '@/features/leases'
-import { useRentalProperties } from '@/hooks/useRentalProperties'
+import { useLeasesByContactCode, useRentalProperties } from '@/features/leases'
 import { TenantCard } from '@/entities/tenant'
 import {
   Tooltip,
@@ -105,7 +104,7 @@ const TenantView = () => {
     data: leases,
     isLoading: leasesLoading,
     error: leasesError,
-  } = useLeases(contactCode)
+  } = useLeasesByContactCode(contactCode)
 
   // Extract unique rental property IDs from leases
   const rentalPropertyIds = useMemo(() => {

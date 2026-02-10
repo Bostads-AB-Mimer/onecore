@@ -7,7 +7,7 @@ import {
   useSimpleDialogState,
   type UseDialogStateReturn,
   type UseSimpleDialogStateReturn,
-} from '@/hooks/useDialogState'
+} from '@/features/rooms/hooks/useDialogState'
 import type { ViewState } from './useComponentLibraryHandlers'
 import type {
   ComponentCategory,

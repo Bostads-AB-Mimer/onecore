@@ -2,7 +2,7 @@ import { buildingService, propertyService } from '@/services/api/core'
 import { useQuery } from '@tanstack/react-query'
 import type { PropertyDetail } from '@/types/api'
 
-export function usePropertyDetail(propertyId: string | undefined) {
+export function useProperty(propertyId: string | undefined) {
   const propertyQuery = useQuery({
     queryKey: ['property', propertyId],
     queryFn: () => propertyService.getPropertyById(propertyId!),

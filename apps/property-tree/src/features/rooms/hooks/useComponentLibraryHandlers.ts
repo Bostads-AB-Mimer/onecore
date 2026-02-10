@@ -2,7 +2,7 @@ import { useComponentEntityMutation } from './useComponentEntityMutation'
 import type {
   UseDialogStateReturn,
   UseSimpleDialogStateReturn,
-} from '@/hooks/useDialogState'
+} from '@/features/rooms/hooks/useDialogState'
 import type {
   ComponentCategory,
   ComponentType,

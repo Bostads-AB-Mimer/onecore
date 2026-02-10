@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useComponentImages } from '../../hooks/useComponentImages'
+import { formatISODate } from '@/utils/formatters'
 import type { Component } from '@/services/types'
 
 interface InstanceDetailsDialogProps {
@@ -245,11 +246,6 @@ export const InstanceDetailsDialog = ({
     }
   }
 
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('sv-SE')
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -306,7 +302,7 @@ export const InstanceDetailsDialog = ({
               <div>
                 <dt className="text-sm text-muted-foreground">Garantistart</dt>
                 <dd className="text-sm font-medium">
-                  {formatDate(instance.warrantyStartDate)}
+                  {formatISODate(instance.warrantyStartDate)}
                 </dd>
               </div>
               <div>
@@ -353,11 +349,11 @@ export const InstanceDetailsDialog = ({
                     {instance.componentInstallations.map((install) => (
                       <TableRow key={install.id}>
                         <TableCell>
-                          {formatDate(install.installationDate)}
+                          {formatISODate(install.installationDate)}
                         </TableCell>
                         <TableCell>
                           {install.deinstallationDate ? (
-                            formatDate(install.deinstallationDate)
+                            formatISODate(install.deinstallationDate)
                           ) : (
                             <Badge variant="default">Aktiv</Badge>
                           )}
@@ -497,7 +493,7 @@ export const InstanceDetailsDialog = ({
                             <p className="font-medium truncate">{doc.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {formatFileSize(doc.size)} •{' '}
-                              {formatDate(doc.lastModified)}
+                              {formatISODate(doc.lastModified)}
                             </p>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">

@@ -16,6 +16,7 @@ import { Trash2, Unplug } from 'lucide-react'
 import { DeinstallationDialog } from './DeinstallationDialog'
 import { ComponentInstallationForm } from './ComponentInstallationForm'
 import type { Component } from '@/services/types'
+import { formatISODate } from '@/utils/formatters'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { componentService } from '@/services/api/core/componentService'
 import { componentLibraryService } from '@/services/api/core/componentLibraryService'
@@ -150,9 +151,9 @@ export const ManageComponentsDialog = ({
                             {activeInstallation && (
                               <p className="text-xs text-muted-foreground">
                                 Installerad:{' '}
-                                {new Date(
+                                {formatISODate(
                                   activeInstallation.installationDate
-                                ).toLocaleDateString('sv-SE')}
+                                )}
                               </p>
                             )}
                           </div>

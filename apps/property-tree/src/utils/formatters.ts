@@ -33,3 +33,9 @@ export function generateAuthorAbbreviation(fullName: string): string {
 
   return (firstName + lastName).toUpperCase()
 }
+
+export const formatISODate = (isoDateString: string | null | undefined) => {
+  if (!isoDateString) return '-'
+  const date = new Date(isoDateString)
+  return date.toLocaleDateString('sv-SE')
+}

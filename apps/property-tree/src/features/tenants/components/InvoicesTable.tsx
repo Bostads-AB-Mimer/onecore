@@ -4,7 +4,7 @@ import { match, P } from 'ts-pattern'
 import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 
 import { Badge } from '@/components/ui/v3/Badge'
-import { useInvoicePaymentEvents } from '@/hooks/useInvoicePaymentEvents'
+import { useInvoicePaymentEvents } from '@/features/tenants'
 import {
   Tooltip,
   TooltipContent,

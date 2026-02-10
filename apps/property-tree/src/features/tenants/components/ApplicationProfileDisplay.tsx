@@ -1,5 +1,6 @@
 import { User, UserCheck } from 'lucide-react'
 import { Badge } from '@/components/ui/v2/Badge'
+import { formatISODate } from '@/utils/formatters'
 
 interface ApplicationProfileDisplayProps {
   profile: {
@@ -141,15 +142,12 @@ export function ApplicationProfileDisplay({
                 <div className="text-xs text-muted-foreground">
                   Granskad av: {housingReference.reviewedBy}
                   {housingReference.reviewedAt &&
-                    ` (${new Date(housingReference.reviewedAt).toLocaleDateString('sv-SE')})`}
+                    ` (${formatISODate(String(housingReference.reviewedAt))})`}
                 </div>
               )}
               {housingReference.expiresAt && (
                 <div className="text-xs text-muted-foreground">
-                  Utgår:{' '}
-                  {new Date(housingReference.expiresAt).toLocaleDateString(
-                    'sv-SE'
-                  )}
+                  Utgår: {formatISODate(String(housingReference.expiresAt))}
                 </div>
               )}
             </div>
