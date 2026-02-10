@@ -16,7 +16,7 @@ import { ContextType } from '@/shared/types/ui'
 import { CurrentTenant } from '@/features/tenants'
 import { LeasesTabContent } from '@/features/leases'
 import { WorkOrdersTabContent } from '@/features/work-orders'
-import { RoomsTabContent } from '@/widgets/rooms-tab'
+import { RoomsTabContent } from './RoomsTabContent'
 
 import { FacilityTabsMobile } from './FacilityTabsMobile'
 import { SpaceComponents } from '@/features/component-library'

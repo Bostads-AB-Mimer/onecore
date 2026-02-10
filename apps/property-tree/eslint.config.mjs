@@ -152,8 +152,7 @@ export default defineConfig([
             {
               from: 'views',
               disallow: ['views'],
-              message:
-                'Views cannot import other views.',
+              message: 'Views cannot import other views.',
             },
             // legacy: no restrictions during migration
             {

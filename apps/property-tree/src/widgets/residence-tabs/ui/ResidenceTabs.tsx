@@ -18,7 +18,7 @@ import { ContextType } from '@/shared/types/ui'
 
 import { ResidenceFloorplanTabsContent } from '@/features/residences'
 import { RentalBlocksTabContent } from '@/features/rental-blocks'
-import { RoomsTabContent } from '@/widgets/rooms-tab'
+import { RoomsTabContent } from './RoomsTabContent'
 import { TenantsTabContent } from '@/features/tenants'
 import { InspectionsTabContent } from '@/features/inspections'
 import { WorkOrdersTabContent } from '@/features/work-orders'
