@@ -690,8 +690,6 @@ export interface paths {
               content?: {
                   /** @description The unique ID of the key loan. */
                   id?: string;
-                  /** @description JSON string array of key IDs. */
-                  keys?: string;
                   /** @description Contact information. */
                   contact?: string;
                   /** @description Second contact information. */
@@ -1053,8 +1051,6 @@ export interface paths {
               content?: {
                 /** @description The unique ID of the key loan. */
                 id?: string;
-                /** @description JSON string array of key IDs. */
-                keys?: string;
                 /** @description Contact information. */
                 contact?: string;
                 /** @description Second contact information. */
@@ -2609,8 +2605,6 @@ export interface components {
       loans?: (({
           /** Format: uuid */
           id: string;
-          keys: string;
-          keyCards: string;
           /** @enum {string} */
           loanType: "TENANT" | "MAINTENANCE";
           contact?: string;
@@ -2682,7 +2676,6 @@ export interface components {
       events?: (({
           /** Format: uuid */
           id: string;
-          keys: string;
           /** @enum {string} */
           type: "FLEX" | "ORDER" | "LOST";
           /** @enum {string} */

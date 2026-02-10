@@ -111,57 +111,21 @@ export function KeyLoansTable({
 
   const expansion = useExpandableRows<LoanExpandedData>({
     onExpand: async (loanId) => {
-      const loan = await keyLoanService.get(loanId)
+      // Fetch loan with keys (including key systems) and cards in one call
+      const loanDetails = (await keyLoanService.get(loanId, {
+        includeKeySystem: true,
+        includeCards: true,
+      })) as KeyLoanWithDetails
 
-      // Parse key IDs and fetch key details
-      let keyIds: string[] = []
-      try {
-        keyIds = JSON.parse(loan.keys || '[]')
-      } catch {
-        keyIds = []
-      }
+      const keysArray = loanDetails.keysArray || []
 
-      // Fetch all keys for this loan
-      const keysArray: Key[] = []
-      for (const keyId of keyIds) {
-        try {
-          const key = await keyService.getKey(keyId)
-          keysArray.push(key)
-        } catch (error) {
-          console.error(`Failed to fetch key ${keyId}:`, error)
-        }
-      }
-
-      // Create KeyLoanWithDetails object
-      const loanDetails: KeyLoanWithDetails = {
-        ...loan,
-        keysArray,
-        keyCardsArray: [],
-        receipts: [],
-      }
-
-      // Build key system map for this loan's keys
-      const uniqueKeySystemIds = [
-        ...new Set(
-          keysArray
-            .map((k) => k.keySystemId)
-            .filter((id): id is string => id != null && id !== '')
-        ),
-      ]
-
+      // Build key system map from the key details (keySystem is already attached)
       const systemMap: Record<string, string> = {}
-      if (uniqueKeySystemIds.length > 0) {
-        await Promise.all(
-          uniqueKeySystemIds.map(async (id) => {
-            try {
-              const keySystem = await keyService.getKeySystem(id)
-              systemMap[id] = keySystem.systemCode
-            } catch (error) {
-              console.error(`Failed to fetch key system ${id}:`, error)
-            }
-          })
-        )
-      }
+      keysArray.forEach((key) => {
+        if (key.keySystemId && key.keySystem?.systemCode) {
+          systemMap[key.keySystemId] = key.keySystem.systemCode
+        }
+      })
 
       // Update the component-level keySystemMap for MaintenanceKeysTable
       setKeySystemMap((prev) => ({ ...prev, ...systemMap }))
@@ -216,13 +180,13 @@ export function KeyLoansTable({
     return d.toLocaleDateString('sv-SE')
   }
 
-  const getKeyCount = (keysString: string) => {
-    try {
-      const keys = JSON.parse(keysString)
-      return Array.isArray(keys) ? keys.length : 0
-    } catch {
-      return 0
+  const getKeyCount = (loan: KeyLoan) => {
+    // Key count from keysArray if available (KeyLoanWithDetails), otherwise '-'
+    const withDetails = loan as KeyLoanWithDetails
+    if (withDetails.keysArray) {
+      return withDetails.keysArray.length
     }
+    return '-'
   }
 
   const getContactFieldDisplay = (
@@ -363,7 +327,7 @@ export function KeyLoansTable({
                 const isExpanded = expansion.isExpanded(loan.id)
                 const isLoadingThis =
                   expansion.isLoading && expansion.expandedId === loan.id
-                const keyCount = getKeyCount(loan.keys)
+                const keyCount = getKeyCount(loan)
                 const isPickedUp = !!loan.pickedUpAt
                 const isReturned = !!loan.returnedAt
                 const isActive = isPickedUp && !isReturned

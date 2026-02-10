@@ -9246,8 +9246,6 @@ export interface components {
     KeyLoan: {
       /** Format: uuid */
       id: string;
-      keys: string;
-      keyCards: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -9289,7 +9287,6 @@ export interface components {
       events?: (({
           /** Format: uuid */
           id: string;
-          keys: string;
           /** @enum {string} */
           type: "FLEX" | "ORDER" | "LOST";
           /** @enum {string} */
@@ -9305,8 +9302,6 @@ export interface components {
     KeyLoanWithDetails: {
       /** Format: uuid */
       id: string;
-      keys: string;
-      keyCards: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -9366,8 +9361,6 @@ export interface components {
           }) | null;
           loans?: {
               id: components["schemas"]["KeyLoanWithDetails"]["id"];
-              keys: components["schemas"]["KeyLoanWithDetails"]["keys"];
-              keyCards: components["schemas"]["KeyLoanWithDetails"]["keyCards"];
               loanType: components["schemas"]["KeyLoanWithDetails"]["loanType"];
               contact?: components["schemas"]["KeyLoanWithDetails"]["contact"];
               contact2?: components["schemas"]["KeyLoanWithDetails"]["contact2"];
@@ -9384,7 +9377,6 @@ export interface components {
           events?: (({
               /** Format: uuid */
               id: string;
-              keys: string;
               /** @enum {string} */
               type: "FLEX" | "ORDER" | "LOST";
               /** @enum {string} */
@@ -9466,7 +9458,6 @@ export interface components {
     KeyEvent: {
       /** Format: uuid */
       id: string;
-      keys: string;
       /** @enum {string} */
       type: "FLEX" | "ORDER" | "LOST";
       /** @enum {string} */
@@ -9523,8 +9514,8 @@ export interface components {
       flexNumber: number;
     };
     CreateKeyLoanRequest: {
-      keys?: string;
-      keyCards?: string;
+      keys?: string[];
+      keyCards?: string[];
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -9540,8 +9531,8 @@ export interface components {
       createdBy?: string | null;
     };
     UpdateKeyLoanRequest: {
-      keys?: string;
-      keyCards?: string;
+      keys?: string[];
+      keyCards?: string[];
       /** @enum {string} */
       loanType?: "TENANT" | "MAINTENANCE";
       contact?: string;
@@ -9681,7 +9672,6 @@ export interface components {
           events?: (({
               /** Format: uuid */
               id: string;
-              keys: string;
               /** @enum {string} */
               type: "FLEX" | "ORDER" | "LOST";
               /** @enum {string} */
@@ -9696,7 +9686,7 @@ export interface components {
         })[];
     };
     CreateKeyEventRequest: {
-      keys: string;
+      keys: string[];
       /** @enum {string} */
       type: "FLEX" | "ORDER" | "LOST";
       /** @enum {string} */
@@ -9705,7 +9695,7 @@ export interface components {
       workOrderId?: string | null;
     };
     UpdateKeyEventRequest: {
-      keys?: string;
+      keys?: string[];
       /** @enum {string} */
       type?: "FLEX" | "ORDER" | "LOST";
       /** @enum {string} */
@@ -9847,8 +9837,6 @@ export interface components {
       loans?: (({
           /** Format: uuid */
           id: string;
-          keys: string;
-          keyCards: string;
           /** @enum {string} */
           loanType: "TENANT" | "MAINTENANCE";
           contact?: string;

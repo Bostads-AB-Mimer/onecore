@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { Key, CardDetails } from '@/services/types'
+import type { Key, CardDetails, KeyLoanWithDetails } from '@/services/types'
 
 // Store loan details for PDF generation
 type LoanDetails = {
@@ -75,8 +75,11 @@ export function ReturnMaintenanceKeysDialog({
 
           if (activeLoan) {
             if (!loansMap.has(activeLoan.id)) {
-              // Parse all keys in this loan
-              const loanKeyIds: string[] = JSON.parse(activeLoan.keys || '[]')
+              // Fetch loan with details to get key IDs
+              const enriched = (await keyLoanService.get(activeLoan.id, {
+                includeCards: true,
+              })) as KeyLoanWithDetails
+              const loanKeyIds = enriched.keysArray?.map((k) => k.id) || []
               const loanKeys = allKeys.filter((k) => loanKeyIds.includes(k.id))
 
               loansMap.set(activeLoan.id, {

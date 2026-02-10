@@ -1,22 +1,25 @@
+import { keys } from '@onecore/types'
 import * as keyEventService from '../key-event-service'
 import * as keyEventsAdapter from '../adapters/key-events-adapter'
 import * as keysAdapter from '../adapters/keys-adapter'
 import * as factory from './factories'
 import { withContext } from './testUtils'
 
+type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
+
 /**
  * Tests for key-event-service
  *
  * These tests verify business logic for key event validation:
- * - Flexible key input parsing (JSON array or single string)
+ * - Array validation
  * - Incomplete event conflict detection
  * - Empty array handling
  */
 
 describe('key-event-service', () => {
   describe('parseKeysInput', () => {
-    it('parses valid JSON array of key IDs', () => {
-      const result = keyEventService.parseKeysInput('["key1", "key2", "key3"]')
+    it('accepts valid array of key IDs', () => {
+      const result = keyEventService.parseKeysInput(['key1', 'key2', 'key3'])
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -24,26 +27,8 @@ describe('key-event-service', () => {
       }
     })
 
-    it('parses single key ID string (non-JSON)', () => {
-      const result = keyEventService.parseKeysInput('single-key-id')
-
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.data).toEqual(['single-key-id'])
-      }
-    })
-
-    it('accepts array input directly', () => {
-      const result = keyEventService.parseKeysInput(['key1', 'key2'])
-
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.data).toEqual(['key1', 'key2'])
-      }
-    })
-
-    it('parses JSON array with single element', () => {
-      const result = keyEventService.parseKeysInput('["single-key"]')
+    it('accepts array with single key', () => {
+      const result = keyEventService.parseKeysInput(['single-key'])
 
       expect(result.ok).toBe(true)
       if (result.ok) {
@@ -51,76 +36,12 @@ describe('key-event-service', () => {
       }
     })
 
-    it('returns error for empty JSON array', () => {
-      const result = keyEventService.parseKeysInput('[]')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.err).toBe('empty-keys-array')
-      }
-    })
-
-    it('returns error for empty array input', () => {
+    it('returns error for empty array', () => {
       const result = keyEventService.parseKeysInput([])
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.err).toBe('empty-keys-array')
-      }
-    })
-
-    it('treats malformed JSON as single key ID (fallback behavior)', () => {
-      // Malformed JSON falls back to treating the string as a single key ID
-      const result = keyEventService.parseKeysInput('["key1", "key2"')
-
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.data).toEqual(['["key1", "key2"'])
-      }
-    })
-
-    it('returns error for non-array JSON object', () => {
-      const result = keyEventService.parseKeysInput('{"key": "value"}')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.err).toBe('invalid-keys-format')
-      }
-    })
-
-    it('returns error for JSON number', () => {
-      const result = keyEventService.parseKeysInput('123')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.err).toBe('invalid-keys-format')
-      }
-    })
-
-    it('returns error for array with non-string elements', () => {
-      const result = keyEventService.parseKeysInput('[123, "key2"]')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.err).toBe('invalid-keys-format')
-      }
-    })
-
-    it('returns error for empty string', () => {
-      const result = keyEventService.parseKeysInput('')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.err).toBe('invalid-keys-format')
-      }
-    })
-
-    it('handles whitespace in JSON', () => {
-      const result = keyEventService.parseKeysInput('  ["key1"  ,  "key2"]  ')
-
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.data).toEqual(['key1', 'key2'])
       }
     })
   })
@@ -139,7 +60,7 @@ describe('key-event-service', () => {
         )
 
         const result = await keyEventService.validateKeyEventCreation(
-          JSON.stringify([key1.id, key2.id]),
+          [key1.id, key2.id],
           ctx.db
         )
 
@@ -149,16 +70,15 @@ describe('key-event-service', () => {
         }
       }))
 
-    it('successfully validates single key ID string', () =>
+    it('successfully validates single key ID in array', () =>
       withContext(async (ctx) => {
         const key = await keysAdapter.createKey(
           factory.key.build({ keyName: 'Test Key' }),
           ctx.db
         )
 
-        // Pass single key ID as string (not JSON)
         const result = await keyEventService.validateKeyEventCreation(
-          key.id,
+          [key.id],
           ctx.db
         )
 
@@ -168,23 +88,10 @@ describe('key-event-service', () => {
         }
       }))
 
-    it('returns error when keys format is invalid', () =>
-      withContext(async (ctx) => {
-        const result = await keyEventService.validateKeyEventCreation(
-          '{"not": "array"}',
-          ctx.db
-        )
-
-        expect(result.ok).toBe(false)
-        if (!result.ok) {
-          expect(result.err).toBe('invalid-keys-format')
-        }
-      }))
-
     it('returns error when keys array is empty', () =>
       withContext(async (ctx) => {
         const result = await keyEventService.validateKeyEventCreation(
-          '[]',
+          [],
           ctx.db
         )
 
@@ -204,16 +111,16 @@ describe('key-event-service', () => {
 
         // Create an incomplete event for this key
         await keyEventsAdapter.createKeyEvent(
-          factory.keyEvent.build({
-            keys: JSON.stringify([key.id]),
-            status: 'ORDERED', // Incomplete status
-          }),
+          {
+            ...factory.keyEvent.build({ status: 'ORDERED' }),
+            keys: [key.id],
+          } as CreateKeyEventRequest,
           ctx.db
         )
 
         // Try to create another event with the same key
         const result = await keyEventService.validateKeyEventCreation(
-          JSON.stringify([key.id]),
+          [key.id],
           ctx.db
         )
 
@@ -234,16 +141,16 @@ describe('key-event-service', () => {
 
         // Create a completed event
         await keyEventsAdapter.createKeyEvent(
-          factory.keyEvent.build({
-            keys: JSON.stringify([key.id]),
-            status: 'COMPLETED',
-          }),
+          {
+            ...factory.keyEvent.build({ status: 'COMPLETED' }),
+            keys: [key.id],
+          } as CreateKeyEventRequest,
           ctx.db
         )
 
         // Should allow new event since previous is completed
         const result = await keyEventService.validateKeyEventCreation(
-          JSON.stringify([key.id]),
+          [key.id],
           ctx.db
         )
 
@@ -271,16 +178,16 @@ describe('key-event-service', () => {
 
         // Create incomplete event with key1 and key2
         await keyEventsAdapter.createKeyEvent(
-          factory.keyEvent.build({
-            keys: JSON.stringify([key1.id, key2.id]),
-            status: 'ORDERED',
-          }),
+          {
+            ...factory.keyEvent.build({ status: 'ORDERED' }),
+            keys: [key1.id, key2.id],
+          } as CreateKeyEventRequest,
           ctx.db
         )
 
         // Try to create event with key2 and key3 (key2 has incomplete event)
         const result = await keyEventService.validateKeyEventCreation(
-          JSON.stringify([key2.id, key3.id]),
+          [key2.id, key3.id],
           ctx.db
         )
 
@@ -306,16 +213,16 @@ describe('key-event-service', () => {
 
         // Create incomplete event with key1 only
         await keyEventsAdapter.createKeyEvent(
-          factory.keyEvent.build({
-            keys: JSON.stringify([key1.id]),
-            status: 'ORDERED',
-          }),
+          {
+            ...factory.keyEvent.build({ status: 'ORDERED' }),
+            keys: [key1.id],
+          } as CreateKeyEventRequest,
           ctx.db
         )
 
         // Should allow event with key2 (no conflict)
         const result = await keyEventService.validateKeyEventCreation(
-          JSON.stringify([key2.id]),
+          [key2.id],
           ctx.db
         )
 
@@ -325,16 +232,16 @@ describe('key-event-service', () => {
         }
       }))
 
-    it('handles single key ID passed as non-JSON string', () =>
+    it('handles single key ID in array', () =>
       withContext(async (ctx) => {
         const key = await keysAdapter.createKey(
           factory.key.build({ keyName: 'Test Key' }),
           ctx.db
         )
 
-        // Pass key ID directly as string (common use case)
+        // Pass key ID in array
         const result = await keyEventService.validateKeyEventCreation(
-          key.id,
+          [key.id],
           ctx.db
         )
 

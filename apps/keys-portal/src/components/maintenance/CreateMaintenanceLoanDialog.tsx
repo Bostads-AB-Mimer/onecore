@@ -69,7 +69,7 @@ export function CreateMaintenanceLoanDialog({
       const keyIds = selectedKeys.map((k) => k.id)
 
       await keyLoanService.create({
-        keys: JSON.stringify(keyIds),
+        keys: keyIds,
         loanType: 'MAINTENANCE',
         contact: companyContactCode,
         contactPerson: contactPerson.trim() || null,

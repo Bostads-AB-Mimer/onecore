@@ -63,26 +63,21 @@ export async function fetchLoans(
 
   const keyIds = keys.map((k) => k.id)
 
-  // Fetch all loans for these keys
-  const loans = await dbConnection('key_loans')
-    .whereRaw(
-      `EXISTS (
-      SELECT 1 FROM OPENJSON(keys) WHERE value IN (${keyIds.map(() => '?').join(',')})
-    )`,
-      keyIds
-    )
-    .orderBy('createdAt', 'desc')
+  // Fetch all loans + their key mappings in a single query via junction table
+  const rows = await dbConnection('key_loan_keys')
+    .join('key_loans', 'key_loans.id', 'key_loan_keys.keyLoanId')
+    .whereIn('key_loan_keys.keyId', keyIds)
+    .select('key_loan_keys.keyId', 'key_loans.*')
+    .orderBy('key_loans.createdAt', 'desc')
 
-  // Build lookup map
-  loans.forEach((loan: KeyLoan) => {
-    const loanKeyIds = JSON.parse(loan.keys) as string[]
-    loanKeyIds.forEach((keyId) => {
-      if (!loansByKeyId.has(keyId)) {
-        loansByKeyId.set(keyId, [])
-      }
-      loansByKeyId.get(keyId)!.push(loan)
-    })
-  })
+  // Build lookup map directly from joined results
+  for (const row of rows) {
+    const keyId = row.keyId
+    if (!loansByKeyId.has(keyId)) {
+      loansByKeyId.set(keyId, [])
+    }
+    loansByKeyId.get(keyId)!.push(row)
+  }
 
   return loansByKeyId
 }
@@ -102,25 +97,21 @@ export async function fetchEvents(
 
   const keyIds = keys.map((k) => k.id)
 
-  // Fetch all events for these keys
-  const events = await dbConnection('key_events')
-    .where(function () {
-      keyIds.forEach((keyId) => {
-        this.orWhere('keys', 'like', `%"${keyId}"%`)
-      })
-    })
-    .orderBy('createdAt', 'desc')
+  // Fetch all events + their key mappings in a single query via junction table
+  const rows = await dbConnection('key_event_keys')
+    .join('key_events', 'key_events.id', 'key_event_keys.keyEventId')
+    .whereIn('key_event_keys.keyId', keyIds)
+    .select('key_event_keys.keyId', 'key_events.*')
+    .orderBy('key_events.createdAt', 'desc')
 
-  // Build lookup map
-  events.forEach((event: KeyEvent) => {
-    const eventKeyIds = JSON.parse(event.keys) as string[]
-    eventKeyIds.forEach((keyId) => {
-      if (!eventsByKeyId.has(keyId)) {
-        eventsByKeyId.set(keyId, [])
-      }
-      eventsByKeyId.get(keyId)!.push(event)
-    })
-  })
+  // Build lookup map directly from joined results
+  for (const row of rows) {
+    const keyId = row.keyId
+    if (!eventsByKeyId.has(keyId)) {
+      eventsByKeyId.set(keyId, [])
+    }
+    eventsByKeyId.get(keyId)!.push(row)
+  }
 
   return eventsByKeyId
 }
