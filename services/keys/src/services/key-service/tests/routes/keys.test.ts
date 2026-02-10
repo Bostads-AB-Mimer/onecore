@@ -375,7 +375,7 @@ describe('POST /keys/bulk-update-flex', () => {
 
     // Verify response
     expect(res.status).toBe(200)
-    expect(res.body.content).toHaveProperty('updatedCount', 3)
+    expect(res.body.content).toBe(3)
   })
 
   it('successfully updates with flex number 1', async () => {
@@ -397,7 +397,7 @@ describe('POST /keys/bulk-update-flex', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.updatedCount).toBe(5)
+    expect(res.body.content).toBe(5)
   })
 
   it('successfully updates with flex number 3 (max)', async () => {
@@ -419,7 +419,7 @@ describe('POST /keys/bulk-update-flex', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.updatedCount).toBe(2)
+    expect(res.body.content).toBe(2)
   })
 
   it('returns 0 when no keys exist for rental object', async () => {
@@ -442,7 +442,7 @@ describe('POST /keys/bulk-update-flex', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.updatedCount).toBe(0)
+    expect(res.body.content).toBe(0)
   })
 
   it('validates flex number minimum (less than 1) and returns 400', async () => {
