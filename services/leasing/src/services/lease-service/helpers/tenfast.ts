@@ -68,10 +68,7 @@ function mapToOnecoreRentalObject(
 // lastDebitDate: Date | undefined // Sista betaldatum
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
-export function mapToOnecoreLease(
-  lease: TenfastLease,
-  includeRentalObject = false
-): Lease {
+export function mapToOnecoreLease(lease: TenfastLease): Lease {
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
@@ -94,7 +91,7 @@ export function mapToOnecoreLease(
     tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
     tenants: undefined,
     rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
-    rentalObject: includeRentalObject
+    rentalObject: lease.hyresobjekt[0]
       ? mapToOnecoreRentalObject(lease.hyresobjekt[0])
       : undefined,
     type: lease.hyresobjekt[0]?.typ ?? 'missing', // TODO: Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
