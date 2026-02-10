@@ -14,10 +14,10 @@ import {
   openMaintenanceReceiptInNewTab,
 } from '@/services/receiptHandlers'
 import { useToast } from '@/hooks/use-toast'
-import type { KeyLoan, Lease } from '@/services/types'
+import type { KeyLoanWithDetails, Lease } from '@/services/types'
 
 export interface LoanActionMenuProps {
-  loan: KeyLoan
+  loan: KeyLoanWithDetails
   lease?: Lease
   onRefresh?: () => void
   onReturn?: (keyIds: string[], cardIds: string[]) => void
@@ -47,22 +47,12 @@ export function LoanActionMenu({
   // Check if loan can be returned (not already returned)
   const canReturn = !loan.returnedAt
 
-  // Parse key and card IDs from the loan
+  // Get key and card IDs from the enriched loan
   const { keyIds, cardIds } = useMemo(() => {
-    let keyIds: string[] = []
-    let cardIds: string[] = []
-    try {
-      keyIds = JSON.parse(loan.keys || '[]')
-    } catch {
-      keyIds = loan.keys ? loan.keys.split(',').map((id) => id.trim()) : []
-    }
-    try {
-      cardIds = JSON.parse(loan.keyCards || '[]')
-    } catch {
-      cardIds = []
-    }
+    const keyIds = loan.keysArray?.map((k) => k.id) || []
+    const cardIds = loan.keyCardsArray?.map((c) => c.cardId) || []
     return { keyIds, cardIds }
-  }, [loan.keys, loan.keyCards])
+  }, [loan.keysArray, loan.keyCardsArray])
 
   const handleReturn = () => {
     if (onReturn && canReturn) {

@@ -201,13 +201,15 @@ describe('key-bundles-adapter', () => {
 
         // Create maintenance loan for key2
         await keyLoansAdapter.createKeyLoan(
-          factory.keyLoanMaintenanceKey.build({
-            keys: JSON.stringify([key2.id]),
-            contact: 'ABC Company',
-            contactPerson: 'John Doe',
-            pickedUpAt: new Date(),
-            returnedAt: null, // Active loan
-          }),
+          {
+            ...factory.keyLoanMaintenanceKey.build({
+              contact: 'ABC Company',
+              contactPerson: 'John Doe',
+              pickedUpAt: new Date(),
+              returnedAt: null, // Active loan
+            }),
+            keys: [key2.id],
+          },
           ctx.db
         )
 

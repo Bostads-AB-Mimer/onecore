@@ -62,9 +62,6 @@ export const routes = (router: KoaRouter) => {
    *                       id:
    *                         type: string
    *                         description: The unique ID of the key loan.
-   *                       keys:
-   *                         type: string
-   *                         description: JSON string array of key IDs.
    *                       contact:
    *                         type: string
    *                         description: Contact information.
@@ -750,9 +747,6 @@ export const routes = (router: KoaRouter) => {
    *                     id:
    *                       type: string
    *                       description: The unique ID of the key loan.
-   *                     keys:
-   *                       type: string
-   *                       description: JSON string array of key IDs.
    *                     contact:
    *                       type: string
    *                       description: Contact information.
@@ -919,7 +913,6 @@ export const routes = (router: KoaRouter) => {
           )
 
           if (!validationResult.ok) {
-            // Map service errors to HTTP responses
             if (validationResult.err === 'active-loan-conflict') {
               ctx.status = 409
               ctx.body = {
@@ -931,18 +924,9 @@ export const routes = (router: KoaRouter) => {
               return
             }
 
-            // All other errors are 400 Bad Request
-            const errorMessages = {
-              'invalid-keys-format':
-                'Invalid keys format. Must be a valid JSON array.',
-              'keys-not-array': 'Keys must be a JSON array',
-              'empty-keys-array': 'Keys array cannot be empty',
-            }
-
             ctx.status = 400
             ctx.body = {
-              reason:
-                errorMessages[validationResult.err] || 'Invalid keys format',
+              reason: 'Keys array cannot be empty',
               ...metadata,
             }
             return
@@ -1057,7 +1041,6 @@ export const routes = (router: KoaRouter) => {
           )
 
           if (!validationResult.ok) {
-            // Map service errors to HTTP responses
             if (validationResult.err === 'active-loan-conflict') {
               ctx.status = 409
               ctx.body = {
@@ -1069,18 +1052,9 @@ export const routes = (router: KoaRouter) => {
               return
             }
 
-            // All other errors are 400 Bad Request
-            const errorMessages = {
-              'invalid-keys-format':
-                'Invalid keys format. Must be a valid JSON array.',
-              'keys-not-array': 'Keys must be a JSON array',
-              'empty-keys-array': 'Keys array cannot be empty',
-            }
-
             ctx.status = 400
             ctx.body = {
-              reason:
-                errorMessages[validationResult.err] || 'Invalid keys format',
+              reason: 'Keys array cannot be empty',
               ...metadata,
             }
             return

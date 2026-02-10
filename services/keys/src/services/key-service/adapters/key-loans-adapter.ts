@@ -5,10 +5,12 @@ import * as daxAdapter from './dax-adapter'
 import type { Card } from 'dax-client'
 import { getKeyDetailsById } from './keys-adapter'
 
+type Key = keys.v1.Key
 type KeyLoan = keys.v1.KeyLoan
 type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
 type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
 type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
+type Receipt = keys.v1.Receipt
 
 const TABLE = 'key_loans'
 const KEYS_TABLE = 'keys'
@@ -53,13 +55,10 @@ export async function getKeyLoanByIdWithDetails(
   const loan = await dbConnection(TABLE).where({ id }).first()
   if (!loan) return undefined
 
-  // Parse key IDs from JSON
-  let keyIds: string[] = []
-  try {
-    keyIds = JSON.parse(loan.keys || '[]')
-  } catch {
-    keyIds = []
-  }
+  // Get key IDs from junction table
+  const keyIds = (
+    await dbConnection('key_loan_keys').where({ keyLoanId: id }).select('keyId')
+  ).map((row) => row.keyId)
 
   // Fetch keys with optional enrichment using shared helper
   const keysArray = await getKeyDetailsById(keyIds, dbConnection, {
@@ -71,16 +70,13 @@ export async function getKeyLoanByIdWithDetails(
   // Fetch cards from DAX if requested
   let keyCardsArray: Card[] = []
   if (options.includeCards) {
-    // Parse card IDs from loan
-    let cardIds: string[] = []
-    try {
-      cardIds = JSON.parse(loan.keyCards || '[]')
-    } catch {
-      cardIds = []
-    }
+    const cardIds = (
+      await dbConnection('key_loan_cards')
+        .where({ keyLoanId: id })
+        .select('cardId')
+    ).map((row) => row.cardId)
 
     if (cardIds.length > 0 && keysArray.length > 0) {
-      // Get rentalObjectCode from the first key
       const rentalObjectCode = keysArray[0].rentalObjectCode
       if (rentalObjectCode) {
         try {
@@ -113,8 +109,10 @@ export async function getKeyLoansByKeyId(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan[]> {
   return await dbConnection(TABLE)
-    .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-    .orderBy('createdAt', 'desc')
+    .join('key_loan_keys', `${TABLE}.id`, 'key_loan_keys.keyLoanId')
+    .where('key_loan_keys.keyId', keyId)
+    .select(`${TABLE}.*`)
+    .orderBy(`${TABLE}.createdAt`, 'desc')
 }
 
 export async function getKeyLoansByCardId(
@@ -122,16 +120,40 @@ export async function getKeyLoansByCardId(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan[]> {
   return await dbConnection(TABLE)
-    .whereRaw('keyCards LIKE ?', [`%"${cardId}"%`])
-    .orderBy('createdAt', 'desc')
+    .join('key_loan_cards', `${TABLE}.id`, 'key_loan_cards.keyLoanId')
+    .where('key_loan_cards.cardId', cardId)
+    .select(`${TABLE}.*`)
+    .orderBy(`${TABLE}.createdAt`, 'desc')
 }
 
 export async function createKeyLoan(
   keyLoanData: CreateKeyLoanRequest,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan> {
-  const [row] = await dbConnection(TABLE).insert(keyLoanData).returning('*')
-  return row
+  const { keys: keyIds, keyCards: cardIds, ...loanData } = keyLoanData
+
+  const execute = async (trx: Knex.Transaction) => {
+    const [row] = await trx(TABLE).insert(loanData).returning('*')
+
+    if (keyIds?.length) {
+      await trx('key_loan_keys').insert(
+        keyIds.map((keyId) => ({ keyLoanId: row.id, keyId }))
+      )
+    }
+
+    if (cardIds?.length) {
+      await trx('key_loan_cards').insert(
+        cardIds.map((cardId) => ({ keyLoanId: row.id, cardId }))
+      )
+    }
+
+    return row
+  }
+
+  if (dbConnection.isTransaction) {
+    return execute(dbConnection as Knex.Transaction)
+  }
+  return dbConnection.transaction(execute)
 }
 
 export async function updateKeyLoan(
@@ -139,12 +161,39 @@ export async function updateKeyLoan(
   keyLoanData: UpdateKeyLoanRequest,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyLoan | undefined> {
-  const [row] = await dbConnection(TABLE)
-    .where({ id })
-    .update({ ...keyLoanData, updatedAt: dbConnection.fn.now() })
-    .returning('*')
+  const { keys: keyIds, keyCards: cardIds, ...loanData } = keyLoanData
 
-  return row
+  const execute = async (trx: Knex.Transaction) => {
+    const [row] = await trx(TABLE)
+      .where({ id })
+      .update({ ...loanData, updatedAt: trx.fn.now() })
+      .returning('*')
+
+    if (keyIds !== undefined) {
+      await trx('key_loan_keys').where({ keyLoanId: id }).del()
+      if (keyIds.length) {
+        await trx('key_loan_keys').insert(
+          keyIds.map((keyId) => ({ keyLoanId: id, keyId }))
+        )
+      }
+    }
+
+    if (cardIds !== undefined) {
+      await trx('key_loan_cards').where({ keyLoanId: id }).del()
+      if (cardIds.length) {
+        await trx('key_loan_cards').insert(
+          cardIds.map((cardId) => ({ keyLoanId: id, cardId }))
+        )
+      }
+    }
+
+    return row
+  }
+
+  if (dbConnection.isTransaction) {
+    return execute(dbConnection as Knex.Transaction)
+  }
+  return dbConnection.transaction(execute)
 }
 
 export async function deleteKeyLoan(
@@ -170,26 +219,19 @@ export async function checkActiveKeyLoans(
     return { hasConflict: false, conflictingKeys: [] }
   }
 
-  const conflictingKeys: string[] = []
+  let query = dbConnection('key_loan_keys')
+    .join(TABLE, 'key_loan_keys.keyLoanId', `${TABLE}.id`)
+    .whereIn('key_loan_keys.keyId', keyIds)
+    .whereNull(`${TABLE}.returnedAt`)
+    .select('key_loan_keys.keyId')
+    .distinct()
 
-  // Check each key ID for active loans
-  for (const keyId of keyIds) {
-    let query = dbConnection(TABLE)
-      .select('id')
-      .whereNull('returnedAt') // Active if: not returned yet (regardless of pickup status)
-      .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-
-    // Exclude specific loan ID if provided (for update scenarios)
-    if (excludeLoanId) {
-      query = query.whereNot('id', excludeLoanId)
-    }
-
-    const activeLoan = await query.first()
-
-    if (activeLoan) {
-      conflictingKeys.push(keyId)
-    }
+  if (excludeLoanId) {
+    query = query.whereNot(`${TABLE}.id`, excludeLoanId)
   }
+
+  const rows = await query
+  const conflictingKeys = rows.map((r) => r.keyId)
 
   return {
     hasConflict: conflictingKeys.length > 0,
@@ -247,16 +289,16 @@ export function getKeyLoansSearchQuery(
     const searchTerm = `%${options.keyNameOrObjectCode}%`
 
     query = query.where(function () {
-      // Search in keys (keyName or rentalObjectCode)
+      // Search in keys via junction table (keyName or rentalObjectCode)
       this.whereRaw(
         `EXISTS (
           SELECT 1
-          FROM ?? k
-          CROSS APPLY OPENJSON(??) AS keyIds
-          WHERE k.id = TRY_CAST(keyIds.value AS uniqueidentifier)
+          FROM key_loan_keys klk
+          JOIN ?? k ON k.id = klk.keyId
+          WHERE klk.keyLoanId = ${TABLE}.id
           AND (k.keyName LIKE ? OR k.rentalObjectCode LIKE ?)
         )`,
-        [KEYS_TABLE, `${TABLE}.keys`, searchTerm, searchTerm]
+        [KEYS_TABLE, searchTerm, searchTerm]
       )
         // OR search in contact fields
         .orWhere(`${TABLE}.contact`, 'like', searchTerm)
@@ -268,7 +310,7 @@ export function getKeyLoansSearchQuery(
   // Filter by minimum number of keys
   if (options.minKeys !== undefined && options.minKeys > 0) {
     query = query.whereRaw(
-      `(SELECT COUNT(*) FROM OPENJSON(${TABLE}.keys)) >= ?`,
+      `(SELECT COUNT(*) FROM key_loan_keys WHERE keyLoanId = ${TABLE}.id) >= ?`,
       [options.minKeys]
     )
   }
@@ -276,7 +318,7 @@ export function getKeyLoansSearchQuery(
   // Filter by maximum number of keys
   if (options.maxKeys !== undefined && options.maxKeys > 0) {
     query = query.whereRaw(
-      `(SELECT COUNT(*) FROM OPENJSON(${TABLE}.keys)) <= ?`,
+      `(SELECT COUNT(*) FROM key_loan_keys WHERE keyLoanId = ${TABLE}.id) <= ?`,
       [options.maxKeys]
     )
   }
@@ -341,17 +383,18 @@ export async function getKeyLoansByRentalObject(
       // Loans with keys from this rental object
       this.whereExists(function () {
         this.select(dbConnection.raw('1'))
-          .from('keys as k')
-          .whereRaw("kl.keys LIKE '%\"' + CAST(k.id AS NVARCHAR(36)) + '\"%'")
+          .from('key_loan_keys as klk')
+          .join('keys as k', 'k.id', 'klk.keyId')
+          .whereRaw('klk.keyLoanId = kl.id')
           .where('k.rentalObjectCode', rentalObjectCode)
       })
-      // OR loans with cards from this rental object (using actual card IDs from DAX)
+      // OR loans with cards from this rental object
       if (cardIdsForRentalObject.length > 0) {
-        this.orWhere(function () {
-          // Check if any of the loan's card IDs match cards from this rental object
-          for (const cardId of cardIdsForRentalObject) {
-            this.orWhereRaw('kl.keyCards LIKE ?', [`%"${cardId}"%`])
-          }
+        this.orWhereExists(function () {
+          this.select(dbConnection.raw('1'))
+            .from('key_loan_cards as klc')
+            .whereRaw('klc.keyLoanId = kl.id')
+            .whereIn('klc.cardId', cardIdsForRentalObject)
         })
       }
     })
@@ -391,31 +434,23 @@ export async function getKeyLoansByRentalObject(
 
   const loanIds = loans.map((l) => l.id)
 
-  // Step 2: Get all keys for these loans
-  const allKeyIds = new Set<string>()
-  loans.forEach((loan) => {
-    try {
-      const keyIds: string[] = JSON.parse(loan.keys || '[]')
-      keyIds.forEach((id) => allKeyIds.add(id))
-    } catch {
-      // Skip malformed JSON
-    }
-  })
+  // Step 2: Get all keys for these loans via junction table (single query)
+  const keyRows = await dbConnection('key_loan_keys')
+    .join('keys', 'keys.id', 'key_loan_keys.keyId')
+    .whereIn('key_loan_keys.keyLoanId', loanIds)
+    .select('key_loan_keys.keyLoanId', 'keys.*')
 
-  const keys =
-    allKeyIds.size > 0
-      ? await dbConnection('keys')
-          .whereIn('id', Array.from(allKeyIds))
-          .select('*')
-      : []
-
-  const keyMap = new Map(keys.map((k) => [k.id, k]))
+  const keysByLoan = new Map<string, Key[]>()
+  for (const row of keyRows) {
+    if (!keysByLoan.has(row.keyLoanId)) keysByLoan.set(row.keyLoanId, [])
+    keysByLoan.get(row.keyLoanId)!.push(row)
+  }
 
   // Step 3: Build card map from cards fetched in Step 0
   const cardMap = new Map(allCards.map((c) => [c.cardId, c]))
 
   // Step 4: Get receipts for these loans (max 2 per loan: LOAN and RETURN) - only if requested
-  const receiptsByLoan = new Map<string, any[]>()
+  const receiptsByLoan = new Map<string, Receipt[]>()
   if (includeReceipts) {
     const receiptsResult = await dbConnection.raw(
       `
@@ -434,7 +469,7 @@ export async function getKeyLoansByRentalObject(
       loanIds
     )
 
-    const receipts = receiptsResult as any[]
+    const receipts = receiptsResult as Receipt[]
     receipts.forEach((receipt) => {
       if (!receiptsByLoan.has(receipt.keyLoanId)) {
         receiptsByLoan.set(receipt.keyLoanId, [])
@@ -443,15 +478,23 @@ export async function getKeyLoansByRentalObject(
     })
   }
 
+  // Step 4b: Get card IDs per loan from junction table (single query)
+  const cardRows = await dbConnection('key_loan_cards')
+    .whereIn('keyLoanId', loanIds)
+    .select('keyLoanId', 'cardId')
+
+  const cardIdsByLoan = new Map<string, string[]>()
+  for (const row of cardRows) {
+    if (!cardIdsByLoan.has(row.keyLoanId)) cardIdsByLoan.set(row.keyLoanId, [])
+    cardIdsByLoan.get(row.keyLoanId)!.push(row.cardId)
+  }
+
   // Step 5: Combine everything
   return loans.map((loan) => {
-    const keyIds: string[] = JSON.parse(loan.keys || '[]')
-    const keysArray = keyIds
-      .map((id) => keyMap.get(id))
-      .filter((k): k is (typeof keys)[0] => k !== undefined)
+    const keysArray = keysByLoan.get(loan.id) || []
 
-    const cardIds: string[] = JSON.parse(loan.keyCards || '[]')
-    const keyCardsArray = cardIds
+    const loanCardIds = cardIdsByLoan.get(loan.id) || []
+    const keyCardsArray = loanCardIds
       .map((id) => cardMap.get(id))
       .filter((c): c is Card => c !== undefined)
 
@@ -517,32 +560,27 @@ export async function getKeyLoansWithKeysByContact(
 
   const loans = await query.orderBy('id', 'desc')
 
-  // For each loan, parse the keys JSON and fetch full key details
-  const loansWithKeys = await Promise.all(
-    loans.map(async (loan) => {
-      let keyIds: string[] = []
-      try {
-        keyIds = JSON.parse(loan.keys)
-      } catch (_e) {
-        // If parsing fails, return empty array
-        keyIds = []
-      }
+  if (loans.length === 0) return []
 
-      // Fetch all keys for this loan
-      const keysArray =
-        keyIds.length > 0
-          ? await dbConnection(KEYS_TABLE).whereIn('id', keyIds).select('*')
-          : []
+  // Batch fetch all keys for all loans via junction table (single query)
+  const loanIds = loans.map((l) => l.id)
+  const keyRows = await dbConnection('key_loan_keys')
+    .join(KEYS_TABLE, `${KEYS_TABLE}.id`, 'key_loan_keys.keyId')
+    .whereIn('key_loan_keys.keyLoanId', loanIds)
+    .select('key_loan_keys.keyLoanId', `${KEYS_TABLE}.*`)
 
-      return {
-        ...loan,
-        keysArray,
-        receipts: [], // Include empty receipts array to match type
-      } as KeyLoanWithDetails
-    })
-  )
+  const keysByLoan = new Map<string, Key[]>()
+  for (const row of keyRows) {
+    if (!keysByLoan.has(row.keyLoanId)) keysByLoan.set(row.keyLoanId, [])
+    keysByLoan.get(row.keyLoanId)!.push(row)
+  }
 
-  return loansWithKeys
+  return loans.map((loan) => ({
+    ...loan,
+    keysArray: keysByLoan.get(loan.id) || [],
+    keyCardsArray: [],
+    receipts: [],
+  })) as KeyLoanWithDetails[]
 }
 
 /**
@@ -589,11 +627,12 @@ export async function getKeyLoansWithKeysByBundle(
     query = query.where({ loanType })
   }
 
-  // Use OR conditions to match any key in the bundle
-  query = query.where(function () {
-    bundleKeyIds.forEach((keyId) => {
-      this.orWhereRaw('keys LIKE ?', [`%"${keyId}"%`])
-    })
+  // Match loans containing any key from the bundle via junction table
+  query = query.whereExists(function () {
+    this.select(dbConnection.raw('1'))
+      .from('key_loan_keys')
+      .whereRaw(`key_loan_keys.keyLoanId = ${TABLE}.id`)
+      .whereIn('key_loan_keys.keyId', bundleKeyIds)
   })
 
   // Apply returnedAt filter
@@ -605,31 +644,27 @@ export async function getKeyLoansWithKeysByBundle(
 
   const loans = await query.orderBy('id', 'desc')
 
-  // For each loan, parse the keys JSON and fetch full key details
-  const loansWithKeys = await Promise.all(
-    loans.map(async (loan) => {
-      let keyIds: string[] = []
-      try {
-        keyIds = JSON.parse(loan.keys)
-      } catch (_e) {
-        keyIds = []
-      }
+  if (loans.length === 0) return []
 
-      // Fetch all keys for this loan
-      const keysArray =
-        keyIds.length > 0
-          ? await dbConnection(KEYS_TABLE).whereIn('id', keyIds).select('*')
-          : []
+  // Batch fetch all keys for all loans via junction table (single query)
+  const loanIds = loans.map((l) => l.id)
+  const keyRows = await dbConnection('key_loan_keys')
+    .join(KEYS_TABLE, `${KEYS_TABLE}.id`, 'key_loan_keys.keyId')
+    .whereIn('key_loan_keys.keyLoanId', loanIds)
+    .select('key_loan_keys.keyLoanId', `${KEYS_TABLE}.*`)
 
-      return {
-        ...loan,
-        keysArray,
-        receipts: [], // Include empty receipts array to match type
-      } as KeyLoanWithDetails
-    })
-  )
+  const keysByLoan = new Map<string, Key[]>()
+  for (const row of keyRows) {
+    if (!keysByLoan.has(row.keyLoanId)) keysByLoan.set(row.keyLoanId, [])
+    keysByLoan.get(row.keyLoanId)!.push(row)
+  }
 
-  return loansWithKeys
+  return loans.map((loan) => ({
+    ...loan,
+    keysArray: keysByLoan.get(loan.id) || [],
+    keyCardsArray: [],
+    receipts: [],
+  })) as KeyLoanWithDetails[]
 }
 
 /**
@@ -663,21 +698,20 @@ export async function activateKeyLoan(
       .update({ pickedUpAt: trx.fn.now(), updatedAt: trx.fn.now() })
 
     // Complete any incomplete key events for keys in this loan
+    const loanKeyIds = (
+      await trx('key_loan_keys').where({ keyLoanId: id }).select('keyId')
+    ).map((r) => r.keyId)
+
     let keyEventsCompleted = 0
-    if (keyLoan.keys) {
-      try {
-        const keyIds: string[] = JSON.parse(keyLoan.keys)
-        for (const keyId of keyIds) {
-          // Update key events that contain this key and are ORDERED or RECEIVED
-          const updated = await trx('key_events')
-            .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
-            .whereIn('status', ['ORDERED', 'RECEIVED'])
-            .update({ status: 'COMPLETED', updatedAt: trx.fn.now() })
-          keyEventsCompleted += updated
-        }
-      } catch {
-        // Ignore JSON parse errors - keys field might be malformed
-      }
+    if (loanKeyIds.length > 0) {
+      keyEventsCompleted = await trx('key_events')
+        .whereIn('id', function () {
+          this.select('keyEventId')
+            .from('key_event_keys')
+            .whereIn('keyId', loanKeyIds)
+        })
+        .whereIn('status', ['ORDERED', 'RECEIVED'])
+        .update({ status: 'COMPLETED', updatedAt: trx.fn.now() })
     }
 
     return { keyEventsCompleted }

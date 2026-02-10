@@ -36,7 +36,7 @@ export const keyEventService = {
     const { data, error } = await GET('/key-events/by-key/{keyId}', {
       params: {
         path: { keyId },
-        query: limit ? { limit: limit.toString() } : {},
+        query: limit ? { limit } : {},
       },
     })
     if (error) throw error
@@ -101,7 +101,7 @@ export const keyEventService = {
     workOrderId?: string
   ): Promise<KeyEvent> {
     return this.create({
-      keys: JSON.stringify(keyIds),
+      keys: keyIds,
       type: 'FLEX',
       status: 'ORDERED',
       workOrderId: workOrderId ?? null,
@@ -116,7 +116,7 @@ export const keyEventService = {
     workOrderId?: string
   ): Promise<KeyEvent> {
     return this.create({
-      keys: JSON.stringify(keyIds),
+      keys: keyIds,
       type: 'ORDER',
       status: 'ORDERED',
       workOrderId: workOrderId ?? null,

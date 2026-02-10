@@ -5,20 +5,9 @@ type KeyLoan = keys.v1.KeyLoan
 
 /**
  * Factory for generating MAINTENANCE type KeyLoan test data.
- * This is a convenience wrapper around KeyLoanFactory for creating maintenance loans.
  *
- * The `keys` field is a JSON string array of key IDs.
- * By default, it generates a single key ID, but you can override with multiple:
- *
- * @example
- * // Single key (default)
- * const loan = KeyLoanMaintenanceKeyFactory.build()
- *
- * @example
- * // Multiple keys
- * const loan = KeyLoanMaintenanceKeyFactory.build({
- *   keys: JSON.stringify(['key-id-1', 'key-id-2', 'key-id-3'])
- * })
+ * Note: keys and keyCards are stored in junction tables (key_loan_keys, key_loan_cards)
+ * and are not part of the KeyLoan response schema.
  */
 export const KeyLoanMaintenanceKeyFactory = Factory.define<KeyLoan>(
   ({ sequence }) => {
@@ -26,8 +15,6 @@ export const KeyLoanMaintenanceKeyFactory = Factory.define<KeyLoan>(
 
     return {
       id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
-      keys: JSON.stringify([`key-${sequence}`]), // JSON string array with single key by default
-      keyCards: JSON.stringify([]), // JSON string array of card IDs
       loanType: 'MAINTENANCE',
       contact: `Company ${sequence}`, // company field is now contact
       contact2: undefined,

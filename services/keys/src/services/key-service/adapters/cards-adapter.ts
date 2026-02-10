@@ -28,26 +28,21 @@ export async function fetchLoansForCards(
 
   const cardIds = cards.map((c) => c.cardId)
 
-  // Fetch all loans for these cards
-  const loans = await dbConnection('key_loans')
-    .whereRaw(
-      `EXISTS (
-      SELECT 1 FROM OPENJSON(keyCards) WHERE value IN (${cardIds.map(() => '?').join(',')})
-    )`,
-      cardIds
-    )
-    .orderBy('createdAt', 'desc')
+  // Fetch all loans + their card mappings in a single query via junction table
+  const rows = await dbConnection('key_loan_cards')
+    .join('key_loans', 'key_loans.id', 'key_loan_cards.keyLoanId')
+    .whereIn('key_loan_cards.cardId', cardIds)
+    .select('key_loan_cards.cardId', 'key_loans.*')
+    .orderBy('key_loans.createdAt', 'desc')
 
-  // Build lookup map
-  loans.forEach((loan: KeyLoan) => {
-    const loanCardIds = JSON.parse(loan.keyCards || '[]') as string[]
-    loanCardIds.forEach((cardId) => {
-      if (!loansByCardId.has(cardId)) {
-        loansByCardId.set(cardId, [])
-      }
-      loansByCardId.get(cardId)!.push(loan)
-    })
-  })
+  // Build lookup map directly from joined results
+  for (const row of rows) {
+    const cardId = row.cardId
+    if (!loansByCardId.has(cardId)) {
+      loansByCardId.set(cardId, [])
+    }
+    loansByCardId.get(cardId)!.push(row)
+  }
 
   return loansByCardId
 }

@@ -4994,16 +4994,8 @@ export const routes = (router: KoaRouter) => {
 
     // Log key event creation
     const keyEvent = result.data
-    let keyCount = 0
-
-    if (keyEvent.keys) {
-      try {
-        const keyIds = JSON.parse(keyEvent.keys)
-        keyCount = keyIds.length
-      } catch {
-        // Ignore parse errors
-      }
-    }
+    const requestKeys = ctx.request.body?.keys
+    const keyCount = Array.isArray(requestKeys) ? requestKeys.length : 0
 
     const eventTypeLabel =
       keyEvent.type === 'FLEX'
@@ -5115,16 +5107,10 @@ export const routes = (router: KoaRouter) => {
 
     // Log key event update
     const keyEvent = result.data
-    let keyCount = 0
-
-    if (keyEvent.keys) {
-      try {
-        const keyIds = JSON.parse(keyEvent.keys)
-        keyCount = keyIds.length
-      } catch {
-        // Ignore parse errors
-      }
-    }
+    const requestKeysForUpdate = ctx.request.body?.keys
+    const keyCount = Array.isArray(requestKeysForUpdate)
+      ? requestKeysForUpdate.length
+      : 0
 
     const eventTypeLabel =
       keyEvent.type === 'FLEX'
