@@ -24,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-import { useUser } from '@/auth/useUser'
+import { useUser } from '@/entities/user'
 import type { DashboardCard } from '@/services/types'
 import { resolve } from '@/utils/env'
 import onecoreLogo from '@/assets/logos/stacked/onecore_logo_stacked_black.svg'

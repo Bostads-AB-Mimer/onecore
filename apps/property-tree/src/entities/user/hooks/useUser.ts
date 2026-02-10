@@ -2,13 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { match, P } from 'ts-pattern'
 
 import { authConfig } from '@/auth-config'
-
-export type User = {
-  id: string
-  name: string
-  email: string
-  roles: string[]
-}
+import { User } from '../types'
 
 type UserState =
   | { tag: 'loading' }
