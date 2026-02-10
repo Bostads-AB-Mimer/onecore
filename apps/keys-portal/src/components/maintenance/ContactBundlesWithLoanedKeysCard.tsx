@@ -83,7 +83,7 @@ export function ContactBundlesWithLoanedKeysCard({
     // Fetch detailed bundle data
     setLoadingBundleId(bundleId)
     try {
-      const data = await getKeyBundleDetails(bundleId)
+      const data = await getKeyBundleDetails(bundleId, { includeLoans: true })
       if (data) {
         setBundleDetails((prev) => ({ ...prev, [bundleId]: data }))
 
@@ -159,12 +159,13 @@ export function ContactBundlesWithLoanedKeysCard({
 
                 // Filter keys that are loaned to this contact
                 const loanedKeys =
-                  details?.keys.filter(
-                    (key) =>
-                      key.loan &&
-                      key.loan.loanType === 'MAINTENANCE' &&
-                      key.loan.contact === contactCode &&
-                      !key.loan.returnedAt
+                  details?.keys.filter((key) =>
+                    key.loans?.some(
+                      (loan) =>
+                        loan.loanType === 'MAINTENANCE' &&
+                        loan.contact === contactCode &&
+                        !loan.returnedAt
+                    )
                   ) || []
 
                 // Get key system map for this bundle (fetched in handleBundleExpand)
