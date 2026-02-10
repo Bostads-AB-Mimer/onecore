@@ -16,6 +16,7 @@ import {
   TenfastLeaseSchema,
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
+  TenfastLeaseTemplateResponseSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -95,6 +96,52 @@ export const createLease = async (
     return { ok: true, data: undefined }
   } catch (err) {
     return handleTenfastError(err, 'lease-could-not-be-created')
+  }
+}
+
+export const getLeases = async (): Promise<
+  AdapterResult<
+    Array<TenfastLease>,
+    'unknown' | 'bad-request' | 'not-found' | 'parsing-error'
+  >
+> => {
+  try {
+    const rentalObjectResponse = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?populate=hyresobjekt,hyresgaster&limit=100000`,
+    })
+
+    console.log(
+      'Antal Leases response from Tenfast:',
+      rentalObjectResponse.data.records.length
+    )
+
+    if (rentalObjectResponse.status === 400)
+      return handleTenfastError(rentalObjectResponse.data.error, 'bad-request')
+    else if (
+      rentalObjectResponse.status !== 200 &&
+      rentalObjectResponse.status !== 201
+    )
+      return handleTenfastError(
+        {
+          error: rentalObjectResponse.data.error,
+          status: rentalObjectResponse.status,
+        },
+        'not-found'
+      )
+
+    const parsedLeaseResponse = TenfastLeaseTemplateResponseSchema.safeParse(
+      rentalObjectResponse.data
+    )
+
+    if (!parsedLeaseResponse.success)
+      return handleTenfastError(parsedLeaseResponse.error, 'parsing-error')
+    return {
+      ok: true,
+      data: parsedLeaseResponse.data.records,
+    }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
   }
 }
 
