@@ -1532,4 +1532,33 @@ describe(tenfastAdapter.getLeaseByExternalId, () => {
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
+
+  describe(tenfastAdapter.updateLeaseInvoiceRows, () => {
+    it('returns unknown when request throws an exception', async () => {
+      ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+      const result = await tenfastAdapter.updateLeaseInvoiceRows({
+        leaseId: '123-456/01',
+        rowsToDelete: [],
+        rowsToAdd: [],
+      })
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns null when request is successful', async () => {
+      ;(request as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: null,
+      })
+
+      const result = await tenfastAdapter.updateLeaseInvoiceRows({
+        leaseId: '123-456/01',
+        rowsToDelete: ['foo'],
+        rowsToAdd: [],
+      })
+
+      expect(result).toEqual({ ok: true, data: null })
+    })
+  })
 })

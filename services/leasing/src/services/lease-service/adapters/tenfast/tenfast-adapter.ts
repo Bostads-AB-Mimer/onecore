@@ -819,7 +819,7 @@ export async function updateLeaseInvoiceRows(params: {
       throw { status: res.status, data: res.data }
     }
   } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.replaceLeaseInvoiceRow')
+    logger.error(mapHttpError(err), 'tenfast-adapter.updateLeaseInvoiceRows')
     return { ok: false, err: 'unknown' }
   }
 }
