@@ -14,13 +14,6 @@ export const IncludeContactsQueryParamSchema = z.object({
     .transform((value) => value === 'true'),
 })
 
-export const IncludeRentInfoQueryParamSchema = z.object({
-  includeRentInfo: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value !== 'false'), // defaults to true
-})
-
 export const FilterLeasesQueryParamsSchema = z.object({
   status: z
     .string()
@@ -47,7 +40,7 @@ export const FilterLeasesQueryParamsSchema = z.object({
 
 export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
   IncludeContactsQueryParamSchema
-).merge(IncludeRentInfoQueryParamSchema)
+)
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
 

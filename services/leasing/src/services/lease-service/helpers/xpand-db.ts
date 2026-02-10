@@ -44,6 +44,7 @@ const toLease = (
     tenants,
     rentalProperty: undefined,
     rentInfo: calculateRentInfoFromTotal(row.totalYearRent),
+    rentRows: [],
     address: undefined,
     noticeGivenBy: row.noticeGivenBy,
     noticeDate: row.noticeDate,
