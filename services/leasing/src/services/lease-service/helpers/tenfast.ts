@@ -50,6 +50,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
     tenants: undefined,
     rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
     type: 'missing',
+    rentRows: lease.hyror.map(mapToOnecoreRentRow),
   }
 }
 

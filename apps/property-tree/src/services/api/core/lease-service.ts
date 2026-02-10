@@ -19,7 +19,6 @@ async function getByRentalPropertyId(
         path: { rentalObjectCode },
         query: {
           includeContacts: params?.includeContacts,
-          includeRentInfo: params?.includeRentInfo,
           status: params?.status?.join(','),
         },
       },

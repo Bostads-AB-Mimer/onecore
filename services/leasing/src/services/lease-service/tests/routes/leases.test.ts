@@ -5,9 +5,7 @@ import bodyParser from 'koa-bodyparser'
 import nock from 'nock'
 
 import { routes } from '../../index'
-import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
-import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
 import config from '../../../../common/config'
 
