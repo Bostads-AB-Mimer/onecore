@@ -8,7 +8,7 @@ import type {
 
 /**
  * Converts a note to a flattened TenantComment for UI display
- * Combines date + time into ISO datetime
+ * Combines date + time into ISO datetime, or null if date is missing
  */
 function transformNote(
   note: TenantCommentNote,
@@ -16,16 +16,23 @@ function transformNote(
   index: number,
   commentType?: string
 ): TenantComment {
-  // Combine date and time into ISO datetime
-  const dateTimeString = `${note.date}T${note.time}:00`
-  const isoDate = new Date(dateTimeString).toISOString()
+  let createdAt: string | null = null
+
+  if (note.date) {
+    // Use provided time or default to start of day for date-only signatures
+    const time = note.time || '00:00'
+    const dateTimeString = `${note.date}T${time}:00`
+    createdAt = new Date(dateTimeString).toISOString()
+  }
 
   return {
     id: `${commentKey}-${index}`,
     commentKey,
     text: note.text,
     author: note.author,
-    createdAt: isoDate,
+    createdAt,
+    // Track if we have the original time for display purposes
+    hasTime: !!note.time,
     commentType: commentType as 'Standard' | 'Sökande' | undefined,
   }
 }

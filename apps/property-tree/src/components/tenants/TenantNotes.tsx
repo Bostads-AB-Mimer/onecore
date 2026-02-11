@@ -43,13 +43,15 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
     )
   }, [allComments, commentTypeFilter])
 
-  const formatDate = (dateString: string): string => {
+  const formatDate = (dateString: string | null, hasTime: boolean): string => {
+    if (!dateString) {
+      return 'Datum saknas'
+    }
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      ...(hasTime && { hour: '2-digit', minute: '2-digit' }),
     }
     return new Date(dateString).toLocaleDateString('sv-SE', options)
   }
@@ -243,7 +245,10 @@ export function TenantNotes({ contactCode }: TenantNotesProps) {
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(comment.createdAt)} av {comment.author}
+                    {!comment.createdAt &&
+                    comment.author === 'Notering utan signatur'
+                      ? 'Osignerad notering'
+                      : `${formatDate(comment.createdAt, comment.hasTime)} av ${comment.author}`}
                   </p>
                   {/* Show badge for comment type when viewing all */}
                   {commentTypeFilter === 'all' && comment.commentType && (
