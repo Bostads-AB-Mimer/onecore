@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { randomUUID } from 'crypto'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
@@ -17,11 +18,15 @@ import { InvoiceWithMatchId } from '@src/services/report-service/types'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
+const XledgerAuthHeader = {
+  Authorization: 'token ' + config.xledger.apiToken,
+}
+
 const axiosOptions = {
   method: 'POST',
   headers: {
     'Content-type': 'application/json',
-    Authorization: 'token ' + config.xledger.apiToken,
+    ...XledgerAuthHeader,
   },
 }
 
@@ -44,22 +49,25 @@ const getCallerFromError = (error: Error) => {
     .split(' ')[0]
 }
 
-const makeXledgerRequest = async (query: {
-  query: string
-  variables?: Record<string, any>
-}): Promise<any> => {
+const makeXledgerRequest = async (
+  query: {
+    query: string
+    variables?: Record<string, any>
+  },
+  attachment?: any // TODO formidable file PersistentFileStorage
+): Promise<any> => {
   function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
-  const result = await makeXledgerHttpRequest(query)
+  const result = await makeXledgerHttpRequest(query, attachment)
 
   if (result.status === 'ok') {
     return result.data
   } else if (result.status === 'retry') {
     logger.warn('Rate limit exceeded, waiting and retrying')
     await sleep(3000)
-    return await makeXledgerRequest(query)
+    return await makeXledgerRequest(query, attachment)
   } else {
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
@@ -72,14 +80,39 @@ const makeXledgerRequest = async (query: {
   }
 }
 
-const makeXledgerHttpRequest = async (query: {
-  query: string
-  variables?: Record<string, any>
-}): Promise<XledgerResponse> => {
-  const result = await axios(`${config.xledger.url}`, {
-    data: query,
-    ...axiosOptions,
-  })
+const makeXledgerHttpRequest = async (
+  query: {
+    query: string
+    variables?: Record<string, any>
+  },
+  attachment?: any
+): Promise<XledgerResponse> => {
+  let result: axios.AxiosResponse
+
+  if (attachment) {
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const formData = new FormData()
+
+    const fileBuffer = fs.readFileSync(attachment.filepath)
+    formData.append(
+      attachment.originalFilename,
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      new Blob([fileBuffer]),
+      attachment.originalFilename
+    )
+    formData.append('content', JSON.stringify(query))
+
+    result = await axios.postForm(`${config.xledger.url}`, formData, {
+      headers: {
+        ...XledgerAuthHeader,
+      },
+    })
+  } else {
+    result = await axios(`${config.xledger.url}`, {
+      data: query,
+      ...axiosOptions,
+    })
+  }
 
   if (result.status === 200) {
     if (result.data && result.data.errors) {
@@ -1072,4 +1105,105 @@ export const uploadFile = async (filename: string, csvFile: string) => {
 
 export const healthCheck = async () => {
   return {}
+}
+
+const quote = (s: string | number) => `"${s}"`
+
+export const submitMiscellaneousInvoice = async (
+  invoice: MiscellaneousInvoicePayload
+) => {
+  // console.log('hit', JSON.stringify(invoice, null, 2))
+  const headerInfo = `${invoice.leaseId}, ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
+
+  const nodes = invoice.invoiceRows.map(
+    (ir, index) => gql`
+      {
+        node: {
+          subledger: { code: ${quote(invoice.contactCode)} }
+          lineNumber: ${index}
+          product: {
+            code: ${quote(ir.articleId)}
+          }
+          text: ${quote(ir.articleName)}
+          quantity: ${ir.amount}
+          unitPrice: ${ir.price}
+          glObject1: {
+            code: ${quote(invoice.costCentre || '61130')}
+          }
+          glObject3: {
+            code: ${quote(invoice.propertyCode || '23003')}
+          }
+          headerInfo: ${quote(headerInfo)}
+          approved: true
+          invoiceDate: ${quote(dateToGraphQlDateString(new Date(invoice.invoiceDate)))}
+          ${
+            invoice.projectCode
+              ? `
+                project: {
+                  code: ${quote(invoice.projectCode)}
+                }
+              `
+              : ''
+          }
+          comment: ${quote(invoice.comment ?? '')}
+          ${
+            invoice.attachment
+              ? `
+                attachment: ${quote(invoice.attachment.originalFilename)}
+                `
+              : ''
+          }
+        }
+      }
+    `
+  )
+
+  const mutation = gql`
+    mutation {
+      addInvoiceBaseItems(
+        inputs: [
+          ${nodes}
+        ]
+      ) {
+        edges {
+          node {
+            dbId
+          }
+        }
+      }
+    }
+  `
+  console.log('mutation', mutation)
+
+  try {
+    const result = await makeXledgerRequest(
+      { query: mutation },
+      invoice.attachment
+    )
+    return result.data.addInvoiceBaseItems.edges
+  } catch (err: unknown) {
+    logger.error(err, 'Error creating miscellaneous invoice')
+    return
+  }
+}
+
+interface InvoiceRow {
+  text: string
+  amount: number
+  price: number
+  articleName: string
+  articleId: string
+}
+
+interface MiscellaneousInvoicePayload {
+  invoiceDate: Date
+  contactCode: string
+  tenantName: string
+  leaseId: string
+  costCentre?: string
+  propertyCode?: string
+  invoiceRows: InvoiceRow[]
+  comment?: string
+  projectCode?: string
+  attachment?: any // TODO formidable file PersistentFileStorage
 }

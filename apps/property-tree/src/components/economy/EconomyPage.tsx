@@ -1,4 +1,4 @@
-import { StrofakturaForm } from './components/StrofakturaForm'
+import { MiscellaneousInvoiceForm } from './components/MiscellaneousInvoiceForm'
 
 export default function StrofakturaUnderlagPage() {
   return (
@@ -12,7 +12,7 @@ export default function StrofakturaUnderlagPage() {
         </p>
       </div>
 
-      <StrofakturaForm />
+      <MiscellaneousInvoiceForm />
     </div>
   )
 }

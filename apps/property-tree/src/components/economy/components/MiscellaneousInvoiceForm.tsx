@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
-import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Calendar } from '@/components/ui/Calendar'
@@ -20,23 +20,12 @@ import { TenantSearchSection } from './TenantSearchSection'
 import { LeaseContractSection } from './LeaseContractSection'
 import { ArticleSection } from './ArticleSection'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
-import { InvoiceRow } from '../types'
+import { InvoiceRow, MiscellaneousInvoicePayload } from '../types'
 import { TenantSearchResult } from '@/hooks/useTenantSearch'
 import { useLeases } from '@/components/hooks/useLeases'
 import { useUser } from '@/auth/useUser'
-
-const strofakturaSchema = z.object({
-  datum: z.date(),
-  kundnummer: z.string().min(1, 'Kundnummer krävs'),
-  kundnamn: z.string(),
-  hyreskontrakt: z.string().min(1, 'Välj hyreskontrakt'),
-  kst: z.string(),
-  fastighet: z.string(),
-  artikel: z.string().min(1, 'Välj artikel'),
-  artikelnummer: z.string(),
-  projekt: z.string().optional(),
-  internInfo: z.string().max(255).optional(),
-})
+import { economyService } from '@/services/api/core/economyService'
+import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
 
 interface FormErrors {
   kundnummer?: string
@@ -44,44 +33,63 @@ interface FormErrors {
   artikel?: string
 }
 
-export function StrofakturaForm() {
+export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Mutation for submitting the invoice
+  const submitInvoiceMutation = useMutation({
+    mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
+      return await economyService.submitMiscellaneousInvoice(invoice)
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: 'Underlag sparat',
+        description: `Ströfaktura-underlag för ${variables.contactCode} har skapats.`,
+      })
+      // handleReset()
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte spara underlaget. Försök igen.',
+        variant: 'destructive',
+      })
+    },
+    onSettled: () => {
+      setIsSubmitting(false)
+    },
+  })
   const [errors, setErrors] = useState<FormErrors>({})
 
   // Form state
-  const [datum, setDatum] = useState<Date>(new Date())
+  const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
   const [selectedTenant, setSelectedTenant] =
     useState<TenantSearchResult | null>(null)
   const { data, error, isLoading } = useLeases(selectedTenant?.contactCode)
-  const [hyreskontrakt, setHyreskontrakt] = useState('')
-  const [kst, setKst] = useState('')
-  const [fastighet, setFastighet] = useState('')
-  const [artikel, setArtikel] = useState('')
-  const [artikelnummer, setArtikelnummer] = useState('')
+  const [leaseId, setLeaseId] = useState('')
+  const [costCentre, setCostCentre] = useState('')
+  const [propertyCode, setPropertyCode] = useState('')
   const [invoiceRows, setInvoiceRows] = useState<InvoiceRow[]>([
     { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
   ])
-  const [projekt, setProjekt] = useState('')
-  const [internInfo, setInternInfo] = useState('')
-  const [avserObjektnummer, setAvserObjektnummer] = useState('')
-  const [administrativaKostnader, setAdministrativaKostnader] = useState(false)
-  const [hanteringsavgift, setHanteringsavgift] = useState(false)
+  const [projectCode, setProjectCode] = useState('')
+  const [comment, setComment] = useState('')
+  const [administrativeCosts, setAdministrativeCosts] = useState(false)
+  const [handlingFee, setHandlingFee] = useState(false)
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
   const handleCustomerSelect = (tenant: TenantSearchResult | null) => {
     setSelectedTenant(tenant)
     if (tenant) {
       // Reset lease-related fields
-      setHyreskontrakt('')
-      setKst('')
-      setFastighet('')
-      setAvserObjektnummer('')
+      setLeaseId('')
+      setCostCentre('')
+      setPropertyCode('')
     } else {
-      setHyreskontrakt('')
-      setKst('')
-      setFastighet('')
-      setAvserObjektnummer('')
+      setLeaseId('')
+      setCostCentre('')
+      setPropertyCode('')
     }
     setErrors((prev) => ({ ...prev, kundnummer: undefined }))
   }
@@ -89,51 +97,49 @@ export function StrofakturaForm() {
   useEffect(() => {}, [selectedTenant])
 
   const handleLeaseSelect = (leaseId: string) => {
-    setHyreskontrakt(leaseId)
+    setLeaseId(leaseId)
     const selectedLease = data?.find((l) => l.leaseId === leaseId)
     if (selectedLease) {
       // setKst(selectedLease.district)
-      setFastighet(selectedLease?.residentialArea?.code ?? '')
-      setAvserObjektnummer(selectedLease?.leaseId)
+      setPropertyCode(selectedLease?.residentialArea?.code ?? '')
     }
     setErrors((prev) => ({ ...prev, hyreskontrakt: undefined }))
   }
 
   const validateForm = (): boolean => {
     const formData = {
-      datum,
+      datum: invoiceDate,
       kundnummer: selectedTenant?.contactCode,
       kundnamn: selectedTenant?.fullName,
-      hyreskontrakt,
-      kst,
-      fastighet,
-      artikel,
-      artikelnummer,
-      projekt,
-      internInfo,
+      hyreskontrakt: leaseId,
+      kst: costCentre,
+      fastighet: propertyCode,
+      invoiceRows,
+      projekt: projectCode,
+      internInfo: comment,
     }
 
-    const result = strofakturaSchema.safeParse(formData)
+    // const result = strofakturaSchema.safeParse(formData)
 
-    if (!result.success) {
-      const newErrors: FormErrors = {}
-      result.error.errors.forEach((err) => {
-        const field = err.path[0] as keyof FormErrors
-        if (
-          ['kundnummer', 'hyreskontrakt', 'artikel'].includes(field as string)
-        ) {
-          newErrors[field] = err.message
-        }
-      })
-      setErrors(newErrors)
-      return false
-    }
+    // if (!result.success) {
+    //   const newErrors: FormErrors = {}
+    //   result.error.errors.forEach((err) => {
+    //     const field = err.path[0] as keyof FormErrors
+    //     if (
+    //       ['kundnummer', 'hyreskontrakt', 'artikel'].includes(field as string)
+    //     ) {
+    //       newErrors[field] = err.message
+    //     }
+    //   })
+    //   setErrors(newErrors)
+    //   return false
+    // }
 
     setErrors({})
     return true
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) {
@@ -145,46 +151,66 @@ export function StrofakturaForm() {
       return
     }
 
+    const rows = [...invoiceRows]
+    if (administrativeCosts) {
+      const article = getArticleById('329000')
+      if (article) {
+        rows.push({
+          articleId: article.id,
+          articleName: article.name,
+          text: article.name,
+          price: article.standardPrice,
+          amount: 1,
+        })
+      }
+    }
+    if (handlingFee) {
+      const article = getArticleById('329001')
+      if (article) {
+        rows.push({
+          articleId: article.id,
+          articleName: article.name,
+          text: article.name,
+          price: article.standardPrice,
+          amount: 1,
+        })
+      }
+    }
+
     setIsSubmitting(true)
 
-    try {
-      // Simulera API-anrop
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      toast({
-        title: 'Underlag sparat',
-        description: `Ströfaktura-underlag för ${selectedTenant?.fullName} har skapats.`,
-      })
-
-      // Reset form
-      handleReset()
-    } catch (error) {
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte spara underlaget. Försök igen.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSubmitting(false)
+    // Prepare invoice payload
+    const invoicePayload: MiscellaneousInvoicePayload = {
+      invoiceDate: invoiceDate,
+      contactCode: selectedTenant?.contactCode ?? '',
+      tenantName: selectedTenant?.fullName ?? '',
+      leaseId: leaseId,
+      costCentre: costCentre,
+      propertyCode: propertyCode,
+      projectCode: projectCode,
+      comment: comment,
+      invoiceRows: rows,
+      administrativeCosts: administrativeCosts,
+      handlingFee: handlingFee,
+      attachment: attachedFile ?? undefined,
     }
+
+    submitInvoiceMutation.mutate(invoicePayload)
   }
 
   const handleReset = () => {
-    setDatum(new Date())
+    setInvoiceDate(new Date())
     setSelectedTenant(null)
-    setHyreskontrakt('')
-    setKst('')
-    setFastighet('')
-    setArtikel('')
-    setArtikelnummer('')
+    setLeaseId('')
+    setCostCentre('')
+    setPropertyCode('')
     setInvoiceRows([
       { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
     ])
-    setProjekt('')
-    setInternInfo('')
-    setAvserObjektnummer('')
-    setAdministrativaKostnader(false)
-    setHanteringsavgift(false)
+    setProjectCode('')
+    setComment('')
+    setAdministrativeCosts(false)
+    setHandlingFee(false)
     setErrors({})
   }
 
@@ -203,12 +229,12 @@ export function StrofakturaForm() {
                     variant="outline"
                     className={cn(
                       'w-full justify-start text-left font-normal',
-                      !datum && 'text-muted-foreground'
+                      !invoiceDate && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {datum ? (
-                      format(datum, 'PPP', { locale: sv })
+                    {invoiceDate ? (
+                      format(invoiceDate, 'PPP', { locale: sv })
                     ) : (
                       <span>Välj datum</span>
                     )}
@@ -217,8 +243,8 @@ export function StrofakturaForm() {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={datum}
-                    onSelect={(date) => date && setDatum(date)}
+                    selected={invoiceDate}
+                    onSelect={(date) => date && setInvoiceDate(date)}
                     initialFocus
                     className="pointer-events-auto"
                   />
@@ -261,9 +287,9 @@ export function StrofakturaForm() {
             <h3 className="font-medium">Kontraktsinformation</h3>
             <LeaseContractSection
               leaseContracts={data ?? []}
-              selectedLease={hyreskontrakt}
-              kst={kst}
-              fastighet={fastighet}
+              selectedLease={leaseId}
+              kst={costCentre}
+              fastighet={propertyCode}
               onLeaseSelect={handleLeaseSelect}
               error={errors.hyreskontrakt}
               disabled={!selectedTenant}
@@ -276,14 +302,12 @@ export function StrofakturaForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Artikelinformation</h3>
             <ArticleSection
-              artikelnummer={artikelnummer}
-              avserObjektnummer={avserObjektnummer}
               invoiceRows={invoiceRows}
-              administrativaKostnader={administrativaKostnader}
-              hanteringsavgift={hanteringsavgift}
+              administrativaKostnader={administrativeCosts}
+              hanteringsavgift={handlingFee}
               onInvoiceRowsChange={setInvoiceRows}
-              onAdministrativaKostnaderChange={setAdministrativaKostnader}
-              onHanteringsavgiftChange={setHanteringsavgift}
+              onAdministrativaKostnaderChange={setAdministrativeCosts}
+              onHanteringsavgiftChange={setHandlingFee}
               errors={{
                 artikel: errors.artikel,
               }}
@@ -296,10 +320,11 @@ export function StrofakturaForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Övrig information</h3>
             <AdditionalInfoSection
-              projekt={projekt}
-              internInfo={internInfo}
-              onProjektChange={setProjekt}
-              onInternInfoChange={setInternInfo}
+              projekt={projectCode}
+              internInfo={comment}
+              onProjektChange={setProjectCode}
+              onInternInfoChange={setComment}
+              onFileAttached={setAttachedFile}
             />
           </div>
 
@@ -315,8 +340,13 @@ export function StrofakturaForm() {
             >
               Rensa
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Sparar...' : 'Spara underlag'}
+            <Button
+              type="submit"
+              disabled={isSubmitting || submitInvoiceMutation.isPending}
+            >
+              {isSubmitting || submitInvoiceMutation.isPending
+                ? 'Sparar...'
+                : 'Spara underlag'}
             </Button>
           </div>
         </div>

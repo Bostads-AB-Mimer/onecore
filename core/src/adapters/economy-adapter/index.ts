@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 
@@ -75,4 +76,34 @@ export async function getInvoicesSentToDebtCollection(
   })
 
   return { ok: true, data: hasDebtCollection }
+}
+
+export async function submitMiscellaneousInvoice(
+  invoice: any,
+  attachment: any
+): Promise<AdapterResult<undefined, 'unknown'>> {
+  // eslint-disable-next-line n/no-unsupported-features/node-builtins
+  const formData = new FormData()
+
+  if (attachment) {
+    const fileBuffer = fs.readFileSync(attachment.filepath)
+
+    formData.append(
+      'attachment',
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      new Blob([fileBuffer]),
+      attachment.originalFilename
+    )
+  }
+
+  formData.append('invoice', JSON.stringify(invoice))
+
+  const url = `${config.economyService.url}/invoices/miscellaneous`
+  const response = await axios.postForm(url, formData)
+
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: false, err: 'unknown' }
 }

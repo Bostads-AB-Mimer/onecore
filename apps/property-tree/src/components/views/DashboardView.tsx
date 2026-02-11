@@ -97,7 +97,7 @@ export function DashboardView() {
       title: 'Ekonomi',
       icon: DollarSign,
       description: 'Skapa ströfakturor',
-      path: '/economy/invoices',
+      path: '/economy',
       isExternal: false,
       isDisabled: false,
     },
