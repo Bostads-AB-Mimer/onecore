@@ -63,6 +63,8 @@ interface KeysTableProps {
   selectable?: boolean
   selectedKeyIds?: Set<string>
   onSelectionChange?: (keyId: string, checked: boolean) => void
+  onSelectAll?: () => void
+  onDeselectAll?: () => void
 }
 
 export function KeysTable({
@@ -80,6 +82,8 @@ export function KeysTable({
   selectable = false,
   selectedKeyIds = new Set(),
   onSelectionChange,
+  onSelectAll,
+  onDeselectAll,
 }: KeysTableProps) {
   const expansion = useExpandableRows<ExpandedKeyData>({
     onExpand: async (keyId) => {
@@ -132,12 +136,30 @@ export function KeysTable({
   // Column count for expanded rows (base 11 + 1 if selectable)
   const columnCount = selectable ? 12 : 11
 
+  const allSelected =
+    keys.length > 0 && keys.every((key) => selectedKeyIds.has(key.id))
+  const someSelected = selectedKeyIds.size > 0
+  const isIndeterminate = someSelected && !allSelected
+
   return (
     <div className="rounded-md border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border">
-            {selectable && <TableHead className="w-[50px]"></TableHead>}
+            {selectable && (
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={isIndeterminate ? 'indeterminate' : allSelected}
+                  onCheckedChange={() => {
+                    if (allSelected) {
+                      onDeselectAll?.()
+                    } else {
+                      onSelectAll?.()
+                    }
+                  }}
+                />
+              </TableHead>
+            )}
             <TableHead className="w-[50px]"></TableHead>
             <TableHead>Nyckelnamn</TableHead>
             <TableHead>Löpnr</TableHead>

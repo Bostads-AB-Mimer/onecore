@@ -514,6 +514,10 @@ const Index = () => {
     []
   )
 
+  const handleSelectAll = useCallback(() => {
+    setSelectedKeyIds(new Set(keys.map((k) => k.id)))
+  }, [keys])
+
   const handleDeselectAll = useCallback(() => {
     setSelectedKeyIds(new Set())
   }, [])
@@ -683,6 +687,8 @@ const Index = () => {
         selectable
         selectedKeyIds={selectedKeyIds}
         onSelectionChange={handleSelectionChange}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
       />
 
       {/* Bulk Action Bar */}
