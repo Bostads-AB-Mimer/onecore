@@ -24,7 +24,7 @@ import { InspectionsTable } from './InspectionsTable'
 type Inspection = components['schemas']['Inspection']
 // type InspectionRoom = components['schemas']['InspectionRoom']
 
-interface InspectionListProps {
+interface InspectionsTabContentProps {
   residenceId: string
   rentalId: string | undefined
   onInspectionCreated?: () => void
@@ -65,13 +65,13 @@ interface InspectionListProps {
 
 const INITIAL_DISPLAY_COUNT = 5
 
-export function InspectionList({
+export function InspectionsTabContent({
   residenceId,
   rentalId,
   onInspectionCreated,
   tenant,
   residence,
-}: InspectionListProps) {
+}: InspectionsTabContentProps) {
   const [showAll, setShowAll] = useState(false)
   // const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   // const { toast } = useToast()
