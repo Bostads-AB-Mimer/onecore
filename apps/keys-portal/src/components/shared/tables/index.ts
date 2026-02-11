@@ -42,21 +42,19 @@ export type { DefaultLoanHeaderProps } from './DefaultLoanHeader'
 export {
   LoanStatusBadge,
   KeyTypeBadge,
+  LoanTypeBadge,
   KeyEventBadge,
   DisposedBadge,
   KeyStatusBadge,
   CardStatusBadge,
+  EarlyHandoutBadge,
   PickupAvailabilityBadge,
   ItemTypeBadge,
   ItemDisposedBadge,
+  KeySystemTypeBadge,
   getLoanStatusType,
   getKeyEventDisplayLabel,
   isActiveKeyEvent,
   getLatestActiveEvent,
-  getPickupAvailability,
 } from './StatusBadges'
-export type {
-  LoanStatusType,
-  PickupAvailabilityType,
-  PickupAvailabilityStatus,
-} from './StatusBadges'
+export type { LoanStatusType } from './StatusBadges'
