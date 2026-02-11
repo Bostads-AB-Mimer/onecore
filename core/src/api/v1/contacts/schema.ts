@@ -38,7 +38,7 @@ export const ContactCommunicationSchema = z.object({
 })
 
 export const ContactAddressSchema = z.object({
-  careOf: z.string().nullable(),
+  careOf: z.string().optional(),
   street: z.string().nullable(),
   zipCode: z.string().nullable(),
   city: z.string().nullable(),
@@ -53,10 +53,10 @@ export const ContactBaseSchema = z.object({
 })
 
 export const ContactPersonalDetailsSchema = z.object({
-  nationalRegistrationNumber: z.string(),
-  birthDate: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
+  nationalRegistrationNumber: z.string().nullable(),
+  birthDate: z.string().nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
   fullName: z.string(),
 })
 
