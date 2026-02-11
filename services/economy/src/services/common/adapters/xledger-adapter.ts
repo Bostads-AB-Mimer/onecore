@@ -920,7 +920,7 @@ export const transformAggregatedInvoiceRow = (
     posting2: invoiceRow.ProjectCode,
     posting3: invoiceRow.Property,
     posting4: invoiceRow.FreeCode,
-    posting5: '',
+    posting5: invoiceRow.CounterPart,
     periodStart: periodInformation.periodStart,
     noOfPeriods: periodInformation.periods,
     subledgerNo: '',

@@ -62,6 +62,7 @@ const convertToDbRow = (row: InvoiceDataRow, batchId: string) => {
     ledgerAccount: row.ledgerAccount,
     totalAccount: row.totalAccount,
     invoiceTotalAmount: row.invoiceTotalAmount,
+    counterPart: row.counterPart,
   }
 }
 
@@ -231,7 +232,8 @@ export const getInvoicesByChunks = async (
       'invoiceFromDate',
       'invoiceToDate',
       'ledgerAccount',
-      'totalAccount'
+      'totalAccount',
+      'counterPart'
     )
     .distinct()
     .where('batchId', batchId)
@@ -241,6 +243,7 @@ export const getInvoicesByChunks = async (
       'invoiceToDate',
       'ledgerAccount',
       'totalAccount',
+      'counterPart',
     ])
 }
 
@@ -271,7 +274,8 @@ export const getAggregatedInvoiceRows = async (
       'InvoiceFromDate',
       'InvoiceToDate',
       'BatchId',
-      'TotalAccount'
+      'TotalAccount',
+      'CounterPart'
     )
     .groupBy(
       'RentArticle',
@@ -285,7 +289,8 @@ export const getAggregatedInvoiceRows = async (
       'InvoiceFromDate',
       'InvoiceToDate',
       'BatchId',
-      'TotalAccount'
+      'TotalAccount',
+      'CounterPart'
     )
     .where('batchId', batchId)
     .whereIn('InvoiceNumber', invoiceNumbers)
@@ -315,10 +320,12 @@ export const getCounterPartCustomers = async (): Promise<{
     customers: CounterPartCustomer[],
     customerName: string
   ): CounterPartCustomer | undefined => {
-    return customers.find((counterPart) =>
-      customerName
-        .toLowerCase()
-        .startsWith(counterPart.customerName.toLowerCase())
+    return customers.find(
+      (counterPart) =>
+        0 ===
+        customerName
+          .toLowerCase()
+          .localeCompare(counterPart.customerName.toLowerCase())
     )
   }
 
