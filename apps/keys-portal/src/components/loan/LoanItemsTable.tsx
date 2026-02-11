@@ -91,7 +91,9 @@ export function LoanItemsTable({
       </TableRow>
 
       {/* Key rows */}
-      {keys.map((key) => (
+      {keys.map((key) => {
+        const latestEvent = getLatestActiveEvent(key)
+        return (
         <TableRow key={key.id}>
           <TableCell className="w-[50px]" />
           <TableCell>
@@ -111,8 +113,8 @@ export function LoanItemsTable({
             <ItemTypeBadge itemType={key.keyType} />
           </TableCell>
           <TableCell>
-            {getLatestActiveEvent(key) ? (
-              <KeyEventBadge event={getLatestActiveEvent(key)} />
+            {latestEvent ? (
+              <KeyEventBadge event={latestEvent} />
             ) : (
               <span className="text-muted-foreground">-</span>
             )}
@@ -122,7 +124,8 @@ export function LoanItemsTable({
           </TableCell>
           <TableCell className="w-[50px]" />
         </TableRow>
-      ))}
+        )
+      })}
 
       {/* Card rows */}
       {cards.map((card) => (
