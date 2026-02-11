@@ -75,7 +75,7 @@ export function MiscellaneousInvoiceForm() {
   const [costCentre, setCostCentre] = useState('')
   const [propertyCode, setPropertyCode] = useState('')
   const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
-    { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
+    { text: '', price: 0, articleId: '', articleName: '' },
   ])
   const [projectCode, setProjectCode] = useState('')
   const [comment, setComment] = useState('')
@@ -164,7 +164,6 @@ export function MiscellaneousInvoiceForm() {
           articleName: article.name,
           text: article.name,
           price: article.standardPrice,
-          amount: 1,
         })
       }
     }
@@ -176,7 +175,6 @@ export function MiscellaneousInvoiceForm() {
           articleName: article.name,
           text: article.name,
           price: article.standardPrice,
-          amount: 1,
         })
       }
     }
@@ -208,9 +206,7 @@ export function MiscellaneousInvoiceForm() {
     setLeaseId('')
     setCostCentre('')
     setPropertyCode('')
-    setInvoiceRows([
-      { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
-    ])
+    setInvoiceRows([{ text: '', price: 0, articleId: '', articleName: '' }])
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)
