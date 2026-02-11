@@ -23,3 +23,18 @@ export interface InvoiceRow {
   articleName: string
   articleId: string
 }
+
+export interface MiscellaneousInvoicePayload {
+  invoiceDate: Date
+  contactCode: string
+  tenantName: string
+  leaseId: string
+  costCentre?: string
+  propertyCode?: string
+  invoiceRows: InvoiceRow[]
+  administrativeCosts: boolean
+  handlingFee: boolean
+  comment?: string
+  projectCode?: string
+  attachment?: File
+}

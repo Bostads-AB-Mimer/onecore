@@ -1,4 +1,5 @@
-import { GET } from './base-api'
+import { MiscellaneousInvoicePayload } from '@/components/economy/types'
+import { GET, POST } from './base-api'
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 
 // TODO: Fix the ts-ignore by updating the OpenAPI spec
@@ -44,7 +45,40 @@ async function getInvoicePaymentEvents(
   return response.content as InvoicePaymentEvent[]
 }
 
+async function submitMiscellaneousInvoice(
+  invoice: MiscellaneousInvoicePayload
+) {
+  const formData = new FormData()
+
+  if (invoice.attachment) {
+    const attachmentBytes = await invoice.attachment.bytes()
+    formData.append(
+      'attachment',
+      new Blob([attachmentBytes]),
+      invoice.attachment.name
+    )
+    delete invoice['attachment']
+  }
+
+  formData.append('invoice', JSON.stringify(invoice))
+
+  const { data, error } = await POST(
+    // @ts-ignore
+    `/invoices/miscellaneous`,
+    {
+      body: formData,
+    }
+  )
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  return response
+}
+
 export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
+  submitMiscellaneousInvoice,
 }

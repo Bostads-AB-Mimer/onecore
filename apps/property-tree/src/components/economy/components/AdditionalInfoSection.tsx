@@ -10,6 +10,7 @@ interface AdditionalInfoSectionProps {
   internInfo: string
   onProjektChange: (value: string) => void
   onInternInfoChange: (value: string) => void
+  onFileAttached: (file: File | null) => void
 }
 
 export function AdditionalInfoSection({
@@ -17,6 +18,7 @@ export function AdditionalInfoSection({
   internInfo,
   onProjektChange,
   onInternInfoChange,
+  onFileAttached,
 }: AdditionalInfoSectionProps) {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
 
@@ -24,12 +26,14 @@ export function AdditionalInfoSection({
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       setAttachedFiles((prev) => [...prev, ...newFiles])
+      onFileAttached(e.target.files[0])
     }
     e.target.value = ''
   }
 
   const removeFile = (index: number) => {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+    onFileAttached(null)
   }
 
   return (

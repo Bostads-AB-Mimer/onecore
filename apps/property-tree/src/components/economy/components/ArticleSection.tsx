@@ -16,8 +16,6 @@ import { MiscellaneousInvoiceArticles } from '@/data/articles/MiscellaneousInvoi
 import { InvoiceRow } from '../types'
 
 interface ArticleSectionProps {
-  artikelnummer: string
-  avserObjektnummer: string
   invoiceRows: InvoiceRow[]
   administrativaKostnader: boolean
   hanteringsavgift: boolean
@@ -30,13 +28,9 @@ interface ArticleSectionProps {
 }
 
 export function ArticleSection({
-  // selectedArticle,
-  artikelnummer,
-  avserObjektnummer,
   invoiceRows,
   administrativaKostnader,
   hanteringsavgift,
-  // onArticleSelect,
   onInvoiceRowsChange,
   onAdministrativaKostnaderChange,
   onHanteringsavgiftChange,
@@ -76,18 +70,6 @@ export function ArticleSection({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="avserObjektnummer">Avser objektsnummer</Label>
-        <Input
-          id="avserObjektnummer"
-          value={avserObjektnummer}
-          readOnly
-          disabled
-          placeholder="Fylls i automatiskt från kontrakt"
-          className="bg-muted"
-        />
-      </div>
-
       {/* Fakturarader - grupperat */}
       <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
         <Label>Fakturarader</Label>
