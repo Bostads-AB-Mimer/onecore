@@ -20,6 +20,7 @@ COPY services/contacts ./services/contacts
 
 RUN pnpm install
 RUN pnpm build:libs
+RUN pnpm install
 RUN pnpm run --filter @onecore/contacts build
 RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/contacts --prod /out
