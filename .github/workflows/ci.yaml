@@ -132,10 +132,11 @@ jobs:
           run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Build
-        run: pnpm run \
-          --filter ${{ matrix.package }}... \
-          --filter !@onecore/utilities \
-          --filter !@onecore/types build
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build
 
 
   test:
