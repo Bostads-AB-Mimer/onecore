@@ -1,5 +1,5 @@
 import createClient from 'openapi-fetch'
-import { logger, PaginationMeta, PaginationLinks } from '@onecore/utilities'
+import { logger, PaginatedResponse } from '@onecore/utilities'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
@@ -31,16 +31,7 @@ export const getXpandInspections = async ({
   sortAscending?: boolean
   inspector?: string
   address?: string
-} = {}): Promise<
-  AdapterResult<
-    {
-      content: XpandInspection[]
-      _meta: PaginationMeta
-      _links: PaginationLinks[]
-    },
-    'unknown'
-  >
-> => {
+} = {}): Promise<AdapterResult<PaginatedResponse<XpandInspection>, 'unknown'>> => {
   try {
     const fetchResponse = await client().GET('/inspections/xpand', {
       params: {

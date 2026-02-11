@@ -6957,7 +6957,7 @@ export interface components {
       inspector: string;
       type: string;
       address: string;
-      apartmentCode: string;
+      apartmentCode: string | null;
       leaseId: string;
       masterKeyAccess: string | null;
       lease: ({
@@ -7161,7 +7161,7 @@ export interface components {
       type: string;
       residenceId: string;
       address: string;
-      apartmentCode: string;
+      apartmentCode: string | null;
       isFurnished: boolean;
       leaseId: string;
       isTenantPresent: boolean;
@@ -7375,7 +7375,7 @@ export interface components {
       type: string;
       residenceId: string;
       address: string;
-      apartmentCode: string;
+      apartmentCode: string | null;
       isFurnished: boolean;
       leaseId: string;
       isTenantPresent: boolean;
@@ -7589,7 +7589,7 @@ export interface components {
       type: string;
       residenceId: string;
       address: string;
-      apartmentCode: string;
+      apartmentCode: string | null;
       isFurnished: boolean;
       leaseId: string;
       isTenantPresent: boolean;
