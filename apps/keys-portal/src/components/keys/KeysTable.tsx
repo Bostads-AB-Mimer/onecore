@@ -104,7 +104,7 @@ export function KeysTable({
         if (loan.contact2) uniqueContactCodes.add(loan.contact2)
       })
 
-      const contactData: KeyDetails['contactData'] = {}
+      const contactData: ExpandedKeyData['contactData'] = {}
       await Promise.all(
         Array.from(uniqueContactCodes).map(async (contactCode) => {
           try {
