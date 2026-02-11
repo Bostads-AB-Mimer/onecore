@@ -102,7 +102,7 @@ export function KeySystemsTable({
           <TableRow>
             <TableHead className="w-[50px]"></TableHead>
             <TableHead>Låssystem</TableHead>
-            <TableHead>Namn</TableHead>
+            <TableHead>Tillhörighet</TableHead>
             <TableHead>Tillverkare</TableHead>
             <TableHead>Fastigheter</TableHead>
             <FilterableTableHeader label="Typ">
