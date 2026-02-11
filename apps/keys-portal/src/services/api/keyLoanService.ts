@@ -205,5 +205,4 @@ export const keyLoanService = {
     if (error) throw error
     return data?.content ?? []
   },
-
 }
