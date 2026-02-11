@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import type { Key } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 
@@ -103,7 +103,7 @@ export function BeforeAfterDialogBase({
           >
             {isProcessing ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner size="sm" />
                 {acceptButtonText}...
               </>
             ) : (

@@ -3,6 +3,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
   TableHeader,
   TableRow,
@@ -273,9 +274,7 @@ export function KeysTable({
                         showActive
                       />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(key.createdAt)}
-                    </TableCell>
+                    <TableCellMuted>{formatDate(key.createdAt)}</TableCellMuted>
                     <TableCell>
                       <ActionMenu
                         onEdit={() => onEdit(key)}

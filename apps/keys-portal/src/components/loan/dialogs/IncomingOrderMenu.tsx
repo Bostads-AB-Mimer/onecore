@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 type Props = {
   open: boolean
@@ -111,9 +111,7 @@ export function IncomingOrderMenu({
             <DialogTitle>Inkommen extranyckel</DialogTitle>
             <DialogDescription>Laddar händelser...</DialogDescription>
           </DialogHeader>
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Spinner centered />
         </DialogContent>
       </Dialog>
     )
@@ -179,7 +177,7 @@ export function IncomingOrderMenu({
           <Button onClick={handleAccept} disabled={isProcessing}>
             {isProcessing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner size="sm" className="mr-2" />
                 Bearbetar...
               </>
             ) : (

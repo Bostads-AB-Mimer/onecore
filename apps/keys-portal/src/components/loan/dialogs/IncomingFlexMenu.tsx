@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 type KeyGroup = {
   keyName: string
@@ -262,9 +262,7 @@ export function IncomingFlexMenu({
             <DialogTitle>Inkommen flex</DialogTitle>
             <DialogDescription>Laddar händelser...</DialogDescription>
           </DialogHeader>
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Spinner centered />
         </DialogContent>
       </Dialog>
     )

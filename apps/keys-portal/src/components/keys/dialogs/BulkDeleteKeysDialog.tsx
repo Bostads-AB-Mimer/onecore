@@ -10,7 +10,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { buttonVariants } from '@/components/ui/button'
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Key } from '@/services/types'
 
 interface BulkDeleteKeysDialogProps {
@@ -105,7 +106,7 @@ export function BulkDeleteKeysDialog({
             className={buttonVariants({ variant: 'destructive' })}
             disabled={isLoading}
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && <Spinner size="sm" className="mr-2" />}
             Ta bort {selectedKeys.length} nycklar
           </AlertDialogAction>
         </AlertDialogFooter>

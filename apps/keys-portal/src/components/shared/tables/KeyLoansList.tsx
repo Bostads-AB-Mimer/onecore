@@ -2,6 +2,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
   TableHeader,
   TableRow,
@@ -99,15 +100,9 @@ export function KeyLoansList({ loans, contactData = {} }: KeyLoansListProps) {
             <TableCell>
               <LoanStatusBadge loan={loan} />
             </TableCell>
-            <TableCell className="text-muted-foreground">
-              {formatDate(loan.createdAt)}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {formatDate(loan.pickedUpAt)}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {formatDate(loan.returnedAt)}
-            </TableCell>
+            <TableCellMuted>{formatDate(loan.createdAt)}</TableCellMuted>
+            <TableCellMuted>{formatDate(loan.pickedUpAt)}</TableCellMuted>
+            <TableCellMuted>{formatDate(loan.returnedAt)}</TableCellMuted>
           </TableRow>
         ))}
       </TableBody>

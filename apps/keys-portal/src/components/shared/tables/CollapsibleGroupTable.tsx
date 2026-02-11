@@ -3,11 +3,12 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableEmptyState,
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCollapsibleSections } from '@/hooks/useCollapsibleSections'
+import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 
 export interface RowRenderProps {
   isSelected: boolean
@@ -147,13 +148,14 @@ export function CollapsibleGroupTable<T>({
             className="bg-muted/50 hover:bg-muted/70 cursor-pointer border-t"
             onClick={() => sections.toggle(groupSectionKey, allCollapsibleIds)}
           >
-            <TableCell colSpan={columnCount} className="font-medium py-3 pl-8">
+            <TableCell colSpan={columnCount} className="font-medium py-3 pl-6">
               <div className="flex items-center gap-2">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
+                <ExpandButton
+                  isExpanded={isExpanded}
+                  onClick={() =>
+                    sections.toggle(groupSectionKey, allCollapsibleIds)
+                  }
+                />
                 {renderGroupHeader(group.groupKey, group.items)}
               </div>
             </TableCell>
@@ -187,13 +189,14 @@ export function CollapsibleGroupTable<T>({
               sections.toggle(section.sectionKey, allCollapsibleIds)
             }
           >
-            <TableCell colSpan={columnCount} className="font-semibold py-4">
+            <TableCell colSpan={columnCount} className="font-semibold py-3">
               <div className="flex items-center gap-2">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
+                <ExpandButton
+                  isExpanded={isExpanded}
+                  onClick={() =>
+                    sections.toggle(section.sectionKey, allCollapsibleIds)
+                  }
+                />
                 {sectionHeaderContent}
               </div>
             </TableCell>
@@ -219,16 +222,11 @@ export function CollapsibleGroupTable<T>({
         <TableBody>
           {groupedSections.map(renderSection)}
 
-          {/* Empty state */}
           {items.length === 0 && (
-            <TableRow>
-              <TableCell
-                colSpan={columnCount}
-                className="text-center py-8 text-muted-foreground"
-              >
-                Inga objekt att visa
-              </TableCell>
-            </TableRow>
+            <TableEmptyState
+              colSpan={columnCount}
+              message="Inga objekt att visa"
+            />
           )}
         </TableBody>
       </Table>

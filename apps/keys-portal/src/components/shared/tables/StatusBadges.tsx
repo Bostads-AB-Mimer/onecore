@@ -52,11 +52,7 @@ export function LoanStatusBadge({
         </Badge>
       )
     case 'not-picked-up':
-      return (
-        <Badge variant="outline" className="text-muted-foreground">
-          Ej upphämtad
-        </Badge>
-      )
+      return <Badge variant="warning">Ej upphämtad</Badge>
     case 'none':
       return showNone ? (
         <Badge variant="outline" className="text-muted-foreground">
@@ -252,45 +248,23 @@ export function KeyStatusBadge({
 }
 
 // ============================================
-// Pickup Availability Badge
+// Early Handout Badge (core - takes loan directly)
 // ============================================
 
-export type PickupAvailabilityType =
-  | 'picked-up'
-  | 'available'
-  | 'available-from'
-  | 'not-available-until'
-
-export interface PickupAvailabilityStatus {
-  type: PickupAvailabilityType
-  label: string
-  variant: 'default' | 'destructive' | 'secondary' | 'outline'
-  date?: Date
+interface EarlyHandoutBadgeProps {
+  /** Loan with availableToNextTenantFrom field */
+  loan: { availableToNextTenantFrom?: string | Date | null } | null | undefined
 }
 
 /**
- * Get pickup availability status for a key or card.
- * Determines if the item can be handed out to the next tenant.
- * Works with both KeyDetails and CardDetails.
+ * Badge showing when items can be handed out based on a loan's availableToNextTenantFrom.
+ * Use directly for loans, or via PickupAvailabilityBadge for items.
  */
-export function getPickupAvailability(
-  item: KeyDetails | CardDetails
-): PickupAvailabilityStatus {
-  const activeLoan = getActiveLoan(item)
-  const previousLoan = getPreviousLoan(item)
-
-  // Case 1: Current loan exists AND has pickedUpAt - already picked up
-  if (activeLoan?.pickedUpAt) {
-    return { type: 'picked-up', label: 'Utlämnad', variant: 'outline' }
-  }
-
-  // Case 2-4: No picked up loan (either no loan or loan without pickedUpAt)
-  // Check previousLoan.availableToNextTenantFrom
-  const availableFrom = previousLoan?.availableToNextTenantFrom
+export function EarlyHandoutBadge({ loan }: EarlyHandoutBadgeProps) {
+  const availableFrom = loan?.availableToNextTenantFrom
 
   if (!availableFrom) {
-    // No previous loan or no date set - availability not specified
-    return { type: 'available', label: 'Ej angivet', variant: 'outline' }
+    return <Badge variant="outline">Ej angivet</Badge>
   }
 
   const availableDate = new Date(availableFrom)
@@ -303,23 +277,17 @@ export function getPickupAvailability(
   const formattedDate = format(availableDate, dateFormat, { locale: sv })
 
   if (availableDate > now) {
-    // Future date - cannot be picked up yet
-    return {
-      type: 'not-available-until',
-      label: `Får ej utlämnas till ${formattedDate}`,
-      variant: 'destructive',
-      date: availableDate,
-    }
+    return (
+      <Badge variant="destructive">Får ej utlämnas till {formattedDate}</Badge>
+    )
   } else {
-    // Past date - can be picked up
-    return {
-      type: 'available-from',
-      label: `Får utlämnas från ${formattedDate}`,
-      variant: 'default',
-      date: availableDate,
-    }
+    return <Badge variant="default">Får utlämnas från {formattedDate}</Badge>
   }
 }
+
+// ============================================
+// Pickup Availability Badge (for items - extracts loan)
+// ============================================
 
 interface PickupAvailabilityBadgeProps {
   /** Key or card data */
@@ -327,14 +295,22 @@ interface PickupAvailabilityBadgeProps {
 }
 
 /**
- * Badge showing if the key/card can be handed out (Får utlämnas / Får ej utlämnas)
- * Works with both KeyDetails and CardDetails.
+ * Badge showing if the key/card can be handed out.
+ * Checks active loan first (shows "Utlämnad"), then uses previous loan's availability date.
  */
 export function PickupAvailabilityBadge({
   itemData,
 }: PickupAvailabilityBadgeProps) {
-  const status = getPickupAvailability(itemData)
-  return <Badge variant={status.variant}>{status.label}</Badge>
+  const activeLoan = getActiveLoan(itemData)
+  const previousLoan = getPreviousLoan(itemData)
+
+  // If already picked up on current loan, show that
+  if (activeLoan?.pickedUpAt) {
+    return <Badge variant="outline">Utlämnad</Badge>
+  }
+
+  // Otherwise show availability based on previous loan
+  return <EarlyHandoutBadge loan={previousLoan} />
 }
 
 // ============================================

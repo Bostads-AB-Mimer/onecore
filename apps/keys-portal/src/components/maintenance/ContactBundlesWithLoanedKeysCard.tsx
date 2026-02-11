@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react'
-import {
-  ChevronDown,
-  ChevronUp,
-  Package,
-  Loader2,
-  ChevronRight,
-} from 'lucide-react'
+import { ChevronDown, ChevronUp, Package, ChevronRight } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -143,9 +138,7 @@ export function ContactBundlesWithLoanedKeysCard({
       {isOpen && (
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <Spinner centered />
           ) : bundles.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
               Inga nyckelsamlingar har utlånade nycklar till denna kontakt
@@ -220,7 +213,7 @@ export function ContactBundlesWithLoanedKeysCard({
                       <div className="border-t px-3 pb-3">
                         {isLoadingDetails ? (
                           <div className="flex items-center justify-center py-4">
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            <Spinner />
                           </div>
                         ) : loanedKeys.length === 0 ? (
                           <p className="text-sm text-muted-foreground py-4 text-center">
