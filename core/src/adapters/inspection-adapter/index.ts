@@ -31,7 +31,9 @@ export const getXpandInspections = async ({
   sortAscending?: boolean
   inspector?: string
   address?: string
-} = {}): Promise<AdapterResult<PaginatedResponse<XpandInspection>, 'unknown'>> => {
+} = {}): Promise<
+  AdapterResult<PaginatedResponse<XpandInspection>, 'unknown'>
+> => {
   try {
     const fetchResponse = await client().GET('/inspections/xpand', {
       params: {
