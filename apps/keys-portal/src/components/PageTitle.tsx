@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom'
 const pageTitles: Record<string, string> = {
   '/KeyLoan': 'Utlåning',
   '/key-loans': 'Nyckellån',
-  '/maintenance-keys': 'Entreprenör',
+  '/maintenance-keys': 'Nycklar förvaltning',
   '/key-bundles': 'Nyckelsamlingar',
   '/Keys': 'Nycklar',
   '/key-systems': 'Låssystem',

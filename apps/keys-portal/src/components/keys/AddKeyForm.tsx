@@ -338,7 +338,7 @@ export function AddKeyForm({
                     setSequenceNumberError('')
                   }
                 }}
-                placeholder="1 eller 1-10 (max 10)"
+                placeholder="1 eller 1-20 (max 20)"
               />
               {sequenceNumberError ? (
                 <p className="text-xs text-red-600">{sequenceNumberError}</p>

@@ -108,7 +108,7 @@ export function AddKeyBundleForm({
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              placeholder="t.ex. Entreprenörsnycklar Stockholm"
+              placeholder="t.ex. Nycklar förvaltning Stockholm"
               required
             />
           </div>

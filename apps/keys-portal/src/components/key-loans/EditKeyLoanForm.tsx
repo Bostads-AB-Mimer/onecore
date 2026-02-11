@@ -346,7 +346,7 @@ export function EditKeyLoanForm({
                 <Textarea
                   id="description"
                   rows={4}
-                  placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
+                  placeholder="T.ex. Nycklar förvaltning för renoveringsprojekt Blocket A"
                   value={formData.description || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({

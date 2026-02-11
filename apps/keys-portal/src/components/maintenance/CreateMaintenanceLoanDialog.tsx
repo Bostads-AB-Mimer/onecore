@@ -110,7 +110,7 @@ export function CreateMaintenanceLoanDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Skapa nytt entreprenörslån</DialogTitle>
+          <DialogTitle>Skapa nytt lån</DialogTitle>
           <DialogDescription>
             Skapa ett nytt lån för {companyName} ({companyContactCode})
           </DialogDescription>
@@ -134,7 +134,7 @@ export function CreateMaintenanceLoanDialog({
             value={description}
             onChange={setDescription}
             label="Beskrivning (valfritt)"
-            placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
+            placeholder="T.ex. Nycklar för renoveringsprojekt Blocket A"
             rows={3}
           />
 
