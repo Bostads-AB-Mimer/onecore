@@ -680,8 +680,8 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter by comment type. If omitted, returns all comment types. */
-          commentType?: 'Standard' | 'Sökande'
-        }
+          commentType?: "Standard" | "Sökande";
+        };
         path: {
           /**
            * @description The unique code identifying the contact.
@@ -758,6 +758,12 @@ export interface paths {
              * @example DAVLIN
              */
             author: string;
+            /**
+             * @description Type of comment. Defaults to 'Standard' if not specified.
+             * @default Standard
+             * @enum {string}
+             */
+            commentType?: "Standard" | "Sökande";
           };
         };
       };
@@ -2234,6 +2240,138 @@ export interface paths {
               error?: string;
             };
           };
+        };
+      };
+    };
+  };
+  "/listing-text-content/{rentalObjectCode}": {
+    /**
+     * Get listing text content by rental object code
+     * @description Fetch the listing text content for a specific rental object.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch text content for. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Listing text content object */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ListingTextContent"];
+            };
+          };
+        };
+        /** @description Listing text content not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Update listing text content
+     * @description Update existing listing text content.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the listing text content to update. */
+          rentalObjectCode: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateListingTextContentRequest"];
+        };
+      };
+      responses: {
+        /** @description Listing text content updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ListingTextContent"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Listing text content not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete listing text content
+     * @description Delete listing text content.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the listing text content to delete. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Listing text content deleted successfully */
+        200: {
+          content: never;
+        };
+        /** @description Listing text content not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/listing-text-content": {
+    /**
+     * Create listing text content
+     * @description Create new listing text content for a rental object.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateListingTextContentRequest"];
+        };
+      };
+      responses: {
+        /** @description Listing text content created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ListingTextContent"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Listing text content already exists for rental object code */
+        409: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
         };
       };
     };
@@ -4900,14 +5038,14 @@ export interface paths {
         query?: {
           /** @description Search term */
           q?: string;
-          /** @description Filter by category */
-          kategori?: string;
-          /** @description Filter by district */
-          distrikt?: string;
-          /** @description Filter by block reason */
-          blockReason?: string;
-          /** @description Filter by property */
-          fastighet?: string;
+          /** @description Filter by category (supports multiple values) */
+          kategori?: string[];
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[];
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[];
+          /** @description Filter by property (supports multiple values) */
+          fastighet?: string[];
           /** @description Filter by start date */
           fromDateGte?: string;
           /** @description Filter by end date */
@@ -4940,14 +5078,14 @@ export interface paths {
           q?: string;
           /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
           fields?: string;
-          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) */
-          kategori?: string;
-          /** @description Filter by district */
-          distrikt?: string;
-          /** @description Filter by block reason */
-          blockReason?: string;
-          /** @description Filter by property code/name */
-          fastighet?: string;
+          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) - supports multiple values */
+          kategori?: string[];
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[];
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[];
+          /** @description Filter by property code/name (supports multiple values) */
+          fastighet?: string[];
           /** @description Filter blocks starting on or after this date */
           fromDateGte?: string;
           /** @description Filter blocks ending on or before this date */
@@ -6925,6 +7063,7 @@ export interface components {
         };
         rentalId: string | null;
         rentalInformation: ({
+          apartmentNumber: string | null;
           type: {
             code: string
             name: string | null
