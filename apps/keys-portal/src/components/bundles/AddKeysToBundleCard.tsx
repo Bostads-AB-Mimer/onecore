@@ -52,7 +52,7 @@ export function AddKeysToBundleCard({
 
       toast({
         title: 'Nycklar tillagda',
-        description: `${selectedKeys.length} nyckel${selectedKeys.length > 1 ? 'ar' : ''} tillagda i ${bundle.name}`,
+        description: `${selectedKeys.length} ${selectedKeys.length > 1 ? 'nycklar' : 'nyckel'} tillagda i ${bundle.name}`,
       })
 
       onKeysAdded()

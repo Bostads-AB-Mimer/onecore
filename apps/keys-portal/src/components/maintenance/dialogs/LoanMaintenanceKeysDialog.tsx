@@ -10,7 +10,9 @@ import {
   fetchContactByContactCode,
 } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
+import { receiptService } from '@/services/api/receiptService'
 import { BeforeAfterDialogBase } from '@/components/loan/dialogs/BeforeAfterDialogBase'
+import { ReceiptDialog } from '@/components/loan/dialogs/ReceiptDialog'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 
 interface LoanMaintenanceKeysDialogProps {
@@ -42,6 +44,9 @@ export function LoanMaintenanceKeysDialog({
 
   // Pre-suggestions state
   const [recentCompanies, setRecentCompanies] = useState<Contact[]>([])
+
+  // Receipt dialog state
+  const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
 
   // Set pre-selected company when dialog opens
   useEffect(() => {
@@ -121,16 +126,26 @@ export function LoanMaintenanceKeysDialog({
         description: addSignature(description) || null,
       }
 
-      await keyLoanService.create(payload)
+      const created = await keyLoanService.create(payload)
+
+      // Create receipt for this loan (non-blocking — loan succeeds even if this fails)
+      try {
+        await receiptService.create({
+          keyLoanId: created.id,
+          receiptType: 'LOAN',
+          type: 'PHYSICAL',
+        })
+      } catch (receiptErr) {
+        console.error('Failed to create receipt:', receiptErr)
+      }
 
       toast({
         title: 'Lån skapat',
         description: `${keys.length} ${keys.length === 1 ? 'nyckel' : 'nycklar'} har lånats ut till ${selectedCompany.fullName}`,
       })
 
-      // Reset form
-      handleReset()
-      onSuccess()
+      // Show receipt dialog instead of immediately closing
+      setCreatedLoanId(created.id)
     } catch (error) {
       console.error('Error creating maintenance loan:', error)
       toast({
@@ -152,7 +167,25 @@ export function LoanMaintenanceKeysDialog({
     setContactPerson('')
     setDescription('')
     setRecentCompanies([])
+    setCreatedLoanId(null)
     onOpenChange(false)
+  }
+
+  const handleReceiptClose = () => {
+    handleReset()
+    onSuccess()
+  }
+
+  // Show receipt dialog after loan creation
+  if (createdLoanId) {
+    return (
+      <ReceiptDialog
+        isOpen={true}
+        onClose={handleReceiptClose}
+        loanType="MAINTENANCE"
+        loanId={createdLoanId}
+      />
+    )
   }
 
   const rightContent = (

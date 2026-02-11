@@ -83,7 +83,7 @@ export function KeySelectionCard({
             <Icon className="h-4 w-4 mr-2" />
             {buttonText.replace(
               '{count}',
-              `${selectedKeys.length} nyckel${selectedKeys.length > 1 ? 'ar' : ''}`
+              `${selectedKeys.length} ${selectedKeys.length > 1 ? 'nycklar' : 'nyckel'}`
             )}
           </Button>
         )}

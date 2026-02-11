@@ -266,7 +266,7 @@ export function ReceiptActions({ loanId, loanType, lease, onRefresh }: Props) {
             disabled={loading}
           >
             <Eye className="h-3 w-3 mr-1" />
-            Lån
+            Kvittens
           </Button>
         )}
 
@@ -279,7 +279,7 @@ export function ReceiptActions({ loanId, loanType, lease, onRefresh }: Props) {
             disabled={loading}
           >
             <Eye className="h-3 w-3 mr-1" />
-            Retur
+            Kvitto
           </Button>
         )}
       </div>
