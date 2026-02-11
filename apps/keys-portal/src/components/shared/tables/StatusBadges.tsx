@@ -277,11 +277,9 @@ export function EarlyHandoutBadge({ loan }: EarlyHandoutBadgeProps) {
   const formattedDate = format(availableDate, dateFormat, { locale: sv })
 
   if (availableDate > now) {
-    return (
-      <Badge variant="destructive">Får ej utlämnas till {formattedDate}</Badge>
-    )
+    return <Badge variant="destructive">Får lämnas ut {formattedDate}</Badge>
   } else {
-    return <Badge variant="default">Får utlämnas från {formattedDate}</Badge>
+    return <Badge variant="default">Får lämnas ut från {formattedDate}</Badge>
   }
 }
 
