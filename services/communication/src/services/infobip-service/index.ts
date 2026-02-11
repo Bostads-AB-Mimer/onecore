@@ -244,10 +244,7 @@ export const routes = (router: KoaRouter) => {
     to: z.string().email(),
     subject: z.string(),
     text: z.string(),
-    address: z.string(),
-    inspectionType: z.string(),
-    inspectionDate: z.string(),
-    apartmentCode: z.string(),
+    firstName: z.string(),
     attachments: z
       .array(
         z.object({

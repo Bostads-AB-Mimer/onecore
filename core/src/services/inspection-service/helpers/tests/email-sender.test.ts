@@ -582,10 +582,7 @@ describe('sendProtocolToTenants', () => {
       expect.objectContaining({
         to: 'test@example.com',
         subject: expect.stringContaining('Besiktningsprotokoll'),
-        address: 'Testgatan 1',
-        inspectionType: 'Inflyttningsbesiktning',
-        inspectionDate: expect.any(String),
-        apartmentCode: 'A101',
+        firstName: 'Test',
         attachments: expect.arrayContaining([
           expect.objectContaining({
             filename: expect.stringContaining('.pdf'),

@@ -5242,7 +5242,7 @@ export interface paths {
   "/inspections/{inspectionId}/tenant-contacts": {
     /**
      * Get tenant contacts for inspection protocol modal
-     * @description Retrieves contact information for new tenant and tenant to display in confirmation modal before sending protocol
+     * @description Retrieves contact information for new and previous tenants to display in confirmation modal before sending protocol
      */
     get: {
       parameters: {
@@ -5284,7 +5284,7 @@ export interface paths {
   "/inspections/{inspectionId}/send-protocol": {
     /**
      * Send inspection protocol to tenant
-     * @description Sends the inspection protocol PDF via email to the specified tenant (new or existing)
+     * @description Sends the inspection protocol PDF via email to the specified tenant (new or previous)
      */
     post: {
       parameters: {

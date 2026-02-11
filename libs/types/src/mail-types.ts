@@ -38,10 +38,7 @@ interface WorkOrderEmail extends Email {
 }
 
 interface InspectionProtocolEmail extends Email {
-  address: string
-  inspectionType: string
-  inspectionDate: string
-  apartmentCode: string
+  firstName: string
 }
 
 // Can be used for both positive and negative notifications

@@ -106,9 +106,6 @@ export const sendProtocolToTenants = async (
       }
     }
 
-    const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
-    const formattedDate = dateFormatter.format(new Date(inspection.date))
-
     // Create attachment (convert Buffer to base64 string)
     const attachment: EmailAttachment = {
       filename: `Besiktningsprotokoll_${inspection.apartmentCode}_${inspection.id}.pdf`,
@@ -126,10 +123,7 @@ export const sendProtocolToTenants = async (
         to: tenant.emailAddress!,
         subject: `Besiktningsprotokoll - ${inspection.type} ${inspection.address}`,
         text: `Besiktningsprotokoll för ${inspection.address}`,
-        address: inspection.address,
-        inspectionType: inspection.type,
-        inspectionDate: formattedDate,
-        apartmentCode: inspection.apartmentCode,
+        firstName: tenant.firstName,
         attachments: [attachment],
       }
 

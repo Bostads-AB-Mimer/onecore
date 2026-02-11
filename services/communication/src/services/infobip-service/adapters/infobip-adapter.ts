@@ -49,9 +49,7 @@ const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
 const WorkOrderExternalContractorEmailTemplateId = 200000000173744
-
-// TODO: Update with correct template ID when available
-const InspectionProtocolEmailTemplateId = 0
+const InspectionProtocolEmailTemplateId = 205000000035322
 
 export const sendEmail = async (message: Email) => {
   logger.info({ to: message.to, subject: message.subject }, 'Sending email')
@@ -321,10 +319,7 @@ export const sendInspectionProtocolEmail = async (
     const toField = JSON.stringify({
       to: email.to,
       placeholders: {
-        address: email.address,
-        inspectionType: email.inspectionType,
-        inspectionDate: email.inspectionDate,
-        apartmentCode: email.apartmentCode,
+        firstName: email.firstName,
       },
     })
 

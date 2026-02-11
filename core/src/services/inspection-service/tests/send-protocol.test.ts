@@ -237,10 +237,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
       expect.objectContaining({
         to: 'new@example.com',
         subject: expect.stringContaining('Besiktningsprotokoll'),
-        address: expect.any(String),
-        inspectionType: expect.any(String),
-        inspectionDate: expect.any(String),
-        apartmentCode: expect.any(String),
+        firstName: 'New',
         attachments: expect.arrayContaining([
           expect.objectContaining({
             filename: expect.stringContaining('.pdf'),
