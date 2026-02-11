@@ -183,7 +183,7 @@ function TableEmptyState({
         colSpan={colSpan}
         className="h-24 text-center text-muted-foreground"
       >
-        {isLoading ? <Spinner /> : message}
+        {isLoading ? <Spinner centered /> : message}
       </TableCell>
     </TableRow>
   )
