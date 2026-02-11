@@ -688,8 +688,10 @@ export async function getLeasesByRentalPropertyId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt,hyresgaster`,
     })
+
+    console.log('res.data', res.data)
 
     // Not sure we want to fail completely here if parsing fails
     const leases = TenfastLeaseSchema.array().safeParse(res.data)
