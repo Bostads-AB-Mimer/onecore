@@ -13,6 +13,7 @@ import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { keyLoanService } from '@/services/api/keyLoanService'
+import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { Pencil, Trash2 } from 'lucide-react'
 
 const Index = () => {
@@ -523,6 +524,11 @@ const Index = () => {
     [keys, selectedKeyIds]
   )
 
+  const NON_DELETABLE_KEY_TYPES = ['HN', 'FS']
+  const hasNonDeletableSelected = selectedKeys.some((k) =>
+    NON_DELETABLE_KEY_TYPES.includes(k.keyType)
+  )
+
   // Bulk delete handler - check for active loans first
   const handleBulkDeleteClick = async () => {
     setBulkLoading(true)
@@ -612,6 +618,26 @@ const Index = () => {
       searchValue={searchInput}
       onSearchChange={handleSearchChange}
       searchPlaceholder="Sök nycklar..."
+      searchExtra={
+        <SearchDropdown
+          className="w-72"
+          preSuggestions={[]}
+          searchFn={searchKeySystems}
+          minSearchLength={1}
+          formatItem={(item: KeySystem) => ({
+            primaryText: item.systemCode,
+            secondaryText: item.name || undefined,
+            searchableText: `${item.systemCode} ${item.name || ''}`,
+          })}
+          getKey={(item: KeySystem) => item.id}
+          value={keySystemSearch}
+          onChange={setKeySystemSearch}
+          onSelect={handleKeySystemSelect}
+          selectedValue={selectedKeySystem}
+          placeholder="Filtrera på låssystem"
+          showSearchIcon
+        />
+      }
       onAddNew={handleAddNew}
       addButtonLabel="Ny nyckel"
       pagination={pagination}
@@ -654,11 +680,6 @@ const Index = () => {
         createdAtAfter={createdAtAfter}
         createdAtBefore={createdAtBefore}
         onDatesChange={handleDatesChange}
-        keySystemSearch={keySystemSearch}
-        onKeySystemSearchChange={setKeySystemSearch}
-        selectedKeySystem={selectedKeySystem}
-        onKeySystemSelect={handleKeySystemSelect}
-        onKeySystemSearch={searchKeySystems}
         selectable
         selectedKeyIds={selectedKeyIds}
         onSelectionChange={handleSelectionChange}
@@ -676,10 +697,13 @@ const Index = () => {
             onClick: () => setShowBulkEditForm(true),
           },
           {
-            label: 'Ta bort',
+            label: hasNonDeletableSelected
+              ? 'Ta bort (innehåller skyddade nycklar)'
+              : 'Ta bort',
             icon: <Trash2 className="mr-2 h-4 w-4" />,
             onClick: handleBulkDeleteClick,
             variant: 'destructive',
+            disabled: hasNonDeletableSelected,
           },
         ]}
       />

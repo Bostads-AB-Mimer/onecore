@@ -253,7 +253,7 @@ export function KeySystemsTable({
                     <TableCell>
                       <ActionMenu
                         onEdit={() => onEdit(KeySystem)}
-                        onDelete={() => onDelete(KeySystem.id)}
+                        // onDelete={() => onDelete(KeySystem.id)}
                       />
                     </TableCell>
                   </TableRow>

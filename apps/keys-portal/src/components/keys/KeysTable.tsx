@@ -18,7 +18,6 @@ import {
 } from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
-import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { Checkbox } from '@/components/ui/checkbox'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
@@ -60,11 +59,6 @@ interface KeysTableProps {
   createdAtAfter: string | null
   createdAtBefore: string | null
   onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
-  keySystemSearch: string
-  onKeySystemSearchChange: (query: string) => void
-  selectedKeySystem: any | null
-  onKeySystemSelect: (keySystem: any | null) => void
-  onKeySystemSearch: (query: string) => Promise<any[]>
   // Selection props
   selectable?: boolean
   selectedKeyIds?: Set<string>
@@ -83,11 +77,6 @@ export function KeysTable({
   createdAtAfter,
   createdAtBefore,
   onDatesChange,
-  keySystemSearch,
-  onKeySystemSearchChange,
-  selectedKeySystem,
-  onKeySystemSelect,
-  onKeySystemSearch,
   selectable = false,
   selectedKeyIds = new Set(),
   onSelectionChange,
@@ -153,25 +142,7 @@ export function KeysTable({
             <TableHead>Nyckelnamn</TableHead>
             <TableHead>Löpnr</TableHead>
             <TableHead>Flexnr</TableHead>
-            <FilterableTableHeader label="" className="w-[150px]">
-              <SearchDropdown
-                preSuggestions={[]}
-                searchFn={onKeySystemSearch}
-                minSearchLength={1}
-                formatItem={(item: any) => ({
-                  primaryText: item.systemCode,
-                  secondaryText: item.name || undefined,
-                  searchableText: `${item.systemCode} ${item.name || ''}`,
-                })}
-                getKey={(item: any) => item.id}
-                value={keySystemSearch}
-                onChange={onKeySystemSearchChange}
-                onSelect={onKeySystemSelect}
-                selectedValue={selectedKeySystem}
-                placeholder="Låssystem"
-                showSearchIcon
-              />
-            </FilterableTableHeader>
+            <TableHead>Låssystem</TableHead>
             <TableHead>Objekt</TableHead>
             <FilterableTableHeader label="Typ">
               <FilterDropdown
@@ -279,6 +250,10 @@ export function KeysTable({
                       <ActionMenu
                         onEdit={() => onEdit(key)}
                         onDelete={() => onDelete(key.id)}
+                        deleteDisabled={
+                          key.keyType === 'HN' || key.keyType === 'FS'
+                        }
+                        deleteDisabledReason="Huvudnycklar och fastighetsnycklar kan inte tas bort"
                       />
                     </TableCell>
                   </TableRow>

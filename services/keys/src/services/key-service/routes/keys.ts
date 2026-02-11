@@ -716,12 +716,25 @@ export const routes = (router: KoaRouter) => {
   router.delete('/keys/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const n = await keysAdapter.deleteKey(ctx.params.id, db)
-      if (!n) {
+      const key = await keysAdapter.getKeyById(ctx.params.id, db)
+      if (!key) {
         ctx.status = 404
         ctx.body = { reason: 'Key not found', ...metadata }
         return
       }
+
+      const NON_DELETABLE_KEY_TYPES = ['HN', 'FS']
+      if (NON_DELETABLE_KEY_TYPES.includes(key.keyType)) {
+        ctx.status = 403
+        ctx.body = {
+          error:
+            'Keys of type Huvudnyckel or Fastighetsnyckel cannot be deleted',
+          ...metadata,
+        }
+        return
+      }
+
+      await keysAdapter.deleteKey(ctx.params.id, db)
       ctx.status = 200
       ctx.body = { ...metadata }
     } catch (err) {
@@ -866,6 +879,25 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       try {
         const payload: BulkDeleteKeysRequest = ctx.request.body
+
+        const NON_DELETABLE_KEY_TYPES = ['HN', 'FS']
+        const keysToDelete = await Promise.all(
+          payload.keyIds.map((id) => keysAdapter.getKeyById(id, db))
+        )
+        const nonDeletableKeys = keysToDelete.filter(
+          (key) => key && NON_DELETABLE_KEY_TYPES.includes(key.keyType)
+        )
+
+        if (nonDeletableKeys.length > 0) {
+          ctx.status = 403
+          ctx.body = {
+            error:
+              'Keys of type Huvudnyckel or Fastighetsnyckel cannot be deleted',
+            conflictingKeys: nonDeletableKeys.map((key) => key!.id),
+            ...metadata,
+          }
+          return
+        }
 
         const { hasConflict, conflictingKeys } = await checkActiveKeyLoans(
           payload.keyIds,

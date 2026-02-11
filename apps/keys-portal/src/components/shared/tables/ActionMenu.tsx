@@ -13,6 +13,8 @@ export interface ActionMenuProps {
   onDelete?: () => void
   editLabel?: string
   deleteLabel?: string
+  deleteDisabled?: boolean
+  deleteDisabledReason?: string
   extraItems?: React.ReactNode
   extraItemsAfter?: React.ReactNode
 }
@@ -23,6 +25,8 @@ export function ActionMenu({
   onDelete,
   editLabel = 'Redigera',
   deleteLabel = 'Ta bort',
+  deleteDisabled = false,
+  deleteDisabledReason,
   extraItems,
   extraItemsAfter,
 }: ActionMenuProps) {
@@ -48,6 +52,8 @@ export function ActionMenu({
         {onDelete && (
           <DropdownMenuItem
             onClick={onDelete}
+            disabled={deleteDisabled}
+            title={deleteDisabled ? deleteDisabledReason : undefined}
             className="text-destructive focus:text-destructive"
           >
             <Trash2 className="h-4 w-4 mr-2" />
