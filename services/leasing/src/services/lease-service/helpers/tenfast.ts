@@ -50,6 +50,7 @@ function mapToOnecoreRentalObject(
     objectTypeCaption: rentalObject.subType ?? rentalObject.typ ?? '',
     objectTypeCode: rentalObject.typ ?? '',
     boaArea: rentalObject.kvm ?? undefined,
+    braArea: rentalObject.kvm ?? undefined,
   }
 }
 
