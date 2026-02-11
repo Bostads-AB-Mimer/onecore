@@ -1,6 +1,7 @@
 import pino from 'pino'
 import pinoElastic from 'pino-elasticsearch'
-import { multistream } from 'pino-multi-stream'
+import pms from 'pino-multi-stream'
+const { multistream } = pms
 import pretty from 'pino-pretty'
 import Koa from 'koa'
 import { randomUUID } from 'crypto'

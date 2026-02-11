@@ -6,4 +6,7 @@ packages:
  - services/*
 
 minimumReleaseAge: 5760
+minimumReleaseAgeExclude:
+ - koa-okapi-router
+
 injectWorkspacePackages: true
