@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 export interface UseExpandableRowsOptions<T> {
   onExpand?: (id: string) => Promise<T>
@@ -26,6 +26,7 @@ export function useExpandableRows<T = unknown>(
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const [loadedData, setLoadedData] = useState<T | null>(null)
+  const expandRequestId = useRef(0)
 
   const isExpanded = useCallback(
     (id: string): boolean => {
@@ -46,17 +47,17 @@ export function useExpandableRows<T = unknown>(
       }
 
       if (onExpand) {
+        const requestId = ++expandRequestId.current
         setIsLoading(true)
         setLoadedData(null)
         try {
           const data = await onExpand(id)
+          if (expandRequestId.current !== requestId) return
           setLoadedData(data)
         } catch (error) {
           console.error('Failed to load expanded row data:', error)
-          setLoadedData(null)
-        } finally {
-          setIsLoading(false)
         }
+        setIsLoading(false)
       }
     },
     [singleExpanded, onExpand]
