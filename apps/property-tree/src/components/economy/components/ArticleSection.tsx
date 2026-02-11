@@ -44,21 +44,29 @@ export function ArticleSection({
     const newRows = [...invoiceRows]
     if (field === 'text') {
       newRows[index] = { ...newRows[index], text: value as string }
-    } else if (field === 'amount') {
-      newRows[index] = { ...newRows[index], amount: Number(value) || 1 }
     } else if (field === 'price') {
       newRows[index] = { ...newRows[index], price: Number(value) || 0 }
-    } else if (field === 'articleId') {
-      newRows[index] = { ...newRows[index], articleId: value as string }
     }
 
+    onInvoiceRowsChange(newRows)
+  }
+
+  const handleChangeRowArticle = (index: number, articleId: string) => {
+    const newRows = [...invoiceRows]
+    const article = MiscellaneousInvoiceArticles.find((a) => a.id === articleId)
+    if (!article) {
+      return
+    }
+
+    newRows[index].articleId = articleId
+    newRows[index].articleName = article.name
     onInvoiceRowsChange(newRows)
   }
 
   const handleAddRow = () => {
     onInvoiceRowsChange([
       ...invoiceRows,
-      { text: '', amount: 1, price: 0, articleId: '', articleName: '' },
+      { text: '', price: 0, articleId: '', articleName: '' },
     ])
   }
 
@@ -73,25 +81,18 @@ export function ArticleSection({
       {/* Fakturarader - grupperat */}
       <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
         <Label>Fakturarader</Label>
-
-        {/* Header row - only visible on larger screens */}
-        <div className="hidden sm:grid sm:grid-cols-[1fr_80px_100px_40px] gap-2 text-sm text-muted-foreground">
-          <span>Text</span>
-          <span>Antal</span>
-          <span>Pris (ink. moms)</span>
-          <span></span>
-        </div>
-
         {invoiceRows.map((row, index) => (
           <div
             key={index}
-            className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_80px_100px_40px] gap-2"
+            className="space-y-2 sm:space-y-0 sm:grid grid-rows-2 gap-2"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="artikel">Artikel</Label>
                 <Select
-                  onValueChange={(e) => handleRowChange(index, 'articleId', e)}
+                  onValueChange={(articleId) =>
+                    handleChangeRowArticle(index, articleId)
+                  }
                 >
                   <SelectTrigger
                     id="artikel"
@@ -124,53 +125,35 @@ export function ArticleSection({
                 />
               </div>
             </div>
-            <div className="space-y-1 sm:space-y-0">
-              <Label className="sm:hidden text-xs text-muted-foreground">
-                Text
-              </Label>
-              <Input
-                value={row.text}
-                onChange={(e) => handleRowChange(index, 'text', e.target.value)}
-                placeholder="Beskrivning..."
-              />
-            </div>
-            <div className="space-y-1 sm:space-y-0">
-              <Label className="sm:hidden text-xs text-muted-foreground">
-                Antal
-              </Label>
-              <Input
-                type="number"
-                min={1}
-                value={row.amount}
-                onChange={(e) =>
-                  handleRowChange(index, 'amount', e.target.value)
-                }
-              />
-            </div>
-            <div className="space-y-1 sm:space-y-0">
-              <Label className="sm:hidden text-xs text-muted-foreground">
-                Pris (ink. moms)
-              </Label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={row.price}
-                onChange={(e) =>
-                  handleRowChange(index, 'amount', e.target.value)
-                }
-              />
-            </div>
-            <div className="flex items-end sm:items-center justify-end sm:justify-center">
+            <div className="grid grid-cols-3 items-center gap-2">
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Text</Label>
+                <Input
+                  value={row.text}
+                  onChange={(e) =>
+                    handleRowChange(index, 'text', e.target.value)
+                  }
+                  placeholder="Beskrivning..."
+                />
+              </div>
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Pris (ink. moms)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  onChange={(e) =>
+                    handleRowChange(index, 'price', e.target.value)
+                  }
+                />
+              </div>
               {invoiceRows.length > 1 && (
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
                   onClick={() => handleRemoveRow(index)}
-                  className="shrink-0 h-9 w-9"
                 >
-                  <X className="h-4 w-4" />
+                  <X />
+                  Ta bort rad
                 </Button>
               )}
             </div>
