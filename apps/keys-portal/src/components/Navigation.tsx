@@ -70,7 +70,7 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {/* Entreprenör with nested Nyckelsamlingar */}
+              {/* Nycklar förvaltning with nested Nyckelsamlingar */}
               <Collapsible
                 defaultOpen={
                   location.pathname === '/maintenance-keys' ||
@@ -86,7 +86,7 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <CollapsibleTrigger asChild>
                       <Link to="/maintenance-keys" className="w-full">
                         <Wrench className="h-4 w-4" />
-                        <span>Entreprenör</span>
+                        <span>Nycklar förvaltning</span>
                         <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
                       </Link>
                     </CollapsibleTrigger>

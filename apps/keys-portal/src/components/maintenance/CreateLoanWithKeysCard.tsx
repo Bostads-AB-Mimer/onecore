@@ -47,7 +47,7 @@ export function CreateLoanWithKeysCard({
 
   return (
     <KeySelectionCard
-      title="Skapa nytt entreprenörslån"
+      title="Skapa nytt lån"
       buttonText="Acceptera {count}"
       buttonIcon={Check}
       onValidateKey={handleValidateKey}

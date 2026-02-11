@@ -78,11 +78,11 @@ export function parseSequenceNumberInput(
     }
 
     const count = end - start + 1
-    if (count > 10) {
+    if (count > 20) {
       return {
         isValid: false,
         numbers: [],
-        error: `Du kan bara skapa max 10 nycklar åt gången (du försökte skapa ${count} nycklar)`,
+        error: `Du kan bara skapa max 20 nycklar åt gången (du försökte skapa ${count} nycklar)`,
       }
     }
 

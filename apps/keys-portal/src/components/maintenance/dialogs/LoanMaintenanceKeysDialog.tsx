@@ -235,7 +235,7 @@ export function LoanMaintenanceKeysDialog({
         value={description}
         onChange={setDescription}
         label="Beskrivning (valfritt)"
-        placeholder="T.ex. Entreprenörsnycklar för renoveringsprojekt Blocket A"
+        placeholder="T.ex. Nycklar för renoveringsprojekt Blocket A"
         rows={4}
       />
     </div>
@@ -245,7 +245,7 @@ export function LoanMaintenanceKeysDialog({
     <BeforeAfterDialogBase
       open={open}
       onOpenChange={onOpenChange}
-      title="Låna ut nycklar till entreprenör"
+      title="Låna ut nycklar"
       description={`Välj företag och fyll i detaljer för lånet av ${keys.length} ${keys.length === 1 ? 'nyckel' : 'nycklar'}`}
       selectedKeys={keys}
       leftTitle={`Valda nycklar (${keys.length})`}
