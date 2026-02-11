@@ -860,12 +860,20 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number) => {
+const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
   const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
+  const accounts208 = ['3012', '3014', '3016']
+
+  console.log(
+    'getTaxRule',
+    account,
+    accounts208.includes(account),
+    accounts208.includes(account) ? '208' : '2'
+  )
 
   switch (vatRate) {
     case 25:
-      return '2'
+      return accounts208.includes(account) ? '208' : '2'
     case 12:
       return '21'
     case 6:
@@ -931,7 +939,8 @@ export const transformAggregatedInvoiceRow = (
     text: '',
     taxRule: getTaxRule(
       invoiceRow.totalAmount as number,
-      invoiceRow.totalVat as number
+      invoiceRow.totalVat as number,
+      invoiceRow.Account as string
     ).toString(),
     amount: -invoiceRow.totalAmount,
     totalAccount: invoiceRow.TotalAccount,
