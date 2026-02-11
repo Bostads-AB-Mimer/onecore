@@ -53,10 +53,5 @@ export {
   getKeyEventDisplayLabel,
   isActiveKeyEvent,
   getLatestActiveEvent,
-  getPickupAvailability,
 } from './StatusBadges'
-export type {
-  LoanStatusType,
-  PickupAvailabilityType,
-  PickupAvailabilityStatus,
-} from './StatusBadges'
+export type { LoanStatusType } from './StatusBadges'
