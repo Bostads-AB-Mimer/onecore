@@ -32,12 +32,12 @@ export const keyService = {
     page: number = 1,
     limit: number = 60,
     includeKeySystem: boolean = false
-  ): Promise<PaginatedResponse<Key>> {
+  ): Promise<PaginatedResponse<KeyDetails>> {
     const { data, error } = await GET('/keys', {
       params: { query: { page, limit, includeKeySystem } },
     })
     if (error) throw error
-    return ensurePaginatedResponse<Key>(data)
+    return ensurePaginatedResponse<KeyDetails>(data)
   },
 
   async getKey(id: string): Promise<Key> {
@@ -73,13 +73,13 @@ export const keyService = {
     page: number = 1,
     limit: number = 60,
     includeKeySystem: boolean = false
-  ): Promise<PaginatedResponse<Key>> {
+  ): Promise<PaginatedResponse<KeyDetails>> {
     const { data, error } = await GET('/keys/search', {
       params: { query: { ...searchParams, page, limit, includeKeySystem } },
       querySerializer,
     })
     if (error) throw error
-    return ensurePaginatedResponse<Key>(data)
+    return ensurePaginatedResponse<KeyDetails>(data)
   },
 
   async getKeysByRentalObjectCode(

@@ -11,7 +11,7 @@ import {
   TableEmptyState,
 } from '@/components/ui/table'
 import {
-  Key,
+  KeyDetails,
   KeyLoan,
   KeyBundle,
   getKeyTypeFilterOptions,
@@ -34,7 +34,7 @@ import { KeyLoansList } from '@/components/shared/tables/KeyLoansList'
 import { KeyBundlesList } from '@/components/shared/tables/KeyBundlesList'
 import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
 
-interface KeyDetails {
+interface ExpandedKeyData {
   loans: KeyLoan[]
   bundles: KeyBundle[]
   contactData: Record<
@@ -48,9 +48,9 @@ interface KeyDetails {
 }
 
 interface KeysTableProps {
-  keys: Key[]
+  keys: KeyDetails[]
   keySystemMap: Record<string, string>
-  onEdit: (key: Key) => void
+  onEdit: (key: KeyDetails) => void
   onDelete: (keyId: string) => void
   selectedType: string | null
   onTypeFilterChange: (value: string | null) => void
@@ -81,7 +81,7 @@ export function KeysTable({
   selectedKeyIds = new Set(),
   onSelectionChange,
 }: KeysTableProps) {
-  const expansion = useExpandableRows<KeyDetails>({
+  const expansion = useExpandableRows<ExpandedKeyData>({
     onExpand: async (keyId) => {
       const [loans, bundles] = await Promise.all([
         keyLoanService.getByKeyId(keyId),
@@ -129,8 +129,8 @@ export function KeysTable({
     return new Date(dateString).toLocaleDateString('sv-SE')
   }
 
-  // Column count for expanded rows (base 10 + 1 if selectable)
-  const columnCount = selectable ? 11 : 10
+  // Column count for expanded rows (base 11 + 1 if selectable)
+  const columnCount = selectable ? 12 : 11
 
   return (
     <div className="rounded-md border bg-card">
@@ -143,6 +143,7 @@ export function KeysTable({
             <TableHead>Löpnr</TableHead>
             <TableHead>Flexnr</TableHead>
             <TableHead>Låssystem</TableHead>
+            <TableHead>Tillhörighet</TableHead>
             <TableHead>Objekt</TableHead>
             <FilterableTableHeader label="Typ">
               <FilterDropdown
@@ -221,6 +222,9 @@ export function KeysTable({
                         '-'
                       )}
                     </TableCell>
+                    <TableCellMuted>
+                      {key.keySystem?.name || '-'}
+                    </TableCellMuted>
                     <TableCell>
                       {key.rentalObjectCode ? (
                         <TableLink
