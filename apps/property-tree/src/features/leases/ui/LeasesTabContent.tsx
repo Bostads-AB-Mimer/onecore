@@ -10,7 +10,7 @@ import { paths } from '@/shared/routes'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
-import { useLeasesByRentalProperty } from '../hooks/useLeasesByRentalProperty'
+import { useLeasesByRentalProperty } from '../../../entities/lease/hooks/useLeasesByRentalProperty'
 
 interface LeasesTabContentProps {
   rentalPropertyId: string

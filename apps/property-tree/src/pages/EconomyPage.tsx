@@ -1,4 +1,4 @@
-import { StrofakturaForm } from '../components/economy/components/StrofakturaForm'
+import { MiscellaneousInvoiceForm } from '@/features/economy/components/MiscellaneousInvoiceForm'
 
 export function EconomyPage() {
   return (
@@ -12,7 +12,7 @@ export function EconomyPage() {
         </p>
       </div>
 
-      <StrofakturaForm />
+      <MiscellaneousInvoiceForm />
     </div>
   )
 }

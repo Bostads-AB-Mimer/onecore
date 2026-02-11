@@ -2,7 +2,7 @@ import { parseAsString, useQueryState } from 'nuqs'
 
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
-import { useTenantInvoices } from '../hooks/useTenantInvoices'
+import { useTenantInvoices } from '../../../entities/tenant/hooks/useTenantInvoices'
 import { InvoicesTable } from './InvoicesTable'
 
 interface TenantLedgerTabContentProps {

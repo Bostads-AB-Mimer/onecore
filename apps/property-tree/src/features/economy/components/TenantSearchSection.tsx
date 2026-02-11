@@ -1,9 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
-import { Input } from '@/components/ui/Input'
-import { Label } from '@/components/ui/Label'
+import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { TenantSearchResult, useTenantSearch } from '@/hooks/useTenantSearch'
+
+import {
+  TenantSearchResult,
+  useTenantSearch,
+} from '@/entities/tenant/hooks/useTenantSearch'
+
+import { cn } from '@/shared/lib/utils'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
 
 interface TenantSearchSectionProps {
   value?: string
@@ -13,18 +18,11 @@ interface TenantSearchSectionProps {
 }
 
 export function TenantSearchSection({
-  value,
   tenantName: customerName,
   onCustomerSelect,
   error,
 }: TenantSearchSectionProps) {
-  const {
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-    showSearchResults,
-    isSearching,
-  } = useTenantSearch()
+  const { searchQuery, setSearchQuery, searchResults } = useTenantSearch()
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 

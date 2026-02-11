@@ -1,27 +1,26 @@
-import { Label } from '@/components/ui/Label'
-import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
-import { Checkbox } from '@/components/ui/Checkbox'
+import { MiscellaneousInvoiceRow } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { Plus, X } from 'lucide-react'
+
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
+import { Checkbox } from '@/shared/ui/Checkbox'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select'
+} from '@/shared/ui/Select'
 
-import { cn } from '@/lib/utils'
 import { MiscellaneousInvoiceArticles } from '@/data/articles/MiscellaneousInvoiceArticles'
-import { InvoiceRow } from '../types'
 
 interface ArticleSectionProps {
-  artikelnummer: string
-  avserObjektnummer: string
-  invoiceRows: InvoiceRow[]
+  invoiceRows: MiscellaneousInvoiceRow[]
   administrativaKostnader: boolean
   hanteringsavgift: boolean
-  onInvoiceRowsChange: (rows: InvoiceRow[]) => void
+  onInvoiceRowsChange: (rows: MiscellaneousInvoiceRow[]) => void
   onAdministrativaKostnaderChange: (checked: boolean) => void
   onHanteringsavgiftChange: (checked: boolean) => void
   errors?: {
@@ -30,13 +29,9 @@ interface ArticleSectionProps {
 }
 
 export function ArticleSection({
-  // selectedArticle,
-  artikelnummer,
-  avserObjektnummer,
   invoiceRows,
   administrativaKostnader,
   hanteringsavgift,
-  // onArticleSelect,
   onInvoiceRowsChange,
   onAdministrativaKostnaderChange,
   onHanteringsavgiftChange,
@@ -44,7 +39,7 @@ export function ArticleSection({
 }: ArticleSectionProps) {
   const handleRowChange = (
     index: number,
-    field: keyof InvoiceRow,
+    field: keyof MiscellaneousInvoiceRow,
     value: string | number
   ) => {
     const newRows = [...invoiceRows]
@@ -76,18 +71,6 @@ export function ArticleSection({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="avserObjektnummer">Avser objektsnummer</Label>
-        <Input
-          id="avserObjektnummer"
-          value={avserObjektnummer}
-          readOnly
-          disabled
-          placeholder="Fylls i automatiskt från kontrakt"
-          className="bg-muted"
-        />
-      </div>
-
       {/* Fakturarader - grupperat */}
       <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
         <Label>Fakturarader</Label>

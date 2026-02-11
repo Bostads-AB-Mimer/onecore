@@ -15,11 +15,3 @@ export interface CustomerSearchResult {
   fullName: string
   leaseContracts: CustomerLeaseContract[]
 }
-
-export interface InvoiceRow {
-  text: string
-  amount: number
-  price: number
-  articleName: string
-  articleId: string
-}

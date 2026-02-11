@@ -19,6 +19,7 @@ import {
   InvoicePaymentEventSchema,
   InvoiceSchema,
 } from './schemas/v1'
+import { MiscellaneousInvoicePayload, MiscellaneousInvoiceRow } from './economy'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -415,4 +416,6 @@ export type {
   CommentThread,
   CommentType,
   Comment,
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceRow,
 }

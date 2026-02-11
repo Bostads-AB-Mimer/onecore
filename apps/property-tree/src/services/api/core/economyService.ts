@@ -1,6 +1,7 @@
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
+import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 
-import { GET } from './baseApi'
+import { GET, POST } from './baseApi'
 
 // TODO: Fix the ts-ignore by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
@@ -45,7 +46,40 @@ async function getInvoicePaymentEvents(
   return response.content as InvoicePaymentEvent[]
 }
 
+async function submitMiscellaneousInvoice(
+  invoice: MiscellaneousInvoicePayload
+) {
+  const formData = new FormData()
+
+  if (invoice.attachment) {
+    const attachmentBytes = await invoice.attachment.bytes()
+    formData.append(
+      'attachment',
+      new Blob([attachmentBytes]),
+      invoice.attachment.name
+    )
+    delete invoice['attachment']
+  }
+
+  formData.append('invoice', JSON.stringify(invoice))
+
+  const { data, error } = await POST(
+    // @ts-ignore
+    `/invoices/miscellaneous`,
+    {
+      body: formData,
+    }
+  )
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  return response
+}
+
 export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
+  submitMiscellaneousInvoice,
 }

@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Label } from '@/components/ui/Label'
-import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
-import { Button } from '@/components/ui/Button'
-import { Paperclip, X, FileText } from 'lucide-react'
+import { FileText, Paperclip, X } from 'lucide-react'
+
+import { Button } from '@/shared/ui/Button'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
+import { Textarea } from '@/shared/ui/Textarea'
 
 interface AdditionalInfoSectionProps {
   projekt: string
   internInfo: string
   onProjektChange: (value: string) => void
   onInternInfoChange: (value: string) => void
+  onFileAttached: (file: File | null) => void
 }
 
 export function AdditionalInfoSection({
@@ -17,6 +19,7 @@ export function AdditionalInfoSection({
   internInfo,
   onProjektChange,
   onInternInfoChange,
+  onFileAttached,
 }: AdditionalInfoSectionProps) {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
 
@@ -24,12 +27,14 @@ export function AdditionalInfoSection({
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       setAttachedFiles((prev) => [...prev, ...newFiles])
+      onFileAttached(e.target.files[0])
     }
     e.target.value = ''
   }
 
   const removeFile = (index: number) => {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+    onFileAttached(null)
   }
 
   return (
