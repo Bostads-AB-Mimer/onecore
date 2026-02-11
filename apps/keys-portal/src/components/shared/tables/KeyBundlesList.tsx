@@ -2,6 +2,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
   TableHeader,
   TableRow,
@@ -45,9 +46,7 @@ export function KeyBundlesList({ bundles }: KeyBundlesListProps) {
         {bundles.map((bundle) => (
           <TableRow key={bundle.id} className="h-12 hover:bg-muted/50">
             <TableCell className="font-medium">{bundle.name}</TableCell>
-            <TableCell className="text-muted-foreground">
-              {bundle.description || '-'}
-            </TableCell>
+            <TableCellMuted>{bundle.description || '-'}</TableCellMuted>
             <TableCell>
               <Badge variant="secondary">{getKeyCount(bundle.keys)}</Badge>
             </TableCell>

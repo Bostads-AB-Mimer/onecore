@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,34 @@ const TableLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
   )
 )
 TableLink.displayName = 'TableLink'
+
+// External link with fallback to plain text when no href is provided
+function TableExternalLink({
+  href,
+  children,
+  className,
+  ...props
+}: {
+  href?: string | null
+  children: React.ReactNode
+  className?: string
+} & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
+  if (!href) return <span>{children}</span>
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        'text-blue-600 hover:text-blue-800 hover:underline',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </a>
+  )
+}
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -75,7 +103,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+      'h-12 border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
       className
     )}
     {...props}
@@ -90,7 +118,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      'h-10 px-2 text-left align-middle font-medium [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+      'h-12 px-2 text-left align-middle font-medium [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
       className
     )}
     {...props}
@@ -112,6 +140,19 @@ const TableCell = React.forwardRef<
   />
 ))
 TableCell.displayName = 'TableCell'
+
+// Secondary data cell with muted text color
+const TableCellMuted = React.forwardRef<
+  HTMLTableCellElement,
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <TableCell
+    ref={ref}
+    className={cn('text-muted-foreground', className)}
+    {...props}
+  />
+))
+TableCellMuted.displayName = 'TableCellMuted'
 
 const TableCaption = React.forwardRef<
   HTMLTableCaptionElement,
@@ -142,13 +183,7 @@ function TableEmptyState({
         colSpan={colSpan}
         className="h-24 text-center text-muted-foreground"
       >
-        {isLoading ? (
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : (
-          message
-        )}
+        {isLoading ? <Spinner /> : message}
       </TableCell>
     </TableRow>
   )
@@ -163,6 +198,8 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableCellMuted,
   TableLink,
+  TableExternalLink,
   TableEmptyState,
 }

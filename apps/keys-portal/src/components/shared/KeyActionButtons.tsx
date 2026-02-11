@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { Button, type ButtonProps } from '@/components/ui/button'
-import { Plus, Copy, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Copy, Trash2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 type ActionButton = {
   label: string
@@ -149,7 +150,7 @@ export function KeyActionButtons({
               disabled={isProcessing}
             >
               {isProcessing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                <Spinner size="sm" className="mr-1" />
               ) : (
                 action.icon
               )}

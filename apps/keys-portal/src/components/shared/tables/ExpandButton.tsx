@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 
 export interface ExpandButtonProps {
@@ -28,7 +29,7 @@ export function ExpandButton({
       disabled={isLoading}
     >
       {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Spinner size="sm" />
       ) : isExpanded ? (
         <ChevronDown className="h-4 w-4" />
       ) : (

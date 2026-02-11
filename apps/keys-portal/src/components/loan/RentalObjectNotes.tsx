@@ -10,7 +10,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { keyNoteService } from '@/services/api/keyNoteService'
 import type { KeyNote } from '@/services/types'
 
@@ -108,9 +109,7 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <Spinner centered />
         ) : (
           <div className="space-y-4 py-4">
             <Textarea
@@ -134,7 +133,7 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
           <Button onClick={handleSave} disabled={loading || saving}>
             {saving ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner size="sm" className="mr-2" />
                 Sparar...
               </>
             ) : (

@@ -3,6 +3,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
   TableHeader,
   TableRow,
@@ -86,9 +87,7 @@ export function KeyBundlesTable({
                         {bundle.name}
                       </TableLink>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {bundle.description || '-'}
-                    </TableCell>
+                    <TableCellMuted>{bundle.description || '-'}</TableCellMuted>
                     <TableCell>
                       <Badge variant="secondary">{keyCount}</Badge>
                     </TableCell>

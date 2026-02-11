@@ -1,36 +1,37 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  Table,
-  TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
-  TableHeader,
   TableRow,
-  TableEmptyState,
   TableLink,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Undo2, User, FileText } from 'lucide-react'
-import { KeyLoan, KeyLoanWithDetails, Key } from '@/services/types'
+import { KeyLoan, KeyLoanWithDetails } from '@/services/types'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
-import { keyService } from '@/services/api/keyService'
-import { KeysList } from '@/components/shared/tables/KeysList'
+import { LoanItemsTable } from '@/components/loan/LoanItemsTable'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter-dropdown'
-import { useExpandableRows } from '@/hooks/useExpandableRows'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
+import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
   LoanTypeBadge,
   LoanStatusBadge,
 } from '@/components/shared/tables/StatusBadges'
-import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
+import { ExpandableRowTable } from '@/components/shared/tables/ExpandableRowTable'
+
+const COLUMN_COUNT = 12
+
+interface LoanExpandedData {
+  loanDetails: KeyLoanWithDetails
+  keySystemMap: Record<string, string>
+}
 
 interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
@@ -101,51 +102,18 @@ export function KeyLoansTable({
       }
     >
   >({})
-  const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
-  const [returnDialogOpen, setReturnDialogOpen] = useState(false)
-
-  interface LoanExpandedData {
-    loanDetails: KeyLoanWithDetails
-    keySystemMap: Record<string, string>
-  }
-
-  const expansion = useExpandableRows<LoanExpandedData>({
-    onExpand: async (loanId) => {
-      // Fetch loan with keys (including key systems) and cards in one call
-      const loanDetails = (await keyLoanService.get(loanId, {
-        includeKeySystem: true,
-        includeCards: true,
-      })) as KeyLoanWithDetails
-
-      const keysArray = loanDetails.keysArray || []
-
-      // Build key system map from the key details (keySystem is already attached)
-      const systemMap: Record<string, string> = {}
-      keysArray.forEach((key) => {
-        if (key.keySystemId && key.keySystem?.systemCode) {
-          systemMap[key.keySystemId] = key.keySystem.systemCode
-        }
-      })
-
-      // Update the component-level keySystemMap for MaintenanceKeysTable
-      setKeySystemMap((prev) => ({ ...prev, ...systemMap }))
-
-      return { loanDetails, keySystemMap: systemMap }
-    },
-  })
+  const [returnLoan, setReturnLoan] = useState<KeyLoanWithDetails | null>(null)
 
   // Fetch contact names for all loans
   useEffect(() => {
     const fetchContactNames = async () => {
       const uniqueContactCodes = new Set<string>()
 
-      // Collect all unique contact codes
       keyLoans.forEach((loan) => {
         if (loan.contact) uniqueContactCodes.add(loan.contact)
         if (loan.contact2) uniqueContactCodes.add(loan.contact2)
       })
 
-      // Fetch contact info for each contact code
       const data: typeof contactData = {}
       await Promise.all(
         Array.from(uniqueContactCodes).map(async (contactCode) => {
@@ -174,19 +142,27 @@ export function KeyLoansTable({
     }
   }, [keyLoans])
 
+  const handleExpand = async (loanId: string): Promise<LoanExpandedData> => {
+    const loanDetails = (await keyLoanService.get(loanId, {
+      includeKeySystem: true,
+      includeCards: true,
+    })) as KeyLoanWithDetails
+
+    const keysArray = loanDetails.keysArray || []
+    const systemMap: Record<string, string> = {}
+    keysArray.forEach((key) => {
+      if (key.keySystemId && key.keySystem?.systemCode) {
+        systemMap[key.keySystemId] = key.keySystem.systemCode
+      }
+    })
+
+    return { loanDetails, keySystemMap: systemMap }
+  }
+
   const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return '-'
     const d = typeof date === 'string' ? new Date(date) : date
     return d.toLocaleDateString('sv-SE')
-  }
-
-  const getKeyCount = (loan: KeyLoan) => {
-    // Key count from keysArray if available (KeyLoanWithDetails), otherwise '-'
-    const withDetails = loan as KeyLoanWithDetails
-    if (withDetails.keysArray) {
-      return withDetails.keysArray.length
-    }
-    return '-'
   }
 
   const getContactFieldDisplay = (
@@ -215,275 +191,209 @@ export function KeyLoansTable({
 
   return (
     <>
-      {/* Return dialog for maintenance loans */}
-      {expansion.loadedData && expansion.expandedId && (
+      {returnLoan && (
         <ReturnMaintenanceKeysDialog
-          open={returnDialogOpen}
-          onOpenChange={setReturnDialogOpen}
-          keyIds={expansion.loadedData.loanDetails.keysArray.map((k) => k.id)}
-          allKeys={expansion.loadedData.loanDetails.keysArray}
+          open={!!returnLoan}
+          onOpenChange={(open) => {
+            if (!open) setReturnLoan(null)
+          }}
+          keyIds={returnLoan.keysArray.map((k) => k.id)}
+          allKeys={returnLoan.keysArray}
           onSuccess={() => {
-            setReturnDialogOpen(false)
+            setReturnLoan(null)
             onRefresh?.()
           }}
         />
       )}
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent border-border">
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Namn</TableHead>
-              <TableHead>Kontaktkod</TableHead>
-              <TableHead>Personnummer</TableHead>
-              <TableHead>Kontaktperson</TableHead>
-              <FilterableTableHeader label="Lånetyp">
-                <FilterDropdown
-                  options={[
-                    { label: 'Hyresgäst', value: 'TENANT' },
-                    { label: 'Underhåll', value: 'MAINTENANCE' },
-                  ]}
-                  selectedValue={loanTypeFilter}
-                  onSelectionChange={onLoanTypeFilterChange}
-                />
-              </FilterableTableHeader>
-              <FilterableTableHeader label="Nycklar" className="w-[80px]">
-                <NumberRangeFilterDropdown
-                  minValue={minKeys}
-                  maxValue={maxKeys}
-                  onRangeChange={onKeyCountChange}
-                  minLabel="Minst antal nycklar"
-                  maxLabel="Max antal nycklar"
-                />
-              </FilterableTableHeader>
-              <FilterableTableHeader label="Status">
-                <DualNullableFilterDropdown
-                  label1="Upphämtat"
-                  label2="Återlämnat"
-                  value1={{ hasValue: pickedUpDateFilter.hasValue }}
-                  value2={{ hasValue: returnedDateFilter.hasValue }}
-                  onChange1={(value) =>
-                    onPickedUpDateChange({
-                      hasValue: value.hasValue,
-                      after: null,
-                      before: null,
-                    })
-                  }
-                  onChange2={(value) =>
-                    onReturnedDateChange({
-                      hasValue: value.hasValue,
-                      after: null,
-                      before: null,
-                    })
-                  }
-                />
-              </FilterableTableHeader>
-              <FilterableTableHeader label="Skapad">
-                <DateRangeFilterDropdown
-                  afterDate={createdAtAfter}
-                  beforeDate={createdAtBefore}
-                  onDatesChange={onCreatedAtDateChange}
-                />
-              </FilterableTableHeader>
-              <FilterableTableHeader label="Upphämtat">
-                <DateRangeFilterDropdown
-                  afterDate={pickedUpDateFilter.after}
-                  beforeDate={pickedUpDateFilter.before}
-                  onDatesChange={(after, before) =>
-                    onPickedUpDateChange({
-                      hasValue: pickedUpDateFilter.hasValue,
-                      after,
-                      before,
-                    })
-                  }
-                />
-              </FilterableTableHeader>
-              <FilterableTableHeader label="Återlämnat">
-                <DateRangeFilterDropdown
-                  afterDate={returnedDateFilter.after}
-                  beforeDate={returnedDateFilter.before}
-                  onDatesChange={(after, before) =>
-                    onReturnedDateChange({
-                      hasValue: returnedDateFilter.hasValue,
-                      after,
-                      before,
-                    })
-                  }
-                />
-              </FilterableTableHeader>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading || keyLoans.length === 0 ? (
-              <TableEmptyState
-                colSpan={12}
-                isLoading={isLoading}
-                message="Inga nyckellån hittades"
+      <ExpandableRowTable<KeyLoan, LoanExpandedData>
+        items={keyLoans}
+        getItemId={(loan) => loan.id}
+        columnCount={COLUMN_COUNT}
+        isLoadingItems={isLoading}
+        emptyMessage="Inga nyckellån hittades"
+        className="rounded-md border bg-card"
+        onExpand={handleExpand}
+        renderHeader={() => (
+          <TableRow className="hover:bg-transparent border-border">
+            <TableHead className="w-[50px]" />
+            <TableHead>Namn</TableHead>
+            <TableHead>Kontaktkod</TableHead>
+            <TableHead>Personnummer</TableHead>
+            <TableHead>Kontaktperson</TableHead>
+            <FilterableTableHeader label="Lånetyp">
+              <FilterDropdown
+                options={[
+                  { label: 'Hyresgäst', value: 'TENANT' },
+                  { label: 'Underhåll', value: 'MAINTENANCE' },
+                ]}
+                selectedValue={loanTypeFilter}
+                onSelectionChange={onLoanTypeFilterChange}
               />
-            ) : (
-              keyLoans.map((loan) => {
-                const isExpanded = expansion.isExpanded(loan.id)
-                const isLoadingThis =
-                  expansion.isLoading && expansion.expandedId === loan.id
-                const keyCount = getKeyCount(loan)
-                const isPickedUp = !!loan.pickedUpAt
-                const isReturned = !!loan.returnedAt
-                const isActive = isPickedUp && !isReturned
+            </FilterableTableHeader>
+            <FilterableTableHeader label="Nycklar" className="w-[80px]">
+              <NumberRangeFilterDropdown
+                minValue={minKeys}
+                maxValue={maxKeys}
+                onRangeChange={onKeyCountChange}
+                minLabel="Minst antal nycklar"
+                maxLabel="Max antal nycklar"
+              />
+            </FilterableTableHeader>
+            <FilterableTableHeader label="Status">
+              <DualNullableFilterDropdown
+                label1="Upphämtat"
+                label2="Återlämnat"
+                value1={{ hasValue: pickedUpDateFilter.hasValue }}
+                value2={{ hasValue: returnedDateFilter.hasValue }}
+                onChange1={(value) =>
+                  onPickedUpDateChange({
+                    hasValue: value.hasValue,
+                    after: null,
+                    before: null,
+                  })
+                }
+                onChange2={(value) =>
+                  onReturnedDateChange({
+                    hasValue: value.hasValue,
+                    after: null,
+                    before: null,
+                  })
+                }
+              />
+            </FilterableTableHeader>
+            <FilterableTableHeader label="Skapad">
+              <DateRangeFilterDropdown
+                afterDate={createdAtAfter}
+                beforeDate={createdAtBefore}
+                onDatesChange={onCreatedAtDateChange}
+              />
+            </FilterableTableHeader>
+            <FilterableTableHeader label="Upphämtat">
+              <DateRangeFilterDropdown
+                afterDate={pickedUpDateFilter.after}
+                beforeDate={pickedUpDateFilter.before}
+                onDatesChange={(after, before) =>
+                  onPickedUpDateChange({
+                    hasValue: pickedUpDateFilter.hasValue,
+                    after,
+                    before,
+                  })
+                }
+              />
+            </FilterableTableHeader>
+            <FilterableTableHeader label="Återlämnat">
+              <DateRangeFilterDropdown
+                afterDate={returnedDateFilter.after}
+                beforeDate={returnedDateFilter.before}
+                onDatesChange={(after, before) =>
+                  onReturnedDateChange({
+                    hasValue: returnedDateFilter.hasValue,
+                    after,
+                    before,
+                  })
+                }
+              />
+            </FilterableTableHeader>
+            <TableHead className="w-[50px]" />
+          </TableRow>
+        )}
+        renderRow={(
+          loan,
+          { isExpanded, isLoading: isLoadingRow, onToggle, loadedData }
+        ) => {
+          const isActive = !!loan.pickedUpAt && !loan.returnedAt
 
-                return (
-                  <React.Fragment key={loan.id}>
-                    {/* Main loan row */}
-                    <TableRow className="hover:bg-muted/50">
-                      <TableCell>
-                        <ExpandButton
-                          isExpanded={isExpanded}
-                          isLoading={isLoadingThis}
-                          onClick={() => expansion.toggle(loan.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {getContactFieldDisplay(loan, 'fullName')}
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const codes = [loan.contact, loan.contact2].filter(
-                            Boolean
-                          ) as string[]
-                          if (codes.length === 0) return '-'
+          return (
+            <TableRow key={loan.id} className="hover:bg-muted/50">
+              <TableCell>
+                <ExpandButton
+                  isExpanded={isExpanded}
+                  isLoading={isLoadingRow}
+                  onClick={onToggle}
+                />
+              </TableCell>
+              <TableCell className="font-medium">
+                {getContactFieldDisplay(loan, 'fullName')}
+              </TableCell>
+              <TableCell>
+                {(() => {
+                  const codes = [loan.contact, loan.contact2].filter(
+                    Boolean
+                  ) as string[]
+                  if (codes.length === 0) return '-'
 
-                          const renderLink = (code: string) => {
-                            const displayCode =
-                              contactData[code]?.contactCode ?? code
-                            const to =
-                              loan.loanType === 'MAINTENANCE'
-                                ? `/maintenance-keys?contact=${displayCode}`
-                                : `/KeyLoan?tenant=${displayCode}`
-                            return (
-                              <TableLink key={code} to={to}>
-                                {displayCode}
-                              </TableLink>
-                            )
-                          }
+                  const renderLink = (code: string) => {
+                    const displayCode = contactData[code]?.contactCode ?? code
+                    const to =
+                      loan.loanType === 'MAINTENANCE'
+                        ? `/maintenance-keys?contact=${displayCode}`
+                        : `/KeyLoan?tenant=${displayCode}`
+                    return (
+                      <TableLink key={code} to={to}>
+                        {displayCode}
+                      </TableLink>
+                    )
+                  }
 
-                          if (codes.length === 1) return renderLink(codes[0])
+                  if (codes.length === 1) return renderLink(codes[0])
 
-                          return (
-                            <div className="flex flex-col gap-1">
-                              {codes.map(renderLink)}
-                            </div>
-                          )
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        {getContactFieldDisplay(
-                          loan,
-                          'nationalRegistrationNumber'
-                        )}
-                      </TableCell>
-                      <TableCell>{loan.contactPerson ?? '-'}</TableCell>
-                      <TableCell>
-                        <LoanTypeBadge loanType={loan.loanType} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{keyCount}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <LoanStatusBadge loan={loan} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(loan.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(loan.pickedUpAt)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(loan.returnedAt)}
-                      </TableCell>
-                      <TableCell>
-                        <ActionMenu
-                          onEdit={() => onEdit?.(loan)}
-                          onDelete={
-                            isActive ? undefined : () => onDelete?.(loan)
-                          }
-                        />
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Expanded keys section */}
-                    {isExpanded && (
-                      <ExpandedRowContent
-                        colSpan={12}
-                        isLoading={expansion.isLoading}
-                        hasData={!!expansion.loadedData}
-                        emptyMessage="Inga nycklar i detta lån"
-                        className="p-0"
-                      >
-                        <div className="space-y-4">
-                          {/* Contact info and Action buttons */}
-                          <div className="flex items-start justify-between gap-4">
-                            {/* Left: Contact Person and Description */}
-                            <div className="flex-1 space-y-1.5">
-                              {expansion.loadedData?.loanDetails
-                                .contactPerson && (
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium">
-                                    {
-                                      expansion.loadedData.loanDetails
-                                        .contactPerson
-                                    }
-                                  </span>
-                                </div>
-                              )}
-                              {expansion.loadedData?.loanDetails
-                                .description && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <FileText className="h-4 w-4" />
-                                  <span>
-                                    {
-                                      expansion.loadedData.loanDetails
-                                        .description
-                                    }
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Right: Action buttons */}
-                            <div className="flex items-center gap-2">
-                              {/* Return button - only show for active loans */}
-                              {isActive && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setReturnDialogOpen(true)}
-                                >
-                                  <Undo2 className="h-4 w-4 mr-1" />
-                                  Återlämna
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Keys table */}
-                          <KeysList
-                            keys={
-                              expansion.loadedData?.loanDetails.keysArray || []
-                            }
-                            keySystemMap={keySystemMap}
-                          />
-                        </div>
-                      </ExpandedRowContent>
-                    )}
-                  </React.Fragment>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  return (
+                    <div className="flex flex-col gap-1">
+                      {codes.map(renderLink)}
+                    </div>
+                  )
+                })()}
+              </TableCell>
+              <TableCell>
+                {getContactFieldDisplay(loan, 'nationalRegistrationNumber')}
+              </TableCell>
+              <TableCell>{loan.contactPerson ?? '-'}</TableCell>
+              <TableCell>
+                <LoanTypeBadge loanType={loan.loanType} />
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {loadedData
+                    ? (loadedData.loanDetails.keysArray?.length || 0) +
+                      (loadedData.loanDetails.keyCardsArray?.length || 0)
+                    : '-'}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <LoanStatusBadge loan={loan} />
+              </TableCell>
+              <TableCellMuted>{formatDate(loan.createdAt)}</TableCellMuted>
+              <TableCellMuted>{formatDate(loan.pickedUpAt)}</TableCellMuted>
+              <TableCellMuted>{formatDate(loan.returnedAt)}</TableCellMuted>
+              <TableCell>
+                {loadedData ? (
+                  <LoanActionMenu
+                    loan={loadedData.loanDetails}
+                    onRefresh={onRefresh}
+                    onReturn={() => setReturnLoan(loadedData.loanDetails)}
+                  />
+                ) : (
+                  <ActionMenu
+                    onEdit={() => onEdit?.(loan)}
+                    onDelete={isActive ? undefined : () => onDelete?.(loan)}
+                  />
+                )}
+              </TableCell>
+            </TableRow>
+          )
+        }}
+        renderExpandedContent={(_loan, { headerClassName, loadedData }) =>
+          loadedData ? (
+            <LoanItemsTable
+              loan={loadedData.loanDetails}
+              keySystemMap={loadedData.keySystemMap}
+              columnCount={COLUMN_COUNT}
+              headerClassName={headerClassName}
+            />
+          ) : null
+        }
+      />
     </>
   )
 }

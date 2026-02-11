@@ -3,7 +3,7 @@ import type { Lease, KeyDetails, CardDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { Badge } from '@/components/ui/badge'
 import { ToastAction } from '@/components/ui/toast'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { keyService } from '@/services/api/keyService'
 import { cardService } from '@/services/api/cardService'
 import { useToast } from '@/hooks/use-toast'
@@ -255,7 +255,7 @@ export function LeaseKeyStatusList({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-24 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <Spinner />
       </div>
     )
   }

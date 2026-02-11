@@ -6,6 +6,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableExternalLink,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
@@ -40,18 +41,9 @@ export function MaintenanceCardsTable({ cards }: Props) {
             return (
               <TableRow key={card.cardId}>
                 <TableCell className="font-medium w-[70%]">
-                  {ownerLink ? (
-                    <a
-                      href={ownerLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      {card.name || card.cardId}
-                    </a>
-                  ) : (
-                    card.name || card.cardId
-                  )}
+                  <TableExternalLink href={ownerLink}>
+                    {card.name || card.cardId}
+                  </TableExternalLink>
                 </TableCell>
                 <TableCell className="w-[30%]">
                   {card.disabled ? (

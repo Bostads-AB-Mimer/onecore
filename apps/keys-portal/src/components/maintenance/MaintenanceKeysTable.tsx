@@ -1,13 +1,14 @@
-import { useNavigate } from 'react-router-dom'
 import { Key } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import {
   Table,
   TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
   TableHeader,
   TableRow,
+  TableLink,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
@@ -16,24 +17,15 @@ type Props = {
   keySystemMap: Record<string, string>
 }
 
-export function MaintenanceKeysTable({ keys, keySystemMap }: Props) {
-  const navigate = useNavigate()
-
-  const handleEditKey = (key: Key) => {
-    // Navigate to Keys page with search query for key name and rental object code
-    const params = new URLSearchParams({
-      disposed: 'false',
-      q: key.keyName,
-    })
-
-    // Always add rentalObjectCode if available
-    if (key.rentalObjectCode) {
-      params.set('rentalObjectCode', key.rentalObjectCode)
-    }
-
-    navigate(`/Keys?${params.toString()}`)
+function getKeySearchUrl(key: Key) {
+  const params = new URLSearchParams({ disposed: 'false', q: key.keyName })
+  if (key.rentalObjectCode) {
+    params.set('rentalObjectCode', key.rentalObjectCode)
   }
+  return `/Keys?${params.toString()}`
+}
 
+export function MaintenanceKeysTable({ keys, keySystemMap }: Props) {
   if (!keys || keys.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
@@ -59,29 +51,24 @@ export function MaintenanceKeysTable({ keys, keySystemMap }: Props) {
           {keys.map((key) => (
             <TableRow key={key.id}>
               <TableCell className="font-medium w-[30%]">
-                <button
-                  onClick={() => handleEditKey(key)}
-                  className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
-                >
-                  {key.keyName}
-                </button>
+                <TableLink to={getKeySearchUrl(key)}>{key.keyName}</TableLink>
               </TableCell>
               <TableCell className="w-[12%]">
                 <Badge variant="outline">
                   {KeyTypeLabels[key.keyType] || key.keyType}
                 </Badge>
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground w-[15%]">
+              <TableCellMuted className="w-[15%]">
                 {key.keySystemId && keySystemMap[key.keySystemId]
                   ? keySystemMap[key.keySystemId]
                   : key.keySystemId || '—'}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground w-[15%]">
+              </TableCellMuted>
+              <TableCellMuted className="w-[15%]">
                 {key.rentalObjectCode || '—'}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground w-[13%]">
+              </TableCellMuted>
+              <TableCellMuted className="w-[13%]">
                 {key.flexNumber || '—'}
-              </TableCell>
+              </TableCellMuted>
               <TableCell className="w-[15%]">
                 {key.disposed ? (
                   <Badge variant="destructive">Kasserad</Badge>
