@@ -6,7 +6,7 @@
     "firstName": "Jonny",
     "lastName": "Hare",
     "fullName": "Hare Jonny",
-    "nationalRegistrationNumber": "170728350617",
+    "nationalId": "170728350617",
     "birthDate": "1902-10-28T00:00:00.000Z"
   },
   "communication": {
@@ -41,7 +41,8 @@
       "city": "VÄSTERÅS",
       "country": "SVERIGE",
       "region": "SE",
-      "full": "Almogeplatsen 27, 722 41, VÄSTERÅS, SVERIGE"
+      "full": "Almogeplatsen 27, 722 41, VÄSTERÅS, SVERIGE",
+      "careOf": "c/o Jörgen Jörgsson"
     }
   ]
 }
