@@ -17,6 +17,8 @@ interface ListPageLayoutProps {
   onSearchChange: (query: string) => void
   /** Search placeholder text */
   searchPlaceholder?: string
+  /** Extra content rendered before the search input (e.g. additional search bars) */
+  searchExtra?: React.ReactNode
   /** Add button click handler - if omitted, no add button shown */
   onAddNew?: () => void
   /** Add button label */
@@ -35,6 +37,7 @@ export function ListPageLayout({
   searchValue,
   onSearchChange,
   searchPlaceholder = 'Sök...',
+  searchExtra,
   onAddNew,
   addButtonLabel = 'Lägg till',
   pagination,
@@ -44,7 +47,8 @@ export function ListPageLayout({
     <div className="container mx-auto py-8 px-4">
       <PageHeader title={title} subtitle={subtitle} badges={badges} />
 
-      <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6">
+        {searchExtra}
         <SearchInput
           value={searchValue}
           onChange={onSearchChange}
