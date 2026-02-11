@@ -40,7 +40,7 @@ function statusBadge(status: 'active' | 'upcoming' | 'ended') {
   if (status === 'upcoming')
     return { label: 'Kommande', variant: 'secondary' as const }
   if (status === 'ended')
-    return { label: 'Avslutat', variant: 'outline' as const }
+    return { label: 'Avslutat', variant: 'destructive' as const }
   return { label: 'Aktivt', variant: 'default' as const }
 }
 
@@ -121,19 +121,16 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
           <div className="flex items-center gap-2">
             {getLeaseTypeIcon(lease.type)}
             <span className="tabular-nums">{lease.leaseId}</span>
-            <Badge
-              variant="outline"
-              className="text-[10px] leading-none py-0.5"
-            >
+            <Badge variant="outline" className="text-[11px] py-0.5">
               {(lease.type || 'Okänd').trim()}
+            </Badge>
+            <Badge variant={variant} className="text-[11px] py-0.5">
+              {label}
             </Badge>
           </div>
 
           <div className="flex items-center gap-2">
             <RentalObjectNotes rentalObjectCode={lease.rentalPropertyId} />
-            <Badge variant={variant} className="text-[11px] py-0.5">
-              {label}
-            </Badge>
           </div>
         </CardTitle>
       </CardHeader>

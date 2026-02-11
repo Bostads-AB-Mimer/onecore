@@ -157,9 +157,9 @@ function assembleReturnReceipt(
  * Used for: maintenance loan receipt generation
  */
 async function assembleMaintenanceLoanReceipt(
-  loanId: string
+  loanId: string,
+  comment?: string
 ): Promise<MaintenanceReceiptData> {
-  // Fetch loan with keys (including keySystem) in one call
   // Fetch loan with keys (including keySystem) and cards in one call
   const loan = (await keyLoanService.get(loanId, {
     includeKeySystem: true,
@@ -175,11 +175,15 @@ async function assembleMaintenanceLoanReceipt(
     : null
   const contactName = contactInfo?.fullName || loan.contact || 'Unknown'
 
+  // Merge loan description with optional comment for the PDF comment box
+  const description =
+    [loan.description, comment].filter(Boolean).join('\n\n') || undefined
+
   return {
     contact: loan.contact || 'Unknown',
     contactName,
     contactPerson: loan.contactPerson ?? null,
-    description: loan.description,
+    description,
     keys,
     receiptType: 'LOAN',
     operationDate: new Date(),
@@ -365,11 +369,13 @@ export async function openPdfInNewTab(
  * Opens a maintenance loan receipt PDF in a new browser tab with automatic print dialog
  *
  * @param loanId - The loan ID to generate the receipt for
+ * @param comment - Optional comment to include in the receipt PDF
  */
 export async function openMaintenanceReceiptInNewTab(
-  loanId: string
+  loanId: string,
+  comment?: string
 ): Promise<void> {
-  const receiptData = await assembleMaintenanceLoanReceipt(loanId)
+  const receiptData = await assembleMaintenanceLoanReceipt(loanId, comment)
   const { blob, fileName } =
     await generateMaintenanceLoanReceiptBlob(receiptData)
 
