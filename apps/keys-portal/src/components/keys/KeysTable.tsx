@@ -177,8 +177,8 @@ export function KeysTable({
             <FilterableTableHeader label="Status">
               <FilterDropdown
                 options={[
-                  { label: 'Ja', value: 'true' },
-                  { label: 'Nej', value: 'false' },
+                  { label: 'Kasserad', value: 'true' },
+                  { label: 'Aktiv', value: 'false' },
                 ]}
                 selectedValue={selectedDisposed}
                 onSelectionChange={onDisposedFilterChange}
