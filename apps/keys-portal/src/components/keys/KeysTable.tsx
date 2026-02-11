@@ -180,7 +180,7 @@ export function KeysTable({
                 onSelectionChange={onTypeFilterChange}
               />
             </FilterableTableHeader>
-            <FilterableTableHeader label="Kasserad">
+            <FilterableTableHeader label="Status">
               <FilterDropdown
                 options={[
                   { label: 'Ja', value: 'true' },
