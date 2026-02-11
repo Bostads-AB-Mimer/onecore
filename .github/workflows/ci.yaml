@@ -135,8 +135,11 @@ jobs:
         run: |
           pnpm run \
             --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
             --filter !@onecore/utilities \
-            --filter !@onecore/types build
+            --filter !@onecore/types build && \
+          pnpm install && \
+          pnpm run --filter ${{ matrix.package }} build
 
 
   test:
