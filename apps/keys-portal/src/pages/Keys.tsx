@@ -8,7 +8,7 @@ import { BulkEditKeysForm } from '@/components/keys/BulkEditKeysForm'
 import { BulkDeleteKeysDialog } from '@/components/keys/dialogs/BulkDeleteKeysDialog'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
-import { Key, KeySystem, KeyWithSystem } from '@/services/types'
+import { Key, KeyDetails, KeySystem } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
@@ -18,13 +18,13 @@ import { Pencil, Trash2 } from 'lucide-react'
 
 const Index = () => {
   const pagination = useUrlPagination()
-  const [keys, setKeys] = useState<KeyWithSystem[]>([])
+  const [keys, setKeys] = useState<KeyDetails[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingKey, setEditingKey] = useState<Key | null>(null)
-  const [deletingKey, setDeletingKey] = useState<KeyWithSystem | null>(null)
+  const [deletingKey, setDeletingKey] = useState<KeyDetails | null>(null)
   const { toast } = useToast()
 
   // Read all filters from URL
