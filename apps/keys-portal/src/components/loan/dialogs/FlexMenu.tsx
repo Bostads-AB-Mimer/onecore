@@ -8,7 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Plus, Minus, Loader2 } from 'lucide-react'
+import { Plus, Minus } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import type { Key, KeyType } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
@@ -280,7 +281,7 @@ export function FlexMenu({
           >
             {isCreating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner size="sm" />
                 Skapar...
               </>
             ) : (

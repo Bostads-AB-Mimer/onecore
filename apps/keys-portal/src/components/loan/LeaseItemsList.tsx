@@ -4,10 +4,11 @@ import {
   TableHead,
   TableRow,
   TableLink,
+  TableExternalLink,
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
+import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
 import { LoanActionMenu } from './LoanActionMenu'
 import {
@@ -247,39 +248,26 @@ function CardRow({
 
   return (
     <React.Fragment>
-      <TableRow
-        className={`bg-background h-12 ${hasCodes ? 'cursor-pointer hover:bg-muted/50' : ''}`}
-        onClick={() => hasCodes && setExpanded(!expanded)}
-      >
+      <TableRow className="bg-background h-12">
         {selectable && (
-          <TableCell
-            className={`w-[50px] ${indent ? 'pl-8' : ''}`}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <TableCell className={`w-[50px] ${indent ? 'pl-8' : ''}`}>
             <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} />
           </TableCell>
         )}
         <TableCell className={`w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}>
           <div className="flex items-center gap-2">
-            {hasCodes &&
-              (expanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              ))}
-            {ownerLink ? (
-              <a
-                href={ownerLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {card.name || card.cardId}
-              </a>
-            ) : (
-              <span>{card.name || card.cardId}</span>
+            {hasCodes && (
+              <ExpandButton
+                isExpanded={expanded}
+                onClick={() => setExpanded(!expanded)}
+              />
             )}
+            <TableExternalLink
+              href={ownerLink}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {card.name || card.cardId}
+            </TableExternalLink>
           </div>
         </TableCell>
         <TableCell className="w-[6%]">-</TableCell>

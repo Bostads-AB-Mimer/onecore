@@ -2,6 +2,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellMuted,
   TableHead,
   TableHeader,
   TableRow,
@@ -48,17 +49,13 @@ export function KeysList({ keys, keySystemMap = {} }: KeysListProps) {
             <TableCell>
               <KeyTypeBadge keyType={key.keyType} />
             </TableCell>
-            <TableCell className="text-muted-foreground">
+            <TableCellMuted>
               {key.keySystemId && keySystemMap[key.keySystemId]
                 ? keySystemMap[key.keySystemId]
                 : '-'}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {key.rentalObjectCode || '-'}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {key.flexNumber || '-'}
-            </TableCell>
+            </TableCellMuted>
+            <TableCellMuted>{key.rentalObjectCode || '-'}</TableCellMuted>
+            <TableCellMuted>{key.flexNumber || '-'}</TableCellMuted>
             <TableCell>
               <DisposedBadge disposed={key.disposed ?? false} showActive />
             </TableCell>

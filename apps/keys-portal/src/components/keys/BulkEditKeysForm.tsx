@@ -17,7 +17,8 @@ import {
   rentalObjectSearchService,
   type RentalObjectSearchResult,
 } from '@/services/api/rentalObjectSearchService'
-import { X, Loader2 } from 'lucide-react'
+import { X } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 interface BulkEditFormState {
   keyName: string
@@ -326,7 +327,7 @@ export function BulkEditKeysForm({
             size="sm"
             disabled={!hasChanges || isLoading}
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && <Spinner size="sm" className="mr-2" />}
             Uppdatera {selectedCount} nycklar
           </Button>
         </div>

@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { TableRow, TableCell } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -24,9 +24,7 @@ export function ExpandedRowContent({
     <TableRow>
       <TableCell colSpan={colSpan} className={cn('p-6 bg-muted/30', className)}>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
+          <Spinner centered />
         ) : !hasData ? (
           <div className="text-center text-muted-foreground py-8">
             {emptyMessage}
