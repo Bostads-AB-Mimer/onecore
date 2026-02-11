@@ -94,36 +94,36 @@ export function LoanItemsTable({
       {keys.map((key) => {
         const latestEvent = getLatestActiveEvent(key)
         return (
-        <TableRow key={key.id}>
-          <TableCell className="w-[50px]" />
-          <TableCell>
-            <TableLink
-              to={getKeyUrl(key.id, key.rentalObjectCode, key.disposed)}
-            >
-              {key.keyName}
-            </TableLink>
-          </TableCell>
-          <TableCellMuted>{key.keySequenceNumber ?? '-'}</TableCellMuted>
-          <TableCellMuted>{key.flexNumber ?? '-'}</TableCellMuted>
-          <TableCellMuted>
-            {key.keySystemId ? keySystemMap[key.keySystemId] || '-' : '-'}
-          </TableCellMuted>
-          <TableCellMuted>{key.rentalObjectCode || '-'}</TableCellMuted>
-          <TableCell>
-            <ItemTypeBadge itemType={key.keyType} />
-          </TableCell>
-          <TableCell>
-            {latestEvent ? (
-              <KeyEventBadge event={latestEvent} />
-            ) : (
-              <span className="text-muted-foreground">-</span>
-            )}
-          </TableCell>
-          <TableCell>
-            <ItemDisposedBadge isDisposed={key.disposed ?? false} />
-          </TableCell>
-          <TableCell className="w-[50px]" />
-        </TableRow>
+          <TableRow key={key.id}>
+            <TableCell className="w-[50px]" />
+            <TableCell>
+              <TableLink
+                to={getKeyUrl(key.id, key.rentalObjectCode, key.disposed)}
+              >
+                {key.keyName}
+              </TableLink>
+            </TableCell>
+            <TableCellMuted>{key.keySequenceNumber ?? '-'}</TableCellMuted>
+            <TableCellMuted>{key.flexNumber ?? '-'}</TableCellMuted>
+            <TableCellMuted>
+              {key.keySystemId ? keySystemMap[key.keySystemId] || '-' : '-'}
+            </TableCellMuted>
+            <TableCellMuted>{key.rentalObjectCode || '-'}</TableCellMuted>
+            <TableCell>
+              <ItemTypeBadge itemType={key.keyType} />
+            </TableCell>
+            <TableCell>
+              {latestEvent ? (
+                <KeyEventBadge event={latestEvent} />
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </TableCell>
+            <TableCell>
+              <ItemDisposedBadge isDisposed={key.disposed ?? false} />
+            </TableCell>
+            <TableCell className="w-[50px]" />
+          </TableRow>
         )
       })}
 
