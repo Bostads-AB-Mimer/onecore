@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ListPageLayout } from '@/components/shared/layout'
 import { Badge } from '@/components/ui/badge'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
@@ -17,6 +17,7 @@ export default function KeyLoans() {
   const [showEditForm, setShowEditForm] = useState(false)
   const [editingKeyLoan, setEditingKeyLoan] = useState<KeyLoan | null>(null)
   const { toast } = useToast()
+  const requestIdRef = useRef(0)
 
   // Read search query from URL
   const searchQuery = pagination.searchParams.get('q') || ''
@@ -49,6 +50,7 @@ export default function KeyLoans() {
   // Load key loans from API
   const loadKeyLoans = useCallback(
     async (page: number = 1, limit: number = 60) => {
+      const currentRequestId = ++requestIdRef.current
       try {
         setIsLoading(true)
 
@@ -126,9 +128,14 @@ export default function KeyLoans() {
 
         // Always use search endpoint with pagination (even with empty params)
         const response = await keyLoanService.search(params, page, limit)
+
+        // Ignore stale responses from earlier requests
+        if (currentRequestId !== requestIdRef.current) return
+
         setKeyLoans(response.content)
         pagination.setPaginationMeta(response._meta)
       } catch (error) {
+        if (currentRequestId !== requestIdRef.current) return
         console.error('Failed to load key loans:', error)
         toast({
           title: 'Fel',
@@ -136,7 +143,9 @@ export default function KeyLoans() {
           variant: 'destructive',
         })
       } finally {
-        setIsLoading(false)
+        if (currentRequestId === requestIdRef.current) {
+          setIsLoading(false)
+        }
       }
     },
     [
