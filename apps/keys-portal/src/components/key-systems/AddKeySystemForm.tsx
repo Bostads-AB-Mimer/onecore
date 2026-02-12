@@ -493,7 +493,7 @@ export function AddKeySystemForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Beskrivning</Label>
+            <Label htmlFor="description">Notering</Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -503,7 +503,7 @@ export function AddKeySystemForm({
                   description: e.target.value,
                 }))
               }
-              placeholder="Beskrivning av låssystemet..."
+              placeholder="Notering om låssystemet..."
               rows={3}
             />
           </div>
