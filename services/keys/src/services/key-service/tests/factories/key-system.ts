@@ -13,7 +13,7 @@ export const KeySystemFactory = Factory.define<KeySystem>(({ sequence }) => ({
   propertyIds: undefined,
   installationDate: undefined,
   isActive: true,
-  description: undefined,
+  notes: undefined,
   createdAt: new Date(),
   updatedAt: new Date(),
   createdBy: undefined,
