@@ -327,6 +327,13 @@ describe('PATCH /keys/:id', () => {
  */
 describe('DELETE /keys/:id', () => {
   it('deletes key successfully and returns 200', async () => {
+    // Mock getKeyById to return a deletable key (not HN or FS)
+    jest
+      .spyOn(keysAdapter, 'getKeyById')
+      .mockResolvedValueOnce(
+        factory.key.build({ id: 'test-key-123', keyType: 'LGH' })
+      )
+
     // Mock the adapter to return 1 (one row deleted)
     const deleteKeySpy = jest
       .spyOn(keysAdapter, 'deleteKey')

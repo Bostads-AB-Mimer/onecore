@@ -341,7 +341,7 @@ export function EditKeyLoanForm({
 
               <div className="space-y-1">
                 <Label htmlFor="description" className="text-xs">
-                  Beskrivning (valfritt)
+                  Notering (valfritt)
                 </Label>
                 <Textarea
                   id="description"
