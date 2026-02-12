@@ -9,6 +9,7 @@ import {
   sendWorkOrderSms,
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
+  sendInspectionProtocolEmail,
 } from './adapters/infobip-adapter'
 import {
   Email,
@@ -18,6 +19,7 @@ import {
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,
+  InspectionProtocolEmail,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -25,6 +27,27 @@ import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const message = ctx.request.body
+    if (!isMessageEmail(message)) {
+      ctx.status = 400
+      ctx.body = { reason: 'Message is not an email object', ...metadata }
+      return
+    }
+    try {
+      const result = await sendEmail(message)
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        error: error.message,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/sendMessageWithAttachment', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const message = ctx.request.body
     if (!isMessageEmail(message)) {
@@ -216,6 +239,46 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  const InspectionProtocolEmailSchema = z.object({
+    to: z.string().email(),
+    subject: z.string(),
+    text: z.string(),
+    firstName: z.string(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string(),
+          content: z.string(),
+          contentType: z.string(),
+        })
+      )
+      .optional(),
+  })
+  router.post(
+    '(.*)/sendInspectionProtocolEmail',
+    parseRequestBody(InspectionProtocolEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as InspectionProtocolEmail
+
+      try {
+        const result = await sendInspectionProtocolEmail(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendInspectionProtocolEmail'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
 }
 
 export const isParkingSpaceOfferEmail = (

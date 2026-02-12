@@ -2,13 +2,16 @@ import KoaRouter from '@koa/router'
 
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
-import { mapLease } from '../lease-service/schemas/lease'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
+import {
+  identifyTenantContracts,
+  sendProtocolToTenants,
+} from './helpers/email-sender'
+import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
 
 /**
  * @swagger
@@ -31,6 +34,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRemark', schemas.DetailedInspectionSchema)
+  registerSchema('TenantContactsResponse', schemas.TenantContactsResponseSchema)
+  registerSchema('SendProtocolRequest', schemas.SendProtocolRequestSchema)
+  registerSchema('SendProtocolResponse', schemas.SendProtocolResponseSchema)
 
   /**
    * @swagger
@@ -328,45 +334,12 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      const result =
-        await inspectionAdapter.getXpandInspectionById(inspectionId)
+      const result = await fetchEnrichedInspection(inspectionId)
 
       if (result.ok) {
-        const rawInspection = result.data
-
-        let lease = null
-        if (rawInspection.leaseId) {
-          const rawLease = await leasingAdapter.getLease(
-            rawInspection.leaseId,
-            'true'
-          )
-          lease = mapLease(rawLease)
-        }
-
-        let residence = null
-        if (rawInspection.residenceId) {
-          const res = await propertyBaseAdapter.getResidenceByRentalId(
-            rawInspection.residenceId
-          )
-          if (res.ok) {
-            residence = res.data
-          }
-        }
-
-        // Validate only the inspection data from Xpand
-        const validatedInspection =
-          schemas.DetailedXpandInspectionSchema.parse(rawInspection)
-
-        // Attach lease and residence without validation
-        const inspection = {
-          ...validatedInspection,
-          lease,
-          residence,
-        }
-
         ctx.status = 200
         ctx.body = {
-          content: inspection,
+          content: result.data,
           ...metadata,
         }
       } else {
@@ -449,41 +422,10 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      const result =
-        await inspectionAdapter.getXpandInspectionById(inspectionId)
+      const result = await fetchEnrichedInspection(inspectionId)
 
       if (result.ok) {
-        const rawInspection = result.data
-
-        let lease = null
-        if (rawInspection.leaseId) {
-          const rawLease = await leasingAdapter.getLease(
-            rawInspection.leaseId,
-            'true'
-          )
-          lease = mapLease(rawLease)
-        }
-
-        let residence = null
-        if (rawInspection.residenceId) {
-          const res = await propertyBaseAdapter.getResidenceByRentalId(
-            rawInspection.residenceId
-          )
-          if (res.ok) {
-            residence = res.data
-          }
-        }
-
-        // Validate only the inspection data from Xpand
-        const validatedInspection =
-          schemas.DetailedXpandInspectionSchema.parse(rawInspection)
-
-        // Attach lease and residence without validation
-        const inspection = {
-          ...validatedInspection,
-          lease,
-          residence,
-        }
+        const inspection = result.data
 
         let protocol
         try {
@@ -530,6 +472,380 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
       return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/{inspectionId}/tenant-contacts:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Get tenant contacts for inspection protocol modal
+   *     description: Retrieves contact information for new and previous tenants to display in confirmation modal before sending protocol
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The inspection ID
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved tenant contacts
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/TenantContactsResponse'
+   *       '404':
+   *         description: Inspection or residence not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Inspection not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/:inspectionId/tenant-contacts', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      // Fetch inspection by ID
+      const inspectionResult =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
+
+      if (!inspectionResult.ok) {
+        logger.error(
+          {
+            err: inspectionResult.err,
+            inspectionId,
+          },
+          'Error getting inspection by id for tenant contacts'
+        )
+        ctx.status = inspectionResult.statusCode || 500
+        ctx.body = { error: inspectionResult.err, ...metadata }
+        return
+      }
+
+      const inspection = inspectionResult.data
+
+      // Fetch leases for the property
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        inspection.residenceId,
+        {
+          includeContacts: true,
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: true,
+        }
+      )
+
+      // Identify tenant contracts using inspection's leaseId
+      const { newTenant, tenant } = identifyTenantContracts(
+        leases,
+        inspection.leaseId
+      )
+
+      // Build response
+      const response: schemas.TenantContactsResponse = {
+        inspection: {
+          id: inspection.id,
+          address: inspection.address,
+          apartmentCode: inspection.apartmentCode,
+        },
+      }
+
+      if (newTenant && newTenant.tenants) {
+        response.new_tenant = {
+          contacts: newTenant.tenants
+            .filter((t) => t.emailAddress)
+            .map((t) => ({
+              fullName: t.fullName,
+              emailAddress: t.emailAddress!,
+              contactCode: t.contactCode,
+            })),
+          contractId: newTenant.leaseId,
+        }
+      }
+
+      if (tenant && tenant.tenants) {
+        response.tenant = {
+          contacts: tenant.tenants
+            .filter((t) => t.emailAddress)
+            .map((t) => ({
+              fullName: t.fullName,
+              emailAddress: t.emailAddress!,
+              contactCode: t.contactCode,
+            })),
+          contractId: tenant.leaseId,
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = { content: response, ...metadata }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error retrieving tenant contacts for inspection'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/{inspectionId}/send-protocol:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Send inspection protocol to tenant
+   *     description: Sends the inspection protocol PDF via email to the specified tenant (new or previous)
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The inspection ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SendProtocolRequest'
+   *     responses:
+   *       '200':
+   *         description: Protocol sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SendProtocolResponse'
+   *       '400':
+   *         description: Invalid request or no contract found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid request body
+   *       '404':
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Inspection not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections/:inspectionId/send-protocol', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      // Validate request body
+      const validationResult = schemas.SendProtocolRequestSchema.safeParse(
+        ctx.request.body
+      )
+
+      if (!validationResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          details: validationResult.error.errors,
+          ...metadata,
+        }
+        return
+      }
+
+      const { recipient } = validationResult.data
+
+      // Fetch enriched inspection
+      const inspectionResult = await fetchEnrichedInspection(inspectionId)
+
+      if (!inspectionResult.ok) {
+        logger.error(
+          {
+            err: inspectionResult.err,
+            inspectionId,
+          },
+          'Error getting inspection by id for sending protocol'
+        )
+        ctx.status = inspectionResult.statusCode || 404
+        ctx.body = { error: inspectionResult.err, ...metadata }
+        return
+      }
+
+      const inspection = inspectionResult.data
+
+      // Fetch all leases for the property
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        inspection.residenceId,
+        {
+          includeContacts: true,
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: true,
+        }
+      )
+
+      // Identify tenant contracts using inspection's leaseId
+      const { newTenant, tenant } = identifyTenantContracts(
+        leases,
+        inspection.leaseId
+      )
+
+      // Select the requested contract
+      const selectedContract = recipient === 'new-tenant' ? newTenant : tenant
+
+      if (!selectedContract) {
+        ctx.status = 400
+        ctx.body = {
+          content: {
+            success: false,
+            recipient,
+            sentTo: {
+              emails: [],
+              contactNames: [],
+              contractId: '',
+            },
+            error: `No contract found for ${recipient}`,
+          },
+          ...metadata,
+        }
+        return
+      }
+
+      // Verify contract has contacts with email addresses
+      if (
+        !selectedContract.tenants ||
+        selectedContract.tenants.length === 0 ||
+        !selectedContract.tenants.some((t) => t.emailAddress)
+      ) {
+        ctx.status = 400
+        ctx.body = {
+          content: {
+            success: false,
+            recipient,
+            sentTo: {
+              emails: [],
+              contactNames: [],
+              contractId: selectedContract.leaseId,
+            },
+            error: 'No email addresses found for tenant',
+          },
+          ...metadata,
+        }
+        return
+      }
+
+      // Generate PDF protocol
+      let pdfBuffer: Buffer
+      try {
+        pdfBuffer = await generateInspectionProtocolPdf(inspection, {
+          includeCosts: recipient !== 'new-tenant',
+        })
+      } catch (pdfError) {
+        logger.error(
+          {
+            pdfError,
+            errorMessage:
+              pdfError instanceof Error ? pdfError.message : String(pdfError),
+            errorStack: pdfError instanceof Error ? pdfError.stack : undefined,
+            inspectionId,
+          },
+          'Error generating PDF protocol for sending'
+        )
+        ctx.status = 500
+        ctx.body = {
+          content: {
+            success: false,
+            recipient,
+            sentTo: {
+              emails: [],
+              contactNames: [],
+              contractId: selectedContract.leaseId,
+            },
+            error: 'Failed to generate PDF protocol',
+          },
+          ...metadata,
+        }
+        return
+      }
+
+      // Send protocol to tenants
+      const result = await sendProtocolToTenants(
+        inspection,
+        pdfBuffer,
+        selectedContract,
+        recipient
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          success: result.success,
+          recipient,
+          sentTo: {
+            emails: result.emails,
+            contactNames: result.contactNames,
+            contractId: result.contractId,
+          },
+          error: result.error,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, inspectionId }, 'Error sending inspection protocol')
+      ctx.status = 500
+      ctx.body = {
+        content: {
+          success: false,
+          recipient: 'unknown',
+          sentTo: {
+            emails: [],
+            contactNames: [],
+            contractId: '',
+          },
+          error: 'Internal server error',
+        },
+        ...metadata,
+      }
     }
   })
 }

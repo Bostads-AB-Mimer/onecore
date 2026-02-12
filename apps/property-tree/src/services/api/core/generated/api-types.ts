@@ -5239,6 +5239,104 @@ export interface paths {
       };
     };
   };
+  "/inspections/{inspectionId}/tenant-contacts": {
+    /**
+     * Get tenant contacts for inspection protocol modal
+     * @description Retrieves contact information for new and previous tenants to display in confirmation modal before sending protocol
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The inspection ID */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved tenant contacts */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["TenantContactsResponse"];
+            };
+          };
+        };
+        /** @description Inspection or residence not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Inspection not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/{inspectionId}/send-protocol": {
+    /**
+     * Send inspection protocol to tenant
+     * @description Sends the inspection protocol PDF via email to the specified tenant (new or previous)
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The inspection ID */
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SendProtocolRequest"];
+        };
+      };
+      responses: {
+        /** @description Protocol sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["SendProtocolResponse"];
+            };
+          };
+        };
+        /** @description Invalid request or no contract found */
+        400: {
+          content: {
+            "application/json": {
+              /** @example Invalid request body */
+              error?: string;
+            };
+          };
+        };
+        /** @description Inspection not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @example Inspection not found */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              /** @example Internal server error */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/files": {
     /** List files with optional prefix */
     get: {
@@ -7673,6 +7771,44 @@ export interface components {
         }) | null;
         areaSize: number | null;
       }) | null;
+    };
+    TenantContactsResponse: {
+      inspection: {
+        id: string;
+        address: string;
+        apartmentCode: string;
+      };
+      new_tenant?: {
+        contacts: {
+            fullName: string;
+            emailAddress: string;
+            contactCode: string;
+          }[];
+        contractId: string;
+      };
+      tenant?: {
+        contacts: {
+            fullName: string;
+            emailAddress: string;
+            contactCode: string;
+          }[];
+        contractId: string;
+      };
+    };
+    SendProtocolRequest: {
+      /** @enum {string} */
+      recipient: "tenant" | "new-tenant";
+    };
+    SendProtocolResponse: {
+      success: boolean;
+      /** @enum {string} */
+      recipient: "tenant" | "new-tenant";
+      sentTo: {
+        emails: string[];
+        contactNames: string[];
+        contractId: string;
+      };
+      error?: string;
     };
     FileListItem: {
       /** @description Full file path/name */

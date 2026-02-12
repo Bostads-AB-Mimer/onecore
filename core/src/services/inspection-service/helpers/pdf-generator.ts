@@ -114,9 +114,30 @@ function safeString(value: string | number | undefined | null): string {
 }
 
 /**
+ * Returns column widths for the remarks table, redistributing the cost column width when costs are hidden
+ */
+function getColWidths(includeCosts: boolean) {
+  return {
+    room: REMARKS_COLUMNS.ROOM,
+    component: REMARKS_COLUMNS.COMPONENT,
+    description: includeCosts
+      ? REMARKS_COLUMNS.DESCRIPTION
+      : REMARKS_COLUMNS.DESCRIPTION + REMARKS_COLUMNS.COST,
+    action: REMARKS_COLUMNS.ACTION,
+    cost: REMARKS_COLUMNS.COST,
+  }
+}
+
+/**
  * Calculates X position for column in remarks table
  */
-function getRemarksColumnX(columnIndex: number): number {
+function getRemarksColumnX(
+  columnIndex: number,
+  includeCosts: boolean = true
+): number {
+  const descriptionWidth = includeCosts
+    ? REMARKS_COLUMNS.DESCRIPTION
+    : REMARKS_COLUMNS.DESCRIPTION + REMARKS_COLUMNS.COST
   const cols = [
     LAYOUT.MARGIN,
     LAYOUT.MARGIN + REMARKS_COLUMNS.ROOM,
@@ -124,11 +145,11 @@ function getRemarksColumnX(columnIndex: number): number {
     LAYOUT.MARGIN +
       REMARKS_COLUMNS.ROOM +
       REMARKS_COLUMNS.COMPONENT +
-      REMARKS_COLUMNS.DESCRIPTION,
+      descriptionWidth,
     LAYOUT.MARGIN +
       REMARKS_COLUMNS.ROOM +
       REMARKS_COLUMNS.COMPONENT +
-      REMARKS_COLUMNS.DESCRIPTION +
+      descriptionWidth +
       REMARKS_COLUMNS.ACTION,
   ]
   return cols[columnIndex] ?? LAYOUT.MARGIN
@@ -235,15 +256,10 @@ function renderFooter(
 function drawRemarksTableHeader(
   doc: InstanceType<typeof PDFDocument>,
   currentY: number,
-  pageWidth: number
+  pageWidth: number,
+  includeCosts: boolean = true
 ): number {
-  const colWidths = {
-    room: REMARKS_COLUMNS.ROOM,
-    component: REMARKS_COLUMNS.COMPONENT,
-    description: REMARKS_COLUMNS.DESCRIPTION,
-    action: REMARKS_COLUMNS.ACTION,
-    cost: REMARKS_COLUMNS.COST,
-  }
+  const colWidths = getColWidths(includeCosts)
 
   // Header background
   doc
@@ -258,7 +274,7 @@ function drawRemarksTableHeader(
     .font('Helvetica-Bold')
     .text(
       'Rum',
-      getRemarksColumnX(0) + SPACING.CELL_PADDING_SMALL,
+      getRemarksColumnX(0, includeCosts) + SPACING.CELL_PADDING_SMALL,
       currentY + 6,
       {
         width: colWidths.room,
@@ -266,7 +282,7 @@ function drawRemarksTableHeader(
     )
     .text(
       'Byggnadsdel',
-      getRemarksColumnX(1) + SPACING.CELL_PADDING_SMALL,
+      getRemarksColumnX(1, includeCosts) + SPACING.CELL_PADDING_SMALL,
       currentY + 6,
       {
         width: colWidths.component,
@@ -274,7 +290,7 @@ function drawRemarksTableHeader(
     )
     .text(
       'Beskrivning',
-      getRemarksColumnX(2) + SPACING.CELL_PADDING_SMALL,
+      getRemarksColumnX(2, includeCosts) + SPACING.CELL_PADDING_SMALL,
       currentY + 6,
       {
         width: colWidths.description,
@@ -282,21 +298,24 @@ function drawRemarksTableHeader(
     )
     .text(
       'Åtgärd',
-      getRemarksColumnX(3) + SPACING.CELL_PADDING_SMALL,
+      getRemarksColumnX(3, includeCosts) + SPACING.CELL_PADDING_SMALL,
       currentY + 6,
       {
         width: colWidths.action,
       }
     )
-    .text(
+
+  if (includeCosts) {
+    doc.text(
       'Kostnad (Kr)',
-      getRemarksColumnX(4) + SPACING.CELL_PADDING_SMALL,
+      getRemarksColumnX(4, includeCosts) + SPACING.CELL_PADDING_SMALL,
       currentY + 6,
       {
         width: colWidths.cost,
         align: 'right',
       }
     )
+  }
 
   return currentY + TABLE.HEADER_HEIGHT
 }
@@ -309,11 +328,14 @@ function drawRemarksTableHeader(
  * Generates a PDF buffer for an inspection protocol
  *
  * @param inspection - The detailed inspection data
+ * @param options - Generation options
+ * @param options.includeCosts - Whether to include cost column and summary row (default: true)
  * @returns Promise that resolves to a PDF buffer
  * @throws Error if inspection data is invalid or PDF generation fails
  */
 export async function generateInspectionProtocolPdf(
-  inspection: DetailedInspection
+  inspection: DetailedInspection,
+  options: { includeCosts?: boolean } = {}
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
@@ -348,6 +370,7 @@ export async function generateInspectionProtocolPdf(
 
       const pageWidth = doc.page.width - LAYOUT.MARGIN * 2
       const data = extractInspectionData(inspection)
+      const includeCosts = options.includeCosts !== false
 
       // Header with logo and company information
       renderHeader(doc)
@@ -533,7 +556,9 @@ export async function generateInspectionProtocolPdf(
         .fontSize(FONT_SIZES.SMALL)
         .font('Helvetica')
         .text(
-          'Här beskriver vi vilka besiktningsanmärkningar som finns registrerade i vilket rum. Du ser även om du behöver åtgärda något samt vad det kommer kosta.',
+          includeCosts
+            ? 'Här beskriver vi vilka besiktningsanmärkningar som finns registrerade i vilket rum. Du ser även om du behöver åtgärda något samt vad det kommer kosta.'
+            : 'Här beskriver vi vilka besiktningsanmärkningar som finns registrerade i vilket rum. Du ser även om du behöver åtgärda något.',
           LAYOUT.MARGIN,
           doc.y,
           { width: pageWidth }
@@ -542,7 +567,13 @@ export async function generateInspectionProtocolPdf(
 
       // Remarks table
       const remarksTableTop = doc.y
-      drawRemarksTable(doc, inspection, remarksTableTop, pageWidth)
+      drawRemarksTable(
+        doc,
+        inspection,
+        remarksTableTop,
+        pageWidth,
+        includeCosts
+      )
 
       // Footer with generation timestamp
       renderFooter(doc, pageWidth)
@@ -682,7 +713,6 @@ function calculateRowHeight(
     component: number
     description: number
     action: number
-    cost: number
   },
   room: string,
   component: string,
@@ -725,20 +755,14 @@ function drawRemarksTable(
   doc: InstanceType<typeof PDFDocument>,
   inspection: DetailedInspection,
   startY: number,
-  pageWidth: number
+  pageWidth: number,
+  includeCosts: boolean = true
 ) {
-  // Cache column widths to avoid recreating object
-  const colWidths = {
-    room: REMARKS_COLUMNS.ROOM,
-    component: REMARKS_COLUMNS.COMPONENT,
-    description: REMARKS_COLUMNS.DESCRIPTION,
-    action: REMARKS_COLUMNS.ACTION,
-    cost: REMARKS_COLUMNS.COST,
-  }
+  const colWidths = getColWidths(includeCosts)
   let currentY = startY
 
   // Draw header row
-  currentY = drawRemarksTableHeader(doc, currentY, pageWidth)
+  currentY = drawRemarksTableHeader(doc, currentY, pageWidth, includeCosts)
   let totalCost = 0
 
   // Data rows - validate rooms data
@@ -761,7 +785,12 @@ function drawRemarksTable(
 
       if (!fitsOnPage(doc, currentY, rowHeight)) {
         doc.addPage()
-        currentY = drawRemarksTableHeader(doc, LAYOUT.MARGIN, pageWidth)
+        currentY = drawRemarksTableHeader(
+          doc,
+          LAYOUT.MARGIN,
+          pageWidth,
+          includeCosts
+        )
       }
 
       // Alternating background
@@ -782,7 +811,8 @@ function drawRemarksTable(
         'Utan anmärkning',
         '',
         'OK',
-        0
+        0,
+        includeCosts
       )
       currentY += rowHeight
     } else {
@@ -823,42 +853,48 @@ function drawRemarksTable(
           safeString(remark.buildingComponent),
           safeString(remark.notes),
           safeString(remark.remarkStatus) || 'OK',
-          cost
+          cost,
+          includeCosts
         )
         currentY += rowHeight
       })
     }
   })
 
-  // Summary row
-  if (
-    !fitsOnPage(
-      doc,
-      currentY,
-      TABLE.SUMMARY_HEIGHT,
-      LAYOUT.PAGE_BOTTOM_THRESHOLD_SUMMARY
-    )
-  ) {
-    doc.addPage()
-    currentY = LAYOUT.MARGIN
+  // Summary row (only when costs are included)
+  if (includeCosts) {
+    if (
+      !fitsOnPage(
+        doc,
+        currentY,
+        TABLE.SUMMARY_HEIGHT,
+        LAYOUT.PAGE_BOTTOM_THRESHOLD_SUMMARY
+      )
+    ) {
+      doc.addPage()
+      currentY = LAYOUT.MARGIN
+    }
+
+    doc
+      .fillColor(COLORS.TABLE_HEADER)
+      .rect(LAYOUT.MARGIN, currentY, pageWidth, TABLE.SUMMARY_HEIGHT)
+      .fill()
+
+    doc
+      .fontSize(FONT_SIZES.MEDIUM)
+      .fillColor(COLORS.WHITE)
+      .font('Helvetica-Bold')
+      .text('SUMMA', LAYOUT.MARGIN + SPACING.CELL_PADDING_SMALL, currentY + 6)
+      .text(
+        totalCost.toString(),
+        getRemarksColumnX(4, includeCosts) + SPACING.CELL_PADDING_SMALL,
+        currentY + 6,
+        {
+          width: colWidths.cost - SPACING.CELL_PADDING_MEDIUM,
+          align: 'right',
+        }
+      )
   }
-
-  doc
-    .fillColor(COLORS.TABLE_HEADER)
-    .rect(LAYOUT.MARGIN, currentY, pageWidth, TABLE.SUMMARY_HEIGHT)
-    .fill()
-
-  doc
-    .fontSize(FONT_SIZES.MEDIUM)
-    .fillColor(COLORS.WHITE)
-    .font('Helvetica-Bold')
-    .text('SUMMA', LAYOUT.MARGIN + SPACING.CELL_PADDING_SMALL, currentY + 6)
-    .text(
-      totalCost.toString(),
-      getRemarksColumnX(4) + SPACING.CELL_PADDING_SMALL,
-      currentY + 6,
-      { width: colWidths.cost - SPACING.CELL_PADDING_MEDIUM, align: 'right' }
-    )
 }
 
 /**
@@ -891,7 +927,8 @@ function drawTableRow(
   component: string,
   description: string,
   action: string,
-  cost: number
+  cost: number,
+  includeCosts: boolean = true
 ) {
   // Cache padding values to avoid repeated property access
   const textPadding = SPACING.CELL_PADDING_MEDIUM
@@ -910,7 +947,9 @@ function drawTableRow(
   doc.rect(col2X, y, colWidths.component, height).stroke()
   doc.rect(col3X, y, colWidths.description, height).stroke()
   doc.rect(col4X, y, colWidths.action, height).stroke()
-  doc.rect(col5X, y, colWidths.cost, height).stroke()
+  if (includeCosts) {
+    doc.rect(col5X, y, colWidths.cost, height).stroke()
+  }
 
   // Calculate text heights for vertical centering
   doc.fontSize(FONT_SIZES.TINY).font('Helvetica')
@@ -930,10 +969,6 @@ function drawTableRow(
   const actionHeight = action
     ? doc.heightOfString(action, { width: colWidths.action - textPadding })
     : 0
-  const costText = cost > 0 ? cost.toString() : '0'
-  const costHeight = doc.heightOfString(costText, {
-    width: colWidths.cost - textPadding,
-  })
 
   // Draw text (vertically centered in each cell)
   doc
@@ -957,8 +992,15 @@ function drawTableRow(
     .text(action, col4X + cellPadding, y + (height - actionHeight) / 2, {
       width: colWidths.action - textPadding,
     })
-    .text(costText, col5X + cellPadding, y + (height - costHeight) / 2, {
+
+  if (includeCosts) {
+    const costText = cost > 0 ? cost.toString() : '0'
+    const costHeight = doc.heightOfString(costText, {
+      width: colWidths.cost - textPadding,
+    })
+    doc.text(costText, col5X + cellPadding, y + (height - costHeight) / 2, {
       width: colWidths.cost - textPadding,
       align: 'right',
     })
+  }
 }
