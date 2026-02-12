@@ -20,7 +20,11 @@ import {
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import React, { useState } from 'react'
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
@@ -260,9 +264,16 @@ export function KeySystemsTable({
                                 <StickyNote className="h-3.5 w-3.5" />
                               </button>
                             </PopoverTrigger>
-                            <PopoverContent align="end" className="w-64 text-sm">
-                              <p className="font-medium text-xs text-muted-foreground mb-1">Notering</p>
-                              <p className="whitespace-pre-wrap">{KeySystem.description}</p>
+                            <PopoverContent
+                              align="end"
+                              className="w-64 text-sm"
+                            >
+                              <p className="font-medium text-xs text-muted-foreground mb-1">
+                                Notering
+                              </p>
+                              <p className="whitespace-pre-wrap">
+                                {KeySystem.description}
+                              </p>
                             </PopoverContent>
                           </Popover>
                         )}
