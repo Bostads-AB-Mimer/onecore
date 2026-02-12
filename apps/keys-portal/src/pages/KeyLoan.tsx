@@ -51,10 +51,15 @@ export default function KeyLoan() {
     setSearchParams({})
   }
 
-  const { searchValue, setSearchValue, handleSearch, loading } =
-    useUnifiedSearch({
-      onResultFound: handleResultFound,
-    })
+  const {
+    searchValue,
+    setSearchValue,
+    handleSearch,
+    handleSelectResult,
+    loading,
+  } = useUnifiedSearch({
+    onResultFound: handleResultFound,
+  })
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -63,10 +68,11 @@ export default function KeyLoan() {
           value={searchValue}
           onChange={setSearchValue}
           onSearch={handleSearch}
+          onSelect={handleSelectResult}
           loading={loading}
-          placeholder="Personnummer, kundnummer eller hyresobjekt"
+          placeholder="Personnummer, kundnummer, hyresobjekt eller adress"
           title="Sök hyresgäst eller hyresobjekt"
-          description="Ange personnummer, kundnummer eller hyresobjekt för att hitta kontrakt"
+          description="Sök på personnummer, kundnummer, hyresobjekt eller adress"
           helpText={
             <>
               <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>

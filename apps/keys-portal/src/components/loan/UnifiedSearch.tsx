@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -6,6 +6,7 @@ import {
   fetchLeasesByRentalPropertyId,
   fetchTenantAndLeasesByContactCode,
 } from '@/services/api/leaseSearchService'
+import type { UnifiedSearchResult } from '@/services/api/unifiedSearchService'
 import type { Lease, Tenant } from '@/services/types'
 
 interface UnifiedSearchProps {
@@ -22,13 +23,11 @@ const isValidPnr = (value: string) =>
 
 const isContactCode = (value: string) => {
   const trimmed = value.trim().toUpperCase()
-  // Contact codes start with P or F and contain only letters/numbers (no dashes or spaces)
   return /^[PF][A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
 }
 
 const isObjectId = (value: string) => {
   const trimmed = value.trim()
-  // Check if there's a dash in the first 5 characters
   const first5 = trimmed.substring(0, 5)
   return first5.includes('-')
 }
@@ -37,7 +36,6 @@ function pickPrimaryTenant(contracts: Lease[]): Tenant | null {
   const isActive = (l: Lease) =>
     (l.status ?? '').toString().toLowerCase() === 'active'
 
-  // For object searches, only return a tenant if there's an active lease
   const primaryLease = contracts.find(isActive)
   if (!primaryLease) return null
 
@@ -51,6 +49,74 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
+  // Handle selecting a dropdown result
+  const handleSelectResult = useCallback(
+    async (result: UnifiedSearchResult) => {
+      setLoading(true)
+
+      try {
+        if (result.type === 'contact') {
+          const contactCode = result.data.contactCode
+          setSearchValue(contactCode)
+          const leaseResult =
+            await fetchTenantAndLeasesByContactCode(contactCode)
+          if (!leaseResult) {
+            toast({
+              title: 'Ingen träff',
+              description: 'Hittade inga kontrakt för vald kontakt.',
+            })
+            return
+          }
+          onResultFound(
+            leaseResult.tenant,
+            leaseResult.contracts,
+            contactCode,
+            'contactCode'
+          )
+        } else {
+          const rentalId = result.data.rentalId
+          if (!rentalId) {
+            toast({
+              title: 'Saknar hyres-ID',
+              description: 'Det valda objektet saknar hyres-ID.',
+              variant: 'destructive',
+            })
+            return
+          }
+          setSearchValue(rentalId)
+          const contracts = await fetchLeasesByRentalPropertyId(rentalId, {
+            includeUpcomingLeases: true,
+            includeTerminatedLeases: true,
+            includeContacts: true,
+          })
+          if (!contracts.length) {
+            toast({
+              title: 'Ingen träff',
+              description: 'Hittade inga kontrakt för valt hyresobjekt.',
+            })
+            return
+          }
+          const tenant = pickPrimaryTenant(contracts)
+          onResultFound(tenant, contracts, rentalId, 'object')
+        }
+      } catch (e: unknown) {
+        const message =
+          e && typeof e === 'object' && 'message' in e
+            ? String((e as { message: string }).message)
+            : 'Okänt fel'
+        toast({
+          title: 'Kunde inte söka',
+          description: message,
+          variant: 'destructive',
+        })
+      } finally {
+        setLoading(false)
+      }
+    },
+    [onResultFound, toast]
+  )
+
+  // Exact match search on Enter/button click
   const handleSearch = async () => {
     const value = searchValue.trim()
     if (!value) {
@@ -62,7 +128,6 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
       return
     }
 
-    // Determine search type based on format
     if (isObjectId(value)) {
       await handleSearchByObjectId(value)
     } else if (isValidPnr(value)) {
@@ -112,7 +177,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
-          ? String((e as any).message)
+          ? String((e as { message: string }).message)
           : 'Okänt fel'
       toast({
         title: 'Kunde inte söka',
@@ -139,7 +204,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
-          ? String((e as any).message)
+          ? String((e as { message: string }).message)
           : 'Okänt fel'
       toast({
         title: 'Kunde inte söka',
@@ -173,7 +238,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     } catch (e: unknown) {
       const message =
         e && typeof e === 'object' && 'message' in e
-          ? String((e as any).message)
+          ? String((e as { message: string }).message)
           : 'Okänt fel'
       toast({
         title: 'Kunde inte söka',
@@ -189,6 +254,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     searchValue,
     setSearchValue,
     handleSearch,
+    handleSelectResult,
     loading,
   }
 }
