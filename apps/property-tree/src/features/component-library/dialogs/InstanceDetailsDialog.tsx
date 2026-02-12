@@ -1,12 +1,30 @@
 import { useState } from 'react'
 import {
+  Check,
+  Download,
+  Eye,
+  File,
+  FileText,
+  Image,
+  Loader2,
+  Trash2,
+  Upload,
+} from 'lucide-react'
+
+import { useComponentImages } from '@/entities/component'
+
+import type { Component } from '@/services/types'
+
+import { formatISODate } from '@/shared/lib/formatters'
+import { cn } from '@/shared/lib/utils'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
-import { Badge } from '@/shared/ui/Badge'
-import { Button } from '@/shared/ui/Button'
 import {
   Table,
   TableBody,
@@ -15,21 +33,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/Table'
-import {
-  Upload,
-  Check,
-  Loader2,
-  FileText,
-  File,
-  Image,
-  Download,
-  Trash2,
-  Eye,
-} from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
-import { useComponentImages } from '@/entities/component'
-import { formatISODate } from '@/shared/lib/formatters'
-import type { Component } from '@/services/types'
 
 interface InstanceDetailsDialogProps {
   isOpen: boolean

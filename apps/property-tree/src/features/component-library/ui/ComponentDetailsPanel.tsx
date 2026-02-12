@@ -1,6 +1,9 @@
 import { useState } from 'react'
+
 import { ComponentCard, ComponentImageGallery } from '@/entities/component'
+
 import type { Component } from '@/services/types'
+
 import { ComponentModelDocuments } from './ComponentModelDocuments'
 
 interface ComponentDetailsPanelProps {

@@ -1,7 +1,7 @@
-import type { Tenant } from '@/services/types'
 import type { Lease } from '@/services/api/core/leaseService'
+import type { Tenant } from '@/services/types'
 
-import { isOrganization, getTenantRoles } from '../lib/classification'
+import { getTenantRoles, isOrganization } from '../lib/classification'
 import { formatTenantAddress, formatTenantName } from '../lib/formatting'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]

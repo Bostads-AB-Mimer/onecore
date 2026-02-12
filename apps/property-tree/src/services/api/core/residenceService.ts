@@ -1,12 +1,13 @@
-import { GET } from './baseApi'
 import { resolve } from '@/shared/lib/env'
+
 import type {
+  RentalBlock,
+  RentalBlocksSearchParams,
   Residence,
   ResidenceDetails,
   ResidenceSummary,
-  RentalBlock,
-  RentalBlocksSearchParams,
 } from '../../types'
+import { GET } from './baseApi'
 
 const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
 

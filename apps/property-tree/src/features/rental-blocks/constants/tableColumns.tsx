@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
+
 import type { RentalBlockWithRentalObject } from '@/services/types'
+
 import { formatISODate } from '@/shared/lib/formatters'
 
 export const rentalBlockColumns = [

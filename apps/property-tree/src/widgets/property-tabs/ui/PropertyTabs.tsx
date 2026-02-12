@@ -1,15 +1,15 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
-
+import { DocumentsTabContent } from '@/features/documents'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
 import { PropertyBuildingsTabContent } from '@/features/properties'
 import { PropertyStatisticsTabContent } from '@/features/properties'
-import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
-import { DocumentsTabContent } from '@/features/documents'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
-import { PropertyTabsMobile } from './PropertyTabsMobile'
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import type { PropertyDetail } from '@/shared/types/api'
 import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
+import { PropertyTabsMobile } from './PropertyTabsMobile'
 
 interface PropertyTabsProps {
   propertyDetail: PropertyDetail

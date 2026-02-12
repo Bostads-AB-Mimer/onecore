@@ -1,4 +1,4 @@
-import { Phone, Mail, MessageSquare } from 'lucide-react'
+import { Mail, MessageSquare, Phone } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
 

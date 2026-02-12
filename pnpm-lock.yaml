@@ -517,6 +517,9 @@ importers:
       eslint-plugin-boundaries:
         specifier: ^5.3.1
         version: 5.3.1(@typescript-eslint/parser@8.42.0(eslint@9.34.0(jiti@1.21.7))(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.34.0(jiti@1.21.7))
+      eslint-plugin-simple-import-sort:
+        specifier: ^12.1.1
+        version: 12.1.1(eslint@9.34.0(jiti@1.21.7))
       eslint-plugin-unicorn:
         specifier: ^56.0.1
         version: 56.0.1(eslint@9.34.0(jiti@1.21.7))
@@ -6787,6 +6790,11 @@ packages:
     engines: {node: '>=4'}
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7
+
+  eslint-plugin-simple-import-sort@12.1.1:
+    resolution: {integrity: sha512-6nuzu4xwQtE3332Uz0to+TxDQYRLTKRESSc2hefVT48Zc8JthmN23Gx9lnYhu0FtkRSL1oxny3kJ2aveVhmOVA==}
+    peerDependencies:
+      eslint: '>=5.0.0'
 
   eslint-plugin-testing-library@7.6.8:
     resolution: {integrity: sha512-8qvVtc9gzYsBWJd2bMJByAlOdr/GBBH2RZygvp70OTivsJkLkYRxSZFtHq1XQK8k+zNi8DcV7aiSx3avE0rf2w==}
@@ -16469,6 +16477,10 @@ snapshots:
       semver: 6.3.1
       string.prototype.matchall: 4.0.12
       string.prototype.repeat: 1.0.0
+
+  eslint-plugin-simple-import-sort@12.1.1(eslint@9.34.0(jiti@1.21.7)):
+    dependencies:
+      eslint: 9.34.0(jiti@1.21.7)
 
   eslint-plugin-testing-library@7.6.8(eslint@9.34.0(jiti@1.21.7))(typescript@5.9.2):
     dependencies:

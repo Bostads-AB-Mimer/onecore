@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+
+import { generateBreadcrumbs } from '@/shared/lib/breadcrumbUtils'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,7 +9,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/shared/ui/Breadcrumb'
-import { generateBreadcrumbs } from '@/shared/lib/breadcrumbUtils'
 
 interface PropertyBreadcrumbProps {
   property?: { id: string; name: string }

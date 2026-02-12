@@ -1,24 +1,27 @@
+import type { ReactNode } from 'react'
+import type { RentalPropertyInfo } from '@onecore/types'
+import { InfoIcon } from 'lucide-react'
+
+import {
+  formatAddress,
+  formatDate,
+  formatRentalType,
+  getPropertyIdentifier,
+  LeaseMobileCard,
+  LeaseStatusBadge,
+  sortLeasesByStatus,
+} from '@/entities/lease'
+
+import { Lease } from '@/services/api/core/leaseService'
+
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
-import { InfoIcon } from 'lucide-react'
-import { Lease } from '@/services/api/core/leaseService'
-import type { RentalPropertyInfo } from '@onecore/types'
-import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import type { ReactNode } from 'react'
-import {
-  formatRentalType,
-  formatDate,
-  formatAddress,
-  getPropertyIdentifier,
-  sortLeasesByStatus,
-  LeaseMobileCard,
-  LeaseStatusBadge,
-} from '@/entities/lease'
 
 interface TenantLeasesTabContentProps {
   leases: Lease[]

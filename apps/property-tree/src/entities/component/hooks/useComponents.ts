@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+
 import { componentService } from '@/services/api/core'
 
 export function useComponents(propertyObjectId: string) {

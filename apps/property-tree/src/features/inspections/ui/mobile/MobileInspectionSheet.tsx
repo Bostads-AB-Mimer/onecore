@@ -1,8 +1,11 @@
-import { Sheet, SheetContent } from '@/shared/ui/Sheet'
-import { MobileInspectionForm } from './MobileInspectionForm'
-import type { Room } from '@/services/types'
 import type { InspectionSubmitData } from '@/features/inspections/types/index'
+
 import type { components } from '@/services/api/core/generated/api-types'
+import type { Room } from '@/services/types'
+
+import { Sheet, SheetContent } from '@/shared/ui/Sheet'
+
+import { MobileInspectionForm } from './MobileInspectionForm'
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 

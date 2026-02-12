@@ -1,18 +1,21 @@
-import { Building, Wrench, FileText, MessageSquare } from 'lucide-react'
+import { UseQueryResult } from '@tanstack/react-query'
+import { Building, FileText, MessageSquare, Wrench } from 'lucide-react'
+
 import { BuildingEntrancesTabContent } from '@/features/buildings'
-import { WorkOrdersTabContent } from '@/features/work-orders'
-import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { FeatureGatedContent } from '@/features/buildings/ui/FeatureGatedContent'
 import { DocumentsTabContent } from '@/features/documents'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import { Building as BuildingType, ResidenceSummary } from '@/services/types'
+
+import { ContextType } from '@/shared/types/ui'
 import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
-import { FeatureGatedContent } from '@/features/buildings/ui/FeatureGatedContent'
-import { Building as BuildingType, ResidenceSummary } from '@/services/types'
-import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
-import { UseQueryResult } from '@tanstack/react-query'
 
-import { ContextType } from '@/shared/types/ui'
+import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 
 interface BuildingTabsMobileProps {
   building: BuildingType

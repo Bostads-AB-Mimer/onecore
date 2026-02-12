@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { Label } from '@/shared/ui/Label'
+
+import { useComponentEntity } from '@/entities/component'
+
+import type { EntityType } from '@/services/types'
+
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from '@/shared/ui/Collapsible'
+import { Label } from '@/shared/ui/Label'
 import {
   Select,
   SelectContent,
@@ -13,8 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
-import { useComponentEntity } from '@/entities/component'
-import type { EntityType } from '@/services/types'
 
 export interface HierarchyData {
   categoryId?: string

@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
+
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import { InspectionProtocol } from './InspectionProtocol'
-import { InspectionFormDialog } from './InspectionFormDialog'
+
 import {
-  getOngoingInspectionColumns,
   getCompletedInspectionColumns,
-  renderInspectionMobileCard,
+  getOngoingInspectionColumns,
   type InspectionTableColumn,
+  renderInspectionMobileCard,
 } from '../constants'
 import { INSPECTION_STATUS } from '../constants'
+import { InspectionFormDialog } from './InspectionFormDialog'
+import { InspectionProtocol } from './InspectionProtocol'
 
 type Inspection = components['schemas']['Inspection']
 type DetailedInspection = components['schemas']['DetailedInspection']

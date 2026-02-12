@@ -1,20 +1,23 @@
-import { useState, useRef, useEffect } from 'react'
-import { Button } from '@/shared/ui/Button'
-import { Card, CardContent } from '@/shared/ui/Card'
-import { Badge } from '@/shared/ui/Badge'
-import { ScrollArea } from '@/shared/ui/ScrollArea'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, User } from 'lucide-react'
-import type { Room } from '@/services/types'
+
 import type {
   InspectionSubmitData,
   TenantSnapshot,
 } from '@/features/inspections/types/index'
-import { useInspectionForm } from '../../hooks/useInspectionForm'
-import { InspectionProgressIndicator } from './InspectionProgressIndicator'
-import { RoomInspectionEditor } from '../RoomInspectionEditor'
-import { InspectorSelectionCard } from '../InspectorSelectionCard'
 
 import type { components } from '@/services/api/core/generated/api-types'
+import type { Room } from '@/services/types'
+
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { Card, CardContent } from '@/shared/ui/Card'
+import { ScrollArea } from '@/shared/ui/ScrollArea'
+
+import { useInspectionForm } from '../../hooks/useInspectionForm'
+import { InspectorSelectionCard } from '../InspectorSelectionCard'
+import { RoomInspectionEditor } from '../RoomInspectionEditor'
+import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 

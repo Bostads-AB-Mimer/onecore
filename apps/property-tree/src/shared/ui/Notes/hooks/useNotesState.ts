@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import type { Note, NotesState } from '../types'
 
 // Mock initial data - this would typically come from API based on entityType and entityId

@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { ChevronRight } from 'lucide-react'
+
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
 
 interface ComponentLibraryBreadcrumbProps {

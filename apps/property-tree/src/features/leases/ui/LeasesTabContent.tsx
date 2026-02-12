@@ -1,11 +1,15 @@
-import { Loader2 } from 'lucide-react'
-import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import type { ReactNode } from 'react'
-import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
-import { useLeasesByRentalProperty } from '../hooks/useLeasesByRentalProperty'
-import type { Lease } from '@/services/api/core/leaseService'
 import { Link } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
+
+import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
+
+import type { Lease } from '@/services/api/core/leaseService'
+
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+
+import { useLeasesByRentalProperty } from '../hooks/useLeasesByRentalProperty'
 
 interface LeasesTabContentProps {
   rentalPropertyId: string

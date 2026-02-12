@@ -1,11 +1,11 @@
 // UI Components
-export { TenantPersonalInfo } from './ui/TenantPersonalInfo'
-export { TenantContactActions } from './ui/TenantContactActions'
 export { TenantCard } from './ui/TenantCard'
+export { TenantContactActions } from './ui/TenantContactActions'
 export { TenantLeaseCard } from './ui/TenantLeaseCard'
+export { TenantPersonalInfo } from './ui/TenantPersonalInfo'
 
 // Formatting utilities
 export { formatTenantAddress, formatTenantName } from './lib/formatting'
 
 // Classification utilities
-export { isOrganization, getTenantRoles } from './lib/classification'
+export { getTenantRoles, isOrganization } from './lib/classification'

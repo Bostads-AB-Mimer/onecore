@@ -1,5 +1,5 @@
-import { type LucideIcon, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { ArrowRight, type LucideIcon } from 'lucide-react'
 
 interface SearchResultItemProps {
   icon: LucideIcon

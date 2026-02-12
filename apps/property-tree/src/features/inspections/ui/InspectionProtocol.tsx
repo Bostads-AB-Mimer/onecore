@@ -1,8 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { format } from 'date-fns'
+import {
+  AlertCircle,
+  Camera,
+  ChevronDown,
+  Home,
+  Key,
+  Loader2,
+  Mail,
+  Phone,
+  User,
+} from 'lucide-react'
+
 import { components } from '@/services/api/core/generated/api-types'
-import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
-import { useSendInspectionProtocol } from '../hooks/useSendInspectionProtocol'
 import { inspectionService } from '@/services/api/core/inspectionService'
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/shared/ui/Accordion'
+import { Alert, AlertDescription } from '@/shared/ui/Alert'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/shared/ui/Collapsible'
 import {
   Dialog,
   DialogContent,
@@ -11,33 +38,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/shared/ui/Accordion'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/shared/ui/Collapsible'
-import { format } from 'date-fns'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import { Badge } from '@/shared/ui/Badge'
-import {
-  Camera,
-  ChevronDown,
-  Key,
-  Home,
-  User,
-  Phone,
-  Mail,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react'
-import { Alert, AlertDescription } from '@/shared/ui/Alert'
-import { Button } from '@/shared/ui/Button'
+
+import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
+import { useSendInspectionProtocol } from '../hooks/useSendInspectionProtocol'
 
 type DetailedInspection = components['schemas']['DetailedInspection']
 type DetailedInspectionRoomEntry = DetailedInspection['rooms'][number]

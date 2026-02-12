@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { InvoicePaymentEvent } from '@onecore/types'
+import { useQuery } from '@tanstack/react-query'
+
 import { economyService } from '@/services/api/core/economyService'
 
 export const useInvoicePaymentEvents = (invoiceId: string) => {

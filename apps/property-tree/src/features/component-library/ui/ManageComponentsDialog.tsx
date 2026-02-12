@@ -1,20 +1,23 @@
 import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Trash2, Unplug } from 'lucide-react'
+
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+import { componentService } from '@/services/api/core/componentService'
+import type { Component } from '@/services/types'
+
+import { formatISODate } from '@/shared/lib/formatters'
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/Tabs'
-import { Trash2, Unplug } from 'lucide-react'
-import { DeinstallationDialog } from './DeinstallationDialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
 import { ComponentInstallationForm } from './ComponentInstallationForm'
-import type { Component } from '@/services/types'
-import { formatISODate } from '@/shared/lib/formatters'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { componentService } from '@/services/api/core/componentService'
-import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+import { DeinstallationDialog } from './DeinstallationDialog'
 
 interface ManageComponentsDialogProps {
   isOpen: boolean

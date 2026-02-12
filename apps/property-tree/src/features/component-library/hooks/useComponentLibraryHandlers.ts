@@ -1,16 +1,18 @@
 import { useComponentEntityMutation } from '@/entities/component'
+
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+import type {
+  Component,
+  ComponentCategory,
+  ComponentModel,
+  ComponentSubtype,
+  ComponentType,
+} from '@/services/types'
+
 import type {
   UseDialogStateReturn,
   UseSimpleDialogStateReturn,
-} from '../../../shared/hooks/useDialogState'
-import type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
-  Component,
-} from '@/services/types'
-import { componentLibraryService } from '@/services/api/core/componentLibraryService'
+} from '@/shared/hooks'
 
 // ViewState type definition
 export type ViewState =

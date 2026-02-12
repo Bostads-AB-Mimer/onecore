@@ -1,21 +1,22 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Command,
-  Building2,
-  User2,
-  Loader2,
   Building as BuildingIcon,
-  SquareUser,
+  Building2,
   CarFront,
+  Command,
+  Loader2,
+  SquareUser,
+  User2,
   Wrench,
 } from 'lucide-react'
 
-import { useSearch, type CombinedSearchResult } from '../hooks/useSearch'
-import { useCommandPalette } from '../hooks/useCommandPalette'
-import { SearchResultItem } from '../ui/SearchResultItem'
 import { debounce } from '@/shared/lib/debounce'
+
+import { useCommandPalette } from '../hooks/useCommandPalette'
+import { type CombinedSearchResult, useSearch } from '../hooks/useSearch'
+import { SearchResultItem } from '../ui/SearchResultItem'
 
 const routeMap = {
   property: '/properties',

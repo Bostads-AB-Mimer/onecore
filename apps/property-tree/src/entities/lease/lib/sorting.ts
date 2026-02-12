@@ -1,5 +1,7 @@
-import { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
+
+import { Lease } from '@/services/api/core/leaseService'
+
 import { LeaseStatus } from './status'
 
 export const sortLeasesByStatus = (

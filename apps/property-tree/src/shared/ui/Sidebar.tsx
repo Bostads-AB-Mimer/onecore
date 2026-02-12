@@ -1,36 +1,36 @@
 // Re-exports from the sidebar module
-export { SidebarProvider, useSidebar } from './sidebar/context'
 export {
   Sidebar,
-  SidebarTrigger,
-  SidebarRail,
-  SidebarInset,
-  SidebarInput,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarSeparator,
   SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInput,
+  SidebarInset,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
 } from './sidebar/components'
+export { SidebarProvider, useSidebar } from './sidebar/context'
 export {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupAction,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarMenuAction,
   SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarMenuSkeleton,
   SidebarMenuSub,
-  SidebarMenuSubItem,
   SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from './sidebar/menu'
 
 // Export types for external use
 export type {
   SidebarContext,
-  SidebarProviderProps,
-  SidebarProps,
   SidebarMenuButtonProps,
+  SidebarProps,
+  SidebarProviderProps,
 } from './sidebar/types'

@@ -1,12 +1,15 @@
-import { SearchResultsTable } from './SearchResultsTable'
-import type { SearchResult } from '../types'
-import { PropertiesTable } from './PropertiesTable'
+import { Building, X } from 'lucide-react'
+
 import type { Property } from '@/services/types'
+
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { Skeleton } from '@/shared/ui/Skeleton'
 import { EmptyState } from '@/shared/ui/EmptyState'
-import { X, Building } from 'lucide-react'
+import { Skeleton } from '@/shared/ui/Skeleton'
+
+import type { SearchResult } from '../types'
+import { PropertiesTable } from './PropertiesTable'
+import { SearchResultsTable } from './SearchResultsTable'
 
 interface FilterChip {
   label: string

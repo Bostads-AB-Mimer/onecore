@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query'
+
 import { buildingService, Lease, leaseService } from '@/services/api/core'
 import { Building } from '@/services/types'
-import { useQuery } from '@tanstack/react-query'
+
 import { useResidence } from './useResidence'
 
 export function useResidenceDetails(residenceId: string) {

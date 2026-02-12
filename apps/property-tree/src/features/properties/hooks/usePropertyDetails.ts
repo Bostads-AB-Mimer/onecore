@@ -1,6 +1,9 @@
-import { buildingService } from '@/services/api/core'
 import { useQuery } from '@tanstack/react-query'
+
+import { buildingService } from '@/services/api/core'
+
 import type { PropertyDetail } from '@/shared/types/api'
+
 import { useProperty } from './useProperty'
 
 export function usePropertyDetails(propertyId: string | undefined) {

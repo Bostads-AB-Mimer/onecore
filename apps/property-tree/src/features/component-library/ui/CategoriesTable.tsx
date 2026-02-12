@@ -1,5 +1,6 @@
-import { DataTable, type Column } from '@/shared/ui/DataTable'
 import type { ComponentCategory } from '@/services/types'
+
+import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 interface CategoriesTableProps {
   categories: ComponentCategory[]

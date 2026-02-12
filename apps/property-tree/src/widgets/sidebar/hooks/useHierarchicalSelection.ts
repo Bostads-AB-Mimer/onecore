@@ -1,9 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
-import { useResidence } from '@/features/residences'
+
 import { useBuilding } from '@/features/buildings'
-import { useProperty } from '@/features/properties'
 import { useCompanyByPropertyId } from '@/features/companies'
+import { useProperty } from '@/features/properties'
+import { useResidence } from '@/features/residences'
 
 interface SelectionState {
   selectedResidenceId: string | null

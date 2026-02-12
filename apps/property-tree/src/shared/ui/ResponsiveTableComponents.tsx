@@ -1,5 +1,6 @@
-import { useState, Fragment, ReactNode } from 'react'
+import { Fragment, ReactNode, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 

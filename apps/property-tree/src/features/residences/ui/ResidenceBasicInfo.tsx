@@ -1,3 +1,8 @@
+import { Bug, TriangleAlert } from 'lucide-react'
+
+import { components } from '@/services/api/core/generated/api-types'
+
+import { Badge } from '@/shared/ui/Badge'
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
 import {
   Tooltip,
@@ -5,9 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
-import { TriangleAlert, Bug } from 'lucide-react'
-import { Badge } from '@/shared/ui/Badge'
-import { components } from '@/services/api/core/generated/api-types'
 
 interface ResidenceBasicInfoProps {
   residence: components['schemas']['ResidenceDetails']

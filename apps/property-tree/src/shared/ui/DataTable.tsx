@@ -1,4 +1,5 @@
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { Edit, MoreHorizontal, Trash2 } from 'lucide-react'
+
 import { Button } from '@/shared/ui/Button'
 import {
   DropdownMenu,
@@ -6,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
+
 import { ResponsiveTableComponents } from './ResponsiveTableComponents'
 
 export interface Column<T> {

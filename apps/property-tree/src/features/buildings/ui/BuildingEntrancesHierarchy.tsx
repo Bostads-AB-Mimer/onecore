@@ -1,13 +1,16 @@
+import { Link } from 'react-router-dom'
+import { UseQueryResult } from '@tanstack/react-query'
+import { ChevronRight, Home } from 'lucide-react'
+
+import { ResidenceSummary } from '@/services/types'
+
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
-import { ChevronRight, Home } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { UseQueryResult } from '@tanstack/react-query'
-import { ResidenceSummary } from '@/services/types'
+
 import { getQuantityValue } from '../lib/quantity'
 
 interface BuildingEntranceHierarchyProps {

@@ -1,19 +1,19 @@
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { SpaceComponents } from '@/features/component-library'
+import {
+  getRoomDisplayName,
+  RoomDetails,
+  RoomOverviewCards,
+  useRoomDeepLink,
+  useRooms,
+} from '@/features/rooms'
+
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
-
-import {
-  useRooms,
-  useRoomDeepLink,
-  getRoomDisplayName,
-  RoomOverviewCards,
-  RoomDetails,
-} from '@/features/rooms'
-import { SpaceComponents } from '@/features/component-library'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 interface RoomsTabContentProps {
   facilityId: string

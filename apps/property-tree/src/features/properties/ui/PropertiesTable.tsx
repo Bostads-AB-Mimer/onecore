@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
+
+import type { Property } from '@/services/types'
+
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import type { Property } from '@/services/types'
 
 interface PropertiesTableProps {
   properties: Property[]

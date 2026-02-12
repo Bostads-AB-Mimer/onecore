@@ -1,12 +1,15 @@
 import { Outlet } from 'react-router-dom'
-import { CommandPalette } from '@/features/search'
-import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
-import { Toaster } from '@/shared/ui/Toaster'
-import { AppHeader } from './AppHeader'
-import { RouteDocumentTitle } from './RouteDocumentTitle'
 
 import { SidebarNavigation } from '@/widgets/sidebar'
+
+import { CommandPalette } from '@/features/search'
+
 import { SidebarToggleButton } from '@/shared/ui/layout'
+import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
+import { Toaster } from '@/shared/ui/Toaster'
+
+import { AppHeader } from './AppHeader'
+import { RouteDocumentTitle } from './RouteDocumentTitle'
 
 /**
  * Full application shell with sidebar, navigation bar, and command palette.

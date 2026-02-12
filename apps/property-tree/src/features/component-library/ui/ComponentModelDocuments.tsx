@@ -1,25 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  Upload,
   Check,
-  Loader2,
-  FileText,
-  File,
-  Table,
-  Image,
   Download,
-  Trash2,
   Eye,
+  File,
+  FileText,
+  Image,
+  Loader2,
+  Table,
+  Trash2,
+  Upload,
 } from 'lucide-react'
+
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
-import { cn } from '@/shared/lib/utils'
+
 import { useComponentModelDocuments } from '../hooks/useComponentModelDocuments'
 
 interface ComponentModelDocumentsProps {

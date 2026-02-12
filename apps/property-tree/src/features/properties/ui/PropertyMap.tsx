@@ -1,5 +1,6 @@
-import type { BuildingLocation, Building } from '@/shared/types/api'
 import { Map } from 'lucide-react'
+
+import type { Building, BuildingLocation } from '@/shared/types/api'
 
 interface PropertyMapProps {
   propertyMap: {

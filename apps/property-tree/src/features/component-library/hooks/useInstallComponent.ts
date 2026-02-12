@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+
 import { componentService } from '@/services/api/core/componentService'
 
 type InstallComponentData = Parameters<

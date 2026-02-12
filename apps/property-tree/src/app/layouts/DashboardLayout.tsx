@@ -1,6 +1,9 @@
 import { Outlet } from 'react-router-dom'
+
 import { CommandPalette } from '@/features/search'
+
 import { Toaster } from '@/shared/ui/Toaster'
+
 import { RouteDocumentTitle } from './RouteDocumentTitle'
 
 /**

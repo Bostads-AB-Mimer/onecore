@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+
 import { roomService } from '@/services/api/core'
 
 export function useRooms(

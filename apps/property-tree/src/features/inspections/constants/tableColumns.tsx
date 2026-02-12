@@ -5,13 +5,16 @@
  * Uses ResponsiveTable column format for mobile/desktop support.
  */
 
+import type { ReactNode } from 'react'
+import { Eye } from 'lucide-react'
+
+import { components } from '@/services/api/core/generated/api-types'
+
+import { formatISODate } from '@/shared/lib/formatters'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { Eye } from 'lucide-react'
-import { components } from '@/services/api/core/generated/api-types'
+
 import { getStatusConfig } from './statuses'
-import { formatISODate } from '@/shared/lib/formatters'
-import type { ReactNode } from 'react'
 
 type Inspection = components['schemas']['Inspection']
 

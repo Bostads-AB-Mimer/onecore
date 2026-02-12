@@ -1,11 +1,14 @@
-import { Button } from '@/shared/ui/Button'
 import { useState } from 'react'
-import { GlobalSearchBar } from '@/features/search'
-import { Menu, Search } from 'lucide-react'
-import { useAuth } from '@/features/auth'
-import { useUser } from '@/entities/user'
 import { Link } from 'react-router-dom'
+import { Menu, Search } from 'lucide-react'
+
+import { useAuth } from '@/features/auth'
+import { GlobalSearchBar } from '@/features/search'
+
+import { useUser } from '@/entities/user'
+
 import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
+import { Button } from '@/shared/ui/Button'
 
 export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const [showMobileSearch, setShowMobileSearch] = useState(false)

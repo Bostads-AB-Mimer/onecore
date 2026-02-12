@@ -1,11 +1,14 @@
-import { components } from '@/services/api/generated/api-types'
-import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { useState } from 'react'
-import { Button } from '@/shared/ui/Button'
-import { useRentalBlocksByRentalId } from '../hooks/useRentalBlocksByRentalId'
-import { Badge } from '@/shared/ui/Badge'
+
+import { components } from '@/services/api/generated/api-types'
+
 import { formatISODate } from '@/shared/lib/formatters'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+
+import { useRentalBlocksByRentalId } from '../hooks/useRentalBlocksByRentalId'
 
 const INITIAL_DISPLAY_COUNT = 5
 

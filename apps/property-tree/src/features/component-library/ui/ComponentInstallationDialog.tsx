@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
+
 import { ComponentInstallationForm } from './ComponentInstallationForm'
 
 interface ComponentInstallationDialogProps {

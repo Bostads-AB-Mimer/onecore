@@ -1,9 +1,11 @@
-import { Users, User } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { User, Users } from 'lucide-react'
+
+import { TenantContactActions, TenantPersonalInfo } from '@/entities/tenant'
+
+import type { Lease } from '@/services/api/core/leaseService'
 
 import { Button } from '@/shared/ui/Button'
-import { TenantPersonalInfo, TenantContactActions } from '@/entities/tenant'
-import type { Lease } from '@/services/api/core/leaseService'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 

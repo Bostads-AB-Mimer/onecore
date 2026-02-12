@@ -1,17 +1,20 @@
 import { useState } from 'react'
+import { AlertCircle } from 'lucide-react'
+
+import type { Component } from '@/services/types'
+
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
-import { Label } from '@/shared/ui/Label'
 import { Input } from '@/shared/ui/Input'
-import { AlertCircle } from 'lucide-react'
+import { Label } from '@/shared/ui/Label'
+
 import { useDeinstallComponent } from '../hooks/useDeinstallComponent'
-import type { Component } from '@/services/types'
 
 interface DeinstallationDialogProps {
   isOpen: boolean

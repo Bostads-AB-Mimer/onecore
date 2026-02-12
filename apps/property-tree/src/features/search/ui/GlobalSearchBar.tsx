@@ -9,12 +9,14 @@
  *
  */
 
-import { useState, useRef } from 'react'
-import { Search, X, Filter, Star } from 'lucide-react'
-import { Input } from '@/shared/ui/Input'
-import { Button } from '@/shared/ui/Button'
-import { Badge } from '@/shared/ui/Badge'
+import { useRef, useState } from 'react'
+import { Filter, Search, Star, X } from 'lucide-react'
+
 import { cn } from '@/shared/lib/utils'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { Input } from '@/shared/ui/Input'
+
 import { useCommandPalette } from '../hooks/useCommandPalette'
 
 interface GlobalSearchBarProps {

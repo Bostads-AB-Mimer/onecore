@@ -1,12 +1,13 @@
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/shared/ui/Collapsible'
-import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
-import { useIsMobile } from '@/shared/hooks/useMobile'
 
 interface CollapsibleInfoCardProps {
   title: string

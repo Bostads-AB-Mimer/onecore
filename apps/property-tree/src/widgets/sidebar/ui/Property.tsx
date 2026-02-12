@@ -1,12 +1,15 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Property } from '@/services/types'
 import { Building } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/shared/ui/Sidebar'
-import { BuildingList } from './BuildingList'
-import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
+
+import { Property } from '@/services/types'
+
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
 import { toTitleCase } from '@/shared/lib/textUtils'
+import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
+
+import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
+import { BuildingList } from './BuildingList'
 
 interface PropertyNavigationProps {
   property: Property

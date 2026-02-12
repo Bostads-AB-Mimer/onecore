@@ -1,4 +1,8 @@
+import { ReactNode } from 'react'
+
 import { useIsMobile } from '@/shared/hooks/useMobile'
+import { cn } from '@/shared/lib/utils'
+import { Card, CardContent } from '@/shared/ui/Card'
 import {
   Table,
   TableBody,
@@ -7,9 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/Table'
-import { Card, CardContent } from '@/shared/ui/Card'
-import { cn } from '@/shared/lib/utils'
-import { ReactNode } from 'react'
 
 interface ResponsiveTableColumn {
   key: string

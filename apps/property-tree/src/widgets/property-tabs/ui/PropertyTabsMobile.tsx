@@ -1,17 +1,17 @@
-import { Building, Home, BarChart3, Wrench } from 'lucide-react'
+import { BarChart3, Building, Home, Wrench } from 'lucide-react'
 
+import { DocumentsTabContent } from '@/features/documents'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
 import { PropertyBuildingsTabContent } from '@/features/properties'
 import { PropertyStatisticsTabContent } from '@/features/properties'
-import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
-import { DocumentsTabContent } from '@/features/documents'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
+import type { PropertyDetail } from '@/shared/types/api'
+import { ContextType } from '@/shared/types/ui'
 import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
-import type { PropertyDetail } from '@/shared/types/api'
-import { ContextType } from '@/shared/types/ui'
 
 interface PropertyTabsMobileProps {
   propertyDetail: PropertyDetail

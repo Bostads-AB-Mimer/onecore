@@ -1,44 +1,41 @@
-# Entities
+# Entities — Layer 3
 
-Core business domain objects. Each entity represents a fundamental "thing" in the domain and provides reusable data logic and basic UI representations.
+Core domain objects and their basic representations.
 
-## How this layer fits in
+> **FSD hierarchy:** shared → services → **entities** → features → widgets → pages → app
 
-An entity answers the question: **What _is_ a tenant?** A name, a personal number, contact info. Here's how to format and display that. Entities hold pure domain knowledge — no business workflows, no user actions. Features build on top of entities to create use cases.
+## Purpose
+
+An entity answers the question: **“What _is_ a tenant / lease / component?”**
+
+Entities encapsulate pure domain knowledge — how to format, display, and reason about a domain object. They do **not** contain user-facing workflows or business actions (that belongs in `features/`).
 
 ## Structure
 
 ```
 entities/
 └── [entity-name]/
-    ├── ui/              # Basic UI representations of the entity
-    ├── hooks/           # Data-fetching hooks (React Query wrappers around services)
-    ├── lib/             # Formatting, sorting, status helpers, constants
-    └── index.ts         # Public exports
+    ├── ui/          # Basic UI representations of the entity
+    ├── hooks/       # React Query wrappers around services for this entity
+    ├── lib/         # Formatting, sorting, status helpers, constants
+    ├── types/       # Entity-specific types (when not covered by services)
+    └── index.ts     # Public barrel exports
 ```
+
+Current entities: `component`, `document`, `lease`, `tenant`, `user`
+
+## Import rules
+
+| Can import from                           | Cannot import from                        |
+| ----------------------------------------- | ----------------------------------------- |
+| `shared/`, `services/`, other `entities/` | `features/`, `widgets/`, `pages/`, `app/` |
+
+Entities **can** import from other entities when it makes domain sense (e.g. `component` using `document` helpers), but avoid deep coupling or circular dependencies.
 
 ## Guidelines
 
-- Entities define **what something is**, not what you can do with it (that belongs in `features/`)
-- Keep entities focused on domain knowledge: data formatting, status logic, sorting, and simple display components
-- `hooks/` should wrap `services/` calls with React Query for caching and state — not contain business workflows or mutations that represent user actions (those belong in `features/`)
-- `ui/` should contain basic, reusable representations of the entity — complex interactive workflows (galleries with CRUD, multi-step selectors) belong in `features/`
-- Entities should be reusable across multiple features
-- Export only what other parts of the app need via `index.ts`
-
-## Import Rules
-
-**Can import from:**
-
-- `shared/*` (UI, hooks, lib, types, assets)
-- `services/` (API calls and data access)
-- Other entities when it makes domain sense (for example, `component` using `document` helpers)
-
-**Cannot import from:**
-
-- `features/`
-- `widgets/`
-- `views/`
-- `layouts/`
-
-Avoid deep coupling and circular dependencies between entities – prefer small, well-defined helpers.
+- **Define what something _is_**, not what you can _do_ with it.
+- `hooks/` should wrap `services/` calls with React Query — no business workflows or mutations that represent user actions.
+- `ui/` should be basic, reusable display components — complex interactive workflows belong in `features/`.
+- Export only what other layers need via `index.ts` (barrel imports are enforced by ESLint).
+- Entities should be reusable across multiple features.

@@ -1,12 +1,14 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/Sheet'
+import { Camera, Clock, FileText, MessageSquare, Wrench } from 'lucide-react'
+
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { Textarea } from '@/shared/ui/Textarea'
 import { Separator } from '@/shared/ui/Separator'
-import { PhotoGallery } from './PhotoGallery'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/Sheet'
+import { Textarea } from '@/shared/ui/Textarea'
+
+import { type ComponentType, getConditionConfig } from '../constants'
 import { ActionChecklist } from './ActionChecklist'
-import { Camera, Wrench, MessageSquare, Clock, FileText } from 'lucide-react'
-import { getConditionConfig, type ComponentType } from '../constants'
+import { PhotoGallery } from './PhotoGallery'
 
 interface ComponentDetailSheetProps {
   isOpen: boolean

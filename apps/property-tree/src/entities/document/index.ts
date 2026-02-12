@@ -4,6 +4,6 @@ export { useDocuments } from './hooks/useDocuments'
 // Lib
 export {
   extractFileName,
-  getFileTypeFromName,
   formatFileSize,
+  getFileTypeFromName,
 } from './lib/fileUtils'

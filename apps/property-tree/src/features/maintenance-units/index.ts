@@ -3,9 +3,10 @@ export { MaintenanceUnitBasicInfo } from './ui/MaintenanceUnitBasicInfo'
 export { MaintenanceUnitsTabContent } from './ui/MaintenanceUnitsTabContent'
 
 // Hooks
+export { useMaintenanceUnit } from './hooks/useMaintenanceUnit'
 export {
-  useMaintenanceUnits,
   type MaintenanceUnitsContextType,
+  useMaintenanceUnits,
 } from './hooks/useMaintenanceUnits'
 
 // Constants

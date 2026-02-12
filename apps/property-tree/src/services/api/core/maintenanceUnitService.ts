@@ -1,5 +1,6 @@
-import { GET } from './baseApi'
 import type { MaintenanceUnit } from '@/services/types'
+
+import { GET } from './baseApi'
 
 export const maintenanceUnitService = {
   async getByPropertyCode(propertyCode: string): Promise<MaintenanceUnit[]> {

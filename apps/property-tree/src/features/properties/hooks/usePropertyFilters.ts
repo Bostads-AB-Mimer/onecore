@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+
 import { GET } from '@/services/api/core/baseApi'
 import type { Property, ResidenceSearchResult } from '@/services/types'
+
 import type { SearchResult } from '../types'
 
 type SearchTypeFilter =

@@ -1,7 +1,10 @@
-import { ResidenceSummary } from '@/services/types'
-import { BuildingEntranceHierarchy } from './BuildingEntrancesHierarchy'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { UseQueryResult } from '@tanstack/react-query'
+
+import { ResidenceSummary } from '@/services/types'
+
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+
+import { BuildingEntranceHierarchy } from './BuildingEntrancesHierarchy'
 
 interface BuildingEntrancesTabContentProps {
   isLoading: boolean

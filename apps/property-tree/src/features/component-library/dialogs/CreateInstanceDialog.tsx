@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
+
+import { useComponentEntityMutation } from '@/entities/component'
+
+import type { ComponentModel } from '@/services/types'
+
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
-import { useComponentEntityMutation } from '@/entities/component'
-import type { ComponentModel } from '@/services/types'
 
 interface CreateInstanceDialogProps {
   isOpen: boolean

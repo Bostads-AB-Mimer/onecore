@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+
 import { commentService } from '@/services/api/core'
 import type { TenantComment } from '@/services/types'
 

@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ReactNode } from 'react'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 interface TabLayoutProps {
   title?: string

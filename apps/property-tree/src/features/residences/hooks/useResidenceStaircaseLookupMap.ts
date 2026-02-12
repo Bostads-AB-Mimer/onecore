@@ -1,7 +1,8 @@
+import { useMemo } from 'react'
+import { useQueries } from '@tanstack/react-query'
+
 import { residenceService } from '@/services/api/core'
 import { Staircase } from '@/services/types'
-import { useQueries } from '@tanstack/react-query'
-import { useMemo } from 'react'
 
 export const useResidenceStaircaseLookupMap = (staircases: Staircase[]) => {
   // Memoize the queries array to prevent duplicate queries when staircases array reference changes

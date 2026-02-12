@@ -1,8 +1,11 @@
-import { Property } from '@/services/types'
-import { SidebarMenu } from '@/shared/ui/Sidebar'
-import { BuildingNavigation } from './Building'
-import { NavigationSkeleton, NavigationError } from '@/shared/ui/layout'
 import { useBuildings } from '@/features/buildings'
+
+import { Property } from '@/services/types'
+
+import { NavigationError, NavigationSkeleton } from '@/shared/ui/layout'
+import { SidebarMenu } from '@/shared/ui/Sidebar'
+
+import { BuildingNavigation } from './Building'
 
 interface BuildingListProps {
   property: Property

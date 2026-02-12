@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { match, P } from 'ts-pattern'
 
 import { authConfig } from '@/authConfig'
+
 import { User } from '../types'
 
 type UserState =

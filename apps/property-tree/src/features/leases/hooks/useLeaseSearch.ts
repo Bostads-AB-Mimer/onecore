@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 import {
+  keepPreviousData,
   useQuery,
   useQueryClient,
-  keepPreviousData,
 } from '@tanstack/react-query'
+
 import {
-  leaseSearchService,
   type LeaseSearchQueryParams,
+  leaseSearchService,
 } from '@/services/api/core/leaseSearchService'
 
 export type { LeaseSearchQueryParams }

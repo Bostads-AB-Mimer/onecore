@@ -1,8 +1,9 @@
-import { Button } from '@/shared/ui/Button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
+import { Check, Copy } from 'lucide-react'
+
 import { useClipboardCopy } from '@/shared/hooks/useClipboardCopy'
 import { useToast } from '@/shared/hooks/useToast'
-import { Copy, Check } from 'lucide-react'
+import { Button } from '@/shared/ui/Button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 interface ActionButton {
   icon: React.ReactNode

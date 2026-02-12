@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+
 import { leaseService } from '@/services/api/core'
 
 export function useLeasesByContactCode(contactCode: string | undefined) {

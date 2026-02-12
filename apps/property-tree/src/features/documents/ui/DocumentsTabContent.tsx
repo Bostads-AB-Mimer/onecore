@@ -1,13 +1,15 @@
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import { Card } from '@/shared/ui/Card'
+import { Download, FileText, Trash2, Upload } from 'lucide-react'
+
+import { formatFileSize, useDocuments } from '@/entities/document'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { useToast } from '@/shared/hooks/useToast'
+import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
+import { Card } from '@/shared/ui/Card'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
-import { FileText, Upload, Download, Trash2 } from 'lucide-react'
-import { useToast } from '@/shared/hooks/useToast'
-import { useIsMobile } from '@/shared/hooks/useMobile'
-import { ContextType } from '@/shared/types/ui'
-import { useDocuments, formatFileSize } from '@/entities/document'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 interface DocumentsTabContentProps {
   contextType: ContextType

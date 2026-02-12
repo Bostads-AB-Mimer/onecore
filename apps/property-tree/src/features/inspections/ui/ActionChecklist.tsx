@@ -1,5 +1,6 @@
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { Label } from '@/shared/ui/Label'
+
 import { ACTION_OPTIONS_BY_TYPE, type ComponentType } from '../constants'
 
 interface ActionChecklistProps {

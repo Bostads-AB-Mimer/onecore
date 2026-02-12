@@ -1,5 +1,7 @@
-import { Property, Building } from '@/services/types'
+import { Building, Property } from '@/services/types'
+
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
+
 import { getQuantityValue } from '../lib/quantity'
 
 interface BuildingBasicInfoProps {

@@ -1,12 +1,13 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
-
-import { useIsMobile } from '@/shared/hooks/useMobile'
-import type { MaintenanceUnit } from '@/services/types'
-import { ContextType } from '@/shared/types/ui'
 
 import { SpaceComponents } from '@/features/component-library'
 import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import type { MaintenanceUnit } from '@/services/types'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { MaintenanceUnitTabsMobile } from './MaintenanceUnitTabsMobile'
 

@@ -1,5 +1,6 @@
-import { Building, Home, CarFront, Warehouse, Wrench } from 'lucide-react'
-import { FilterChip } from '@/shared/ui/FilterChip'
+import { Building, CarFront, Home, Warehouse, Wrench } from 'lucide-react'
+
+import { FilterChip } from '@/shared/ui/filters'
 
 type SearchTypeFilter =
   | 'property'

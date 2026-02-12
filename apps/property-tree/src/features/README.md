@@ -1,43 +1,41 @@
-# Features
+# Features — Layer 4
 
-**The core of the app.** Each feature is a self-contained module organized by domain/functionality.
+User-facing use cases and business logic built on top of entities.
 
-## How this layer fits in
+> **FSD hierarchy:** shared → services → entities → **features** → widgets → pages → app
 
-A feature answers the question: **What can I _do_ with tenants?** Search for them, list their leases, add comments. Features use entities for domain knowledge and add business logic and user-facing workflows on top.
+## Purpose
+
+A feature answers the question: **“What can I _do_ with tenants / leases / buildings?”**
+
+Search for them, filter a list, manage a component library, run an inspection. Features use entities for domain knowledge and add business logic, mutations, and interactive UI on top.
 
 ## Structure
 
 ```
 features/
 └── [feature-name]/
-    ├── components/      # UI specific to this feature
-    ├── hooks/           # Hooks specific to this feature
-    ├── lib/             # Utility functions specific to this feature
-    ├── constants/       # Domain constants
-    ├── types/           # Feature-specific types
-    └── index.ts         # Public exports
+    ├── ui/          # Feature-specific UI components
+    ├── hooks/       # Feature-specific hooks (filters, mutations, workflows)
+    ├── lib/         # Feature-specific utilities
+    ├── constants/   # Domain constants
+    ├── types/       # Feature-specific types
+    └── index.ts     # Public barrel exports
 ```
+
+Current features: `auth`, `buildings`, `companies`, `component-library`, `documents`, `facilities`, `inspections`, `leases`, `maintenance-units`, `parking-spaces`, `properties`, `rental-blocks`, `residences`, `rooms`, `search`, `tenants`, `work-orders`
+
+## Import rules
+
+| Can import from                     | Cannot import from                              |
+| ----------------------------------- | ----------------------------------------------- |
+| `shared/`, `services/`, `entities/` | other `features/`, `widgets/`, `pages/`, `app/` |
+
+⚠️ **Features cannot import from other features.** If two features need shared logic, extract it into `entities/` or `shared/`.
 
 ## Guidelines
 
-- Keep all related code together (components, hooks, constants, types)
-- Export only what other parts of the app need via `index.ts`
-- Each feature should be as independent as possible
-- Feature-specific components stay here, not in `/components`
-
-## Import Rules
-
-**Can import from:**
-
-- `entities/` (domain models and basic UI)
-- `shared/*` (UI, hooks, lib, types, assets)
-- `services/` (API calls)
-- `config/` (configuration)
-- Global state (store/app shell) when needed
-
-**Cannot import from:**
-
-- Other features (extract shared parts into `entities/` or `shared/`)
-- `views/`
-- `layouts/`
+- Keep each feature self-contained and independent.
+- This is where most business logic lives: filters, search, CRUD workflows, export, mutations.
+- Export only what other layers need via `index.ts` (barrel imports are enforced by ESLint).
+- Feature-specific components stay here — don’t put them in `shared/ui`.

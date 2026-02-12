@@ -1,189 +1,113 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
-import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useCallback, useMemo, useState } from 'react'
+
+import { residenceService } from '@/services/api/core'
 import type { RentalBlocksSearchParams } from '@/services/types'
+
+import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
+
+import { useRentalBlocks } from './useRentalBlocks'
 
 const PAGE_SIZE = 50
 
+const FILTER_KEYS = [
+  'active',
+  'kategori',
+  'fastighet',
+  'distrikt',
+  'orsak',
+  'fromDate',
+  'toDate',
+] as const
+
 export function useRentalBlocksFilters() {
-  const { page, setPage, searchParams, updateUrlParams } = useUrlPagination({
-    defaultLimit: PAGE_SIZE,
+  const filters = useUrlFilters({
+    filterKeys: FILTER_KEYS,
+    pageSize: PAGE_SIZE,
   })
 
   const activeFilter = useMemo(() => {
-    const val = searchParams.get('active')
+    const val = filters.getFilterValue('active')
     if (val === 'true') return true
     if (val === 'false') return false
     if (val === 'all') return undefined
-    return true
-  }, [searchParams])
-
-  const selectedKategori = useMemo(
-    () => searchParams.get('kategori') || '',
-    [searchParams]
-  )
-  const selectedFastighet = useMemo(
-    () => searchParams.get('fastighet') || '',
-    [searchParams]
-  )
-  const selectedDistrikt = useMemo(
-    () => searchParams.get('distrikt') || '',
-    [searchParams]
-  )
-  const selectedOrsak = useMemo(
-    () => searchParams.get('orsak') || '',
-    [searchParams]
-  )
-  const startDatum = useMemo(
-    () => searchParams.get('fromDate') || '',
-    [searchParams]
-  )
-  const slutDatum = useMemo(
-    () => searchParams.get('toDate') || '',
-    [searchParams]
-  )
-
-  const [searchInput, setSearchInput] = useState(
-    searchParams.get('search') || ''
-  )
-  const debouncedSearch = useDebounce(searchInput, 300)
-
-  useEffect(() => {
-    const currentSearch = searchParams.get('search') || ''
-    if (debouncedSearch !== currentSearch) {
-      updateUrlParams(
-        { search: debouncedSearch || undefined, page: undefined },
-        { replace: true }
-      )
-    }
-  }, [debouncedSearch, searchParams, updateUrlParams])
-
-  useEffect(() => {
-    const urlSearch = searchParams.get('search') || ''
-    if (urlSearch !== searchInput) {
-      setSearchInput(urlSearch)
-    }
-  }, [searchParams])
+    // Default: active (no URL param set)
+    return val ? undefined : true
+  }, [filters])
 
   const setActiveFilter = useCallback(
     (val: 'active' | 'expired' | 'all') => {
-      updateUrlParams({
-        active:
-          val === 'active' ? undefined : val === 'expired' ? 'false' : 'all',
-        page: undefined,
-      })
+      filters.setFilterValue(
+        'active',
+        val === 'active' ? null : val === 'expired' ? 'false' : 'all'
+      )
     },
-    [updateUrlParams]
+    [filters]
   )
-
-  const setSelectedKategori = useCallback(
-    (val: string | null) => {
-      updateUrlParams({ kategori: val || undefined, page: undefined })
-    },
-    [updateUrlParams]
-  )
-
-  const setSelectedFastighet = useCallback(
-    (val: string | null) => {
-      updateUrlParams({ fastighet: val || undefined, page: undefined })
-    },
-    [updateUrlParams]
-  )
-
-  const setSelectedDistrikt = useCallback(
-    (val: string | null) => {
-      updateUrlParams({ distrikt: val || undefined, page: undefined })
-    },
-    [updateUrlParams]
-  )
-
-  const setSelectedOrsak = useCallback(
-    (val: string | null) => {
-      updateUrlParams({ orsak: val || undefined, page: undefined })
-    },
-    [updateUrlParams]
-  )
-
-  const setDateRange = useCallback(
-    (start: string | null, end: string | null) => {
-      updateUrlParams({
-        fromDate: start || undefined,
-        toDate: end || undefined,
-        page: undefined,
-      })
-    },
-    [updateUrlParams]
-  )
-
-  const clearFilters = useCallback(() => {
-    setSearchInput('')
-    updateUrlParams({
-      search: undefined,
-      active: undefined,
-      kategori: undefined,
-      fastighet: undefined,
-      distrikt: undefined,
-      orsak: undefined,
-      fromDate: undefined,
-      toDate: undefined,
-      page: undefined,
-    })
-  }, [updateUrlParams])
-
-  const hasActiveFilters =
-    debouncedSearch ||
-    activeFilter !== true ||
-    selectedKategori ||
-    selectedFastighet ||
-    selectedDistrikt ||
-    selectedOrsak ||
-    startDatum ||
-    slutDatum
 
   const params: RentalBlocksSearchParams = useMemo(
     () => ({
-      q: debouncedSearch || undefined,
-      kategori: selectedKategori || undefined,
-      distrikt: selectedDistrikt || undefined,
-      blockReason: selectedOrsak || undefined,
-      fastighet: selectedFastighet || undefined,
-      fromDateGte: startDatum || undefined,
-      toDateLte: slutDatum || undefined,
+      q: filters.debouncedSearch || undefined,
+      kategori: filters.getFilterValue('kategori') || undefined,
+      distrikt: filters.getFilterValue('distrikt') || undefined,
+      blockReason: filters.getFilterValue('orsak') || undefined,
+      fastighet: filters.getFilterValue('fastighet') || undefined,
+      fromDateGte: filters.getFilterValue('fromDate') || undefined,
+      toDateLte: filters.getFilterValue('toDate') || undefined,
       active: activeFilter,
     }),
-    [
-      debouncedSearch,
-      selectedKategori,
-      selectedDistrikt,
-      selectedOrsak,
-      selectedFastighet,
-      startDatum,
-      slutDatum,
-      activeFilter,
-    ]
+    [filters, activeFilter]
   )
 
+  const {
+    data: rentalBlocks,
+    meta,
+    isLoading,
+    isFetching,
+    error,
+  } = useRentalBlocks(params, filters.page, PAGE_SIZE)
+
+  const totalPages = meta?.totalRecords
+    ? Math.ceil(meta.totalRecords / PAGE_SIZE)
+    : 1
+
+  // Excel export
+  const [isExporting, setIsExporting] = useState(false)
+  const handleExport = useCallback(async () => {
+    if (!meta?.totalRecords || meta.totalRecords === 0) return
+
+    setIsExporting(true)
+    try {
+      const blob = await residenceService.exportRentalBlocksToExcel(params)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `sparrlista-${new Date().toISOString().split('T')[0]}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [params, meta?.totalRecords])
+
   return {
-    page,
+    ...filters,
     pageSize: PAGE_SIZE,
-    setPage,
-    params,
-    searchInput,
-    setSearchInput,
     activeFilter,
-    selectedKategori,
-    setSelectedKategori,
-    selectedFastighet,
-    setSelectedFastighet,
-    selectedDistrikt,
-    setSelectedDistrikt,
-    selectedOrsak,
-    setSelectedOrsak,
-    startDatum,
-    slutDatum,
-    setDateRange,
     setActiveFilter,
-    clearFilters,
-    hasActiveFilters,
+    params,
+
+    // Query results
+    rentalBlocks: rentalBlocks || [],
+    meta,
+    totalPages,
+    isLoading,
+    isFetching,
+    error,
+
+    // Export
+    isExporting,
+    handleExport,
   }
 }

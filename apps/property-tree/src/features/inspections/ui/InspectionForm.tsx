@@ -1,13 +1,14 @@
-import { Button } from '@/shared/ui/Button'
-import { RoomInspectionEditor } from './RoomInspectionEditor'
-import { InspectorSelectionCard } from './InspectorSelectionCard'
-import { useInspectionForm } from '../hooks/useInspectionForm'
-import type { Room } from '@/services/types'
+import { useEffect } from 'react'
+import { CheckCircle2 } from 'lucide-react'
+
 import type {
   InspectionSubmitData,
   TenantSnapshot,
 } from '@/features/inspections/types/index'
-import { CheckCircle2 } from 'lucide-react'
+
+import type { components } from '@/services/api/core/generated/api-types'
+import type { Room } from '@/services/types'
+
 import {
   Accordion,
   AccordionContent,
@@ -15,8 +16,11 @@ import {
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
 import { Badge } from '@/shared/ui/Badge'
-import { useEffect } from 'react'
-import type { components } from '@/services/api/core/generated/api-types'
+import { Button } from '@/shared/ui/Button'
+
+import { useInspectionForm } from '../hooks/useInspectionForm'
+import { InspectorSelectionCard } from './InspectorSelectionCard'
+import { RoomInspectionEditor } from './RoomInspectionEditor'
 
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']

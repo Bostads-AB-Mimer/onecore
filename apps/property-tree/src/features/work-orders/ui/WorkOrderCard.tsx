@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import { Badge } from '@/shared/ui/Badge'
 import { WorkOrder } from '@/services/api/core'
+
+import { Badge } from '@/shared/ui/Badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 type WorkOrderCardProps = {
   orderItem: WorkOrder

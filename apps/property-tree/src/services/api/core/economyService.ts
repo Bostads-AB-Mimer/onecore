@@ -1,5 +1,6 @@
-import { GET } from './baseApi'
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
+
+import { GET } from './baseApi'
 
 // TODO: Fix the ts-ignore by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(

@@ -1,11 +1,12 @@
-import type { components } from './api/core/generated/api-types'
 import type {
-  ResidentialArea,
-  ApplicantStatus,
-  WaitingListType,
-  ApplicationProfileHousingReference,
   Address,
+  ApplicantStatus,
+  ApplicationProfileHousingReference,
+  ResidentialArea,
+  WaitingListType,
 } from '@onecore/types'
+
+import type { components } from './api/core/generated/api-types'
 
 export interface WaitingListResponse {
   queueTime: string
@@ -43,8 +44,8 @@ export interface ApplicationProfileResponse {
 // Re-export shared types for convenience
 export type {
   ApplicantStatus,
-  WaitingListType,
   ApplicationProfileHousingReference,
+  WaitingListType,
 }
 
 // Extract types from the generated schemas

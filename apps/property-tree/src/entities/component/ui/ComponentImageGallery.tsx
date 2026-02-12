@@ -1,22 +1,24 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
+  Check,
   ChevronLeft,
   ChevronRight,
-  Upload,
-  Trash2,
-  Check,
   Loader2,
+  Trash2,
+  Upload,
 } from 'lucide-react'
+
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
-import { cn } from '@/shared/lib/utils'
+
 import { useComponentImages } from '../hooks/useComponentImages'
 import { ComponentImageUpload } from './ComponentImageUpload'
 

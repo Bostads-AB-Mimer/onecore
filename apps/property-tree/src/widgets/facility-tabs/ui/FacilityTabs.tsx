@@ -1,25 +1,26 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import {
   ClipboardList,
-  Users,
-  MessageSquare,
   FileText,
-  Wrench,
   Info,
+  MessageSquare,
+  Users,
+  Wrench,
 } from 'lucide-react'
 
-import { useIsMobile } from '@/shared/hooks/useMobile'
+import { SpaceComponents } from '@/features/component-library'
+import { LeasesTabContent } from '@/features/leases'
+import { CurrentTenant } from '@/features/tenants'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
 import { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/leaseService'
-import { ContextType } from '@/shared/types/ui'
 
-import { CurrentTenant } from '@/features/tenants'
-import { LeasesTabContent } from '@/features/leases'
-import { WorkOrdersTabContent } from '@/features/work-orders'
-import { RoomsTabContent } from './RoomsTabContent'
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { FacilityTabsMobile } from './FacilityTabsMobile'
-import { SpaceComponents } from '@/features/component-library'
+import { RoomsTabContent } from './RoomsTabContent'
 
 type Facility = components['schemas']['FacilityDetails']
 

@@ -1,23 +1,26 @@
 import { useState } from 'react'
+import { PlayCircle, RotateCcw } from 'lucide-react'
+
+import { components } from '@/services/api/core/generated/api-types'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
-import { PlayCircle, RotateCcw } from 'lucide-react'
-import { useIsMobile } from '@/shared/hooks/useMobile'
-import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
-import { InspectionForm } from './InspectionForm'
 
-import { components } from '@/services/api/core/generated/api-types'
+import { InspectionForm } from './InspectionForm'
+import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
 type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
-import type { Room } from '@/services/types'
 import type { InspectionSubmitData } from '@/features/inspections/types/index'
+
+import type { Room } from '@/services/types'
 
 interface InspectionFormDialogProps {
   isOpen: boolean

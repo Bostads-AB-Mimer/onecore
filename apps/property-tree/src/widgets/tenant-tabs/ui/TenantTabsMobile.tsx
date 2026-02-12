@@ -1,3 +1,4 @@
+import type { RentalPropertyInfo } from '@onecore/types'
 import {
   FileText,
   Home,
@@ -7,21 +8,20 @@ import {
 } from 'lucide-react'
 
 import {
+  TenantLeasesTabContent,
+  TenantLedgerTabContent,
+  TenantNotesTabContent,
+  TenantQueueSystemTabContent,
+} from '@/features/tenants'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import { Lease } from '@/services/api/core/leaseService'
+
+import { ContextType } from '@/shared/types/ui'
+import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
-
-import { Lease } from '@/services/api/core/leaseService'
-import type { RentalPropertyInfo } from '@onecore/types'
-import { ContextType } from '@/shared/types/ui'
-
-import {
-  TenantLeasesTabContent,
-  TenantQueueSystemTabContent,
-  TenantNotesTabContent,
-  TenantLedgerTabContent,
-} from '@/features/tenants'
-import { WorkOrdersTabContent } from '@/features/work-orders'
 
 interface TenantTabsMobileProps {
   leases: Lease[]

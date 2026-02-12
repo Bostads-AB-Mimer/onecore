@@ -5,14 +5,14 @@ export { LeaseStatusBadge } from './ui/LeaseStatusBadge'
 
 // Formatting utilities
 export {
-  formatRentalType,
-  formatDate,
-  formatCurrency,
   formatAddress,
+  formatCurrency,
+  formatDate,
+  formatRentalType,
 } from './lib/formatting'
 
 // Status utilities and constants
-export { LeaseStatus, getStatusBadge } from './lib/status'
+export { getStatusBadge, LeaseStatus } from './lib/status'
 
 // Property utilities
 export { getPropertyIdentifier } from './lib/property'

@@ -1,21 +1,22 @@
-import { GET, POST, PUT, DELETE } from './baseApi'
 import type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
   Component,
-  CreateComponentCategory,
-  UpdateComponentCategory,
-  CreateComponentType,
-  UpdateComponentType,
-  CreateComponentSubtype,
-  UpdateComponentSubtype,
-  CreateComponentModel,
-  UpdateComponentModel,
+  ComponentCategory,
+  ComponentModel,
+  ComponentSubtype,
+  ComponentType,
   CreateComponent,
+  CreateComponentCategory,
+  CreateComponentModel,
+  CreateComponentSubtype,
+  CreateComponentType,
   UpdateComponent,
+  UpdateComponentCategory,
+  UpdateComponentModel,
+  UpdateComponentSubtype,
+  UpdateComponentType,
 } from '@/services/types'
+
+import { DELETE, GET, POST, PUT } from './baseApi'
 
 export const componentLibraryService = {
   // ===== Category Operations =====
@@ -332,19 +333,19 @@ export const componentLibraryService = {
 
 // Export types for use in components
 export type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
   Component,
-  CreateComponentCategory,
-  UpdateComponentCategory,
-  CreateComponentType,
-  UpdateComponentType,
-  CreateComponentSubtype,
-  UpdateComponentSubtype,
-  CreateComponentModel,
-  UpdateComponentModel,
+  ComponentCategory,
+  ComponentModel,
+  ComponentSubtype,
+  ComponentType,
   CreateComponent,
+  CreateComponentCategory,
+  CreateComponentModel,
+  CreateComponentSubtype,
+  CreateComponentType,
   UpdateComponent,
+  UpdateComponentCategory,
+  UpdateComponentModel,
+  UpdateComponentSubtype,
+  UpdateComponentType,
 }

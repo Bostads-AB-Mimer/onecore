@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+
 import { useSidebar } from '@/shared/ui/Sidebar'
 
 //TODO better design for toggle button

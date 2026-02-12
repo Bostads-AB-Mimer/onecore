@@ -1,7 +1,8 @@
 import { useRef } from 'react'
 import { Camera } from 'lucide-react'
-import { Button } from '@/shared/ui/Button'
+
 import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
 
 interface PhotoCaptureProps {
   onPhotoCapture: (photoDataUrl: string) => void

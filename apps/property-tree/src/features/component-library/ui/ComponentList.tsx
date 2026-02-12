@@ -1,9 +1,12 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Settings, Building, Package, Wrench, ArrowRight } from 'lucide-react'
-import { Component } from '../../../services/types'
-import { Card } from '@/shared/ui/Card'
+import { ArrowRight, Building, Package, Settings, Wrench } from 'lucide-react'
+
+import { Component } from '@/services/types'
+
 import { Button } from '@/shared/ui/Button'
+import { Card } from '@/shared/ui/Card'
+
 import { ComponentModal } from './ComponentModal'
 
 interface ComponentListProps {

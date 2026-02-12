@@ -1,13 +1,15 @@
-import { History, Unplug, ImageIcon } from 'lucide-react'
+import { History, ImageIcon, Unplug } from 'lucide-react'
+
+import type { Component } from '@/services/types'
+
+import { formatISODate } from '@/shared/lib/formatters'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
-  DataTable,
   type Column,
+  DataTable,
   type DataTableAction,
 } from '@/shared/ui/DataTable'
-import type { Component } from '@/services/types'
-import { formatISODate } from '@/shared/lib/formatters'
 
 interface InstancesTableProps {
   instances: Component[]

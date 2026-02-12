@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+
 import type { InspectorInfo } from './useInspectorInfo'
 
 export interface ValidationResult {

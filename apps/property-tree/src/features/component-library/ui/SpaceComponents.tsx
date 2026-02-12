@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { useComponents } from '@/entities/component'
-import { ManageComponentsDialog } from './ManageComponentsDialog'
-import { Button } from '@/shared/ui/Button'
 import { Plus } from 'lucide-react'
+
+import { useComponents } from '@/entities/component'
+
+import { Button } from '@/shared/ui/Button'
+
 import { ComponentDetailsPanel } from './ComponentDetailsPanel'
+import { ManageComponentsDialog } from './ManageComponentsDialog'
 
 interface SpaceComponentsProps {
   spaceId: string

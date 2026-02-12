@@ -1,6 +1,7 @@
 //TODO: Handle the case where contact is not a tenant in the original call, not fallback
 
 import { useQuery } from '@tanstack/react-query'
+
 import { tenantService } from '@/services/api/core'
 import type { Tenant } from '@/services/types'
 

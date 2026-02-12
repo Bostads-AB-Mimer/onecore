@@ -1,14 +1,17 @@
-import { useState, useMemo } from 'react'
-import { Label } from '@/shared/ui/Label'
-import { Input } from '@/shared/ui/Input'
-import { useComponentEntity } from '../hooks/useComponentEntity'
-import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useMemo, useState } from 'react'
+
 import type {
+  ComponentCategory,
   ComponentModel,
   ComponentSubtype,
   ComponentType,
-  ComponentCategory,
 } from '@/services/types'
+
+import { useDebounce } from '@/shared/hooks/useDebounce'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
+
+import { useComponentEntity } from '../hooks/useComponentEntity'
 
 // Extended model type with full hierarchy
 export type ComponentModelWithHierarchy = ComponentModel & {

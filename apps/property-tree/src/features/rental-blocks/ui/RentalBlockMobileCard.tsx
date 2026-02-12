@@ -1,4 +1,5 @@
 import type { RentalBlockWithRentalObject } from '@/services/types'
+
 import { formatISODate } from '@/shared/lib/formatters'
 
 export function RentalBlockMobileCard({

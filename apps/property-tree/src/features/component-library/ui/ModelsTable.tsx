@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { Eye, FileText } from 'lucide-react'
+
+import type { ComponentModel } from '@/services/types'
+
 import { Button } from '@/shared/ui/Button'
 import {
-  DataTable,
   type Column,
+  DataTable,
   type DataTableAction,
 } from '@/shared/ui/DataTable'
+
 import { ComponentModelDocuments } from './ComponentModelDocuments'
-import type { ComponentModel } from '@/services/types'
 
 interface ModelsTableProps {
   models: ComponentModel[]

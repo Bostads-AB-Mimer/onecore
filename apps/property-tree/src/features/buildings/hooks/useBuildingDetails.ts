@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { Building, Property } from '@/services/types'
+
 import { propertyService, staircaseService } from '@/services/api/core'
+import { Building, Property } from '@/services/types'
 import { Staircase } from '@/services/types'
+
 import { useBuilding } from './useBuilding'
 
 export const useBuildingDetails = (propertyId: string, buildingId?: string) => {

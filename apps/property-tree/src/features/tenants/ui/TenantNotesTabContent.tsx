@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { useTenantComments } from '../hooks/useTenantComments'
-import { useCreateTenantComment } from '../hooks/useCreateTenantComment'
-import { useUser } from '@/entities/user'
-import { Card, CardContent } from '@/shared/ui/Card'
-import { Button } from '@/shared/ui/Button'
-import { Textarea } from '@/shared/ui/Textarea'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Plus, Save } from 'lucide-react'
+
+import { useUser } from '@/entities/user'
+
 import { generateAuthorAbbreviation } from '@/shared/lib/formatters'
+import { Button } from '@/shared/ui/Button'
+import { Card, CardContent } from '@/shared/ui/Card'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { Textarea } from '@/shared/ui/Textarea'
+
+import { useCreateTenantComment } from '../hooks/useCreateTenantComment'
+import { useTenantComments } from '../hooks/useTenantComments'
 
 interface TenantNotesTabContentProps {
   contactCode: string | undefined

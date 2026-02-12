@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+
 import { economyService } from '@/services/api/core/economyService'
 
 export function useTenantInvoices(contactCode: string | undefined) {

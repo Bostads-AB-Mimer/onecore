@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
-import { Badge } from '@/shared/ui/Badge'
+
 import { Lease } from '@/services/api/core/leaseService'
+
+import { Badge } from '@/shared/ui/Badge'
 
 export const LeaseStatus = {
   Current: 0, // Gällande

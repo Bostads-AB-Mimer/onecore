@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import { useIsMobile } from '@/shared/hooks/useMobile'
 import { components } from '@/services/api/core/generated/api-types'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 interface MaintenanceUnitBasicInfoProps {
   maintenanceUnit: components['schemas']['MaintenanceUnit']

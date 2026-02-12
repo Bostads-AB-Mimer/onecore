@@ -2,8 +2,9 @@ import React from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { match, P } from 'ts-pattern'
 
-import { authConfig } from '@/authConfig'
 import { POST } from '@/services/api/core/baseApi'
+
+import { authConfig } from '@/authConfig'
 
 type AuthCallbackState =
   | { tag: 'loading' }

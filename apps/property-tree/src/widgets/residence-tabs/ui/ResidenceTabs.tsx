@@ -1,32 +1,33 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import {
   ClipboardList,
+  FileText,
+  Folder,
   Info,
+  Lock,
+  Map,
   MessageSquare,
   Users,
-  FileText,
-  Map,
-  Folder,
-  Lock,
   Wrench,
 } from 'lucide-react'
 
-import { useIsMobile } from '@/shared/hooks/useMobile'
+import { DocumentsTabContent } from '@/features/documents'
+import { InspectionsTabContent } from '@/features/inspections'
+import { LeasesTabContent } from '@/features/leases'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { RentalBlocksTabContent } from '@/features/rental-blocks'
+import { ResidenceFloorplanTabsContent } from '@/features/residences'
+import { TenantsTabContent } from '@/features/tenants'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
 import { Lease } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
-import { ContextType } from '@/shared/types/ui'
 
-import { ResidenceFloorplanTabsContent } from '@/features/residences'
-import { RentalBlocksTabContent } from '@/features/rental-blocks'
-import { RoomsTabContent } from './RoomsTabContent'
-import { TenantsTabContent } from '@/features/tenants'
-import { InspectionsTabContent } from '@/features/inspections'
-import { WorkOrdersTabContent } from '@/features/work-orders'
-import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
-import { LeasesTabContent } from '@/features/leases'
-import { DocumentsTabContent } from '@/features/documents'
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { ResidenceTabsMobile } from './ResidenceTabsMobile'
+import { RoomsTabContent } from './RoomsTabContent'
 
 type Residence = components['schemas']['ResidenceDetails']
 

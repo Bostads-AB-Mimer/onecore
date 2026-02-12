@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import type { PropertyDetail } from '@/shared/types/api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 interface PropertyBasicInfoProps {
   propertyDetail: PropertyDetail
   showBasicInfoOnly?: boolean
