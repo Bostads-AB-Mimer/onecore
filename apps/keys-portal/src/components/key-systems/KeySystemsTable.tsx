@@ -25,7 +25,7 @@ import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropd
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
-import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
+import { ExpandedRowFreeContent } from '@/components/shared/tables/ExpandedRowFreeContent'
 import { KeysListSectioned } from '@/components/shared/tables/KeysListSectioned'
 import { KeySystemTypeBadge } from '@/components/shared/tables/StatusBadges'
 
@@ -258,7 +258,7 @@ export function KeySystemsTable({
                     </TableCell>
                   </TableRow>
                   {isExpanded && (
-                    <ExpandedRowContent
+                    <ExpandedRowFreeContent
                       colSpan={10}
                       isLoading={isLoadingKeys}
                       hasData={keysForExpandedSystem.length > 0}
@@ -270,7 +270,7 @@ export function KeySystemsTable({
                         className=""
                         indent
                       />
-                    </ExpandedRowContent>
+                    </ExpandedRowFreeContent>
                   )}
                 </React.Fragment>
               )
