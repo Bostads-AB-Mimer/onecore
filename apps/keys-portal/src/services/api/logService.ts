@@ -29,16 +29,7 @@ const mapFiltersToQuery = (
   return q
 }
 
-const normalizeLog = (row: any): Log => ({
-  ...row,
-  userName: row.userName,
-  objectType: row.objectType,
-  objectId: row.objectId ?? null,
-  description: row.description ?? null,
-  // New optional fields from backend
-  eventTypeLabel: row.eventTypeLabel,
-  objectTypeLabel: row.objectTypeLabel,
-})
+const asLog = (row: any): Log => row
 
 export const logService = {
   async fetchLogs(
@@ -71,7 +62,7 @@ export const logService = {
     }
 
     return {
-      content: rows.map(normalizeLog),
+      content: rows.map(asLog),
       _meta: {
         page: meta.page,
         limit: meta.limit,
@@ -94,7 +85,7 @@ export const logService = {
     })
     if (error) throw error
     const rows = (data?.content ?? []) as any[]
-    return rows.map(normalizeLog)
+    return rows.map(asLog)
   },
 
   async fetchLogsByRentalObject(
@@ -135,7 +126,7 @@ export const logService = {
     }
 
     return {
-      content: rows.map(normalizeLog),
+      content: rows.map(asLog),
       _meta: {
         page: meta.page,
         limit: meta.limit,
@@ -181,7 +172,7 @@ export const logService = {
     }
 
     return {
-      content: rows.map(normalizeLog),
+      content: rows.map(asLog),
       _meta: {
         page: meta.page,
         limit: meta.limit,

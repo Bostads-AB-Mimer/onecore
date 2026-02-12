@@ -9433,6 +9433,8 @@ export interface components {
       /** Format: date-time */
       eventTime: string;
       description?: string | null;
+      eventTypeLabel?: string;
+      objectTypeLabel?: string;
     };
     KeyNote: {
       /** Format: uuid */

@@ -106,8 +106,8 @@ export const LogSchema = z.object({
   objectId: z.string().uuid().nullable().optional(),
   eventTime: z.coerce.date(),
   description: z.string().nullable().optional(),
-  // All context (rentalObjectCode, contactId, keyEvent data) is now fetched via JOINs
-  // when filtering/displaying logs - not stored in the logs table
+  eventTypeLabel: z.string().optional(),
+  objectTypeLabel: z.string().optional(),
 })
 
 export const KeyNoteSchema = z.object({
