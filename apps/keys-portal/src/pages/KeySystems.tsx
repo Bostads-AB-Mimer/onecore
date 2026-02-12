@@ -9,6 +9,7 @@ import { keyService } from '@/services/api/keyService'
 import { propertySearchService } from '@/services/api/propertySearchService'
 import { keySystemSchemaService } from '@/services/api/keySystemSchemaService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 
 export default function KeySystems() {
   const pagination = useUrlPagination()
@@ -28,6 +29,7 @@ export default function KeySystems() {
     null
   )
   const { toast } = useToast()
+  const checkStale = useStaleGuard()
 
   // Read all filters from URL
   const searchQuery = pagination.searchParams.get('q') || ''
@@ -45,6 +47,7 @@ export default function KeySystems() {
   // Load key systems and their properties from API
   const loadKeySystems = useCallback(
     async (page: number = 1, limit: number = 60) => {
+      const isStale = checkStale()
       try {
         setIsLoading(true)
 
@@ -86,6 +89,8 @@ export default function KeySystems() {
           ? await keyService.searchKeySystems(searchParams, page, limit)
           : await keyService.getAllKeySystems(page, limit)
 
+        if (isStale()) return
+
         setKeySystems(response.content)
         pagination.setPaginationMeta(response._meta)
 
@@ -112,11 +117,13 @@ export default function KeySystems() {
           const properties = await propertySearchService.getByIds(
             Array.from(allPropertyIds)
           )
+          if (isStale()) return
           const newPropertyMap = new Map<string, Property>()
           properties.forEach((prop) => newPropertyMap.set(prop.id, prop))
           setPropertyMap(newPropertyMap)
         }
       } catch (error) {
+        if (isStale()) return
         console.error('Failed to load key systems:', error)
         toast({
           title: 'Fel',
@@ -124,7 +131,7 @@ export default function KeySystems() {
           variant: 'destructive',
         })
       } finally {
-        setIsLoading(false)
+        if (!isStale()) setIsLoading(false)
       }
     },
     [

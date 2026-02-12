@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ListPageLayout } from '@/components/shared/layout'
 import { Badge } from '@/components/ui/badge'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { receiptService } from '@/services/api/receiptService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 
 export default function KeyLoans() {
   const pagination = useUrlPagination()
@@ -17,7 +18,7 @@ export default function KeyLoans() {
   const [showEditForm, setShowEditForm] = useState(false)
   const [editingKeyLoan, setEditingKeyLoan] = useState<KeyLoan | null>(null)
   const { toast } = useToast()
-  const requestIdRef = useRef(0)
+  const checkStale = useStaleGuard()
 
   // Read search query from URL
   const searchQuery = pagination.searchParams.get('q') || ''
@@ -50,7 +51,7 @@ export default function KeyLoans() {
   // Load key loans from API
   const loadKeyLoans = useCallback(
     async (page: number = 1, limit: number = 60) => {
-      const currentRequestId = ++requestIdRef.current
+      const isStale = checkStale()
       try {
         setIsLoading(true)
 
@@ -130,12 +131,12 @@ export default function KeyLoans() {
         const response = await keyLoanService.search(params, page, limit)
 
         // Ignore stale responses from earlier requests
-        if (currentRequestId !== requestIdRef.current) return
+        if (isStale()) return
 
         setKeyLoans(response.content)
         pagination.setPaginationMeta(response._meta)
       } catch (error) {
-        if (currentRequestId !== requestIdRef.current) return
+        if (isStale()) return
         console.error('Failed to load key loans:', error)
         toast({
           title: 'Fel',
@@ -143,9 +144,7 @@ export default function KeyLoans() {
           variant: 'destructive',
         })
       } finally {
-        if (currentRequestId === requestIdRef.current) {
-          setIsLoading(false)
-        }
+        if (!isStale()) setIsLoading(false)
       }
     },
     [

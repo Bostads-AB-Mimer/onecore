@@ -8,6 +8,7 @@ import { BulkEditKeysForm } from '@/components/keys/BulkEditKeysForm'
 import { BulkDeleteKeysDialog } from '@/components/keys/dialogs/BulkDeleteKeysDialog'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 import { useItemSelection } from '@/hooks/useItemSelection'
 import { Key, KeyDetails, KeySystem } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
@@ -27,6 +28,7 @@ const Index = () => {
   const [editingKey, setEditingKey] = useState<Key | null>(null)
   const [deletingKey, setDeletingKey] = useState<KeyDetails | null>(null)
   const { toast } = useToast()
+  const checkStale = useStaleGuard()
 
   // Read all filters from URL
   const searchQuery = pagination.searchParams.get('q') || ''
@@ -55,6 +57,7 @@ const Index = () => {
 
   const fetchKeys = useCallback(
     async (page: number = 1, limit: number = 60) => {
+      const isStale = checkStale()
       setLoading(true)
       setError('')
       try {
@@ -101,6 +104,8 @@ const Index = () => {
           ? await keyService.searchKeys(searchParams, page, limit, true)
           : await keyService.getAllKeys(page, limit, true)
 
+        if (isStale()) return
+
         setKeys(response.content)
         pagination.setPaginationMeta(response._meta)
 
@@ -113,6 +118,7 @@ const Index = () => {
         })
         setKeySystemMap(systemMap)
       } catch (e) {
+        if (isStale()) return
         const msg = e instanceof Error ? e.message : 'Okänt fel'
         setError(msg)
         toast({
@@ -121,7 +127,7 @@ const Index = () => {
           variant: 'destructive',
         })
       } finally {
-        setLoading(false)
+        if (!isStale()) setLoading(false)
       }
     },
     [
