@@ -1,0 +1,51 @@
+[
+  {
+    "id": "rn-2026-02-11-v188-1",
+    "date": "2026-02-11",
+    "title": "Odoo: Loggknapp för externa ärenden",
+    "description": "Loggknappen syns nu även för ärenden med 'dold i mimer.nu', vilket åtgärdar problemet för externa leverantörer.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-02-11-v188-2",
+    "date": "2026-02-11",
+    "title": "Odoo: Planerad aktivitet",
+    "description": "Åtgärdat bugg där en planerad aktivitet felaktigt skapades när man angav 'planerat utförandedatum'.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-02-11-v188-3",
+    "date": "2026-02-11",
+    "title": "Odoo: Skicka meddelande i mobilläge",
+    "description": "Fixad bugg för 'Skicka meddelande'-funktionen där knapparna inte syntes i mobilläget och tvingade horisontell skroll.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-02-11-v188-4",
+    "date": "2026-02-11",
+    "title": "Odoo: Komponenter i lägenhetsrum",
+    "description": "Det går nu att lägga till komponenter i lägenheters rum direkt från Odoo. OBS: Komponentkategorin och undertyp behöver finnas i ONECore för att komponenten ska kunna läggas till.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-11-v188-5",
+    "date": "2026-02-11",
+    "title": "Odoo: AI-tolkning av bilder till komponenter",
+    "description": "Stöd för AI-tolkning av bilder till komponenter från Odoo. Kategori och undertyp behöver finnas i ONECore.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-12-v188-1",
+    "date": "2026-02-12",
+    "title": "Befarade kundförluster på fakturor",
+    "description": "Stöd för bokföringskod och befarade kundförluster på fakturor. Transaktioner på konto 1529 exkluderas och motsvarande fakturor markeras som befarade kundförluster. Befarade kundförluster visas i fakturatabellen.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-12-v188-2",
+    "date": "2026-02-12",
+    "title": "Förbättringar av noteringar på kunder",
+    "description": "Manuellt skrivna signaturer utan tid tolkas nu korrekt, osignerade noteringar visas med texten 'Osignerad notering', datum utan tid visas i rätt format, och noteringar utan datum sorteras sist.",
+    "category": "fix"
+  }
+]
