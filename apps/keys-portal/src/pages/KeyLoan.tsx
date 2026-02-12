@@ -51,10 +51,22 @@ export default function KeyLoan() {
     setSearchParams({})
   }
 
-  const { searchValue, setSearchValue, handleSearch, loading } =
-    useUnifiedSearch({
-      onResultFound: handleResultFound,
-    })
+  const {
+    searchValue,
+    setSearchValue,
+    handleSearch,
+    handleKeyDown,
+    loading,
+    dropdownResults,
+    showDropdown,
+    isSearching,
+    selectedIndex,
+    setSelectedIndex,
+    handleSelectResult,
+    closeDropdown,
+  } = useUnifiedSearch({
+    onResultFound: handleResultFound,
+  })
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -63,10 +75,11 @@ export default function KeyLoan() {
           value={searchValue}
           onChange={setSearchValue}
           onSearch={handleSearch}
+          onKeyDown={handleKeyDown}
           loading={loading}
-          placeholder="Personnummer, kundnummer eller hyresobjekt"
+          placeholder="Personnummer, kundnummer, hyresobjekt eller adress"
           title="Sök hyresgäst eller hyresobjekt"
-          description="Ange personnummer, kundnummer eller hyresobjekt för att hitta kontrakt"
+          description="Sök på personnummer, kundnummer, hyresobjekt eller adress"
           helpText={
             <>
               <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
@@ -74,8 +87,16 @@ export default function KeyLoan() {
                 Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)
               </p>
               <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
+              <p>Adress: Sök på gatunamn (t.ex. Storgatan)</p>
             </>
           }
+          dropdownResults={dropdownResults}
+          showDropdown={showDropdown}
+          isSearching={isSearching}
+          selectedIndex={selectedIndex}
+          onSelectResult={handleSelectResult}
+          onMouseEnterResult={setSelectedIndex}
+          onCloseDropdown={closeDropdown}
         />
       </div>
 

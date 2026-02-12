@@ -1,5 +1,3 @@
-import type { RentalPropertyResponse } from '@/services/types'
-
 import { GET } from './core/base-api'
 
 export interface RentalObjectSearchResult {
@@ -15,7 +13,6 @@ export class RentalObjectSearchService {
     return rentalIdPattern.test(rentalId) && rentalId.length >= 5
   }
 
-  // TODO Impelement using the new property base service
   async searchByRentalId(
     rentalId: string
   ): Promise<RentalObjectSearchResult[]> {
@@ -24,32 +21,58 @@ export class RentalObjectSearchService {
     }
 
     try {
-      const response = await GET(
-        '/rental-properties/by-rental-object-code/{rentalObjectCode}',
-        {
-          params: { path: { rentalObjectCode: rentalId } },
+      const [residences, parkingSpaces, facilities] = await Promise.all([
+        GET('/residences/search', {
+          params: { query: { q: rentalId } },
+        }),
+        GET('/parking-spaces/search', {
+          params: { query: { q: rentalId } },
+        }),
+        GET('/facilities/search', {
+          params: { query: { q: rentalId } },
+        }),
+      ])
+
+      const results: RentalObjectSearchResult[] = []
+
+      for (const r of residences.data?.content ?? []) {
+        if (r.rentalId === rentalId) {
+          results.push({
+            rentalId: r.rentalId ?? rentalId,
+            name: r.name ?? rentalId,
+            type: 'Bostad',
+            address: r.name ?? 'Okänd adress',
+          })
         }
-      )
-
-      if (response.data) {
-        const rentalProperty: RentalPropertyResponse = response.data
-
-        const typeFromApi = rentalProperty.content?.type ?? 'unknown'
-
-        const result: RentalObjectSearchResult = {
-          rentalId: rentalProperty.content?.id || rentalId,
-          name: this.getPropertyName(rentalProperty),
-          type: typeFromApi,
-          address: this.getPropertyAddress(rentalProperty),
-        }
-
-        return [result]
       }
+
+      for (const p of parkingSpaces.data?.content ?? []) {
+        if (p.rentalId === rentalId) {
+          results.push({
+            rentalId: p.rentalId,
+            name: p.name ?? rentalId,
+            type: 'Bilplats',
+            address: p.name ?? 'Okänd adress',
+          })
+        }
+      }
+
+      for (const f of facilities.data?.content ?? []) {
+        if (f.rentalId === rentalId) {
+          results.push({
+            rentalId: f.rentalId,
+            name: f.name ?? rentalId,
+            type: 'Lokal',
+            address: f.name ?? 'Okänd adress',
+          })
+        }
+      }
+
+      return results
     } catch (error) {
       console.warn('Error searching rental properties:', error)
+      return []
     }
-
-    return []
   }
 
   async getAddressByRentalId(rentalId: string): Promise<string> {
@@ -67,22 +90,6 @@ export class RentalObjectSearchService {
       )
     )
     return Object.fromEntries(entries)
-  }
-
-  private getPropertyName(rentalProperty: RentalPropertyResponse): string {
-    const address = this.getPropertyAddress(rentalProperty)
-    if (address && address !== 'Okänd adress') {
-      return address
-    }
-    // Fallback to the raw API type if no address
-    return rentalProperty.content?.type || 'Okänd typ'
-  }
-
-  private getPropertyAddress(rentalProperty: RentalPropertyResponse): string {
-    if (rentalProperty.content?.property?.address) {
-      return rentalProperty.content.property.address
-    }
-    return 'Okänd adress'
   }
 }
 
