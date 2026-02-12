@@ -1,52 +1,25 @@
-import { GET } from './core/base-api'
-import { searchContacts } from './contactService'
-import type { components } from './core/generated/api-types'
+import type { Contact } from '@/services/types'
 
-type ResidenceSearchResult = components['schemas']['ResidenceSearchResult']
-type ParkingSpaceSearchResult =
-  components['schemas']['ParkingSpaceSearchResult']
-type FacilitySearchResult = components['schemas']['FacilitySearchResult']
-type Contact = components['schemas']['Contact']
+import {
+  rentalObjectSearchService,
+  type RentalObjectSearchResult,
+} from './rentalObjectSearchService'
+import { searchContacts } from './contactService'
 
 export type UnifiedSearchResult =
-  | { type: 'residence'; data: ResidenceSearchResult }
-  | { type: 'parking-space'; data: ParkingSpaceSearchResult }
-  | { type: 'facility'; data: FacilitySearchResult }
+  | { type: 'rental'; data: RentalObjectSearchResult }
   | { type: 'contact'; data: Contact }
 
 export async function searchAll(query: string): Promise<UnifiedSearchResult[]> {
   if (!query.trim() || query.trim().length < 3) return []
 
-  const [residences, parkingSpaces, facilities, contacts] = await Promise.all([
-    GET('/residences/search', {
-      params: { query: { q: query } },
-    }),
-    GET('/parking-spaces/search', {
-      params: { query: { q: query } },
-    }),
-    GET('/facilities/search', {
-      params: { query: { q: query } },
-    }),
+  const [rentalResults, contacts] = await Promise.all([
+    rentalObjectSearchService.searchByQuery(query),
     searchContacts(query),
   ])
 
-  const results: UnifiedSearchResult[] = []
-
-  for (const r of residences.data?.content ?? []) {
-    results.push({ type: 'residence', data: r })
-  }
-
-  for (const p of parkingSpaces.data?.content ?? []) {
-    results.push({ type: 'parking-space', data: p })
-  }
-
-  for (const f of facilities.data?.content ?? []) {
-    results.push({ type: 'facility', data: f })
-  }
-
-  for (const c of contacts) {
-    results.push({ type: 'contact', data: c })
-  }
-
-  return results
+  return [
+    ...rentalResults.map((r) => ({ type: 'rental' as const, data: r })),
+    ...contacts.map((c) => ({ type: 'contact' as const, data: c })),
+  ]
 }

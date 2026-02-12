@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useToast } from '@/hooks/use-toast'
-import { useSearch } from '@/hooks/useSearch'
-import { useDebounce } from '@/utils/debounce'
 import {
   fetchTenantAndLeasesByPnr,
   fetchLeasesByRentalPropertyId,
   fetchTenantAndLeasesByContactCode,
 } from '@/services/api/leaseSearchService'
-import { searchAll } from '@/services/api/unifiedSearchService'
 import type { UnifiedSearchResult } from '@/services/api/unifiedSearchService'
 import type { Lease, Tenant } from '@/services/types'
 
@@ -26,13 +23,11 @@ const isValidPnr = (value: string) =>
 
 const isContactCode = (value: string) => {
   const trimmed = value.trim().toUpperCase()
-  // Contact codes start with P or F and contain only letters/numbers (no dashes or spaces)
   return /^[PF][A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
 }
 
 const isObjectId = (value: string) => {
   const trimmed = value.trim()
-  // Check if there's a dash in the first 5 characters
   const first5 = trimmed.substring(0, 5)
   return first5.includes('-')
 }
@@ -41,7 +36,6 @@ function pickPrimaryTenant(contracts: Lease[]): Tenant | null {
   const isActive = (l: Lease) =>
     (l.status ?? '').toString().toLowerCase() === 'active'
 
-  // For object searches, only return a tenant if there's an active lease
   const primaryLease = contracts.find(isActive)
   if (!primaryLease) return null
 
@@ -52,52 +46,12 @@ function pickPrimaryTenant(contracts: Lease[]): Tenant | null {
 export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
   const [searchParams] = useSearchParams()
   const [searchValue, setSearchValue] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(-1)
   const { toast } = useToast()
-
-  const updateDebouncedQuery = useDebounce((query: string) => {
-    setDebouncedQuery(query)
-  }, 300)
-
-  useEffect(() => {
-    updateDebouncedQuery(searchValue.trim())
-  }, [searchValue, updateDebouncedQuery])
-
-  // Dropdown search - fires as user types (min 3 chars, debounced)
-  const dropdownQuery = useSearch(
-    (query: string) => searchAll(query),
-    'unified-search-dropdown',
-    debouncedQuery,
-    { minLength: 3 }
-  )
-
-  const dropdownResults = dropdownQuery.data ?? []
-  const isSearching = dropdownQuery.isFetching
-
-  // Show/hide dropdown based on results
-  useEffect(() => {
-    if (dropdownResults.length > 0) {
-      setShowDropdown(true)
-      setSelectedIndex(-1)
-    } else if (debouncedQuery.length >= 3 && !isSearching) {
-      setShowDropdown(true)
-    } else if (debouncedQuery.length < 3) {
-      setShowDropdown(false)
-    }
-  }, [dropdownResults.length, debouncedQuery, isSearching])
-
-  const closeDropdown = useCallback(() => {
-    setShowDropdown(false)
-    setSelectedIndex(-1)
-  }, [])
 
   // Handle selecting a dropdown result
   const handleSelectResult = useCallback(
     async (result: UnifiedSearchResult) => {
-      closeDropdown()
       setLoading(true)
 
       try {
@@ -120,7 +74,6 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
             'contactCode'
           )
         } else {
-          // Residence, parking-space, or facility
           const rentalId = result.data.rentalId
           if (!rentalId) {
             toast({
@@ -160,10 +113,10 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         setLoading(false)
       }
     },
-    [closeDropdown, onResultFound, toast]
+    [onResultFound, toast]
   )
 
-  // Exact match search on Enter (existing behavior)
+  // Exact match search on Enter/button click
   const handleSearch = async () => {
     const value = searchValue.trim()
     if (!value) {
@@ -175,9 +128,6 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
       return
     }
 
-    closeDropdown()
-
-    // Determine search type based on format
     if (isObjectId(value)) {
       await handleSearchByObjectId(value)
     } else if (isValidPnr(value)) {
@@ -300,55 +250,11 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
     }
   }
 
-  // Keyboard handler for dropdown navigation
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      closeDropdown()
-      return
-    }
-
-    if (!showDropdown || dropdownResults.length === 0) {
-      if (e.key === 'Enter') {
-        handleSearch()
-      }
-      return
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setSelectedIndex((prev) =>
-          prev < dropdownResults.length - 1 ? prev + 1 : prev
-        )
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1))
-        break
-      case 'Enter':
-        e.preventDefault()
-        if (selectedIndex >= 0 && selectedIndex < dropdownResults.length) {
-          handleSelectResult(dropdownResults[selectedIndex])
-        } else {
-          handleSearch()
-        }
-        break
-    }
-  }
-
   return {
     searchValue,
     setSearchValue,
     handleSearch,
-    handleKeyDown,
-    loading,
-    // Dropdown state
-    dropdownResults,
-    showDropdown,
-    isSearching,
-    selectedIndex,
-    setSelectedIndex,
     handleSelectResult,
-    closeDropdown,
+    loading,
   }
 }
