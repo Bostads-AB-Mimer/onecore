@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import { X } from 'lucide-react'
 import { UnifiedMaintenanceSearch } from '@/components/maintenance/UnifiedMaintenanceSearch'
 import {
   useUnifiedMaintenanceSearch,
   type SearchResult,
 } from '@/components/maintenance/UnifiedMaintenanceSearchHook'
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
-import { LoanCard } from '@/components/shared/LoanCard'
+import { MaintenanceLoansTable } from '@/components/maintenance/MaintenanceLoansTable'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
+import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
 import { ContactBundlesWithLoanedKeysCard } from '@/components/maintenance/ContactBundlesWithLoanedKeysCard'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
@@ -29,13 +30,9 @@ import { useToast } from '@/hooks/use-toast'
 export default function MaintenanceKeys() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
-  const [activeLoans, setActiveLoans] = useState<KeyLoanWithDetails[]>([])
-  const [returnedLoans, setReturnedLoans] = useState<KeyLoanWithDetails[]>([])
+  const [loans, setLoans] = useState<KeyLoanWithDetails[]>([])
   const [loansLoading, setLoansLoading] = useState(false)
-  const [activeLoansOpen, setActiveLoansOpen] = useState(false)
-  const [returnedLoansOpen, setReturnedLoansOpen] = useState(false)
-  const [hasLoadedActive, setHasLoadedActive] = useState(false)
-  const [hasLoadedReturned, setHasLoadedReturned] = useState(false)
+  const [hasLoadedLoans, setHasLoadedLoans] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [bundleKeys, setBundleKeys] = useState<KeyDetails[]>([])
   const [bundleKeysLoading, setBundleKeysLoading] = useState(false)
@@ -50,8 +47,19 @@ export default function MaintenanceKeys() {
   const [contactLoanedKeyIds, setContactLoanedKeyIds] = useState<Set<string>>(
     new Set()
   )
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false)
+  const [returnLoanId, setReturnLoanId] = useState<string | null>(null)
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
+
+  const returnLoan = returnLoanId
+    ? (loans.find((l) => l.id === returnLoanId) ?? null)
+    : null
+
+  const handleLoanReturn = (loanId: string) => {
+    setReturnLoanId(loanId)
+    setReturnDialogOpen(true)
+  }
 
   const scrollToResults = () =>
     setTimeout(
@@ -74,12 +82,8 @@ export default function MaintenanceKeys() {
 
   const handleClearSearch = () => {
     setSearchResult(null)
-    setActiveLoans([])
-    setReturnedLoans([])
-    setHasLoadedActive(false)
-    setHasLoadedReturned(false)
-    setActiveLoansOpen(false)
-    setReturnedLoansOpen(false)
+    setLoans([])
+    setHasLoadedLoans(false)
     setContactLoanedKeyIds(new Set())
     setSearchParams({})
   }
@@ -113,36 +117,32 @@ export default function MaintenanceKeys() {
     fetchLoanedKeyIds()
   }, [searchResult])
 
-  // Fetch active loans when the section is opened
+  // Fetch all loans when a search result is found
   useEffect(() => {
-    if (!searchResult || !activeLoansOpen) {
+    if (!searchResult || hasLoadedLoans) {
       return
     }
 
-    const fetchActiveLoans = async () => {
+    const fetchLoans = async () => {
       setLoansLoading(true)
       try {
-        let active: KeyLoanWithDetails[] = []
+        let allLoans: KeyLoanWithDetails[] = []
 
         if (searchResult.type === 'contact' && searchResult.contact) {
-          active = await keyLoanService.getByContactWithKeys(
-            searchResult.contact.contactCode,
-            'MAINTENANCE',
-            false
+          allLoans = await keyLoanService.getByContactWithKeys(
+            searchResult.contact.contactCode
           )
         } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          active = await keyLoanService.getByBundleWithKeys(
-            searchResult.bundle.id,
-            'MAINTENANCE',
-            false
+          allLoans = await keyLoanService.getByBundleWithKeys(
+            searchResult.bundle.id
           )
         }
 
-        setActiveLoans(active)
-        setHasLoadedActive(true)
+        setLoans(allLoans)
+        setHasLoadedLoans(true)
 
-        // Fetch key systems for the keys in active loans
-        const allKeys = active.flatMap((loan) => loan.keysArray)
+        // Fetch key systems for the keys in all loans
+        const allKeys = allLoans.flatMap((loan) => loan.keysArray)
         const uniqueKeySystemIds = [
           ...new Set(
             allKeys
@@ -167,83 +167,18 @@ export default function MaintenanceKeys() {
         }
       } catch (error) {
         toast({
-          title: 'Kunde inte hämta aktiva lån',
-          description: 'Ett fel uppstod när aktiva lån skulle hämtas',
+          title: 'Kunde inte hämta lån',
+          description: 'Ett fel uppstod när lån skulle hämtas',
           variant: 'destructive',
         })
-        console.error('Error fetching active maintenance loans:', error)
+        console.error('Error fetching maintenance loans:', error)
       } finally {
         setLoansLoading(false)
       }
     }
 
-    fetchActiveLoans()
-  }, [searchResult, activeLoansOpen, toast])
-
-  // Fetch returned loans when the section is opened
-  useEffect(() => {
-    if (!searchResult || !returnedLoansOpen) {
-      return
-    }
-
-    const fetchReturnedLoans = async () => {
-      try {
-        let returned: KeyLoanWithDetails[] = []
-
-        if (searchResult.type === 'contact' && searchResult.contact) {
-          returned = await keyLoanService.getByContactWithKeys(
-            searchResult.contact.contactCode,
-            'MAINTENANCE',
-            true
-          )
-        } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          returned = await keyLoanService.getByBundleWithKeys(
-            searchResult.bundle.id,
-            'MAINTENANCE',
-            true
-          )
-        }
-
-        setReturnedLoans(returned)
-        setHasLoadedReturned(true)
-
-        // Fetch key systems for the keys in returned loans (merge with existing map)
-        const allKeys = returned.flatMap((loan) => loan.keysArray)
-        const uniqueKeySystemIds = [
-          ...new Set(
-            allKeys
-              .map((k) => k.keySystemId)
-              .filter((id): id is string => id != null && id !== '')
-          ),
-        ]
-
-        if (uniqueKeySystemIds.length > 0) {
-          const systemMap: Record<string, string> = {}
-          await Promise.all(
-            uniqueKeySystemIds.map(async (id) => {
-              try {
-                const keySystem = await keyService.getKeySystem(id)
-                systemMap[id] = keySystem.systemCode
-              } catch (error) {
-                console.error(`Failed to fetch key system ${id}:`, error)
-              }
-            })
-          )
-          // Merge with existing loans key system map
-          setLoansKeySystemMap((prev) => ({ ...prev, ...systemMap }))
-        }
-      } catch (error) {
-        toast({
-          title: 'Kunde inte hämta återlämnade lån',
-          description: 'Ett fel uppstod när återlämnade lån skulle hämtas',
-          variant: 'destructive',
-        })
-        console.error('Error fetching returned maintenance loans:', error)
-      }
-    }
-
-    fetchReturnedLoans()
-  }, [searchResult, returnedLoansOpen, toast])
+    fetchLoans()
+  }, [searchResult, hasLoadedLoans, toast])
 
   // Fetch bundle keys when a bundle is selected
   useEffect(() => {
@@ -544,116 +479,46 @@ export default function MaintenanceKeys() {
 
             {/* Loans Display */}
             {!loansLoading && (
-              <>
-                {/* Active Loans - Always show header */}
-                <Card>
-                  <CardHeader
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setActiveLoansOpen(!activeLoansOpen)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-green-600">
-                        Aktiva lån
-                        {hasLoadedActive && ` (${activeLoans.length})`}
-                      </CardTitle>
-                      {activeLoansOpen ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                  </CardHeader>
-                  {activeLoansOpen && (
-                    <>
-                      {activeLoans.length > 0 ? (
-                        <CardContent className="space-y-4">
-                          {activeLoans.map((loan) => (
-                            <LoanCard
-                              key={loan.id}
-                              loan={loan}
-                              keySystemMap={loansKeySystemMap}
-                              onRefresh={() => {
-                                // Refetch active loans to update UI
-                                setHasLoadedActive(false)
-                              }}
-                            />
-                          ))}
-                        </CardContent>
-                      ) : (
-                        <CardContent>
-                          <p className="text-muted-foreground text-center text-sm">
-                            Inga aktiva lån
-                          </p>
-                        </CardContent>
-                      )}
-                    </>
-                  )}
-                </Card>
-
-                {/* Returned Loans - Always show header */}
-                <Card>
-                  <CardHeader
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setReturnedLoansOpen(!returnedLoansOpen)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-muted-foreground">
-                        Återlämnade lån
-                        {hasLoadedReturned && ` (${returnedLoans.length})`}
-                      </CardTitle>
-                      {returnedLoansOpen ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                  </CardHeader>
-                  {returnedLoansOpen && (
-                    <>
-                      {returnedLoans.length > 0 ? (
-                        <CardContent className="space-y-4">
-                          {returnedLoans.map((loan) => (
-                            <LoanCard
-                              key={loan.id}
-                              loan={loan}
-                              keySystemMap={loansKeySystemMap}
-                              onRefresh={() => {
-                                // Refetch returned loans to update UI
-                                setHasLoadedReturned(false)
-                              }}
-                            />
-                          ))}
-                        </CardContent>
-                      ) : (
-                        <CardContent>
-                          <p className="text-muted-foreground text-center text-sm">
-                            Inga återlämnade lån
-                          </p>
-                        </CardContent>
-                      )}
-                    </>
-                  )}
-                </Card>
-
-                {/* No Loans Found - only show if we've checked both sections */}
-                {hasLoadedActive &&
-                  hasLoadedReturned &&
-                  activeLoans.length === 0 &&
-                  returnedLoans.length === 0 && (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-muted-foreground text-center">
-                          {searchResult.type === 'contact'
-                            ? 'Inga lån hittades för detta företag.'
-                            : 'Inga lån hittades för denna nyckelsamling.'}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-              </>
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Lån
+                    {hasLoadedLoans && ` (${loans.length})`}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <MaintenanceLoansTable
+                    loans={loans}
+                    keySystemMap={loansKeySystemMap}
+                    emptyMessage="Inga lån"
+                    onLoanReturned={handleLoanReturn}
+                    onLoanUpdated={() => setHasLoadedLoans(false)}
+                  />
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
+      )}
+
+      {/* Return Loan Dialog */}
+      {returnLoan && (
+        <ReturnMaintenanceKeysDialog
+          open={returnDialogOpen}
+          onOpenChange={(open) => {
+            setReturnDialogOpen(open)
+            if (!open) setReturnLoanId(null)
+          }}
+          keyIds={returnLoan.keysArray.map((k) => k.id)}
+          cardIds={(returnLoan.keyCardsArray || []).map((c) => c.cardId)}
+          allKeys={returnLoan.keysArray}
+          allCards={returnLoan.keyCardsArray || []}
+          onSuccess={() => {
+            setReturnDialogOpen(false)
+            setReturnLoanId(null)
+            setHasLoadedLoans(false)
+          }}
+        />
       )}
 
       {/* Create Loan Dialog - only for contact searches */}
@@ -671,9 +536,8 @@ export default function MaintenanceKeys() {
           keys={preSelectedKeys}
           preSelectedCompany={preSelectedCompany || undefined}
           onSuccess={() => {
-            // Refresh active loans after creating a new one
-            setHasLoadedActive(false)
-            setActiveLoansOpen(true)
+            // Refresh loans after creating a new one
+            setHasLoadedLoans(false)
             setPreSelectedKeys([])
             setPreSelectedCompany(null)
           }}
