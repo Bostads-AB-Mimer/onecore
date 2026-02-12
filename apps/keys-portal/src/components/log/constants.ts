@@ -1,3 +1,20 @@
+export const eventTypeLabels: Record<string, string> = {
+  creation: 'Skapad',
+  update: 'Uppdaterad',
+  delete: 'Raderad',
+}
+
+export const objectTypeLabels: Record<string, string> = {
+  key: 'Nyckel',
+  keySystem: 'Låssystem',
+  keyLoan: 'Nyckellån',
+  keyBundle: 'Nyckelsamling',
+  receipt: 'Kvittens',
+  keyEvent: 'Nyckelhändelse',
+  signature: 'Signatur',
+  keyNote: 'Nyckelanteckning',
+}
+
 export const eventTypeColors: Record<string, string> = {
   creation:
     'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',

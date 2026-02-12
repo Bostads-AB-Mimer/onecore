@@ -57,28 +57,13 @@ export function LogEventCard({ log }: { log: Log }) {
                   variant="outline"
                   className={eventTypeColors[log.eventType]}
                 >
-                  {log.eventTypeLabel ||
-                    {
-                      creation: 'Skapad',
-                      update: 'Uppdaterad',
-                      delete: 'Raderad',
-                    }[log.eventType]}
+                  {log.eventTypeLabel}
                 </Badge>
                 <Badge
                   variant="outline"
                   className={objectTypeColors[log.objectType]}
                 >
-                  {log.objectTypeLabel ||
-                    {
-                      key: 'Nyckel',
-                      keySystem: 'Låssystem',
-                      keyLoan: 'Nyckellån',
-                      keyBundle: 'Nyckelsamling',
-                      receipt: 'Kvittens',
-                      keyEvent: 'Nyckelhändelse',
-                      signature: 'Signatur',
-                      keyNote: 'Nyckelanteckning',
-                    }[log.objectType]}
+                  {log.objectTypeLabel}
                 </Badge>
               </div>
 
@@ -86,14 +71,6 @@ export function LogEventCard({ log }: { log: Log }) {
                 <p className="text-sm text-muted-foreground">
                   {log.description}
                 </p>
-              )}
-
-              {log.objectId && (
-                <div className="mt-2">
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Objekt-ID: {log.objectId}
-                  </p>
-                </div>
               )}
 
               {log.objectId && (
@@ -136,28 +113,13 @@ export function LogEventCard({ log }: { log: Log }) {
                         variant="outline"
                         className={`text-xs ${eventTypeColors[eventLog.eventType]}`}
                       >
-                        {eventLog.eventTypeLabel ||
-                          {
-                            creation: 'Skapad',
-                            update: 'Uppdaterad',
-                            delete: 'Raderad',
-                          }[eventLog.eventType]}
+                        {eventLog.eventTypeLabel}
                       </Badge>
                       <Badge
                         variant="outline"
                         className={`text-xs ${objectTypeColors[eventLog.objectType]}`}
                       >
-                        {eventLog.objectTypeLabel ||
-                          {
-                            key: 'Nyckel',
-                            keySystem: 'Låssystem',
-                            keyLoan: 'Nyckellån',
-                            keyBundle: 'Nyckelsamling',
-                            receipt: 'Kvittens',
-                            keyEvent: 'Nyckelhändelse',
-                            signature: 'Signatur',
-                            keyNote: 'Nyckelanteckning',
-                          }[eventLog.objectType]}
+                        {eventLog.objectTypeLabel}
                       </Badge>
                     </div>
 
