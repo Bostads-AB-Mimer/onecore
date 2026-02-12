@@ -62,7 +62,7 @@ export const KeyLoanSchema = z.object({
   contact: z.string().optional(),
   contact2: z.string().optional(),
   contactPerson: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
@@ -82,7 +82,7 @@ export const KeySystemSchema = z.object({
   propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
-  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   schemaFileId: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -194,7 +194,7 @@ export const CreateKeySystemRequestSchema = z.object({
   propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
-  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
 })
 
 export const UpdateKeySystemRequestSchema = z.object({
@@ -205,7 +205,7 @@ export const UpdateKeySystemRequestSchema = z.object({
   propertyIds: z.string().optional(),
   installationDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
-  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   schemaFileId: z.string().nullable().optional(),
 })
 
@@ -218,7 +218,7 @@ export const CreateKeyLoanRequestSchema = z.object({
   contact: z.string().optional(),
   contact2: z.string().optional(),
   contactPerson: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
@@ -232,7 +232,7 @@ export const UpdateKeyLoanRequestSchema = z.object({
   contact: z.string().optional(),
   contact2: z.string().optional(),
   contactPerson: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   returnedAt: z.coerce.date().nullable().optional(),
   availableToNextTenantFrom: z.coerce.date().nullable().optional(),
   pickedUpAt: z.coerce.date().nullable().optional(),

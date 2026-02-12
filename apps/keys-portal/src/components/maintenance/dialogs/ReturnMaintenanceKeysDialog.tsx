@@ -6,7 +6,7 @@ type LoanDetails = {
   contact: string
   contactName: string
   contactPerson: string | null
-  description: string | null | undefined
+  notes: string | null | undefined
 }
 import {
   ReturnKeysDialogBase,
@@ -102,7 +102,7 @@ export function ReturnMaintenanceKeysDialog({
                 contact: activeLoan.contact || 'Unknown',
                 contactName,
                 contactPerson: activeLoan.contactPerson ?? null,
-                description: activeLoan.description,
+                notes: activeLoan.notes,
               })
             }
           }
@@ -149,7 +149,7 @@ export function ReturnMaintenanceKeysDialog({
           // Update loan to mark as returned
           await keyLoanService.update(loanGroup.loanId, {
             returnedAt: new Date().toISOString(),
-            description: returnNote.trim() || undefined,
+            notes: returnNote.trim() || undefined,
           })
 
           // Create return receipt and generate PDF
@@ -165,8 +165,7 @@ export function ReturnMaintenanceKeysDialog({
             if (loanDetails && receipt.id) {
               try {
                 // Use user-entered returnNote for the PDF (with signature), falls back to original description
-                const noteForPdf =
-                  addSignature(returnNote) || loanDetails.description
+                const noteForPdf = addSignature(returnNote) || loanDetails.notes
                 await generateAndUploadMaintenanceReturnReceipt(
                   receipt.id,
                   loanDetails.contact,

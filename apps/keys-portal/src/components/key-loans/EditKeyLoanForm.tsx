@@ -47,7 +47,7 @@ export function EditKeyLoanForm({
     contact2: editingKeyLoan.contact2 || '',
     loanType: editingKeyLoan.loanType,
     contactPerson: editingKeyLoan.contactPerson || '',
-    description: editingKeyLoan.description || '',
+    notes: editingKeyLoan.notes || '',
     pickedUpAt: editingKeyLoan.pickedUpAt
       ? new Date(editingKeyLoan.pickedUpAt).toISOString().split('T')[0]
       : '',
@@ -132,7 +132,7 @@ export function EditKeyLoanForm({
     const loanData: UpdateKeyLoanRequest = {
       ...restFormData,
       contactPerson: formData.contactPerson?.trim() || null,
-      description: formData.description?.trim() || null,
+      notes: formData.notes?.trim() || null,
       returnedAt: formData.returnedAt
         ? new Date(formData.returnedAt).toISOString()
         : null,
@@ -340,18 +340,18 @@ export function EditKeyLoanForm({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="description" className="text-xs">
+                <Label htmlFor="notes" className="text-xs">
                   Notering (valfritt)
                 </Label>
                 <Textarea
-                  id="description"
+                  id="notes"
                   rows={4}
                   placeholder="T.ex. Nycklar förvaltning för renoveringsprojekt Blocket A"
-                  value={formData.description || ''}
+                  value={formData.notes || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      description: e.target.value,
+                      notes: e.target.value,
                     }))
                   }
                 />
