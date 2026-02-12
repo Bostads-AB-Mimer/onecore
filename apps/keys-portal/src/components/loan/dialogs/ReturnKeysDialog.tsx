@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
-import { Calendar as CalendarIcon, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import type {
   Key,
   Lease,
@@ -12,16 +11,10 @@ import { BeforeAfterDialogBase } from './BeforeAfterDialogBase'
 import { handleReturnKeys } from '@/services/loanHandlers'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { CommentInput } from '@/components/shared/CommentInput'
+import { AvailabilityDatePicker } from '@/components/shared/AvailabilityDatePicker'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 
 type KeysByLoan = {
@@ -404,40 +397,10 @@ export function ReturnKeysDialog({
   // Right side content - date picker and comment
   const rightContent = (
     <div className="space-y-4">
-      <div className="space-y-3">
-        <div className="text-sm text-muted-foreground">
-          Välj datum när nycklarna blir tillgängliga för nästa hyresgäst:
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                'w-full justify-start text-left font-normal',
-                !availableDate && 'text-muted-foreground'
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {availableDate ? (
-                format(availableDate, 'PPP')
-              ) : (
-                <span>Välj datum</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={availableDate}
-              onSelect={setAvailableDate}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-        {!availableDate && (
-          <div className="text-xs text-muted-foreground">Inget datum valt</div>
-        )}
-      </div>
+      <AvailabilityDatePicker
+        availableDate={availableDate}
+        onDateChange={setAvailableDate}
+      />
 
       <CommentInput
         value={comment}
