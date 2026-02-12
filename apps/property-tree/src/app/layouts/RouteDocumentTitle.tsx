@@ -5,7 +5,7 @@ interface RouteHandle {
   title?: string
 }
 
-export function PageTitle() {
+export function RouteDocumentTitle() {
   const matches = useMatches()
 
   useEffect(() => {

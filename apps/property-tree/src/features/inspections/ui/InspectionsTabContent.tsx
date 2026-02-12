@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/Button'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionsTable } from './InspectionsTable'
 import { roomService, inspectionService } from '@/services/api/core'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { components } from '@/services/api/core/generated/api-types'
 
 import type { ResidenceDetails } from '@/services/types'

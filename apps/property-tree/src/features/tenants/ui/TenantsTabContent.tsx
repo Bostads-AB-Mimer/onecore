@@ -1,7 +1,7 @@
 import { Separator } from '@/shared/ui/Separator'
 import { LeaseInfo } from '@/entities/lease'
 import { TenantLeaseCard } from '@/entities/tenant'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Lease } from '@/services/api/core/leaseService'
 
 interface TenantsTabContentProps {

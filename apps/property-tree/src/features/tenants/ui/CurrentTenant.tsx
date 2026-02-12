@@ -3,7 +3,7 @@ import { Separator } from '@/shared/ui/Separator'
 import { LeaseInfo } from '@/entities/lease'
 import { TenantLeaseCard } from '@/entities/tenant'
 import { Grid } from '@/shared/ui/Grid'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'
 

@@ -23,6 +23,7 @@ import { useUser } from '@/entities/user'
 import type { DashboardCard } from '@/services/types'
 import { resolve } from '@/shared/lib/env'
 import onecoreLogo from '@/shared/assets/logos/stacked/onecore_logo_stacked_black.svg'
+import { ViewLayout } from '@/shared/ui/layout'
 
 export function DashboardView() {
   const navigate = useNavigate()
@@ -185,7 +186,7 @@ export function DashboardView() {
   }
 
   return (
-    <div className="p-8 space-y-6 animate-in">
+    <ViewLayout className="space-y-6">
       <header className="text-center space-y-4">
         <h1 className="text-3xl font-bold">
           <div className="text-center my-[8px]">
@@ -266,6 +267,6 @@ export function DashboardView() {
           )
         })}
       </div>
-    </div>
+    </ViewLayout>
   )
 }

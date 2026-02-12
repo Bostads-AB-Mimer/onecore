@@ -14,6 +14,7 @@ import {
   PropertyTypeFilters,
   PropertyFilteredResults,
 } from '@/features/properties'
+import { ViewLayout } from '@/shared/ui/layout'
 
 const SearchView = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
@@ -29,7 +30,7 @@ const SearchView = () => {
   } = usePropertyFilters()
 
   return (
-    <div className="py-4 animate-in">
+    <ViewLayout>
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Fastigheter</h1>
         <p className="text-muted-foreground">
@@ -99,7 +100,7 @@ const SearchView = () => {
           />
         </CardContent>
       </Card>
-    </div>
+    </ViewLayout>
   )
 }
 

@@ -1,10 +1,11 @@
 import React from 'react'
+import { Outlet } from 'react-router-dom'
 import { match } from 'ts-pattern'
 
 import { useAuth } from '@/features/auth'
 import { useUser } from '@/entities/user'
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+export function ProtectedRoute({ children }: { children?: React.ReactNode }) {
   const { login } = useAuth()
   const user = useUser()
 
@@ -27,6 +28,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         <div className="text-red-500">Okänt fel, kontakta support.</div>
       </div>
     ))
-    .with({ tag: 'success' }, () => <>{children}</>)
+    .with({ tag: 'success' }, () => <>{children ?? <Outlet />}</>)
     .exhaustive()
 }

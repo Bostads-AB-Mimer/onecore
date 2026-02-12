@@ -7,7 +7,7 @@ import { useUser } from '@/entities/user'
 import { Link } from 'react-router-dom'
 import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
 
-export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
+export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const [showMobileSearch, setShowMobileSearch] = useState(false)
 
   const { logout } = useAuth()

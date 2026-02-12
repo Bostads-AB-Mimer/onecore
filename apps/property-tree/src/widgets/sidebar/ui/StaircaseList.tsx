@@ -1,8 +1,7 @@
 import { Building } from '@/services/types'
 import { SidebarMenu } from '@/shared/ui/Sidebar'
 import { StaircaseNavigation } from './Staircase'
-import { NavigationSkeleton } from './NavigationSkeleton'
-import { NavigationError } from './NavigationError'
+import { NavigationSkeleton, NavigationError } from '@/shared/ui/layout'
 import { useStaircases } from '@/features/buildings'
 
 interface StaircaseListProps {

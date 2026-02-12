@@ -15,7 +15,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { CompanyList } from './CompanyList'
-import { SidebarNavLink } from './SidebarNavLink'
+import { SidebarNavLink } from '@/shared/ui/layout'
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +31,7 @@ import {
   useCompanyExpansion,
 } from './CompanyExpansionContext'
 
-export default function SidebarNavigation() {
+export function SidebarNavigation() {
   return (
     <CompanyExpansionProvider>
       <SidebarNavigationContent />

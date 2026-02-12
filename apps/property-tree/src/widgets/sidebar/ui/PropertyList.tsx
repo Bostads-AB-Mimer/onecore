@@ -1,7 +1,6 @@
 import { Company } from '@/services/types'
 import { PropertyNavigation } from './Property'
-import { NavigationSkeleton } from './NavigationSkeleton'
-import { NavigationError } from './NavigationError'
+import { NavigationSkeleton, NavigationError } from '@/shared/ui/layout'
 import { useProperties } from '@/features/properties'
 
 interface PropertyListProps {

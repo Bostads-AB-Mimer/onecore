@@ -27,6 +27,7 @@ import {
 import { Pagination } from '@/shared/ui/Pagination'
 import { residenceService } from '@/services/api/core/residenceService'
 import { propertyService } from '@/services/api/core/propertyService'
+import { ViewLayout } from '@/shared/ui/layout'
 
 const kategoriOptions = [
   'Bostad',
@@ -107,7 +108,7 @@ const RentalBlocksView = () => {
   const displayBlocks = rentalBlocks || []
 
   return (
-    <div className="py-4 animate-in">
+    <ViewLayout>
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Spärrlista</h1>
         <p className="text-muted-foreground">
@@ -256,7 +257,7 @@ const RentalBlocksView = () => {
           />
         </CardContent>
       </Card>
-    </div>
+    </ViewLayout>
   )
 }
 

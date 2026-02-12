@@ -1,6 +1,6 @@
 import { parseAsString, useQueryState } from 'nuqs'
 
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { InvoicesTable } from './InvoicesTable'
 import { useTenantInvoices } from '../hooks/useTenantInvoices'
 

@@ -1,7 +1,6 @@
 import { CompanyNavigation } from './Company'
 import { SidebarMenu } from '@/shared/ui/Sidebar'
-import { NavigationSkeleton } from './NavigationSkeleton'
-import { NavigationError } from './NavigationError'
+import { NavigationSkeleton, NavigationError } from '@/shared/ui/layout'
 import { useCompanies } from '@/features/companies'
 
 export function CompanyList() {

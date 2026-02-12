@@ -1,116 +1,16 @@
 import React from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  BedDouble,
-  ChefHat,
-  ShowerHead,
-  Sofa,
-  Home,
-  Maximize2,
-  DoorOpen,
-  Wrench,
-} from 'lucide-react'
+import { Maximize2, DoorOpen, Wrench } from 'lucide-react'
 
 import { Room, Component, Issue } from '../services/types'
-import { ViewHeader } from '../shared/ui/ViewHeader'
 import { Card } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
+import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { ComponentList } from '../features/component-library'
 import { ActiveIssues } from '../features/rooms/ui/ActiveIssues'
-
-const roomIcons = {
-  bedroom: BedDouble,
-  kitchen: ChefHat,
-  bathroom: ShowerHead,
-  living: Sofa,
-  other: Home,
-} as const
-
-function LoadingSkeleton() {
-  return (
-    <div className="p-8 animate-in">
-      {/* Header Skeleton */}
-      <div className="mb-8">
-        <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-2" />
-        <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            </div>
-            <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
-          </div>
-        ))}
-      </div>
-
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Features Skeleton */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Components Skeleton */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            </div>
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Side Panel Skeleton */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            </div>
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export function RoomView() {
   const { roomId, apartmentId } = useParams()
@@ -118,6 +18,7 @@ export function RoomView() {
   const [components, setComponents] = React.useState<Component[]>([])
   const [issues, setIssues] = React.useState<Issue[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<Error | null>(null)
 
   React.useEffect(() => {
     const loadRoom = async () => {
@@ -136,8 +37,9 @@ export function RoomView() {
         setRoom(roomData)
         setComponents(componentsData)
         setIssues(issuesData)
-      } catch (error) {
-        console.error('Failed to load room data:', error)
+      } catch (err) {
+        console.error('Failed to load room data:', err)
+        setError(err instanceof Error ? err : new Error('Failed to load room'))
       } finally {
         setLoading(false)
       }
@@ -145,18 +47,6 @@ export function RoomView() {
 
     loadRoom()
   }, [roomId])
-
-  if (loading) return <LoadingSkeleton />
-  if (!room) return <div>Room not found</div>
-
-  const roomIconKey =
-    room.roomType?.name === 'Kök'
-      ? 'kitchen'
-      : room.roomType?.name === 'Badrum'
-        ? 'bathroom'
-        : 'other'
-
-  const Icon = roomIcons[roomIconKey]
 
   const handleAddComponent = async (_data: unknown) => {
     // TODO: Implementation for adding a component
@@ -171,124 +61,134 @@ export function RoomView() {
   }
 
   return (
-    <div className="p-8 animate-in">
-      <ViewHeader
-        title={room.name ?? ''}
-        subtitle={`Lägenhet ${apartmentId}`}
-        type="Rum"
-        icon={Icon}
-      />
-
-      <Grid cols={3} className="mb-8">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Maximize2 className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Storlek</p>
-                <p className="font-medium">{room.roomType?.name} ?</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <DoorOpen className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Fönster</p>
-                <p className="font-medium">? st</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Wrench className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Funktioner</p>
-                <p className="font-medium">
-                  {Object.values(room.features).filter(Boolean).length} st
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </Grid>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+    <ViewLayout>
+      <ObjectPageLayout
+        isLoading={loading}
+        error={error}
+        data={room}
+        notFoundMessage="Rummet kunde inte hittas"
+        searchedFor={roomId}
       >
-        <div className="lg:col-span-2 space-y-6">
-          <Card title="Funktioner">
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(room.features).map((feature, index) => (
-                <Badge key={index} variant="default">
-                  {feature}
-                </Badge>
-              ))}
-              <Button variant="outline" disabled>
-                Lägg till
-              </Button>
-            </div>
-          </Card>
+        {(room) => (
+          <>
+            <h1 className="text-3xl font-bold mb-2">{room.name ?? ''}</h1>
+            <p className="text-muted-foreground mb-8">Lägenhet {apartmentId}</p>
 
-          <ComponentList
-            components={components}
-            rooms={room.name ? [room.name] : []}
-            onAddComponent={handleAddComponent}
-            onEditComponent={handleEditComponent}
-            onViewComponent={handleViewComponent}
-          />
-
-          {issues.length > 0 && <ActiveIssues issues={issues} />}
-        </div>
-
-        <div className="space-y-6">
-          <Card title="Åtgärder">
-            <div className="space-y-3">
-              <Button variant="link" className="w-full" disabled>
-                Registrera ärende
-              </Button>
-              <Button variant="secondary" className="w-full" disabled>
-                Planera underhåll
-              </Button>
-              <Button variant="secondary" className="w-full" disabled>
-                Ruminställningar
-              </Button>
-            </div>
-          </Card>
-
-          <Card title="Status">
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-500">Skick</span>
-                  <span className="text-sm font-medium text-green-500">
-                    Gott
-                  </span>
+            <Grid cols={3} className="mb-8">
+              <Card>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Maximize2 className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Storlek</p>
+                      <p className="font-medium">{room.roomType?.name} ?</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-500">
-                    Senaste besiktning
-                  </span>
-                  <span className="text-sm font-medium">2024-01-15</span>
+              </Card>
+
+              <Card>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <DoorOpen className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Fönster</p>
+                      <p className="font-medium">? st</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Nästa underhåll</span>
-                  <span className="text-sm font-medium">2024-06-01</span>
+              </Card>
+
+              <Card>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Wrench className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Funktioner</p>
+                      <p className="font-medium">
+                        {Object.values(room.features).filter(Boolean).length} st
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              </Card>
+            </Grid>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+            >
+              <div className="lg:col-span-2 space-y-6">
+                <Card title="Funktioner">
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(room.features).map((feature, index) => (
+                      <Badge key={index} variant="default">
+                        {feature}
+                      </Badge>
+                    ))}
+                    <Button variant="outline" disabled>
+                      Lägg till
+                    </Button>
+                  </div>
+                </Card>
+
+                <ComponentList
+                  components={components}
+                  rooms={room.name ? [room.name] : []}
+                  onAddComponent={handleAddComponent}
+                  onEditComponent={handleEditComponent}
+                  onViewComponent={handleViewComponent}
+                />
+
+                {issues.length > 0 && <ActiveIssues issues={issues} />}
               </div>
-            </div>
-          </Card>
-        </div>
-      </motion.div>
-    </div>
+
+              <div className="space-y-6">
+                <Card title="Åtgärder">
+                  <div className="space-y-3">
+                    <Button variant="link" className="w-full" disabled>
+                      Registrera ärende
+                    </Button>
+                    <Button variant="secondary" className="w-full" disabled>
+                      Planera underhåll
+                    </Button>
+                    <Button variant="secondary" className="w-full" disabled>
+                      Ruminställningar
+                    </Button>
+                  </div>
+                </Card>
+
+                <Card title="Status">
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-500">Skick</span>
+                        <span className="text-sm font-medium text-green-500">
+                          Gott
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-500">
+                          Senaste besiktning
+                        </span>
+                        <span className="text-sm font-medium">2024-01-15</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">
+                          Nästa underhåll
+                        </span>
+                        <span className="text-sm font-medium">2024-06-01</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </ObjectPageLayout>
+    </ViewLayout>
   )
 }

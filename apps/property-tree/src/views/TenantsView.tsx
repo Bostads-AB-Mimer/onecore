@@ -12,6 +12,7 @@ import { Input } from '@/shared/ui/Input'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 import { ChevronDown } from 'lucide-react'
 import { useTenantSearch } from '@/features/tenants'
+import { ViewLayout } from '@/shared/ui/layout'
 
 const TenantsView = () => {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
@@ -24,7 +25,7 @@ const TenantsView = () => {
   } = useTenantSearch()
 
   return (
-    <div className="py-4 animate-in">
+    <ViewLayout>
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Kunder</h1>
         <p className="text-muted-foreground">
@@ -151,7 +152,7 @@ const TenantsView = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </ViewLayout>
   )
 }
 

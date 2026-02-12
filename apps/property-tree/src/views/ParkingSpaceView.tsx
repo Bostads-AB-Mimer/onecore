@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { parkingSpaceService, leaseService } from '@/services/api/core'
 import { ParkingSpaceBasicInfo } from '@/features/parking-spaces'
-import { ObjectPageLayout } from '../layouts/ObjectPageLayout'
+import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { ParkingSpaceTabs } from '@/widgets/parking-space-tabs'
 
 export function ParkingSpaceView() {
@@ -32,8 +32,8 @@ export function ParkingSpaceView() {
   )
   const currentRent = currentLease?.rentInfo?.currentRent?.currentRent
 
-  if (!parkingSpace) {
-    return (
+  return (
+    <ViewLayout>
       <ObjectPageLayout
         isLoading={parkingSpaceQuery.isLoading}
         error={parkingSpaceQuery.error}
@@ -41,34 +41,26 @@ export function ParkingSpaceView() {
         notFoundMessage="Parkering hittades inte"
         searchedFor={rentalId}
       >
-        <></>
+        {(parkingSpace) => (
+          <>
+            <div className="lg:col-span-3 space-y-6">
+              <ParkingSpaceBasicInfo
+                parkingSpace={parkingSpace}
+                rent={currentRent}
+                isLoadingRent={leasesQuery.isLoading}
+              />
+            </div>
+
+            <div className="lg:col-span-3">
+              <ParkingSpaceTabs
+                parkingSpace={parkingSpace}
+                leases={leasesQuery.data}
+                leasesIsLoading={leasesQuery.isLoading}
+              />
+            </div>
+          </>
+        )}
       </ObjectPageLayout>
-    )
-  }
-
-  return (
-    <ObjectPageLayout
-      isLoading={parkingSpaceQuery.isLoading}
-      error={parkingSpaceQuery.error}
-      data={parkingSpace}
-      notFoundMessage="Parkering hittades inte"
-      searchedFor={rentalId}
-    >
-      <div className="lg:col-span-3 space-y-6">
-        <ParkingSpaceBasicInfo
-          parkingSpace={parkingSpace}
-          rent={currentRent}
-          isLoadingRent={leasesQuery.isLoading}
-        />
-      </div>
-
-      <div className="lg:col-span-3">
-        <ParkingSpaceTabs
-          parkingSpace={parkingSpace}
-          leases={leasesQuery.data}
-          leasesIsLoading={leasesQuery.isLoading}
-        />
-      </div>
-    </ObjectPageLayout>
+    </ViewLayout>
   )
 }

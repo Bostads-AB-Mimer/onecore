@@ -1,5 +1,5 @@
 import { PropertyBuildingCard } from './PropertyBuildingCard'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import type { Building } from '@/shared/types/api'
 
 interface PropertyBuildingsTabContentProps {
