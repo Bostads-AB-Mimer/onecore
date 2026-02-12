@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import type { Tenant } from '@/services/types'
 
 export interface ContactSearchResult {

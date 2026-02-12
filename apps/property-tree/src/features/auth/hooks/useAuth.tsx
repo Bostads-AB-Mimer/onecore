@@ -1,4 +1,4 @@
-import { authConfig } from '@/auth-config'
+import { authConfig } from '@/authConfig'
 
 export function useAuth() {
   const login = (currentClientPath?: string) => {

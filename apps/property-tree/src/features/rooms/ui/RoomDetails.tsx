@@ -1,5 +1,5 @@
 import { useIsMobile } from '@/shared/hooks/useMobile'
-import { getOrientationText } from '../lib/get-room-orientation'
+import { getOrientationText } from '../lib/getRoomOrientation'
 import type { components } from '@/services/api/core/generated/api-types'
 
 type Room = components['schemas']['Room']

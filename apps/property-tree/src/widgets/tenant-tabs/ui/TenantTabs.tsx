@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
-import { Lease } from '@/services/api/core/lease-service'
+import { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { ContextType } from '@/shared/types/ui'
 

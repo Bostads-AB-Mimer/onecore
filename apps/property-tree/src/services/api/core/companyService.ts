@@ -1,5 +1,5 @@
 import { Company, CompanyDetails } from '../../types'
-import { GET } from './base-api'
+import { GET } from './baseApi'
 
 export const companyService = {
   // Get all companies

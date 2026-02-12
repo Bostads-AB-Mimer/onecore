@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from '@/shared/ui/Dialog'
 import { Button } from '@/shared/ui/Button'
-import { entityDialogConfig } from '../constants/entity-dialog-config'
+import { entityDialogConfig } from '../constants/entityDialogConfig'
 import { FieldRenderer } from './FieldRenderer'
 import {
   ParentHierarchySelector,

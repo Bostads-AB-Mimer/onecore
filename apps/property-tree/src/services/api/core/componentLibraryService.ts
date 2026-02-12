@@ -1,4 +1,4 @@
-import { GET, POST, PUT, DELETE } from './base-api'
+import { GET, POST, PUT, DELETE } from './baseApi'
 import type {
   ComponentCategory,
   ComponentType,

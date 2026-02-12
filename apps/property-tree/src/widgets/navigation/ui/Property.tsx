@@ -4,9 +4,9 @@ import { Property } from '@/services/types'
 import { Building } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/shared/ui/Sidebar'
 import { BuildingList } from './BuildingList'
-import { useHierarchicalSelection } from '@/shared/hooks/useHierarchicalSelection'
+import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
-import { toTitleCase } from '@/shared/lib/text-utils'
+import { toTitleCase } from '@/shared/lib/textUtils'
 
 interface PropertyNavigationProps {
   property: Property

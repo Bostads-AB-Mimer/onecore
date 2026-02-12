@@ -3,7 +3,7 @@ import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { components } from '@/services/api/core/generated/api-types'
-import { Lease } from '@/services/api/core/lease-service'
+import { Lease } from '@/services/api/core/leaseService'
 import { ContextType } from '@/shared/types/ui'
 
 import { CurrentTenant } from '@/features/tenants'

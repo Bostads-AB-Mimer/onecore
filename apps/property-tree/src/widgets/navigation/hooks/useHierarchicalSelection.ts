@@ -1,0 +1,148 @@
+import { useCallback, useMemo } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
+import { useResidence } from '@/features/residences'
+import { useBuilding } from '@/features/buildings'
+import { useProperty } from '@/features/properties'
+import { useCompanyByPropertyId } from '@/features/companies'
+
+interface SelectionState {
+  selectedResidenceId: string | null
+  selectedBuildingId: string | null
+  selectedBuildingCode: string | null
+  selectedPropertyId: string | null
+  selectedCompanyId: string | null
+}
+
+export function useHierarchicalSelection() {
+  const location = useLocation()
+  const params = useParams()
+  const state = location.state as Record<string, string> | null
+
+  const residenceId =
+    params.residenceId && location.pathname.startsWith('/residences/')
+      ? params.residenceId
+      : undefined
+  const { data: selectedResidence } = useResidence(residenceId)
+
+  const buildingId =
+    params.buildingId &&
+    location.pathname.startsWith('/buildings/') &&
+    !state?.propertyId
+      ? params.buildingId
+      : undefined
+  const { data: selectedBuilding } = useBuilding(buildingId)
+
+  const needsProperty =
+    !state?.companyId &&
+    (location.pathname.startsWith('/properties/') ||
+      location.pathname.startsWith('/buildings/') ||
+      location.pathname.startsWith('/residences/'))
+  const propertyIdForQuery = needsProperty
+    ? params.propertyId || selectedBuilding?.property?.id || undefined
+    : undefined
+  const { data: selectedProperty } = useProperty(propertyIdForQuery)
+
+  const companyPropertyId =
+    selectedProperty && !state?.companyId ? selectedProperty.id : undefined
+  const { data: propertyCompany } = useCompanyByPropertyId(companyPropertyId)
+
+  const selectionState = useMemo((): SelectionState => {
+    const path = location.pathname
+    const companyId = state?.companyId || propertyCompany?.id || null
+
+    if (path.startsWith('/residences/') && params.residenceId) {
+      return {
+        selectedResidenceId: params.residenceId,
+        selectedBuildingId: null,
+        selectedBuildingCode:
+          state?.buildingCode || selectedResidence?.building?.code || null,
+        selectedPropertyId:
+          state?.propertyId ||
+          state?.propertyCode ||
+          selectedResidence?.property?.code ||
+          null,
+        selectedCompanyId: companyId,
+      }
+    }
+
+    if (path.startsWith('/properties/') && params.propertyId) {
+      return {
+        selectedResidenceId: null,
+        selectedBuildingId: null,
+        selectedBuildingCode: null,
+        selectedPropertyId: params.propertyId,
+        selectedCompanyId: companyId,
+      }
+    }
+
+    if (path.startsWith('/companies/') && params.companyId) {
+      return {
+        selectedResidenceId: null,
+        selectedBuildingId: null,
+        selectedBuildingCode: null,
+        selectedPropertyId: null,
+        selectedCompanyId: params.companyId,
+      }
+    }
+
+    if (path.startsWith('/buildings/') && params.buildingId) {
+      return {
+        selectedResidenceId: null,
+        selectedBuildingId: params.buildingId,
+        selectedBuildingCode:
+          state?.buildingCode || selectedBuilding?.code || null,
+        selectedPropertyId:
+          state?.propertyId || selectedBuilding?.property?.id || null,
+        selectedCompanyId: companyId,
+      }
+    }
+
+    return {
+      selectedResidenceId: null,
+      selectedBuildingId: null,
+      selectedBuildingCode: null,
+      selectedPropertyId: null,
+      selectedCompanyId: null,
+    }
+  }, [
+    location.pathname,
+    params,
+    state,
+    selectedResidence,
+    selectedBuilding,
+    propertyCompany,
+  ])
+
+  const isPropertyInHierarchy = useCallback(
+    (propertyId: string) => selectionState.selectedPropertyId === propertyId,
+    [selectionState.selectedPropertyId]
+  )
+
+  const isBuildingInHierarchy = useCallback(
+    (buildingCode: string, propertyId: string, buildingId?: string) =>
+      (!!buildingId && selectionState.selectedBuildingId === buildingId) ||
+      selectionState.selectedBuildingCode === buildingCode ||
+      (selectionState.selectedResidenceId !== null &&
+        selectionState.selectedBuildingCode === buildingCode &&
+        selectionState.selectedPropertyId === propertyId),
+    [selectionState]
+  )
+
+  const isResidenceSelected = useCallback(
+    (residenceId: string) => selectionState.selectedResidenceId === residenceId,
+    [selectionState.selectedResidenceId]
+  )
+
+  const isCompanyInHierarchy = useCallback(
+    (companyId: string) => selectionState.selectedCompanyId === companyId,
+    [selectionState.selectedCompanyId]
+  )
+
+  return {
+    selectionState,
+    isPropertyInHierarchy,
+    isBuildingInHierarchy,
+    isResidenceSelected,
+    isCompanyInHierarchy,
+  }
+}

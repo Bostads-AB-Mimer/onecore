@@ -1,5 +1,5 @@
 import type { Tenant } from '@/services/types'
-import type { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/leaseService'
 
 import { isOrganization, getTenantRoles } from '../lib/classification'
 import { formatTenantAddress, formatTenantName } from '../lib/formatting'

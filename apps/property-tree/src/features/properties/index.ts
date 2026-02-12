@@ -14,6 +14,7 @@ export { PropertyStatisticsTabContent } from './ui/PropertyStatisticsTabContent'
 
 // Hooks
 export { useProperties } from './hooks/useProperties'
+export { usePropertyDetails } from './hooks/usePropertyDetails'
 export { useProperty } from './hooks/useProperty'
 export { usePropertyFilters } from './hooks/usePropertyFilters'
 

@@ -8,7 +8,7 @@ import type { Room } from '@/services/types'
 import type {
   InspectionSubmitData,
   TenantSnapshot,
-} from '@/shared/types/inspections/index'
+} from '@/features/inspections/types/index'
 import { useInspectionForm } from '../../hooks/useInspectionForm'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'

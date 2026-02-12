@@ -9,4 +9,4 @@ export { useRentalBlocks } from './hooks/useRentalBlocks'
 export { useRentalBlocksFilters } from './hooks/useRentalBlocksFilters'
 
 // Constants
-export { rentalBlockColumns } from './constants/table-columns'
+export { rentalBlockColumns } from './constants/tableColumns'

@@ -4,7 +4,7 @@ import { Map } from '@/shared/ui/Map'
 import { Button } from '@/shared/ui/Button'
 import { MapIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { geocodingService } from '@/services/api/geocodingService'
+import { searchAddress } from '@/shared/lib/geocoding'
 
 interface MapDialogProps {
   residences: Array<{
@@ -22,9 +22,7 @@ export function MapDialog({ residences }: MapDialogProps) {
     queryKey: ['coordinates', residenceAddresses],
     queryFn: async () => {
       const coords = await Promise.all(
-        residenceAddresses.map((address) =>
-          geocodingService.searchAddress(address)
-        )
+        residenceAddresses.map((address) => searchAddress(address))
       )
       return coords.filter((coord): coord is [number, number] => coord !== null)
     },

@@ -1,5 +1,5 @@
 import type { components } from './generated/api-types'
-import { GET } from './base-api'
+import { GET } from './baseApi'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
 export type PaginationMeta = components['schemas']['PaginationMeta']

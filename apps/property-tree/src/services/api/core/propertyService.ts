@@ -1,5 +1,5 @@
 import type { Company } from '../../types'
-import { GET } from './base-api'
+import { GET } from './baseApi'
 
 /** Display-only type for property search results */
 interface PropertySearchResult {

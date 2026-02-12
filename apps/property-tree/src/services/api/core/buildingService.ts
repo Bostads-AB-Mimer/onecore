@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import type { components } from './generated/api-types'
 
 type Building = components['schemas']['Building']

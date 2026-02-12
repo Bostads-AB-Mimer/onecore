@@ -1,4 +1,4 @@
-import type { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/leaseService'
 import type { components } from '@/services/api/core/generated/api-types'
 import { getStatusBadge } from '../lib/status'
 

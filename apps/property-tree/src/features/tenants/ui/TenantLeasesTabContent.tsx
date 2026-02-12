@@ -5,7 +5,7 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 import { InfoIcon } from 'lucide-react'
-import { Lease } from '@/services/api/core/lease-service'
+import { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 import { TabLayout } from '@/shared/ui/TabLayout'

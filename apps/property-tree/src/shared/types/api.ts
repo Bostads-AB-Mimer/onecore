@@ -1,4 +1,28 @@
-import { Staircase } from '@/services/types'
+export interface Staircase {
+  id: string
+  code: string
+  name: string | null
+  features: {
+    floorPlan: string | null
+    accessibleByElevator: boolean
+  }
+  dates: {
+    from: string
+    to: string
+  }
+  property?: {
+    propertyId: string | null
+    propertyName: string | null
+    propertyCode: string | null
+  }
+  building?: {
+    buildingId: string | null
+    buildingName: string | null
+    buildingCode: string | null
+  }
+  deleted: boolean
+  timestamp: string
+}
 
 // residence = apartment
 export interface Residence {

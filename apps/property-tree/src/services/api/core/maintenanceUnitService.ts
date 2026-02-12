@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import type { MaintenanceUnit } from '@/services/types'
 
 export const maintenanceUnitService = {

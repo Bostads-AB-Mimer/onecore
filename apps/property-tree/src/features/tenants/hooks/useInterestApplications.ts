@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { GET } from '@/services/api/core/base-api'
+import { GET } from '@/services/api/core/baseApi'
 import type { InterestApplication } from '@/services/types'
 
 /**

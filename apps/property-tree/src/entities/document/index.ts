@@ -6,4 +6,4 @@ export {
   extractFileName,
   getFileTypeFromName,
   formatFileSize,
-} from './lib/file-utils'
+} from './lib/fileUtils'

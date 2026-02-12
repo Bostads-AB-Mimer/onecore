@@ -1,4 +1,4 @@
-import { Lease } from '@/services/api/core/lease-service'
+import { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { LeaseStatus } from './status'
 

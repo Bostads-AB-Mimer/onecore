@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import { resolve } from '@/shared/lib/env'
 import type {
   Residence,

@@ -17,7 +17,7 @@ type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 import type { Room } from '@/services/types'
-import type { InspectionSubmitData } from '@/shared/types/inspections/index'
+import type { InspectionSubmitData } from '@/features/inspections/types/index'
 
 interface InspectionFormDialogProps {
   isOpen: boolean

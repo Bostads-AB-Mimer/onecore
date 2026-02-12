@@ -14,7 +14,7 @@ import type {
   InspectionSubmitData,
   ResidenceInfo,
   TenantSnapshot,
-} from '@/shared/types/inspections'
+} from '@/features/inspections/types'
 import { useToast } from '@/shared/hooks/useToast'
 import { InspectionProtocol } from '../ui/InspectionProtocol'
 

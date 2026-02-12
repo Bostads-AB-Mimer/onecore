@@ -5,7 +5,7 @@ import { TenantLeaseCard } from '@/entities/tenant'
 import { Grid } from '@/shared/ui/Grid'
 import { TabLayout } from '@/shared/ui/TabLayout'
 import { leaseService } from '@/services/api/core'
-import type { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/leaseService'
 
 interface CurrentTenantProps {
   rentalPropertyId: string

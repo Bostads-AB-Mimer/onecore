@@ -1,6 +1,7 @@
 import { defineConfig } from 'eslint/config'
 import boundaries from 'eslint-plugin-boundaries'
 import typescriptEslint from 'typescript-eslint'
+import unicorn from 'eslint-plugin-unicorn'
 
 import onecoreReactBase from '../../eslint.react.config.mjs'
 
@@ -13,6 +14,32 @@ export default defineConfig([
     ],
     rules: {
       '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
+  // File naming: PascalCase or camelCase for .tsx files (components = PascalCase, hooks = camelCase)
+  {
+    files: ['src/**/*.tsx'],
+    ignores: ['src/main.tsx'],
+    plugins: { unicorn },
+    rules: {
+      'unicorn/filename-case': [
+        'error',
+        {
+          cases: {
+            pascalCase: true,
+            camelCase: true,
+          },
+        },
+      ],
+    },
+  },
+  // File naming: camelCase for all other source files (.ts, .js, .jsx)
+  {
+    files: ['src/**/*.{ts,js,jsx}'],
+    ignores: ['src/**/generated/**', 'src/vite-env.d.ts'],
+    plugins: { unicorn },
+    rules: {
+      'unicorn/filename-case': ['error', { case: 'camelCase' }],
     },
   },
   {

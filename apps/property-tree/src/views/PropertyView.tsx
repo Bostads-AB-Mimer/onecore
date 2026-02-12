@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { useProperty, PropertyBasicInfo } from '@/features/properties'
+import { usePropertyDetails, PropertyBasicInfo } from '@/features/properties'
 //import { useToast } from '@/hooks/use-toast'
 import { PropertyTabs } from '@/widgets/property-tabs'
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -23,7 +23,11 @@ const PropertyView = () => {
   // Use property directly as the key
   const propertyKey = propertyId
 
-  const { data: propertyDetail, isLoading, error } = useProperty(propertyKey)
+  const {
+    data: propertyDetail,
+    isLoading,
+    error,
+  } = usePropertyDetails(propertyKey)
 
   useEffect(() => {
     if (error) {

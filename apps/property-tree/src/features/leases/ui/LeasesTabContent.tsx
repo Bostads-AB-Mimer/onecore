@@ -4,7 +4,7 @@ import { TabLayout } from '@/shared/ui/TabLayout'
 import type { ReactNode } from 'react'
 import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
 import { useLeasesByRentalProperty } from '../hooks/useLeasesByRentalProperty'
-import type { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/leaseService'
 import { Link } from 'react-router-dom'
 
 interface LeasesTabContentProps {

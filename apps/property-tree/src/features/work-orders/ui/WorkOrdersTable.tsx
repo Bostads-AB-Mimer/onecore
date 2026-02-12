@@ -2,7 +2,7 @@ import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { WorkOrder } from '@/services/api/core'
-import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
+import { linkToWorkOrderInOdoo } from '@/features/work-orders/lib/odooUtils'
 import { useState } from 'react'
 
 interface WorkOrdersTableProps {

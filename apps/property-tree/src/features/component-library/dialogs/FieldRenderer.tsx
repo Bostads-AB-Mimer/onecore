@@ -1,6 +1,6 @@
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
-import type { FieldConfig } from '../constants/entity-dialog-config'
+import type { FieldConfig } from '../constants/entityDialogConfig'
 
 interface FieldRendererProps {
   field: FieldConfig

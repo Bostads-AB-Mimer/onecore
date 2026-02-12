@@ -6,7 +6,7 @@ import type { Room } from '@/services/types'
 import type {
   InspectionSubmitData,
   TenantSnapshot,
-} from '@/shared/types/inspections/index'
+} from '@/features/inspections/types/index'
 import { CheckCircle2 } from 'lucide-react'
 import {
   Accordion,

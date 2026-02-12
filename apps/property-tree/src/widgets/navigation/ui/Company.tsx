@@ -4,7 +4,7 @@ import { Company } from '@/services/types'
 import { Building2 } from 'lucide-react'
 import { SidebarMenuItem, SidebarMenuButton } from '@/shared/ui/Sidebar'
 import { PropertyList } from './PropertyList'
-import { useHierarchicalSelection } from '@/shared/hooks/useHierarchicalSelection'
+import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
 import { useCompanyExpansion } from './CompanyExpansionContext'
 
