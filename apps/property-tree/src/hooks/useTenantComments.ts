@@ -27,11 +27,14 @@ export const useTenantComments = (
   })
 
   // Sort comments by date descending (most recent first)
+  // Comments without dates are placed at the end
   const sortedData = query.data
-    ? [...query.data].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+    ? [...query.data].sort((a, b) => {
+        if (!a.createdAt && !b.createdAt) return 0
+        if (!a.createdAt) return 1
+        if (!b.createdAt) return -1
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
     : []
 
   return {

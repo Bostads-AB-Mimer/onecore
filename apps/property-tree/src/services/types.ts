@@ -383,7 +383,8 @@ export interface TenantComment {
   commentKey: string
   text: string
   author: string
-  createdAt: string // ISO datetime combining date + time
+  createdAt: string | null // ISO datetime combining date + time, or null if missing
+  hasTime: boolean // Whether the original note had a time (false for manually typed date-only signatures)
   commentType?: 'Standard' | 'Sökande'
 }
 
