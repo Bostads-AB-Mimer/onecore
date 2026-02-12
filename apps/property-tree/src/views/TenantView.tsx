@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTenant } from '@/features/tenants'
 import { useLeasesByContactCode, useRentalProperties } from '@/features/leases'
@@ -9,9 +9,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
-import { Card, CardContent } from '@/shared/ui/Card'
 import { AlertTriangle } from 'lucide-react'
+import { Card, CardContent } from '@/shared/ui/Card'
 import { TenantTabs } from '@/widgets/tenant-tabs'
+import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import type { Tenant } from '@/services/types'
 import type { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
@@ -119,57 +120,34 @@ const TenantView = () => {
     error: rentalPropertiesError,
   } = useRentalProperties(rentalPropertyIds)
 
-  useEffect(() => {
-    if (tenantError) {
-      console.error('Error loading tenant data:', tenantError)
-    }
-  }, [tenantError])
-
-  const renderContent = () => {
-    // Show simple loading message while tenant data loads
-    if (tenantLoading) {
-      return (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">Hämtar hyresgäst...</p>
-        </div>
-      )
-    }
-
-    // Show error if tenant not found
-    if (tenantError || !tenant) {
-      return (
-        <div className="text-center py-10 space-y-4">
-          <h2 className="text-2xl font-bold">Hyresgästen kunde inte hittas</h2>
-          <p className="text-muted-foreground">
-            Kontrollera kundnummret och försök igen
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Sökte efter: {contactCode}
-          </p>
-        </div>
-      )
-    }
-
-    // Render tenant header and card immediately
-    return (
-      <div className="w-full">
-        <TenantHeader tenant={tenant} />
-        <div className="grid grid-cols-1 gap-6 mb-6">
-          <TenantCard tenant={tenant} />
-        </div>
-        <TenantTabsSection
-          tenant={tenant}
-          leases={leases}
-          rentalProperties={rentalProperties}
-          leasesLoading={leasesLoading}
-          leasesError={leasesError}
-          rentalPropertiesLoading={rentalPropertiesLoading}
-        />
-      </div>
-    )
-  }
-
-  return renderContent()
+  return (
+    <ViewLayout>
+      <ObjectPageLayout
+        isLoading={tenantLoading}
+        error={tenantError}
+        data={tenant}
+        notFoundMessage="Hyresgästen kunde inte hittas"
+        searchedFor={contactCode}
+      >
+        {(tenant) => (
+          <>
+            <TenantHeader tenant={tenant} />
+            <div className="grid grid-cols-1 gap-6 mb-6">
+              <TenantCard tenant={tenant} />
+            </div>
+            <TenantTabsSection
+              tenant={tenant}
+              leases={leases}
+              rentalProperties={rentalProperties}
+              leasesLoading={leasesLoading}
+              leasesError={leasesError}
+              rentalPropertiesLoading={rentalPropertiesLoading}
+            />
+          </>
+        )}
+      </ObjectPageLayout>
+    </ViewLayout>
+  )
 }
 
 export default TenantView

@@ -1,6 +1,4 @@
 // UI
-export { ErrorState } from './ui/ErrorState'
-export { LoadingState } from './ui/LoadingState'
 export { ResidenceBasicInfo } from './ui/ResidenceBasicInfo'
 export { ResidenceFloorplanTabsContent } from './ui/ResidenceFloorplanTabsContent'
 

@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import type { ReactNode } from 'react'
 import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
 import { useLeasesByRentalProperty } from '../hooks/useLeasesByRentalProperty'

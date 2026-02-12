@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { maintenanceUnitService } from '@/services/api/core'
 import { MaintenanceUnitBasicInfo } from '@/features/maintenance-units'
-import { ObjectPageLayout } from '../layouts/ObjectPageLayout'
+import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { MaintenanceUnitTabs } from '@/widgets/maintenance-unit-tabs'
 
 export function MaintenanceUnitView() {
@@ -17,8 +17,8 @@ export function MaintenanceUnitView() {
 
   const maintenanceUnit = maintenanceUnitQuery.data
 
-  if (!maintenanceUnit) {
-    return (
+  return (
+    <ViewLayout>
       <ObjectPageLayout
         isLoading={maintenanceUnitQuery.isLoading}
         error={maintenanceUnitQuery.error}
@@ -26,26 +26,18 @@ export function MaintenanceUnitView() {
         notFoundMessage="Serviceenhet hittades inte"
         searchedFor={code}
       >
-        <></>
+        {(maintenanceUnit) => (
+          <>
+            <div className="lg:col-span-3 space-y-6">
+              <MaintenanceUnitBasicInfo maintenanceUnit={maintenanceUnit} />
+            </div>
+
+            <div className="lg:col-span-3">
+              <MaintenanceUnitTabs maintenanceUnit={maintenanceUnit} />
+            </div>
+          </>
+        )}
       </ObjectPageLayout>
-    )
-  }
-
-  return (
-    <ObjectPageLayout
-      isLoading={maintenanceUnitQuery.isLoading}
-      error={maintenanceUnitQuery.error}
-      data={maintenanceUnit}
-      notFoundMessage="Serviceenhet hittades inte"
-      searchedFor={code}
-    >
-      <div className="lg:col-span-3 space-y-6">
-        <MaintenanceUnitBasicInfo maintenanceUnit={maintenanceUnit} />
-      </div>
-
-      <div className="lg:col-span-3">
-        <MaintenanceUnitTabs maintenanceUnit={maintenanceUnit} />
-      </div>
-    </ObjectPageLayout>
+    </ViewLayout>
   )
 }

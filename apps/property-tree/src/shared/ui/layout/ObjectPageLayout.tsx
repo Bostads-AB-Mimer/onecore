@@ -1,22 +1,26 @@
 import { ReactNode } from 'react'
+import { cn } from '@/shared/lib/utils'
 
-interface ObjectPageLayoutProps {
+interface ObjectPageLayoutProps<T> {
   isLoading: boolean
   error: Error | null
-  data: any | null
+  data: T | null | undefined
   notFoundMessage: string
   searchedFor?: string
-  children: ReactNode
+  children: ReactNode | ((data: T) => ReactNode)
+  /** Custom classes for the success-state wrapper (default: 3-col grid) */
+  className?: string
 }
 
-export const ObjectPageLayout = ({
+export function ObjectPageLayout<T>({
   isLoading,
   error,
   data,
   notFoundMessage,
   searchedFor,
   children,
-}: ObjectPageLayoutProps) => {
+  className,
+}: ObjectPageLayoutProps<T>) {
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-6 py-4">
@@ -44,8 +48,8 @@ export const ObjectPageLayout = ({
   }
 
   return (
-    <div className="py-4 animate-in grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {children}
+    <div className={cn('space-y-6', className)}>
+      {typeof children === 'function' ? children(data) : children}
     </div>
   )
 }

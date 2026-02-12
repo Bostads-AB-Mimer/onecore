@@ -23,6 +23,7 @@ import {
 } from '@/services/api/core/leaseSearchService'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 import { formatDate, LeaseStatusBadge } from '@/entities/lease'
+import { ViewLayout } from '@/shared/ui/layout'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -285,7 +286,7 @@ const LeasesView = () => {
     endDateTo
 
   return (
-    <div className="py-4 animate-in">
+    <ViewLayout>
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Hyreskontrakt</h1>
         <p className="text-muted-foreground">
@@ -570,7 +571,7 @@ const LeasesView = () => {
           />
         </CardContent>
       </Card>
-    </div>
+    </ViewLayout>
   )
 }
 

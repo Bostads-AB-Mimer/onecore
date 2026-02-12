@@ -1,4 +1,4 @@
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import {
   Accordion,
   AccordionContent,

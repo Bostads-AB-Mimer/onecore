@@ -1,8 +1,7 @@
 import { Building } from '@/services/types'
 import { SidebarMenu } from '@/shared/ui/Sidebar'
 import { ResidenceNavigation } from './Residence'
-import { NavigationSkeleton } from './NavigationSkeleton'
-import { NavigationError } from './NavigationError'
+import { NavigationSkeleton, NavigationError } from '@/shared/ui/layout'
 import { useResidences } from '@/features/residences'
 
 interface ResidenceListProps {

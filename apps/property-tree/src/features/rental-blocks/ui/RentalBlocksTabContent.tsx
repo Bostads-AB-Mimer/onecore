@@ -1,6 +1,6 @@
 import { components } from '@/services/api/generated/api-types'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { useState } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { useRentalBlocksByRentalId } from '../hooks/useRentalBlocksByRentalId'

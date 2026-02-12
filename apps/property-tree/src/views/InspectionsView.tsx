@@ -23,6 +23,7 @@ import {
 } from '@/features/inspections'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import { useQuery } from '@tanstack/react-query'
+import { ViewLayout } from '@/shared/ui/layout'
 
 type Inspection = components['schemas']['Inspection']
 
@@ -131,7 +132,7 @@ export default function AllInspectionsPage() {
   }
 
   return (
-    <div className="py-4 animate-in max-w-full overflow-hidden">
+    <ViewLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -420,6 +421,6 @@ export default function AllInspectionsPage() {
           )}
         </DialogContent>
       </Dialog> */}
-    </div>
+    </ViewLayout>
   )
 }

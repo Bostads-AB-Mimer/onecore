@@ -1,82 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Layers,
-  Home,
-  Users,
-  Building as BuildingIcon,
-  ArrowRight,
-  AlertCircle,
-} from 'lucide-react'
+import { Home, Building as BuildingIcon, ArrowRight } from 'lucide-react'
 import { buildingService, residenceService } from '../services/api/core'
-import { Issue } from '@/services/types'
 
-const mockIssues: Issue[] = [
-  {
-    id: 'issue-1',
-    description: 'Läckande kran i köket',
-    priority: 'high',
-    status: 'in-progress',
-    room: 'Kök',
-    feature: 'Vattenkran',
-    date: '2024-02-01',
-    residenceId: 'residence-1',
-  },
-  {
-    id: 'issue-2',
-    description: 'Trasig dörrhandtag',
-    priority: 'medium',
-    status: 'pending',
-    room: 'Hall',
-    feature: 'Ytterdörr',
-    date: '2024-02-02',
-    residenceId: 'residence-2',
-  },
-]
 import { StatCard } from '../shared/ui/StatCard'
-import { ViewHeader } from '../shared/ui/ViewHeader'
 import { Card, CardHeader, CardTitle, CardContent } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
-import { Badge } from '@/shared/ui/Badge'
+import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { staircaseService } from '@/services/api/core/staircaseService'
-
-function LoadingSkeleton() {
-  return (
-    <div className="p-8 animate-in">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
-      <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-8 animate-pulse" />
-
-      <Grid cols={3} className="mb-8">
-        {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"
-          />
-        ))}
-      </Grid>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-        </div>
-        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-      </div>
-    </div>
-  )
-}
-
-const priorityLabels = {
-  low: 'Låg',
-  medium: 'Medium',
-  high: 'Hög',
-} as const
-
-const statusLabels = {
-  pending: 'Väntar',
-  'in-progress': 'Pågående',
-  resolved: 'Åtgärdat',
-} as const
 
 export function StaircaseView() {
   const { staircaseId, buildingId } = useParams()
@@ -104,103 +36,95 @@ export function StaircaseView() {
     enabled: !!buildingQuery.data?.code,
   })
 
-  if (
+  const isLoading =
     buildingQuery.isLoading ||
     staircaseQuery.isLoading ||
     residencesQuery.isLoading
-  ) {
-    return <LoadingSkeleton />
-  }
-
-  if (!staircaseQuery.data) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Uppgång hittades inte
-        </h2>
-      </div>
-    )
-  }
 
   return (
-    <div className="p-8 animate-in">
-      <ViewHeader
-        title={buildingQuery.data?.name ?? ''}
-        subtitle={`Byggnad ${staircaseQuery.data?.name}`}
-        type="Uppgång"
-        icon={Layers}
-      />
+    <ViewLayout>
+      <ObjectPageLayout
+        isLoading={isLoading}
+        error={staircaseQuery.error || buildingQuery.error}
+        data={staircaseQuery.data}
+        notFoundMessage="Uppgång hittades inte"
+        searchedFor={staircaseId}
+      >
+        <h1 className="text-3xl font-bold mb-2">{buildingQuery.data?.name}</h1>
+        <p className="text-muted-foreground mb-8">
+          Uppgång {staircaseQuery.data?.name}
+        </p>
 
-      <Grid cols={3} className="mb-8">
-        <StatCard
-          title="Bostäder"
-          value={residencesQuery.data?.length || 0}
-          icon={Home}
-          //subtitle={`? st uthyrda`}
-          subtitle=""
-        />
-        {/* Hiding for demo purposes */}
-        {/*
+        <Grid cols={3} className="mb-8">
+          <StatCard
+            title="Bostäder"
+            value={residencesQuery.data?.length || 0}
+            icon={Home}
+            //subtitle={`? st uthyrda`}
+            subtitle=""
+          />
+          {/* Hiding for demo purposes */}
+          {/*
         <StatCard title="Uthyrningsgrad" value={`? %`} icon={Users} />
         */}
-        <StatCard
-          title="Våningar"
-          value={Math.ceil((residencesQuery.data?.length || 0) / 2)}
-          icon={BuildingIcon}
-        />
-      </Grid>
+          <StatCard
+            title="Våningar"
+            value={Math.ceil((residencesQuery.data?.length || 0) / 2)}
+            icon={BuildingIcon}
+          />
+        </Grid>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
-      >
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <Home className="h-5 w-5" />
-                Bostäder
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Grid cols={2}>
-                {residencesQuery.data?.map((residence) => (
-                  <motion.div
-                    key={residence.id}
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() =>
-                      navigate(`/residences/${residence.id}`, {
-                        state: {
-                          buildingCode: buildingQuery.data?.code,
-                          staircaseCode: residence.code.substring(2, 4),
-                        },
-                      })
-                    }
-                    className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium group-hover:text-blue-500 transition-colors">
-                          Lägenhet {residence.code}
-                        </h3>
-                        {/* Hiding for demo purposes */}
-                        {/*
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+        >
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <Home className="h-5 w-5" />
+                  Bostäder
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Grid cols={2}>
+                  {residencesQuery.data?.map((residence) => (
+                    <motion.div
+                      key={residence.id}
+                      whileHover={{ scale: 1.02 }}
+                      onClick={() =>
+                        navigate(`/residences/${residence.id}`, {
+                          state: {
+                            buildingCode: buildingQuery.data?.code,
+                            staircaseCode: residence.code.substring(2, 4),
+                          },
+                        })
+                      }
+                      className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium group-hover:text-blue-500 transition-colors">
+                            Lägenhet {residence.code}
+                          </h3>
+                          {/* Hiding for demo purposes */}
+                          {/*
                       <p className="text-sm text-gray-500">
                         3 rum och kök, 75m²
                       </p>
                       */}
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
                       </div>
-                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                    </div>
-                  </motion.div>
-                ))}
-              </Grid>
-            </CardContent>
-          </Card>
-          {/* Hiding for demo purposes */}
-          {/*
+                    </motion.div>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+            {/* Hiding for demo purposes */}
+            {/*
           {mockIssues.length > 0 && (
             <Card title="Pågående ärenden" icon={AlertCircle}>
               <div className="space-y-4">
@@ -245,11 +169,11 @@ export function StaircaseView() {
             </Card>
           )}
           */}
-        </div>
+          </div>
 
-        <div className="space-y-6">
-          {/* Hiding for demo purposes */}
-          {/*
+          <div className="space-y-6">
+            {/* Hiding for demo purposes */}
+            {/*
           <Card title="Status" icon={Layers}>
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
@@ -288,8 +212,9 @@ export function StaircaseView() {
             </div>
           </Card>
           */}
-        </div>
-      </motion.div>
-    </div>
+          </div>
+        </motion.div>
+      </ObjectPageLayout>
+    </ViewLayout>
   )
 }

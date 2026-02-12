@@ -1,7 +1,7 @@
 import { Button } from '@/shared/ui/Button'
 import { WorkOrdersTable } from './WorkOrdersTable'
 import { WorkOrdersTableSkeleton } from './WorkOrdersTableSkeleton'
-import { TabLayout } from '@/shared/ui/TabLayout'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { FilePlus } from 'lucide-react'
 import { useWorkOrders } from '../hooks/useWorkOrders'
 import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'

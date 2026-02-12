@@ -6,6 +6,7 @@ import {
   ComponentLibraryDialogs,
 } from '@/features/component-library'
 import { ComponentImageGallery } from '@/entities/component'
+import { ViewLayout } from '@/shared/ui/layout'
 
 const ComponentLibraryView = () => {
   const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =
@@ -45,7 +46,7 @@ const ComponentLibraryView = () => {
   })
 
   return (
-    <div className="py-4 space-y-6">
+    <ViewLayout>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -134,7 +135,7 @@ const ComponentLibraryView = () => {
           onClose={dialogs.imageGalleryDialog.close}
         />
       )}
-    </div>
+    </ViewLayout>
   )
 }
 
