@@ -223,6 +223,8 @@ export async function bulkUpdateKeys(
     keySystemId?: string | null
     rentalObjectCode?: string
     disposed?: boolean
+    notes?: string | null
+    clearNotes?: boolean
   },
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<number> {
@@ -238,6 +240,19 @@ export async function bulkUpdateKeys(
   if (updates.rentalObjectCode !== undefined)
     updateData.rentalObjectCode = updates.rentalObjectCode
   if (updates.disposed !== undefined) updateData.disposed = updates.disposed
+  if (updates.clearNotes && updates.notes) {
+    // Overwrite: clear + set new text
+    updateData.notes = updates.notes
+  } else if (updates.clearNotes) {
+    // Clear only
+    updateData.notes = null
+  } else if (updates.notes !== undefined) {
+    // Append to existing
+    updateData.notes = dbConnection.raw(
+      "CASE WHEN notes IS NOT NULL AND notes != '' THEN CONCAT(notes, CHAR(10), ?) ELSE ? END",
+      [updates.notes, updates.notes]
+    )
+  }
 
   if (Object.keys(updateData).length === 0) return 0
 

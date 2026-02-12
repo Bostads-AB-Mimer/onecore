@@ -567,6 +567,8 @@ const Index = () => {
     keySystemId?: string | null
     rentalObjectCode?: string
     disposed?: boolean
+    notes?: string | null
+    clearNotes?: boolean
   }) => {
     try {
       const result = await keyService.bulkUpdateKeys(

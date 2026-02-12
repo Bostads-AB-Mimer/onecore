@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ import {
   rentalObjectSearchService,
   type RentalObjectSearchResult,
 } from '@/services/api/rentalObjectSearchService'
+import { Checkbox } from '@/components/ui/checkbox'
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -30,6 +32,8 @@ interface BulkEditFormState {
   selectedRentalObject: RentalObjectSearchResult | null
   rentalObjectSearch: string
   disposed: boolean | null
+  notes: string
+  clearNotes: boolean
 }
 
 interface BulkEditKeysFormProps {
@@ -40,6 +44,8 @@ interface BulkEditKeysFormProps {
     keySystemId?: string | null
     rentalObjectCode?: string
     disposed?: boolean
+    notes?: string | null
+    clearNotes?: boolean
   }) => Promise<void>
   onCancel: () => void
 }
@@ -54,6 +60,8 @@ const initialFormState: BulkEditFormState = {
   selectedRentalObject: null,
   rentalObjectSearch: '',
   disposed: null,
+  notes: '',
+  clearNotes: false,
 }
 
 export function BulkEditKeysForm({
@@ -90,6 +98,8 @@ export function BulkEditKeysForm({
       keySystemId?: string | null
       rentalObjectCode?: string
       disposed?: boolean
+      notes?: string | null
+      clearNotes?: boolean
     } = {}
 
     if (formState.keyName) {
@@ -106,6 +116,12 @@ export function BulkEditKeysForm({
     }
     if (formState.disposed !== null) {
       updates.disposed = formState.disposed
+    }
+    if (formState.clearNotes) {
+      updates.clearNotes = true
+    }
+    if (formState.notes) {
+      updates.notes = formState.notes.trim() || null
     }
 
     if (Object.keys(updates).length === 0) {
@@ -133,7 +149,9 @@ export function BulkEditKeysForm({
     formState.flexNumber !== null ||
     formState.keySystemId !== null ||
     !!formState.rentalObjectCode ||
-    formState.disposed !== null
+    formState.disposed !== null ||
+    !!formState.notes ||
+    formState.clearNotes
 
   return (
     <Card className="animate-fade-in mb-6">
@@ -309,6 +327,45 @@ export function BulkEditKeysForm({
                   <SelectItem value="false">Nej (aktiv)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1">
+              <Label htmlFor="notes" className="text-xs">
+                Notering
+              </Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                placeholder="Läggs till efter befintlig notering"
+                value={formState.notes}
+                onChange={(e) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                disabled={isLoading}
+              />
+              <div className="flex items-center space-x-2 pt-1">
+                <Checkbox
+                  id="clearNotes"
+                  checked={formState.clearNotes}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      clearNotes: checked === true,
+                    }))
+                  }
+                  disabled={isLoading}
+                />
+                <Label
+                  htmlFor="clearNotes"
+                  className="text-xs font-normal cursor-pointer"
+                >
+                  Rensa befintliga noteringar
+                </Label>
+              </div>
             </div>
           </div>
         </div>

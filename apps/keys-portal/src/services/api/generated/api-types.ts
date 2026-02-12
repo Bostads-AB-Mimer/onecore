@@ -2643,6 +2643,8 @@ export interface components {
         keySystemId?: string | null;
         rentalObjectCode?: string;
         disposed?: boolean;
+        notes?: string | null;
+        clearNotes?: boolean;
       };
     };
     Key: components["schemas"]["Key"];
@@ -2661,6 +2663,7 @@ export interface components {
       keySystemId?: string | null;
       /** @default false */
       disposed?: boolean;
+      notes?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
