@@ -10,7 +10,7 @@ export const GetLeasesStatusSchema = z.enum([
 export const IncludeContactsQueryParamSchema = z.object({
   includeContacts: z
     .enum(['true', 'false'])
-    .optional()
+    .default('false')
     .transform((value) => value === 'true'),
 })
 
