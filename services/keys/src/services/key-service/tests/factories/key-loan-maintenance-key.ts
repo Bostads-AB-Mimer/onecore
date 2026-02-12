@@ -19,7 +19,7 @@ export const KeyLoanMaintenanceKeyFactory = Factory.define<KeyLoan>(
       contact: `Company ${sequence}`, // company field is now contact
       contact2: undefined,
       contactPerson: `Contact Person ${sequence}`,
-      description: `Maintenance key loan ${sequence}`,
+      notes: `Maintenance key loan ${sequence}`,
       returnedAt: undefined, // null = not returned yet (active loan)
       availableToNextTenantFrom: undefined,
       pickedUpAt: new Date(now.getTime() - 86400000), // Picked up 1 day ago

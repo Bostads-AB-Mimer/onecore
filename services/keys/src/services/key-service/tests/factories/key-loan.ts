@@ -26,7 +26,7 @@ export const KeyLoanFactory = Factory.define<KeyLoan>(({ sequence }) => {
     contact: `contact-${sequence}@example.com`,
     contact2: undefined,
     contactPerson: undefined,
-    description: undefined,
+    notes: undefined,
     returnedAt: undefined, // null = not returned yet (active loan)
     availableToNextTenantFrom: undefined,
     pickedUpAt: new Date(now.getTime() - 86400000), // Picked up 1 day ago
