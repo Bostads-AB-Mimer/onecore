@@ -1,19 +1,22 @@
 import { Plus } from 'lucide-react'
-import { Button } from '@/shared/ui/Button'
-import { CategoriesTable } from './CategoriesTable'
-import { TypesTable } from './TypesTable'
-import { SubtypesTable } from './SubtypesTable'
-import { ModelsTable } from './ModelsTable'
-import { InstancesTable } from './InstancesTable'
-import { TableToolbar } from '../../../shared/ui/TableToolbar'
-import type { ViewState } from '../hooks/useComponentLibraryHandlers'
+
 import type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
   Component,
+  ComponentCategory,
+  ComponentModel,
+  ComponentSubtype,
+  ComponentType,
 } from '@/services/types'
+
+import { Button } from '@/shared/ui/Button'
+import { TableToolbar } from '@/shared/ui/TableToolbar'
+
+import type { ViewState } from '../hooks/useComponentLibraryHandlers'
+import { CategoriesTable } from './CategoriesTable'
+import { InstancesTable } from './InstancesTable'
+import { ModelsTable } from './ModelsTable'
+import { SubtypesTable } from './SubtypesTable'
+import { TypesTable } from './TypesTable'
 
 interface ComponentLibraryContentProps {
   viewState: ViewState

@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 import { type LucideIcon } from 'lucide-react'
+
 import {
   SidebarGroup,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
 } from '@/shared/ui/Sidebar'
 
 interface SidebarNavLinkProps {

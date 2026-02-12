@@ -1,16 +1,16 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import { BuildingEntrancesTabContent } from '@/features/buildings'
-import { WorkOrdersTabContent } from '@/features/work-orders'
 import { DocumentsTabContent } from '@/features/documents'
 import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { useResidenceStaircaseLookupMap } from '@/features/residences'
+import { WorkOrdersTabContent } from '@/features/work-orders'
 
-import { BuildingTabsMobile } from './BuildingTabsMobile'
+import { Building, Staircase } from '@/services/types'
 
 import { useIsMobile } from '@/shared/hooks'
-import { Building, Staircase } from '@/services/types'
-import { useResidenceStaircaseLookupMap } from '@/features/residences'
-
 import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
+import { BuildingTabsMobile } from './BuildingTabsMobile'
 
 interface BuildingTabsProps {
   building: Building

@@ -1,5 +1,6 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
+
 import { Button } from './Button'
 
 interface ModalProps {

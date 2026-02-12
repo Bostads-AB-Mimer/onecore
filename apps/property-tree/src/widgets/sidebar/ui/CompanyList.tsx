@@ -1,7 +1,9 @@
-import { CompanyNavigation } from './Company'
-import { SidebarMenu } from '@/shared/ui/Sidebar'
-import { NavigationSkeleton, NavigationError } from '@/shared/ui/layout'
 import { useCompanies } from '@/features/companies'
+
+import { NavigationError, NavigationSkeleton } from '@/shared/ui/layout'
+import { SidebarMenu } from '@/shared/ui/Sidebar'
+
+import { CompanyNavigation } from './Company'
 
 export function CompanyList() {
   const { data: companies, isLoading, error } = useCompanies()

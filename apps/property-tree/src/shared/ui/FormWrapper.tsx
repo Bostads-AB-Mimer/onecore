@@ -1,7 +1,8 @@
 import React from 'react'
-import { ScrollArea } from '@/shared/ui/ScrollArea'
-import { cn } from '@/shared/lib/utils'
+
 import { useIsMobile } from '@/shared/hooks/useMobile'
+import { cn } from '@/shared/lib/utils'
+import { ScrollArea } from '@/shared/ui/ScrollArea'
 
 interface FormWrapperProps {
   children: React.ReactNode

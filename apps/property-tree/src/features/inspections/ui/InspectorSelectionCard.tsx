@@ -1,4 +1,15 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Clock, ExternalLink, MapPin, User } from 'lucide-react'
+
+import { Tenant } from '@/services/types'
+
+import { cn } from '@/shared/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/Avatar'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { Label } from '@/shared/ui/Label'
 import {
   Select,
   SelectContent,
@@ -6,15 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/Avatar'
-import { Button } from '@/shared/ui/Button'
-import { Badge } from '@/shared/ui/Badge'
-import { Label } from '@/shared/ui/Label'
-import { User, MapPin, ExternalLink, Clock } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { cn } from '@/shared/lib/utils'
-import { Tenant } from '@/services/types'
 
 interface InspectorSelectionCardProps {
   inspectorName: string

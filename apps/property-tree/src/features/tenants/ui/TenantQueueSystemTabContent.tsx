@@ -1,24 +1,26 @@
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { useEffect, useState } from 'react'
+import {
+  Car,
+  ExternalLink,
+  Home,
+  InfoIcon,
+  Loader2,
+  Plus,
+  Users,
+} from 'lucide-react'
+
+import { resolve } from '@/shared/lib/env'
+import { formatISODate } from '@/shared/lib/formatters'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/Alert'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import {
-  InfoIcon,
-  Home,
-  Car,
-  Users,
-  ExternalLink,
-  Plus,
-  Loader2,
-} from 'lucide-react'
-import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
-import { useInterestApplications } from '../hooks/useInterestApplications'
+
 import { useApplicationProfile } from '../hooks/useApplicationProfile'
 import { useContactQueuePoints } from '../hooks/useContactQueuePoints'
-import { resolve } from '@/shared/lib/env'
-import { formatISODate } from '@/shared/lib/formatters'
+import { useInterestApplications } from '../hooks/useInterestApplications'
+import { ApplicationProfileDisplay } from './ApplicationProfileDisplay'
 
 // Helper function to get status badge variant
 // Handles both numeric ApplicantStatus enum values and string values

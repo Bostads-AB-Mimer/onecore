@@ -1,5 +1,6 @@
-import type { Lease } from '@/services/api/core/leaseService'
 import type { components } from '@/services/api/core/generated/api-types'
+import type { Lease } from '@/services/api/core/leaseService'
+
 import { getStatusBadge } from '../lib/status'
 
 type LeaseSearchResult = components['schemas']['LeaseSearchResult']

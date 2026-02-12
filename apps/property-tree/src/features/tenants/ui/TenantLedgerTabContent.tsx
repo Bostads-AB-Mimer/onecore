@@ -1,8 +1,9 @@
 import { parseAsString, useQueryState } from 'nuqs'
 
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import { InvoicesTable } from './InvoicesTable'
+
 import { useTenantInvoices } from '../hooks/useTenantInvoices'
+import { InvoicesTable } from './InvoicesTable'
 
 interface TenantLedgerTabContentProps {
   contactCode: string

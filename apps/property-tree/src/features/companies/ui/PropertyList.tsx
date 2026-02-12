@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Building2, Home } from 'lucide-react'
+
 import { Property } from '@/services/types'
-import { useNavigate } from 'react-router-dom'
+
 import { Card } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
 

@@ -1,7 +1,8 @@
+import { useLocation, useNavigate } from 'react-router-dom'
+
 import type { Building } from '@/shared/types/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Button } from '@/shared/ui/Button'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 interface PropertyBuildingCardProps {
   building: Building

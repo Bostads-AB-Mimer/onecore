@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { Map as GeoMap } from 'maplibre-gl'
-import { Expand, Minimize2 } from 'lucide-react'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+import { useEffect, useRef, useState } from 'react'
+import { Expand, Minimize2 } from 'lucide-react'
+import { Map as GeoMap } from 'maplibre-gl'
 
 import { Property } from '@/services/types'
 

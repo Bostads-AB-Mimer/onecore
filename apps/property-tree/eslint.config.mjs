@@ -1,5 +1,6 @@
 import { defineConfig } from 'eslint/config'
 import boundaries from 'eslint-plugin-boundaries'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import typescriptEslint from 'typescript-eslint'
 import unicorn from 'eslint-plugin-unicorn'
 
@@ -14,6 +15,73 @@ export default defineConfig([
     ],
     rules: {
       '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
+  // Import sorting: FSD layer hierarchy (bottom → top)
+  {
+    files: ['src/**/*.{js,jsx,ts,tsx}'],
+    plugins: { 'simple-import-sort': simpleImportSort },
+    rules: {
+      'simple-import-sort/imports': [
+        'warn',
+        {
+          groups: [
+            // Side effect imports (e.g., import './index.css')
+            ['^\\u0000'],
+            // React, then external packages
+            ['^react', '^@?\\w'],
+            // FSD layers: app → pages → widgets → features → entities → services → shared
+            ['^@/app'],
+            ['^@/pages'],
+            ['^@/widgets'],
+            ['^@/features'],
+            ['^@/entities'],
+            ['^@/services'],
+            ['^@/shared'],
+            // Any other @/ imports (e.g., @/contexts)
+            ['^@/'],
+            // Relative imports
+            ['^\\.'],
+          ],
+        },
+      ],
+      'simple-import-sort/exports': 'warn',
+      // Cross-layer imports must use @/ alias so boundaries + sorting work
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../**/shared/*', '../shared/*'],
+              message: 'Use @/shared/ instead of relative paths.',
+            },
+            {
+              group: ['../**/services/*', '../services/*'],
+              message: 'Use @/services/ instead of relative paths.',
+            },
+            {
+              group: ['../**/entities/*', '../entities/*'],
+              message: 'Use @/entities/ instead of relative paths.',
+            },
+            {
+              group: ['../**/features/*', '../features/*'],
+              message: 'Use @/features/ instead of relative paths.',
+            },
+            {
+              group: ['../**/widgets/*', '../widgets/*'],
+              message: 'Use @/widgets/ instead of relative paths.',
+            },
+            {
+              group: ['../**/pages/*', '../pages/*'],
+              message: 'Use @/pages/ instead of relative paths.',
+            },
+            {
+              group: ['../**/app/*', '../app/*'],
+              message: 'Use @/app/ instead of relative paths.',
+            },
+          ],
+        },
+      ],
     },
   },
   // File naming: PascalCase or camelCase for .tsx files (components = PascalCase, hooks = camelCase)
@@ -63,17 +131,18 @@ export default defineConfig([
         },
       },
       'boundaries/elements': [
+        // FSD layers (bottom → top): shared → services → entities → features → widgets → pages → app
         { type: 'shared', pattern: 'src/shared/*' },
         { type: 'services', pattern: 'src/services/*' },
         { type: 'entities', pattern: 'src/entities/*' },
         { type: 'features', pattern: 'src/features/*' },
         { type: 'widgets', pattern: 'src/widgets/*' },
-        { type: 'layouts', pattern: 'src/layouts/*' },
-        { type: 'views', pattern: 'src/views/*' },
-        // Legacy folders (to be migrated) - no restrictions for now
+        { type: 'pages', pattern: 'src/pages/*' },
+        { type: 'app', pattern: 'src/app/*' },
+        // Legacy (to be migrated)
         {
           type: 'legacy',
-          pattern: ['src/contexts/*', 'src/app/*'],
+          pattern: ['src/contexts/*'],
         },
       ],
       'boundaries/ignore': [
@@ -86,14 +155,15 @@ export default defineConfig([
         'src/main.tsx',
         'src/index.css',
         'src/vite-env.d.ts',
-        'src/auth-config.ts',
+        'src/authConfig.ts',
       ],
     },
     rules: {
       // Catch files not matching any defined element type
       // 'boundaries/no-unknown-files': ['warn'],
 
-      // Enforce importing through index.ts (barrel exports) for features and entities
+      // Enforce importing through index.ts (barrel exports) for features, entities, and widgets
+      // shared/ui is excluded — direct imports like @/shared/ui/Button are allowed
       'boundaries/entry-point': [
         'error',
         {
@@ -107,6 +177,10 @@ export default defineConfig([
               target: ['entities'],
               allow: 'index.(ts|tsx)',
             },
+            {
+              target: ['widgets'],
+              allow: 'index.(ts|tsx)',
+            },
           ],
         },
       ],
@@ -116,9 +190,9 @@ export default defineConfig([
         {
           default: 'disallow',
           message:
-            '${file.type}/ cannot import from ${dependency.type}/. Check the layer hierarchy: shared → services → entities → features → widgets → views.',
+            '${file.type}/ cannot import from ${dependency.type}/. Check the FSD layer hierarchy: shared → services → entities → features → widgets → pages → app.',
           rules: [
-            // shared: lowest level - can only import from itself
+            // shared: lowest level — can only import from itself
             {
               from: 'shared',
               allow: ['shared'],
@@ -134,7 +208,7 @@ export default defineConfig([
               allow: ['shared', 'services', 'entities'],
             },
             // features: can import entities, shared, services
-            // CANNOT import other features, widgets, views, layouts
+            // CANNOT import other features
             {
               from: 'features',
               allow: ['shared', 'services', 'entities'],
@@ -146,7 +220,7 @@ export default defineConfig([
                 'Features cannot import other features. Extract shared code into entities/ or shared/.',
             },
             // widgets: can import features, entities, shared, services
-            // CANNOT import other widgets, views, layouts
+            // CANNOT import other widgets
             {
               from: 'widgets',
               allow: ['shared', 'services', 'entities', 'features'],
@@ -157,29 +231,29 @@ export default defineConfig([
               message:
                 'Widgets cannot import other widgets. Extract shared code into features/ or shared/.',
             },
-            // layouts: can import shared
-            // CANNOT import features, views, services, entities, widgets
+            // pages: top composition layer — can import everything below
+            // CANNOT import other pages
             {
-              from: 'layouts',
-              allow: ['shared'],
+              from: 'pages',
+              allow: ['shared', 'services', 'entities', 'features', 'widgets'],
             },
-            // views: can import almost everything (top level)
-            // CANNOT import other views
             {
-              from: 'views',
+              from: 'pages',
+              disallow: ['pages'],
+              message: 'Pages cannot import other pages.',
+            },
+            // app: application layer — can import everything
+            {
+              from: 'app',
               allow: [
                 'shared',
                 'services',
                 'entities',
                 'features',
                 'widgets',
-                'layouts',
+                'pages',
+                'app',
               ],
-            },
-            {
-              from: 'views',
-              disallow: ['views'],
-              message: 'Views cannot import other views.',
             },
             // legacy: no restrictions during migration
             {
@@ -190,8 +264,8 @@ export default defineConfig([
                 'entities',
                 'features',
                 'widgets',
-                'layouts',
-                'views',
+                'pages',
+                'app',
                 'legacy',
               ],
             },

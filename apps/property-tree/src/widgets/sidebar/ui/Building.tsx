@@ -1,11 +1,14 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Building, Property } from '@/services/types'
 import { Warehouse } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/shared/ui/Sidebar'
-import { ResidenceList } from './ResidenceList'
-import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
+
+import { Building, Property } from '@/services/types'
+
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
+import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
+
+import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
+import { ResidenceList } from './ResidenceList'
 
 interface BuildingNavigationProps {
   building: Building

@@ -1,6 +1,7 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar, History, Wrench, AlertCircle } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertCircle, Calendar, History, Wrench, X } from 'lucide-react'
+
 import { IssueForm, IssueFormData } from './IssueForm'
 
 interface FeatureDetails {

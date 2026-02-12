@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+
 import type { components } from '@/services/api/core/generated/api-types'
 
 type Room = components['schemas']['Room']

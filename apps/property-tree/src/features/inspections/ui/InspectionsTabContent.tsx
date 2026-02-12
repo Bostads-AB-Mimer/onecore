@@ -1,22 +1,25 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import { Plus } from 'lucide-react'
-import { Button } from '@/shared/ui/Button'
-import { InspectionFormDialog } from './InspectionFormDialog'
-import { InspectionsTable } from './InspectionsTable'
-import { roomService, inspectionService } from '@/services/api/core'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import { components } from '@/services/api/core/generated/api-types'
 
-import type { ResidenceDetails } from '@/services/types'
 import type {
   InspectionSubmitData,
   ResidenceInfo,
   TenantSnapshot,
 } from '@/features/inspections/types'
+
+import { inspectionService, roomService } from '@/services/api/core'
+import { components } from '@/services/api/core/generated/api-types'
+import type { ResidenceDetails } from '@/services/types'
+
 import { useToast } from '@/shared/hooks/useToast'
+import { Button } from '@/shared/ui/Button'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
 import { InspectionProtocol } from '../ui/InspectionProtocol'
+import { InspectionFormDialog } from './InspectionFormDialog'
+import { InspectionsTable } from './InspectionsTable'
 
 type Inspection = components['schemas']['Inspection']
 // type InspectionRoom = components['schemas']['InspectionRoom']

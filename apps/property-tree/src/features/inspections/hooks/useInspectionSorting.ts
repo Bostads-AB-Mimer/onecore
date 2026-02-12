@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import type { components } from '@/services/api/core/generated/api-types'
 
 type Inspection = components['schemas']['Inspection']

@@ -6,6 +6,7 @@
  */
 
 import type { components } from '@/services/api/core/generated/api-types'
+
 import type { ComponentType } from './actions'
 
 type InspectionRoom = components['schemas']['InspectionRoom']

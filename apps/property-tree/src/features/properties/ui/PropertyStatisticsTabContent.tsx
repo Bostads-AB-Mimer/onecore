@@ -1,5 +1,5 @@
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { PropertyDetail } from '@/shared/types/api'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 interface PropertyStatisticsTabContentProps {
   property: PropertyDetail

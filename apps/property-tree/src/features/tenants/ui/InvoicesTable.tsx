@@ -1,16 +1,17 @@
+import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
 import { format, parseISO } from 'date-fns'
 import { FileText } from 'lucide-react'
 import { match, P } from 'ts-pattern'
-import { Invoice, PaymentStatus, InvoicePaymentEvent } from '@onecore/types'
 
 import { Badge } from '@/shared/ui/Badge'
-import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
+import { Button } from '@/shared/ui/Button'
 import {
   CollapsibleTable,
   CollapsibleTableColumn,
 } from '@/shared/ui/CollapsibleTable'
-import { Button } from '@/shared/ui/Button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
+
+import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',

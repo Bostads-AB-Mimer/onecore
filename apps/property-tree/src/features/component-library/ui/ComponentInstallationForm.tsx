@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+
+import {
+  type ComponentModelWithHierarchy,
+  InstanceSelector,
+  ModelSelector,
+} from '@/entities/component'
+
+import { componentService } from '@/services/api/core/componentService'
+
+import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
-import { Button } from '@/shared/ui/Button'
-import {
-  ModelSelector,
-  InstanceSelector,
-  type ComponentModelWithHierarchy,
-} from '@/entities/component'
+
 import { useInstallComponent } from '../hooks/useInstallComponent'
-import { componentService } from '@/services/api/core/componentService'
-import { useQueryClient } from '@tanstack/react-query'
 
 export interface InstallationFormData {
   modelId: string

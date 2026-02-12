@@ -1,21 +1,25 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
-import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
 import { useComponentEntity } from '@/entities/component'
+
+import type {
+  Component,
+  ComponentCategory,
+  ComponentModel,
+  ComponentSubtype,
+  ComponentType,
+} from '@/services/types'
+
 import {
   useDialogState,
-  useSimpleDialogState,
   type UseDialogStateReturn,
+  useSimpleDialogState,
   type UseSimpleDialogStateReturn,
-} from '../../../shared/hooks/useDialogState'
+} from '@/shared/hooks'
+import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
+
 import type { ViewState } from './useComponentLibraryHandlers'
-import type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
-  Component,
-} from '@/services/types'
 
 // Helper function to derive ViewState from URL search params
 function deriveViewStateFromParams(searchParams: URLSearchParams): ViewState {

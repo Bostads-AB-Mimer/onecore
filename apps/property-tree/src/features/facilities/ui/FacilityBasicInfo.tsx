@@ -1,7 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import { useIsMobile } from '@/shared/hooks/useMobile'
-import { components } from '@/services/api/core/generated/api-types'
 import { Loader2 } from 'lucide-react'
+
+import { components } from '@/services/api/core/generated/api-types'
+
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 interface FacilityBasicInfoProps {
   facility: components['schemas']['FacilityDetails']
@@ -20,12 +22,6 @@ export const FacilityBasicInfo = ({
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-          {facility.name || facility.code}
-        </h1>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">Grundinformation</CardTitle>

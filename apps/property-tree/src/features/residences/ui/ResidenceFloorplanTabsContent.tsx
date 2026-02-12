@@ -1,7 +1,8 @@
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import { EmptyState } from '@/shared/ui/EmptyState'
-import { FileImage } from 'lucide-react'
 import { useState } from 'react'
+import { FileImage } from 'lucide-react'
+
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 export const ResidenceFloorplanTabsContent = ({
   rentalId,

@@ -7,9 +7,9 @@ import { Input } from '@/shared/ui/Input'
 import { Separator } from '@/shared/ui/Separator'
 import { Sheet, SheetContent } from '@/shared/ui/Sheet'
 
+import { SIDEBAR_WIDTH_MOBILE } from './constants'
 import { useSidebar } from './context'
 import { SidebarProps } from './types'
-import { SIDEBAR_WIDTH_MOBILE } from './constants'
 
 // Helper for creating forwarded components
 function createForwardedComponent<

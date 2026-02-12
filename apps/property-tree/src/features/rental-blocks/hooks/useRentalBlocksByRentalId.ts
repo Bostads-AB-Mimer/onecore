@@ -1,5 +1,6 @@
-import { residenceService } from '@/services/api/core'
 import { useQuery } from '@tanstack/react-query'
+
+import { residenceService } from '@/services/api/core'
 
 export function useRentalBlocksByRentalId(rentalId: string | undefined) {
   const rentalBlocksQuery = useQuery({

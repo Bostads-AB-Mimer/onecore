@@ -1,20 +1,23 @@
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import { EmptyState } from '@/shared/ui/EmptyState'
+import { Link } from 'react-router-dom'
+import { ChevronRight, FilePlus, Wrench } from 'lucide-react'
+
+import type { MaintenanceUnit } from '@/services/types'
+
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
-import { Wrench, ChevronRight, FilePlus } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
-import {
-  useMaintenanceUnits,
-  type MaintenanceUnitsContextType,
-} from '../hooks/useMaintenanceUnits'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+
 import { MAINTENANCE_UNIT_TYPES, TYPE_CONFIG } from '../constants'
-import { Link } from 'react-router-dom'
-import type { MaintenanceUnit } from '@/services/types'
+import {
+  type MaintenanceUnitsContextType,
+  useMaintenanceUnits,
+} from '../hooks/useMaintenanceUnits'
 
 interface MaintenanceUnitsTabContentProps {
   contextType: MaintenanceUnitsContextType

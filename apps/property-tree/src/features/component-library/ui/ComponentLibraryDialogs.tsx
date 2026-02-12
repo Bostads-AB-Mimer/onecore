@@ -1,18 +1,20 @@
-import { GenericEntityDialog } from '../dialogs/GenericEntityDialog'
-import { InstanceDetailsDialog } from '../dialogs/InstanceDetailsDialog'
-import { DeinstallationDialog } from './DeinstallationDialog'
-import type { ViewState } from '../hooks/useComponentLibraryHandlers'
+import type {
+  Component,
+  ComponentCategory,
+  ComponentModel,
+  ComponentSubtype,
+  ComponentType,
+} from '@/services/types'
+
 import type {
   UseDialogStateReturn,
   UseSimpleDialogStateReturn,
-} from '../../../shared/hooks/useDialogState'
-import type {
-  ComponentCategory,
-  ComponentType,
-  ComponentSubtype,
-  ComponentModel,
-  Component,
-} from '@/services/types'
+} from '@/shared/hooks'
+
+import { GenericEntityDialog } from '../dialogs/GenericEntityDialog'
+import { InstanceDetailsDialog } from '../dialogs/InstanceDetailsDialog'
+import type { ViewState } from '../hooks/useComponentLibraryHandlers'
+import { DeinstallationDialog } from './DeinstallationDialog'
 
 interface ComponentLibraryDialogsProps {
   viewState: ViewState

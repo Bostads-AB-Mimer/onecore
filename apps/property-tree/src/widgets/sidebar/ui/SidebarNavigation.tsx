@@ -1,20 +1,20 @@
 import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
-import { Link, useLocation } from 'react-router-dom'
 import {
+  ChevronRight,
+  Contact,
+  FileText,
   Home,
   LayoutGrid,
-  Contact,
-  ShieldX,
-  FileText,
-  ChevronRight,
   Settings,
+  ShieldX,
 } from 'lucide-react'
-import { CompanyList } from './CompanyList'
+
 import { SidebarNavLink } from '@/shared/ui/layout'
 import {
   Sidebar,
@@ -22,14 +22,16 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
 } from '@/shared/ui/Sidebar'
+
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
 import {
   CompanyExpansionProvider,
   useCompanyExpansion,
 } from './CompanyExpansionContext'
+import { CompanyList } from './CompanyList'
 
 export function SidebarNavigation() {
   return (

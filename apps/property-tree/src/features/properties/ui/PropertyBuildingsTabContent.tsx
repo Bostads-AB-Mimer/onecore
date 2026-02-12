@@ -1,6 +1,7 @@
-import { PropertyBuildingCard } from './PropertyBuildingCard'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import type { Building } from '@/shared/types/api'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+
+import { PropertyBuildingCard } from './PropertyBuildingCard'
 
 interface PropertyBuildingsTabContentProps {
   buildings: Building[]

@@ -1,8 +1,10 @@
+import { Pin, PinOff, Plus, Save, Trash2 } from 'lucide-react'
+
 import { Button } from '@/shared/ui/Button'
 import { Textarea } from '@/shared/ui/Textarea'
-import { Plus, Save, Pin, PinOff, Trash2 } from 'lucide-react'
+
 import { useNotesState } from './hooks/useNotesState'
-import type { NotesProps, Note } from './types'
+import type { Note, NotesProps } from './types'
 
 export function Notes({
   entityType,

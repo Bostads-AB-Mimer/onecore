@@ -1,7 +1,9 @@
+import type { Tenant } from '@/services/types'
+
 import { Card, CardContent } from '@/shared/ui/Card'
+
 import { TenantContactActions } from './TenantContactActions'
 import { TenantPersonalInfo } from './TenantPersonalInfo'
-import type { Tenant } from '@/services/types'
 
 interface TenantCardProps {
   tenant: Tenant

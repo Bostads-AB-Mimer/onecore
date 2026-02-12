@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { inspectionService } from '@/services/api/core/inspectionService'
+
 import { components } from '@/services/api/core/generated/api-types'
+import { inspectionService } from '@/services/api/core/inspectionService'
 
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 

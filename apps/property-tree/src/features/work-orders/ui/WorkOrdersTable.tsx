@@ -1,9 +1,12 @@
-import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+import { useState } from 'react'
+
+import { linkToWorkOrderInOdoo } from '@/features/work-orders/lib/odooUtils'
+
+import { WorkOrder } from '@/services/api/core'
+
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { WorkOrder } from '@/services/api/core'
-import { linkToWorkOrderInOdoo } from '@/features/work-orders/lib/odooUtils'
-import { useState } from 'react'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 interface WorkOrdersTableProps {
   orders: WorkOrder[]

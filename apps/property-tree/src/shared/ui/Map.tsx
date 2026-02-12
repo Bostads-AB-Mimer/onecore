@@ -1,6 +1,7 @@
+import 'maplibre-gl/dist/maplibre-gl.css'
+
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
 
 interface Location {
   name: string

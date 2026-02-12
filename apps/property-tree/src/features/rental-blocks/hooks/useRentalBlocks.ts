@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
-import { residenceService } from '@/services/api/core'
 import {
+  keepPreviousData,
   useQuery,
   useQueryClient,
-  keepPreviousData,
 } from '@tanstack/react-query'
+
+import { residenceService } from '@/services/api/core'
 import type { RentalBlocksSearchParams } from '@/services/types'
 
 const hasSearchFilters = (params: RentalBlocksSearchParams) =>

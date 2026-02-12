@@ -1,6 +1,7 @@
-import { useQueries } from '@tanstack/react-query'
-import { rentalPropertyService } from '@/services/api/core'
 import type { RentalPropertyInfo } from '@onecore/types'
+import { useQueries } from '@tanstack/react-query'
+
+import { rentalPropertyService } from '@/services/api/core'
 
 export function useRentalProperties(rentalPropertyIds: string[]): {
   data: Record<string, RentalPropertyInfo | null>

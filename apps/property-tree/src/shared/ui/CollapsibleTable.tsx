@@ -1,5 +1,8 @@
 import { Fragment, ReactNode, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+
+import { cn } from '@/shared/lib/utils'
+import { Card } from '@/shared/ui/Card'
 import {
   Table,
   TableBody,
@@ -8,8 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/Table'
-import { Card } from '@/shared/ui/Card'
-import { cn } from '@/shared/lib/utils'
 
 export interface CollapsibleTableColumn<T> {
   key: string

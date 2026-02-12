@@ -1,4 +1,5 @@
 import { Modal } from '@/shared/ui/Modal'
+
 import { ComponentForm } from './ComponentForm'
 
 interface ComponentModalProps {

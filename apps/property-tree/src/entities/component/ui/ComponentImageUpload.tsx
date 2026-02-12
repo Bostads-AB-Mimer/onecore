@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { Upload, Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, Upload } from 'lucide-react'
+
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
-import { cn } from '@/shared/lib/utils'
+
 import { useComponentImages } from '../hooks/useComponentImages'
 
 interface ComponentImageUploadProps {

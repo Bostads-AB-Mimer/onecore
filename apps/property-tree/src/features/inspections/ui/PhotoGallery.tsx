@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { X, Plus, ZoomIn } from 'lucide-react'
+import { Plus, X, ZoomIn } from 'lucide-react'
+
 import { Button } from '@/shared/ui/Button'
 import { Dialog, DialogContent } from '@/shared/ui/Dialog'
+
 import { PhotoCapture } from './PhotoCapture'
 
 interface PhotoGalleryProps {

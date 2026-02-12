@@ -1,11 +1,14 @@
+import { FilePlus } from 'lucide-react'
+
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'
+
+import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
+
+import { useWorkOrders } from '../hooks/useWorkOrders'
 import { WorkOrdersTable } from './WorkOrdersTable'
 import { WorkOrdersTableSkeleton } from './WorkOrdersTableSkeleton'
-import { TabLayout } from '@/shared/ui/layout/TabLayout'
-import { FilePlus } from 'lucide-react'
-import { useWorkOrders } from '../hooks/useWorkOrders'
-import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'
-import { ContextType } from '@/shared/types/ui'
 
 export interface WorkOrdersTabContentProps {
   id: string

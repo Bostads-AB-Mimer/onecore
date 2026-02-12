@@ -1,5 +1,6 @@
-import { DataTable, type Column } from '@/shared/ui/DataTable'
 import type { ComponentType } from '@/services/types'
+
+import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 interface TypesTableProps {
   types: ComponentType[]

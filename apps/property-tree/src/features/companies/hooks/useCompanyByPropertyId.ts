@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+
 import { companyService, propertyService } from '@/services/api/core'
 
 /**

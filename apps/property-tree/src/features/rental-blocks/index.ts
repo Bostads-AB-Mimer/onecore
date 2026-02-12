@@ -4,8 +4,8 @@ export { RentalBlocksTabContent } from './ui/RentalBlocksTabContent'
 
 // Hooks
 export { useBlockReasons } from './hooks/useBlockReasons'
-export { useRentalBlocksByRentalId } from './hooks/useRentalBlocksByRentalId'
 export { useRentalBlocks } from './hooks/useRentalBlocks'
+export { useRentalBlocksByRentalId } from './hooks/useRentalBlocksByRentalId'
 export { useRentalBlocksFilters } from './hooks/useRentalBlocksFilters'
 
 // Constants

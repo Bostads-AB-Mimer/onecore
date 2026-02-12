@@ -1,8 +1,11 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Building, Staircase } from '@/services/types'
 import { GitGraph } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/shared/ui/Sidebar'
+
+import { Building, Staircase } from '@/services/types'
+
+import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
+
 import { ResidenceList } from './ResidenceList'
 
 interface StaircaseNavigationProps {

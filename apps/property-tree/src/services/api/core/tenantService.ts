@@ -1,5 +1,6 @@
-import { GET } from './baseApi'
 import type { Tenant } from '@/services/types'
+
+import { GET } from './baseApi'
 
 export interface ContactSearchResult {
   fullName: string

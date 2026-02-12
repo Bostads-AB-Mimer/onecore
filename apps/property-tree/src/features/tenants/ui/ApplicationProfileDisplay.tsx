@@ -1,6 +1,7 @@
 import { User, UserCheck } from 'lucide-react'
-import { Badge } from '@/shared/ui/Badge'
+
 import { formatISODate } from '@/shared/lib/formatters'
+import { Badge } from '@/shared/ui/Badge'
 
 interface ApplicationProfileDisplayProps {
   profile: {

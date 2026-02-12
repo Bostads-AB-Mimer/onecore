@@ -1,6 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Package, Wrench, Loader2, Building, Settings } from 'lucide-react'
+import { Building, Loader2, Package, Settings, Wrench } from 'lucide-react'
+
 import { Button } from '@/shared/ui/Button'
 
 interface ComponentFormData {

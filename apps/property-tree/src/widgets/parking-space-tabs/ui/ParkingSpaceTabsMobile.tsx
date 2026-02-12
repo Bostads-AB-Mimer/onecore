@@ -1,16 +1,17 @@
-import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
+import { ClipboardList, FileText, MessageSquare, Users } from 'lucide-react'
 
+import { LeasesTabContent } from '@/features/leases'
+import { CurrentTenant } from '@/features/tenants'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import { components } from '@/services/api/core/generated/api-types'
+import { Lease } from '@/services/api/core/leaseService'
+
+import { ContextType } from '@/shared/types/ui'
 import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
-import { components } from '@/services/api/core/generated/api-types'
-import { Lease } from '@/services/api/core/leaseService'
-import { ContextType } from '@/shared/types/ui'
-
-import { CurrentTenant } from '@/features/tenants'
-import { LeasesTabContent } from '@/features/leases'
-import { WorkOrdersTabContent } from '@/features/work-orders'
 
 type ParkingSpace = components['schemas']['ParkingSpace']
 

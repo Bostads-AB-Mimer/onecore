@@ -1,14 +1,15 @@
 import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 
+import { SpaceComponents } from '@/features/component-library'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import type { MaintenanceUnit } from '@/services/types'
+
+import { ContextType } from '@/shared/types/ui'
 import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
-import type { MaintenanceUnit } from '@/services/types'
-import { ContextType } from '@/shared/types/ui'
-
-import { SpaceComponents } from '@/features/component-library'
-import { WorkOrdersTabContent } from '@/features/work-orders'
 
 interface MaintenanceUnitTabsMobileProps {
   maintenanceUnit: MaintenanceUnit

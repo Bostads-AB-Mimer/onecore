@@ -1,15 +1,17 @@
 import * as React from 'react'
+
 import { useIsMobile } from '@/shared/hooks/useMobile'
-import { TooltipProvider } from '@/shared/ui/Tooltip'
 import { cn } from '@/shared/lib/utils'
-import { SidebarContext, SidebarProviderProps } from './types'
+import { TooltipProvider } from '@/shared/ui/Tooltip'
+
 import {
-  SIDEBAR_COOKIE_NAME,
   SIDEBAR_COOKIE_MAX_AGE,
+  SIDEBAR_COOKIE_NAME,
+  SIDEBAR_KEYBOARD_SHORTCUT,
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
-  SIDEBAR_KEYBOARD_SHORTCUT,
 } from './constants'
+import { SidebarContext, SidebarProviderProps } from './types'
 
 const SidebarContextValue = React.createContext<SidebarContext | null>(null)
 

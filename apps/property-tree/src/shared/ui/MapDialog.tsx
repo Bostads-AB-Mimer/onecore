@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { MapIcon } from 'lucide-react'
+
+import { searchAddress } from '@/shared/lib/geocoding'
+import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { Map } from '@/shared/ui/Map'
-import { Button } from '@/shared/ui/Button'
-import { MapIcon } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { searchAddress } from '@/shared/lib/geocoding'
 
 interface MapDialogProps {
   residences: Array<{

@@ -1,8 +1,10 @@
 import { RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CommandPaletteProvider } from '@/features/search'
 import { NuqsAdapter } from 'nuqs/adapters/react-router/v6'
+
 import { router } from '@/app/router'
+
+import { CommandPaletteProvider } from '@/features/search'
 
 const queryClient = new QueryClient({
   defaultOptions: {

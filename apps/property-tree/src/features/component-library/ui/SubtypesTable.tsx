@@ -1,6 +1,7 @@
-import { Badge } from '@/shared/ui/Badge'
-import { DataTable, type Column } from '@/shared/ui/DataTable'
 import type { ComponentSubtype } from '@/services/types'
+
+import { Badge } from '@/shared/ui/Badge'
+import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 interface SubtypesTableProps {
   subtypes: ComponentSubtype[]

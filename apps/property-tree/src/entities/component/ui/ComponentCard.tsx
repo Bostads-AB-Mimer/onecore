@@ -1,16 +1,19 @@
-import { Card, CardContent, CardHeader } from '@/shared/ui/Card'
-import { Badge } from '@/shared/ui/Badge'
-import { Button } from '@/shared/ui/Button'
+import { useState } from 'react'
+import { Copy, FileText, Images, Ticket } from 'lucide-react'
+
+import type { Component } from '@/services/types'
+
+import { formatISODate } from '@/shared/lib/formatters'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
-import { Copy, Ticket, Images, FileText } from 'lucide-react'
-import type { Component } from '@/services/types'
-import { formatISODate } from '@/shared/lib/formatters'
-import { useState } from 'react'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import { Card, CardContent, CardHeader } from '@/shared/ui/Card'
+
 import {
   calculateComponentAge,
   calculateComponentLifespanProgress,

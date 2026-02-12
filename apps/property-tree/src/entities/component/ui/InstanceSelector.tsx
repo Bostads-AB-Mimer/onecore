@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Label } from '@/shared/ui/Label'
-import { Input } from '@/shared/ui/Input'
 import { useQuery } from '@tanstack/react-query'
+
 import { componentService } from '@/services/api/core/componentService'
-import { useDebounce } from '@/shared/hooks/useDebounce'
 import type { Component } from '@/services/types'
+
+import { useDebounce } from '@/shared/hooks/useDebounce'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
 
 interface InstanceSelectorProps {
   modelId: string

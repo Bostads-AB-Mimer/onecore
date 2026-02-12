@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react'
+
+import { useComponentEntityMutation } from '@/entities/component'
+
+import type { EntityType } from '@/services/types'
+
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
+
 import { entityDialogConfig } from '../constants/entityDialogConfig'
 import { FieldRenderer } from './FieldRenderer'
 import {
+  type HierarchyData,
   ParentHierarchySelector,
   parentIdFieldMap,
-  type HierarchyData,
 } from './ParentHierarchySelector'
-import { useComponentEntityMutation } from '@/entities/component'
-import type { EntityType } from '@/services/types'
 
 interface GenericEntityDialogProps<T extends Record<string, any>> {
   isOpen: boolean

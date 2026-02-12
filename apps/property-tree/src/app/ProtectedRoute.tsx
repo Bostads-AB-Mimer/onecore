@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { match } from 'ts-pattern'
 
 import { useAuth } from '@/features/auth'
+
 import { useUser } from '@/entities/user'
 
 export function ProtectedRoute({ children }: { children?: React.ReactNode }) {

@@ -1,27 +1,28 @@
 import { createBrowserRouter, type RouterProviderProps } from 'react-router-dom'
+
+import BuildingView from '@/pages/BuildingPage'
+import { CompanyPage } from '@/pages/CompanyPage'
+import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
+import { DashboardPage } from '@/pages/DashboardPage'
+import { FacilityPage } from '@/pages/FacilityPage'
+import InspectionsView from '@/pages/InspectionsPage'
+import LeasesPage from '@/pages/LeasesPage'
+import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
+import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
+import { PropertyPage } from '@/pages/PropertyPage'
+import { RentalBlocksPage } from '@/pages/RentalBlocksPage'
+import { ResidencePage } from '@/pages/ResidencePage'
+import { RoomPage } from '@/pages/RoomPage'
+import { SearchPage } from '@/pages/SearchPage'
+import { StaircasePage } from '@/pages/StaircasePage'
+import { TenantPage } from '@/pages/TenantPage'
+import { TenantsPage } from '@/pages/TenantsPage'
+
 import { AuthCallback } from '@/features/auth'
 
-import { CompanyView } from '@/views/CompanyView'
-import SearchView from '@/views/SearchView'
-import PropertyView from '@/views/PropertyView'
-import BuildingView from '@/views/BuildingView'
-import ComponentLibraryView from '@/views/ComponentLibraryView'
-import TenantView from '@/views/TenantView'
-import { StaircaseView } from '@/views/StaircaseView'
-import ResidenceView from '@/views/ResidenceView'
-import { RoomView } from '@/views/RoomView'
-import { ParkingSpaceView } from '@/views/ParkingSpaceView'
-import { MaintenanceUnitView } from '@/views/MaintenanceUnitView'
-import { FacilityView } from '@/views/FacilityView'
-import { DashboardView } from '@/views/DashboardView'
-import TenantsView from '@/views/TenantsView'
-import InspectionsView from '@/views/InspectionsView'
-import RentalBlocksView from '@/views/RentalBlocksView'
-import LeasesView from '@/views/LeasesView'
-
-import { ProtectedRoute } from './ProtectedRoute'
 import { AppLayout } from './layouts/AppLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
+import { ProtectedRoute } from './ProtectedRoute'
 
 export const router: RouterProviderProps['router'] = createBrowserRouter([
   {
@@ -36,12 +37,12 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
         children: [
           {
             path: '/',
-            element: <DashboardView />,
+            element: <DashboardPage />,
             handle: { title: 'Startsida' },
           },
           {
             path: '/sv',
-            element: <DashboardView />,
+            element: <DashboardPage />,
             handle: { title: 'Startsida' },
           },
         ],
@@ -51,17 +52,17 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
         children: [
           {
             path: 'companies/:companyId',
-            element: <CompanyView />,
+            element: <CompanyPage />,
             handle: { title: 'Företag' },
           },
           {
             path: 'properties',
-            element: <SearchView />,
+            element: <SearchPage />,
             handle: { title: 'Fastigheter' },
           },
           {
             path: 'properties/:propertyId',
-            element: <PropertyView />,
+            element: <PropertyPage />,
             handle: { title: 'Fastighet' },
           },
           {
@@ -71,57 +72,57 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           },
           {
             path: 'components',
-            element: <ComponentLibraryView />,
+            element: <ComponentLibraryPage />,
             handle: { title: 'Komponenter' },
           },
           {
             path: 'staircases/:buildingId/:staircaseId',
-            element: <StaircaseView />,
+            element: <StaircasePage />,
             handle: { title: 'Uppgång' },
           },
           {
             path: 'residences/:residenceId',
-            element: <ResidenceView />,
+            element: <ResidencePage />,
             handle: { title: 'Bostad' },
           },
           {
             path: 'residences/:residenceId/rooms/:roomId',
-            element: <RoomView />,
+            element: <RoomPage />,
             handle: { title: 'Rum' },
           },
           {
             path: 'parking-spaces/:rentalId',
-            element: <ParkingSpaceView />,
+            element: <ParkingSpacePage />,
             handle: { title: 'Bilplats' },
           },
           {
             path: 'maintenance-units/:code',
-            element: <MaintenanceUnitView />,
+            element: <MaintenanceUnitPage />,
             handle: { title: 'Underhållsenhet' },
           },
           {
             path: 'facilities/:rentalId',
-            element: <FacilityView />,
+            element: <FacilityPage />,
             handle: { title: 'Lokal' },
           },
           {
             path: 'tenants',
-            element: <TenantsView />,
+            element: <TenantsPage />,
             handle: { title: 'Kunder' },
           },
           {
             path: 'tenants/:contactCode',
-            element: <TenantView />,
+            element: <TenantPage />,
             handle: { title: 'Kund' },
           },
           {
             path: 'rental-blocks',
-            element: <RentalBlocksView />,
+            element: <RentalBlocksPage />,
             handle: { title: 'Spärrar' },
           },
           {
             path: 'leases',
-            element: <LeasesView />,
+            element: <LeasesPage />,
             handle: { title: 'Hyreskontrakt' },
           },
           {

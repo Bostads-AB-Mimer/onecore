@@ -1,8 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { fileStorageService } from '@/services/api/core'
 import { POST } from '@/services/api/core/baseApi'
-import { ContextType } from '@/shared/types/ui'
+
 import { fileToBase64 } from '@/shared/lib/file'
+import { ContextType } from '@/shared/types/ui'
+
 import { extractFileName, getFileTypeFromName } from '../lib/fileUtils'
 
 export function useDocuments(contextType: ContextType, id: string | undefined) {

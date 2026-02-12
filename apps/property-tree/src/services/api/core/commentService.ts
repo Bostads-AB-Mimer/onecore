@@ -1,10 +1,11 @@
-import { GET, POST } from './baseApi'
 import type {
   TenantComment,
+  TenantCommentNote,
   TenantCommentRaw,
   TenantCommentsResponse,
-  TenantCommentNote,
 } from '@/services/types'
+
+import { GET, POST } from './baseApi'
 
 /**
  * Converts a note to a flattened TenantComment for UI display

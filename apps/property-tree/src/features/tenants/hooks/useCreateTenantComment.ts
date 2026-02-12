@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+
 import { commentService } from '@/services/api/core'
 import type { TenantCommentRaw } from '@/services/types'
 

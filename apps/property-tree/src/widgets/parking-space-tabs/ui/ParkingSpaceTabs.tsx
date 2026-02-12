@@ -1,14 +1,15 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
-import { ClipboardList, Users, MessageSquare, FileText } from 'lucide-react'
+import { ClipboardList, FileText, MessageSquare, Users } from 'lucide-react'
 
-import { useIsMobile } from '@/shared/hooks/useMobile'
+import { LeasesTabContent } from '@/features/leases'
+import { CurrentTenant } from '@/features/tenants'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
 import { components } from '@/services/api/core/generated/api-types'
 import { Lease } from '@/services/api/core/leaseService'
-import { ContextType } from '@/shared/types/ui'
 
-import { CurrentTenant } from '@/features/tenants'
-import { LeasesTabContent } from '@/features/leases'
-import { WorkOrdersTabContent } from '@/features/work-orders'
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { ParkingSpaceTabsMobile } from './ParkingSpaceTabsMobile'
 
