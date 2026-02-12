@@ -10,6 +10,12 @@ import {
 import { useCollapsibleSections } from '@/hooks/useCollapsibleSections'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 
+/** Minimal selection interface — satisfied by UseItemSelectionReturn or a custom bridge */
+export interface TableSelectionProps {
+  isSelected: (id: string) => boolean
+  toggle: (id: string) => void
+}
+
 export interface RowRenderProps {
   isSelected: boolean
   onToggleSelect: () => void
@@ -37,9 +43,7 @@ export interface CollapsibleGroupTableProps<T> {
   groupBy?: (item: T) => string | null // Return null for ungrouped items
   sectionBy?: (item: T) => string // Top-level grouping (e.g., "loaned" vs "unloaned")
   sectionOrder?: string[] // Order of sections, others appear at end
-  selectable?: boolean
-  selectedIds?: string[]
-  onSelectionChange?: (id: string, checked: boolean) => void
+  selection?: TableSelectionProps
   columnCount?: number // For colspan calculations
   className?: string
   /** Initial expanded state: 'all' = all expanded, 'none' = all collapsed. Default: 'all' */
@@ -57,16 +61,12 @@ export function CollapsibleGroupTable<T>({
   groupBy,
   sectionBy,
   sectionOrder = [],
-  selectable = false,
-  selectedIds = [],
-  onSelectionChange,
+  selection,
   columnCount = 10,
   className,
   initialExpanded = 'all',
 }: CollapsibleGroupTableProps<T>) {
   const sections = useCollapsibleSections({ initialExpanded })
-
-  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
 
   // Group and section the items
   const groupedSections = useMemo(() => {
@@ -124,8 +124,8 @@ export function CollapsibleGroupTable<T>({
   const createRowProps = (item: T): RowRenderProps => {
     const id = getItemId(item)
     return {
-      isSelected: selectedSet.has(id),
-      onToggleSelect: () => onSelectionChange?.(id, !selectedSet.has(id)),
+      isSelected: selection?.isSelected(id) ?? false,
+      onToggleSelect: () => selection?.toggle(id),
       indent: !!(groupBy || sectionBy),
     }
   }

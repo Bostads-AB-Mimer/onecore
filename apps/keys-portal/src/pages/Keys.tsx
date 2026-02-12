@@ -8,6 +8,7 @@ import { BulkEditKeysForm } from '@/components/keys/BulkEditKeysForm'
 import { BulkDeleteKeysDialog } from '@/components/keys/dialogs/BulkDeleteKeysDialog'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useItemSelection } from '@/hooks/useItemSelection'
 import { Key, KeyDetails, KeySystem } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
@@ -46,7 +47,7 @@ const Index = () => {
   )
 
   // Bulk selection state
-  const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set())
+  const keySelection = useItemSelection()
   const [showBulkEditForm, setShowBulkEditForm] = useState(false)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -160,7 +161,7 @@ const Index = () => {
 
   // Clear selection when page or filters change
   useEffect(() => {
-    setSelectedKeyIds(new Set())
+    keySelection.deselectAll()
   }, [
     pagination.currentPage,
     searchQuery,
@@ -498,34 +499,10 @@ const Index = () => {
     setEditingKey(null)
   }
 
-  // Selection handlers
-  const handleSelectionChange = useCallback(
-    (keyId: string, checked: boolean) => {
-      setSelectedKeyIds((prev) => {
-        const next = new Set(prev)
-        if (checked) {
-          next.add(keyId)
-        } else {
-          next.delete(keyId)
-        }
-        return next
-      })
-    },
-    []
-  )
-
-  const handleSelectAll = useCallback(() => {
-    setSelectedKeyIds(new Set(keys.map((k) => k.id)))
-  }, [keys])
-
-  const handleDeselectAll = useCallback(() => {
-    setSelectedKeyIds(new Set())
-  }, [])
-
   // Get selected keys as array
   const selectedKeys = useMemo(
-    () => keys.filter((k) => selectedKeyIds.has(k.id)),
-    [keys, selectedKeyIds]
+    () => keys.filter((k) => keySelection.isSelected(k.id)),
+    [keys, keySelection.selectedIds]
   )
 
   const NON_DELETABLE_KEY_TYPES = ['HN', 'FS']
@@ -561,11 +538,12 @@ const Index = () => {
 
   const handleBulkDeleteConfirm = async () => {
     try {
-      const result = await keyService.bulkDeleteKeys(Array.from(selectedKeyIds))
+      const result = await keyService.bulkDeleteKeys(keySelection.selectedIds)
 
       // Remove deleted keys from local state
-      setKeys((prev) => prev.filter((k) => !selectedKeyIds.has(k.id)))
-      setSelectedKeyIds(new Set())
+      const deletedSet = new Set(keySelection.selectedIds)
+      setKeys((prev) => prev.filter((k) => !deletedSet.has(k.id)))
+      keySelection.deselectAll()
       setShowBulkDeleteDialog(false)
 
       toast({
@@ -592,13 +570,13 @@ const Index = () => {
   }) => {
     try {
       const result = await keyService.bulkUpdateKeys(
-        Array.from(selectedKeyIds),
+        keySelection.selectedIds,
         updates
       )
 
       // Refetch to get updated data
       await fetchKeys(pagination.currentPage, pagination.currentLimit)
-      setSelectedKeyIds(new Set())
+      keySelection.deselectAll()
       setShowBulkEditForm(false)
 
       toast({
@@ -659,7 +637,7 @@ const Index = () => {
 
       {showBulkEditForm && (
         <BulkEditKeysForm
-          selectedCount={selectedKeyIds.size}
+          selectedCount={keySelection.selectedIds.length}
           onSave={handleBulkEditConfirm}
           onCancel={() => setShowBulkEditForm(false)}
         />
@@ -684,17 +662,13 @@ const Index = () => {
         createdAtAfter={createdAtAfter}
         createdAtBefore={createdAtBefore}
         onDatesChange={handleDatesChange}
-        selectable
-        selectedKeyIds={selectedKeyIds}
-        onSelectionChange={handleSelectionChange}
-        onSelectAll={handleSelectAll}
-        onDeselectAll={handleDeselectAll}
+        selection={keySelection}
       />
 
       {/* Bulk Action Bar */}
       <BulkActionBar
-        selectedCount={selectedKeyIds.size}
-        onClear={handleDeselectAll}
+        selectedCount={keySelection.selectedIds.length}
+        onClear={() => keySelection.deselectAll()}
         isLoading={bulkLoading}
         actions={[
           {

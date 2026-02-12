@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { keyService } from '@/services/api/keyService'
 import { cardService } from '@/services/api/cardService'
 import { useToast } from '@/hooks/use-toast'
+import { useItemSelection } from '@/hooks/useItemSelection'
 import {
   handleLoanKeys,
   handleDisposeKeys,
@@ -43,8 +44,8 @@ export function LeaseKeyStatusList({
   const [cards, setCards] = useState<CardDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
-  const [selectedCards, setSelectedCards] = useState<string[]>([])
+  const keySelection = useItemSelection()
+  const cardSelection = useItemSelection()
 
   // Receipt dialog state
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
@@ -156,8 +157,8 @@ export function LeaseKeyStatusList({
 
     if (result.success) {
       await refreshStatuses()
-      setSelectedKeys([])
-      setSelectedCards([])
+      keySelection.deselectAll()
+      cardSelection.deselectAll()
 
       // Open receipt dialog if we have a receiptId
       if (result.receiptId) {
@@ -191,7 +192,7 @@ export function LeaseKeyStatusList({
 
     if (result.success) {
       await refreshStatuses()
-      setSelectedKeys([])
+      keySelection.deselectAll()
 
       // Show toast with undo action - custom styling for prominence
       toast({
@@ -274,7 +275,7 @@ export function LeaseKeyStatusList({
         {showAddKeyForm && (
           <AddKeyForm
             keys={keys}
-            selectedKeyIds={selectedKeys}
+            selectedKeyIds={keySelection.selectedIds}
             rentalObjectCode={lease.rentalPropertyId}
             onKeyCreated={handleKeyCreated}
             onCancel={() => setShowAddKeyForm(false)}
@@ -308,8 +309,8 @@ export function LeaseKeyStatusList({
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2">
           <KeyActionButtons
-            selectedKeys={selectedKeys}
-            selectedCards={selectedCards}
+            selectedKeys={keySelection.selectedIds}
+            selectedCards={cardSelection.selectedIds}
             keysWithStatus={visibleKeys}
             cardsWithStatus={cards}
             leaseIsNotPast={leaseIsNotPast}
@@ -332,7 +333,7 @@ export function LeaseKeyStatusList({
         {showAddKeyForm && (
           <AddKeyForm
             keys={keys}
-            selectedKeyIds={selectedKeys}
+            selectedKeyIds={keySelection.selectedIds}
             rentalObjectCode={lease.rentalPropertyId}
             onKeyCreated={handleKeyCreated}
             onCancel={() => setShowAddKeyForm(false)}
@@ -345,17 +346,15 @@ export function LeaseKeyStatusList({
           cards={cards}
           lease={lease}
           selectable={true}
-          selectedKeys={selectedKeys}
-          selectedCards={selectedCards}
+          selectedKeys={keySelection.selectedIds}
+          selectedCards={cardSelection.selectedIds}
           onKeySelectionChange={(keyId, checked) => {
-            setSelectedKeys((prev) =>
-              checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
-            )
+            if (checked) keySelection.select(keyId)
+            else keySelection.deselect(keyId)
           }}
           onCardSelectionChange={(cardId, checked) => {
-            setSelectedCards((prev) =>
-              checked ? [...prev, cardId] : prev.filter((id) => id !== cardId)
-            )
+            if (checked) cardSelection.select(cardId)
+            else cardSelection.deselect(cardId)
           }}
           onRefresh={refreshStatuses}
           onReturn={onReturn}
@@ -366,12 +365,12 @@ export function LeaseKeyStatusList({
             const visibleCardIds = cards
               .filter((c) => !c.disabled || getActiveLoan(c))
               .map((c) => c.cardId)
-            setSelectedKeys(visibleKeyIds)
-            setSelectedCards(visibleCardIds)
+            keySelection.selectAll(visibleKeyIds)
+            cardSelection.selectAll(visibleCardIds)
           }}
           onDeselectAll={() => {
-            setSelectedKeys([])
-            setSelectedCards([])
+            keySelection.deselectAll()
+            cardSelection.deselectAll()
           }}
         />
       </div>
@@ -400,8 +399,8 @@ export function LeaseKeyStatusList({
         onSuccess={async (receiptId) => {
           // Refresh and show receipt
           await refreshStatuses()
-          setSelectedKeys([])
-          setSelectedCards([])
+          keySelection.deselectAll()
+          cardSelection.deselectAll()
 
           if (receiptId) {
             setReceiptId(receiptId)
@@ -423,8 +422,8 @@ export function LeaseKeyStatusList({
         onSuccess={async () => {
           // Refresh statuses and clear selection
           await refreshStatuses()
-          setSelectedKeys([])
-          setSelectedCards([])
+          keySelection.deselectAll()
+          cardSelection.deselectAll()
           onKeysReturned?.()
         }}
       />

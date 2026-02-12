@@ -6,7 +6,10 @@ import {
   TableLink,
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CollapsibleGroupTable } from './tables/CollapsibleGroupTable'
+import {
+  CollapsibleGroupTable,
+  type TableSelectionProps,
+} from './tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from './tables/DefaultLoanHeader'
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
@@ -66,19 +69,29 @@ export function KeyBundleKeysList({
 
   // Calculate selection state for header checkbox
   const allKeyIds = useMemo(() => keys.map((key) => key.id), [keys])
+  const selectedSet = useMemo(() => new Set(selectedKeys), [selectedKeys])
   const allSelected =
-    allKeyIds.length > 0 && allKeyIds.every((id) => selectedKeys.includes(id))
+    allKeyIds.length > 0 && allKeyIds.every((id) => selectedSet.has(id))
   const someSelected = selectedKeys.length > 0
   const isIndeterminate = someSelected && !allSelected
+
+  // Bridge into TableSelectionProps
+  const selection: TableSelectionProps | undefined = selectable
+    ? {
+        isSelected: (id) => selectedSet.has(id),
+        toggle: (id) => {
+          const checked = !selectedSet.has(id)
+          onKeySelectionChange?.(id, checked)
+        },
+      }
+    : undefined
 
   return (
     <CollapsibleGroupTable
       items={keys}
       getItemId={(key) => key.id}
       columnCount={columnCount}
-      selectable={selectable}
-      selectedIds={selectedKeys}
-      onSelectionChange={onKeySelectionChange}
+      selection={selection}
       // Group by contact code (from latest loan - active or previous)
       // Use special marker for never-loaned keys so they get a group header too
       groupBy={(key) => {
