@@ -4,16 +4,26 @@
  * @returns { Promise<void> }
  */
 
-exports.up = function (knex) {
-  return knex.schema
-    .alterTable('key_systems', (table) => {
+exports.up = async function (knex) {
+  const hasDescriptionInKeySystems = await knex.schema.hasColumn(
+    'key_systems',
+    'description'
+  )
+  if (hasDescriptionInKeySystems) {
+    await knex.schema.alterTable('key_systems', (table) => {
       table.renameColumn('description', 'notes')
     })
-    .then(() =>
-      knex.schema.alterTable('key_loans', (table) => {
-        table.renameColumn('description', 'notes')
-      })
-    )
+  }
+
+  const hasDescriptionInKeyLoans = await knex.schema.hasColumn(
+    'key_loans',
+    'description'
+  )
+  if (hasDescriptionInKeyLoans) {
+    await knex.schema.alterTable('key_loans', (table) => {
+      table.renameColumn('description', 'notes')
+    })
+  }
 }
 
 /**
@@ -22,14 +32,21 @@ exports.up = function (knex) {
  * @returns { Promise<void> }
  */
 
-exports.down = function (knex) {
-  return knex.schema
-    .alterTable('key_systems', (table) => {
+exports.down = async function (knex) {
+  const hasNotesInKeySystems = await knex.schema.hasColumn(
+    'key_systems',
+    'notes'
+  )
+  if (hasNotesInKeySystems) {
+    await knex.schema.alterTable('key_systems', (table) => {
       table.renameColumn('notes', 'description')
     })
-    .then(() =>
-      knex.schema.alterTable('key_loans', (table) => {
-        table.renameColumn('notes', 'description')
-      })
-    )
+  }
+
+  const hasNotesInKeyLoans = await knex.schema.hasColumn('key_loans', 'notes')
+  if (hasNotesInKeyLoans) {
+    await knex.schema.alterTable('key_loans', (table) => {
+      table.renameColumn('notes', 'description')
+    })
+  }
 }
