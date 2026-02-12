@@ -53,8 +53,6 @@ export type UpdateKeyBundleRequest =
   components['schemas']['UpdateKeyBundleRequest']
 export type CreateKeyLoanRequest = components['schemas']['CreateKeyLoanRequest']
 export type UpdateKeyLoanRequest = components['schemas']['UpdateKeyLoanRequest']
-export type RentalPropertyResponse =
-  components['schemas']['RentalPropertyResponse']
 export type CreateKeyNoteRequest = components['schemas']['CreateKeyNoteRequest']
 export type UpdateKeyNoteRequest = components['schemas']['UpdateKeyNoteRequest']
 export type CreateReceiptRequest = components['schemas']['CreateReceiptRequest']

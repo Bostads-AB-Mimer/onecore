@@ -8,6 +8,8 @@ export interface SearchDropdownDisplayFormat {
   primaryText: string
   secondaryText?: string
   searchableText?: string // For client-side filtering, defaults to primaryText
+  icon?: React.ReactNode // Icon displayed before the primary text (e.g. lucide icon)
+  badge?: React.ReactNode // Badge displayed after the primary text (e.g. <Badge>)
 }
 
 interface SearchDropdownProps<T> {
@@ -30,9 +32,10 @@ interface SearchDropdownProps<T> {
   onSelect: (item: T | null) => void // Called when item selected or cleared
   selectedValue?: T | null // Currently selected item
 
-  // Focus/Blur
+  // Focus/Blur/Keyboard
   onFocus?: () => void
   onBlur?: () => void
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
 
   // UI Customization
   placeholder?: string
@@ -72,6 +75,7 @@ export function SearchDropdown<T>({
   selectedValue,
   onFocus,
   onBlur,
+  onKeyDown,
   placeholder,
   emptyMessage = 'Inga resultat',
   loadingMessage = 'Söker...',
@@ -205,6 +209,8 @@ export function SearchDropdown<T>({
         value: item,
         primaryText: formatted.primaryText,
         secondaryText,
+        icon: formatted.icon,
+        badge: formatted.badge,
       }
     })
   }, [allItems, preSuggestions, preSuggestionLabel])
@@ -259,7 +265,13 @@ export function SearchDropdown<T>({
   }
 
   const renderItem = (
-    item: { value: T; primaryText: string; secondaryText?: string },
+    item: {
+      value: T
+      primaryText: string
+      secondaryText?: string
+      icon?: React.ReactNode
+      badge?: React.ReactNode
+    },
     index: number
   ) => {
     const itemDisabled = isItemDisabled?.(item.value) ?? false
@@ -277,13 +289,19 @@ export function SearchDropdown<T>({
         onClick={() => handleSelectItem(item.value)}
         disabled={itemDisabled}
       >
-        <div className="min-w-0">
-          <div className="font-medium">{item.primaryText}</div>
-          {item.secondaryText && (
-            <div className="text-xs text-muted-foreground">
-              {item.secondaryText}
+        <div className="flex items-center gap-2 min-w-0">
+          {item.icon && <span className="shrink-0">{item.icon}</span>}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{item.primaryText}</span>
+              {item.badge && <span className="shrink-0">{item.badge}</span>}
             </div>
-          )}
+            {item.secondaryText && (
+              <div className="text-xs text-muted-foreground">
+                {item.secondaryText}
+              </div>
+            )}
+          </div>
         </div>
         {itemSelected && <Check className="h-4 w-4 shrink-0 text-primary" />}
       </button>
@@ -326,6 +344,7 @@ export function SearchDropdown<T>({
           onChange={(e) => onChange(e.target.value)}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
