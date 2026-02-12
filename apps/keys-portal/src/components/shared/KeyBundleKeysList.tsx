@@ -65,7 +65,7 @@ export function KeyBundleKeysList({
     return `/Keys?${params.toString()}`
   }
 
-  const columnCount = selectable ? 9 : 8
+  const columnCount = selectable ? 10 : 9
 
   // Calculate selection state for header checkbox
   const allKeyIds = useMemo(() => keys.map((key) => key.id), [keys])
@@ -124,6 +124,7 @@ export function KeyBundleKeysList({
           <TableHead className="w-[6%]">Löpnr</TableHead>
           <TableHead className="w-[6%]">Flex</TableHead>
           <TableHead className="w-[10%]">Låssystem</TableHead>
+          <TableHead className="w-[12%]">Tillhörighet</TableHead>
           <TableHead className="w-[12%]">Typ</TableHead>
           <TableHead className="w-[12%]">Status</TableHead>
           <TableHead className="w-[18%]">Utlämning</TableHead>
@@ -151,6 +152,9 @@ export function KeyBundleKeysList({
           <TableCell className="w-[6%]">{key.flexNumber ?? '-'}</TableCell>
           <TableCell className="w-[10%]">
             {key.keySystem?.systemCode || '-'}
+          </TableCell>
+          <TableCell className="w-[12%]">
+            {key.keySystem?.name || '-'}
           </TableCell>
           <TableCell className="w-[12%]">
             <KeyTypeBadge keyType={key.keyType} />
