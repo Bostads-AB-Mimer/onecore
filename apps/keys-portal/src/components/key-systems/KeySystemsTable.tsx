@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Upload, FileText } from 'lucide-react'
+import { Upload, FileText, StickyNote } from 'lucide-react'
 import {
   KeySystem,
   Property,
@@ -20,6 +20,7 @@ import {
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import React, { useState } from 'react'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
@@ -251,10 +252,25 @@ export function KeySystemsTable({
                         : '-'}
                     </TableCell>
                     <TableCell>
-                      <ActionMenu
-                        onEdit={() => onEdit(KeySystem)}
-                        // onDelete={() => onDelete(KeySystem.id)}
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        {KeySystem.description && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded">
+                                <StickyNote className="h-3.5 w-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-64 text-sm">
+                              <p className="font-medium text-xs text-muted-foreground mb-1">Notering</p>
+                              <p className="whitespace-pre-wrap">{KeySystem.description}</p>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                        <ActionMenu
+                          onEdit={() => onEdit(KeySystem)}
+                          // onDelete={() => onDelete(KeySystem.id)}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                   {isExpanded && (
