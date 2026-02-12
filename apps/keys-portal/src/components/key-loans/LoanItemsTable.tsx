@@ -15,6 +15,7 @@ import {
   getLatestActiveEvent,
 } from '@/components/shared/tables/StatusBadges'
 import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
+import { sortKeys } from '@/utils/sortKeys'
 import type { KeyLoanWithDetails, CardDetails } from '@/services/types'
 
 // Card type from loan's keyCardsArray
@@ -41,7 +42,7 @@ export function LoanItemsTable({
   columnCount,
   headerClassName,
 }: LoanItemsTableProps) {
-  const keys = loan.keysArray || []
+  const keys = sortKeys(loan.keysArray || [])
   const cards = loan.keyCardsArray || []
   const hasItems = keys.length > 0 || cards.length > 0
 
