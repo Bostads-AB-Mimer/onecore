@@ -15,7 +15,7 @@ import { KeyBundle, KeyDetails } from '@/services/types'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
-import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
+import { ExpandedRowFreeContent } from '@/components/shared/tables/ExpandedRowFreeContent'
 
 interface KeyBundlesTableProps {
   keyBundles: KeyBundle[]
@@ -99,7 +99,7 @@ export function KeyBundlesTable({
                     </TableCell>
                   </TableRow>
                   {isExpanded && (
-                    <ExpandedRowContent
+                    <ExpandedRowFreeContent
                       colSpan={5}
                       isLoading={isLoadingKeys}
                       hasData={keysForExpandedBundle.length > 0}
@@ -110,7 +110,7 @@ export function KeyBundlesTable({
                         bundleId={bundle.id}
                         onRefresh={onRefresh}
                       />
-                    </ExpandedRowContent>
+                    </ExpandedRowFreeContent>
                   )}
                 </React.Fragment>
               )
