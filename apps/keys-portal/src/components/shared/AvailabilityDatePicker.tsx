@@ -24,7 +24,7 @@ export function AvailabilityDatePicker({
   availableDate,
   onDateChange,
   label = 'Välj datum när nycklarna blir tillgängliga för nästa hyresgäst:',
-  helperText = 'Inget datum valt - nycklarna blir tillgängliga direkt',
+  helperText = 'Inget datum valt',
 }: Props) {
   return (
     <div className="space-y-3">
