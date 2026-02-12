@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react'
 import type { KeyDetails } from '@/services/types'
 import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
 import { fetchContactByContactCode } from '@/services/api/contactService'
+import { useItemSelection } from '@/hooks/useItemSelection'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
 import { LoanMaintenanceKeysDialog } from './dialogs/LoanMaintenanceKeysDialog'
@@ -27,7 +28,7 @@ export function KeyBundleKeysTable({
 }: KeyBundleKeysTableProps) {
   const { toast } = useToast()
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({})
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  const keySelection = useItemSelection()
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Split keys into disposed and non-disposed
@@ -116,7 +117,7 @@ export function KeyBundleKeysTable({
   const hasDisposed = disposedKeys.length > 0
 
   // Get selected keys data
-  const selectedKeysData = keys.filter((k) => selectedKeys.includes(k.id))
+  const selectedKeysData = keys.filter((k) => keySelection.isSelected(k.id))
 
   // Determine which keys can be returned (currently loaned with MAINTENANCE type)
   const returnableKeys = selectedKeysData.filter((k) => {
@@ -152,7 +153,7 @@ export function KeyBundleKeysTable({
       const currentKeyIds = keys.map((k) => k.id)
       // Remove selected keys
       const updatedKeyIds = currentKeyIds.filter(
-        (id) => !selectedKeys.includes(id)
+        (id) => !keySelection.isSelected(id)
       )
 
       await updateKeyBundle(bundleId, {
@@ -161,10 +162,10 @@ export function KeyBundleKeysTable({
 
       toast({
         title: 'Nycklar borttagna',
-        description: `${selectedKeys.length} ${selectedKeys.length === 1 ? 'nyckel' : 'nycklar'} borttagen från samlingen`,
+        description: `${keySelection.selectedIds.length} ${keySelection.selectedIds.length === 1 ? 'nyckel' : 'nycklar'} borttagen från samlingen`,
       })
 
-      setSelectedKeys([])
+      keySelection.deselectAll()
       onRefresh()
     } catch (error) {
       toast({
@@ -179,14 +180,14 @@ export function KeyBundleKeysTable({
 
   const handleDispose = async () => {
     setIsProcessing(true)
-    const result = await handleDisposeKeys({ keyIds: selectedKeys })
+    const result = await handleDisposeKeys({ keyIds: keySelection.selectedIds })
 
     if (result.success) {
       toast({
         title: result.title,
         description: result.message,
       })
-      setSelectedKeys([])
+      keySelection.deselectAll()
       onRefresh()
     } else {
       toast({
@@ -203,7 +204,7 @@ export function KeyBundleKeysTable({
       {/* Action buttons */}
       <div className="mb-4">
         <KeyActionButtons
-          selectedCount={selectedKeys.length}
+          selectedCount={keySelection.selectedIds.length}
           isProcessing={isProcessing}
           loanAction={
             loanableKeys.length > 0
@@ -253,16 +254,15 @@ export function KeyBundleKeysTable({
               keys={nonDisposedKeys}
               companyNames={companyNames}
               selectable={true}
-              selectedKeys={selectedKeys}
+              selectedKeys={keySelection.selectedIds}
               onKeySelectionChange={(keyId, checked) => {
-                setSelectedKeys((prev) =>
-                  checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
-                )
+                if (checked) keySelection.select(keyId)
+                else keySelection.deselect(keyId)
               }}
               onSelectAll={() =>
-                setSelectedKeys(nonDisposedKeys.map((k) => k.id))
+                keySelection.selectAll(nonDisposedKeys.map((k) => k.id))
               }
-              onDeselectAll={() => setSelectedKeys([])}
+              onDeselectAll={() => keySelection.deselectAll()}
               onRefresh={onRefresh}
               onReturn={handleReturnFromMenu}
             />
@@ -279,14 +279,15 @@ export function KeyBundleKeysTable({
               keys={disposedKeys}
               companyNames={companyNames}
               selectable={true}
-              selectedKeys={selectedKeys}
+              selectedKeys={keySelection.selectedIds}
               onKeySelectionChange={(keyId, checked) => {
-                setSelectedKeys((prev) =>
-                  checked ? [...prev, keyId] : prev.filter((id) => id !== keyId)
-                )
+                if (checked) keySelection.select(keyId)
+                else keySelection.deselect(keyId)
               }}
-              onSelectAll={() => setSelectedKeys(disposedKeys.map((k) => k.id))}
-              onDeselectAll={() => setSelectedKeys([])}
+              onSelectAll={() =>
+                keySelection.selectAll(disposedKeys.map((k) => k.id))
+              }
+              onDeselectAll={() => keySelection.deselectAll()}
               onRefresh={onRefresh}
               onReturn={handleReturnFromMenu}
             />
@@ -305,7 +306,7 @@ export function KeyBundleKeysTable({
         keys={loanableKeys}
         allBundleKeys={keys}
         onSuccess={() => {
-          setSelectedKeys([])
+          keySelection.deselectAll()
           onRefresh()
         }}
       />
@@ -323,7 +324,7 @@ export function KeyBundleKeysTable({
         }
         allKeys={keys}
         onSuccess={() => {
-          setSelectedKeys([])
+          keySelection.deselectAll()
           setPendingReturnKeyIds([])
           onRefresh()
         }}

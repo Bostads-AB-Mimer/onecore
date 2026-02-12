@@ -19,6 +19,7 @@ import {
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { Checkbox } from '@/components/ui/checkbox'
+import type { UseItemSelectionReturn } from '@/hooks/useItemSelection'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
 import { fetchContactByContactCode } from '@/services/api/contactService'
@@ -32,7 +33,7 @@ import {
 } from '@/components/shared/tables/StatusBadges'
 import { KeyLoansList } from '@/components/shared/tables/KeyLoansList'
 import { KeyBundlesList } from '@/components/shared/tables/KeyBundlesList'
-import { ExpandedRowContent } from '@/components/shared/tables/ExpandedRowContent'
+import { ExpandedRowFreeContent } from '@/components/shared/tables/ExpandedRowFreeContent'
 
 interface ExpandedKeyData {
   loans: KeyLoan[]
@@ -59,12 +60,7 @@ interface KeysTableProps {
   createdAtAfter: string | null
   createdAtBefore: string | null
   onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
-  // Selection props
-  selectable?: boolean
-  selectedKeyIds?: Set<string>
-  onSelectionChange?: (keyId: string, checked: boolean) => void
-  onSelectAll?: () => void
-  onDeselectAll?: () => void
+  selection?: UseItemSelectionReturn
 }
 
 export function KeysTable({
@@ -79,11 +75,7 @@ export function KeysTable({
   createdAtAfter,
   createdAtBefore,
   onDatesChange,
-  selectable = false,
-  selectedKeyIds = new Set(),
-  onSelectionChange,
-  onSelectAll,
-  onDeselectAll,
+  selection,
 }: KeysTableProps) {
   const expansion = useExpandableRows<ExpandedKeyData>({
     onExpand: async (keyId) => {
@@ -133,30 +125,23 @@ export function KeysTable({
     return new Date(dateString).toLocaleDateString('sv-SE')
   }
 
-  // Column count for expanded rows (base 11 + 1 if selectable)
-  const columnCount = selectable ? 12 : 11
+  // Column count for expanded rows (base 11 + 1 if selection enabled)
+  const columnCount = selection ? 12 : 11
 
-  const allSelected =
-    keys.length > 0 && keys.every((key) => selectedKeyIds.has(key.id))
-  const someSelected = selectedKeyIds.size > 0
-  const isIndeterminate = someSelected && !allSelected
+  const itemIds = keys.map((key) => key.id)
+  const allSelected = selection?.areAllSelected(itemIds) ?? false
+  const isIndeterminate = selection?.areSomeSelected(itemIds) ?? false
 
   return (
     <div className="rounded-md border bg-card">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border">
-            {selectable && (
+            {selection && (
               <TableHead className="w-[50px]">
                 <Checkbox
                   checked={isIndeterminate ? 'indeterminate' : allSelected}
-                  onCheckedChange={() => {
-                    if (allSelected) {
-                      onDeselectAll?.()
-                    } else {
-                      onSelectAll?.()
-                    }
-                  }}
+                  onCheckedChange={() => selection.toggleAll(itemIds)}
                 />
               </TableHead>
             )}
@@ -205,20 +190,18 @@ export function KeysTable({
               const isExpanded = expansion.isExpanded(key.id)
               const isLoadingThis =
                 expansion.isLoading && expansion.expandedId === key.id
-              const isSelected = selectedKeyIds.has(key.id)
+              const isSelected = selection?.isSelected(key.id) ?? false
               return (
                 <React.Fragment key={key.id}>
                   <TableRow
                     className="hover:bg-muted/50"
                     data-state={isSelected ? 'selected' : undefined}
                   >
-                    {selectable && (
+                    {selection && (
                       <TableCell>
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={(checked) =>
-                            onSelectionChange?.(key.id, checked === true)
-                          }
+                          onCheckedChange={() => selection.toggle(key.id)}
                           aria-label={`Markera ${key.keyName}`}
                         />
                       </TableCell>
@@ -285,7 +268,7 @@ export function KeysTable({
                   </TableRow>
 
                   {isExpanded && (
-                    <ExpandedRowContent
+                    <ExpandedRowFreeContent
                       colSpan={columnCount}
                       isLoading={expansion.isLoading}
                       hasData={!!expansion.loadedData}
@@ -327,7 +310,7 @@ export function KeysTable({
                             </div>
                           )}
                       </div>
-                    </ExpandedRowContent>
+                    </ExpandedRowFreeContent>
                   )}
                 </React.Fragment>
               )

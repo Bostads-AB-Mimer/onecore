@@ -7,7 +7,10 @@ import {
   TableExternalLink,
 } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
+import {
+  CollapsibleGroupTable,
+  type TableSelectionProps,
+} from '@/components/shared/tables/CollapsibleGroupTable'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
 import { LoanActionMenu } from './LoanActionMenu'
@@ -91,6 +94,24 @@ export function LeaseItemsList({
   const someSelected = selectedIds.length > 0
   const isIndeterminate = someSelected && !allSelected
 
+  // Bridge dual key/card selection into a single TableSelectionProps
+  const keyIdSet = useMemo(() => new Set(keys.map((k) => k.id)), [keys])
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+  const selection: TableSelectionProps | undefined = selectable
+    ? {
+        isSelected: (id) => selectedSet.has(id),
+        toggle: (id) => {
+          const isKey = keyIdSet.has(id)
+          const checked = !selectedSet.has(id)
+          if (isKey) {
+            onKeySelectionChange?.(id, checked)
+          } else {
+            onCardSelectionChange?.(id, checked)
+          }
+        },
+      }
+    : undefined
+
   return (
     <CollapsibleGroupTable
       items={items}
@@ -98,15 +119,7 @@ export function LeaseItemsList({
         item.itemType === 'key' ? item.data.id : item.data.cardId
       }
       columnCount={columnCount}
-      selectable={selectable}
-      selectedIds={[...selectedKeys, ...selectedCards]}
-      onSelectionChange={(id, checked) => {
-        if (selectedKeys.includes(id) || keys.some((k) => k.id === id)) {
-          onKeySelectionChange?.(id, checked)
-        } else {
-          onCardSelectionChange?.(id, checked)
-        }
-      }}
+      selection={selection}
       groupBy={(item) => getLatestLoan(item.data)?.id || '__never_loaned__'}
       sectionBy={(item) => (getActiveLoan(item.data) ? 'loaned' : 'unloaned')}
       sectionOrder={['loaned', 'unloaned']}

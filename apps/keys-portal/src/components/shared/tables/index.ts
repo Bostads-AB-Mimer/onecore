@@ -17,6 +17,10 @@ export type {
   UseCollapsibleSectionsReturn,
 } from '@/hooks/useCollapsibleSections'
 
+// Expanded row wrappers
+export { ExpandedRowFreeContent } from './ExpandedRowFreeContent'
+export { ExpandedRowSubtable } from './ExpandedRowSubtable'
+
 // Components
 export { CollapsibleGroupTable } from './CollapsibleGroupTable'
 export type {

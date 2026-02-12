@@ -2,7 +2,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { TableRow, TableCell } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
-interface ExpandedRowContentProps {
+interface ExpandedRowFreeContentProps {
   colSpan: number
   isLoading: boolean
   hasData: boolean
@@ -11,15 +11,15 @@ interface ExpandedRowContentProps {
   children: React.ReactNode
 }
 
-/** Wrapper for expanded row content with loading and empty states */
-export function ExpandedRowContent({
+/** Wrapper for expanded row free-form content (divs, lists, etc.) with loading and empty states */
+export function ExpandedRowFreeContent({
   colSpan,
   isLoading,
   hasData,
   emptyMessage = 'Inga data att visa',
   className,
   children,
-}: ExpandedRowContentProps) {
+}: ExpandedRowFreeContentProps) {
   return (
     <TableRow>
       <TableCell colSpan={colSpan} className={cn('p-6 bg-muted/30', className)}>
