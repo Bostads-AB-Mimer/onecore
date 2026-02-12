@@ -12,6 +12,7 @@ An entity answers the question: **What _is_ a tenant?** A name, a personal numbe
 entities/
 └── [entity-name]/
     ├── ui/              # Basic UI representations of the entity
+    ├── hooks/           # Data-fetching hooks (React Query wrappers around services)
     ├── lib/             # Formatting, sorting, status helpers, constants
     └── index.ts         # Public exports
 ```
@@ -20,6 +21,8 @@ entities/
 
 - Entities define **what something is**, not what you can do with it (that belongs in `features/`)
 - Keep entities focused on domain knowledge: data formatting, status logic, sorting, and simple display components
+- `hooks/` should wrap `services/` calls with React Query for caching and state — not contain business workflows or mutations that represent user actions (those belong in `features/`)
+- `ui/` should contain basic, reusable representations of the entity — complex interactive workflows (galleries with CRUD, multi-step selectors) belong in `features/`
 - Entities should be reusable across multiple features
 - Export only what other parts of the app need via `index.ts`
 
@@ -27,13 +30,9 @@ entities/
 
 **Can import from:**
 
-- `components/` (shared UI)
-- `hooks/` (shared hooks)
-- `services/` (API calls)
-- `utils/` (utilities)
-- `types/` (shared types)
-- `config/` (configuration)
-- `store/` (global state)
+- `shared/*` (UI, hooks, lib, types, assets)
+- `services/` (API calls and data access)
+- Other entities when it makes domain sense (for example, `component` using `document` helpers)
 
 **Cannot import from:**
 
@@ -41,4 +40,5 @@ entities/
 - `widgets/`
 - `views/`
 - `layouts/`
-- Other entities (keep entities independent)
+
+Avoid deep coupling and circular dependencies between entities – prefer small, well-defined helpers.

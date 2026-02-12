@@ -1,16 +1,16 @@
-// Components
-export { ApplicationProfileDisplay } from './components/ApplicationProfileDisplay'
-export { InvoicesTable } from './components/InvoicesTable'
+// UI
+export { ApplicationProfileDisplay } from './ui/ApplicationProfileDisplay'
+export { InvoicesTable } from './ui/InvoicesTable'
 export { TenantLeaseCard } from '../../entities/tenant/ui/TenantLeaseCard'
-export { TenantsHeader } from './components/TenantsHeader'
-export { CurrentTenant } from './components/CurrentTenant'
+export { TenantsHeader } from './ui/TenantsHeader'
+export { CurrentTenant } from './ui/CurrentTenant'
 
 // Tab Components
-export { TenantsTabContent } from './components/TenantsTabContent'
-export { TenantLedgerTabContent } from './components/TenantLedgerTabContent'
-export { TenantNotesTabContent } from './components/TenantNotesTabContent'
-export { TenantQueueSystemTabContent } from './components/TenantQueueSystemTabContent'
-export { TenantLeasesTabContent } from './components/TenantLeasesTabContent'
+export { TenantsTabContent } from './ui/TenantsTabContent'
+export { TenantLedgerTabContent } from './ui/TenantLedgerTabContent'
+export { TenantNotesTabContent } from './ui/TenantNotesTabContent'
+export { TenantQueueSystemTabContent } from './ui/TenantQueueSystemTabContent'
+export { TenantLeasesTabContent } from './ui/TenantLeasesTabContent'
 
 // Hooks
 export { useTenant } from './hooks/useTenant'

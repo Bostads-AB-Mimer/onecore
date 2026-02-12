@@ -1,21 +1,21 @@
-// Components
-export { ActionChecklist } from './components/ActionChecklist'
-export { ComponentDetailSheet } from './components/ComponentDetailSheet'
-export { ComponentInspectionCard } from './components/ComponentInspectionCard'
-export { InspectionForm } from './components/InspectionForm'
-export { InspectionFormDialog } from './components/InspectionFormDialog'
-export { InspectionProtocol } from './components/InspectionProtocol'
-export { InspectionsTable } from './components/InspectionsTable'
-export { InspectionsTabContent } from './components/InspectionsTabContent'
-export { InspectorSelectionCard } from './components/InspectorSelectionCard'
-export { PhotoCapture } from './components/PhotoCapture'
-export { PhotoGallery } from './components/PhotoGallery'
-export { RoomInspectionEditor } from './components/RoomInspectionEditor'
+// UI
+export { ActionChecklist } from './ui/ActionChecklist'
+export { ComponentDetailSheet } from './ui/ComponentDetailSheet'
+export { ComponentInspectionCard } from './ui/ComponentInspectionCard'
+export { InspectionForm } from './ui/InspectionForm'
+export { InspectionFormDialog } from './ui/InspectionFormDialog'
+export { InspectionProtocol } from './ui/InspectionProtocol'
+export { InspectionsTable } from './ui/InspectionsTable'
+export { InspectionsTabContent } from './ui/InspectionsTabContent'
+export { InspectorSelectionCard } from './ui/InspectorSelectionCard'
+export { PhotoCapture } from './ui/PhotoCapture'
+export { PhotoGallery } from './ui/PhotoGallery'
+export { RoomInspectionEditor } from './ui/RoomInspectionEditor'
 
-// Mobile components
-export { InspectionProgressIndicator } from './components/mobile/InspectionProgressIndicator'
-export { MobileInspectionForm } from './components/mobile/MobileInspectionForm'
-export { MobileInspectionSheet } from './components/mobile/MobileInspectionSheet'
+// Mobile ui
+export { InspectionProgressIndicator } from './ui/mobile/InspectionProgressIndicator'
+export { MobileInspectionForm } from './ui/mobile/MobileInspectionForm'
+export { MobileInspectionSheet } from './ui/mobile/MobileInspectionSheet'
 
 // Hooks
 export { useComponentInspection } from './hooks/useComponentInspection'

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { useProperty, PropertyBasicInfo } from '@/features/properties'
+import { usePropertyDetails, PropertyBasicInfo } from '@/features/properties'
 //import { useToast } from '@/hooks/use-toast'
 import { PropertyTabs } from '@/widgets/property-tabs'
-import { useIsMobile } from '@/hooks/useMobile'
-import { PropertyBreadcrumb } from '@/components/shared/Breadcrumb'
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { PropertyBreadcrumb } from '@/shared/ui/PropertyBreadcrumb'
 
 const PropertyView = () => {
   const { propertyId } = useParams<{ propertyId: string }>()
@@ -23,7 +23,11 @@ const PropertyView = () => {
   // Use property directly as the key
   const propertyKey = propertyId
 
-  const { data: propertyDetail, isLoading, error } = useProperty(propertyKey)
+  const {
+    data: propertyDetail,
+    isLoading,
+    error,
+  } = usePropertyDetails(propertyKey)
 
   useEffect(() => {
     if (error) {

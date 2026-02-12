@@ -13,17 +13,15 @@ import {
 import {
   MobileAccordion,
   MobileAccordionItem,
-} from '@/components/ui/MobileAccordion'
+} from '@/shared/ui/MobileAccordion'
 
 import { Lease } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
-import {
-  ResidenceFloorplanTabsContent,
-  RentalBlocksTabContent,
-} from '@/features/residences'
-import { ResidenceRoomsTabContent } from '@/features/rooms'
+import { ResidenceFloorplanTabsContent } from '@/features/residences'
+import { RentalBlocksTabContent } from '@/features/rental-blocks'
+import { RoomsTabContent } from './RoomsTabContent'
 import { TenantsTabContent } from '@/features/tenants'
 import { InspectionsTabContent } from '@/features/inspections'
 import { WorkOrdersTabContent } from '@/features/work-orders'
@@ -53,7 +51,7 @@ export const ResidenceTabsMobile = ({
       id: 'rooms',
       icon: Info,
       title: 'Rumsinformation',
-      content: <ResidenceRoomsTabContent residenceId={residence.id} />,
+      content: <RoomsTabContent residenceId={residence.id} />,
     },
     {
       id: 'floorplan',

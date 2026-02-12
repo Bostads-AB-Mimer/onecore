@@ -1,5 +1,5 @@
-// Components
-export { LeasesTabContent } from './components/LeasesTabContent'
+// UI
+export { LeasesTabContent } from './ui/LeasesTabContent'
 
 // Hooks
 export { useLeasesByContactCode } from './hooks/useLeasesByContactCode'

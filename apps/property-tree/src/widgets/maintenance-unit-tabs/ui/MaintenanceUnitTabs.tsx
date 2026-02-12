@@ -1,16 +1,11 @@
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 
-import { useIsMobile } from '@/hooks/useMobile'
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import type { MaintenanceUnit } from '@/services/types'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
-import { MaintenanceUnitComponents } from '@/features/maintenance-units'
+import { SpaceComponents } from '@/features/component-library'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
 import { MaintenanceUnitTabsMobile } from './MaintenanceUnitTabsMobile'
@@ -50,9 +45,13 @@ export function MaintenanceUnitTabs({
       </TabsList>
 
       <TabsContent value="components">
-        <MaintenanceUnitComponents
-          propertyObjectId={maintenanceUnit.propertyObjectId}
-          maintenanceUnitName={maintenanceUnit.caption || maintenanceUnit.code}
+        <SpaceComponents
+          spaceId={maintenanceUnit.propertyObjectId}
+          spaceName={
+            maintenanceUnit.caption ||
+            maintenanceUnit.code ||
+            `Serviceenhet: ${maintenanceUnit.id}`
+          }
         />
       </TabsContent>
 

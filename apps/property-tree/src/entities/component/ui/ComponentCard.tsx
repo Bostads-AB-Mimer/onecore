@@ -1,0 +1,476 @@
+import { Card, CardContent, CardHeader } from '@/shared/ui/Card'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/shared/ui/Accordion'
+import { Copy, Ticket, Images, FileText } from 'lucide-react'
+import type { Component } from '@/services/types'
+import { formatISODate } from '@/shared/lib/formatters'
+import { useState } from 'react'
+import {
+  calculateComponentAge,
+  calculateComponentLifespanProgress,
+  calculateComponentWarrantyStatus,
+  formatComponentCurrency,
+  getComponentStatusConfig,
+} from '../lib/componentCalculations'
+
+interface ComponentCardProps {
+  component: Component
+  onShowImages?: () => void
+  onShowDocuments?: () => void
+}
+
+export const ComponentCard = ({
+  component,
+  onShowImages,
+  onShowDocuments,
+}: ComponentCardProps) => {
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  // Helper: Copy to clipboard
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(fieldName)
+      setTimeout(() => setCopiedField(null), 2000)
+    })
+  }
+
+  // Data extraction
+  const installation = component.componentInstallations?.[0]
+  const age = calculateComponentAge(installation?.installationDate)
+  const installationYear = installation?.installationDate
+    ? new Date(installation.installationDate).getFullYear()
+    : null
+  const warrantyStatus = calculateComponentWarrantyStatus(component)
+  const lifespanProgress = calculateComponentLifespanProgress(component)
+  const statusConfig = getComponentStatusConfig(component.status)
+
+  return (
+    <>
+      <Card className="w-full">
+        {/* HEADER: Always Visible - At A Glance */}
+        <CardHeader className="pb-3">
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <h3 className="text-base font-semibold">
+                  {component.model?.subtype?.componentType?.description}
+                  {component.model?.subtype?.componentType?.description &&
+                    component.model?.subtype?.subTypeName &&
+                    ' • '}
+                  {component.model?.subtype?.subTypeName || '-'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {component.model?.manufacturer &&
+                  component.model.manufacturer !== 'Unknown'
+                    ? `${component.model.manufacturer} | `
+                    : ''}
+                  {component.model?.modelName}
+                </p>
+                {component.serialNumber && (
+                  <p className="text-xs text-muted-foreground">
+                    SN: {component.serialNumber}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Warranty Badge */}
+              <Badge
+                variant={warrantyStatus.active ? 'default' : 'secondary'}
+                className={
+                  warrantyStatus.active
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-gray-500'
+                }
+              >
+                {warrantyStatus.active ? '✓' : '✗'}{' '}
+                {warrantyStatus.active ? 'Under garanti' : 'Garanti utgången'}
+              </Badge>
+
+              {/* Status Badge */}
+              <Badge
+                variant={
+                  statusConfig.color === 'green' ? 'default' : 'secondary'
+                }
+                className={
+                  statusConfig.color === 'green'
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : statusConfig.color === 'yellow'
+                      ? 'bg-yellow-500 hover:bg-yellow-600'
+                      : statusConfig.color === 'red'
+                        ? 'bg-red-500 hover:bg-red-600'
+                        : 'bg-gray-500'
+                }
+              >
+                ● {statusConfig.label}
+              </Badge>
+
+              {/* Age */}
+              {age !== null && (
+                <span className="text-sm text-muted-foreground">
+                  Ålder: {age} år
+                </span>
+              )}
+
+              {/* Images Button */}
+              {onShowImages && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onShowImages}
+                  className="ml-auto"
+                  title="Bilder"
+                >
+                  <Images className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
+
+            {/* Installation info */}
+            <div className="text-sm text-muted-foreground">
+              Installerad: {formatISODate(installation?.installationDate)}
+              {installationYear && ` (Byggår ${installationYear})`}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0 space-y-3">
+          <Accordion type="multiple" defaultValue={['status']}>
+            {/* SECTION 1: IDENTIFICATION (Collapsed by default) */}
+            <AccordionItem value="identification">
+              <AccordionTrigger className="text-sm font-medium">
+                Identifiering
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Typ:</span>
+                    <span className="font-medium">
+                      {component.model?.subtype?.componentType?.description ||
+                        '-'}{' '}
+                      › {component.model?.subtype?.subTypeName || '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tillverkare:</span>
+                    <span className="font-medium">
+                      {component.model?.manufacturer || '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Serienummer:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {component.serialNumber || '-'}
+                      </span>
+                      {component.serialNumber && (
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              component.serialNumber ?? '',
+                              'serial'
+                            )
+                          }
+                          className="p-1 hover:bg-accent rounded"
+                          title="Kopiera serienummer"
+                        >
+                          <Copy className="h-3 w-3" />
+                          {copiedField === 'serial' && (
+                            <span className="text-xs text-green-600 ml-1">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {component.model?.coclassCode && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">
+                        CoClass-kod:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {component.model.coclassCode}
+                        </span>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              component.model!.coclassCode || '',
+                              'coclass'
+                            )
+                          }
+                          className="p-1 hover:bg-accent rounded"
+                          title="Kopiera CoClass-kod"
+                        >
+                          <Copy className="h-3 w-3" />
+                          {copiedField === 'coclass' && (
+                            <span className="text-xs text-green-600 ml-1">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {component.ncsCode && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">NCS-kod:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{component.ncsCode}</span>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(component.ncsCode || '', 'ncs')
+                          }
+                          className="p-1 hover:bg-accent rounded"
+                          title="Kopiera NCS-kod"
+                        >
+                          <Copy className="h-3 w-3" />
+                          {copiedField === 'ncs' && (
+                            <span className="text-xs text-green-600 ml-1">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* SECTION 2: STATUS & ÅLDER (Expanded by default) */}
+            <AccordionItem value="status">
+              <AccordionTrigger className="text-sm font-medium">
+                Status & Ålder
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4">
+                  {/* Visual Grid */}
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Ålder</p>
+                      <p className="text-lg font-semibold">{age || 0} år</p>
+                      {lifespanProgress && (
+                        <p className="text-xs text-muted-foreground">
+                          ({Math.round(lifespanProgress.percentage)}% sliten)
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Garanti</p>
+                      <p
+                        className={`text-lg font-semibold ${warrantyStatus.active ? 'text-green-600' : 'text-red-600'}`}
+                      >
+                        {warrantyStatus.active ? '✓' : '✗'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {warrantyStatus.remaining}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Livslängd</p>
+                      <p className="text-lg font-semibold">
+                        {component.model?.subtype?.technicalLifespan
+                          ? `${component.model.subtype.technicalLifespan} år`
+                          : '-'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">(teknisk)</p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {lifespanProgress && (
+                    <div className="space-y-1">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            lifespanProgress.percentage < 50
+                              ? 'bg-green-500'
+                              : lifespanProgress.percentage < 75
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                          }`}
+                          style={{ width: `${lifespanProgress.percentage}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {lifespanProgress.remaining} år återstående livslängd
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Details */}
+                  <div className="space-y-2 text-sm pt-2 border-t">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Installation:
+                      </span>
+                      <span className="font-medium">
+                        {formatISODate(installation?.installationDate)}
+                      </span>
+                    </div>
+
+                    {installationYear && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Byggår:</span>
+                        <span className="font-medium">{installationYear}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="font-medium">{statusConfig.label}</span>
+                    </div>
+
+                    {component.priceAtPurchase !== null &&
+                      component.priceAtPurchase !== undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">A-pris:</span>
+                          <span className="font-medium">
+                            {formatComponentCurrency(component.priceAtPurchase)}
+                          </span>
+                        </div>
+                      )}
+
+                    {warrantyStatus.expiryDate && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Garanti t.o.m:
+                        </span>
+                        <span className="font-medium">
+                          {formatISODate(
+                            warrantyStatus.expiryDate.toISOString()
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                    {component.model?.subtype?.economicLifespan !== null &&
+                      component.model?.subtype?.economicLifespan !==
+                        undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Ekonomisk livslängd:
+                          </span>
+                          <span className="font-medium">
+                            {component.model.subtype.economicLifespan} år
+                          </span>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* SECTION 3: TECHNICAL INFO (Collapsed by default) */}
+            <AccordionItem value="technical">
+              <AccordionTrigger className="text-sm font-medium">
+                Teknisk Information
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 text-sm">
+                  {component.model?.dimensions && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Mått:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {component.model.dimensions}
+                        </span>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              component.model!.dimensions || '',
+                              'dimensions'
+                            )
+                          }
+                          className="p-1 hover:bg-accent rounded"
+                          title="Kopiera mått"
+                        >
+                          <Copy className="h-3 w-3" />
+                          {copiedField === 'dimensions' && (
+                            <span className="text-xs text-green-600 ml-1">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {component.model?.technicalSpecification && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Specifikationer:
+                      </span>
+                      <span className="font-medium">
+                        {component.model.technicalSpecification}
+                      </span>
+                    </div>
+                  )}
+
+                  {component.model?.installationInstructions && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Dokumentation:
+                      </span>
+                      <span className="font-medium">
+                        {component.model.installationInstructions}
+                      </span>
+                    </div>
+                  )}
+
+                  {component.model?.id && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onShowDocuments}
+                        disabled={!onShowDocuments}
+                        className="font-medium text-primary hover:text-primary/80"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Visa dokument
+                      </Button>
+                    </div>
+                  )}
+
+                  {!component.model?.dimensions &&
+                    !component.model?.technicalSpecification &&
+                    !component.model?.installationInstructions &&
+                    !component.model?.id && (
+                      <p className="text-muted-foreground text-center py-2">
+                        Ingen teknisk information tillgänglig
+                      </p>
+                    )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          {/* Action Button */}
+          <Button
+            className="w-full mt-4"
+            variant="outline"
+            disabled
+            title="Kommer snart: Öppna serviceanmälan"
+          >
+            <Ticket className="h-4 w-4 mr-2" />
+            Öppna Serviceanmälan
+          </Button>
+        </CardContent>
+      </Card>
+    </>
+  )
+}

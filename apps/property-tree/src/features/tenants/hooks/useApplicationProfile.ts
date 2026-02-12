@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { GET } from '@/services/api/core/base-api'
+import { GET } from '@/services/api/core/baseApi'
 
 export interface HousingReferences {
   currentHousingForm: string

@@ -9,9 +9,9 @@ import { WorkOrdersTabContent } from '@/features/work-orders'
 import {
   MobileAccordion,
   MobileAccordionItem,
-} from '@/components/ui/MobileAccordion'
-import type { PropertyDetail } from '@/types/api'
-import { ContextType } from '@/types/ui'
+} from '@/shared/ui/MobileAccordion'
+import type { PropertyDetail } from '@/shared/types/api'
+import { ContextType } from '@/shared/types/ui'
 
 interface PropertyTabsMobileProps {
   propertyDetail: PropertyDetail

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/v2/Button'
-import type { Lease } from '@/services/api/core/lease-service'
+import { Button } from '@/shared/ui/Button'
+import type { Lease } from '@/services/api/core/leaseService'
 import { formatDate } from '../lib/formatting'
 import { LeaseStatusBadge } from './LeaseStatusBadge'
 

@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 
 // TODO: Fix the ts-ignore by updating the OpenAPI spec

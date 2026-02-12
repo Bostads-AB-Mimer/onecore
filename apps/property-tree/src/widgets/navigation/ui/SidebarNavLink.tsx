@@ -5,7 +5,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from '@/components/ui/Sidebar'
+} from '@/shared/ui/Sidebar'
 
 interface SidebarNavLinkProps {
   to: string

@@ -1,17 +1,12 @@
 import { useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/v2/Collapsible'
-import { Button } from '@/components/ui/v2/Button'
-import { Badge } from '@/components/ui/v2/Badge'
+} from '@/shared/ui/Collapsible'
+import { Button } from '@/shared/ui/Button'
+import { Badge } from '@/shared/ui/Badge'
 import { ChevronDown } from 'lucide-react'
 import {
   usePropertyFilters,

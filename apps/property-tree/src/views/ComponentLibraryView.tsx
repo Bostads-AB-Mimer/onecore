@@ -4,8 +4,8 @@ import {
   ComponentLibraryBreadcrumb,
   ComponentLibraryContent,
   ComponentLibraryDialogs,
-  ComponentImageGallery,
-} from '@/features/rooms'
+} from '@/features/component-library'
+import { ComponentImageGallery } from '@/entities/component'
 
 const ComponentLibraryView = () => {
   const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =

@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import type { QueueData, InterestApplication } from '@/services/types'
 
 export const queueService = {

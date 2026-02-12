@@ -1,9 +1,4 @@
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import {
   ClipboardList,
   Users,
@@ -13,18 +8,18 @@ import {
   Info,
 } from 'lucide-react'
 
-import { useIsMobile } from '@/hooks/useMobile'
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { components } from '@/services/api/core/generated/api-types'
-import { Lease } from '@/services/api/core/lease-service'
-import { ContextType } from '@/types/ui'
+import { Lease } from '@/services/api/core/leaseService'
+import { ContextType } from '@/shared/types/ui'
 
-import { FacilityComponents } from '@/features/facilities'
 import { CurrentTenant } from '@/features/tenants'
 import { LeasesTabContent } from '@/features/leases'
 import { WorkOrdersTabContent } from '@/features/work-orders'
-import { ResidenceRoomsTabContent } from '@/features/rooms'
+import { RoomsTabContent } from './RoomsTabContent'
 
 import { FacilityTabsMobile } from './FacilityTabsMobile'
+import { SpaceComponents } from '@/features/component-library'
 
 type Facility = components['schemas']['FacilityDetails']
 
@@ -86,14 +81,14 @@ export function FacilityTabs({
       </TabsList>
 
       <TabsContent value="components">
-        <FacilityComponents
-          propertyObjectId={facility.propertyObjectId}
-          facilityName={facility.name || facility.code}
+        <SpaceComponents
+          spaceId={facility.propertyObjectId}
+          spaceName={facility.name || facility.code}
         />
       </TabsContent>
 
       <TabsContent value="rooms">
-        <ResidenceRoomsTabContent facilityId={facility.id} />
+        <RoomsTabContent facilityId={facility.id} />
       </TabsContent>
 
       <TabsContent value="tenant">

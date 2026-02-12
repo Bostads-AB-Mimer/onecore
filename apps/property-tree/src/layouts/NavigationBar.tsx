@@ -1,11 +1,11 @@
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/shared/ui/Button'
 import { useState } from 'react'
 import { GlobalSearchBar } from '@/features/search'
 import { Menu, Search } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useUser } from '@/entities/user'
 import { Link } from 'react-router-dom'
-import onecoreLogo from '@/assets/logos/full/onecore_logo_black.svg'
+import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
 
 export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
   const [showMobileSearch, setShowMobileSearch] = useState(false)

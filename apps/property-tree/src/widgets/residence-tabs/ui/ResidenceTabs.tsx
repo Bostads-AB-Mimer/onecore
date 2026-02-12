@@ -1,9 +1,4 @@
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import {
   ClipboardList,
   Info,
@@ -16,16 +11,14 @@ import {
   Wrench,
 } from 'lucide-react'
 
-import { useIsMobile } from '@/hooks/useMobile'
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { Lease } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
-import {
-  ResidenceFloorplanTabsContent,
-  RentalBlocksTabContent,
-} from '@/features/residences'
-import { ResidenceRoomsTabContent } from '@/features/rooms'
+import { ResidenceFloorplanTabsContent } from '@/features/residences'
+import { RentalBlocksTabContent } from '@/features/rental-blocks'
+import { RoomsTabContent } from './RoomsTabContent'
 import { TenantsTabContent } from '@/features/tenants'
 import { InspectionsTabContent } from '@/features/inspections'
 import { WorkOrdersTabContent } from '@/features/work-orders'
@@ -108,7 +101,7 @@ export const ResidenceTabs = ({
       </TabsList>
 
       <TabsContent value="rooms">
-        <ResidenceRoomsTabContent residenceId={residence.id} />
+        <RoomsTabContent residenceId={residence.id} />
       </TabsContent>
 
       <TabsContent value="floorplan">

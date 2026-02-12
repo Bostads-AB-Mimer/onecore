@@ -1,11 +1,6 @@
 import { ReactNode } from 'react'
 import { LucideIcon } from 'lucide-react'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 export interface TabConfig {
   value: string

@@ -1,9 +1,4 @@
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { PropertyBuildingsTabContent } from '@/features/properties'
 import { PropertyStatisticsTabContent } from '@/features/properties'
@@ -12,9 +7,9 @@ import { DocumentsTabContent } from '@/features/documents'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
 import { PropertyTabsMobile } from './PropertyTabsMobile'
-import { useIsMobile } from '@/hooks/useMobile'
-import type { PropertyDetail } from '@/types/api'
-import { ContextType } from '@/types/ui'
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import type { PropertyDetail } from '@/shared/types/api'
+import { ContextType } from '@/shared/types/ui'
 
 interface PropertyTabsProps {
   propertyDetail: PropertyDetail

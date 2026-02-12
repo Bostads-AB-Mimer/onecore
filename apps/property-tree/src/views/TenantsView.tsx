@@ -1,20 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/Collapsible'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/v3/Badge'
-import { Input } from '@/components/ui/Input'
-import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
+} from '@/shared/ui/Collapsible'
+import { Button } from '@/shared/ui/Button'
+import { Badge } from '@/shared/ui/Badge'
+import { Input } from '@/shared/ui/Input'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 import { ChevronDown } from 'lucide-react'
 import { useTenantSearch } from '@/features/tenants'
 

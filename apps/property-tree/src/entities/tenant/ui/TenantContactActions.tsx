@@ -1,6 +1,6 @@
 import { Phone, Mail, MessageSquare } from 'lucide-react'
 
-import { Button } from '@/components/ui/v2/Button'
+import { Button } from '@/shared/ui/Button'
 
 interface TenantContactActionsProps {
   phoneNumbers?: Array<{ phoneNumber: string }>

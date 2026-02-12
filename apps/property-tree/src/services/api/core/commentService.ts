@@ -1,4 +1,4 @@
-import { GET, POST } from './base-api'
+import { GET, POST } from './baseApi'
 import type {
   TenantComment,
   TenantCommentRaw,

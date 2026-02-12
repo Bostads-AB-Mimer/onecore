@@ -1,5 +1,5 @@
 import { workOrderService } from '@/services/api/core'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 import { useQuery } from '@tanstack/react-query'
 
 export const useWorkOrders = (id: string, contextType: ContextType) => {

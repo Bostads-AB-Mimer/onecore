@@ -1,5 +1,5 @@
 import { Building } from '@/services/types'
-import { SidebarMenu } from '@/components/ui/Sidebar'
+import { SidebarMenu } from '@/shared/ui/Sidebar'
 import { StaircaseNavigation } from './Staircase'
 import { NavigationSkeleton } from './NavigationSkeleton'
 import { NavigationError } from './NavigationError'

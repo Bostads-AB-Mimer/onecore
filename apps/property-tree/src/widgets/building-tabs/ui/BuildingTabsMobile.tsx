@@ -6,13 +6,13 @@ import { DocumentsTabContent } from '@/features/documents'
 import {
   MobileAccordion,
   MobileAccordionItem,
-} from '@/components/ui/MobileAccordion'
-import { FeatureGatedContent } from '@/components/shared/FeatureGatedContent'
+} from '@/shared/ui/MobileAccordion'
+import { FeatureGatedContent } from '@/features/buildings/ui/FeatureGatedContent'
 import { Building as BuildingType, ResidenceSummary } from '@/services/types'
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 import { UseQueryResult } from '@tanstack/react-query'
 
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
 interface BuildingTabsMobileProps {
   building: BuildingType

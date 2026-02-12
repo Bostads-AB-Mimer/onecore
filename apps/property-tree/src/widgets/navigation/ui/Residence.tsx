@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Residence } from '@/services/types'
 import { Hotel } from 'lucide-react'
-import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/Sidebar'
-import { useHierarchicalSelection } from '@/hooks/useHierarchicalSelection'
-import { useScrollToSelected } from '@/hooks/useScrollToSelected'
-import { toTitleCase } from '@/lib/text-utils'
+import { SidebarMenuItem, SidebarMenuButton } from '@/shared/ui/Sidebar'
+import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
+import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
+import { toTitleCase } from '@/shared/lib/textUtils'
 
 interface ResidenceNavigationProps {
   residence: Residence

@@ -1,27 +1,22 @@
 import { useCallback, useState } from 'react'
 import { Search, Download } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/v2/Card'
-import { Input } from '@/components/ui/Input'
-import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
-import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { Input } from '@/shared/ui/Input'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+import { Button } from '@/shared/ui/Button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select'
-import { FilterDropdown } from '@/components/ui/FilterDropdown'
+} from '@/shared/ui/Select'
+import { FilterDropdown } from '@/shared/ui/FilterDropdown'
 import {
   SearchFilterDropdown,
   SearchFilterOption,
-} from '@/components/ui/SearchFilterDropdown'
-import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
+} from '@/shared/ui/SearchFilterDropdown'
+import { DateRangeFilterDropdown } from '@/shared/ui/DateRangeFilterDropdown'
 import {
   useBlockReasons,
   useRentalBlocks,
@@ -29,7 +24,7 @@ import {
   rentalBlockColumns,
   RentalBlockMobileCard,
 } from '@/features/rental-blocks'
-import { Pagination } from '@/components/ui/Pagination'
+import { Pagination } from '@/shared/ui/Pagination'
 import { residenceService } from '@/services/api/core/residenceService'
 import { propertyService } from '@/services/api/core/propertyService'
 

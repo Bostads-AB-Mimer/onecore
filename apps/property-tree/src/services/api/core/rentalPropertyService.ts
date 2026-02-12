@@ -1,4 +1,4 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import type { RentalPropertyInfo } from '@onecore/types'
 
 async function getByRentalObjectCode(

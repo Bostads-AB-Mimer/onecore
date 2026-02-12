@@ -3,11 +3,11 @@ import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 import {
   MobileAccordion,
   MobileAccordionItem,
-} from '@/components/ui/MobileAccordion'
+} from '@/shared/ui/MobileAccordion'
 import type { MaintenanceUnit } from '@/services/types'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
-import { MaintenanceUnitComponents } from '@/features/maintenance-units'
+import { SpaceComponents } from '@/features/component-library'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
 interface MaintenanceUnitTabsMobileProps {
@@ -23,9 +23,13 @@ export function MaintenanceUnitTabsMobile({
       icon: Wrench,
       title: 'Komponenter',
       content: (
-        <MaintenanceUnitComponents
-          propertyObjectId={maintenanceUnit.propertyObjectId}
-          maintenanceUnitName={maintenanceUnit.caption || maintenanceUnit.code}
+        <SpaceComponents
+          spaceId={maintenanceUnit.propertyObjectId}
+          spaceName={
+            maintenanceUnit.caption ||
+            maintenanceUnit.code ||
+            `Serviceenhet: ${maintenanceUnit.id}`
+          }
         />
       ),
     },

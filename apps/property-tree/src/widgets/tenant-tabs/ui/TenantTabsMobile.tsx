@@ -9,11 +9,11 @@ import {
 import {
   MobileAccordion,
   MobileAccordionItem,
-} from '@/components/ui/MobileAccordion'
+} from '@/shared/ui/MobileAccordion'
 
-import { Lease } from '@/services/api/core/lease-service'
+import { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
 import {
   TenantLeasesTabContent,

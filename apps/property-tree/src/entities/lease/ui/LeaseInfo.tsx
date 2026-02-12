@@ -1,6 +1,6 @@
 import { Calendar } from 'lucide-react'
 
-import type { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/leaseService'
 
 import { formatDate } from '../lib/formatting'
 

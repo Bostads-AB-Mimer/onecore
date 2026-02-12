@@ -1,203 +1,93 @@
-# Folder Structure
+# Folder Structure (FSD)
 
-Based on [Recommended Folder Structure for React 2025](https://dev.to/pramod_boda/recommended-folder-structure-for-react-2025-48mc).
+This app follows a **Feature-Sliced Design** (FSD)-inspired structure.
 
 ```
 src/
-├── assets/        # Static files (images, fonts, icons)
-├── components/    # Shared/reusable UI components
-├── config/        # App configuration & environment
-├── features/      # Feature-based modules (domain logic)
-├── hooks/         # Shared custom hooks
-├── layouts/       # View layout components
-├── services/      # API calls & external integrations
-├── store/         # Global state management
-├── styles/        # Global styles & CSS
-├── types/         # Shared TypeScript types
-├── utils/         # Utility functions
-├── views/         # Route-level view components
-└── widgets/       # Compositional blocks (combine features)
+├── app/         # App shell: routing, providers, entry wiring
+├── shared/      # Reusable, cross-cutting building blocks
+├── entities/    # Domain models and basic representations
+├── features/    # User-facing use cases built on entities
+├── widgets/     # Reusable compositions of features/entities
+├── views/       # Route-level pages (aka pages in FSD)
+├── layouts/     # Page layouts (shells around views)
+└── services/    # API and external integrations
 ```
+
+High-level dependency direction:
+
+```text
+app → views → widgets → features → entities → shared
+                      ↘ services (data access)
+```
+
+Lower layers must **never** depend on upper layers (for example, `entities/` must not import from `features/` or `views/`).
 
 ---
 
 ## Folder Descriptions
 
-### `/assets`
+### `/shared`
 
-Static files like images, fonts, and icons.
+Cross-cutting, reusable primitives with **no domain knowledge**:
 
-```
-assets/
-├── images/
-├── fonts/
-└── icons/
-```
+- `shared/ui` – generic UI components (buttons, cards, dialogs, icons)
+- `shared/hooks` – generic hooks (media queries, responsive checks, etc.)
+- `shared/lib` – pure utility functions
+- `shared/types` – shared TypeScript types
+- `shared/assets` – static assets
 
-### `/components`
+Anything that knows nothing about “tenant”, “component”, etc. belongs here.
 
-Shared, reusable UI components with no business logic. These can be used anywhere in the app.
+### `/entities`
 
-```
-components/
-├── ui/
-│   ├── Button.tsx
-│   ├── Card.tsx
-│   ├── Dialog.tsx
-│   └── DataTable.tsx
-└── common/
-    ├── ErrorBoundary.tsx
-    └── LoadingSpinner.tsx
-```
+Domain objects and their basic behavior. Each entity (`tenant`, `component`, `document`, …):
 
-### `/config`
+- Encapsulates domain-specific logic (formatting, status, basic calculations)
+- Provides small UI pieces for rendering the entity
+- May include hooks that fetch data for a single entity or collection
 
-Application configuration, environment variables, and constants.
-
-```
-config/
-├── env.ts
-├── routes.ts
-└── constants.ts
-```
+Entities can depend on `shared/*` and `services/`, and on other entities when it makes domain sense, but must never import from `features/`, `widgets/`, or `views/`.
 
 ### `/features`
 
-**The core of the app.** Each feature is a self-contained module with its own components, hooks, types, and constants. Features are organized by domain/functionality.
+Use cases / user stories built on top of entities, for example "manage component library" or "search tenants". A feature may include:
 
-```
-features/
-└── [feature-name]/
-    ├── components/      # UI specific to this feature
-    ├── hooks/           # Hooks specific to this feature
-    ├── constants/       # Domain constants
-    ├── types/           # Feature-specific types
-    └── index.ts         # Public exports
-```
+- Feature-specific UI
+- Feature-specific hooks and lib
+- Coordination of multiple entities and services
 
-**Rules for features:**
-
-- Keep all related code together (components, hooks, constants, types)
-- Export only what other parts of the app need via `index.ts`
-- Features should not import from other features (use shared code instead)
-
-### `/hooks`
-
-Shared custom hooks that are used across multiple features. Not business-specific.
-
-```
-hooks/
-├── useDebounce.ts
-├── useLocalStorage.ts
-├── useMediaQuery.ts
-└── useClickOutside.ts
-```
-
-### `/layouts`
-
-Layout components that wrap views (headers, sidebars, footers).
-
-```
-layouts/
-├── MainLayout.tsx
-├── AuthLayout.tsx
-└── DashboardLayout.tsx
-```
-
-### `/services`
-
-API service layer - all external API calls.
-
-```
-services/
-└── api/
-    └── [domain]Service.ts
-```
-
-### `/store`
-
-Global state management (Redux, Zustand, etc.).
-
-```
-store/
-├── index.ts
-└── [slice-name]Slice.ts
-```
-
-### `/styles`
-
-Global styles, CSS variables, and theme definitions.
-
-```
-styles/
-├── globals.css
-├── variables.css
-└── themes/
-```
-
-### `/types`
-
-Shared TypeScript types and interfaces used across the app.
-
-```
-types/
-├── api.ts
-├── common.ts
-└── index.ts
-```
-
-### `/utils`
-
-Pure utility functions with no React dependencies.
-
-```
-utils/
-├── formatters.ts
-├── validators.ts
-├── dateUtils.ts
-└── stringUtils.ts
-```
-
-### `/views`
-
-View-level components, one per route. Views compose features and layouts.
-
-```
-views/
-├── HomeView.tsx
-├── DetailView.tsx
-└── NotFoundView.tsx
-```
+Features can depend on `entities/`, `shared/`, and `services/`, but not on other features (extract shared code instead).
 
 ### `/widgets`
 
-Compositional layer that combines multiple features into larger, reusable UI blocks. Part of Feature Sliced Design (FSD).
+Reusable compositions that glue together features and entities into a cohesive block (for example a tabbed object page). Widgets are used by `views/` and should not contain low-level business logic.
 
-```
-widgets/
-└── [widget-name]/
-    ├── ui/              # Widget UI components
-    ├── lib/             # Widget-specific utilities
-    ├── types/           # Widget-specific types
-    └── index.ts         # Public exports
-```
+### `/views`
 
-**When to use widgets:**
+Route-level pages. Views:
 
-- When multiple features need to work together as a cohesive UI block
-- When a composition of features is reused across multiple views
-- To avoid duplicating feature composition logic in views
+- Handle routing params / query params
+- Choose layouts and widgets/features to render
+- Contain minimal domain logic (delegate downwards).
+
+### `/layouts`
+
+Layout components wrapping views (headers, sidebars, navigation). Layouts should be generic and mostly depend on `shared/*` and global app state.
+
+### `/services`
+
+Low-level API clients and integrations. Services expose typed methods used by entities and features for data access.
 
 ---
 
-## Import Guidelines
+## Import Guidelines (Summary)
 
-1. **Features** should only import from:
-   - `components/` (shared UI)
-   - `hooks/` (shared hooks)
-   - `services/` (API calls)
-   - `utils/` (utilities)
-   - `types/` (shared types)
+- `shared/*` – bottom layer; no imports from app-specific layers.
+- `entities/*` – can import from `shared/*` and `services/` (and other entities when reasonable).
+- `features/*` – can import from `entities/*`, `shared/*`, and `services/`, but not from other features.
+- `widgets/*` – can import from `features/*`, `entities/*`, and `shared/*`.
+- `views/*` – can import from anything below (`widgets/`, `features/`, `entities/`, `shared/`, `services/`, `layouts/`).
 
 2. **Views** compose features and layouts
 

@@ -1,13 +1,9 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { CommandPalette } from '../features/search/components/CommandPalette'
+import { CommandPalette } from '../features/search'
 import SidebarNavigation from '../widgets/navigation/ui/SidebarNavigation'
-import {
-  SidebarInset,
-  SidebarProvider,
-  useSidebar,
-} from '../components/ui/Sidebar'
-import { Toaster } from '../components/ui/Toaster'
+import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
+import { Toaster } from '@/shared/ui/Toaster'
 import { PageTitle } from './PageTitle'
 
 import { NavigationBar } from './NavigationBar'

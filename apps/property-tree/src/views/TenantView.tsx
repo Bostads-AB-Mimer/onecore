@@ -8,12 +8,12 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/Tooltip'
-import { Card, CardContent } from '@/components/ui/v2/Card'
+} from '@/shared/ui/Tooltip'
+import { Card, CardContent } from '@/shared/ui/Card'
 import { AlertTriangle } from 'lucide-react'
 import { TenantTabs } from '@/widgets/tenant-tabs'
 import type { Tenant } from '@/services/types'
-import type { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
 
 // Helper component: Tenant header with name and special attention badge

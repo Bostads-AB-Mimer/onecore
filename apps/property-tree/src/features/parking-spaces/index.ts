@@ -1,2 +1,2 @@
-// Components
-export { ParkingSpaceBasicInfo } from './components/ParkingSpaceBasicInfo'
+// UI
+export { ParkingSpaceBasicInfo } from './ui/ParkingSpaceBasicInfo'

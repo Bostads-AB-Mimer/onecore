@@ -1,5 +1,5 @@
-import { GET } from './base-api'
-import { resolve } from '@/utils/env'
+import { GET } from './baseApi'
+import { resolve } from '@/shared/lib/env'
 import type {
   Residence,
   ResidenceDetails,

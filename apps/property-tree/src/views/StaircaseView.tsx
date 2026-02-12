@@ -34,11 +34,11 @@ const mockIssues: Issue[] = [
     residenceId: 'residence-2',
   },
 ]
-import { StatCard } from '../components/shared/StatCard'
-import { ViewHeader } from '../components/shared/ViewHeader'
-import { Card } from '@/components/ui/Card'
-import { Grid } from '@/components/ui/Grid'
-import { Badge } from '@/components/ui/Badge'
+import { StatCard } from '../shared/ui/StatCard'
+import { ViewHeader } from '../shared/ui/ViewHeader'
+import { Card, CardHeader, CardTitle, CardContent } from '@/shared/ui/Card'
+import { Grid } from '@/shared/ui/Grid'
+import { Badge } from '@/shared/ui/Badge'
 import { staircaseService } from '@/services/api/core/staircaseService'
 
 function LoadingSkeleton() {
@@ -157,39 +157,47 @@ export function StaircaseView() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         <div className="lg:col-span-2 space-y-6">
-          <Card title="Bostäder" icon={Home}>
-            <Grid cols={2}>
-              {residencesQuery.data?.map((residence) => (
-                <motion.div
-                  key={residence.id}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() =>
-                    navigate(`/residences/${residence.id}`, {
-                      state: {
-                        buildingCode: buildingQuery.data?.code,
-                        staircaseCode: residence.code.substring(2, 4),
-                      },
-                    })
-                  }
-                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium group-hover:text-blue-500 transition-colors">
-                        Lägenhet {residence.code}
-                      </h3>
-                      {/* Hiding for demo purposes */}
-                      {/*
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Home className="h-5 w-5" />
+                Bostäder
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Grid cols={2}>
+                {residencesQuery.data?.map((residence) => (
+                  <motion.div
+                    key={residence.id}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() =>
+                      navigate(`/residences/${residence.id}`, {
+                        state: {
+                          buildingCode: buildingQuery.data?.code,
+                          staircaseCode: residence.code.substring(2, 4),
+                        },
+                      })
+                    }
+                    className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium group-hover:text-blue-500 transition-colors">
+                          Lägenhet {residence.code}
+                        </h3>
+                        {/* Hiding for demo purposes */}
+                        {/*
                       <p className="text-sm text-gray-500">
                         3 rum och kök, 75m²
                       </p>
                       */}
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                  </div>
-                </motion.div>
-              ))}
-            </Grid>
+                  </motion.div>
+                ))}
+              </Grid>
+            </CardContent>
           </Card>
           {/* Hiding for demo purposes */}
           {/*

@@ -1,10 +1,5 @@
 import { parseAsString, useQueryState } from 'nuqs'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/v2/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import {
   FileText,
   Home,
@@ -13,10 +8,10 @@ import {
   StickyNote,
 } from 'lucide-react'
 
-import { useIsMobile } from '@/hooks/useMobile'
-import { Lease } from '@/services/api/core/lease-service'
+import { useIsMobile } from '@/shared/hooks/useMobile'
+import { Lease } from '@/services/api/core/leaseService'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { ContextType } from '@/types/ui'
+import { ContextType } from '@/shared/types/ui'
 
 import {
   TenantLeasesTabContent,
