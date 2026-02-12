@@ -4,6 +4,7 @@ import { LogFilters } from '@/components/log/LogFilters'
 import { LogEventCard } from '@/components/log/LogEventCard'
 import { PaginationControls } from '@/components/common/PaginationControls'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 import type { LogEventType, LogObjectType, Log } from '@/services/types'
 
 export default function ActivityLog() {
@@ -11,6 +12,7 @@ export default function ActivityLog() {
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(false)
   const [uniqueUsers, setUniqueUsers] = useState<string[]>([])
+  const checkStale = useStaleGuard()
 
   // Read all filters from URL
   const searchQuery = pagination.searchParams.get('q') || ''
@@ -50,6 +52,7 @@ export default function ActivityLog() {
   )
 
   const fetchLogs = useCallback(async () => {
+    const isStale = checkStale()
     setLoading(true)
     try {
       let response
@@ -95,13 +98,16 @@ export default function ActivityLog() {
         )
       }
 
+      if (isStale()) return
+
       setLogs(response.content)
       pagination.setPaginationMeta(response._meta)
     } catch (error) {
+      if (isStale()) return
       console.error('Failed to fetch logs:', error)
       setLogs([])
     } finally {
-      setLoading(false)
+      if (!isStale()) setLoading(false)
     }
   }, [
     searchQuery,

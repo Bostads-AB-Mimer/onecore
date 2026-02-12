@@ -7,6 +7,7 @@ import { KeyBundle, KeyDetails } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import * as keyBundleService from '@/services/api/keyBundleService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 
 export default function KeyBundles() {
   const pagination = useUrlPagination()
@@ -23,6 +24,7 @@ export default function KeyBundles() {
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const [deletingBundleId, setDeletingBundleId] = useState<string | null>(null)
   const { toast } = useToast()
+  const checkStale = useStaleGuard()
 
   // Read search query from URL
   const searchQuery = pagination.searchParams.get('q') || ''
@@ -32,6 +34,7 @@ export default function KeyBundles() {
 
   // Load key bundles from API
   const loadKeyBundles = useCallback(async () => {
+    const isStale = checkStale()
     try {
       setIsLoading(true)
 
@@ -48,9 +51,12 @@ export default function KeyBundles() {
               pagination.currentLimit
             )
 
+      if (isStale()) return
+
       setKeyBundles(response.content)
       pagination.setPaginationMeta(response._meta)
     } catch (error) {
+      if (isStale()) return
       console.error('Failed to load key bundles:', error)
       toast({
         title: 'Fel',
@@ -58,7 +64,7 @@ export default function KeyBundles() {
         variant: 'destructive',
       })
     } finally {
-      setIsLoading(false)
+      if (!isStale()) setIsLoading(false)
     }
   }, [
     searchQuery,

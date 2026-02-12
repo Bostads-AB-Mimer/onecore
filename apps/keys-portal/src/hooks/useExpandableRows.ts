@@ -55,9 +55,13 @@ export function useExpandableRows<T = unknown>(
           if (expandRequestId.current !== requestId) return
           setLoadedData(data)
         } catch (error) {
+          if (expandRequestId.current !== requestId) return
           console.error('Failed to load expanded row data:', error)
+        } finally {
+          if (expandRequestId.current === requestId) {
+            setIsLoading(false)
+          }
         }
-        setIsLoading(false)
       }
     },
     [singleExpanded, onExpand]
