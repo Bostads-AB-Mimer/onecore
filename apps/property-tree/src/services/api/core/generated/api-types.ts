@@ -6130,17 +6130,7 @@ export interface paths {
     patch: {
       requestBody: {
         content: {
-          "application/json": {
-            keyIds: string[];
-            updates: {
-              keyName?: string;
-              flexNumber?: number | null;
-              /** Format: uuid */
-              keySystemId?: string | null;
-              rentalObjectCode?: string;
-              disposed?: boolean;
-            };
-          };
+          "application/json": components["schemas"]["BulkUpdateKeysRequest"];
         };
       };
       responses: {
@@ -9388,6 +9378,7 @@ export interface components {
       keySystemId?: string | null;
       /** @default false */
       disposed?: boolean;
+      notes?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -9450,6 +9441,7 @@ export interface components {
       keySystemId?: string | null;
       /** @default false */
       disposed?: boolean;
+      notes?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -9505,6 +9497,7 @@ export interface components {
           keySystemId?: string | null;
           /** @default false */
           disposed?: boolean;
+          notes?: string | null;
           /** Format: date-time */
           createdAt: string;
           /** Format: date-time */
@@ -9671,6 +9664,7 @@ export interface components {
       keyType: "HN" | "FS" | "MV" | "LGH" | "PB" | "GAR" | "LOK" | "HL" | "FÖR" | "SOP" | "ÖVR";
       /** Format: uuid */
       keySystemId?: string | null;
+      notes?: string | null;
     };
     UpdateKeyRequest: {
       keyName?: string;
@@ -9682,10 +9676,24 @@ export interface components {
       /** Format: uuid */
       keySystemId?: string | null;
       disposed?: boolean;
+      notes?: string | null;
     };
     BulkUpdateFlexRequest: {
       rentalObjectCode: string;
       flexNumber: number;
+    };
+    BulkUpdateKeysRequest: {
+      keyIds: string[];
+      updates: {
+        keyName?: string;
+        flexNumber?: number | null;
+        /** Format: uuid */
+        keySystemId?: string | null;
+        rentalObjectCode?: string;
+        disposed?: boolean;
+        notes?: string | null;
+        clearNotes?: boolean;
+      };
     };
     CreateKeyLoanRequest: {
       keys?: string[];
@@ -9816,6 +9824,7 @@ export interface components {
           keySystemId?: string | null;
           /** @default false */
           disposed?: boolean;
+          notes?: string | null;
           /** Format: date-time */
           createdAt: string;
           /** Format: date-time */

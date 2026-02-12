@@ -37,6 +37,7 @@ const {
   CreateKeyRequestSchema,
   UpdateKeyRequestSchema,
   BulkUpdateFlexRequestSchema,
+  BulkUpdateKeysRequestSchema,
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   CreateKeySystemRequestSchema,
@@ -111,6 +112,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyRequest', CreateKeyRequestSchema)
   registerSchema('UpdateKeyRequest', UpdateKeyRequestSchema)
   registerSchema('BulkUpdateFlexRequest', BulkUpdateFlexRequestSchema)
+  registerSchema('BulkUpdateKeysRequest', BulkUpdateKeysRequestSchema)
   registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
   registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
   registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
@@ -1681,36 +1683,7 @@ export const routes = (router: KoaRouter) => {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - keyIds
-   *               - updates
-   *             properties:
-   *               keyIds:
-   *                 type: array
-   *                 items:
-   *                   type: string
-   *                   format: uuid
-   *                 minItems: 1
-   *                 maxItems: 100
-   *               updates:
-   *                 type: object
-   *                 properties:
-   *                   keyName:
-   *                     type: string
-   *                   flexNumber:
-   *                     type: integer
-   *                     minimum: 1
-   *                     maximum: 3
-   *                     nullable: true
-   *                   keySystemId:
-   *                     type: string
-   *                     format: uuid
-   *                     nullable: true
-   *                   rentalObjectCode:
-   *                     type: string
-   *                   disposed:
-   *                     type: boolean
+   *             $ref: '#/components/schemas/BulkUpdateKeysRequest'
    *     responses:
    *       200:
    *         description: Keys updated successfully
@@ -1747,6 +1720,8 @@ export const routes = (router: KoaRouter) => {
         keySystemId?: string | null
         rentalObjectCode?: string
         disposed?: boolean
+        notes?: string | null
+        clearNotes?: boolean
       }
     }
 

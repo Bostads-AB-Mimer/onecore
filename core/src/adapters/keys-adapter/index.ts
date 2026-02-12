@@ -269,6 +269,8 @@ export const KeysApi = {
       keySystemId?: string | null
       rentalObjectCode?: string
       disposed?: boolean
+      notes?: string | null
+      clearNotes?: boolean
     }
   ): Promise<AdapterResult<number, 'bad-request' | CommonErr>> => {
     const r = await patchJSON<{ content: number }>(`${BASE}/keys/bulk-update`, {

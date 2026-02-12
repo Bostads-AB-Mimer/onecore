@@ -136,6 +136,8 @@ export const keyService = {
       keySystemId?: string | null
       rentalObjectCode?: string
       disposed?: boolean
+      notes?: string | null
+      clearNotes?: boolean
     }
   ): Promise<number> {
     const { data, error } = await (PATCH as any)('/keys/bulk-update', {

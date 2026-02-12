@@ -51,6 +51,7 @@ export const KeySchema = z.object({
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
   disposed: z.boolean().default(false),
+  notes: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -169,6 +170,7 @@ export const CreateKeyRequestSchema = z.object({
   rentalObjectCode: z.string().optional(),
   keyType: KeyTypeSchema,
   keySystemId: z.string().uuid().nullable().optional(),
+  notes: z.string().nullable().optional(),
 })
 
 export const UpdateKeyRequestSchema = z.object({
@@ -179,6 +181,7 @@ export const UpdateKeyRequestSchema = z.object({
   keyType: KeyTypeSchema.optional(),
   keySystemId: z.string().uuid().nullable().optional(),
   disposed: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
 })
 
 // Request schemas for key systems
@@ -401,6 +404,8 @@ export const BulkUpdateKeysRequestSchema = z.object({
     keySystemId: z.string().uuid().nullable().optional(),
     rentalObjectCode: z.string().optional(),
     disposed: z.boolean().optional(),
+    notes: z.string().nullable().optional(),
+    clearNotes: z.boolean().optional(),
   }),
 })
 
