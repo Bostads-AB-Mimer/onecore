@@ -47,7 +47,7 @@ const emptyFormData: KeySystemFormData = {
   type: 'MECHANICAL',
   installationDate: '',
   isActive: true,
-  description: '',
+  notes: '',
   propertyIds: '',
 }
 
@@ -112,7 +112,7 @@ export function AddKeySystemForm({
                 .split('T')[0]
             : '',
           isActive: editingKeySystem.isActive || false,
-          description: editingKeySystem.description || '',
+          notes: editingKeySystem.notes || '',
           propertyIds: editingKeySystem.propertyIds || '',
         })
       } else {
@@ -188,7 +188,7 @@ export function AddKeySystemForm({
       installationDate: formData.installationDate || undefined,
       manufacturer: formData.manufacturer || undefined,
       managingSupplier: formData.managingSupplier || undefined,
-      description: formData.description || undefined,
+      notes: formData.notes || undefined,
       propertyIds: propertyIdsValue,
     }
 
@@ -493,14 +493,14 @@ export function AddKeySystemForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Notering</Label>
+            <Label htmlFor="notes">Notering</Label>
             <Textarea
-              id="description"
-              value={formData.description}
+              id="notes"
+              value={formData.notes}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  description: e.target.value,
+                  notes: e.target.value,
                 }))
               }
               placeholder="Notering om låssystemet..."

@@ -2231,7 +2231,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *       - in: query
-   *         name: description
+   *         name: notes
    *         schema:
    *           type: string
    *       - in: query

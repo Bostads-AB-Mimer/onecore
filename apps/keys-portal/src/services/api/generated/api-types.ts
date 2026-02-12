@@ -1457,7 +1457,7 @@ export interface paths {
           propertyIds?: string;
           installationDate?: string;
           isActive?: string;
-          description?: string;
+          notes?: string;
           createdAt?: string;
           updatedAt?: string;
           createdBy?: string;
@@ -2610,7 +2610,7 @@ export interface components {
           contact?: string;
           contact2?: string;
           contactPerson?: string | null;
-          description?: string | null;
+          notes?: string | null;
           /** Format: date-time */
           returnedAt?: string | null;
           /** Format: date-time */

@@ -49,7 +49,7 @@ export function LoanCard({
     if (loanType === 'MAINTENANCE') {
       return {
         primaryName: loan.contactPerson || null,
-        secondaryInfo: loan.description || null,
+        secondaryInfo: loan.notes || null,
       }
     } else {
       // TENANT loan - get info from lease

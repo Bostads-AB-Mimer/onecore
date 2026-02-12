@@ -393,7 +393,7 @@ export function KeyLoansTable({
                       </TableCellMuted>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          <NotePopover text={loan.description} />
+                          <NotePopover text={loan.notes} />
                           {isExpanded &&
                           !isLoadingThis &&
                           expansion.loadedData ? (

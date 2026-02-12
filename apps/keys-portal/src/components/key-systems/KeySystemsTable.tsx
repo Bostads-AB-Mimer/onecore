@@ -253,7 +253,7 @@ export function KeySystemsTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
-                        <NotePopover text={KeySystem.description} />
+                        <NotePopover text={KeySystem.notes} />
                         <ActionMenu
                           onEdit={() => onEdit(KeySystem)}
                           // onDelete={() => onDelete(KeySystem.id)}

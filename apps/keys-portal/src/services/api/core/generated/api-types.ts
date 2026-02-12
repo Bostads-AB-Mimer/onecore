@@ -6330,7 +6330,7 @@ export interface paths {
           propertyIds?: string;
           installationDate?: string;
           isActive?: string;
-          description?: string;
+          notes?: string;
           createdAt?: string;
           updatedAt?: string;
           createdBy?: string;
@@ -9397,7 +9397,7 @@ export interface components {
       /** Format: date-time */
       installationDate?: string | null;
       isActive?: boolean;
-      description?: string | null;
+      notes?: string | null;
       schemaFileId?: string | null;
       /** Format: date-time */
       createdAt: string;
@@ -9414,7 +9414,7 @@ export interface components {
       contact?: string;
       contact2?: string;
       contactPerson?: string | null;
-      description?: string | null;
+      notes?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -9471,7 +9471,7 @@ export interface components {
       contact?: string;
       contact2?: string;
       contactPerson?: string | null;
-      description?: string | null;
+      notes?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -9515,7 +9515,7 @@ export interface components {
             /** Format: date-time */
             installationDate?: string | null;
             isActive?: boolean;
-            description?: string | null;
+            notes?: string | null;
             schemaFileId?: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -9530,7 +9530,7 @@ export interface components {
               contact?: components["schemas"]["KeyLoanWithDetails"]["contact"];
               contact2?: components["schemas"]["KeyLoanWithDetails"]["contact2"];
               contactPerson?: components["schemas"]["KeyLoanWithDetails"]["contactPerson"];
-              description?: components["schemas"]["KeyLoanWithDetails"]["description"];
+              notes?: components["schemas"]["KeyLoanWithDetails"]["notes"];
               returnedAt?: components["schemas"]["KeyLoanWithDetails"]["returnedAt"];
               availableToNextTenantFrom?: components["schemas"]["KeyLoanWithDetails"]["availableToNextTenantFrom"];
               pickedUpAt?: components["schemas"]["KeyLoanWithDetails"]["pickedUpAt"];
@@ -9703,7 +9703,7 @@ export interface components {
       contact?: string;
       contact2?: string;
       contactPerson?: string | null;
-      description?: string | null;
+      notes?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -9720,7 +9720,7 @@ export interface components {
       contact?: string;
       contact2?: string;
       contactPerson?: string | null;
-      description?: string | null;
+      notes?: string | null;
       /** Format: date-time */
       returnedAt?: string | null;
       /** Format: date-time */
@@ -9739,7 +9739,7 @@ export interface components {
       /** Format: date-time */
       installationDate?: string | null;
       isActive?: boolean;
-      description?: string | null;
+      notes?: string | null;
     };
     UpdateKeySystemRequest: {
       systemCode?: string;
@@ -9751,7 +9751,7 @@ export interface components {
       /** Format: date-time */
       installationDate?: string | null;
       isActive?: boolean;
-      description?: string | null;
+      notes?: string | null;
       schemaFileId?: string | null;
     };
     CreateLogRequest: {
@@ -9842,7 +9842,7 @@ export interface components {
             /** Format: date-time */
             installationDate?: string | null;
             isActive?: boolean;
-            description?: string | null;
+            notes?: string | null;
             schemaFileId?: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -10025,7 +10025,7 @@ export interface components {
           contact?: string;
           contact2?: string;
           contactPerson?: string | null;
-          description?: string | null;
+          notes?: string | null;
           /** Format: date-time */
           returnedAt?: string | null;
           /** Format: date-time */
