@@ -23,6 +23,7 @@ import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
+import { NotePopover } from '@/components/shared/tables/NotePopover'
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
   LoanTypeBadge,
@@ -391,24 +392,27 @@ export function KeyLoansTable({
                         {formatDate(loan.returnedAt)}
                       </TableCellMuted>
                       <TableCell>
-                        {isExpanded &&
-                        !isLoadingThis &&
-                        expansion.loadedData ? (
-                          <LoanActionMenu
-                            loan={expansion.loadedData.loanDetails}
-                            onRefresh={onRefresh}
-                            onReturn={() =>
-                              setReturnLoan(expansion.loadedData!.loanDetails)
-                            }
-                          />
-                        ) : (
-                          <ActionMenu
-                            onEdit={() => onEdit?.(loan)}
-                            onDelete={
-                              isActive ? undefined : () => onDelete?.(loan)
-                            }
-                          />
-                        )}
+                        <div className="flex items-center justify-end gap-1">
+                          <NotePopover text={loan.description} />
+                          {isExpanded &&
+                          !isLoadingThis &&
+                          expansion.loadedData ? (
+                            <LoanActionMenu
+                              loan={expansion.loadedData.loanDetails}
+                              onRefresh={onRefresh}
+                              onReturn={() =>
+                                setReturnLoan(expansion.loadedData!.loanDetails)
+                              }
+                            />
+                          ) : (
+                            <ActionMenu
+                              onEdit={() => onEdit?.(loan)}
+                              onDelete={
+                                isActive ? undefined : () => onDelete?.(loan)
+                              }
+                            />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
 

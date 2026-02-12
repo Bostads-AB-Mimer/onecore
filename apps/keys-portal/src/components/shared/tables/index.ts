@@ -39,6 +39,9 @@ export type { ExpandButtonProps } from './ExpandButton'
 export { ActionMenu } from './ActionMenu'
 export type { ActionMenuProps } from './ActionMenu'
 
+export { NotePopover } from './NotePopover'
+export type { NotePopoverProps } from './NotePopover'
+
 export { DefaultLoanHeader } from './DefaultLoanHeader'
 export type { DefaultLoanHeaderProps } from './DefaultLoanHeader'
 

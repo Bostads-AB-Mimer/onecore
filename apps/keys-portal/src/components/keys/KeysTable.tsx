@@ -27,6 +27,7 @@ import { useExpandableRows } from '@/hooks/useExpandableRows'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
+import { NotePopover } from '@/components/shared/tables/NotePopover'
 import {
   KeyTypeBadge,
   DisposedBadge,
@@ -256,14 +257,17 @@ export function KeysTable({
                     </TableCell>
                     <TableCellMuted>{formatDate(key.createdAt)}</TableCellMuted>
                     <TableCell>
-                      <ActionMenu
-                        onEdit={() => onEdit(key)}
-                        onDelete={() => onDelete(key.id)}
-                        deleteDisabled={
-                          key.keyType === 'HN' || key.keyType === 'FS'
-                        }
-                        deleteDisabledReason="Huvudnycklar och fastighetsnycklar kan inte tas bort"
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        <NotePopover text={key.notes} />
+                        <ActionMenu
+                          onEdit={() => onEdit(key)}
+                          onDelete={() => onDelete(key.id)}
+                          deleteDisabled={
+                            key.keyType === 'HN' || key.keyType === 'FS'
+                          }
+                          deleteDisabledReason="Huvudnycklar och fastighetsnycklar kan inte tas bort"
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
 
