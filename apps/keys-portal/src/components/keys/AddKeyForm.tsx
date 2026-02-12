@@ -6,6 +6,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -53,6 +54,7 @@ export function AddKeyForm({
     keyType: editingKey?.keyType || ('LGH' as KeyType),
     keySystemId: editingKey?.keySystemId || '',
     disposed: editingKey?.disposed || false,
+    notes: editingKey?.notes || '',
   })
 
   // Search state
@@ -153,6 +155,7 @@ export function AddKeyForm({
         keyType: formData.keyType,
         keySystemId: formData.keySystemId || undefined,
         disposed: formData.disposed,
+        notes: formData.notes?.trim() || null,
       })
       return
     }
@@ -171,6 +174,7 @@ export function AddKeyForm({
         rentalObjectCode: formData.rentalObject || undefined,
         keyType: formData.keyType,
         keySystemId: formData.keySystemId || undefined,
+        notes: formData.notes?.trim() || null,
       })
     } else {
       // Check for duplicate keys before creating
@@ -215,6 +219,7 @@ export function AddKeyForm({
           rentalObjectCode: formData.rentalObject || undefined,
           keyType: formData.keyType,
           keySystemId: formData.keySystemId || undefined,
+          notes: formData.notes?.trim() || null,
         })
       })
     }
@@ -234,6 +239,7 @@ export function AddKeyForm({
       keyType: 'LGH',
       keySystemId: '',
       disposed: false,
+      notes: '',
     })
     setRentalObjectSearch('')
     setSelectedRentalObject(null)
@@ -255,6 +261,7 @@ export function AddKeyForm({
       keyType: 'LGH',
       keySystemId: '',
       disposed: false,
+      notes: '',
     })
     setRentalObjectSearch('')
     setSelectedRentalObject(null)
@@ -448,6 +455,24 @@ export function AddKeyForm({
                 </div>
               </div>
             )}
+
+            <div className="space-y-1">
+              <Label htmlFor="notes" className="text-xs">
+                Notering
+              </Label>
+              <Textarea
+                id="notes"
+                rows={3}
+                placeholder="Extra info om nyckeln"
+                value={formData.notes || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+              />
+            </div>
           </div>
         </div>
 
