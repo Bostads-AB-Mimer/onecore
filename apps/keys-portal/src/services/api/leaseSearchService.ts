@@ -14,7 +14,7 @@ function isMaculated(lease: Lease): boolean {
   return false
 }
 
-function dedupeLeases(leases: Lease[]): Lease[] {
+export function dedupeLeases(leases: Lease[]): Lease[] {
   const seen = new Set<string>()
   return (leases ?? []).filter((l) => {
     const id =
@@ -36,7 +36,8 @@ function normalizePnr(s: string) {
   return (s ?? '').replace(/[^\d]/g, '')
 }
 const last10 = (s: string) => normalizePnr(s).slice(-10)
-const equalPnr = (a?: string, b?: string) => last10(a ?? '') === last10(b ?? '')
+export const equalPnr = (a?: string, b?: string) =>
+  last10(a ?? '') === last10(b ?? '')
 
 // ---------- queries ----------
 export async function fetchLeasesByRentalPropertyId(

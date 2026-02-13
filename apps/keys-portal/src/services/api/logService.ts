@@ -3,7 +3,7 @@ import type { Log, LogFilterParams, PaginatedResponse } from '@/services/types'
 
 import { GET } from './core/base-api'
 
-const mapFiltersToQuery = (
+export const mapFiltersToQuery = (
   filters?: LogFilterParams,
   page?: number,
   limit?: number
