@@ -354,11 +354,11 @@ export function useBulkMessaging<TItem>({
 
 /** Extract error message from various error shapes */
 function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
   if (error && typeof error === 'object') {
     const apiError = error as { message?: string; reason?: string }
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason
   }
-  if (error instanceof Error) return error.message
   return 'Ett fel uppstod'
 }

@@ -13,7 +13,7 @@ import { ReactNode } from 'react'
 
 interface ResponsiveTableColumn {
   key: string
-  label: string
+  label: ReactNode
   render: (item: any) => ReactNode
   className?: string
   hideOnMobile?: boolean

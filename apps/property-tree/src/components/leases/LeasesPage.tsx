@@ -506,7 +506,7 @@ const LeasesPage = () => {
                       onCheckedChange={toggleSelectAll}
                       aria-label="Välj alla"
                     />
-                  ) as unknown as string,
+                  ),
                   className: 'w-10 px-2',
                   render: (lease: LeaseSearchResult) => (
                     <Checkbox

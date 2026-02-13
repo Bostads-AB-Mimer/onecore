@@ -1043,7 +1043,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/contacts/send-bulk-sms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const MAX_BULK_SMS_RECIPIENTS = 15000
     const { phoneNumbers, text } = ctx.request.body as {
       phoneNumbers: string[]
       text: string
@@ -1053,18 +1052,6 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 400
       ctx.body = {
         reason: 'phoneNumbers and text are required',
-        ...metadata,
-      }
-      return
-    }
-
-    if (phoneNumbers.length > MAX_BULK_SMS_RECIPIENTS) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'TOO_MANY_RECIPIENTS',
-        message: `För många mottagare. Maximalt antal är ${MAX_BULK_SMS_RECIPIENTS.toLocaleString('sv-SE')}.`,
-        maxRecipients: MAX_BULK_SMS_RECIPIENTS,
-        requestedRecipients: phoneNumbers.length,
         ...metadata,
       }
       return
