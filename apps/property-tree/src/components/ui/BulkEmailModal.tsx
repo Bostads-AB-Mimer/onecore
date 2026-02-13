@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Mail, User, AlertTriangle } from 'lucide-react'
 import {
   Dialog,
@@ -24,7 +24,7 @@ interface BulkEmailModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   recipients: EmailRecipient[]
-  onSend?: (subject: string, body: string, recipients: EmailRecipient[]) => void
+  onSend?: (subject: string, body: string, recipients: EmailRecipient[]) => Promise<void>
 }
 
 export function BulkEmailModal({
@@ -35,6 +35,7 @@ export function BulkEmailModal({
 }: BulkEmailModalProps) {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [isSending, setIsSending] = useState(false)
 
   const { validRecipients, invalidRecipients } = useMemo(() => {
     const valid = recipients.filter((r) => r.email)
@@ -42,13 +43,18 @@ export function BulkEmailModal({
     return { validRecipients: valid, invalidRecipients: invalid }
   }, [recipients])
 
-  const handleSend = () => {
+  const handleSend = useCallback(async () => {
     if (!subject.trim() || !body.trim() || validRecipients.length === 0) return
-    onSend?.(subject, body, validRecipients)
-    setSubject('')
-    setBody('')
-    onOpenChange(false)
-  }
+    if (!onSend || isSending) return
+    setIsSending(true)
+    try {
+      await onSend(subject, body, validRecipients)
+      setSubject('')
+      setBody('')
+    } finally {
+      setIsSending(false)
+    }
+  }, [onSend, isSending, subject, body, validRecipients])
 
   const handleClose = () => {
     setSubject('')
@@ -134,16 +140,16 @@ export function BulkEmailModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={handleClose} disabled={isSending}>
             Avbryt
           </Button>
           <Button
             onClick={handleSend}
             disabled={
-              !subject.trim() || !body.trim() || validRecipients.length === 0
+              !subject.trim() || !body.trim() || validRecipients.length === 0 || isSending
             }
           >
-            Skicka till {validRecipients.length} mottagare
+            {isSending ? 'Skickar...' : `Skicka till ${validRecipients.length} mottagare`}
           </Button>
         </DialogFooter>
       </DialogContent>

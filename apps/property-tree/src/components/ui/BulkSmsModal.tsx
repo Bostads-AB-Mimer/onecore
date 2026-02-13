@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { MessageSquare, User, AlertTriangle } from 'lucide-react'
 import {
   Dialog,
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Badge } from '@/components/ui/v2/Badge'
 import { cn } from '@/lib/utils'
 
-const MAX_SMS_LENGTH = 160
+const MAX_SMS_LENGTH = 1600
 const COST_WARNING_THRESHOLD = 100
 const SMS_COST_SEK = 0.5
 
@@ -34,7 +34,7 @@ interface BulkSmsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   recipients: SmsRecipient[]
-  onSend?: (message: string, recipients: SmsRecipient[]) => void
+  onSend?: (message: string, recipients: SmsRecipient[]) => Promise<void>
 }
 
 export function BulkSmsModal({
@@ -45,6 +45,7 @@ export function BulkSmsModal({
 }: BulkSmsModalProps) {
   const [message, setMessage] = useState('')
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
+  const [isSending, setIsSending] = useState(false)
 
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
@@ -55,6 +56,18 @@ export function BulkSmsModal({
   }, [recipients])
 
   const estimatedCost = validRecipients.length * SMS_COST_SEK
+
+  const doSend = useCallback(async () => {
+    if (!onSend || isSending) return
+    setIsSending(true)
+    try {
+      await onSend(message, validRecipients)
+      setMessage('')
+      setShowCostConfirmation(false)
+    } finally {
+      setIsSending(false)
+    }
+  }, [onSend, isSending, message, validRecipients])
 
   const handleSend = () => {
     if (!message.trim() || validRecipients.length === 0) return
@@ -68,17 +81,11 @@ export function BulkSmsModal({
       return
     }
 
-    onSend?.(message, validRecipients)
-    setMessage('')
-    setShowCostConfirmation(false)
-    onOpenChange(false)
+    doSend()
   }
 
   const handleConfirmSend = () => {
-    onSend?.(message, validRecipients)
-    setMessage('')
-    setShowCostConfirmation(false)
-    onOpenChange(false)
+    doSend()
   }
 
   const handleCancelConfirmation = () => {
@@ -186,22 +193,24 @@ export function BulkSmsModal({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={handleCancelConfirmation}>
+              <Button variant="outline" onClick={handleCancelConfirmation} disabled={isSending}>
                 Avbryt
               </Button>
-              <Button onClick={handleConfirmSend}>Ja, skicka SMS</Button>
+              <Button onClick={handleConfirmSend} disabled={isSending}>
+                {isSending ? 'Skickar...' : 'Ja, skicka SMS'}
+              </Button>
             </DialogFooter>
           </div>
         ) : (
           <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>
+            <Button variant="outline" onClick={handleClose} disabled={isSending}>
               Avbryt
             </Button>
             <Button
               onClick={handleSend}
-              disabled={!message.trim() || validRecipients.length === 0}
+              disabled={!message.trim() || validRecipients.length === 0 || isSending}
             >
-              Skicka till {validRecipients.length} mottagare
+              {isSending ? 'Skickar...' : `Skicka till ${validRecipients.length} mottagare`}
             </Button>
           </DialogFooter>
         )}
