@@ -19,7 +19,6 @@ import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
 import { useInspectionForm } from '../hooks/useInspectionForm'
-import { InspectorSelectionCard } from './InspectorSelectionCard'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 
 type Inspection = components['schemas']['Inspection']

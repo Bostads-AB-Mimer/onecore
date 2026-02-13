@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { ChevronsUpDown, Check, X } from 'lucide-react'
+import { Check, ChevronsUpDown, X } from 'lucide-react'
 
-import { components } from '@/services/api/core/generated/api-types'
+import { InspectionsTable } from '@/features/inspections'
+import { INSPECTION_STATUS_FILTER } from '@/features/inspections/constants/inspectionTypes'
 import { useInspectionFilters } from '@/features/inspections/hooks/useInspectionFilters'
 import { useInspections } from '@/features/inspections/hooks/useInspections'
-import { INSPECTION_STATUS_FILTER } from '@/features/inspections/constants/inspectionTypes'
-import { InspectionsTable } from '@/features/inspections'
+
+import { components } from '@/services/api/core/generated/api-types'
+
 import { useUrlPagination } from '@/shared/hooks'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'

@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
-import { inspectionService } from '@/services/api/core/inspectionService'
 import {
+  keepPreviousData,
   useQuery,
   useQueryClient,
-  keepPreviousData,
 } from '@tanstack/react-query'
+
+import { inspectionService } from '@/services/api/core/inspectionService'
+
 import { InspectionStatusFilter } from '../constants/inspectionTypes'
 
 export function useInspections(

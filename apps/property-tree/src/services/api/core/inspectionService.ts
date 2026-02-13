@@ -1,6 +1,7 @@
+import { InspectionStatusFilter } from '@/shared/types/inspection'
+
 import { GET, POST } from './baseApi'
 import { components } from './generated/api-types'
-import { InspectionStatusFilter } from '../../../features/inspections/constants/inspectionTypes'
 
 type Inspection = components['schemas']['Inspection']
 type DetailedInspection = components['schemas']['DetailedInspection']

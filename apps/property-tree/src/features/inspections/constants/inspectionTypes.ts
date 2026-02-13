@@ -47,11 +47,9 @@ export function isValidInspectionType(type: string): type is InspectionType {
 
 /**
  * Inspection status filter constants
+ * Re-exported from shared layer for convenience
  */
-export const INSPECTION_STATUS_FILTER = {
-  ONGOING: 'ongoing',
-  COMPLETED: 'completed',
-} as const
-
-export type InspectionStatusFilter =
-  (typeof INSPECTION_STATUS_FILTER)[keyof typeof INSPECTION_STATUS_FILTER]
+export {
+  INSPECTION_STATUS_FILTER,
+  type InspectionStatusFilter,
+} from '@/shared/types/inspection'
