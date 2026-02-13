@@ -5,7 +5,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query'
-import { InspectionStatusFilter } from '../constants/inspection-types'
+import { InspectionStatusFilter } from '../constants/inspectionTypes'
 
 export function useInspections(
   statusFilter: InspectionStatusFilter,

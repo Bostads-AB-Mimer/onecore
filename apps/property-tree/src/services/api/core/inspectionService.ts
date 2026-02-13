@@ -43,8 +43,10 @@ export const inspectionService = {
         _tag: 'external' as const,
         ...v,
       })),
-      _meta: externalInspections.data._meta!,
-      _links: externalInspections.data._links!,
+      _meta: externalInspections.data
+        ._meta as components['schemas']['PaginationMeta'],
+      _links: externalInspections.data
+        ._links as components['schemas']['PaginationLinks'][],
     }
   },
 
