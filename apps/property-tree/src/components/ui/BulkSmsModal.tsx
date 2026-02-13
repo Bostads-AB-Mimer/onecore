@@ -193,7 +193,11 @@ export function BulkSmsModal({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={handleCancelConfirmation} disabled={isSending}>
+              <Button
+                variant="outline"
+                onClick={handleCancelConfirmation}
+                disabled={isSending}
+              >
                 Avbryt
               </Button>
               <Button onClick={handleConfirmSend} disabled={isSending}>
@@ -203,14 +207,22 @@ export function BulkSmsModal({
           </div>
         ) : (
           <DialogFooter>
-            <Button variant="outline" onClick={handleClose} disabled={isSending}>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSending}
+            >
               Avbryt
             </Button>
             <Button
               onClick={handleSend}
-              disabled={!message.trim() || validRecipients.length === 0 || isSending}
+              disabled={
+                !message.trim() || validRecipients.length === 0 || isSending
+              }
             >
-              {isSending ? 'Skickar...' : `Skicka till ${validRecipients.length} mottagare`}
+              {isSending
+                ? 'Skickar...'
+                : `Skicka till ${validRecipients.length} mottagare`}
             </Button>
           </DialogFooter>
         )}

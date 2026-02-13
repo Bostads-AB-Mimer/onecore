@@ -24,7 +24,11 @@ interface BulkEmailModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   recipients: EmailRecipient[]
-  onSend?: (subject: string, body: string, recipients: EmailRecipient[]) => Promise<void>
+  onSend?: (
+    subject: string,
+    body: string,
+    recipients: EmailRecipient[]
+  ) => Promise<void>
 }
 
 export function BulkEmailModal({
@@ -146,10 +150,15 @@ export function BulkEmailModal({
           <Button
             onClick={handleSend}
             disabled={
-              !subject.trim() || !body.trim() || validRecipients.length === 0 || isSending
+              !subject.trim() ||
+              !body.trim() ||
+              validRecipients.length === 0 ||
+              isSending
             }
           >
-            {isSending ? 'Skickar...' : `Skicka till ${validRecipients.length} mottagare`}
+            {isSending
+              ? 'Skickar...'
+              : `Skicka till ${validRecipients.length} mottagare`}
           </Button>
         </DialogFooter>
       </DialogContent>
