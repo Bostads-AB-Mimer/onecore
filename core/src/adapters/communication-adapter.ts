@@ -8,6 +8,8 @@ import {
   WorkOrderSms,
   BulkSms,
   BulkEmail,
+  BulkSmsResult,
+  BulkEmailResult,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -235,7 +237,7 @@ export const sendWorkOrderEmail = async ({
 export const sendBulkSms = async ({
   phoneNumbers,
   text,
-}: BulkSms): Promise<AdapterResult<any, 'error'>> => {
+}: BulkSms): Promise<AdapterResult<BulkSmsResult, 'error'>> => {
   try {
     const axiosOptions = {
       method: 'POST',
@@ -266,7 +268,7 @@ export const sendBulkEmail = async ({
   emails,
   subject,
   text,
-}: BulkEmail): Promise<AdapterResult<any, 'error'>> => {
+}: BulkEmail): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
   try {
     const axiosOptions = {
       method: 'POST',

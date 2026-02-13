@@ -44,6 +44,20 @@ interface BulkEmail {
   text: string
 }
 
+interface BulkSmsResult {
+  successful: string[]
+  invalid: string[]
+  totalSent: number
+  totalInvalid: number
+}
+
+interface BulkEmailResult {
+  successful: string[]
+  invalid: string[]
+  totalSent: number
+  totalInvalid: number
+}
+
 interface WorkOrderEmail extends Email {
   externalContractorName?: string
 }
@@ -63,4 +77,6 @@ export type {
   WorkOrderEmail,
   BulkSms,
   BulkEmail,
+  BulkSmsResult,
+  BulkEmailResult,
 }

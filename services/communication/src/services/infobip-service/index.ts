@@ -294,7 +294,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const result = await sendBulkSms({
+      await sendBulkSms({
         phoneNumbers: validPhones,
         text: sms.text,
       })
@@ -306,7 +306,6 @@ export const routes = (router: KoaRouter) => {
           invalid: invalidPhones,
           totalSent: validPhones.length,
           totalInvalid: invalidPhones.length,
-          infobipResponse: result,
         },
         ...metadata,
       }
@@ -356,7 +355,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const result = await sendBulkEmail({
+      await sendBulkEmail({
         emails: validEmails,
         subject: email.subject,
         text: email.text,
@@ -369,7 +368,6 @@ export const routes = (router: KoaRouter) => {
           invalid: invalidEmails,
           totalSent: validEmails.length,
           totalInvalid: invalidEmails.length,
-          infobipResponse: result,
         },
         ...metadata,
       }
