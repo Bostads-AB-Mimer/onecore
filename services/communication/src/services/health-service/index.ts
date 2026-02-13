@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
-import { healthCheck as infobipHealthCheck } from '../infobip-service/adapters/infobip-adapter'
+import { healthCheck as infobipHealthCheck } from '../infobip-service/adapters/email-adapter'
 import {
   HealthCheckTarget,
   pollSystemHealth,
