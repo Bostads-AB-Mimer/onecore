@@ -5,7 +5,8 @@ import bodyParser from 'koa-bodyparser'
 import { Email, WorkOrderSms, BulkSms } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
-import * as infobipAdapter from '../adapters/infobip-adapter'
+import * as emailAdapter from '../adapters/email-adapter'
+import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
 
 jest.mock('@onecore/utilities', () => {
@@ -36,7 +37,7 @@ describe('/sendWorkOrderSms', () => {
   >
 
   beforeEach(() => {
-    sendWorkOrderSmsSpy = jest.spyOn(infobipAdapter, 'sendWorkOrderSms')
+    sendWorkOrderSmsSpy = jest.spyOn(smsAdapter, 'sendWorkOrderSms')
     sendWorkOrderSmsSpy.mockReset()
   })
 
@@ -99,7 +100,7 @@ describe('/sendWorkOrderEmail', () => {
   >
 
   beforeEach(() => {
-    sendWorkOrderEmailSpy = jest.spyOn(infobipAdapter, 'sendWorkOrderEmail')
+    sendWorkOrderEmailSpy = jest.spyOn(emailAdapter, 'sendWorkOrderEmail')
     sendWorkOrderEmailSpy.mockReset()
   })
 
@@ -225,7 +226,7 @@ describe('/sendBulkSms', () => {
   let sendBulkSmsSpy: jest.SpyInstance<Promise<any>, [sms: BulkSms], any>
 
   beforeEach(() => {
-    sendBulkSmsSpy = jest.spyOn(infobipAdapter, 'sendBulkSms')
+    sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
     sendBulkSmsSpy.mockReset()
   })
 

@@ -5,13 +5,15 @@ import {
   sendEmail,
   sendParkingSpaceOffer,
   sendParkingSpaceAssignedToOther,
-  sendParkingSpaceOfferSms,
-  sendWorkOrderSms,
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
-  sendBulkSms,
   sendBulkEmail,
-} from './adapters/infobip-adapter'
+} from './adapters/email-adapter'
+import {
+  sendParkingSpaceOfferSms,
+  sendWorkOrderSms,
+  sendBulkSms,
+} from './adapters/sms-adapter'
 import {
   Email,
   ParkingSpaceOfferEmail,
