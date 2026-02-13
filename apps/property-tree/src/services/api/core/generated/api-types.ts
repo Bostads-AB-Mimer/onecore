@@ -285,6 +285,44 @@ export interface paths {
       };
     };
   };
+  "/leases/contacts-by-filters": {
+    /**
+     * Get unique contacts from leases matching filters
+     * @description Returns deduplicated contacts for all leases matching the filter criteria. Used for bulk SMS/email operations.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search */
+          q?: string;
+          /** @description Object types */
+          objectType?: string[];
+          /** @description Contract status filter */
+          status?: string[];
+          startDateFrom?: string;
+          startDateTo?: string;
+          endDateFrom?: string;
+          endDateTo?: string;
+          property?: string[];
+          districtNames?: string[];
+        };
+      };
+      responses: {
+        /** @description List of unique contacts */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ContactInfo"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id
@@ -556,6 +594,80 @@ export interface paths {
         };
         /** @description Contact not found */
         404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/contacts/send-bulk-sms": {
+    /**
+     * Send SMS to multiple contacts
+     * @description Send SMS messages to multiple phone numbers
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of phone numbers */
+            phoneNumbers: string[];
+            /** @description SMS message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description SMS sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkSmsResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/contacts/send-bulk-email": {
+    /**
+     * Send email to multiple contacts
+     * @description Send email messages to multiple email addresses
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of email addresses */
+            emails: string[];
+            /** @description Email subject */
+            subject: string;
+            /** @description Email message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Email sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkEmailResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
           content: never;
         };
         /** @description Internal server error */
@@ -5555,6 +5667,22 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+    };
+    BulkSmsResult: {
+      /** @description Phone numbers that received SMS */
+      successful: string[];
+      /** @description Invalid phone numbers */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
+    };
+    BulkEmailResult: {
+      /** @description Email addresses that received email */
+      successful: string[];
+      /** @description Invalid email addresses */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
     };
     WorkOrder: {
       accessCaption: string;

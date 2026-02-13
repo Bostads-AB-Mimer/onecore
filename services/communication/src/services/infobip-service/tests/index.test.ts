@@ -2,10 +2,11 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { Email, WorkOrderSms } from '@onecore/types'
+import { Email, WorkOrderSms, BulkSms } from '@onecore/types'
 
-import { isMessageEmail, isValidWorkOrderSms } from '../index'
-import * as infobipAdapter from '../adapters/infobip-adapter'
+import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
+import * as emailAdapter from '../adapters/email-adapter'
+import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
 
 jest.mock('@onecore/utilities', () => {
@@ -36,7 +37,7 @@ describe('/sendWorkOrderSms', () => {
   >
 
   beforeEach(() => {
-    sendWorkOrderSmsSpy = jest.spyOn(infobipAdapter, 'sendWorkOrderSms')
+    sendWorkOrderSmsSpy = jest.spyOn(smsAdapter, 'sendWorkOrderSms')
     sendWorkOrderSmsSpy.mockReset()
   })
 
@@ -99,7 +100,7 @@ describe('/sendWorkOrderEmail', () => {
   >
 
   beforeEach(() => {
-    sendWorkOrderEmailSpy = jest.spyOn(infobipAdapter, 'sendWorkOrderEmail')
+    sendWorkOrderEmailSpy = jest.spyOn(emailAdapter, 'sendWorkOrderEmail')
     sendWorkOrderEmailSpy.mockReset()
   })
 
@@ -218,5 +219,126 @@ describe('isValidWorkOrderSms', () => {
 
   it('should return false for non-object inputs', () => {
     expect(isValidWorkOrderSms('not an object')).toBe(false)
+  })
+})
+
+describe('/sendBulkSms', () => {
+  let sendBulkSmsSpy: jest.SpyInstance<Promise<any>, [sms: BulkSms], any>
+
+  beforeEach(() => {
+    sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
+    sendBulkSmsSpy.mockReset()
+  })
+
+  it('should return 200 with all valid phone numbers', async () => {
+    sendBulkSmsSpy.mockResolvedValue({})
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567', '0709876543'],
+        text: 'Test message',
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkSmsSpy).toHaveBeenCalledWith({
+      phoneNumbers: ['46701234567', '46709876543'],
+      text: 'Test message',
+    })
+    expect(res.body.content.successful).toHaveLength(2)
+    expect(res.body.content.invalid).toHaveLength(0)
+  })
+
+  it('should return 200 with partial valid phone numbers', async () => {
+    sendBulkSmsSpy.mockResolvedValue({})
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567', 'invalid', '0709876543'],
+        text: 'Test message',
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkSmsSpy).toHaveBeenCalledWith({
+      phoneNumbers: ['46701234567', '46709876543'],
+      text: 'Test message',
+    })
+    expect(res.body.content.successful).toHaveLength(2)
+    expect(res.body.content.invalid).toEqual(['invalid'])
+  })
+
+  it('should return 400 for missing text', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+      })
+
+    expect(res.status).toBe(400)
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 for empty phoneNumbers array', async () => {
+    const res = await request(app.callback()).post('/sendBulkSms').send({
+      phoneNumbers: [],
+      text: 'Test message',
+    })
+
+    expect(res.status).toBe(400)
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 when all phone numbers are invalid', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['invalid1', 'invalid2'],
+        text: 'Test message',
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('No valid phone numbers')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('isValidBulkSms', () => {
+  it('should return true for valid BulkSms objects', () => {
+    const validSms = {
+      phoneNumbers: ['0701234567', '0709876543'],
+      text: 'Hello, this is a test message',
+    }
+
+    expect(isValidBulkSms(validSms)).toBe(true)
+  })
+
+  it('should return false for missing phoneNumbers', () => {
+    const invalidSms = { text: 'hello' }
+
+    expect(isValidBulkSms(invalidSms)).toBe(false)
+  })
+
+  it('should return false for missing text', () => {
+    const invalidSms = { phoneNumbers: ['0701234567'] }
+
+    expect(isValidBulkSms(invalidSms)).toBe(false)
+  })
+
+  it('should return false for empty phoneNumbers array', () => {
+    const invalidSms = { phoneNumbers: [], text: 'hello' }
+
+    expect(isValidBulkSms(invalidSms)).toBe(false)
+  })
+
+  it('should return false for empty text', () => {
+    const invalidSms = { phoneNumbers: ['0701234567'], text: '' }
+
+    expect(isValidBulkSms(invalidSms)).toBe(false)
+  })
+
+  it('should return false for non-object inputs', () => {
+    expect(isValidBulkSms('not an object')).toBe(false)
+    expect(isValidBulkSms(null)).toBe(false)
   })
 })

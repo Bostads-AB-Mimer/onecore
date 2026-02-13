@@ -18,6 +18,7 @@ import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
+import * as communicationAdapter from '../../adapters/communication-adapter'
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
@@ -37,6 +38,22 @@ import {
   Lease,
   mapLease,
 } from './schemas/lease'
+
+const BulkSmsResult = z.object({
+  successful: z.array(z.string()).describe('Phone numbers that received SMS'),
+  invalid: z.array(z.string()).describe('Invalid phone numbers'),
+  totalSent: z.number(),
+  totalInvalid: z.number(),
+})
+
+const BulkEmailResult = z.object({
+  successful: z
+    .array(z.string())
+    .describe('Email addresses that received email'),
+  invalid: z.array(z.string()).describe('Invalid email addresses'),
+  totalSent: z.number(),
+  totalInvalid: z.number(),
+})
 
 const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
@@ -82,6 +99,8 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ContactInfo', leasing.v1.ContactInfoSchema)
   registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
   registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
+  registerSchema('BulkSmsResult', BulkSmsResult)
+  registerSchema('BulkEmailResult', BulkEmailResult)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -296,6 +315,148 @@ export const routes = (router: KoaRouter) => {
           error instanceof Error
             ? error.message
             : 'Unknown error occurred during lease search',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/contacts-by-filters:
+   *   get:
+   *     summary: Get unique contacts from leases matching filters
+   *     tags:
+   *       - Lease service
+   *     description: Returns deduplicated contacts for all leases matching the filter criteria. Used for bulk SMS/email operations.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *     responses:
+   *       '200':
+   *         description: List of unique contacts
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ContactInfo'
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/contacts-by-filters', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      // Fetch all leases matching filters with high limit (no pagination)
+      const result = await leasingAdapter.searchLeases({
+        ...ctx.query,
+        limit: '50000',
+        page: '1',
+      })
+
+      if (!result.content) {
+        ctx.status = 200
+        ctx.body = { content: [], ...metadata }
+        return
+      }
+
+      // Deduplicate contacts across all leases
+      const contactMap = new Map<
+        string,
+        {
+          contactCode: string
+          name: string
+          phone: string | null
+          email: string | null
+        }
+      >()
+
+      for (const lease of result.content) {
+        if (lease.contacts) {
+          for (const contact of lease.contacts) {
+            if (!contactMap.has(contact.contactCode)) {
+              contactMap.set(contact.contactCode, {
+                contactCode: contact.contactCode,
+                name: contact.name,
+                phone: contact.phone ?? null,
+                email: contact.email ?? null,
+              })
+            }
+          }
+        }
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: Array.from(contactMap.values()),
+        _meta: {
+          totalContacts: contactMap.size,
+          totalLeases: result.content.length,
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching contacts by filters')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching contacts',
         ...metadata,
       }
     }
@@ -811,6 +972,178 @@ export const routes = (router: KoaRouter) => {
     ctx.body = {
       content: result.data,
       ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/send-bulk-sms:
+   *   post:
+   *     summary: Send SMS to multiple contacts
+   *     description: Send SMS messages to multiple phone numbers
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - phoneNumbers
+   *               - text
+   *             properties:
+   *               phoneNumbers:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of phone numbers
+   *               text:
+   *                 type: string
+   *                 description: SMS message content
+   *     responses:
+   *       '200':
+   *         description: SMS sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkSmsResult'
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/contacts/send-bulk-sms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { phoneNumbers, text } = ctx.request.body as {
+      phoneNumbers: string[]
+      text: string
+    }
+
+    if (!phoneNumbers?.length || !text) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'phoneNumbers and text are required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await communicationAdapter.sendBulkSms({
+        phoneNumbers,
+        text,
+      })
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        logger.error(
+          { error: result.err },
+          `Error sending bulk sms, status: ${result.statusCode}`
+        )
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Unexpected error sending bulk sms')
+      ctx.status = 500
+      ctx.body = { error: 'Unexpected error sending bulk sms', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/send-bulk-email:
+   *   post:
+   *     summary: Send email to multiple contacts
+   *     description: Send email messages to multiple email addresses
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - emails
+   *               - subject
+   *               - text
+   *             properties:
+   *               emails:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of email addresses
+   *               subject:
+   *                 type: string
+   *                 description: Email subject
+   *               text:
+   *                 type: string
+   *                 description: Email message content
+   *     responses:
+   *       '200':
+   *         description: Email sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkEmailResult'
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/contacts/send-bulk-email', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { emails, subject, text } = ctx.request.body as {
+      emails: string[]
+      subject: string
+      text: string
+    }
+
+    if (!emails?.length || !subject || !text) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'emails, subject, and text are required',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await communicationAdapter.sendBulkEmail({
+        emails,
+        subject,
+        text,
+      })
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        logger.error(
+          { error: result.err },
+          `Error sending bulk email, status: ${result.statusCode}`
+        )
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Unexpected error sending bulk email')
+      ctx.status = 500
+      ctx.body = { error: 'Unexpected error sending bulk email', ...metadata }
     }
   })
 

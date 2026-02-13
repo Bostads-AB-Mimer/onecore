@@ -6,6 +6,10 @@ import {
   ParkingSpaceAcceptOfferEmail,
   WorkOrderEmail,
   WorkOrderSms,
+  BulkSms,
+  BulkEmail,
+  BulkSmsResult,
+  BulkEmailResult,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -217,6 +221,67 @@ export const sendWorkOrderEmail = async ({
       {
         ...axiosOptions,
         data: { to, subject, text, externalContractorName },
+      }
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendBulkSms = async ({
+  phoneNumbers,
+  text,
+}: BulkSms): Promise<AdapterResult<BulkSmsResult, 'error'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendBulkSms`,
+      {
+        ...axiosOptions,
+        data: { phoneNumbers, text },
+      }
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendBulkEmail = async ({
+  emails,
+  subject,
+  text,
+}: BulkEmail): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendBulkEmail`,
+      {
+        ...axiosOptions,
+        data: { emails, subject, text },
       }
     )
 

@@ -10,6 +10,7 @@ import {
 import { Input } from '@/components/ui/Input'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
 import {
   MultiSelectSearchFilterDropdown,
@@ -19,6 +20,7 @@ import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown
 import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
+import { useBulkMessaging } from '@/components/hooks/useBulkMessaging'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import {
@@ -26,7 +28,11 @@ import {
   type LeaseSearchResult,
   type BuildingManager,
 } from '@/services/api/core/leaseSearchService'
+import { tenantService } from '@/services/api/core/tenantService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { BulkSmsModal } from '@/components/ui/BulkSmsModal'
+import { BulkEmailModal } from '@/components/ui/BulkEmailModal'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -265,6 +271,87 @@ const LeasesPage = () => {
 
   const displayLeases = leases || []
 
+  // Build current filter params for fetching all contacts
+  const currentFilterParams = useMemo(
+    () => ({
+      q: debouncedSearch || undefined,
+      objectType:
+        selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
+      status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+      property: selectedProperties.length > 0 ? selectedProperties : undefined,
+      districtNames:
+        selectedDistricts.length > 0 ? selectedDistricts : undefined,
+      startDateFrom: startDateFrom || undefined,
+      startDateTo: startDateTo || undefined,
+      endDateFrom: endDateFrom || undefined,
+      endDateTo: endDateTo || undefined,
+    }),
+    [
+      debouncedSearch,
+      selectedObjectTypes,
+      selectedStatuses,
+      selectedProperties,
+      selectedDistricts,
+      startDateFrom,
+      startDateTo,
+      endDateFrom,
+      endDateTo,
+    ]
+  )
+
+  // Bulk messaging hook
+  const {
+    selectedIds: selectedLeaseIds,
+    allResultsSelected,
+    selectedCount,
+    toggleSelection,
+    toggleSelectAll,
+    clearSelection,
+    isSelected,
+    showSmsModal,
+    showEmailModal,
+    setShowSmsModal,
+    setShowEmailModal,
+    smsRecipients,
+    emailRecipients,
+    handleOpenSmsModal,
+    handleOpenEmailModal,
+    handleSendSms,
+    handleSendEmail,
+    isLoadingContacts,
+  } = useBulkMessaging({
+    items: displayLeases,
+    totalCount: meta?.totalRecords ?? 0,
+    getItemId: (lease) => lease.leaseId,
+    getContacts: (lease) =>
+      (lease.contacts ?? []).map((c) => ({
+        contactCode: c.contactCode,
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+      })),
+    fetchAllContacts: () =>
+      leaseSearchService.getContactsByFilters(currentFilterParams),
+    sendBulkSms: tenantService.sendBulkSms,
+    sendBulkEmail: tenantService.sendBulkEmail,
+  })
+
+  // Clear selection when filters change
+  useEffect(() => {
+    clearSelection()
+  }, [
+    debouncedSearch,
+    selectedObjectTypes,
+    selectedStatuses,
+    selectedProperties,
+    selectedDistricts,
+    startDateFrom,
+    startDateTo,
+    endDateFrom,
+    endDateTo,
+    clearSelection,
+  ])
+
   const clearFilters = () => {
     setSearchInput('')
     updateUrlParams({
@@ -409,6 +496,27 @@ const LeasesPage = () => {
             <ResponsiveTable
               data={displayLeases}
               columns={[
+                {
+                  key: 'select',
+                  label: (
+                    <Checkbox
+                      checked={
+                        allResultsSelected || selectedLeaseIds.length > 0
+                      }
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Välj alla"
+                    />
+                  ),
+                  className: 'w-10 px-2',
+                  render: (lease: LeaseSearchResult) => (
+                    <Checkbox
+                      checked={isSelected(lease.leaseId)}
+                      onCheckedChange={() => toggleSelection(lease.leaseId)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      aria-label={`Välj ${lease.leaseId}`}
+                    />
+                  ),
+                },
                 {
                   key: 'leaseId',
                   label: 'Kontraktsnummer',
@@ -580,6 +688,28 @@ const LeasesPage = () => {
           />
         </CardContent>
       </Card>
+
+      <BulkActionBar
+        selectedCount={selectedCount}
+        onClear={clearSelection}
+        onSendSms={handleOpenSmsModal}
+        onSendEmail={handleOpenEmailModal}
+        isLoading={isLoadingContacts}
+      />
+
+      <BulkSmsModal
+        open={showSmsModal}
+        onOpenChange={setShowSmsModal}
+        recipients={smsRecipients}
+        onSend={handleSendSms}
+      />
+
+      <BulkEmailModal
+        open={showEmailModal}
+        onOpenChange={setShowEmailModal}
+        recipients={emailRecipients}
+        onSend={handleSendEmail}
+      />
     </div>
   )
 }
