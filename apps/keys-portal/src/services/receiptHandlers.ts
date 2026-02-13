@@ -31,7 +31,7 @@ import type {
 /**
  * Categorizes keys into returned/missing/disposed based on selection
  */
-function categorizeKeys(
+export function categorizeKeys(
   keys: KeyDetails[],
   selectedIds: Set<string>
 ): { returned: KeyDetails[]; missing: KeyDetails[]; disposed: KeyDetails[] } {
@@ -55,7 +55,7 @@ function categorizeKeys(
 /**
  * Categorizes cards into returned/missing based on selection
  */
-function categorizeCards(
+export function categorizeCards(
   cards: Card[],
   selectedIds: Set<string>
 ): { returned: Card[]; missing: Card[] } {
@@ -121,7 +121,7 @@ async function assembleFromReceipt(
  * Assembles ReceiptData for a return receipt from pre-fetched data
  * Used for: generating return receipt PDFs (no additional API calls)
  */
-function assembleReturnReceipt(
+export function assembleReturnReceipt(
   loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   lease: Lease,
@@ -156,7 +156,7 @@ function assembleReturnReceipt(
  * Assembles MaintenanceReceiptData from loan ID
  * Used for: maintenance loan receipt generation
  */
-async function assembleMaintenanceLoanReceipt(
+export async function assembleMaintenanceLoanReceipt(
   loanId: string,
   comment?: string
 ): Promise<MaintenanceReceiptData> {
@@ -195,7 +195,7 @@ async function assembleMaintenanceLoanReceipt(
  * Assembles MaintenanceReceiptData for a return receipt from pre-fetched data
  * Used for: generating maintenance return receipt PDFs (no additional API calls)
  */
-function assembleMaintenanceReturnReceipt(
+export function assembleMaintenanceReturnReceipt(
   contact: string,
   contactName: string,
   contactPerson: string | null,
