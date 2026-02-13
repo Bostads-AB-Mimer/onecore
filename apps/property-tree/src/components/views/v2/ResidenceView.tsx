@@ -107,10 +107,7 @@ export const ResidenceView = () => {
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Kontrakt</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="keys"
-                className="flex items-center gap-1.5"
-              >
+              <TabsTrigger value="keys" className="flex items-center gap-1.5">
                 <KeyRound className="h-4 w-4" />
                 <span className="hidden sm:inline">Nycklar</span>
               </TabsTrigger>
