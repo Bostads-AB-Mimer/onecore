@@ -92,47 +92,49 @@ function SidebarNavigationContent() {
           className="group/collapsible"
         >
           <SidebarGroup>
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isPropertiesActive}
-                  tooltip="Fastighetsdata"
-                >
-                  <Link to="/properties" onClick={handleFastighetsdataClick}>
-                    <LayoutGrid />
-                    <span>Fastighetsdata</span>
-                    <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                  </Link>
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  {/* FÖRETAG - Nested collapsible section */}
-                  <Collapsible
-                    open={isForetagExpanded}
-                    onOpenChange={setIsForetagExpanded}
-                    className="group/nested-collapsible ml-4"
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isPropertiesActive}
+                    tooltip="Fastighetsdata"
                   >
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton>
-                        <ChevronRight className="transition-transform group-data-[state=open]/nested-collapsible:rotate-90" />
-                        <span>Företag</span>
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
+                    <Link to="/properties" onClick={handleFastighetsdataClick}>
+                      <LayoutGrid />
+                      <span>Fastighetsdata</span>
+                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                    </Link>
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
 
-                    <CollapsibleContent>
-                      <SidebarGroupContent>
-                        <SidebarMenu>
-                          <CompanyList />
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarMenuItem>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    {/* FÖRETAG - Nested collapsible section */}
+                    <Collapsible
+                      open={isForetagExpanded}
+                      onOpenChange={setIsForetagExpanded}
+                      className="group/nested-collapsible ml-4"
+                    >
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton>
+                          <ChevronRight className="transition-transform group-data-[state=open]/nested-collapsible:rotate-90" />
+                          <span>Företag</span>
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent>
+                        <SidebarGroupContent>
+                          <SidebarMenu>
+                            <CompanyList />
+                          </SidebarMenu>
+                        </SidebarGroupContent>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </SidebarMenu>
           </SidebarGroup>
         </Collapsible>
 
