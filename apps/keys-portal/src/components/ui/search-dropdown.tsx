@@ -129,20 +129,26 @@ export function SearchDropdown<T>({
       return
     }
 
+    let stale = false
+
     const search = async () => {
       setIsSearching(true)
       try {
         const results = await searchFnRef.current(debouncedQuery)
-        setServerResults(results)
+        if (!stale) setServerResults(results)
       } catch (error) {
         console.error('SearchDropdown: Error fetching results', error)
-        setServerResults([])
+        if (!stale) setServerResults([])
       } finally {
-        setIsSearching(false)
+        if (!stale) setIsSearching(false)
       }
     }
 
     search()
+
+    return () => {
+      stale = true
+    }
   }, [debouncedQuery, selectedValue, minSearchLength])
 
   // Combine pre-suggestions with server results
