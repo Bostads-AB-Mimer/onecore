@@ -21,10 +21,7 @@ export function useAuth() {
     authUrl.searchParams.append('scope', 'openid profile email')
 
     if (currentClientPath) {
-      authUrl.searchParams.append(
-        'state',
-        encodeURIComponent(currentClientPath)
-      )
+      authUrl.searchParams.append('state', currentClientPath)
     }
 
     window.location.href = authUrl.toString()

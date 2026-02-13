@@ -18,7 +18,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     .with({ tag: 'loading' }, () => (
       <div className="flex items-center justify-center h-screen">Laddar...</div>
     ))
-    .with({ tag: 'error' }, () => (
+    .with({ tag: 'error', error: 'unauthenticated' }, () => (
+      <div className="flex items-center justify-center h-screen">Laddar...</div>
+    ))
+    .with({ tag: 'error', error: 'unknown' }, () => (
       <div className="flex items-center justify-center h-screen">
         <div className="text-red-500">Okänt fel, kontakta support.</div>
       </div>
