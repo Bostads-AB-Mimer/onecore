@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-
 import type { KeyDetails, Card, Lease } from '../types'
 
 vi.mock('../api/receiptService', () => ({
