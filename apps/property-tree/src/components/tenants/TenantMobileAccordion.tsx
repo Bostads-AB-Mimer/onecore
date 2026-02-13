@@ -77,7 +77,7 @@ export function TenantMobileAccordion({
     {
       id: 'keys',
       title: 'Nyckellån',
-      content: <TenantKeyLoans contactCode={contactCode} />,
+      content: <TenantKeyLoans contactCode={contactCode} leases={contracts} />,
     },
     /*
     {
