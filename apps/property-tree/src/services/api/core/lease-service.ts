@@ -29,7 +29,7 @@ async function getByContactCode(contactCode: string): Promise<Array<Lease>> {
   const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
     params: {
       path: { contactCode },
-      query: { includeTerminatedLeases: 'true', includeUpcomingLeases: 'true' },
+      query: { includeTerminatedLeases: true, includeUpcomingLeases: true },
     },
   })
 

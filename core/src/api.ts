@@ -7,6 +7,7 @@ import { routes as searchRoutes } from './services/search-service'
 import { routes as economyRoutes } from './services/economy-service'
 import { routes as fileStorageRoutes } from './services/file-storage-service'
 
+import { routes as keyRoutes } from './services/keys-service'
 import { updateSwaggerSchemas } from './swagger'
 
 const router = new KoaRouter()
@@ -16,10 +17,10 @@ leaseRoutes(router)
 rentalPropertyRoutes(router)
 workOrderRoutes(router)
 propertyBaseRoutes(router)
+keyRoutes(router)
 searchRoutes(router)
 economyRoutes(router)
 fileStorageRoutes(router)
-
 updateSwaggerSchemas()
 
 export default router

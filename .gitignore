@@ -58,3 +58,8 @@ lib-cov
 *.sln
 *.sw?
 .turbo
+
+
+# --- Private Keys --- 
+*.pem
+
