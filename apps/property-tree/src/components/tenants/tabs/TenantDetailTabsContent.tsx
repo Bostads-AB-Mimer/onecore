@@ -68,7 +68,7 @@ export const TenantDetailTabsContent = ({
       </TabsContent>
 
       <TabsContent value="keys">
-        <TenantKeyLoans contactCode={contactCode} />
+        <TenantKeyLoans contactCode={contactCode} leases={leases} />
       </TabsContent>
 
       {/*
