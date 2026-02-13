@@ -500,7 +500,9 @@ const LeasesPage = () => {
                   key: 'select',
                   label: (
                     <Checkbox
-                      checked={allResultsSelected || selectedLeaseIds.length > 0}
+                      checked={
+                        allResultsSelected || selectedLeaseIds.length > 0
+                      }
                       onCheckedChange={toggleSelectAll}
                       aria-label="Välj alla"
                     />
