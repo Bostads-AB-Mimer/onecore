@@ -1,3 +1,5 @@
+import { sortByRentalId } from '@/utils/sortByRentalId'
+
 import { GET } from './core/base-api'
 
 export interface RentalObjectSearchResult {
@@ -68,7 +70,7 @@ export class RentalObjectSearchService {
         }
       }
 
-      return results
+      return sortByRentalId(results)
     } catch (error) {
       console.warn('Error searching rental properties:', error)
       return []
@@ -122,7 +124,7 @@ export class RentalObjectSearchService {
         })
       }
 
-      return results
+      return sortByRentalId(results)
     } catch (error) {
       console.warn('Error searching rental properties:', error)
       return []
