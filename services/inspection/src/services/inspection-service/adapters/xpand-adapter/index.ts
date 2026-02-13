@@ -7,6 +7,8 @@ import {
   XpandInspectionSchema,
   DetailedXpandInspection,
   DetailedXpandInspectionSchema,
+  INSPECTION_STATUS_FILTER,
+  InspectionStatusFilter,
 } from '../../schemas'
 import {
   trimStrings,
@@ -95,18 +97,55 @@ function buildBaseInspectionQuery() {
 }
 
 export async function getInspections({
-  skip = 0,
+  page = 1,
   limit = 100,
   sortAscending,
-}: { skip?: number; limit?: number; sortAscending?: boolean } = {}): Promise<
-  AdapterResult<XpandInspection[], 'schema-error' | 'unknown'>
+  statusFilter,
+  inspector,
+  address,
+}: {
+  page?: number
+  limit?: number
+  sortAscending?: boolean
+  statusFilter?: InspectionStatusFilter
+  inspector?: string
+  address?: string
+} = {}): Promise<
+  AdapterResult<
+    { inspections: XpandInspection[]; totalRecords: number },
+    'schema-error' | 'unknown'
+  >
 > {
   logger.info(`Getting inspections from Xpand`)
 
   try {
-    const dbInspections = await buildBaseInspectionQuery()
+    const baseQuery = buildBaseInspectionQuery()
+
+    if (statusFilter === INSPECTION_STATUS_FILTER.ONGOING) {
+      baseQuery.whereNot('lbbes.status', 1)
+    } else if (statusFilter === INSPECTION_STATUS_FILTER.COMPLETED) {
+      baseQuery.where('lbbes.status', 1)
+    }
+
+    if (inspector) {
+      baseQuery.where('cmctc.cmctcben', inspector)
+    }
+    if (address) {
+      baseQuery.where('babuf.caption', address)
+    }
+
+    const countResult = await baseQuery
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .count('* as count')
+      .first()
+    const totalRecords = Number(countResult?.count ?? 0)
+
+    const offset = (page - 1) * limit
+    const dbInspections = await baseQuery
       .orderBy('lbbes.besdat', sortAscending ? 'asc' : 'desc')
-      .offset(skip)
+      .offset(offset)
       .limit(limit)
 
     const trimmedInspections = trimStrings(dbInspections)
@@ -123,7 +162,7 @@ export async function getInspections({
 
     return {
       ok: true,
-      data: parsed.data,
+      data: { inspections: parsed.data, totalRecords },
     }
   } catch (error) {
     logger.error(
@@ -135,14 +174,24 @@ export async function getInspections({
 }
 
 export async function getInspectionsByResidenceId(
-  residenceId: string
+  residenceId: string,
+  statusFilter?: InspectionStatusFilter
 ): Promise<AdapterResult<XpandInspection[], 'schema-error' | 'unknown'>> {
   logger.info(`Getting inspections from Xpand for residenceId: ${residenceId}`)
 
   try {
-    const dbInspections = await buildBaseInspectionQuery()
-      .andWhere('babuf.hyresid', residenceId)
-      .orderBy('lbbes.besdat', 'desc')
+    const query = buildBaseInspectionQuery().andWhere(
+      'babuf.hyresid',
+      residenceId
+    )
+
+    if (statusFilter === INSPECTION_STATUS_FILTER.ONGOING) {
+      query.whereNot('lbbes.status', 1)
+    } else if (statusFilter === INSPECTION_STATUS_FILTER.COMPLETED) {
+      query.where('lbbes.status', 1)
+    }
+
+    const dbInspections = await query.orderBy('lbbes.besdat', 'desc')
 
     const trimmedInspections = trimStrings(dbInspections)
     const inspections = mapInspectionStatus(trimmedInspections)

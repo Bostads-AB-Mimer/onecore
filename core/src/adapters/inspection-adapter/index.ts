@@ -1,8 +1,9 @@
 import createClient from 'openapi-fetch'
-import { logger } from '@onecore/utilities'
+import { logger, PaginatedResponse } from '@onecore/utilities'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
+import { InspectionStatusFilter } from '../../services/inspection-service/schemas'
 
 export type XpandInspection = components['schemas']['XpandInspection']
 export type DetailedXpandInspection =
@@ -17,16 +18,26 @@ const client = () =>
   })
 
 export const getXpandInspections = async ({
-  skip = 0,
-  limit = 100,
+  page = 1,
+  limit = 25,
+  statusFilter,
   sortAscending,
-}: { skip?: number; limit?: number; sortAscending?: boolean } = {}): Promise<
-  AdapterResult<XpandInspection[], 'unknown'>
+  inspector,
+  address,
+}: {
+  page?: number
+  limit?: number
+  statusFilter?: InspectionStatusFilter
+  sortAscending?: boolean
+  inspector?: string
+  address?: string
+} = {}): Promise<
+  AdapterResult<PaginatedResponse<XpandInspection>, 'unknown'>
 > => {
   try {
     const fetchResponse = await client().GET('/inspections/xpand', {
       params: {
-        query: { skip, limit, sortAscending },
+        query: { page, limit, statusFilter, sortAscending, inspector, address },
       },
     })
 
@@ -34,13 +45,17 @@ export const getXpandInspections = async ({
       throw fetchResponse.error
     }
 
-    if (!fetchResponse.data.content?.inspections) {
+    if (!fetchResponse.data.content) {
       throw 'missing-content'
     }
 
     return {
       ok: true,
-      data: fetchResponse.data?.content.inspections,
+      data: {
+        content: fetchResponse.data.content,
+        _meta: fetchResponse.data._meta!,
+        _links: fetchResponse.data._links!,
+      },
     }
   } catch (error) {
     logger.error({ error }, 'inspection-adapter.getXpandInspections')
@@ -50,13 +65,17 @@ export const getXpandInspections = async ({
 }
 
 export const getXpandInspectionsByResidenceId = async (
-  residenceId: string
+  residenceId: string,
+  statusFilter?: InspectionStatusFilter
 ): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
   try {
     const fetchResponse = await client().GET(
       '/inspections/xpand/residence/{residenceId}',
       {
-        params: { path: { residenceId: residenceId } },
+        params: {
+          path: { residenceId },
+          query: { statusFilter },
+        },
       }
     )
 

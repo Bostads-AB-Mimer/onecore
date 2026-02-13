@@ -44,3 +44,12 @@ export function getInspectionTypeLabel(type?: string): string {
 export function isValidInspectionType(type: string): type is InspectionType {
   return Object.values(INSPECTION_TYPE).includes(type as InspectionType)
 }
+
+/**
+ * Inspection status filter constants
+ * Re-exported from shared layer for convenience
+ */
+export {
+  INSPECTION_STATUS_FILTER,
+  type InspectionStatusFilter,
+} from '@/shared/types/inspection'

@@ -63,6 +63,8 @@ interface InspectionsTabContentProps {
 //   }
 // }
 
+const INITIAL_DISPLAY_COUNT = 5
+
 export function InspectionsTabContent({
   residenceId,
   rentalId,
@@ -70,6 +72,7 @@ export function InspectionsTabContent({
   tenant,
   residence,
 }: InspectionsTabContentProps) {
+  const [showAll, setShowAll] = useState(false)
   // const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   // const { toast } = useToast()
 
@@ -216,7 +219,33 @@ export function InspectionsTabContent({
 
         <TabsContent value="history">
           {completedInspections.length > 0 ? (
-            renderInspectionsTable(completedInspections)
+            <div className="space-y-4">
+              {renderInspectionsTable(
+                showAll
+                  ? completedInspections
+                  : completedInspections.slice(0, INITIAL_DISPLAY_COUNT)
+              )}
+
+              {completedInspections.length > INITIAL_DISPLAY_COUNT &&
+                !showAll && (
+                  <div className="flex justify-center">
+                    <Button variant="outline" onClick={() => setShowAll(true)}>
+                      Se fler (
+                      {completedInspections.length - INITIAL_DISPLAY_COUNT}{' '}
+                      till)
+                    </Button>
+                  </div>
+                )}
+
+              {showAll &&
+                completedInspections.length > INITIAL_DISPLAY_COUNT && (
+                  <div className="flex justify-center">
+                    <Button variant="outline" onClick={() => setShowAll(false)}>
+                      Visa färre
+                    </Button>
+                  </div>
+                )}
+            </div>
           ) : (
             <p className="text-slate-500 p-2">
               Ingen besiktningshistorik för denna lägenhet.

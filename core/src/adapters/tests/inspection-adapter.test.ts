@@ -42,7 +42,9 @@ describe('inspection-adapter', () => {
         http.get(`${config.inspectionService.url}/inspections/xpand`, () =>
           HttpResponse.json(
             {
-              content: { inspections: xpandInspectionMock },
+              content: xpandInspectionMock,
+              _meta: { totalRecords: 2, page: 1, limit: 25, count: 2 },
+              _links: [],
             },
             { status: 200 }
           )
@@ -53,7 +55,11 @@ describe('inspection-adapter', () => {
 
       expect(result).toMatchObject({
         ok: true,
-        data: xpandInspectionMock,
+        data: {
+          content: xpandInspectionMock,
+          _meta: { totalRecords: 2, page: 1, limit: 25, count: 2 },
+          _links: [],
+        },
       })
     })
 
@@ -62,7 +68,9 @@ describe('inspection-adapter', () => {
         http.get(`${config.inspectionService.url}/inspections/xpand`, () =>
           HttpResponse.json(
             {
-              content: { inspections: xpandInspectionMock },
+              content: xpandInspectionMock,
+              _meta: { totalRecords: 2, page: 1, limit: 50, count: 2 },
+              _links: [],
             },
             { status: 200 }
           )
@@ -70,14 +78,18 @@ describe('inspection-adapter', () => {
       )
 
       const result = await inspectionAdapter.getXpandInspections({
-        skip: 10,
+        page: 1,
         limit: 50,
         sortAscending: true,
       })
 
       expect(result).toMatchObject({
         ok: true,
-        data: xpandInspectionMock,
+        data: {
+          content: xpandInspectionMock,
+          _meta: { totalRecords: 2, page: 1, limit: 50, count: 2 },
+          _links: [],
+        },
       })
     })
   })

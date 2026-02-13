@@ -20,6 +20,10 @@ jest.mock('knex', () => {
     offset: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     first: jest.fn().mockReturnThis(),
+    clone: jest.fn().mockReturnThis(),
+    clearSelect: jest.fn().mockReturnThis(),
+    clearOrder: jest.fn().mockReturnThis(),
+    count: jest.fn().mockReturnThis(),
     then: mockThen,
   }
 
@@ -54,57 +58,70 @@ describe(xpandAdapter.getInspections, () => {
   })
 
   it('should map all status codes correctly', async () => {
+    const inspections = [
+      XpandDbInspectionFactory.build({ id: 'INS001', status: 0 }),
+      XpandDbInspectionFactory.build({ id: 'INS002', status: 1 }),
+      XpandDbInspectionFactory.build({ id: 'INS003', status: 3 }),
+      XpandDbInspectionFactory.build({ id: 'INS004', status: 6 }),
+    ]
+    // First call for count
     mockThen.mockImplementationOnce((callback) =>
-      callback([
-        XpandDbInspectionFactory.build({ id: 'INS001', status: 0 }),
-        XpandDbInspectionFactory.build({ id: 'INS002', status: 1 }),
-        XpandDbInspectionFactory.build({ id: 'INS003', status: 3 }),
-        XpandDbInspectionFactory.build({ id: 'INS004', status: 6 }),
-      ])
+      callback({ count: inspections.length })
     )
+    // Second call for data
+    mockThen.mockImplementationOnce((callback) => callback(inspections))
 
     const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.data).toHaveLength(4)
-      expect(result.data[0].status).toBe('Registrerad')
-      expect(result.data[1].status).toBe('Genomförd')
-      expect(result.data[2].status).toBe('Besiktningsresultat skickat')
-      expect(result.data[3].status).toBe('Makulerad')
+      expect(result.data.inspections).toHaveLength(4)
+      expect(result.data.inspections[0].status).toBe('Registrerad')
+      expect(result.data.inspections[1].status).toBe('Genomförd')
+      expect(result.data.inspections[2].status).toBe(
+        'Besiktningsresultat skickat'
+      )
+      expect(result.data.inspections[3].status).toBe('Makulerad')
+      expect(result.data.totalRecords).toBe(4)
     }
   })
 
   it('should handle unknown status codes with fallback message', async () => {
+    const inspections = [
+      XpandDbInspectionFactory.build({ id: 'INS005', status: 99 }),
+    ]
     mockThen.mockImplementationOnce((callback) =>
-      callback([XpandDbInspectionFactory.build({ id: 'INS005', status: 99 })])
+      callback({ count: inspections.length })
     )
+    mockThen.mockImplementationOnce((callback) => callback(inspections))
 
     const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.data[0].status).toBe('Unknown (99)')
+      expect(result.data.inspections[0].status).toBe('Unknown (99)')
     }
   })
 
   it('should return empty array for empty database result', async () => {
+    mockThen.mockImplementationOnce((callback) => callback({ count: 0 }))
     mockThen.mockImplementationOnce((callback) => callback([]))
 
     const result = await xpandAdapter.getInspections()
 
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.data).toEqual([])
+      expect(result.data.inspections).toEqual([])
+      expect(result.data.totalRecords).toBe(0)
     }
   })
 
   it('should return schema-error when validation fails', async () => {
-    mockThen.mockImplementationOnce((callback) =>
-      callback([
-        XpandDbInspectionFactory.build({ date: 'invalid-date' as any }),
-      ])
-    )
+    const invalidInspections = [
+      XpandDbInspectionFactory.build({ date: 'invalid-date' as any }),
+    ]
+    mockThen.mockImplementationOnce((callback) => callback({ count: 1 }))
+    mockThen.mockImplementationOnce((callback) => callback(invalidInspections))
 
     const result = await xpandAdapter.getInspections()
 
