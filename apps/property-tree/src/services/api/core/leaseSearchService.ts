@@ -95,4 +95,8 @@ async function getContactsByFilters(
   return response.content ?? []
 }
 
-export const leaseSearchService = { search, getBuildingManagers, getContactsByFilters }
+export const leaseSearchService = {
+  search,
+  getBuildingManagers,
+  getContactsByFilters,
+}
