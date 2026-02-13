@@ -1943,7 +1943,7 @@ export const routes = (router: KoaRouter) => {
    *               subject:
    *                 type: string
    *                 description: The subject of the email.
-   *               message:
+   *               text:
    *                 type: string
    *                 description: The message to be sent in the email.
    *     responses:
