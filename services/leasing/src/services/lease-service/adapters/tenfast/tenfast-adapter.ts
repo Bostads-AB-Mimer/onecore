@@ -691,8 +691,6 @@ export async function getLeasesByRentalPropertyId(
       url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt,hyresgaster`,
     })
 
-    console.log('res.data', res.data)
-
     // Not sure we want to fail completely here if parsing fails
     const leases = TenfastLeaseSchema.array().safeParse(res.data)
 
