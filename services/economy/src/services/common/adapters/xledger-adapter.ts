@@ -864,13 +864,6 @@ const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
   const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
   const accounts208 = ['3012', '3014', '3016']
 
-  console.log(
-    'getTaxRule',
-    account,
-    accounts208.includes(account),
-    accounts208.includes(account) ? '208' : '2'
-  )
-
   switch (vatRate) {
     case 25:
       return accounts208.includes(account) ? '208' : '2'
