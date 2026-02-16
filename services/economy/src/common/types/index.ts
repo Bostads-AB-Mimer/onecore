@@ -125,6 +125,7 @@ export type InvoiceContract = {
   invoiceToDate: string
   ledgerAccount: string
   totalAccount: string
+  counterPart?: string | undefined
   tenantName: string
 }
 

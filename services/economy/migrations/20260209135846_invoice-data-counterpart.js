@@ -3,7 +3,7 @@
  * @returns { Promise<void> }
  */
 exports.up = function (knex) {
-  return knex.schema.table('invoice_contact', (table) => {
+  return knex.schema.table('invoice_data', (table) => {
     table.string('CounterPart').nullable().defaultTo(null)
   })
 }
@@ -13,7 +13,7 @@ exports.up = function (knex) {
  * @returns { Promise<void> }
  */
 exports.down = function (knex) {
-  return knex.schema.alterTable('invoice_contact', (table) => {
+  return knex.schema.alterTable('invoice_data', (table) => {
     table.dropColumn('CounterPart')
   })
 }
