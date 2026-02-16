@@ -7,7 +7,11 @@ import {
   GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
 } from './schema'
-import { generateRouteMetadata, RouteMetadata } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+  RouteMetadata,
+} from '@onecore/utilities'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
 import { transformContact, transformContacts } from './transform'
@@ -38,13 +42,12 @@ export const routes = (router: OkapiRouter, config: Config) => {
     result: AdapterResult<Contact, 'unknown'>
   ) => {
     const metadata = generateRouteMetadata(ctx)
-    console.log(result)
     if (result.ok) {
       ctx.status = 200
-      ctx.body = {
-        content: transformContact(result.data),
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody(
+        transformContact(result.data),
+        metadata
+      )
     } else {
       encodeError(ctx, result, metadata)
     }
@@ -58,12 +61,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
 
     if (result.ok) {
       ctx.status = 200
-      ctx.body = {
-        content: {
-          contacts: transformContacts(result.data),
-        },
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody(
+        transformContacts(result.data),
+        metadata
+      )
     } else {
       encodeError(ctx, result, metadata)
     }
