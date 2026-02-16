@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react'
 
 import { useTenantSearch } from '@/features/tenants'
 
+import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
@@ -112,7 +113,7 @@ export function TenantsPage() {
                     label: 'Åtgärd',
                     render: (contact) => (
                       <Button asChild variant="link" size="sm">
-                        <Link to={`/tenants/${contact.contactCode}`}>
+                        <Link to={paths.tenant(contact.contactCode)}>
                           Visa detaljer
                         </Link>
                       </Button>
@@ -134,7 +135,7 @@ export function TenantsPage() {
                     </div>
                     <div className="flex justify-end">
                       <Button asChild variant="link" size="sm">
-                        <Link to={`/tenants/${contact.contactCode}`}>
+                        <Link to={paths.tenant(contact.contactCode)}>
                           Visa detaljer
                         </Link>
                       </Button>

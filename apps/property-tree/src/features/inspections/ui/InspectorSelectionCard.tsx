@@ -5,6 +5,7 @@ import { Clock, ExternalLink, MapPin, User } from 'lucide-react'
 import { Tenant } from '@/services/types'
 
 import { cn } from '@/shared/lib/utils'
+import { paths } from '@/shared/routes'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -60,7 +61,7 @@ export function InspectorSelectionCard({
 
   const handleOpenTenantProfile = () => {
     if (tenant?.contactCode) {
-      navigate(`/tenants/${tenant.contactCode}`)
+      navigate(paths.tenant(tenant.contactCode))
     }
   }
 

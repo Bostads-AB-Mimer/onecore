@@ -5,6 +5,7 @@ import { TenantContactActions, TenantPersonalInfo } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 
+import { paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
@@ -24,7 +25,7 @@ export function TenantLeaseCard({ tenant }: TenantLeaseCardProps) {
           <h4 className="font-medium">Kontraktsinnehavare</h4>
         </div>
         <Button variant="outline" asChild className="shrink-0">
-          <Link to={`/tenants/${tenant.contactCode}`} rel="noopener noreferrer">
+          <Link to={paths.tenant(tenant.contactCode)} rel="noopener noreferrer">
             <User className="h-4 w-4 mr-2" />
             Öppna kundkort
           </Link>

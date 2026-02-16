@@ -7,11 +7,14 @@ import { BuildingBasicInfo, useBuildingDetails } from '@/features/buildings'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 const BuildingPage = () => {
-  const { buildingId } = useParams()
+  const { buildingCode } = useParams()
   const { state } = useLocation()
   const propertyId = state?.propertyId
 
-  const { data, isLoading, error } = useBuildingDetails(propertyId, buildingId)
+  const { data, isLoading, error } = useBuildingDetails(
+    propertyId,
+    buildingCode
+  )
 
   const basePath = `/residences`
 
@@ -22,7 +25,7 @@ const BuildingPage = () => {
         error={error}
         data={data}
         notFoundMessage="Byggnaden kunde inte hittas"
-        searchedFor={buildingId}
+        searchedFor={buildingCode}
       >
         {(data) => (
           <>

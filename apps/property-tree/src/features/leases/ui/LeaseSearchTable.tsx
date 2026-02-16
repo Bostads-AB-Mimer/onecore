@@ -4,6 +4,7 @@ import { formatDate, LeaseStatusBadge } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
+import { paths } from '@/shared/routes'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 
 export function LeaseMobileCard(lease: LeaseSearchResult) {
@@ -24,7 +25,7 @@ export function LeaseMobileCard(lease: LeaseSearchResult) {
             <div key={contact.contactCode} className="flex justify-between">
               <span className="text-muted-foreground">Hyresgäst:</span>
               <Link
-                to={`/tenants/${contact.contactCode}`}
+                to={paths.tenant(contact.contactCode)}
                 className="font-medium text-primary hover:underline"
               >
                 {contact.name}

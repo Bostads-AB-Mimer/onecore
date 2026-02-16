@@ -6,6 +6,8 @@ import { useCompanyByPropertyId } from '@/features/companies'
 import { useProperty } from '@/features/properties'
 import { useResidence } from '@/features/residences'
 
+import { matchesRoute, routes } from '@/shared/routes'
+
 interface SelectionState {
   selectedResidenceId: string | null
   selectedBuildingId: string | null
@@ -20,14 +22,14 @@ export function useHierarchicalSelection() {
   const state = location.state as Record<string, string> | null
 
   const residenceId =
-    params.residenceId && location.pathname.startsWith('/residences/')
+    params.residenceId && matchesRoute(routes.residence, location.pathname)
       ? params.residenceId
       : undefined
   const { data: selectedResidence } = useResidence(residenceId)
 
   const buildingId =
     params.buildingId &&
-    location.pathname.startsWith('/buildings/') &&
+    matchesRoute(routes.building, location.pathname) &&
     !state?.propertyId
       ? params.buildingId
       : undefined
@@ -35,9 +37,9 @@ export function useHierarchicalSelection() {
 
   const needsProperty =
     !state?.companyId &&
-    (location.pathname.startsWith('/properties/') ||
-      location.pathname.startsWith('/buildings/') ||
-      location.pathname.startsWith('/residences/'))
+    (matchesRoute(routes.property, location.pathname) ||
+      matchesRoute(routes.building, location.pathname) ||
+      matchesRoute(routes.residence, location.pathname))
   const propertyIdForQuery = needsProperty
     ? params.propertyId || selectedBuilding?.property?.id || undefined
     : undefined
@@ -51,7 +53,7 @@ export function useHierarchicalSelection() {
     const path = location.pathname
     const companyId = state?.companyId || propertyCompany?.id || null
 
-    if (path.startsWith('/residences/') && params.residenceId) {
+    if (matchesRoute(routes.residence, path) && params.residenceId) {
       return {
         selectedResidenceId: params.residenceId,
         selectedBuildingId: null,
@@ -66,7 +68,7 @@ export function useHierarchicalSelection() {
       }
     }
 
-    if (path.startsWith('/properties/') && params.propertyId) {
+    if (matchesRoute(routes.property, path) && params.propertyId) {
       return {
         selectedResidenceId: null,
         selectedBuildingId: null,
@@ -76,7 +78,7 @@ export function useHierarchicalSelection() {
       }
     }
 
-    if (path.startsWith('/companies/') && params.companyId) {
+    if (matchesRoute(routes.company, path) && params.companyId) {
       return {
         selectedResidenceId: null,
         selectedBuildingId: null,
@@ -86,7 +88,7 @@ export function useHierarchicalSelection() {
       }
     }
 
-    if (path.startsWith('/buildings/') && params.buildingId) {
+    if (matchesRoute(routes.building, path) && params.buildingId) {
       return {
         selectedResidenceId: null,
         selectedBuildingId: params.buildingId,

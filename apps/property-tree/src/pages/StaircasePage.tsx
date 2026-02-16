@@ -4,6 +4,7 @@ import { ArrowRight, Building as BuildingIcon, Home } from 'lucide-react'
 
 import { useStaircaseDetails } from '@/features/buildings'
 
+import { paths } from '@/shared/routes'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
@@ -67,7 +68,7 @@ export function StaircasePage() {
                       key={residence.id}
                       whileHover={{ scale: 1.02 }}
                       onClick={() =>
-                        navigate(`/residences/${residence.id}`, {
+                        navigate(paths.residence(residence.id), {
                           state: {
                             buildingCode: building?.code,
                             staircaseCode: residence.code.substring(2, 4),
@@ -107,7 +108,7 @@ export function StaircasePage() {
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.02 }}
                     className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
-                    onClick={() => navigate(`/residences/${issue.residenceId}`)}
+                    onClick={() => navigate(paths.residence(issue.residenceId))}
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">

@@ -5,6 +5,7 @@ import { Building2 } from 'lucide-react'
 import { Company } from '@/services/types'
 
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
+import { matchesRoute, paths, routes } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
@@ -23,7 +24,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const isInHierarchy = isCompanyInHierarchy(company.id)
   const isDirectlySelected =
     selectionState.selectedCompanyId === company.id &&
-    location.pathname.startsWith('/companies/')
+    matchesRoute(routes.company, location.pathname)
 
   // Check if this company should be expanded via context
   const isRequestedToExpand = expandedCompanyCodes.has(company.code)
@@ -53,7 +54,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={`/companies/${company.id}`}
+          to={paths.company(company.id)}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <Building2 />

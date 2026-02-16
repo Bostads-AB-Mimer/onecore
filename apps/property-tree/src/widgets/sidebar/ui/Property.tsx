@@ -6,6 +6,7 @@ import { Property } from '@/services/types'
 
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
 import { toTitleCase } from '@/shared/lib/textUtils'
+import { matchesRoute, paths, routes } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
@@ -26,7 +27,7 @@ export function PropertyNavigation({
   const isInHierarchy = isPropertyInHierarchy(property.id)
   const isDirectlySelected =
     selectionState.selectedPropertyId === property.id &&
-    location.pathname.startsWith('/properties/')
+    matchesRoute(routes.property, location.pathname)
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
@@ -52,7 +53,7 @@ export function PropertyNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={`/properties/${property.id}`}
+          to={paths.property(property.id)}
           state={{ companyId }}
           onClick={() => setIsExpanded(!isExpanded)}
         >

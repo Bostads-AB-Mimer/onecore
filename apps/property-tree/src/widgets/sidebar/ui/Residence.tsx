@@ -5,6 +5,7 @@ import { Residence } from '@/services/types'
 
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
 import { toTitleCase } from '@/shared/lib/textUtils'
+import { paths } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
@@ -37,7 +38,7 @@ export function ResidenceNavigation({
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton asChild tooltip={residence.name} isActive={isSelected}>
         <Link
-          to={`/residences/${residence.id}`}
+          to={paths.residence(residence.id)}
           state={{ buildingCode, staircaseCode, propertyId, companyId }}
         >
           <Hotel />

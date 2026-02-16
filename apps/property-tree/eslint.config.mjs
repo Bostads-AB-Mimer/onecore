@@ -132,13 +132,19 @@ export default defineConfig([
       },
       'boundaries/elements': [
         // FSD layers (bottom → top): shared → services → entities → features → widgets → pages → app
-        { type: 'shared', pattern: 'src/shared/*' },
-        { type: 'services', pattern: 'src/services/*' },
+        //
+        // Layers with entry-point rules (features, entities, widgets) use 'src/layer/*'
+        // so each sub-folder is an individual element (e.g. src/features/buildings).
+        //
+        // Other layers use 'src/layer' — the entire folder is one element,
+        // covering both direct files and sub-folders.
+        { type: 'shared', pattern: 'src/shared' },
+        { type: 'services', pattern: 'src/services' },
         { type: 'entities', pattern: 'src/entities/*' },
         { type: 'features', pattern: 'src/features/*' },
         { type: 'widgets', pattern: 'src/widgets/*' },
-        { type: 'pages', pattern: 'src/pages/*' },
-        { type: 'app', pattern: 'src/app/*' },
+        { type: 'pages', pattern: 'src/pages' },
+        { type: 'app', pattern: 'src/app' },
         // Legacy (to be migrated)
         {
           type: 'legacy',

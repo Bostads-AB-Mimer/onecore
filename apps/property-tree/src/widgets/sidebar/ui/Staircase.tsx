@@ -4,6 +4,7 @@ import { GitGraph } from 'lucide-react'
 
 import { Building, Staircase } from '@/services/types'
 
+import { paths } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { ResidenceList } from './ResidenceList'
@@ -23,7 +24,7 @@ export function StaircaseNavigation({
     <SidebarMenuItem>
       <SidebarMenuButton asChild tooltip={staircase.name || staircase.code}>
         <Link
-          to={`/staircases/${building.code}/${staircase.id}`}
+          to={paths.staircase(building.code, staircase.id)}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <GitGraph />
