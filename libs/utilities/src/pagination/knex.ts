@@ -13,7 +13,7 @@ import {
  * @param ctx - Koa context
  * @param additionalParams - Additional query parameters to include in pagination links
  * @param defaultLimit - Default number of records per page (default: 20)
- * @param knownTotalCount - If provided, skip the COUNT query and use this value.
+ * @param totalCount - If provided, skip the COUNT query and use this value.
  *                          Useful for export pagination where total is known from page 1.
  * @returns Paginated response with content, _meta, and _links
  */
@@ -22,17 +22,17 @@ export async function paginateKnex<T>(
   ctx: Context,
   additionalParams: Record<string, string> = {},
   defaultLimit = 20,
-  knownTotalCount?: number
+  totalCount?: number
 ): Promise<PaginatedResponse<T>> {
   const { limit, offset } = parsePaginationParams(ctx, defaultLimit)
 
   let totalRecords: number
   let rows: T[]
 
-  if (knownTotalCount !== undefined) {
+  if (totalCount !== undefined) {
     // Skip COUNT query when total is already known
     rows = (await query.limit(limit).offset(offset)) as T[]
-    totalRecords = knownTotalCount
+    totalRecords = totalCount
   } else {
     // Run count and data queries in parallel
     const [countResult, dataRows] = await Promise.all([

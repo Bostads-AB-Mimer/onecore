@@ -899,20 +899,15 @@ const exportLeasesToExcel = async (
   queryParams: Record<string, string | string[] | undefined>
 ): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
   try {
-    const params = new URLSearchParams()
-
-    Object.entries(queryParams).forEach(([key, value]) => {
-      if (value === undefined) return
-      if (Array.isArray(value)) {
-        value.forEach((v) => params.append(key, v))
-      } else {
-        params.append(key, value)
-      }
-    })
-
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/leases/export?${params.toString()}`,
-      { responseType: 'arraybuffer' }
+      `${tenantsLeasesServiceUrl}/leases/export`,
+      {
+        params: queryParams,
+        responseType: 'arraybuffer',
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
     )
 
     return {
