@@ -23,7 +23,7 @@ export default defineConfig([
     tsconfig: './tsconfig.build.json',
     sourcemap: true,
     clean: false,
-    bundle: false,
+    bundle: true,
     splitting: false,
     dts: {
       entry: ['src/index.ts', 'src/domain/index.ts', 'src/schema.ts'],
