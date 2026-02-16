@@ -92,7 +92,7 @@ export function useKeyLoans(
     } finally {
       setLoading(false)
     }
-  }, [lease.rentalPropertyId, returned, enabled])
+  }, [lease.rentalPropertyId, lease.tenants, returned, enabled])
 
   useEffect(() => {
     fetchKeyLoans()
