@@ -401,7 +401,7 @@ export const routes = (router: KoaRouter) => {
       // Create Excel using streaming - fetches pages incrementally
       const buffer =
         await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
-          async (page: number, limit: number, knownTotalCount?: number) => {
+          async (page: number, limit: number, totalCount?: number) => {
             // Use a derived context with overridden query instead of mutating ctx.query
             const paginationCtx = Object.create(ctx)
             paginationCtx.query = {
@@ -412,7 +412,7 @@ export const routes = (router: KoaRouter) => {
 
             return await searchLeases(queryParams.data, paginationCtx, {
               forExport: true,
-              knownTotalCount,
+              totalCount,
             })
           },
           {
