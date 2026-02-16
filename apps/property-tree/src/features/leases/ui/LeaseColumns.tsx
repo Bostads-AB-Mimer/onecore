@@ -4,6 +4,7 @@ import { formatDate, LeaseStatusBadge } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
+import { paths } from '@/shared/routes'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 
 export const leaseColumns = [
@@ -28,7 +29,7 @@ export const leaseColumns = [
           {lease.contacts.map((contact) => (
             <div key={contact.contactCode}>
               <Link
-                to={`/tenants/${contact.contactCode}`}
+                to={paths.tenant(contact.contactCode)}
                 className="font-medium text-primary hover:underline"
               >
                 {contact.name}

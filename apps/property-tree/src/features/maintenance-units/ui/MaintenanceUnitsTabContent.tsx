@@ -3,6 +3,7 @@ import { ChevronRight, FilePlus, Wrench } from 'lucide-react'
 
 import type { MaintenanceUnit } from '@/services/types'
 
+import { paths } from '@/shared/routes'
 import {
   Accordion,
   AccordionContent,
@@ -29,7 +30,7 @@ interface MaintenanceUnitsTabContentProps {
 // Reusable component for rendering a single maintenance unit item
 const MaintenanceUnitItem = ({ unit }: { unit: MaintenanceUnit }) => (
   <Link
-    to={`/maintenance-units/${unit.code}`}
+    to={paths.maintenanceUnit(unit.code)}
     className="block p-3 bg-background rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
   >
     <div className="flex justify-between items-start gap-2">

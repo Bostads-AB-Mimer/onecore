@@ -6,6 +6,7 @@ import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
 
 import type { Lease } from '@/services/api/core/leaseService'
 
+import { paths } from '@/shared/routes'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
@@ -55,7 +56,7 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
             <div key={tenant.contactCode}>
               {isValidContact ? (
                 <Link
-                  to={`/tenants/${tenant.contactCode}`}
+                  to={paths.tenant(tenant.contactCode)}
                   className="font-medium text-primary hover:underline"
                 >
                   {tenant.fullName}
@@ -152,7 +153,7 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
                 <span className="text-muted-foreground">Hyresgäst:</span>
                 {isValidContact ? (
                   <Link
-                    to={`/tenants/${primaryTenant?.contactCode}`}
+                    to={paths.tenant(primaryTenant?.contactCode ?? '')}
                     className="font-medium text-primary hover:underline"
                   >
                     {primaryTenant?.fullName}

@@ -5,6 +5,7 @@ import { Warehouse } from 'lucide-react'
 import { Building, Property } from '@/services/types'
 
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
+import { matchesRoute, paths, routes } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
@@ -30,8 +31,8 @@ export function BuildingNavigation({
     building.id
   )
   const isDirectlySelected =
-    selectionState.selectedBuildingId === building.id &&
-    location.pathname.startsWith('/buildings/')
+    selectionState.selectedBuildingCode === building.code &&
+    matchesRoute(routes.building, location.pathname)
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
   const [isExpanded, setIsExpanded] = React.useState(shouldAutoExpand)
@@ -56,7 +57,7 @@ export function BuildingNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={`/buildings/${building.id}`}
+          to={paths.building(building.code)}
           state={{
             propertyId: property.id,
             buildingCode: building.code,

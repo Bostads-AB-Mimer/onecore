@@ -6,8 +6,8 @@ import type { PropertyDetail } from '@/shared/types/api'
 
 import { useProperty } from './useProperty'
 
-export function usePropertyDetails(propertyId: string | undefined) {
-  const propertyQuery = useProperty(propertyId)
+export function usePropertyDetails(propertyCode: string | undefined) {
+  const propertyQuery = useProperty(propertyCode)
 
   const buildingsQuery = useQuery({
     queryKey: ['buildings', propertyQuery.data?.code],

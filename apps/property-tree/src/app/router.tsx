@@ -20,13 +20,15 @@ import { TenantsPage } from '@/pages/TenantsPage'
 
 import { AuthCallback } from '@/features/auth'
 
+import { routes } from '@/shared/routes'
+
 import { AppLayout } from './layouts/AppLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { ProtectedRoute } from './ProtectedRoute'
 
 export const router: RouterProviderProps['router'] = createBrowserRouter([
   {
-    path: '/callback',
+    path: routes.callback,
     element: <AuthCallback />,
   },
   {
@@ -36,12 +38,12 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
         element: <DashboardLayout />,
         children: [
           {
-            path: '/',
+            path: routes.dashboard,
             element: <DashboardPage />,
             handle: { title: 'Startsida' },
           },
           {
-            path: '/sv',
+            path: '/sv', // alias for dashboard
             element: <DashboardPage />,
             handle: { title: 'Startsida' },
           },
@@ -51,82 +53,82 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
         element: <AppLayout />,
         children: [
           {
-            path: 'companies/:companyId',
+            path: routes.company,
             element: <CompanyPage />,
             handle: { title: 'Företag' },
           },
           {
-            path: 'properties',
+            path: routes.properties,
             element: <SearchPage />,
             handle: { title: 'Fastigheter' },
           },
           {
-            path: 'properties/:propertyId',
+            path: routes.property,
             element: <PropertyPage />,
             handle: { title: 'Fastighet' },
           },
           {
-            path: 'buildings/:buildingId',
+            path: routes.building,
             element: <BuildingView />,
             handle: { title: 'Byggnad' },
           },
           {
-            path: 'components',
+            path: routes.components,
             element: <ComponentLibraryPage />,
             handle: { title: 'Komponenter' },
           },
           {
-            path: 'staircases/:buildingId/:staircaseId',
+            path: routes.staircase,
             element: <StaircasePage />,
             handle: { title: 'Uppgång' },
           },
           {
-            path: 'residences/:residenceId',
+            path: routes.residence,
             element: <ResidencePage />,
             handle: { title: 'Bostad' },
           },
           {
-            path: 'residences/:residenceId/rooms/:roomId',
+            path: routes.room,
             element: <RoomPage />,
             handle: { title: 'Rum' },
           },
           {
-            path: 'parking-spaces/:rentalId',
+            path: routes.parkingSpace,
             element: <ParkingSpacePage />,
             handle: { title: 'Bilplats' },
           },
           {
-            path: 'maintenance-units/:code',
+            path: routes.maintenanceUnit,
             element: <MaintenanceUnitPage />,
             handle: { title: 'Underhållsenhet' },
           },
           {
-            path: 'facilities/:rentalId',
+            path: routes.facility,
             element: <FacilityPage />,
             handle: { title: 'Lokal' },
           },
           {
-            path: 'tenants',
+            path: routes.tenants,
             element: <TenantsPage />,
             handle: { title: 'Kunder' },
           },
           {
-            path: 'tenants/:contactCode',
+            path: routes.tenant,
             element: <TenantPage />,
             handle: { title: 'Kund' },
           },
           {
-            path: 'rental-blocks',
+            path: routes.rentalBlocks,
             element: <RentalBlocksPage />,
             handle: { title: 'Spärrar' },
           },
           {
-            path: 'leases',
+            path: routes.leases,
             element: <LeasesPage />,
             handle: { title: 'Hyreskontrakt' },
           },
           {
-            path: 'inspections',
+            path: routes.inspections,
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
           },

@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
+import { paths } from '@/shared/routes'
 import type { Building } from '@/shared/types/api'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
@@ -17,7 +18,9 @@ export const PropertyBuildingCard = ({
 
   const handleOpenBuilding = () => {
     // Create a URL-friendly building name
-    navigate(`/buildings/${building.id}`, { state: { companyId } })
+    navigate(paths.building(building.code), {
+      state: { companyId },
+    })
   }
 
   return (
