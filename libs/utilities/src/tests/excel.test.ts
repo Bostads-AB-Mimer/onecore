@@ -22,9 +22,11 @@ describe('formatDateForExcel', () => {
     expect(formatDateForExcel(undefined)).toBe('')
   })
 
-  it('should handle Date with time component', () => {
+  it('should handle Date near midnight UTC', () => {
     const date = new Date('2024-12-25T23:59:59.999Z')
-    expect(formatDateForExcel(date)).toBe('2024-12-26') // UTC+1 timezone
+    // Result depends on local timezone — verify it matches JS locale formatting
+    const expected = new Date(date).toLocaleDateString('sv-SE')
+    expect(formatDateForExcel(date)).toBe(expected)
   })
 })
 
