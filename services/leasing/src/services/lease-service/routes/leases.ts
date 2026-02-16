@@ -10,7 +10,6 @@ import { Contact, Lease, leasing, schemas } from '@onecore/types'
 import {
   getContactByContactCode,
   getContactsByLeaseId,
-  getLeasesForPropertyId,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
@@ -431,12 +430,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Include contact information in the result.
-   *       - in: query
-   *         name: includeRentInfo
-   *         schema:
-   *           type: boolean
-   *           default: true
-   *         description: Include rent information in the result. Defaults to true.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -542,101 +535,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
-
-  /**
-   * @swagger
-   * /leases/for/propertyId/{propertyId}:
-   *   get:
-   *     summary: Get leases by property ID
-   *     description: Retrieve leases associated with a property by property ID.
-   *     tags: [Leases]
-   *     parameters:
-   *       - in: path
-   *         name: propertyId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the property.
-   *       - in: query
-   *         name: includeTerminatedLeases
-   *         schema:
-   *           type: boolean
-   *         description: Include terminated leases in the result.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
-   *       - in: query
-   *         name: includeRentInfo
-   *         schema:
-   *           type: boolean
-   *           default: true
-   *         description: Include rent information in the result. Defaults to true.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved leases.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     description: Lease details.
-   *       500:
-   *         description: Internal server error. Failed to retrieve leases.
-   */
-
-  const getLeasesForPropertyIdQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeRentInfo: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value !== 'false'), // defaults to true
-  })
-
-  router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-      'includeRentInfo',
-    ])
-
-    const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
-      ctx.query
-    )
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
-
-    const responseData = await getLeasesForPropertyId(ctx.params.propertyId, {
-      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-      includeContacts: queryParams.data.includeContacts,
-      includeRentInfo: queryParams.data.includeRentInfo,
-    })
-
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
 
   /**
    * @swagger
