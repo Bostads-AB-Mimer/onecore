@@ -12,18 +12,18 @@ export { generatePath }
 export const routes = {
   dashboard: '/',
   properties: '/fastigheter',
-  property: '/fastigheter/:propertyId',
+  property: '/fastigheter/:propertyId', // -- byts ut mot :propertyCode
   building: '/byggnader/:buildingCode', // klar
-  staircase: '/uppgångar/:buildingCode/:staircaseId',
-  residence: '/bostäder/:residenceId',
-  room: '/bostäder/:residenceId/rum/:roomId',
-  parkingSpace: '/bilplatser/:rentalId',
-  maintenanceUnit: '/underhållsenheter/:code', // klar
-  facility: '/lokaler/:rentalId',
-  company: '/företag/:companyId',
-  tenants: '/hyresgäster',
-  tenant: '/hyresgäster/:contactCode',
-  rentalBlocks: '/spärrar',
+  staircase: '/uppgangar/:buildingCode/:staircaseId', // -- byts ut mot :buildingCode/:staircaseCode
+  residence: '/bostader/:residenceId', // -- byts ut mot :rentalId
+  room: '/bostader/:residenceId/rum/:roomId', // -- byts ut mot :rentalId/rum/:roomCode
+  parkingSpace: '/bilplatser/:rentalId', // klar
+  maintenanceUnit: '/underhallsenheter/:code', // klar
+  facility: '/lokaler/:rentalId', // klar
+  company: '/foretag/:companyId', // -- byts ut mot :organizationNumber
+  tenants: '/hyresgaster',
+  tenant: '/hyresgaster/:contactCode', // klar
+  rentalBlocks: '/sparrar',
   leases: '/hyreskontrakt',
   inspections: '/besiktningar',
   components: '/komponenter',
@@ -37,8 +37,8 @@ export type RoutePath = (typeof routes)[keyof typeof routes]
  *
  *   paths.property('123')            →  '/fastigheter/123'
  *   paths.building('B01')            →  '/byggnader/B01'
- *   paths.staircase('B01', 'S1')     →  '/uppgångar/B01/S1'
- *   paths.room('R1', 'RM1')          →  '/bostäder/R1/rum/RM1'
+ *   paths.staircase('B01', 'S1')     →  '/uppgangar/B01/S1'
+ *   paths.room('R1', 'RM1')          →  '/bostader/R1/rum/RM1'
  */
 export const paths = {
   property: (propertyId: string) =>
