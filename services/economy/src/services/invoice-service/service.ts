@@ -403,7 +403,6 @@ export const createAggregateRows = async (batchId: string) => {
     const endDate = invoices[currentStart].invoiceToDate
     const totalAccount = invoices[currentStart].totalAccount
     const counterPart = invoices[currentStart].counterPart
-    console.log('chunk counterpart', invoices[currentStart].counterPart)
 
     for (
       let currentInvoicesIndex = currentStart;
