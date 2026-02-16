@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { KeyDetails, Card, Lease } from '../types'
+
+import type { KeyDetails, Card, Lease } from '@/services/types'
+
+import {
+  categorizeKeys,
+  categorizeCards,
+  assembleReturnReceipt,
+  assembleMaintenanceLoanReceipt,
+} from '../receiptHandlers'
+import { keyLoanService } from '../api/keyLoanService'
+import { fetchContactByContactCode } from '../api/contactService'
 
 vi.mock('../api/receiptService', () => ({
   receiptService: {},
@@ -21,15 +31,6 @@ vi.mock('../api/keyLoanService', () => ({
 vi.mock('../api/contactService', () => ({
   fetchContactByContactCode: vi.fn(),
 }))
-
-import {
-  categorizeKeys,
-  categorizeCards,
-  assembleReturnReceipt,
-  assembleMaintenanceLoanReceipt,
-} from '../receiptHandlers'
-import { keyLoanService } from '../api/keyLoanService'
-import { fetchContactByContactCode } from '../api/contactService'
 
 // --- Minimal fixtures ---
 
