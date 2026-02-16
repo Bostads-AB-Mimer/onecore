@@ -178,13 +178,13 @@ export function setExcelDownloadHeaders(
  * Uses ExcelJS WorkbookWriter which flushes rows to buffer as they're committed,
  * rather than holding all data in memory.
  *
- * The fetcher receives an optional third parameter `knownTotalCount` on pages 2+,
+ * The fetcher receives an optional third parameter `totalCount` on pages 2+,
  * allowing adapters to skip expensive COUNT queries after the first page.
  *
  * @example
  * ```typescript
  * const buffer = await createExcelFromPaginated(
- *   (page, limit, knownTotalCount) => searchLeases({ ...filters, page, limit, knownTotalCount }),
+ *   (page, limit, totalCount) => searchLeases({ ...filters, page, limit, totalCount }),
  *   {
  *     sheetName: 'Hyreskontrakt',
  *     columns: [
@@ -200,8 +200,8 @@ export function setExcelDownloadHeaders(
  * )
  * ```
  *
- * @param fetcher - Function that fetches a single page. Receives (page, limit, knownTotalCount?)
- *                  where knownTotalCount is provided on pages 2+ to allow skipping COUNT queries.
+ * @param fetcher - Function that fetches a single page. Receives (page, limit, totalCount?)
+ *                  where totalCount is provided on pages 2+ to allow skipping COUNT queries.
  * @param options - Excel export options plus optional batchSize (default: 500)
  * @returns Buffer containing the Excel file
  */
@@ -209,7 +209,7 @@ export async function createExcelFromPaginated<T>(
   fetcher: (
     page: number,
     limit: number,
-    knownTotalCount?: number
+    totalCount?: number
   ) => Promise<PaginatedResponse<T>>,
   options: Omit<ExcelExportOptions<T>, 'data'> & { batchSize?: number }
 ): Promise<Buffer> {

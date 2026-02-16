@@ -1280,7 +1280,7 @@ export interface SearchRentalBlocksOptions {
    * If provided, skip the COUNT query and use this value as totalCount.
    * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
    */
-  knownTotalCount?: number
+  totalCount?: number
 }
 
 /**
@@ -1303,7 +1303,7 @@ async function searchRentalBlocksWithDistriktRaw(
     active,
     limit,
     offset,
-    knownTotalCount,
+    totalCount,
   } = options
 
   const conditions: string[] = []
@@ -1397,10 +1397,10 @@ async function searchRentalBlocksWithDistriktRaw(
 
   const whereClause = conditions.join(' AND ')
 
-  // Skip COUNT query if knownTotalCount is provided (e.g., from page 1 of export)
-  let totalCount: number
-  if (knownTotalCount !== undefined) {
-    totalCount = knownTotalCount
+  // Skip COUNT query if totalCount is provided (e.g., from page 1 of export)
+  let resolvedTotal: number
+  if (totalCount !== undefined) {
+    resolvedTotal = totalCount
   } else {
     const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
       SELECT COUNT(*) AS count
@@ -1410,7 +1410,7 @@ async function searchRentalBlocksWithDistriktRaw(
       LEFT JOIN bafen ON bafen.code = babuf.fencode
       WHERE ${whereClause}
     `)
-    totalCount = countResult[0]?.count ?? 0
+    resolvedTotal = countResult[0]?.count ?? 0
   }
 
   // Get paginated IDs with ordering
@@ -1432,7 +1432,7 @@ async function searchRentalBlocksWithDistriktRaw(
 
   return {
     ids: rows.map((r) => r.id.trim()),
-    totalCount,
+    totalCount: resolvedTotal,
   }
 }
 
@@ -1481,7 +1481,7 @@ export const searchRentalBlocks = async (
   options: SearchRentalBlocksOptions
 ) => {
   try {
-    const { limit, offset, distrikt, knownTotalCount } = options
+    const { limit, offset, distrikt, totalCount: knownTotal } = options
 
     let totalCount: number
     let rentalBlocks: Awaited<
@@ -1522,9 +1522,9 @@ export const searchRentalBlocks = async (
       // No distrikt filter - use standard Prisma query
       const whereClause = buildRentalBlockWhereClause(options)
 
-      // Skip COUNT query if knownTotalCount is provided (e.g., from page 1 of export)
-      if (knownTotalCount !== undefined) {
-        totalCount = knownTotalCount
+      // Skip COUNT query if knownTotal is provided (e.g., from page 1 of export)
+      if (knownTotal !== undefined) {
+        totalCount = knownTotal
         rentalBlocks = await prisma.rentalBlock.findMany({
           where: whereClause,
           include: rentalBlockInclude,

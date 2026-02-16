@@ -51,7 +51,7 @@ export interface LeaseSearchOptions {
    * If provided, skip the COUNT query and use this value as totalRecords.
    * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
    */
-  knownTotalCount?: number
+  totalCount?: number
 }
 
 /**
@@ -565,13 +565,13 @@ export const searchLeases = async (
 
   const query = builder.getQuery()
 
-  // Use pagination utility (pass knownTotalCount to skip COUNT on pages 2+)
+  // Use pagination utility (pass totalCount to skip COUNT on pages 2+)
   const paginatedResult = await paginateKnex<any>(
     query,
     ctx,
     {},
     params.limit,
-    options?.knownTotalCount
+    options?.totalCount
   )
 
   // Transform rows and parse contacts JSON
