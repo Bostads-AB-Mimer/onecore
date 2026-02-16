@@ -41,6 +41,7 @@ import {
 
 import { useInspectionPdfDownload } from '../hooks/useInspectionPdfDownload'
 import { useSendInspectionProtocol } from '../hooks/useSendInspectionProtocol'
+import { InspectionProtocolDropdown } from './InspectionProtocolDropdown'
 
 type DetailedInspection = components['schemas']['DetailedInspection']
 type DetailedInspectionRoomEntry = DetailedInspection['rooms'][number]
@@ -110,7 +111,12 @@ export function InspectionProtocol({
 
   const handleDownloadPdf = async () => {
     if (!inspection?.id) return
-    await downloadPdf(inspection.id)
+    await downloadPdf(inspection.id, undefined, { includeCosts: true })
+  }
+
+  const handleDownloadPdfWithoutCosts = async () => {
+    if (!inspection?.id) return
+    await downloadPdf(inspection.id, undefined, { includeCosts: false })
   }
 
   const handleOpenSendModal = (recipient: 'new-tenant' | 'tenant') => {
@@ -429,59 +435,18 @@ export function InspectionProtocol({
 
   const renderContent = () => (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-end gap-2 items-center">
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={!inspection || isDownloadingPdf}
-          className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
-        >
-          {isDownloadingPdf ? 'Genererar PDF…' : 'Generera PDF'}
-        </button>
-
-        <div className="relative group">
-          <button
-            type="button"
-            onClick={() => handleOpenSendModal('new-tenant')}
-            disabled={
-              !inspection ||
-              isSending ||
-              isFetchingContacts ||
-              !hasNewTenantContacts
-            }
-            className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Mail className="h-4 w-4 mr-1" />
-            Skicka till ny hyresgäst
-          </button>
-          {!isFetchingContacts && !hasNewTenantContacts && tenantContacts && (
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-foreground text-background rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Kontaktuppgifter saknas för ny hyresgäst
-            </span>
-          )}
-        </div>
-
-        <div className="relative group">
-          <button
-            type="button"
-            onClick={() => handleOpenSendModal('tenant')}
-            disabled={
-              !inspection ||
-              isSending ||
-              isFetchingContacts ||
-              !hasTenantContacts
-            }
-            className="inline-flex items-center rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Mail className="h-4 w-4 mr-1" />
-            Skicka till hyresgäst
-          </button>
-          {!isFetchingContacts && !hasTenantContacts && tenantContacts && (
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-foreground text-background rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Kontaktuppgifter saknas för hyresgäst
-            </span>
-          )}
-        </div>
+      <div className="flex justify-end">
+        <InspectionProtocolDropdown
+          onDownloadPdf={handleDownloadPdf}
+          onDownloadPdfWithoutCosts={handleDownloadPdfWithoutCosts}
+          onSendToNewTenant={() => handleOpenSendModal('new-tenant')}
+          onSendToTenant={() => handleOpenSendModal('tenant')}
+          isDownloading={isDownloadingPdf}
+          isSending={isSending}
+          hasNewTenantContacts={hasNewTenantContacts || false}
+          hasTenantContacts={hasTenantContacts || false}
+          isFetchingContacts={isFetchingContacts}
+        />
       </div>
       {renderHeader()}
       <Card>

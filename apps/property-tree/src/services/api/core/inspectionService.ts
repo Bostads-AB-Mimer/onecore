@@ -85,11 +85,17 @@ export const inspectionService = {
     return inspectionResponse.data.content
   },
 
-  async getInspectionPdfBase64(inspectionId: string): Promise<string> {
+  async getInspectionPdfBase64(
+    inspectionId: string,
+    options?: { includeCosts?: boolean }
+  ): Promise<string> {
     const pdfResponse = await GET(
       '/inspections/xpand/{inspectionId}/pdf' as any,
       {
-        params: { path: { inspectionId } },
+        params: {
+          path: { inspectionId },
+          query: { includeCosts: options?.includeCosts ?? true },
+        },
       }
     )
     if (pdfResponse.error) throw pdfResponse.error
