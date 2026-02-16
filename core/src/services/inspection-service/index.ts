@@ -430,6 +430,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the inspection to generate a PDF for.
+   *       - in: query
+   *         name: includeCosts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include cost information in the PDF.
    *     responses:
    *       '200':
    *         description: Successfully generated PDF protocol.
@@ -470,6 +477,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/inspections/xpand/:inspectionId/pdf', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
+    const includeCosts = ctx.query.includeCosts !== 'false'
 
     try {
       const result = await fetchEnrichedInspection(inspectionId)
@@ -479,7 +487,9 @@ export const routes = (router: KoaRouter) => {
 
         let protocol
         try {
-          protocol = await generateInspectionProtocolPdf(inspection)
+          protocol = await generateInspectionProtocolPdf(inspection, {
+            includeCosts,
+          })
         } catch (pdfError) {
           logger.error(
             {

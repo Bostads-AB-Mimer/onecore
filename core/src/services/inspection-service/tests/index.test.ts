@@ -608,7 +608,10 @@ describe('inspection-service index', () => {
       expect(res.body.content).toHaveProperty('pdfBase64')
       expect(res.body.content.pdfBase64).toBe(mockPdfBuffer.toString('base64'))
       expect(getXpandInspectionByIdSpy).toHaveBeenCalledWith('inspection-123')
-      expect(generateInspectionProtocolPdfSpy).toHaveBeenCalled()
+      expect(generateInspectionProtocolPdfSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        { includeCosts: true }
+      )
     })
 
     it('should return 500 if PDF generation fails', async () => {
@@ -647,6 +650,80 @@ describe('inspection-service index', () => {
       expect(res.body.error).toBe('Internal server error')
       expect(getXpandInspectionByIdSpy).toHaveBeenCalledWith('inspection-123')
       expect(generateInspectionProtocolPdfSpy).toHaveBeenCalled()
+    })
+
+    it('should generate PDF without costs when includeCosts=false', async () => {
+      const mockDetailedInspection = DetailedXpandInspectionFactory.build()
+      const mockLease = LeaseFactory.build()
+      const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+      const mockPdfBuffer = Buffer.from('%PDF-1.4...')
+
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: mockDetailedInspection,
+        })
+
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockResidence,
+        })
+
+      const generateInspectionProtocolPdfSpy = jest
+        .spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
+        .mockResolvedValue(mockPdfBuffer)
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123/pdf?includeCosts=false'
+      )
+
+      expect(res.status).toBe(200)
+      expect(generateInspectionProtocolPdfSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        { includeCosts: false }
+      )
+    })
+
+    it('should generate PDF with costs by default when includeCosts is not specified', async () => {
+      const mockDetailedInspection = DetailedXpandInspectionFactory.build()
+      const mockLease = LeaseFactory.build()
+      const mockResidence = ResidenceByRentalIdDetailsFactory.build()
+      const mockPdfBuffer = Buffer.from('%PDF-1.4...')
+
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: mockDetailedInspection,
+        })
+
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
+
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValue({
+          ok: true,
+          data: mockResidence,
+        })
+
+      const generateInspectionProtocolPdfSpy = jest
+        .spyOn(pdfGenerator, 'generateInspectionProtocolPdf')
+        .mockResolvedValue(mockPdfBuffer)
+
+      const res = await request(app.callback()).get(
+        '/inspections/xpand/inspection-123/pdf'
+      )
+
+      expect(res.status).toBe(200)
+      expect(generateInspectionProtocolPdfSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        { includeCosts: true }
+      )
     })
   })
 })
