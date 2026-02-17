@@ -1,5 +1,10 @@
 import createClient from 'openapi-fetch'
-import { logger, PaginatedResponse } from '@onecore/utilities'
+import {
+  logger,
+  PaginatedResponse,
+  PaginationMeta,
+  PaginationLinks,
+} from '@onecore/utilities'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
@@ -53,8 +58,8 @@ export const getXpandInspections = async ({
       ok: true,
       data: {
         content: fetchResponse.data.content,
-        _meta: fetchResponse.data._meta!,
-        _links: fetchResponse.data._links!,
+        _meta: fetchResponse.data._meta as PaginationMeta,
+        _links: fetchResponse.data._links as PaginationLinks[],
       },
     }
   } catch (error) {
