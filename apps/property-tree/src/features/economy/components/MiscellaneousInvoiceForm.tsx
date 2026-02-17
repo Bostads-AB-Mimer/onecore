@@ -34,9 +34,9 @@ import { LeaseContractSection } from './LeaseContractSection'
 import { TenantSearchSection } from './TenantSearchSection'
 
 interface FormErrors {
-  kundnummer?: string
-  hyreskontrakt?: string
-  artikel?: string
+  contactCode?: string
+  leaseId?: string
+  articles?: string
 }
 
 export function MiscellaneousInvoiceForm() {
@@ -74,16 +74,22 @@ export function MiscellaneousInvoiceForm() {
     useState<TenantSearchResult | null>(null)
   const { data: leases } = useLeasesByContactCode(selectedTenant?.contactCode)
 
-  const [leaseId, setLeaseId] = useState('')
+  const [leaseId, setLeaseId] = useState<string | null>(null)
   const [selectedLease, setSelectedLease] = useState<CoreLease | null>(null)
 
   const { data: miscellaneousInvoiceDataForLease } =
     useMiscellaneousInvoiceDataForLease(selectedLease?.leaseId)
 
-  const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
-    { text: '', price: 0, articleId: '', articleName: '' },
-  ])
+  const [costCentre, setCostCentre] = useState<string | undefined>(
+    miscellaneousInvoiceDataForLease?.costCentre
+  )
+  const [propertyCode, setPropertyCode] = useState<string | undefined>(
+    miscellaneousInvoiceDataForLease?.propertyCode
+  )
 
+  const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
+    { price: 0, articleId: '', articleName: '' },
+  ])
   const [projectCode, setProjectCode] = useState('')
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
@@ -92,16 +98,11 @@ export function MiscellaneousInvoiceForm() {
 
   const handleCustomerSelect = (tenant: TenantSearchResult | null) => {
     setSelectedTenant(tenant)
-    if (tenant) {
-      // Reset lease-related fields
-      setLeaseId('')
-    } else {
-      setLeaseId('')
-    }
-    setErrors((prev) => ({ ...prev, kundnummer: undefined }))
+    setLeaseId(null)
+    setCostCentre(undefined)
+    setPropertyCode(undefined)
+    setErrors((prev) => ({ ...prev, contactCode: undefined }))
   }
-
-  useEffect(() => {}, [selectedTenant])
 
   const handleLeaseSelect = (leaseId: string) => {
     setLeaseId(leaseId)
@@ -109,38 +110,34 @@ export function MiscellaneousInvoiceForm() {
     if (lease) {
       setSelectedLease(lease)
     }
-    setErrors((prev) => ({ ...prev, hyreskontrakt: undefined }))
+    setErrors((prev) => ({ ...prev, leaseId: undefined }))
   }
 
+  useEffect(() => {
+    setCostCentre(miscellaneousInvoiceDataForLease?.costCentre)
+    setPropertyCode(miscellaneousInvoiceDataForLease?.propertyCode)
+  }, [miscellaneousInvoiceDataForLease])
+
   const validateForm = (): boolean => {
-    const formData = {
-      datum: invoiceDate,
-      kundnummer: selectedTenant?.contactCode,
-      kundnamn: selectedTenant?.fullName,
-      hyreskontrakt: leaseId,
-      invoiceRows,
-      projekt: projectCode,
-      internInfo: comment,
+    const newErrors: FormErrors = {}
+
+    if (!selectedTenant) {
+      newErrors.contactCode = 'Kund måste väljas'
     }
 
-    // const result = strofakturaSchema.safeParse(formData)
+    if (!leaseId) {
+      newErrors.leaseId = 'Hyreskontrakt måste väljas'
+    }
 
-    // if (!result.success) {
-    //   const newErrors: FormErrors = {}
-    //   result.error.errors.forEach((err) => {
-    //     const field = err.path[0] as keyof FormErrors
-    //     if (
-    //       ['kundnummer', 'hyreskontrakt', 'artikel'].includes(field as string)
-    //     ) {
-    //       newErrors[field] = err.message
-    //     }
-    //   })
-    //   setErrors(newErrors)
-    //   return false
-    // }
+    const hasValidInvoiceRows = invoiceRows.some(
+      (row) => row.articleId !== '' && row.price !== 0
+    )
+    if (!hasValidInvoiceRows) {
+      newErrors.articles = 'Minst en artikel eller tjänst måste läggas till'
+    }
 
-    setErrors({})
-    return true
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -162,7 +159,6 @@ export function MiscellaneousInvoiceForm() {
         rows.push({
           articleId: article.id,
           articleName: article.name,
-          text: article.name,
           price: article.standardPrice,
         })
       }
@@ -173,7 +169,6 @@ export function MiscellaneousInvoiceForm() {
         rows.push({
           articleId: article.id,
           articleName: article.name,
-          text: article.name,
           price: article.standardPrice,
         })
       }
@@ -186,9 +181,9 @@ export function MiscellaneousInvoiceForm() {
       invoiceDate: invoiceDate,
       contactCode: selectedTenant?.contactCode ?? '',
       tenantName: selectedTenant?.fullName ?? '',
-      leaseId: leaseId,
-      costCentre: miscellaneousInvoiceDataForLease.costCentre,
-      propertyCode: miscellaneousInvoiceDataForLease.propertyCode,
+      leaseId: leaseId ?? '',
+      costCentre: miscellaneousInvoiceDataForLease?.costCentre ?? '',
+      propertyCode: miscellaneousInvoiceDataForLease?.propertyCode ?? '',
       projectCode: projectCode,
       comment: comment,
       invoiceRows: rows,
@@ -205,7 +200,7 @@ export function MiscellaneousInvoiceForm() {
     setSelectedTenant(null)
     setLeaseId('')
     setSelectedLease(null)
-    setInvoiceRows([{ text: '', price: 0, articleId: '', articleName: '' }])
+    setInvoiceRows([{ price: 0, articleId: '', articleName: '' }])
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)
@@ -275,7 +270,7 @@ export function MiscellaneousInvoiceForm() {
               value={selectedTenant?.contactCode}
               tenantName={selectedTenant?.fullName}
               onCustomerSelect={handleCustomerSelect}
-              error={errors.kundnummer}
+              error={errors.contactCode}
             />
           </div>
 
@@ -287,10 +282,10 @@ export function MiscellaneousInvoiceForm() {
             <LeaseContractSection
               leaseContracts={leases ?? []}
               selectedLease={leaseId}
-              costCentre={miscellaneousInvoiceDataForLease?.costCentre}
-              propertyCode={miscellaneousInvoiceDataForLease?.propertyCode}
+              costCentre={costCentre}
+              propertyCode={propertyCode}
               onLeaseSelect={handleLeaseSelect}
-              error={errors.hyreskontrakt}
+              error={errors.leaseId}
               disabled={!selectedTenant}
             />
           </div>
@@ -308,7 +303,7 @@ export function MiscellaneousInvoiceForm() {
               onAdministrativaKostnaderChange={setAdministrativeCosts}
               onHanteringsavgiftChange={setHandlingFee}
               errors={{
-                artikel: errors.artikel,
+                articles: errors.articles,
               }}
             />
           </div>
@@ -341,7 +336,12 @@ export function MiscellaneousInvoiceForm() {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || submitInvoiceMutation.isPending}
+              disabled={
+                isSubmitting ||
+                submitInvoiceMutation.isPending ||
+                !selectedTenant ||
+                !leaseId
+              }
             >
               {isSubmitting || submitInvoiceMutation.isPending
                 ? 'Sparar...'

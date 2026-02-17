@@ -24,7 +24,7 @@ interface ArticleSectionProps {
   onAdministrativaKostnaderChange: (checked: boolean) => void
   onHanteringsavgiftChange: (checked: boolean) => void
   errors?: {
-    artikel?: string
+    articles?: string
   }
 }
 
@@ -59,7 +59,7 @@ export function ArticleSection({
   const handleAddRow = () => {
     onInvoiceRowsChange([
       ...invoiceRows,
-      { text: '', price: 0, articleId: '', articleName: '' },
+      { price: 0, articleId: '', articleName: '' },
     ])
   }
 
@@ -89,7 +89,7 @@ export function ArticleSection({
                 >
                   <SelectTrigger
                     id="artikel"
-                    className={cn(errors?.artikel && 'border-destructive')}
+                    className={cn(errors?.articles && 'border-destructive')}
                   >
                     <SelectValue placeholder="Välj artikel" />
                   </SelectTrigger>
@@ -101,8 +101,8 @@ export function ArticleSection({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors?.artikel && (
-                  <p className="text-sm text-destructive">{errors.artikel}</p>
+                {errors?.articles && (
+                  <p className="text-sm text-destructive">{errors.articles}</p>
                 )}
               </div>
 
