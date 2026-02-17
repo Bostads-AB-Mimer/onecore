@@ -10,6 +10,8 @@ export interface MiscellaneousInvoicePayload {
   handlingFee: boolean
   comment?: string
   projectCode?: string
+  // @ts-expect-error
+  // eslint-disable-next-line n/no-unsupported-features/node-builtins
   attachment?: File // TODO fix type
 }
 

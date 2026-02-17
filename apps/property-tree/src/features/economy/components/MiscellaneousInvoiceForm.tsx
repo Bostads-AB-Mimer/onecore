@@ -12,6 +12,7 @@ import { useLeasesByContactCode } from '@/entities/lease'
 import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
 
+import { Lease as CoreLease } from '@/services/api/core'
 import { economyService } from '@/services/api/core/economyService'
 
 import { useToast } from '@/shared/hooks/useToast'
@@ -26,6 +27,7 @@ import { Separator } from '@/shared/ui/Separator'
 
 import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
 
+import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { ArticleSection } from './ArticleSection'
 import { LeaseContractSection } from './LeaseContractSection'
@@ -70,13 +72,18 @@ export function MiscellaneousInvoiceForm() {
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
   const [selectedTenant, setSelectedTenant] =
     useState<TenantSearchResult | null>(null)
-  const { data } = useLeasesByContactCode(selectedTenant?.contactCode)
+  const { data: leases } = useLeasesByContactCode(selectedTenant?.contactCode)
+
   const [leaseId, setLeaseId] = useState('')
-  const [costCentre, setCostCentre] = useState('')
-  const [propertyCode, setPropertyCode] = useState('')
+  const [selectedLease, setSelectedLease] = useState<CoreLease | null>(null)
+
+  const { data: miscellaneousInvoiceDataForLease } =
+    useMiscellaneousInvoiceDataForLease(selectedLease?.leaseId)
+
   const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
     { text: '', price: 0, articleId: '', articleName: '' },
   ])
+
   const [projectCode, setProjectCode] = useState('')
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
@@ -88,12 +95,8 @@ export function MiscellaneousInvoiceForm() {
     if (tenant) {
       // Reset lease-related fields
       setLeaseId('')
-      setCostCentre('')
-      setPropertyCode('')
     } else {
       setLeaseId('')
-      setCostCentre('')
-      setPropertyCode('')
     }
     setErrors((prev) => ({ ...prev, kundnummer: undefined }))
   }
@@ -102,10 +105,9 @@ export function MiscellaneousInvoiceForm() {
 
   const handleLeaseSelect = (leaseId: string) => {
     setLeaseId(leaseId)
-    const selectedLease = data?.find((l) => l.leaseId === leaseId)
-    if (selectedLease) {
-      // setKst(selectedLease.district)
-      setPropertyCode(selectedLease?.residentialArea?.code ?? '')
+    const lease = leases?.find((l) => l.leaseId === leaseId)
+    if (lease) {
+      setSelectedLease(lease)
     }
     setErrors((prev) => ({ ...prev, hyreskontrakt: undefined }))
   }
@@ -116,8 +118,6 @@ export function MiscellaneousInvoiceForm() {
       kundnummer: selectedTenant?.contactCode,
       kundnamn: selectedTenant?.fullName,
       hyreskontrakt: leaseId,
-      kst: costCentre,
-      fastighet: propertyCode,
       invoiceRows,
       projekt: projectCode,
       internInfo: comment,
@@ -187,8 +187,8 @@ export function MiscellaneousInvoiceForm() {
       contactCode: selectedTenant?.contactCode ?? '',
       tenantName: selectedTenant?.fullName ?? '',
       leaseId: leaseId,
-      costCentre: costCentre,
-      propertyCode: propertyCode,
+      costCentre: miscellaneousInvoiceDataForLease.costCentre,
+      propertyCode: miscellaneousInvoiceDataForLease.propertyCode,
       projectCode: projectCode,
       comment: comment,
       invoiceRows: rows,
@@ -204,8 +204,7 @@ export function MiscellaneousInvoiceForm() {
     setInvoiceDate(new Date())
     setSelectedTenant(null)
     setLeaseId('')
-    setCostCentre('')
-    setPropertyCode('')
+    setSelectedLease(null)
     setInvoiceRows([{ text: '', price: 0, articleId: '', articleName: '' }])
     setProjectCode('')
     setComment('')
@@ -286,10 +285,10 @@ export function MiscellaneousInvoiceForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Kontraktsinformation</h3>
             <LeaseContractSection
-              leaseContracts={data ?? []}
+              leaseContracts={leases ?? []}
               selectedLease={leaseId}
-              kst={costCentre}
-              fastighet={propertyCode}
+              costCentre={miscellaneousInvoiceDataForLease?.costCentre}
+              propertyCode={miscellaneousInvoiceDataForLease?.propertyCode}
               onLeaseSelect={handleLeaseSelect}
               error={errors.hyreskontrakt}
               disabled={!selectedTenant}
