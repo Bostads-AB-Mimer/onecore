@@ -10,23 +10,15 @@ const {
   KeyNoteSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
-} = keys.v1
-type CreateKeyNoteRequest = keys.v1.CreateKeyNoteRequest
-type UpdateKeyNoteRequest = keys.v1.UpdateKeyNoteRequest
+} = keys
+type CreateKeyNoteRequest = keys.CreateKeyNoteRequest
+type UpdateKeyNoteRequest = keys.UpdateKeyNoteRequest
 
 /**
  * @swagger
  * tags:
  *   - name: KeyNotes
  *     description: Operations for key notes
- * components:
- *   schemas:
- *     CreateKeyNoteRequest:
- *       $ref: '#/components/schemas/CreateKeyNoteRequest'
- *     UpdateKeyNoteRequest:
- *       $ref: '#/components/schemas/UpdateKeyNoteRequest'
- *     KeyNote:
- *       $ref: '#/components/schemas/KeyNote'
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyNoteRequest', CreateKeyNoteRequestSchema)
@@ -176,7 +168,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /key-notes/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a key note
    *     description: Update the description of an existing key note.
    *     tags: [KeyNotes]
@@ -210,7 +202,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: An error occurred while updating the key note.
    */
-  router.patch(
+  router.put(
     '/key-notes/:id',
     parseRequestBody(UpdateKeyNoteRequestSchema),
     async (ctx) => {

@@ -8,21 +8,15 @@ import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
 import * as logsAdapter from '../adapters/logs-adapter'
 
-const { LogSchema, CreateLogRequestSchema, PaginatedResponseSchema } = keys.v1
-type CreateLogRequest = keys.v1.CreateLogRequest
-type Log = keys.v1.Log
+const { LogSchema, CreateLogRequestSchema, PaginatedResponseSchema } = keys
+type CreateLogRequest = keys.CreateLogRequest
+type Log = keys.Log
 
 /**
  * @swagger
  * tags:
  *   - name: Logs
  *     description: Read-only audit logs
- * components:
- *   schemas:
- *     CreateLogRequest:
- *       $ref: '#/components/schemas/CreateLogRequest'
- *     Log:
- *       $ref: '#/components/schemas/Log'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types

@@ -1,8 +1,7 @@
-import { authConfig } from '@/auth-config'
 import { blobToBase64 } from '@/utils/fileUtils'
 
 import type { KeySystemSchemaDownloadUrlResponse } from '../types'
-import { GET, DELETE } from './core/base-api'
+import { GET, POST, DELETE } from './core/base-api'
 
 export const keySystemSchemaService = {
   /**
@@ -11,28 +10,15 @@ export const keySystemSchemaService = {
   async uploadFile(keySystemId: string, file: File): Promise<void> {
     const base64Content = await blobToBase64(file)
 
-    const response = await fetch(
-      `${authConfig.apiUrl}/key-systems/${keySystemId}/upload-schema`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileData: base64Content,
-          fileContentType: file.type || 'application/pdf',
-          fileName: file.name,
-        }),
-        credentials: 'include',
-      }
-    )
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(
-        errorData.error || errorData.reason || 'Failed to upload file'
-      )
-    }
+    const { error } = await POST('/key-systems/{id}/upload-schema', {
+      params: { path: { id: keySystemId } },
+      body: {
+        fileData: base64Content,
+        fileContentType: file.type || 'application/pdf',
+        fileName: file.name,
+      },
+    })
+    if (error) throw error
   },
 
   /**

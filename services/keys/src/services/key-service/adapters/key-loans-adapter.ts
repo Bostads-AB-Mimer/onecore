@@ -5,12 +5,12 @@ import * as daxAdapter from './dax-adapter'
 import type { Card } from 'dax-client'
 import { getKeyDetailsById } from './keys-adapter'
 
-type Key = keys.v1.Key
-type KeyLoan = keys.v1.KeyLoan
-type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
-type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
-type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
-type Receipt = keys.v1.Receipt
+type Key = keys.Key
+type KeyLoan = keys.KeyLoan
+type KeyLoanWithDetails = keys.KeyLoanWithDetails
+type CreateKeyLoanRequest = keys.CreateKeyLoanRequest
+type UpdateKeyLoanRequest = keys.UpdateKeyLoanRequest
+type Receipt = keys.Receipt
 
 const TABLE = 'key_loans'
 const KEYS_TABLE = 'keys'

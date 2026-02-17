@@ -14,10 +14,10 @@ const {
   NotFoundResponseSchema,
   BadRequestResponseSchema,
   ReceiptSchema,
-} = keys.v1
-type CreateReceiptRequest = keys.v1.CreateReceiptRequest
-type UpdateReceiptRequest = keys.v1.UpdateReceiptRequest
-type Receipt = keys.v1.Receipt
+} = keys
+type CreateReceiptRequest = keys.CreateReceiptRequest
+type UpdateReceiptRequest = keys.UpdateReceiptRequest
+type Receipt = keys.Receipt
 
 const IdParamSchema = z.object({ id: z.string().uuid() })
 const KeyLoanParamSchema = z.object({ keyLoanId: z.string().uuid() })
@@ -158,6 +158,15 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Receipt
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Receipt'
    *       404:
    *         description: Receipt not found
    */
@@ -190,7 +199,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /receipts/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a receipt (allows marking as signed)
    *     tags: [Receipts]
    *     parameters:
@@ -219,7 +228,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Receipt not found
    */
-  router.patch(
+  router.put(
     '/receipts/:id',
     parseRequestBody(UpdateReceiptRequestSchema),
     async (ctx) => {

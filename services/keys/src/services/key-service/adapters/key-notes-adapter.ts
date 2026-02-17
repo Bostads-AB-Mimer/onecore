@@ -1,9 +1,9 @@
 import { Knex } from 'knex'
 import { keys } from '@onecore/types'
 
-type KeyNote = keys.v1.KeyNote
-type CreateKeyNoteRequest = keys.v1.CreateKeyNoteRequest
-type UpdateKeyNoteRequest = keys.v1.UpdateKeyNoteRequest
+type KeyNote = keys.KeyNote
+type CreateKeyNoteRequest = keys.CreateKeyNoteRequest
+type UpdateKeyNoteRequest = keys.UpdateKeyNoteRequest
 
 const TABLE = 'key_notes'
 

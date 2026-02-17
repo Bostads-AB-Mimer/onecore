@@ -5,7 +5,7 @@ import * as cardsAdapter from '../adapters/cards-adapter'
 import { db } from '../adapters/db'
 import { registerSchema } from '../../../utils/openapi'
 
-const { CardSchema, CardDetailsSchema } = keys.v1
+const { CardSchema, CardDetailsSchema } = keys
 
 // Register schemas for OpenAPI
 registerSchema('Card', CardSchema)

@@ -2,9 +2,9 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 
-type Signature = keys.v1.Signature
-type CreateSignatureRequest = keys.v1.CreateSignatureRequest
-type UpdateSignatureRequest = keys.v1.UpdateSignatureRequest
+type Signature = keys.Signature
+type CreateSignatureRequest = keys.CreateSignatureRequest
+type UpdateSignatureRequest = keys.UpdateSignatureRequest
 
 const TABLE = 'signatures'
 

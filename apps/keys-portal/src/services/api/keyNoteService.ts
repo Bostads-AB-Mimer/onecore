@@ -5,7 +5,7 @@ import type {
   UpdateKeyNoteRequest,
 } from '@/services/types'
 
-import { GET, POST, PATCH } from './core/base-api'
+import { GET, POST, PUT } from './core/base-api'
 
 export const keyNoteService = {
   /**
@@ -51,7 +51,7 @@ export const keyNoteService = {
     id: string,
     payload: UpdateKeyNoteRequest
   ): Promise<KeyNote> {
-    const { data, error } = await PATCH('/key-notes/{id}', {
+    const { data, error } = await PUT('/key-notes/{id}', {
       params: { path: { id } },
       body: payload,
     })

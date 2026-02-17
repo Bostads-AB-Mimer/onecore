@@ -16,10 +16,10 @@ const {
   CreateSignatureRequestSchema,
   SendSignatureRequestSchema,
   SimpleSignWebhookPayloadSchema,
-} = keys.v1
+} = keys
 
-type SendSignatureRequest = keys.v1.SendSignatureRequest
-type SimpleSignWebhookPayload = keys.v1.SimpleSignWebhookPayload
+type SendSignatureRequest = keys.SendSignatureRequest
+type SimpleSignWebhookPayload = keys.SimpleSignWebhookPayload
 
 const IdParamSchema = z.object({ id: z.string().uuid() })
 

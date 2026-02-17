@@ -220,7 +220,7 @@ describe('GET /keys/by-rental-object/:rentalObjectCode', () => {
 })
 
 /**
- * Tests for PATCH /keys/:id endpoint (Update)
+ * Tests for PUT /keys/:id endpoint (Update)
  *
  * Testing key update with various scenarios:
  * - Successful full update
@@ -229,7 +229,7 @@ describe('GET /keys/by-rental-object/:rentalObjectCode', () => {
  * - Validation errors
  * - Database errors
  */
-describe('PATCH /keys/:id', () => {
+describe('PUT /keys/:id', () => {
   it('updates key successfully and returns 200', async () => {
     // Create a mock updated key
     const updatedKey = factory.key.build({
@@ -244,8 +244,8 @@ describe('PATCH /keys/:id', () => {
       .spyOn(keysAdapter, 'updateKey')
       .mockResolvedValueOnce(updatedKey)
 
-    // Make PATCH request
-    const res = await request(app.callback()).patch('/keys/test-key-123').send({
+    // Make PUT request
+    const res = await request(app.callback()).put('/keys/test-key-123').send({
       keyName: 'Updated Master Key',
       keyType: 'PB',
       rentalObjectCode: 'B002',
@@ -284,8 +284,8 @@ describe('PATCH /keys/:id', () => {
       .spyOn(keysAdapter, 'updateKey')
       .mockResolvedValueOnce(updatedKey)
 
-    // Make PATCH request with only one field
-    const res = await request(app.callback()).patch('/keys/test-key-123').send({
+    // Make PUT request with only one field
+    const res = await request(app.callback()).put('/keys/test-key-123').send({
       keyName: 'Only Name Changed',
     })
 
@@ -305,7 +305,7 @@ describe('PATCH /keys/:id', () => {
 
   it('validates invalid keyType enum and returns 400', async () => {
     // Try to update key with invalid keyType
-    const res = await request(app.callback()).patch('/keys/test-key-123').send({
+    const res = await request(app.callback()).put('/keys/test-key-123').send({
       keyType: 'INVALID_TYPE', // Not one of: LGH, PB, FS, HN
     })
 

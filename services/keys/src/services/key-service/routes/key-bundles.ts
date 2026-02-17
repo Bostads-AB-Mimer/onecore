@@ -10,30 +10,24 @@ import { paginate } from '../../../utils/pagination'
 
 const {
   KeyBundleSchema,
+  KeyBundleDetailsResponseSchema,
+  KeyDetailsSchema,
   BundleWithLoanedKeysInfoSchema,
   CreateKeyBundleRequestSchema,
   UpdateKeyBundleRequestSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
-} = keys.v1
-type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
-type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
-type KeyBundleResponse = keys.v1.KeyBundle
+} = keys
+type CreateKeyBundleRequest = keys.CreateKeyBundleRequest
+type UpdateKeyBundleRequest = keys.UpdateKeyBundleRequest
+type KeyBundleResponse = keys.KeyBundle
 
 /**
  * @swagger
  * tags:
  *   - name: Key Bundles
  *     description: Endpoints related to key bundle operations
- * components:
- *   schemas:
- *     CreateKeyBundleRequest:
- *       $ref: '#/components/schemas/CreateKeyBundleRequest'
- *     UpdateKeyBundleRequest:
- *       $ref: '#/components/schemas/UpdateKeyBundleRequest'
- *     KeyBundle:
- *       $ref: '#/components/schemas/KeyBundle'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
@@ -41,6 +35,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyBundleRequest', UpdateKeyBundleRequestSchema)
   registerSchema('KeyBundle', KeyBundleSchema)
   registerSchema('BundleWithLoanedKeysInfo', BundleWithLoanedKeysInfoSchema)
+  registerSchema('KeyBundleDetailsResponse', KeyBundleDetailsResponseSchema, {
+    KeyBundle: KeyBundleSchema,
+    KeyDetails: KeyDetailsSchema,
+  })
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
   registerSchema('PaginatedResponse', PaginatedResponseSchema)
@@ -364,9 +362,9 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /key-bundles/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a key bundle
-   *     description: Partially update an existing key bundle.
+   *     description: Update an existing key bundle.
    *     tags: [Key Bundles]
    *     parameters:
    *       - in: path
@@ -398,7 +396,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: An error occurred while updating the key bundle.
    */
-  router.patch(
+  router.put(
     '/key-bundles/:id',
     parseRequestBody(UpdateKeyBundleRequestSchema),
     async (ctx) => {

@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type Log = keys.v1.Log
+type Log = keys.Log
 
 /**
  * Factory for generating test Log entities.

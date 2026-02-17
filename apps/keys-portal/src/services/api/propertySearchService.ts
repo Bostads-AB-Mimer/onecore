@@ -1,4 +1,5 @@
 import type { Property } from '@/services/types'
+import { querySerializer } from '@/utils/querySerializer'
 
 import { GET } from './core/base-api'
 
@@ -17,23 +18,9 @@ export class PropertySearchService {
 
   async search(params: PropertySearchParams): Promise<Property[]> {
     try {
-      const queryParams: Record<string, string> = {}
-
-      // Add all params to query string
-      for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined) {
-          if (Array.isArray(value)) {
-            queryParams[key] = value.join(',')
-          } else {
-            queryParams[key] = value
-          }
-        }
-      }
-
       const response = await GET('/properties/search', {
-        params: {
-          query: queryParams,
-        },
+        params: { query: params },
+        querySerializer,
       })
 
       return response.data?.content || []

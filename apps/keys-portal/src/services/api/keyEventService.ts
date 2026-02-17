@@ -4,7 +4,7 @@ import type {
   UpdateKeyEventRequest,
 } from '@/services/types'
 
-import { GET, POST, PATCH } from './core/base-api'
+import { GET, POST, PUT } from './core/base-api'
 
 export const keyEventService = {
   /**
@@ -85,7 +85,7 @@ export const keyEventService = {
    * Update an existing key event
    */
   async update(id: string, payload: UpdateKeyEventRequest): Promise<KeyEvent> {
-    const { data, error } = await PATCH('/key-events/{id}', {
+    const { data, error } = await PUT('/key-events/{id}', {
       params: { path: { id } },
       body: payload,
     })

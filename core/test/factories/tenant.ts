@@ -20,7 +20,7 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
     {
       phoneNumber: '070000000',
       type: 'mobil',
-      isMainNumber: true,
+      isMainNumber: 1,
     },
   ],
   emailAddress: 'test@mimer.nu',

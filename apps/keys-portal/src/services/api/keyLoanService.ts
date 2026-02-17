@@ -8,7 +8,7 @@ import type {
 } from '@/services/types'
 import { querySerializer } from '@/utils/querySerializer'
 
-import { GET, POST, PATCH, DELETE } from './core/base-api'
+import { GET, POST, PUT, DELETE } from './core/base-api'
 
 type ApiError = {
   status?: number
@@ -101,7 +101,7 @@ export const keyLoanService = {
   },
 
   async update(id: string, payload: UpdateKeyLoanRequest): Promise<KeyLoan> {
-    const { data, error } = await PATCH('/key-loans/{id}', {
+    const { data, error } = await PUT('/key-loans/{id}', {
       params: { path: { id } },
       body: payload,
     })

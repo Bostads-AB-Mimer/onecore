@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type Signature = keys.v1.Signature
+type Signature = keys.Signature
 
 export const SignatureFactory = Factory.define<Signature>(({ sequence }) => ({
   id: `00000000-0000-0000-0000-${sequence.toString().padStart(12, '0')}`,

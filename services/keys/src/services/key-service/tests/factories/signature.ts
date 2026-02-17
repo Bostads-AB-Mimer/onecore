@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type Signature = keys.v1.Signature
+type Signature = keys.Signature
 
 /**
  * Factory for generating Signature test data.

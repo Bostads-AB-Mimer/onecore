@@ -16,7 +16,7 @@ import * as factory from '../factories'
 import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
 import * as keyLoanService from '../../key-loan-service'
 
-type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
+type KeyLoanWithDetails = keys.KeyLoanWithDetails
 
 // Set up a Koa app with the key-loans routes for testing
 const app = new Koa()
@@ -425,7 +425,7 @@ describe('POST /key-loans', () => {
 })
 
 /**
- * Tests for PATCH /key-loans/:id endpoint (Update)
+ * Tests for PUT /key-loans/:id endpoint (Update)
  *
  * Testing key loan update with various scenarios:
  * - Successful update
@@ -434,7 +434,7 @@ describe('POST /key-loans', () => {
  * - Conflict with active loan (409)
  * - Database errors
  */
-describe('PATCH /key-loans/:id', () => {
+describe('PUT /key-loans/:id', () => {
   it('updates key loan successfully and returns 200', async () => {
     const updatedLoan = factory.keyLoan.build({
       id: 'loan-123',
@@ -451,7 +451,7 @@ describe('PATCH /key-loans/:id', () => {
       .mockResolvedValueOnce(updatedLoan)
 
     const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
+      .put('/key-loans/loan-123')
       .send({
         keys: ['key-3', 'key-4'],
         contact: 'updated@example.com',
@@ -481,11 +481,9 @@ describe('PATCH /key-loans/:id', () => {
       .spyOn(keyLoansAdapter, 'updateKeyLoan')
       .mockResolvedValueOnce(updatedLoan)
 
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        contact: 'new-contact@example.com',
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      contact: 'new-contact@example.com',
+    })
 
     expect(updateKeyLoanSpy).toHaveBeenCalledWith(
       'loan-123',
@@ -507,7 +505,7 @@ describe('PATCH /key-loans/:id', () => {
     })
 
     const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
+      .put('/key-loans/loan-123')
       .send({
         keys: ['key-5'],
       })
@@ -529,7 +527,7 @@ describe('PATCH /key-loans/:id', () => {
     )
 
     await request(app.callback())
-      .patch('/key-loans/loan-123')
+      .put('/key-loans/loan-123')
       .send({
         keys: ['key-1'],
       })
@@ -671,11 +669,9 @@ describe('Key Loans Lifecycle', () => {
       .spyOn(keyLoansAdapter, 'updateKeyLoan')
       .mockResolvedValueOnce(activatedLoan)
 
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        pickedUpAt: now,
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      pickedUpAt: now,
+    })
 
     expect(res.status).toBe(200)
     expect(res.body.content.pickedUpAt).toBeTruthy()
@@ -707,11 +703,9 @@ describe('Key Loans Lifecycle', () => {
       .spyOn(keyLoansAdapter, 'updateKeyLoan')
       .mockResolvedValueOnce(returnedLoan)
 
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        returnedAt: now,
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      returnedAt: now,
+    })
 
     expect(res.status).toBe(200)
     expect(res.body.content.returnedAt).toBeTruthy()
@@ -743,12 +737,10 @@ describe('Key Loans Lifecycle', () => {
       .spyOn(keyLoansAdapter, 'updateKeyLoan')
       .mockResolvedValueOnce(earlyReturnLoan)
 
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        returnedAt: returnedNow,
-        availableToNextTenantFrom: futureDate,
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      returnedAt: returnedNow,
+      availableToNextTenantFrom: futureDate,
+    })
 
     expect(res.status).toBe(200)
     expect(res.body.content.returnedAt).toBeTruthy()
@@ -805,12 +797,10 @@ describe('Key Loans Lifecycle', () => {
       .spyOn(keyLoansAdapter, 'updateKeyLoan')
       .mockResolvedValueOnce(invalidLoan)
 
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        pickedUpAt: pickupDate,
-        returnedAt: returnDate,
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      pickedUpAt: pickupDate,
+      returnedAt: returnDate,
+    })
 
     // Currently accepts invalid dates - this documents expected behavior
     // Future improvement: add date validation in the route
@@ -839,11 +829,9 @@ describe('Key Loans Lifecycle', () => {
       .spyOn(keyLoansAdapter, 'updateKeyLoan')
       .mockResolvedValueOnce(undoReturnLoan)
 
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        returnedAt: null, // Explicitly set to null to clear
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      returnedAt: null, // Explicitly set to null to clear
+    })
 
     expect(res.status).toBe(200)
   })
@@ -887,7 +875,7 @@ describe('Key Loans Lifecycle', () => {
       .mockResolvedValueOnce(activatedLoan)
 
     const activateRes = await request(app.callback())
-      .patch('/key-loans/workflow-loan-123')
+      .put('/key-loans/workflow-loan-123')
       .send({
         pickedUpAt: new Date().toISOString(),
       })
@@ -911,7 +899,7 @@ describe('Key Loans Lifecycle', () => {
       .mockResolvedValueOnce(returnedLoan)
 
     const returnRes = await request(app.callback())
-      .patch('/key-loans/workflow-loan-123')
+      .put('/key-loans/workflow-loan-123')
       .send({
         returnedAt: new Date().toISOString(),
       })
@@ -936,11 +924,9 @@ describe('Validation Edge Cases - Key Loans', () => {
   // Removed: "empty contact string allowed" - documents a bug, not a feature
 
   it('validates invalid date format strings', async () => {
-    const res = await request(app.callback())
-      .patch('/key-loans/loan-123')
-      .send({
-        returnedAt: 'not-a-valid-date', // Invalid format
-      })
+    const res = await request(app.callback()).put('/key-loans/loan-123').send({
+      returnedAt: 'not-a-valid-date', // Invalid format
+    })
 
     // Should fail validation
     expect(res.status).toBe(400)

@@ -15,24 +15,16 @@ const {
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
-} = keys.v1
-type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
-type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
-type KeySystem = keys.v1.KeySystem
+} = keys
+type CreateKeySystemRequest = keys.CreateKeySystemRequest
+type UpdateKeySystemRequest = keys.UpdateKeySystemRequest
+type KeySystem = keys.KeySystem
 
 /**
  * @swagger
  * tags:
  *   - name: Key Systems
  *     description: Endpoints for managing key systems
- * components:
- *   schemas:
- *     CreateKeySystemRequest:
- *       $ref: '#/components/schemas/CreateKeySystemRequest'
- *     UpdateKeySystemRequest:
- *       $ref: '#/components/schemas/UpdateKeySystemRequest'
- *     KeySystem:
- *       $ref: '#/components/schemas/KeySystem'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
@@ -271,8 +263,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   description: Key system details
+   *                   $ref: '#/components/schemas/KeySystem'
    *       404:
    *         description: Key system not found
    *       500:
@@ -318,8 +309,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   description: Created key system details
+   *                   $ref: '#/components/schemas/KeySystem'
    *       400:
    *         description: Invalid type
    *       409:
@@ -365,9 +355,9 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /key-systems/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a key system
-   *     description: Partially update a key system
+   *     description: Update a key system
    *     tags: [Key Systems]
    *     parameters:
    *       - in: path
@@ -391,8 +381,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   description: Updated key system details
+   *                   $ref: '#/components/schemas/KeySystem'
    *       400:
    *         description: Invalid type
    *       404:
@@ -402,7 +391,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.patch(
+  router.put(
     '/key-systems/:id',
     parseRequestBody(UpdateKeySystemRequestSchema),
     async (ctx) => {

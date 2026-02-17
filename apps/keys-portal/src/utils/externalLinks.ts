@@ -4,10 +4,7 @@ import { resolve } from '@/services/utils/env'
  * Get the base URL for Alliera (DAX card management system)
  */
 export function getAllieraBaseUrl(): string {
-  return resolve(
-    'VITE_ALLIERA_BASE_URL',
-    'https://srvmimhk21.mimerbygg.local/Alliera'
-  )
+  return resolve('VITE_ALLIERA_BASE_URL', '')
 }
 
 /**

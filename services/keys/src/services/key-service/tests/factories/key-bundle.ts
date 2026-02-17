@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeyBundle = keys.v1.KeyBundle
+type KeyBundle = keys.KeyBundle
 
 /**
  * Factory for generating KeyBundle test data.

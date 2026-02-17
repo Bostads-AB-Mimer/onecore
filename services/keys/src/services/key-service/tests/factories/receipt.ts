@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type Receipt = keys.v1.Receipt
+type Receipt = keys.Receipt
 
 export const ReceiptFactory = Factory.define<Receipt>(({ sequence }) => {
   const now = new Date()

@@ -6,7 +6,7 @@ import * as keysAdapter from '../../adapters/keys-adapter'
 import * as factory from '../factories'
 import { withContext } from '../testUtils'
 
-type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
+type CreateKeyEventRequest = keys.CreateKeyEventRequest
 
 /**
  * Integration tests for receipts-adapter

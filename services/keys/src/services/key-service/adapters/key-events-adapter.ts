@@ -1,9 +1,9 @@
 import { Knex } from 'knex'
 import { keys } from '@onecore/types'
 
-type KeyEvent = keys.v1.KeyEvent
-type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
-type UpdateKeyEventRequest = keys.v1.UpdateKeyEventRequest
+type KeyEvent = keys.KeyEvent
+type CreateKeyEventRequest = keys.CreateKeyEventRequest
+type UpdateKeyEventRequest = keys.UpdateKeyEventRequest
 
 const TABLE = 'key_events'
 

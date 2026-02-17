@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeyNote = keys.v1.KeyNote
+type KeyNote = keys.KeyNote
 
 /**
  * Factory for generating test KeyNote entities.

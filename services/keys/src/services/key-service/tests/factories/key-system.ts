@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeySystem = keys.v1.KeySystem
+type KeySystem = keys.KeySystem
 
 export const KeySystemFactory = Factory.define<KeySystem>(({ sequence }) => ({
   id: `00000000-0000-0000-0000-${String(sequence).padStart(12, '0')}`,
