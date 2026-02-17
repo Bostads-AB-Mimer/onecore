@@ -38,6 +38,8 @@ export const requireAuth = async (ctx: Context, next: Next) => {
           preferred_username: verifiedToken.preferred_username,
           source: 'keycloak',
           realm_access: verifiedToken.realm_access, // For role checking
+          resource_access: verifiedToken.resource_access, // Client-specific roles
+          groups: verifiedToken.groups, // Azure AD groups
         }
 
         // Continue to next middleware (skip extractJwtToken)
@@ -51,8 +53,22 @@ export const requireAuth = async (ctx: Context, next: Next) => {
       }
     }
 
-    // If no refresh needed OR refresh failed, use standard token extraction
-    await auth.middleware.extractJwtToken(ctx, next)
+    // If no refresh needed OR refresh failed, verify token and extract all claims
+    const verifiedToken = await auth.jwksService.verifyToken(accessToken)
+
+    // Set user with all claims (including role-related ones)
+    ctx.state.user = {
+      id: verifiedToken.sub,
+      email: verifiedToken.email,
+      name: verifiedToken.name,
+      preferred_username: verifiedToken.preferred_username,
+      source: 'keycloak',
+      realm_access: verifiedToken.realm_access,
+      resource_access: verifiedToken.resource_access,
+      groups: verifiedToken.groups,
+    }
+
+    return await next()
   } catch (error) {
     logger.error(error, 'Authentication error:')
     ctx.status = 401
@@ -61,24 +77,25 @@ export const requireAuth = async (ctx: Context, next: Next) => {
 }
 
 // Middleware to check for specific roles
-// TODO: fetch roles from entraID
 export const requireRole = (requiredRoles: string | string[]) => {
   const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles]
 
   return async (ctx: Context, next: Next) => {
     try {
-      await auth.middleware.extractJwtToken(ctx, next)
+      // First ensure user is authenticated (this sets ctx.state.user with all claims)
+      await requireAuth(ctx, async () => {
+        // Check roles after authentication
+        const userRoles = ctx.state.user?.realm_access?.roles || []
+        const hasRequiredRole = roles.some((role) => userRoles.includes(role))
 
-      const userRoles = ctx.state.user?.realm_access?.roles || []
-      const hasRequiredRole = roles.some((role) => userRoles.includes(role))
+        if (!hasRequiredRole) {
+          ctx.status = 403
+          ctx.body = { message: 'Insufficient permissions' }
+          return
+        }
 
-      if (!hasRequiredRole) {
-        ctx.status = 403
-        ctx.body = { message: 'Insufficient permissions' }
-        return
-      }
-
-      return next()
+        return next()
+      })
     } catch (error) {
       logger.error(error, 'Role verification error:')
       ctx.status = 401

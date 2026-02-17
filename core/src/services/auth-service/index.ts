@@ -6,6 +6,8 @@ import hash from './hash'
 import { createToken } from './jwt'
 import auth from './keycloak'
 import { requireAuth } from '../../middlewares/keycloak-auth'
+import { extractRolesFromToken } from './extract-roles'
+import config from '../../common/config'
 
 /**
  * @swagger
@@ -236,7 +238,24 @@ export const routes = (router: KoaRouter) => {
    *         description: Unauthorized
    */
   router.get('(.*)/auth/profile', requireAuth, async (ctx) => {
-    ctx.body = ctx.state.user
+    const user = ctx.state.user
+
+    // Transform user object to match frontend contract
+    const roles = extractRolesFromToken(
+      {
+        realm_access: user.realm_access,
+        resource_access: user.resource_access,
+        groups: user.groups,
+      },
+      config.auth.keycloak.clientId
+    )
+
+    ctx.body = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles,
+    }
   })
 
   /**
