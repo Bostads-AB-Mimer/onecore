@@ -1113,7 +1113,7 @@ export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {
   // console.log('hit', JSON.stringify(invoice, null, 2))
-  const headerInfo = `${invoice.leaseId}, ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
+  const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
 
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
@@ -1128,10 +1128,10 @@ export const submitMiscellaneousInvoice = async (
           quantity: 1
           unitPrice: ${ir.price}
           glObject1: {
-            code: ${quote(invoice.costCentre || '61130')}
+            code: ${quote(invoice.costCentre)}
           }
           glObject3: {
-            code: ${quote(invoice.propertyCode || '23003')}
+            code: ${quote(invoice.propertyCode)}
           }
           headerInfo: ${quote(headerInfo)}
           approved: true
@@ -1199,8 +1199,8 @@ interface MiscellaneousInvoicePayload {
   contactCode: string
   tenantName: string
   leaseId: string
-  costCentre?: string
-  propertyCode?: string
+  costCentre: string
+  propertyCode: string
   invoiceRows: InvoiceRow[]
   comment?: string
   projectCode?: string

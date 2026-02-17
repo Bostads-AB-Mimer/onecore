@@ -36,18 +36,9 @@ export function ArticleSection({
   onHanteringsavgiftChange,
   errors,
 }: ArticleSectionProps) {
-  const handleRowChange = (
-    index: number,
-    field: keyof InvoiceRow,
-    value: string | number
-  ) => {
+  const handleChangeRowPrice = (index: number, value: string | number) => {
     const newRows = [...invoiceRows]
-    if (field === 'text') {
-      newRows[index] = { ...newRows[index], text: value as string }
-    } else if (field === 'price') {
-      newRows[index] = { ...newRows[index], price: Number(value) || 0 }
-    }
-
+    newRows[index] = { ...newRows[index], price: Number(value) || 0 }
     onInvoiceRowsChange(newRows)
   }
 
@@ -128,24 +119,12 @@ export function ArticleSection({
             </div>
             <div className="grid grid-cols-3 items-center gap-2">
               <div className="space-y-1 sm:space-y-0">
-                <Label>Text</Label>
-                <Input
-                  value={row.text}
-                  onChange={(e) =>
-                    handleRowChange(index, 'text', e.target.value)
-                  }
-                  placeholder="Beskrivning..."
-                />
-              </div>
-              <div className="space-y-1 sm:space-y-0">
                 <Label>Pris (ink. moms)</Label>
                 <Input
                   type="number"
                   value={row.price}
                   min={0}
-                  onChange={(e) =>
-                    handleRowChange(index, 'price', e.target.value)
-                  }
+                  onChange={(e) => handleChangeRowPrice(index, e.target.value)}
                 />
               </div>
               {invoiceRows.length > 1 && (

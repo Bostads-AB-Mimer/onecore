@@ -2,14 +2,14 @@ import { MiscellaneousInvoicePayload } from '@/components/economy/types'
 import { GET, POST } from './base-api'
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 
-// TODO: Fix the ts-ignore by updating the OpenAPI spec
+// TODO: Fix the @ts-expect-error by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
 
 async function getInvoicesByContactCode(
   contactCode: string
 ): Promise<Invoice[]> {
   const { data, error } = await GET(
-    //@ts-ignore
+    // @ts-expect-error
     `/invoices/by-contact-code/${contactCode}`,
     {
       params: { path: { contactCode } },
@@ -29,7 +29,7 @@ async function getInvoicePaymentEvents(
   invoiceId: string
 ): Promise<InvoicePaymentEvent[]> {
   const { data, error } = await GET(
-    //@ts-ignore
+    // @ts-expect-error
     `/invoices/${invoiceId}/payment-events`,
     {
       params: { path: { invoiceId } },
@@ -47,10 +47,10 @@ async function getInvoicePaymentEvents(
 
 async function getMiscellaneousInvoiceDataForLease(
   leaseId: string
-): Promise<any> {
+): Promise<{ costCentre: string; propertyCode: string } | null> {
   const rentalId = leaseId.split('/')[0]
   const { data, error } = await GET(
-    //@ts-ignore
+    // @ts-expect-error
     `/invoices/miscellaneous/${rentalId}`,
     {
       params: {
@@ -67,7 +67,7 @@ async function getMiscellaneousInvoiceDataForLease(
     throw error
   }
 
-  //@ts-expect-error
+  // @ts-expect-error
   return data.content.data
 }
 
@@ -89,7 +89,7 @@ async function submitMiscellaneousInvoice(
   formData.append('invoice', JSON.stringify(invoice))
 
   const { data, error } = await POST(
-    // @ts-ignore
+    // @ts-expect-error
     `/invoices/miscellaneous`,
     {
       body: formData,
@@ -98,7 +98,6 @@ async function submitMiscellaneousInvoice(
 
   if (error) throw error
 
-  // Type assertion needed because generated types are incomplete
   return data
 }
 
