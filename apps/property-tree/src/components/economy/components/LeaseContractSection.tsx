@@ -13,8 +13,8 @@ import { Lease } from '@/services/api/core'
 interface LeaseContractSectionProps {
   leaseContracts: Lease[]
   selectedLease: string
-  kst: string
-  fastighet: string
+  costCentre?: string
+  propertyCode?: string
   onLeaseSelect: (leaseId: string) => void
   error?: string
   disabled?: boolean
@@ -23,8 +23,8 @@ interface LeaseContractSectionProps {
 export function LeaseContractSection({
   leaseContracts,
   selectedLease,
-  kst,
-  fastighet,
+  costCentre,
+  propertyCode,
   onLeaseSelect,
   error,
   disabled = false,
@@ -68,7 +68,7 @@ export function LeaseContractSection({
         <Label htmlFor="kst">KST (Kostnadsställe)</Label>
         <Input
           id="kst"
-          value={kst}
+          value={costCentre ?? ''}
           readOnly
           disabled
           placeholder="Fylls i automatiskt"
@@ -80,7 +80,7 @@ export function LeaseContractSection({
         <Label htmlFor="fastighet">Fastighet</Label>
         <Input
           id="fastighet"
-          value={fastighet}
+          value={propertyCode ?? ''}
           readOnly
           disabled
           placeholder="Fylls i automatiskt"

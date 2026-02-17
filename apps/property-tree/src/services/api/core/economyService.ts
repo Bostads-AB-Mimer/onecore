@@ -45,6 +45,32 @@ async function getInvoicePaymentEvents(
   return response.content as InvoicePaymentEvent[]
 }
 
+async function getMiscellaneousInvoiceDataForLease(
+  leaseId: string
+): Promise<any> {
+  const rentalId = leaseId.split('/')[0]
+  const { data, error } = await GET(
+    //@ts-ignore
+    `/invoices/miscellaneous/${rentalId}`,
+    {
+      params: {
+        path: { rentalId },
+        query: {
+          year: new Date().getFullYear(),
+        },
+      },
+    }
+  )
+
+  if (error) {
+    console.log('error', error)
+    throw error
+  }
+
+  //@ts-expect-error
+  return data.content.data
+}
+
 async function submitMiscellaneousInvoice(
   invoice: MiscellaneousInvoicePayload
 ) {
@@ -73,12 +99,12 @@ async function submitMiscellaneousInvoice(
   if (error) throw error
 
   // Type assertion needed because generated types are incomplete
-  const response = data as any
-  return response
+  return data
 }
 
 export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
+  getMiscellaneousInvoiceDataForLease,
   submitMiscellaneousInvoice,
 }

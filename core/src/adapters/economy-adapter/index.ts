@@ -78,10 +78,25 @@ export async function getInvoicesSentToDebtCollection(
   return { ok: true, data: hasDebtCollection }
 }
 
+export async function getMiscellaneousInvoiceDataForLease(
+  rentalId: string,
+  year?: string
+): Promise<
+  AdapterResult<{ costCentre: string; propertyCode: string }, 'unknown'>
+> {
+  const url = `${config.economyService.url}/invoices/miscellaneous/${rentalId}?year=${year ?? new Date().getFullYear()}`
+  const response = await axios.get(url)
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: false, err: 'unknown' }
+}
+
 export async function submitMiscellaneousInvoice(
   invoice: any,
   attachment: any
-): Promise<AdapterResult<undefined, 'unknown'>> {
+): Promise<AdapterResult<boolean, 'unknown'>> {
   // eslint-disable-next-line n/no-unsupported-features/node-builtins
   const formData = new FormData()
 
