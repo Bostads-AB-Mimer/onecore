@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/Select'
 
 import { cn } from '@/lib/utils'
-import { MiscellaneousInvoiceArticles } from '@/data/articles/MiscellaneousInvoiceArticles'
+import { SelectableInvoiceArticles } from '@/data/articles/MiscellaneousInvoiceArticles'
 import { InvoiceRow } from '../types'
 
 interface ArticleSectionProps {
@@ -53,13 +53,14 @@ export function ArticleSection({
 
   const handleChangeRowArticle = (index: number, articleId: string) => {
     const newRows = [...invoiceRows]
-    const article = MiscellaneousInvoiceArticles.find((a) => a.id === articleId)
+    const article = SelectableInvoiceArticles.find((a) => a.id === articleId)
     if (!article) {
       return
     }
 
     newRows[index].articleId = articleId
     newRows[index].articleName = article.name
+    newRows[index].price = article.standardPrice
     onInvoiceRowsChange(newRows)
   }
 
@@ -101,7 +102,7 @@ export function ArticleSection({
                     <SelectValue placeholder="Välj artikel" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MiscellaneousInvoiceArticles.map((article) => (
+                    {SelectableInvoiceArticles.map((article) => (
                       <SelectItem key={article.id} value={article.id}>
                         {article.name}
                       </SelectItem>
@@ -140,6 +141,7 @@ export function ArticleSection({
                 <Label>Pris (ink. moms)</Label>
                 <Input
                   type="number"
+                  value={row.price}
                   min={0}
                   onChange={(e) =>
                     handleRowChange(index, 'price', e.target.value)
