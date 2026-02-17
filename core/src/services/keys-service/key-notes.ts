@@ -4,6 +4,46 @@ import { KeyNotesApi } from '../../adapters/keys-adapter'
 import { createLogEntry } from './helpers'
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /key-notes/{id}:
+   *   get:
+   *     summary: Get key note by ID
+   *     description: Retrieve a specific key note by its ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key note
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved key note
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeyNote'
+   *       404:
+   *         description: Key note not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/key-notes/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -26,6 +66,45 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /key-notes/by-rental-object/{rentalObjectCode}:
+   *   get:
+   *     summary: Get key note by rental object code
+   *     description: Retrieve the key note for a specific rental object
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved key note
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeyNote'
+   *       404:
+   *         description: Key note not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/key-notes/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -53,6 +132,44 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /key-notes:
+   *   post:
+   *     summary: Create a new key note
+   *     description: Create a new key note for a rental object
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateKeyNoteRequest'
+   *     responses:
+   *       201:
+   *         description: Key note created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeyNote'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.post('/key-notes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
@@ -85,6 +202,58 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /key-notes/{id}:
+   *   patch:
+   *     summary: Update a key note
+   *     description: Update the description of an existing key note
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key note to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateKeyNoteRequest'
+   *     responses:
+   *       200:
+   *         description: Key note updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeyNote'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Key note not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.put('/key-notes/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body

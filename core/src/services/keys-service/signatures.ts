@@ -4,6 +4,69 @@ import { SignaturesApi } from '../../adapters/keys-adapter'
 import { createLogEntry } from './helpers'
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /signatures/send:
+   *   post:
+   *     summary: Send a document for digital signature via SimpleSign
+   *     description: Send a PDF document to SimpleSign for digital signature
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - resourceType
+   *               - resourceId
+   *               - recipientEmail
+   *               - pdfBase64
+   *             properties:
+   *               resourceType:
+   *                 type: string
+   *                 enum: [receipt]
+   *               resourceId:
+   *                 type: string
+   *                 format: uuid
+   *               recipientEmail:
+   *                 type: string
+   *                 format: email
+   *               recipientName:
+   *                 type: string
+   *               pdfBase64:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Signature request sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Signature'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Resource not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.post('/signatures/send', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
@@ -44,6 +107,45 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /signatures/{id}:
+   *   get:
+   *     summary: Get a signature by ID
+   *     description: Retrieve a specific signature by its ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: Signature details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Signature'
+   *       404:
+   *         description: Signature not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/signatures/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -66,6 +168,47 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /signatures/resource/{resourceType}/{resourceId}:
+   *   get:
+   *     summary: Get all signatures for a resource
+   *     description: Retrieve all signatures associated with a specific resource
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: resourceType
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [receipt]
+   *       - in: path
+   *         name: resourceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: List of signatures
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Signature'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/signatures/resource/:resourceType/:resourceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { resourceType, resourceId } = ctx.params
@@ -83,6 +226,27 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /webhooks/simplesign:
+   *   post:
+   *     summary: Webhook endpoint for SimpleSign status updates
+   *     description: Receives webhook notifications from SimpleSign when document status changes (e.g., signed, declined)
+   *     tags: [Webhooks]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SimpleSignWebhookPayload'
+   *     responses:
+   *       200:
+   *         description: Webhook processed successfully
+   *       404:
+   *         description: Signature not found
+   *       500:
+   *         description: Internal server error
+   */
   router.post('/webhooks/simplesign', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
