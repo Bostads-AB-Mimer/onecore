@@ -21,11 +21,11 @@ export function PropertyList({ properties, companyId }: PropertyListProps) {
       <Grid cols={2} className="p-4">
         {properties?.map((property) => (
           <motion.div
-            key={property.id}
+            key={property.code}
             whileHover={{ scale: 1.02 }}
             className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
             onClick={() =>
-              navigate(paths.property(property.id), { state: { companyId } })
+              navigate(paths.property(property.code), { state: { companyId } })
             }
           >
             <div className="flex items-center justify-between">

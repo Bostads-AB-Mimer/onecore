@@ -53,7 +53,7 @@ export function PropertyNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={paths.property(property.id)}
+          to={paths.property(property.code)}
           state={{ companyId }}
           onClick={() => setIsExpanded(!isExpanded)}
         >

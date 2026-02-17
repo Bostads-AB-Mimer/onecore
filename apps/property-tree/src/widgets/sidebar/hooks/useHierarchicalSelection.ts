@@ -41,7 +41,7 @@ export function useHierarchicalSelection() {
       matchesRoute(routes.building, location.pathname) ||
       matchesRoute(routes.residence, location.pathname))
   const propertyIdForQuery = needsProperty
-    ? params.propertyId || selectedBuilding?.property?.id || undefined
+    ? params.propertyCode || selectedBuilding?.property?.code || undefined
     : undefined
   const { data: selectedProperty } = useProperty(propertyIdForQuery)
 
@@ -68,12 +68,12 @@ export function useHierarchicalSelection() {
       }
     }
 
-    if (matchesRoute(routes.property, path) && params.propertyId) {
+    if (matchesRoute(routes.property, path) && params.propertyCode) {
       return {
         selectedResidenceId: null,
         selectedBuildingId: null,
         selectedBuildingCode: null,
-        selectedPropertyId: params.propertyId,
+        selectedPropertyId: params.propertyCode,
         selectedCompanyId: companyId,
       }
     }

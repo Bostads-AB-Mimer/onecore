@@ -7,7 +7,7 @@ model Property {
   valueAreaId              String?   @map("keybavom") @db.Char(15) // TODO: Once mapped, verify if 'Värdeområde' means value area
   // contactId String? @map("keycmctc") @db.Char(15) // Existing relation to Contact model
   // legalOwnerId String? @map("keycmctc2") @db.Char(15) // Existing relation, could map "Legal Owner"
-  code                     String    @map("code") @db.VarChar(30)
+  code                     String    @unique @map("code") @db.VarChar(30)
   designation              String?   @map("caption") @db.VarChar(60)
   municipality             String?   @map("kommun") @db.VarChar(30)
   tract                    String?   @map("trakt") @db.VarChar(30)

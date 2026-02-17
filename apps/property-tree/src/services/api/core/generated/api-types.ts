@@ -4146,16 +4146,16 @@ export interface paths {
       };
     };
   };
-  "/properties/{propertyId}": {
+  "/properties/{propertyCode}": {
     /**
-     * Get property by property id
-     * @description Retrieves property by property id
+     * Get property by property code
+     * @description Retrieves property by property code
      */
     get: {
       parameters: {
         path: {
-          /** @description The id of the property */
-          propertyId: string;
+          /** @description The code of the property */
+          propertyCode: string;
         };
       };
       responses: {

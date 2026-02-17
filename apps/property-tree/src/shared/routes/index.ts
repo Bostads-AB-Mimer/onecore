@@ -12,7 +12,7 @@ export { generatePath }
 export const routes = {
   dashboard: '/',
   properties: '/fastigheter',
-  property: '/fastigheter/:propertyId', // -- byts ut mot :propertyCode
+  property: '/fastigheter/:propertyCode', // -- byts ut mot :propertyCode
   building: '/byggnader/:buildingCode', // klar
   staircase: '/uppgangar/:buildingCode/:staircaseCode', // klar
   residence: '/bostader/:residenceId', // -- byts ut mot :rentalId
@@ -41,8 +41,8 @@ export type RoutePath = (typeof routes)[keyof typeof routes]
  *   paths.room('R1', 'RM1')          →  '/bostader/R1/rum/RM1'
  */
 export const paths = {
-  property: (propertyId: string) =>
-    generatePath(routes.property, { propertyId }),
+  property: (propertyCode: string) =>
+    generatePath(routes.property, { propertyCode }),
   building: (buildingCode: string) =>
     generatePath(routes.building, { buildingCode }),
   staircase: (buildingCode: string, staircaseCode: string) =>

@@ -7,13 +7,13 @@ import { PropertyBasicInfo, usePropertyDetails } from '@/features/properties'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function PropertyPage() {
-  const { propertyId } = useParams<{ propertyId: string }>()
+  const { propertyCode } = useParams<{ propertyCode: string }>()
 
   const {
     data: propertyDetail,
     isLoading,
     error,
-  } = usePropertyDetails(propertyId)
+  } = usePropertyDetails(propertyCode)
 
   return (
     <ViewLayout>
@@ -22,7 +22,7 @@ export function PropertyPage() {
         error={error}
         data={propertyDetail}
         notFoundMessage="Fastigheten kunde inte hittas"
-        searchedFor={propertyId}
+        searchedFor={propertyCode}
       >
         {(propertyDetail) => (
           <>
