@@ -7,15 +7,15 @@ import { Staircase } from '@/services/types'
 import { useBuilding } from './useBuilding'
 
 export const useBuildingDetails = (
-  propertyId: string,
+  propertyCode: string,
   buildingCode?: string
 ) => {
   const buildingQuery = useBuilding(buildingCode)
 
   const propertyQuery = useQuery({
-    queryKey: ['property', propertyId],
-    queryFn: () => propertyService.getPropertyById(propertyId),
-    enabled: !!propertyId,
+    queryKey: ['property', propertyCode],
+    queryFn: () => propertyService.getPropertyByCode(propertyCode),
+    enabled: !!propertyCode,
   })
 
   const staircasesQuery = useQuery({
