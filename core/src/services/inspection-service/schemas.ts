@@ -192,6 +192,16 @@ export const SendProtocolResponseSchema = z.object({
   error: z.string().optional(),
 })
 
+export const CreateInspectionRequestSchema = DetailedXpandInspectionSchema.omit(
+  {
+    id: true,
+    remarkCount: true,
+  }
+)
+
+export type CreateInspectionRequest = z.infer<
+  typeof CreateInspectionRequestSchema
+>
 export type TenantContact = z.infer<typeof TenantContactSchema>
 export type TenantInfo = z.infer<typeof TenantInfoSchema>
 export type TenantContactsResponse = z.infer<

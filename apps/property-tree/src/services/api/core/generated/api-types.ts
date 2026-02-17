@@ -5355,6 +5355,47 @@ export interface paths {
       };
     };
   };
+  "/inspections": {
+    /**
+     * Create a new inspection
+     * @description Creates a new inspection in the local inspection database
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateInspectionRequest"];
+        };
+      };
+      responses: {
+        /** @description Inspection created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                inspection?: components["schemas"]["DetailedInspection"];
+              };
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/files": {
     /** List files with optional prefix */
     get: {
@@ -7827,6 +7868,47 @@ export interface components {
         contractId: string;
       };
       error?: string;
+    };
+    CreateInspectionRequest: {
+      status: string;
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string | null;
+      isFurnished: boolean;
+      leaseId: string;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              /** Format: date-time */
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
     };
     FileListItem: {
       /** @description Full file path/name */

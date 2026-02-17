@@ -12,6 +12,9 @@ import {
   XpandInspectionSchema,
 } from './schemas'
 import * as xpandAdapter from './adapters/xpand-adapter'
+import * as dbAdapter from './adapters/db-adapter'
+import { CreateInspectionSchema } from './adapters/db-adapter/schemas'
+import { db } from './adapters/db'
 
 /**
  * @swagger
@@ -26,6 +29,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedXpandInspection', DetailedXpandInspectionSchema)
   registerSchema('DetailedXpandInspectionRoom', DetailedXpandInspectionSchema)
   registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
+  registerSchema('CreateInspection', CreateInspectionSchema)
 
   /**
    * @swagger
@@ -366,6 +370,103 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections:
+   *   post:
+   *     tags:
+   *       - Inspection
+   *     summary: Create a new inspection
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateInspection'
+   *     responses:
+   *       201:
+   *         description: Inspection created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/DetailedXpandInspection'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       400:
+   *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 details:
+   *                   type: array
+   *                 metadata:
+   *                   type: object
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   */
+  router.post('(.*)/inspections', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const validationResult = CreateInspectionSchema.safeParse(ctx.request.body)
+    if (!validationResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: validationResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await dbAdapter.createInspection(
+        db,
+        validationResult.data
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to create inspection: ${result.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: {
+          inspection: result.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error creating inspection')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
 }

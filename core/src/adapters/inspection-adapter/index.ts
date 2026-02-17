@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch'
+import axios from 'axios'
 import { logger, PaginatedResponse } from '@onecore/utilities'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -130,6 +131,34 @@ export const getXpandInspectionById = async (
       'inspection-adapter.getXpandInspectionById'
     )
 
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const createInspection = async (
+  body: unknown
+): Promise<AdapterResult<DetailedXpandInspection, string>> => {
+  try {
+    const response = await axios.post<{
+      content: { inspection: DetailedXpandInspection }
+    }>(`${config.inspectionService.url}/inspections`, body, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    return {
+      ok: true,
+      data: response.data.content.inspection,
+    }
+  } catch (error) {
+    logger.error({ error }, 'inspection-adapter.createInspection')
+    if (axios.isAxiosError(error)) {
+      return {
+        ok: false,
+        err: error.response?.data?.error || 'Failed to create inspection',
+      }
+    }
     return { ok: false, err: 'unknown' }
   }
 }
