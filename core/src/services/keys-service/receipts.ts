@@ -5,6 +5,44 @@ import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { createLogEntry } from './helpers'
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /receipts:
+   *   post:
+   *     summary: Create a receipt
+   *     description: Create a new receipt record for a key loan
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateReceiptRequest'
+   *     responses:
+   *       201:
+   *         description: Key note created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.post('/receipts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
@@ -45,6 +83,46 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /receipts/{id}:
+   *   get:
+   *     summary: Get a receipt by ID
+   *     description: Retrieve a specific receipt by its ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The receipt ID
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved receipt
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -114,6 +192,58 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /receipts/{id}:
+   *   patch:
+   *     summary: Update a receipt
+   *     description: Update a receipt (e.g., set fileId after upload)
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateReceiptRequest'
+   *     responses:
+   *       200:
+   *         description: Receipt updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Receipt'
+   *       400:
+   *         description: Invalid request data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.put('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
@@ -293,6 +423,39 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: { fileId }, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /receipts/{id}:
+   *   delete:
+   *     summary: Delete a receipt
+   *     description: Delete a receipt by ID (and associated file from MinIO)
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the receipt to delete
+   *     responses:
+   *       204:
+   *         description: Receipt deleted successfully
+   *       404:
+   *         description: Receipt not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.delete('/receipts/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 

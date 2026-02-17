@@ -5,6 +5,51 @@ import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { createLogEntry, getUserName } from './helpers'
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /key-systems:
+   *   get:
+   *     summary: List all key systems with pagination
+   *     description: Retrieve a paginated list of all key systems
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved paginated key systems
+   *         content:
+   *           application/json:
+   *             schema:
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeySystem'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -26,6 +71,135 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { ...metadata, ...result.data }
   })
 
+  /**
+   * @swagger
+   * /key-systems/search:
+   *   get:
+   *     summary: Search key systems
+   *     description: |
+   *       Search key systems with flexible filtering.
+   *       - **OR search**: Use `q` with `fields` for multiple field search
+   *       - **AND search**: Use any KeySystem field parameter for filtering
+   *       - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+   *       - Only one OR group is supported, but you can combine it with multiple AND filters
+   *
+   *       Examples:
+   *       - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+   *       - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *         description: Page number (starts from 1)
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 20
+   *         description: Number of records per page
+   *       - in: query
+   *         name: q
+   *         required: false
+   *         schema:
+   *           type: string
+   *           minLength: 3
+   *         description: Search query for OR search across fields specified in 'fields' parameter
+   *       - in: query
+   *         name: fields
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode.
+   *       - in: query
+   *         name: id
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: systemCode
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: manufacturer
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: managingSupplier
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: propertyIds
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: installationDate
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: isActive
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: notes
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedAt
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: createdBy
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: updatedBy
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved paginated search results
+   *         content:
+   *           application/json:
+   *             schema:
+   *               allOf:
+   *                 - $ref: '#/components/schemas/PaginatedResponse'
+   *                 - type: object
+   *                   properties:
+   *                     content:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/KeySystem'
+   *       400:
+   *         description: Bad request. Invalid parameters or field names
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/key-systems/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
 
@@ -47,6 +221,46 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { ...metadata, ...result.data }
   })
 
+  /**
+   * @swagger
+   * /key-systems/{id}:
+   *   get:
+   *     summary: Get key system by ID
+   *     description: Retrieve a specific key system by its ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved key system
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeySystem'
+   *       404:
+   *         description: Key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -69,6 +283,44 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /key-systems:
+   *   post:
+   *     summary: Create a new key system
+   *     description: Create a new key system
+   *     tags: [Keys Service]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateKeySystemRequest'
+   *     responses:
+   *       201:
+   *         description: Key system created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeySystem'
+   *       400:
+   *         description: Invalid type or duplicate system code
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.post('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
@@ -109,6 +361,58 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /key-systems/{id}:
+   *   patch:
+   *     summary: Update a key system
+   *     description: Partially update a key system
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateKeySystemRequest'
+   *     responses:
+   *       200:
+   *         description: Key system updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeySystem'
+   *       400:
+   *         description: Invalid type or duplicate system code
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       404:
+   *         description: Key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.put('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body
@@ -154,6 +458,39 @@ export const routes = (router: KoaRouter) => {
     ctx.body = { content: result.data, ...metadata }
   })
 
+  /**
+   * @swagger
+   * /key-systems/{id}:
+   *   delete:
+   *     summary: Delete a key system
+   *     description: Delete a key system by ID
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system to delete
+   *     responses:
+   *       200:
+   *         description: Key system deleted successfully
+   *       404:
+   *         description: Key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
   router.delete('/key-systems/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
