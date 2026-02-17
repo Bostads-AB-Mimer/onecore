@@ -180,7 +180,6 @@ export function ArticleSection({
             id="administrativaKostnader"
             checked={administrativaKostnader}
             onCheckedChange={onAdministrativaKostnaderChange}
-            className="rounded-[2px]"
           />
           <Label
             htmlFor="administrativaKostnader"
@@ -195,7 +194,6 @@ export function ArticleSection({
             id="hanteringsavgift"
             checked={hanteringsavgift}
             onCheckedChange={onHanteringsavgiftChange}
-            className="rounded-[2px]"
           />
           <Label
             htmlFor="hanteringsavgift"
