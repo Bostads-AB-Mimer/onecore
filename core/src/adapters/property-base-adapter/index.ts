@@ -246,11 +246,11 @@ export async function getProperties(
 type GetPropertyDetailsResponse = components['schemas']['PropertyDetails']
 
 export async function getPropertyDetails(
-  propertyId: string
+  propertyCode: string
 ): Promise<AdapterResult<GetPropertyDetailsResponse, 'not-found' | 'unknown'>> {
   try {
-    const fetchResponse = await client().GET('/properties/{id}', {
-      params: { path: { id: propertyId } },
+    const fetchResponse = await client().GET('/properties/{code}', {
+      params: { path: { code: propertyCode } },
     })
 
     if (fetchResponse.data?.content) {

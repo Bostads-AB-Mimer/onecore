@@ -1521,18 +1521,18 @@ export interface paths {
       };
     };
   };
-  "/properties/{id}": {
+  "/properties/{code}": {
     /**
      * Get detailed information about a specific property
-     * @description Retrieves comprehensive information about a real estate property using its unique identifier.
+     * @description Retrieves comprehensive information about a real estate property using its unique code.
      * Returns detailed property information including property code, tract, designation,
      * and associated property objects.
      */
     get: {
       parameters: {
         path: {
-          /** @description The ID of the property. */
-          id: string;
+          /** @description The code of the property. */
+          code: string;
         };
       };
       responses: {

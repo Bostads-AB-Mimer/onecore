@@ -580,11 +580,19 @@ export async function generateInspectionProtocolPdf(
 
       doc.end()
     } catch (error) {
-      console.error('Error generating inspection protocol PDF:', error)
       const errorMessage =
         error instanceof Error
           ? error.message
           : 'Unknown error occurred during PDF generation'
+
+      const isValidationError =
+        error instanceof Error &&
+        error.message.startsWith('Invalid inspection:')
+
+      if (!isValidationError) {
+        console.error('Error generating inspection protocol PDF:', error)
+      }
+
       reject(
         new Error(`Failed to generate inspection protocol: ${errorMessage}`)
       )

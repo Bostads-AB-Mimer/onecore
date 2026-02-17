@@ -69,14 +69,14 @@ export interface paths {
             'application/json': {
               content?: components['schemas']['XpandInspection'][]
               _meta?: {
-                totalRecords: number
-                page: number
-                limit: number
-                count: number
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
               }
               _links?: {
-                href: string
-                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+                href?: string
+                rel?: string
               }[]
             }
           }
@@ -182,7 +182,7 @@ export interface components {
       inspector: string
       type: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       leaseId: string
       masterKeyAccess: string | null
     }
@@ -197,7 +197,7 @@ export interface components {
       type: string
       residenceId: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       isFurnished: boolean
       leaseId: string
       isTenantPresent: boolean
@@ -237,7 +237,7 @@ export interface components {
       type: string
       residenceId: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       isFurnished: boolean
       leaseId: string
       isTenantPresent: boolean
@@ -277,7 +277,7 @@ export interface components {
       type: string
       residenceId: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       isFurnished: boolean
       leaseId: string
       isTenantPresent: boolean

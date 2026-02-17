@@ -171,7 +171,7 @@ export const TenantContactsResponseSchema = z.object({
   inspection: z.object({
     id: z.string(),
     address: z.string(),
-    apartmentCode: z.string(),
+    apartmentCode: z.string().nullable(),
   }),
   new_tenant: TenantInfoSchema.optional(),
   tenant: TenantInfoSchema.optional(),
