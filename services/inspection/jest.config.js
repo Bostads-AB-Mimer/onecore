@@ -3,5 +3,5 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   modulePathIgnorePatterns: ['<rootDir>/build/'],
-  extensionsToTreatAsEsm: ['.d.ts, .ts'],
+  extensionsToTreatAsEsm: ['.d.ts', '.ts'],
 }
