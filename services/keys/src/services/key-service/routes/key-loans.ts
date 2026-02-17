@@ -13,32 +13,34 @@ import { paginate } from '../../../utils/pagination'
 
 const {
   KeyLoanSchema,
+  KeyLoanWithDetailsSchema,
+  KeyDetailsSchema,
+  CardSchema,
+  ReceiptSchema,
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
-} = keys.v1
-type CreateKeyLoanRequest = keys.v1.CreateKeyLoanRequest
-type UpdateKeyLoanRequest = keys.v1.UpdateKeyLoanRequest
-type KeyLoanResponse = keys.v1.KeyLoan
+} = keys
+type CreateKeyLoanRequest = keys.CreateKeyLoanRequest
+type UpdateKeyLoanRequest = keys.UpdateKeyLoanRequest
+type KeyLoanResponse = keys.KeyLoan
 
 /**
  * @swagger
  * tags:
  *   - name: Key Loans
  *     description: Endpoints related to key loan operations
- * components:
- *   schemas:
- *     CreateKeyLoanRequest:
- *       $ref: '#/components/schemas/CreateKeyLoanRequest'
- *     UpdateKeyLoanRequest:
- *       $ref: '#/components/schemas/UpdateKeyLoanRequest'
- *     KeyLoan:
- *       $ref: '#/components/schemas/KeyLoan'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('CreateKeyLoanRequest', CreateKeyLoanRequestSchema)
   registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
   registerSchema('KeyLoan', KeyLoanSchema)
+  registerSchema('KeyLoanWithDetails', KeyLoanWithDetailsSchema, {
+    KeyLoan: KeyLoanSchema,
+    KeyDetails: KeyDetailsSchema,
+    Card: CardSchema,
+    Receipt: ReceiptSchema,
+  })
   /**
    * @swagger
    * /key-loans:
@@ -57,43 +59,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     type: object
-   *                     properties:
-   *                       id:
-   *                         type: string
-   *                         description: The unique ID of the key loan.
-   *                       contact:
-   *                         type: string
-   *                         description: Contact information.
-   *                       contact2:
-   *                         type: string
-   *                         description: Second contact information.
-   *                       returnedAt:
-   *                         type: string
-   *                         format: date-time
-   *                         description: When keys were returned.
-   *                       availableToNextTenantFrom:
-   *                         type: string
-   *                         format: date-time
-   *                         description: When keys become available for next tenant if early return.
-   *                       pickedUpAt:
-   *                         type: string
-   *                         format: date-time
-   *                         description: When keys were picked up.
-   *                       createdAt:
-   *                         type: string
-   *                         format: date-time
-   *                         description: When the record was created.
-   *                       updatedAt:
-   *                         type: string
-   *                         format: date-time
-   *                         description: When the record was last updated.
-   *                       createdBy:
-   *                         type: string
-   *                         description: Who created this record.
-   *                       updatedBy:
-   *                         type: string
-   *                         description: Who last updated this record.
+   *                     $ref: '#/components/schemas/KeyLoan'
    *       500:
    *         description: An error occurred while listing key loans.
    *         content:
@@ -742,43 +708,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     id:
-   *                       type: string
-   *                       description: The unique ID of the key loan.
-   *                     contact:
-   *                       type: string
-   *                       description: Contact information.
-   *                     contact2:
-   *                       type: string
-   *                       description: Second contact information.
-   *                     returnedAt:
-   *                       type: string
-   *                       format: date-time
-   *                       description: When keys were returned.
-   *                     availableToNextTenantFrom:
-   *                       type: string
-   *                       format: date-time
-   *                       description: When keys become available for next tenant.
-   *                     pickedUpAt:
-   *                       type: string
-   *                       format: date-time
-   *                       description: When keys were picked up.
-   *                     createdAt:
-   *                       type: string
-   *                       format: date-time
-   *                       description: When the record was created.
-   *                     updatedAt:
-   *                       type: string
-   *                       format: date-time
-   *                       description: When the record was last updated.
-   *                     createdBy:
-   *                       type: string
-   *                       description: Who created this record.
-   *                     updatedBy:
-   *                       type: string
-   *                       description: Who last updated this record.
+   *                   $ref: '#/components/schemas/KeyLoanWithDetails'
    *       404:
    *         description: Key loan not found.
    *         content:
@@ -874,8 +804,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   description: The created key loan object.
+   *                   $ref: '#/components/schemas/KeyLoan'
    *       500:
    *         description: An error occurred while creating the key loan.
    *         content:
@@ -947,9 +876,9 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /key-loans/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a key loan
-   *     description: Partially update an existing key loan.
+   *     description: Update an existing key loan.
    *     tags: [Key Loans]
    *     parameters:
    *       - in: path
@@ -973,8 +902,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   description: The updated key loan object.
+   *                   $ref: '#/components/schemas/KeyLoan'
    *       404:
    *         description: Key loan not found.
    *         content:
@@ -996,7 +924,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch(
+  router.put(
     '/key-loans/:id',
     parseRequestBody(UpdateKeyLoanRequestSchema),
     async (ctx) => {

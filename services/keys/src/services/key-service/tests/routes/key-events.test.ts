@@ -249,7 +249,7 @@ describe('POST /key-events', () => {
 })
 
 /**
- * Tests for PATCH /key-events/:id endpoint (Update)
+ * Tests for PUT /key-events/:id endpoint (Update)
  *
  * Testing key event updates:
  * - Successful update
@@ -257,7 +257,7 @@ describe('POST /key-events', () => {
  * - Validation errors
  * - Database errors
  */
-describe('PATCH /key-events/:id', () => {
+describe('PUT /key-events/:id', () => {
   it('updates key event successfully and returns 200', async () => {
     const updatedEvent = factory.keyEvent.build({
       id: 'event-123',
@@ -269,7 +269,7 @@ describe('PATCH /key-events/:id', () => {
       .mockResolvedValueOnce(updatedEvent)
 
     const res = await request(app.callback())
-      .patch('/key-events/event-123')
+      .put('/key-events/event-123')
       .send({
         status: 'COMPLETED',
       })
@@ -291,7 +291,7 @@ describe('PATCH /key-events/:id', () => {
 
   it('validates invalid updates and returns 400', async () => {
     const res = await request(app.callback())
-      .patch('/key-events/event-123')
+      .put('/key-events/event-123')
       .send({
         status: 'INVALID_STATUS', // Invalid enum value
       })

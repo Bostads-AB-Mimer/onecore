@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeyLoan = keys.v1.KeyLoan
+type KeyLoan = keys.KeyLoan
 
 /**
  * Factory for generating MAINTENANCE type KeyLoan test data.

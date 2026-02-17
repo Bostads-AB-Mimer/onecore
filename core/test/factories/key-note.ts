@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeyNote = keys.v1.KeyNote
+type KeyNote = keys.KeyNote
 
 export const KeyNoteFactory = Factory.define<KeyNote>(({ sequence }) => ({
   id: `00000000-0000-0000-0000-${sequence.toString().padStart(12, '0')}`,

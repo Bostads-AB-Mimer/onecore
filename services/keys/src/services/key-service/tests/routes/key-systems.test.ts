@@ -107,7 +107,7 @@ describe('POST /key-systems', () => {
   })
 })
 
-describe('PATCH /key-systems/:id', () => {
+describe('PUT /key-systems/:id', () => {
   it('updates key system successfully and returns 200', async () => {
     const updatedSystem = factory.keySystem.build({
       id: 'system-123',
@@ -124,7 +124,7 @@ describe('PATCH /key-systems/:id', () => {
       .mockResolvedValueOnce(updatedSystem)
 
     const res = await request(app.callback())
-      .patch('/key-systems/system-123')
+      .put('/key-systems/system-123')
       .send({
         name: 'Updated Name',
       })
@@ -276,7 +276,7 @@ describe('Validation Edge Cases - Key Systems', () => {
       .mockResolvedValueOnce(updatedSystem)
 
     const res = await request(app.callback())
-      .patch(`/key-systems/${systemId}`)
+      .put(`/key-systems/${systemId}`)
       .send({
         systemCode: currentCode, // Same code, just updating other fields
         name: 'Updated Name',

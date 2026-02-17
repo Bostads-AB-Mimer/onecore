@@ -2,9 +2,9 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 
-type Receipt = keys.v1.Receipt
-type CreateReceiptRequest = keys.v1.CreateReceiptRequest
-type UpdateReceiptRequest = keys.v1.UpdateReceiptRequest
+type Receipt = keys.Receipt
+type CreateReceiptRequest = keys.CreateReceiptRequest
+type UpdateReceiptRequest = keys.UpdateReceiptRequest
 
 const TABLE = 'receipts'
 

@@ -1,8 +1,8 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeyLoan = keys.v1.KeyLoan
-type KeyLoanWithDetails = keys.v1.KeyLoanWithDetails
+type KeyLoan = keys.KeyLoan
+type KeyLoanWithDetails = keys.KeyLoanWithDetails
 
 export const KeyLoanFactory = Factory.define<KeyLoan>(({ sequence }) => ({
   id: `00000000-0000-0000-0000-${sequence.toString().padStart(12, '0')}`,

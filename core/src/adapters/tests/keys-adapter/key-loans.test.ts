@@ -1,12 +1,32 @@
-import nock from 'nock'
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
 import assert from 'node:assert'
 import config from '../../../common/config'
 import * as keysAdapter from '../../keys-adapter'
-import { mockedKeyLoan, mockedLog } from './mocks'
+import * as factory from '../../../../test/factories'
+import { keys } from '@onecore/types'
+
+const { KeyLoanSchema, LogSchema } = keys
+
+const mockedKeyLoan = JSON.parse(JSON.stringify(factory.keyLoan.build()))
+const mockedLog = JSON.parse(JSON.stringify(factory.log.build()))
+
+const expectedKeyLoan = KeyLoanSchema.parse(mockedKeyLoan)
+const expectedLog = LogSchema.parse(mockedLog)
+
+const mockServer = setupServer()
 
 describe('keys-adapter - KeyLoans & Logs', () => {
+  beforeAll(() => {
+    mockServer.listen()
+  })
+
   afterEach(() => {
-    nock.cleanAll()
+    mockServer.resetHandlers()
+  })
+
+  afterAll(() => {
+    mockServer.close()
   })
 
   // ============================================================================
@@ -16,18 +36,25 @@ describe('keys-adapter - KeyLoans & Logs', () => {
   describe('KeyLoansApi', () => {
     describe(keysAdapter.KeyLoansApi.list, () => {
       it('returns ok with key loans array on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans')
-          .reply(200, { content: [mockedKeyLoan] })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-loans`, () =>
+            HttpResponse.json({ content: [mockedKeyLoan] }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.list()
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyLoan])
+        expect(result.data).toEqual([expectedKeyLoan])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).get('/key-loans').reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-loans`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.list()
 
@@ -43,16 +70,21 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           _links: [{ href: '/key-loans/search?contact=P123456', rel: 'self' }],
         }
 
-        nock(config.keysService.url)
-          .get('/key-loans/search?contact=P123456')
-          .reply(200, paginatedResponse)
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-loans/search`, () =>
+            HttpResponse.json(paginatedResponse, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.search({
           contact: 'P123456',
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(paginatedResponse)
+        expect(result.data).toEqual({
+          ...paginatedResponse,
+          content: [expectedKeyLoan],
+        })
       })
 
       it('handles array parameters', async () => {
@@ -64,22 +96,30 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           ],
         }
 
-        nock(config.keysService.url)
-          .get('/key-loans/search?keys=key1&keys=key2')
-          .reply(200, paginatedResponse)
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-loans/search`, () =>
+            HttpResponse.json(paginatedResponse, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.search({
           keys: ['key1', 'key2'],
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(paginatedResponse)
+        expect(result.data).toEqual({
+          ...paginatedResponse,
+          content: [expectedKeyLoan],
+        })
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/search?invalid=param')
-          .reply(400)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-loans/search`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.search({
           invalid: 'param',
@@ -89,9 +129,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/search?contact=P123')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-loans/search`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.search({ contact: 'P123' })
 
@@ -101,22 +144,27 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
     describe(keysAdapter.KeyLoansApi.getByKey, () => {
       it('returns ok with key loans for specific key on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/by-key/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: [mockedKeyLoan] })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-loans/by-key/:keyId`, () =>
+            HttpResponse.json({ content: [mockedKeyLoan] }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.getByKey(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyLoan])
+        expect(result.data).toEqual([expectedKeyLoan])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/by-key/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-loans/by-key/:keyId`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.getByKey(
           '00000000-0000-0000-0000-000000000001'
@@ -128,9 +176,11 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
     describe(keysAdapter.KeyLoansApi.get, () => {
       it('returns ok with key loan on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedKeyLoan })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-loans/:id`, () =>
+            HttpResponse.json({ content: mockedKeyLoan }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -141,9 +191,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -153,9 +206,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -173,18 +229,25 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           contact: 'P123456',
         }
 
-        nock(config.keysService.url)
-          .post('/key-loans', createPayload)
-          .reply(201, { content: mockedKeyLoan })
+        mockServer.use(
+          http.post(`${config.keysService.url}/key-loans`, () =>
+            HttpResponse.json({ content: mockedKeyLoan }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.create(createPayload)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKeyLoan)
+        expect(result.data).toEqual(expectedKeyLoan)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/key-loans').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-loans`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.create({
           loanType: 'TENANT',
@@ -194,7 +257,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns conflict on 409 when keys already loaned', async () => {
-        nock(config.keysService.url).post('/key-loans').reply(409)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-loans`,
+            () => new HttpResponse(null, { status: 409 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.create({
           keys: ['key-1'],
@@ -206,7 +274,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/key-loans').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-loans`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.create({
           keys: ['key-1'],
@@ -228,9 +301,11 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           returnedAt: '2024-02-01T00:00:00.000Z',
         }
 
-        nock(config.keysService.url)
-          .patch('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: updatedKeyLoan })
+        mockServer.use(
+          http.put(`${config.keysService.url}/key-loans/:id`, () =>
+            HttpResponse.json({ content: updatedKeyLoan }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -238,13 +313,16 @@ describe('keys-adapter - KeyLoans & Logs', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(updatedKeyLoan)
+        expect(result.data).toEqual(KeyLoanSchema.parse(updatedKeyLoan))
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .patch('/key-loans/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.update(
           '00000000-0000-0000-0000-000000000999',
@@ -255,9 +333,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .patch('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(400)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -268,9 +349,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns conflict on 409', async () => {
-        nock(config.keysService.url)
-          .patch('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(409)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 409 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -281,9 +365,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .patch('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -296,9 +383,11 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
     describe(keysAdapter.KeyLoansApi.remove, () => {
       it('returns ok on 200', async () => {
-        nock(config.keysService.url)
-          .delete('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(200)
+        mockServer.use(
+          http.delete(`${config.keysService.url}/key-loans/:id`, () =>
+            HttpResponse.json(undefined, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.remove(
           '00000000-0000-0000-0000-000000000001'
@@ -308,9 +397,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .delete('/key-loans/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.remove(
           '00000000-0000-0000-0000-000000000999'
@@ -320,9 +412,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .delete('/key-loans/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/key-loans/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyLoansApi.remove(
           '00000000-0000-0000-0000-000000000001'
@@ -351,12 +446,19 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           _links: [{ href: '/logs?page=1&limit=20', rel: 'self' }],
         }
 
-        nock(config.keysService.url).get('/logs').reply(200, paginatedResponse)
+        mockServer.use(
+          http.get(`${config.keysService.url}/logs`, () =>
+            HttpResponse.json(paginatedResponse, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.list()
 
         assert(result.ok)
-        expect(result.data).toEqual(paginatedResponse)
+        expect(result.data).toEqual({
+          ...paginatedResponse,
+          content: [expectedLog],
+        })
       })
 
       it('returns ok with pagination params', async () => {
@@ -366,9 +468,11 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           _links: [],
         }
 
-        nock(config.keysService.url)
-          .get('/logs?page=2&limit=10')
-          .reply(200, paginatedResponse)
+        mockServer.use(
+          http.get(`${config.keysService.url}/logs`, () =>
+            HttpResponse.json(paginatedResponse, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.list(2, 10)
 
@@ -377,7 +481,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).get('/logs').reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/logs`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.list()
 
@@ -393,16 +502,21 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           _links: [],
         }
 
-        nock(config.keysService.url)
-          .get('/logs/search?eventType=creation')
-          .reply(200, paginatedResponse)
+        mockServer.use(
+          http.get(`${config.keysService.url}/logs/search`, () =>
+            HttpResponse.json(paginatedResponse, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.search({
           eventType: 'creation',
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(paginatedResponse)
+        expect(result.data).toEqual({
+          ...paginatedResponse,
+          content: [expectedLog],
+        })
       })
 
       it('handles array parameters', async () => {
@@ -412,9 +526,11 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           _links: [],
         }
 
-        nock(config.keysService.url)
-          .get('/logs/search?objectType=key&objectType=keyLoan')
-          .reply(200, paginatedResponse)
+        mockServer.use(
+          http.get(`${config.keysService.url}/logs/search`, () =>
+            HttpResponse.json(paginatedResponse, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.search({
           objectType: ['key', 'keyLoan'],
@@ -425,9 +541,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .get('/logs/search?invalid=param')
-          .reply(400)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/logs/search`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.search({ invalid: 'param' })
 
@@ -435,9 +554,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/logs/search?userName=test')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/logs/search`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.search({ userName: 'test' })
 
@@ -447,22 +569,27 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
     describe(keysAdapter.LogsApi.get, () => {
       it('returns ok with log on 200', async () => {
-        nock(config.keysService.url)
-          .get('/logs/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedLog })
+        mockServer.use(
+          http.get(`${config.keysService.url}/logs/:id`, () =>
+            HttpResponse.json({ content: mockedLog }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.get(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedLog)
+        expect(result.data).toEqual(expectedLog)
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/logs/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/logs/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -472,9 +599,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/logs/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/logs/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -486,22 +616,27 @@ describe('keys-adapter - KeyLoans & Logs', () => {
 
     describe(keysAdapter.LogsApi.getByObjectId, () => {
       it('returns ok with logs for specific object on 200', async () => {
-        nock(config.keysService.url)
-          .get('/logs/object/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: [mockedLog] })
+        mockServer.use(
+          http.get(`${config.keysService.url}/logs/object/:objectId`, () =>
+            HttpResponse.json({ content: [mockedLog] }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.getByObjectId(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedLog])
+        expect(result.data).toEqual([expectedLog])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/logs/object/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/logs/object/:objectId`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.getByObjectId(
           '00000000-0000-0000-0000-000000000001'
@@ -522,18 +657,25 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           description: 'Created new key',
         }
 
-        nock(config.keysService.url)
-          .post('/logs')
-          .reply(201, { content: mockedLog })
+        mockServer.use(
+          http.post(`${config.keysService.url}/logs`, () =>
+            HttpResponse.json({ content: mockedLog }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.create(createPayload)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedLog)
+        expect(result.data).toEqual(expectedLog)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/logs').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/logs`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.create({})
 
@@ -541,7 +683,12 @@ describe('keys-adapter - KeyLoans & Logs', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/logs').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/logs`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.LogsApi.create({
           userName: 'test',

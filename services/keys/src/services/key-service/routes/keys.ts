@@ -22,27 +22,19 @@ const {
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
-} = keys.v1
-type CreateKeyRequest = keys.v1.CreateKeyRequest
-type UpdateKeyRequest = keys.v1.UpdateKeyRequest
-type BulkUpdateFlexRequest = keys.v1.BulkUpdateFlexRequest
-type BulkDeleteKeysRequest = keys.v1.BulkDeleteKeysRequest
-type BulkUpdateKeysRequest = keys.v1.BulkUpdateKeysRequest
-type Key = keys.v1.Key
+} = keys
+type CreateKeyRequest = keys.CreateKeyRequest
+type UpdateKeyRequest = keys.UpdateKeyRequest
+type BulkUpdateFlexRequest = keys.BulkUpdateFlexRequest
+type BulkDeleteKeysRequest = keys.BulkDeleteKeysRequest
+type BulkUpdateKeysRequest = keys.BulkUpdateKeysRequest
+type Key = keys.Key
 
 /**
  * @swagger
  * tags:
  *   - name: Keys
  *     description: CRUD operations for keys
- * components:
- *   schemas:
- *     CreateKeyRequest:
- *       $ref: '#/components/schemas/CreateKeyRequest'
- *     UpdateKeyRequest:
- *       $ref: '#/components/schemas/UpdateKeyRequest'
- *     Key:
- *       $ref: '#/components/schemas/Key'
  */
 export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
@@ -518,7 +510,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /keys/bulk-update:
-   *   patch:
+   *   put:
    *     summary: Update multiple keys by ID
    *     description: Update multiple keys with the same values in a single request. Maximum 100 keys per request. Only provided fields will be updated.
    *     tags: [Keys]
@@ -560,7 +552,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch(
+  router.put(
     '/keys/bulk-update',
     parseRequestBody(BulkUpdateKeysRequestSchema),
     async (ctx) => {
@@ -587,9 +579,9 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /keys/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a key
-   *     description: Partially update an existing key.
+   *     description: Update an existing key.
    *     tags: [Keys]
    *     parameters:
    *       - in: path
@@ -645,7 +637,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Internal server error
    */
-  router.patch(
+  router.put(
     '/keys/:id',
     parseRequestBody(UpdateKeyRequestSchema),
     async (ctx) => {

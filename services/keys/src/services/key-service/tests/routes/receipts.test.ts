@@ -237,9 +237,9 @@ describe('GET /receipts/by-key-loan/:keyLoanId', () => {
 })
 
 /**
- * Note: PATCH /receipts/:id endpoint tests
+ * Note: PUT /receipts/:id endpoint tests
  *
- * The PATCH endpoint uses parseRequestBody middleware which makes unit testing
+ * The PUT endpoint uses parseRequestBody middleware which makes unit testing
  * more complex. The endpoint supports:
  * - Updating receiptFormat, receiptType, signedBy, signedAt
  * - Returns 404 when receipt not found

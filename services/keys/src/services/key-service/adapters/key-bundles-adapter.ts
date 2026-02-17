@@ -3,11 +3,11 @@ import { db } from './db'
 import { keys } from '@onecore/types'
 import { getKeyDetailsById, type KeyIncludeOptions } from './keys-adapter'
 
-type KeyBundle = keys.v1.KeyBundle
-type KeyDetails = keys.v1.KeyDetails
-type BundleWithLoanedKeysInfo = keys.v1.BundleWithLoanedKeysInfo
-type CreateKeyBundleRequest = keys.v1.CreateKeyBundleRequest
-type UpdateKeyBundleRequest = keys.v1.UpdateKeyBundleRequest
+type KeyBundle = keys.KeyBundle
+type KeyDetails = keys.KeyDetails
+type BundleWithLoanedKeysInfo = keys.BundleWithLoanedKeysInfo
+type CreateKeyBundleRequest = keys.CreateKeyBundleRequest
+type UpdateKeyBundleRequest = keys.UpdateKeyBundleRequest
 
 const TABLE = 'key_bundles'
 const KEY_LOANS_TABLE = 'key_loans'

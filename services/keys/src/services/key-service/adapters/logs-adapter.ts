@@ -2,8 +2,8 @@ import { Knex } from 'knex'
 import { keys } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
-type Log = keys.v1.Log
-type CreateLogRequest = keys.v1.CreateLogRequest
+type Log = keys.Log
+type CreateLogRequest = keys.CreateLogRequest
 
 const TABLE = 'logs'
 

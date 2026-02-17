@@ -140,7 +140,7 @@ export const Lease = z.object({
             z.object({
               phoneNumber: z.string(),
               type: z.string(),
-              isMainNumber: z.boolean(),
+              isMainNumber: z.number(),
             })
           )
           .optional(),

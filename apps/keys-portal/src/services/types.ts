@@ -4,9 +4,9 @@ import { keys } from '@onecore/types'
 import type { paths, components } from './api/core/generated/api-types'
 
 // Re-export pagination types from @onecore/types
-export type PaginatedResponse<T> = keys.v1.PaginatedResponse<T>
-export type PaginationMeta = keys.v1.PaginationMeta
-export type PaginationLinks = keys.v1.PaginationLinks
+export type PaginatedResponse<T> = keys.PaginatedResponse<T>
+export type PaginationMeta = keys.PaginationMeta
+export type PaginationLinks = keys.PaginationLinks
 
 // Tables/response types from the generated schemas
 export type Key = components['schemas']['Key']

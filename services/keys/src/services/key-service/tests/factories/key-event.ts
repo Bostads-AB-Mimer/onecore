@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type KeyEvent = keys.v1.KeyEvent
+type KeyEvent = keys.KeyEvent
 
 /**
  * Factory for generating test KeyEvent entities.

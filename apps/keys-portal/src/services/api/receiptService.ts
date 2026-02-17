@@ -1,4 +1,3 @@
-import { authConfig } from '@/auth-config'
 import { blobToBase64 } from '@/utils/fileUtils'
 
 import type {
@@ -80,30 +79,15 @@ export const receiptService = {
   async uploadFile(receiptId: string, file: File): Promise<UploadFileResponse> {
     const base64Content = await blobToBase64(file)
 
-    const response = await fetch(
-      `${authConfig.apiUrl}/receipts/${receiptId}/upload`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileData: base64Content,
-          fileContentType: file.type || 'application/pdf',
-        }),
-        credentials: 'include',
-      }
-    )
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(
-        errorData.error || errorData.reason || 'Failed to upload file'
-      )
-    }
-
-    const result = await response.json()
-    return result.content as UploadFileResponse
+    const { data, error } = await POST('/receipts/{id}/upload', {
+      params: { path: { id: receiptId } },
+      body: {
+        fileData: base64Content,
+        fileContentType: file.type || 'application/pdf',
+      },
+    })
+    if (error) throw error
+    return data?.content as UploadFileResponse
   },
 
   /**

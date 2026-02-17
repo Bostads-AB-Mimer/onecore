@@ -1,17 +1,59 @@
-import nock from 'nock'
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
 import assert from 'node:assert'
 import config from '../../../common/config'
 import * as keysAdapter from '../../keys-adapter'
-import {
-  mockedKey,
-  mockedKeySystem,
-  mockedPaginatedKeys,
-  mockedPaginatedKeySystems,
-} from './mocks'
+import * as factory from '../../../../test/factories'
+import { keys } from '@onecore/types'
+
+const { KeySchema, KeySystemSchema } = keys
+
+const mockedKey = JSON.parse(JSON.stringify(factory.key.build()))
+const mockedKeySystem = JSON.parse(JSON.stringify(factory.keySystem.build()))
+
+const expectedKey = KeySchema.parse(mockedKey)
+const expectedKeySystem = KeySystemSchema.parse(mockedKeySystem)
+
+const mockedPaginatedKeys = {
+  content: [mockedKey],
+  _meta: { totalRecords: 1, page: 1, limit: 20, count: 1 },
+  _links: [
+    { href: '/keys?page=1&limit=20', rel: 'self' },
+    { href: '/keys?page=1&limit=20', rel: 'first' },
+    { href: '/keys?page=1&limit=20', rel: 'last' },
+  ],
+}
+
+const expectedPaginatedKeys = { ...mockedPaginatedKeys, content: [expectedKey] }
+
+const mockedPaginatedKeySystems = {
+  content: [mockedKeySystem],
+  _meta: { totalRecords: 1, page: 1, limit: 20, count: 1 },
+  _links: [
+    { href: '/key-systems?page=1&limit=20', rel: 'self' },
+    { href: '/key-systems?page=1&limit=20', rel: 'first' },
+    { href: '/key-systems?page=1&limit=20', rel: 'last' },
+  ],
+}
+
+const expectedPaginatedKeySystems = {
+  ...mockedPaginatedKeySystems,
+  content: [expectedKeySystem],
+}
+
+const mockServer = setupServer()
 
 describe('keys-adapter', () => {
+  beforeAll(() => {
+    mockServer.listen()
+  })
+
   afterEach(() => {
-    nock.cleanAll()
+    mockServer.resetHandlers()
+  })
+
+  afterAll(() => {
+    mockServer.close()
   })
 
   // ============================================================================
@@ -21,30 +63,39 @@ describe('keys-adapter', () => {
   describe('KeysApi', () => {
     describe(keysAdapter.KeysApi.list, () => {
       it('returns ok with paginated keys on 200', async () => {
-        nock(config.keysService.url)
-          .get('/keys')
-          .reply(200, mockedPaginatedKeys)
+        mockServer.use(
+          http.get(`${config.keysService.url}/keys`, () =>
+            HttpResponse.json(mockedPaginatedKeys, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.list()
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeys)
+        expect(result.data).toEqual(expectedPaginatedKeys)
         expect(result.data.content).toHaveLength(1)
       })
 
       it('returns ok with pagination params', async () => {
-        nock(config.keysService.url)
-          .get('/keys?page=2&limit=10')
-          .reply(200, mockedPaginatedKeys)
+        mockServer.use(
+          http.get(`${config.keysService.url}/keys`, () =>
+            HttpResponse.json(mockedPaginatedKeys, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.list(2, 10)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeys)
+        expect(result.data).toEqual(expectedPaginatedKeys)
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).get('/keys').reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.list()
 
@@ -54,35 +105,42 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeysApi.search, () => {
       it('returns ok with search results on 200', async () => {
-        nock(config.keysService.url)
-          .get('/keys/search?rentalObjectCode=123-456-789%2F1')
-          .reply(200, mockedPaginatedKeys)
+        mockServer.use(
+          http.get(`${config.keysService.url}/keys/search`, () =>
+            HttpResponse.json(mockedPaginatedKeys, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.search({
           rentalObjectCode: '123-456-789/1',
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeys)
+        expect(result.data).toEqual(expectedPaginatedKeys)
       })
 
       it('handles array parameters', async () => {
-        nock(config.keysService.url)
-          .get('/keys/search?keyType=LGH&keyType=PB')
-          .reply(200, mockedPaginatedKeys)
+        mockServer.use(
+          http.get(`${config.keysService.url}/keys/search`, () =>
+            HttpResponse.json(mockedPaginatedKeys, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.search({
           keyType: ['LGH', 'PB'],
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeys)
+        expect(result.data).toEqual(expectedPaginatedKeys)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .get('/keys/search?invalid=param')
-          .reply(400)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys/search`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.search({ invalid: 'param' })
 
@@ -90,7 +148,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).get('/keys/search?query=test').reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys/search`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.search({ query: 'test' })
 
@@ -100,21 +163,27 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeysApi.getByRentalObjectCode, () => {
       it('returns ok with keys array on 200', async () => {
-        nock(config.keysService.url)
-          .get(/\/keys\/by-rental-object\/.*/)
-          .reply(200, { content: [mockedKey] })
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys/by-rental-object/:rentalObjectCode`,
+            () => HttpResponse.json({ content: [mockedKey] }, { status: 200 })
+          )
+        )
 
         const result =
           await keysAdapter.KeysApi.getByRentalObjectCode('123-456-789/1')
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKey])
+        expect(result.data).toEqual([expectedKey])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get(/\/keys\/by-rental-object\/.*/)
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys/by-rental-object/:rentalObjectCode`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result =
           await keysAdapter.KeysApi.getByRentalObjectCode('123-456-789/1')
@@ -125,22 +194,27 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeysApi.get, () => {
       it('returns ok with key on 200', async () => {
-        nock(config.keysService.url)
-          .get('/keys/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedKey })
+        mockServer.use(
+          http.get(`${config.keysService.url}/keys/:id`, () =>
+            HttpResponse.json({ content: mockedKey }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.get(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKey)
+        expect(result.data).toEqual(expectedKey)
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/keys/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -150,9 +224,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/keys/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -170,18 +247,25 @@ describe('keys-adapter', () => {
           flexNumber: 1,
         }
 
-        nock(config.keysService.url)
-          .post('/keys', createPayload)
-          .reply(201, { content: mockedKey })
+        mockServer.use(
+          http.post(`${config.keysService.url}/keys`, () =>
+            HttpResponse.json({ content: mockedKey }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.create(createPayload)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKey)
+        expect(result.data).toEqual(expectedKey)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/keys').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/keys`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.create({})
 
@@ -189,7 +273,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/keys').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/keys`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.create({ keyName: 'Test' })
 
@@ -202,9 +291,11 @@ describe('keys-adapter', () => {
         const updatePayload = { keyName: 'Updated Key' }
         const updatedKey = { ...mockedKey, keyName: 'Updated Key' }
 
-        nock(config.keysService.url)
-          .patch('/keys/00000000-0000-0000-0000-000000000001', updatePayload)
-          .reply(200, { content: updatedKey })
+        mockServer.use(
+          http.put(`${config.keysService.url}/keys/:id`, () =>
+            HttpResponse.json({ content: updatedKey }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -212,13 +303,16 @@ describe('keys-adapter', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(updatedKey)
+        expect(result.data).toEqual(KeySchema.parse(updatedKey))
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .patch('/keys/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.update(
           '00000000-0000-0000-0000-000000000999',
@@ -229,9 +323,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .patch('/keys/00000000-0000-0000-0000-000000000001')
-          .reply(400)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -242,9 +339,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .patch('/keys/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -257,9 +357,11 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeysApi.remove, () => {
       it('returns ok on 200', async () => {
-        nock(config.keysService.url)
-          .delete('/keys/00000000-0000-0000-0000-000000000001')
-          .reply(200)
+        mockServer.use(
+          http.delete(`${config.keysService.url}/keys/:id`, () =>
+            HttpResponse.json(undefined, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.remove(
           '00000000-0000-0000-0000-000000000001'
@@ -269,9 +371,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .delete('/keys/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.remove(
           '00000000-0000-0000-0000-000000000999'
@@ -281,9 +386,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .delete('/keys/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/keys/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.remove(
           '00000000-0000-0000-0000-000000000001'
@@ -295,14 +403,11 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeysApi.bulkUpdateFlex, () => {
       it('returns ok with updated count on 200', async () => {
-        const payload = {
-          rentalObjectCode: '123-456-789/1',
-          flexNumber: 5,
-        }
-
-        nock(config.keysService.url)
-          .post('/keys/bulk-update-flex', payload)
-          .reply(200, { content: 3 })
+        mockServer.use(
+          http.post(`${config.keysService.url}/keys/bulk-update-flex`, () =>
+            HttpResponse.json({ content: 3 }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.bulkUpdateFlex(
           '123-456-789/1',
@@ -314,7 +419,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/keys/bulk-update-flex').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/keys/bulk-update-flex`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.bulkUpdateFlex(
           '123-456-789/1',
@@ -325,7 +435,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/keys/bulk-update-flex').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/keys/bulk-update-flex`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeysApi.bulkUpdateFlex(
           '123-456-789/1',
@@ -344,29 +459,38 @@ describe('keys-adapter', () => {
   describe('KeySystemsApi', () => {
     describe(keysAdapter.KeySystemsApi.list, () => {
       it('returns ok with paginated key systems on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems')
-          .reply(200, mockedPaginatedKeySystems)
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-systems`, () =>
+            HttpResponse.json(mockedPaginatedKeySystems, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.list()
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeySystems)
+        expect(result.data).toEqual(expectedPaginatedKeySystems)
       })
 
       it('returns ok with pagination params', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems?page=2&limit=10')
-          .reply(200, mockedPaginatedKeySystems)
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-systems`, () =>
+            HttpResponse.json(mockedPaginatedKeySystems, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.list(2, 10)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeySystems)
+        expect(result.data).toEqual(expectedPaginatedKeySystems)
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).get('/key-systems').reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-systems`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.list()
 
@@ -376,35 +500,42 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeySystemsApi.search, () => {
       it('returns ok with search results on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/search?manufacturer=ASSA%20ABLOY')
-          .reply(200, mockedPaginatedKeySystems)
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-systems/search`, () =>
+            HttpResponse.json(mockedPaginatedKeySystems, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.search({
           manufacturer: 'ASSA ABLOY',
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeySystems)
+        expect(result.data).toEqual(expectedPaginatedKeySystems)
       })
 
       it('handles array parameters', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/search?type=MECHANICAL&type=ELECTRONIC')
-          .reply(200, mockedPaginatedKeySystems)
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-systems/search`, () =>
+            HttpResponse.json(mockedPaginatedKeySystems, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.search({
           type: ['MECHANICAL', 'ELECTRONIC'],
         })
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedPaginatedKeySystems)
+        expect(result.data).toEqual(expectedPaginatedKeySystems)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/search?invalid=param')
-          .reply(400)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-systems/search`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.search({
           invalid: 'param',
@@ -414,9 +545,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/search?query=test')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-systems/search`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.search({ query: 'test' })
 
@@ -426,22 +560,27 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeySystemsApi.get, () => {
       it('returns ok with key system on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedKeySystem })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-systems/:id`, () =>
+            HttpResponse.json({ content: mockedKeySystem }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.get(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKeySystem)
+        expect(result.data).toEqual(expectedKeySystem)
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -451,9 +590,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -472,18 +614,25 @@ describe('keys-adapter', () => {
           type: 'ELECTRONIC' as const,
         }
 
-        nock(config.keysService.url)
-          .post('/key-systems', createPayload)
-          .reply(201, { content: mockedKeySystem })
+        mockServer.use(
+          http.post(`${config.keysService.url}/key-systems`, () =>
+            HttpResponse.json({ content: mockedKeySystem }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.create(createPayload)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKeySystem)
+        expect(result.data).toEqual(expectedKeySystem)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/key-systems').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-systems`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.create({})
 
@@ -491,7 +640,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns conflict on 409', async () => {
-        nock(config.keysService.url).post('/key-systems').reply(409)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-systems`,
+            () => new HttpResponse(null, { status: 409 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.create({
           systemCode: 'SYS-001',
@@ -504,7 +658,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/key-systems').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-systems`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.create({
           systemCode: 'SYS-002',
@@ -522,12 +681,11 @@ describe('keys-adapter', () => {
         const updatePayload = { name: 'Updated System' }
         const updatedSystem = { ...mockedKeySystem, name: 'Updated System' }
 
-        nock(config.keysService.url)
-          .patch(
-            '/key-systems/00000000-0000-0000-0000-000000000001',
-            updatePayload
+        mockServer.use(
+          http.put(`${config.keysService.url}/key-systems/:id`, () =>
+            HttpResponse.json({ content: updatedSystem }, { status: 200 })
           )
-          .reply(200, { content: updatedSystem })
+        )
 
         const result = await keysAdapter.KeySystemsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -535,13 +693,16 @@ describe('keys-adapter', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(updatedSystem)
+        expect(result.data).toEqual(KeySystemSchema.parse(updatedSystem))
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .patch('/key-systems/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.update(
           '00000000-0000-0000-0000-000000000999',
@@ -552,9 +713,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns conflict on 409', async () => {
-        nock(config.keysService.url)
-          .patch('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(409)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 409 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -565,9 +729,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .patch('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(400)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -578,9 +745,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .patch('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -593,9 +763,11 @@ describe('keys-adapter', () => {
 
     describe(keysAdapter.KeySystemsApi.remove, () => {
       it('returns ok on 200', async () => {
-        nock(config.keysService.url)
-          .delete('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(200)
+        mockServer.use(
+          http.delete(`${config.keysService.url}/key-systems/:id`, () =>
+            HttpResponse.json(undefined, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.remove(
           '00000000-0000-0000-0000-000000000001'
@@ -605,9 +777,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .delete('/key-systems/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.remove(
           '00000000-0000-0000-0000-000000000999'
@@ -617,9 +792,12 @@ describe('keys-adapter', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .delete('/key-systems/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/key-systems/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeySystemsApi.remove(
           '00000000-0000-0000-0000-000000000001'

@@ -10,7 +10,7 @@ import type {
 } from '@/services/types'
 import { querySerializer } from '@/utils/querySerializer'
 
-import { GET, POST, PATCH, DELETE } from './core/base-api'
+import { GET, POST, PUT, DELETE } from './core/base-api'
 
 // Helper to ensure paginated response has proper structure
 function ensurePaginatedResponse<T>(data: any): PaginatedResponse<T> {
@@ -55,7 +55,7 @@ export const keyService = {
   },
 
   async updateKey(id: string, payload: UpdateKeyRequest): Promise<Key> {
-    const { data, error } = await PATCH('/keys/{id}', {
+    const { data, error } = await PUT('/keys/{id}', {
       params: { path: { id } },
       body: payload,
     })
@@ -119,9 +119,8 @@ export const keyService = {
     return data?.content as number
   },
 
-  // Note: These endpoints use type assertions until OpenAPI types are regenerated
   async bulkDeleteKeys(keyIds: string[]): Promise<number> {
-    const { data, error } = await (POST as any)('/keys/bulk-delete', {
+    const { data, error } = await POST('/keys/bulk-delete', {
       body: { keyIds },
     })
     if (error) throw error
@@ -140,7 +139,7 @@ export const keyService = {
       clearNotes?: boolean
     }
   ): Promise<number> {
-    const { data, error } = await (PATCH as any)('/keys/bulk-update', {
+    const { data, error } = await PUT('/keys/bulk-update', {
       body: { keyIds, updates },
     })
     if (error) throw error
@@ -184,7 +183,7 @@ export const keyService = {
     id: string,
     payload: UpdateKeySystemRequest
   ): Promise<KeySystem> {
-    const { data, error, response } = await PATCH('/key-systems/{id}', {
+    const { data, error, response } = await PUT('/key-systems/{id}', {
       params: { path: { id } },
       body: payload,
     })

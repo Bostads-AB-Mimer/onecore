@@ -2,13 +2,13 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 
-type Key = keys.v1.Key
-type KeyDetails = keys.v1.KeyDetails
-type KeyLoan = keys.v1.KeyLoan
-type KeyEvent = keys.v1.KeyEvent
-type KeySystem = keys.v1.KeySystem
-type CreateKeyRequest = keys.v1.CreateKeyRequest
-type UpdateKeyRequest = keys.v1.UpdateKeyRequest
+type Key = keys.Key
+type KeyDetails = keys.KeyDetails
+type KeyLoan = keys.KeyLoan
+type KeyEvent = keys.KeyEvent
+type KeySystem = keys.KeySystem
+type CreateKeyRequest = keys.CreateKeyRequest
+type UpdateKeyRequest = keys.UpdateKeyRequest
 
 const TABLE = 'keys'
 

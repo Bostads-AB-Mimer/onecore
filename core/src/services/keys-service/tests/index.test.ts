@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import { routes } from '../index'
 import * as keysAdapter from '../../../adapters/keys-adapter'
+import * as fileStorageAdapter from '../../../adapters/file-storage-adapter'
 import * as factory from '../../../../test/factories'
 
 // Mock logger to prevent errors in routes
@@ -231,7 +232,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: true, data: updatedKey })
 
       const res = await request(app.callback())
-        .patch(`/keys/${updatedKey.id}`)
+        .put(`/keys/${updatedKey.id}`)
         .send({ keyName: 'Updated Name' })
 
       expect(res.status).toBe(200)
@@ -244,7 +245,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch('/keys/00000000-0000-0000-0000-000000000999')
+        .put('/keys/00000000-0000-0000-0000-000000000999')
         .send({ keyName: 'Updated Name' })
 
       expect(res.status).toBe(404)
@@ -256,7 +257,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'bad-request' })
 
       const res = await request(app.callback())
-        .patch('/keys/00000000-0000-0000-0000-000000000001')
+        .put('/keys/00000000-0000-0000-0000-000000000001')
         .send({ invalid: 'data' })
 
       expect(res.status).toBe(400)
@@ -268,7 +269,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
-        .patch('/keys/00000000-0000-0000-0000-000000000001')
+        .put('/keys/00000000-0000-0000-0000-000000000001')
         .send({ keyName: 'Updated Name' })
 
       expect(res.status).toBe(500)
@@ -543,7 +544,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: true, data: updatedKeyLoan })
 
       const res = await request(app.callback())
-        .patch(`/key-loans/${updatedKeyLoan.id}`)
+        .put(`/key-loans/${updatedKeyLoan.id}`)
         .send({ returnedAt: new Date().toISOString() })
 
       expect(res.status).toBe(200)
@@ -556,7 +557,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch('/key-loans/00000000-0000-0000-0000-000000000999')
+        .put('/key-loans/00000000-0000-0000-0000-000000000999')
         .send({ returnedAt: new Date().toISOString() })
 
       expect(res.status).toBe(404)
@@ -568,7 +569,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'bad-request' })
 
       const res = await request(app.callback())
-        .patch('/key-loans/00000000-0000-0000-0000-000000000001')
+        .put('/key-loans/00000000-0000-0000-0000-000000000001')
         .send({ invalid: 'data' })
 
       expect(res.status).toBe(400)
@@ -580,7 +581,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
-        .patch('/key-loans/00000000-0000-0000-0000-000000000001')
+        .put('/key-loans/00000000-0000-0000-0000-000000000001')
         .send({ returnedAt: new Date().toISOString() })
 
       expect(res.status).toBe(500)
@@ -907,7 +908,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: true, data: updatedKeySystem })
 
       const res = await request(app.callback())
-        .patch(`/key-systems/${updatedKeySystem.id}`)
+        .put(`/key-systems/${updatedKeySystem.id}`)
         .send({ name: 'Updated Name' })
 
       expect(res.status).toBe(200)
@@ -920,7 +921,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch('/key-systems/00000000-0000-0000-0000-000000000999')
+        .put('/key-systems/00000000-0000-0000-0000-000000000999')
         .send({ name: 'Updated Name' })
 
       expect(res.status).toBe(404)
@@ -932,7 +933,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'bad-request' })
 
       const res = await request(app.callback())
-        .patch('/key-systems/00000000-0000-0000-0000-000000000001')
+        .put('/key-systems/00000000-0000-0000-0000-000000000001')
         .send({ invalid: 'data' })
 
       expect(res.status).toBe(400)
@@ -944,7 +945,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
-        .patch('/key-systems/00000000-0000-0000-0000-000000000001')
+        .put('/key-systems/00000000-0000-0000-0000-000000000001')
         .send({ name: 'Updated Name' })
 
       expect(res.status).toBe(500)
@@ -1003,27 +1004,34 @@ describe('keys-service', () => {
 
   describe('GET /key-systems/:id/download-schema', () => {
     it('responds with download URL on success', async () => {
+      const keySystem = factory.keySystem.build({
+        schemaFileId: 'schemas/key-system-123.pdf',
+      })
       const mockUrl = {
         url: 'https://minio.example.com/schemas/file.json',
         expiresIn: 3600,
-        fileId: 'file-123',
       }
 
       jest
-        .spyOn(keysAdapter.KeySystemsApi, 'getSchemaDownloadUrl')
-        .mockResolvedValue({ ok: true, data: mockUrl })
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
+        .mockResolvedValue({ ok: true, data: keySystem })
+
+      jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
+        ok: true,
+        data: mockUrl,
+      })
 
       const res = await request(app.callback()).get(
         '/key-systems/system-123/download-schema'
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toEqual(mockUrl)
+      expect(res.body.content.url).toBe(mockUrl.url)
     })
 
     it('responds with 404 if key system not found', async () => {
       jest
-        .spyOn(keysAdapter.KeySystemsApi, 'getSchemaDownloadUrl')
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
@@ -1033,10 +1041,19 @@ describe('keys-service', () => {
       expect(res.status).toBe(404)
     })
 
-    it('responds with 500 if adapter fails', async () => {
+    it('responds with 500 if file storage fails', async () => {
+      const keySystem = factory.keySystem.build({
+        schemaFileId: 'schemas/key-system-123.pdf',
+      })
+
       jest
-        .spyOn(keysAdapter.KeySystemsApi, 'getSchemaDownloadUrl')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
+        .mockResolvedValue({ ok: true, data: keySystem })
+
+      jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
 
       const res = await request(app.callback()).get(
         '/key-systems/system-123/download-schema'
@@ -1048,21 +1065,22 @@ describe('keys-service', () => {
 
   describe('DELETE /key-systems/:id/schema', () => {
     it('responds with 204 on successful schema deletion', async () => {
-      jest
-        .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
-        .mockResolvedValue({ ok: true, data: undefined })
+      const keySystem = factory.keySystem.build({
+        schemaFileId: 'schemas/key-system-123.pdf',
+      })
 
-      jest.spyOn(keysAdapter.KeySystemsApi, 'get').mockResolvedValue({
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
+        .mockResolvedValue({ ok: true, data: keySystem })
+
+      jest.spyOn(fileStorageAdapter, 'deleteFile').mockResolvedValue({
         ok: true,
-        data: {
-          id: 'system-123',
-          systemCode: 'TEST-SYSTEM',
-          type: 'MECHANICAL',
-          name: 'Test System',
-          manufacturer: 'Test Manufacturer',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        data: undefined,
+      })
+
+      jest.spyOn(keysAdapter.KeySystemsApi, 'update').mockResolvedValue({
+        ok: true,
+        data: { ...keySystem, schemaFileId: null },
       })
 
       const res = await request(app.callback()).delete(
@@ -1074,7 +1092,7 @@ describe('keys-service', () => {
 
     it('responds with 404 if key system not found', async () => {
       jest
-        .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).delete(
@@ -1084,10 +1102,19 @@ describe('keys-service', () => {
       expect(res.status).toBe(404)
     })
 
-    it('responds with 500 if adapter fails', async () => {
+    it('responds with 500 if file storage deletion fails', async () => {
+      const keySystem = factory.keySystem.build({
+        schemaFileId: 'schemas/key-system-123.pdf',
+      })
+
       jest
-        .spyOn(keysAdapter.KeySystemsApi, 'deleteSchemaFile')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
+        .spyOn(keysAdapter.KeySystemsApi, 'get')
+        .mockResolvedValue({ ok: true, data: keySystem })
+
+      jest.spyOn(fileStorageAdapter, 'deleteFile').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
 
       const res = await request(app.callback()).delete(
         '/key-systems/system-123/schema'
@@ -1513,7 +1540,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: true, data: updatedKeyNote })
 
       const res = await request(app.callback())
-        .patch(`/key-notes/${updatedKeyNote.id}`)
+        .put(`/key-notes/${updatedKeyNote.id}`)
         .send({ description: 'Updated' })
 
       expect(res.status).toBe(200)
@@ -1526,7 +1553,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch('/key-notes/00000000-0000-0000-0000-000000000999')
+        .put('/key-notes/00000000-0000-0000-0000-000000000999')
         .send({ description: 'Updated' })
 
       expect(res.status).toBe(404)
@@ -1538,7 +1565,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'bad-request' })
 
       const res = await request(app.callback())
-        .patch('/key-notes/00000000-0000-0000-0000-000000000001')
+        .put('/key-notes/00000000-0000-0000-0000-000000000001')
         .send({ invalid: 'data' })
 
       expect(res.status).toBe(400)
@@ -1550,7 +1577,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
-        .patch('/key-notes/00000000-0000-0000-0000-000000000001')
+        .put('/key-notes/00000000-0000-0000-0000-000000000001')
         .send({ description: 'Updated' })
 
       expect(res.status).toBe(500)
@@ -1679,7 +1706,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: true, data: updatedReceipt })
 
       const res = await request(app.callback())
-        .patch(`/receipts/${updatedReceipt.id}`)
+        .put(`/receipts/${updatedReceipt.id}`)
         .send({ receiptType: 'RETURN' })
 
       expect(res.status).toBe(200)
@@ -1692,7 +1719,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch('/receipts/00000000-0000-0000-0000-000000000999')
+        .put('/receipts/00000000-0000-0000-0000-000000000999')
         .send({ receiptType: 'RETURN' })
 
       expect(res.status).toBe(404)
@@ -1704,7 +1731,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'bad-request' })
 
       const res = await request(app.callback())
-        .patch('/receipts/00000000-0000-0000-0000-000000000001')
+        .put('/receipts/00000000-0000-0000-0000-000000000001')
         .send({ invalid: 'data' })
 
       expect(res.status).toBe(400)
@@ -1716,7 +1743,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
-        .patch('/receipts/00000000-0000-0000-0000-000000000001')
+        .put('/receipts/00000000-0000-0000-0000-000000000001')
         .send({ receiptType: 'RETURN' })
 
       expect(res.status).toBe(500)
@@ -1725,7 +1752,7 @@ describe('keys-service', () => {
 
   describe('DELETE /receipts/:id', () => {
     it('responds with 200 on successful deletion', async () => {
-      const receipt = factory.receipt.build()
+      const receipt = factory.receipt.build({ fileId: null })
 
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'get')
@@ -1759,7 +1786,7 @@ describe('keys-service', () => {
     })
 
     it('responds with 500 if adapter fails', async () => {
-      const receipt = factory.receipt.build()
+      const receipt = factory.receipt.build({ fileId: null })
 
       jest
         .spyOn(keysAdapter.ReceiptsApi, 'get')
@@ -1779,27 +1806,31 @@ describe('keys-service', () => {
 
   describe('GET /receipts/:id/download', () => {
     it('responds with download URL on success', async () => {
-      const downloadInfo = {
-        url: 'https://example.com/file.pdf',
-        expiresIn: 3600,
-        fileId: 'file-123',
-      }
+      const receipt = factory.receipt.build({
+        fileId: 'keys/receipt-123.pdf',
+      })
 
       jest
-        .spyOn(keysAdapter.ReceiptsApi, 'getDownloadUrl')
-        .mockResolvedValue({ ok: true, data: downloadInfo })
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
+        ok: true,
+        data: { url: 'https://example.com/file.pdf', expiresIn: 3600 },
+      })
 
       const res = await request(app.callback()).get(
         '/receipts/00000000-0000-0000-0000-000000000001/download'
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content.url).toBe(downloadInfo.url)
+      expect(res.body.content.url).toBe('https://example.com/file.pdf')
+      expect(res.body.content.fileId).toBe('keys/receipt-123.pdf')
     })
 
     it('responds with 404 if receipt not found', async () => {
       jest
-        .spyOn(keysAdapter.ReceiptsApi, 'getDownloadUrl')
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).get(
@@ -1809,10 +1840,19 @@ describe('keys-service', () => {
       expect(res.status).toBe(404)
     })
 
-    it('responds with 500 if adapter fails', async () => {
+    it('responds with 500 if file storage fails', async () => {
+      const receipt = factory.receipt.build({
+        fileId: 'keys/receipt-123.pdf',
+      })
+
       jest
-        .spyOn(keysAdapter.ReceiptsApi, 'getDownloadUrl')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
 
       const res = await request(app.callback()).get(
         '/receipts/00000000-0000-0000-0000-000000000001/download'
@@ -1824,10 +1864,27 @@ describe('keys-service', () => {
 
   describe('POST /receipts/:id/upload', () => {
     it('uploads file successfully and returns fileId', async () => {
-      jest.spyOn(keysAdapter.ReceiptsApi, 'uploadFile').mockResolvedValue({
-        ok: true,
-        data: { fileId: 'keys/receipt-123.pdf' },
+      const receipt = factory.receipt.build({ fileId: null })
+      const updatedReceipt = factory.receipt.build({
+        fileId: 'keys/receipt-123.pdf',
       })
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest.spyOn(fileStorageAdapter, 'uploadFile').mockResolvedValue({
+        ok: true,
+        data: { fileName: 'keys/receipt-123.pdf', message: 'uploaded' },
+      })
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'update')
+        .mockResolvedValue({ ok: true, data: updatedReceipt })
+
+      jest
+        .spyOn(keysAdapter.KeyLoansApi, 'activate')
+        .mockResolvedValue({ ok: true, data: undefined as any })
 
       const res = await request(app.callback())
         .post('/receipts/00000000-0000-0000-0000-000000000001/upload')
@@ -1850,10 +1907,9 @@ describe('keys-service', () => {
     })
 
     it('responds with 404 if receipt not found', async () => {
-      jest.spyOn(keysAdapter.ReceiptsApi, 'uploadFile').mockResolvedValue({
-        ok: false,
-        err: 'not-found',
-      })
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
         .post('/receipts/00000000-0000-0000-0000-000000000999/upload')
@@ -1863,7 +1919,13 @@ describe('keys-service', () => {
     })
 
     it('responds with 500 if upload fails', async () => {
-      jest.spyOn(keysAdapter.ReceiptsApi, 'uploadFile').mockResolvedValue({
+      const receipt = factory.receipt.build({ fileId: null })
+
+      jest
+        .spyOn(keysAdapter.ReceiptsApi, 'get')
+        .mockResolvedValue({ ok: true, data: receipt })
+
+      jest.spyOn(fileStorageAdapter, 'uploadFile').mockResolvedValue({
         ok: false,
         err: 'unknown',
       })
@@ -2047,7 +2109,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: true, data: updatedKeyEvent })
 
       const res = await request(app.callback())
-        .patch(`/key-events/${updatedKeyEvent.id}`)
+        .put(`/key-events/${updatedKeyEvent.id}`)
         .send({ status: 'COMPLETED' })
 
       expect(res.status).toBe(200)
@@ -2060,7 +2122,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch('/key-events/00000000-0000-0000-0000-000000000999')
+        .put('/key-events/00000000-0000-0000-0000-000000000999')
         .send({ status: 'COMPLETED' })
 
       expect(res.status).toBe(404)
@@ -2072,7 +2134,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'bad-request' })
 
       const res = await request(app.callback())
-        .patch('/key-events/00000000-0000-0000-0000-000000000001')
+        .put('/key-events/00000000-0000-0000-0000-000000000001')
         .send({ invalid: 'data' })
 
       expect(res.status).toBe(400)
@@ -2084,7 +2146,7 @@ describe('keys-service', () => {
         .mockResolvedValue({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
-        .patch('/key-events/00000000-0000-0000-0000-000000000001')
+        .put('/key-events/00000000-0000-0000-0000-000000000001')
         .send({ status: 'COMPLETED' })
 
       expect(res.status).toBe(500)

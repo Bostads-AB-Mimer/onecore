@@ -166,7 +166,7 @@ describe('POST /key-notes', () => {
 })
 
 /**
- * Tests for PATCH /key-notes/:id endpoint (Update)
+ * Tests for PUT /key-notes/:id endpoint (Update)
  *
  * Testing key note update with various scenarios:
  * - Successful update
@@ -175,7 +175,7 @@ describe('POST /key-notes', () => {
  * - Validation errors
  * - Database errors
  */
-describe('PATCH /key-notes/:id', () => {
+describe('PUT /key-notes/:id', () => {
   it('updates key note successfully and returns 200', async () => {
     const updatedKeyNote = factory.keyNote.build({
       id: 'note-123',
@@ -187,11 +187,9 @@ describe('PATCH /key-notes/:id', () => {
       .spyOn(keyNotesAdapter, 'updateKeyNote')
       .mockResolvedValueOnce(updatedKeyNote)
 
-    const res = await request(app.callback())
-      .patch('/key-notes/note-123')
-      .send({
-        description: 'Updated description',
-      })
+    const res = await request(app.callback()).put('/key-notes/note-123').send({
+      description: 'Updated description',
+    })
 
     expect(updateKeyNoteSpy).toHaveBeenCalledWith(
       'note-123',
@@ -216,11 +214,9 @@ describe('PATCH /key-notes/:id', () => {
       .spyOn(keyNotesAdapter, 'updateKeyNote')
       .mockResolvedValueOnce(updatedKeyNote)
 
-    const res = await request(app.callback())
-      .patch('/key-notes/note-123')
-      .send({
-        description: 'Partially updated description',
-      })
+    const res = await request(app.callback()).put('/key-notes/note-123').send({
+      description: 'Partially updated description',
+    })
 
     expect(updateKeyNoteSpy).toHaveBeenCalledWith(
       'note-123',

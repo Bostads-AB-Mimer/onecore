@@ -56,7 +56,7 @@ export type Tenant = Omit<Contact, 'leases' | 'isTenant'> & {
 interface PhoneNumber {
   phoneNumber: string
   type: string
-  isMainNumber: boolean
+  isMainNumber: number
 }
 
 interface Lease {

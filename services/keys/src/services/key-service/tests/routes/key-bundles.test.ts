@@ -176,7 +176,7 @@ describe('POST /key-bundles', () => {
 })
 
 /**
- * Tests for PATCH /key-bundles/:id endpoint
+ * Tests for PUT /key-bundles/:id endpoint
  *
  * Testing update key bundle:
  * - Successful full update
@@ -186,7 +186,7 @@ describe('POST /key-bundles', () => {
  * - Invalid keys array format
  * - Database errors
  */
-describe('PATCH /key-bundles/:id', () => {
+describe('PUT /key-bundles/:id', () => {
   it('updates a key bundle and responds with 200', async () => {
     const mockUpdatedBundle = factory.keyBundle.build({
       id: 'bundle-123',
@@ -199,7 +199,7 @@ describe('PATCH /key-bundles/:id', () => {
       .mockResolvedValueOnce(mockUpdatedBundle)
 
     const res = await request(app.callback())
-      .patch('/key-bundles/bundle-123')
+      .put('/key-bundles/bundle-123')
       .send({
         name: 'Updated Bundle',
         keys: JSON.stringify(['key-3', 'key-4']),
@@ -230,7 +230,7 @@ describe('PATCH /key-bundles/:id', () => {
       .mockResolvedValueOnce(mockUpdatedBundle)
 
     const res = await request(app.callback())
-      .patch('/key-bundles/bundle-123')
+      .put('/key-bundles/bundle-123')
       .send({
         name: 'New Name Only',
       })
@@ -253,7 +253,7 @@ describe('PATCH /key-bundles/:id', () => {
       .mockResolvedValueOnce(mockUpdatedBundle)
 
     const res = await request(app.callback())
-      .patch('/key-bundles/bundle-123')
+      .put('/key-bundles/bundle-123')
       .send({
         keys: newKeys,
       })
@@ -264,7 +264,7 @@ describe('PATCH /key-bundles/:id', () => {
 
   it('validates invalid keys format (not JSON) and returns 400', async () => {
     const res = await request(app.callback())
-      .patch('/key-bundles/bundle-123')
+      .put('/key-bundles/bundle-123')
       .send({
         keys: 'invalid-json',
       })
@@ -275,7 +275,7 @@ describe('PATCH /key-bundles/:id', () => {
 
   it('validates keys must be a JSON array and returns 400', async () => {
     const res = await request(app.callback())
-      .patch('/key-bundles/bundle-123')
+      .put('/key-bundles/bundle-123')
       .send({
         keys: JSON.stringify('not an array'),
       })

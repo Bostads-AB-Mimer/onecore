@@ -11,23 +11,15 @@ const {
   KeyEventSchema,
   CreateKeyEventRequestSchema,
   UpdateKeyEventRequestSchema,
-} = keys.v1
-type CreateKeyEventRequest = keys.v1.CreateKeyEventRequest
-type UpdateKeyEventRequest = keys.v1.UpdateKeyEventRequest
+} = keys
+type CreateKeyEventRequest = keys.CreateKeyEventRequest
+type UpdateKeyEventRequest = keys.UpdateKeyEventRequest
 
 /**
  * @swagger
  * tags:
  *   - name: KeyEvents
  *     description: Operations for key events
- * components:
- *   schemas:
- *     CreateKeyEventRequest:
- *       $ref: '#/components/schemas/CreateKeyEventRequest'
- *     UpdateKeyEventRequest:
- *       $ref: '#/components/schemas/UpdateKeyEventRequest'
- *     KeyEvent:
- *       $ref: '#/components/schemas/KeyEvent'
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('CreateKeyEventRequest', CreateKeyEventRequestSchema)
@@ -261,7 +253,7 @@ export const routes = (router: KoaRouter) => {
   /**
    * @swagger
    * /key-events/{id}:
-   *   patch:
+   *   put:
    *     summary: Update a key event
    *     description: Update an existing key event.
    *     tags: [KeyEvents]
@@ -295,7 +287,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: An error occurred while updating the key event.
    */
-  router.patch(
+  router.put(
     '/key-events/:id',
     parseRequestBody(UpdateKeyEventRequestSchema),
     async (ctx) => {

@@ -1,4 +1,4 @@
-import { GET, PATCH, POST, DELETE } from './core/base-api'
+import { GET, PUT, POST, DELETE } from './core/base-api'
 import type {
   KeyBundle,
   KeyBundleDetailsResponse,
@@ -103,7 +103,7 @@ export async function updateKeyBundle(
   id: string,
   updates: UpdateKeyBundleRequest
 ): Promise<KeyBundle> {
-  const { data, error } = await PATCH('/key-bundles/{id}', {
+  const { data, error } = await PUT('/key-bundles/{id}', {
     params: {
       path: { id },
     },
@@ -160,7 +160,7 @@ export async function getKeyBundleDetails(
     throw new Error('Failed to fetch key bundle with loan status')
   }
 
-  return (data?.content as KeyBundleDetailsResponse) ?? null
+  return (data as KeyBundleDetailsResponse) ?? null
 }
 
 /**

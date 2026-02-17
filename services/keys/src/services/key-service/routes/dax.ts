@@ -5,7 +5,7 @@ import * as daxAdapter from '../adapters/dax-adapter'
 import createHttpError from 'http-errors'
 import { registerSchema } from '../../../utils/openapi'
 
-const { CardOwnerSchema, CardSchema } = keys.v1
+const { CardOwnerSchema, CardSchema } = keys
 
 /**
  * @swagger

@@ -4,8 +4,8 @@ import { keys } from '@onecore/types'
 import type { Card } from 'dax-client'
 import * as daxAdapter from './dax-adapter'
 
-type CardDetails = keys.v1.CardDetails
-type KeyLoan = keys.v1.KeyLoan
+type CardDetails = keys.CardDetails
+type KeyLoan = keys.KeyLoan
 
 /**
  * Database adapter functions for cards (from DAX access control system).

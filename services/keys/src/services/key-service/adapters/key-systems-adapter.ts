@@ -2,9 +2,9 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 
-type KeySystem = keys.v1.KeySystem
-type CreateKeySystemRequest = keys.v1.CreateKeySystemRequest
-type UpdateKeySystemRequest = keys.v1.UpdateKeySystemRequest
+type KeySystem = keys.KeySystem
+type CreateKeySystemRequest = keys.CreateKeySystemRequest
+type UpdateKeySystemRequest = keys.UpdateKeySystemRequest
 
 const TABLE = 'key_systems'
 

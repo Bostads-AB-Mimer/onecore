@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type Receipt = keys.v1.Receipt
+type Receipt = keys.Receipt
 
 export const ReceiptFactory = Factory.define<Receipt>(({ sequence }) => ({
   id: `00000000-0000-0000-0000-${sequence.toString().padStart(12, '0')}`,

@@ -1,7 +1,7 @@
 import { Factory } from 'fishery'
 import { keys } from '@onecore/types'
 
-type Log = keys.v1.Log
+type Log = keys.Log
 
 export const LogFactory = Factory.define<Log>(({ sequence }) => ({
   id: `00000000-0000-0000-0000-${sequence.toString().padStart(12, '0')}`,

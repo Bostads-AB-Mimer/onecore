@@ -1,12 +1,33 @@
-import nock from 'nock'
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
 import assert from 'node:assert'
 import config from '../../../common/config'
 import * as keysAdapter from '../../keys-adapter'
-import { mockedReceipt, mockedKeyNote, mockedKeyEvent } from './mocks'
+import * as factory from '../../../../test/factories'
+import { keys } from '@onecore/types'
+
+const { ReceiptSchema, KeyEventSchema } = keys
+
+const mockedReceipt = JSON.parse(JSON.stringify(factory.receipt.build()))
+const mockedKeyNote = JSON.parse(JSON.stringify(factory.keyNote.build()))
+const mockedKeyEvent = JSON.parse(JSON.stringify(factory.keyEvent.build()))
+
+const expectedReceipt = ReceiptSchema.parse(mockedReceipt)
+const expectedKeyEvent = KeyEventSchema.parse(mockedKeyEvent)
+
+const mockServer = setupServer()
 
 describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
+  beforeAll(() => {
+    mockServer.listen()
+  })
+
   afterEach(() => {
-    nock.cleanAll()
+    mockServer.resetHandlers()
+  })
+
+  afterAll(() => {
+    mockServer.close()
   })
 
   // ============================================================================
@@ -23,18 +44,25 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
           type: 'DIGITAL' as const,
         }
 
-        nock(config.keysService.url)
-          .post('/receipts', createPayload)
-          .reply(201, { content: mockedReceipt })
+        mockServer.use(
+          http.post(`${config.keysService.url}/receipts`, () =>
+            HttpResponse.json({ content: mockedReceipt }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.create(createPayload)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedReceipt)
+        expect(result.data).toEqual(expectedReceipt)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/receipts').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/receipts`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.create({} as any)
 
@@ -42,7 +70,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns conflict on 409', async () => {
-        nock(config.keysService.url).post('/receipts').reply(409)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/receipts`,
+            () => new HttpResponse(null, { status: 409 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.create({
           keyLoanId: '00000000-0000-0000-0000-000000000001',
@@ -53,7 +86,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/receipts').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/receipts`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.create({
           keyLoanId: '00000000-0000-0000-0000-000000000001',
@@ -66,22 +104,27 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.ReceiptsApi.get, () => {
       it('returns ok with receipt on 200', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedReceipt })
+        mockServer.use(
+          http.get(`${config.keysService.url}/receipts/:id`, () =>
+            HttpResponse.json({ content: mockedReceipt }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.get(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedReceipt)
+        expect(result.data).toEqual(expectedReceipt)
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -91,9 +134,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -105,22 +151,29 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.ReceiptsApi.getByKeyLoan, () => {
       it('returns ok with receipts array on 200', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/by-key-loan/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: [mockedReceipt] })
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/receipts/by-key-loan/:keyLoanId`,
+            () =>
+              HttpResponse.json({ content: [mockedReceipt] }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.getByKeyLoan(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedReceipt])
+        expect(result.data).toEqual([expectedReceipt])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/by-key-loan/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/receipts/by-key-loan/:keyLoanId`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.getByKeyLoan(
           '00000000-0000-0000-0000-000000000001'
@@ -135,12 +188,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         const updatePayload = { fileId: 'new-file-id' }
         const updatedReceipt = { ...mockedReceipt, fileId: 'new-file-id' }
 
-        nock(config.keysService.url)
-          .patch(
-            '/receipts/00000000-0000-0000-0000-000000000001',
-            updatePayload
+        mockServer.use(
+          http.put(`${config.keysService.url}/receipts/:id`, () =>
+            HttpResponse.json({ content: updatedReceipt }, { status: 200 })
           )
-          .reply(200, { content: updatedReceipt })
+        )
 
         const result = await keysAdapter.ReceiptsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -148,13 +200,16 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(updatedReceipt)
+        expect(result.data).toEqual(ReceiptSchema.parse(updatedReceipt))
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .patch('/receipts/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.update(
           '00000000-0000-0000-0000-000000000999',
@@ -165,9 +220,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .patch('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(400)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -178,9 +236,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .patch('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -193,22 +254,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.ReceiptsApi.remove, () => {
       it('returns ok on 200', async () => {
-        // remove() first GETs the receipt to check for fileId, then DELETEs
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: { ...mockedReceipt, fileId: null } })
-
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedReceipt })
-
-        nock(config.fileStorageService.url)
-          .delete(`/files/${encodeURIComponent(mockedReceipt.fileId)}`)
-          .reply(200)
-
-        nock(config.keysService.url)
-          .delete('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200)
+        mockServer.use(
+          http.delete(`${config.keysService.url}/receipts/:id`, () =>
+            HttpResponse.json(undefined, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.remove(
           '00000000-0000-0000-0000-000000000001'
@@ -218,10 +268,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns not-found on 404', async () => {
-        // remove() first GETs the receipt - if not found, returns not-found immediately
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.remove(
           '00000000-0000-0000-0000-000000000999'
@@ -231,194 +283,15 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedReceipt })
-
-        nock(config.fileStorageService.url)
-          .delete(`/files/${encodeURIComponent(mockedReceipt.fileId)}`)
-          .reply(200)
-
-        nock(config.keysService.url)
-          .delete('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.delete(
+            `${config.keysService.url}/receipts/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.ReceiptsApi.remove(
           '00000000-0000-0000-0000-000000000001'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'unknown' })
-      })
-    })
-
-    describe(keysAdapter.ReceiptsApi.getDownloadUrl, () => {
-      it('returns ok with download URL when receipt has fileId', async () => {
-        // Mock getting receipt with fileId
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, {
-            content: { ...mockedReceipt, fileId: 'keys/receipt-file-123.pdf' },
-          })
-
-        // Mock file-storage service to return presigned URL
-        nock(config.fileStorageService.url)
-          .get('/files/keys%2Freceipt-file-123.pdf/url')
-          .query({ expirySeconds: 3600 })
-          .reply(200, {
-            url: 'https://storage.example.com/file-123',
-            expiresIn: 3600,
-          })
-
-        const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
-          '00000000-0000-0000-0000-000000000001'
-        )
-
-        assert(result.ok)
-        expect(result.data.url).toBe('https://storage.example.com/file-123')
-        expect(result.data.fileId).toBe('keys/receipt-file-123.pdf')
-      })
-
-      it('returns not-found when receipt does not exist', async () => {
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000999')
-          .reply(404)
-
-        const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
-          '00000000-0000-0000-0000-000000000999'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'not-found' })
-      })
-
-      it('returns not-found when receipt has no fileId', async () => {
-        // Mock getting receipt without fileId
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: { ...mockedReceipt, fileId: null } })
-
-        const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
-          '00000000-0000-0000-0000-000000000001'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'not-found' })
-      })
-
-      it('returns unknown when file-storage service fails', async () => {
-        // Mock getting receipt with fileId
-        nock(config.keysService.url)
-          .get('/receipts/00000000-0000-0000-0000-000000000001')
-          .reply(200, {
-            content: { ...mockedReceipt, fileId: 'keys/receipt-file-123.pdf' },
-          })
-
-        // Mock file-storage service error
-        nock(config.fileStorageService.url)
-          .get('/files/keys%2Freceipt-file-123.pdf/url')
-          .query({ expirySeconds: 3600 })
-          .reply(500)
-
-        const result = await keysAdapter.ReceiptsApi.getDownloadUrl(
-          '00000000-0000-0000-0000-000000000001'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'unknown' })
-      })
-    })
-
-    describe(keysAdapter.ReceiptsApi.uploadFile, () => {
-      it('uploads file to existing receipt and updates fileId', async () => {
-        const receiptId = '00000000-0000-0000-0000-000000000001'
-        const fileData = Buffer.from('test pdf content').toString('base64')
-
-        // Mock getting receipt to verify it exists
-        nock(config.keysService.url)
-          .get(`/receipts/${receiptId}`)
-          .reply(200, { content: mockedReceipt })
-
-        // Mock file-storage upload
-        nock(config.fileStorageService.url)
-          .post('/files/upload')
-          .reply(200, {
-            fileName: `keys/receipt-${receiptId}-123456.pdf`,
-            size: 100,
-          })
-
-        // Mock receipt update with fileId
-        nock(config.keysService.url)
-          .patch(`/receipts/${receiptId}`)
-          .reply(200, {
-            content: {
-              ...mockedReceipt,
-              fileId: `keys/receipt-${receiptId}-123456.pdf`,
-            },
-          })
-
-        const result = await keysAdapter.ReceiptsApi.uploadFile(
-          receiptId,
-          fileData
-        )
-
-        assert(result.ok)
-        expect(result.data.fileId).toContain('keys/receipt-')
-      })
-
-      it('returns not-found when receipt does not exist', async () => {
-        const receiptId = '00000000-0000-0000-0000-000000000999'
-
-        nock(config.keysService.url).get(`/receipts/${receiptId}`).reply(404)
-
-        const result = await keysAdapter.ReceiptsApi.uploadFile(
-          receiptId,
-          'base64data'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'not-found' })
-      })
-
-      it('returns unknown when file-storage upload fails', async () => {
-        const receiptId = '00000000-0000-0000-0000-000000000001'
-
-        // Mock getting receipt
-        nock(config.keysService.url)
-          .get(`/receipts/${receiptId}`)
-          .reply(200, { content: mockedReceipt })
-
-        // Mock file-storage upload failure
-        nock(config.fileStorageService.url).post('/files/upload').reply(500)
-
-        const result = await keysAdapter.ReceiptsApi.uploadFile(
-          receiptId,
-          'base64data'
-        )
-
-        expect(result).toEqual({ ok: false, err: 'unknown' })
-      })
-
-      it('deletes uploaded file if receipt update fails (compensation)', async () => {
-        const receiptId = '00000000-0000-0000-0000-000000000001'
-
-        // Mock getting receipt
-        nock(config.keysService.url)
-          .get(`/receipts/${receiptId}`)
-          .reply(200, { content: mockedReceipt })
-
-        // Mock file-storage upload success
-        nock(config.fileStorageService.url).post('/files/upload').reply(200, {
-          fileName: 'keys/receipt-test.pdf',
-          size: 100,
-        })
-
-        // Mock receipt update failure
-        nock(config.keysService.url).patch(`/receipts/${receiptId}`).reply(500)
-
-        // Mock file deletion (compensation)
-        nock(config.fileStorageService.url)
-          .delete('/files/keys%2Freceipt-test.pdf')
-          .reply(200)
-
-        const result = await keysAdapter.ReceiptsApi.uploadFile(
-          receiptId,
-          'base64data'
         )
 
         expect(result).toEqual({ ok: false, err: 'unknown' })
@@ -433,9 +306,13 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
   describe('KeyNotesApi', () => {
     describe(keysAdapter.KeyNotesApi.getByRentalObjectCode, () => {
       it('returns ok with key notes array on 200', async () => {
-        nock(config.keysService.url)
-          .get(/\/key-notes\/by-rental-object\/.*/)
-          .reply(200, { content: [mockedKeyNote] })
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-notes/by-rental-object/:rentalObjectCode`,
+            () =>
+              HttpResponse.json({ content: [mockedKeyNote] }, { status: 200 })
+          )
+        )
 
         const result =
           await keysAdapter.KeyNotesApi.getByRentalObjectCode('123-456-789/1')
@@ -445,9 +322,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get(/\/key-notes\/by-rental-object\/.*/)
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-notes/by-rental-object/:rentalObjectCode`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result =
           await keysAdapter.KeyNotesApi.getByRentalObjectCode('123-456-789/1')
@@ -458,9 +338,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.KeyNotesApi.get, () => {
       it('returns ok with key note on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-notes/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedKeyNote })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-notes/:id`, () =>
+            HttpResponse.json({ content: mockedKeyNote }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -471,9 +353,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/key-notes/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-notes/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -483,9 +368,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-notes/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-notes/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -502,9 +390,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
           description: 'Test note',
         }
 
-        nock(config.keysService.url)
-          .post('/key-notes', createPayload)
-          .reply(201, { content: mockedKeyNote })
+        mockServer.use(
+          http.post(`${config.keysService.url}/key-notes`, () =>
+            HttpResponse.json({ content: mockedKeyNote }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.create(createPayload)
 
@@ -513,7 +403,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/key-notes').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-notes`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.create({})
 
@@ -521,7 +416,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/key-notes').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-notes`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.create({
           rentalObjectCode: '123-456-789/1',
@@ -537,12 +437,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         const updatePayload = { description: 'Updated note' }
         const updatedNote = { ...mockedKeyNote, description: 'Updated note' }
 
-        nock(config.keysService.url)
-          .patch(
-            '/key-notes/00000000-0000-0000-0000-000000000001',
-            updatePayload
+        mockServer.use(
+          http.put(`${config.keysService.url}/key-notes/:id`, () =>
+            HttpResponse.json({ content: updatedNote }, { status: 200 })
           )
-          .reply(200, { content: updatedNote })
+        )
 
         const result = await keysAdapter.KeyNotesApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -554,9 +453,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .patch('/key-notes/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-notes/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.update(
           '00000000-0000-0000-0000-000000000999',
@@ -567,9 +469,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .patch('/key-notes/00000000-0000-0000-0000-000000000001')
-          .reply(400)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-notes/:id`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -580,9 +485,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .patch('/key-notes/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-notes/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyNotesApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -601,18 +509,25 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
   describe('KeyEventsApi', () => {
     describe(keysAdapter.KeyEventsApi.list, () => {
       it('returns ok with key events array on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-events')
-          .reply(200, { content: [mockedKeyEvent] })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-events`, () =>
+            HttpResponse.json({ content: [mockedKeyEvent] }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.list()
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyEvent])
+        expect(result.data).toEqual([expectedKeyEvent])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).get('/key-events').reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-events`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.list()
 
@@ -622,24 +537,26 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.KeyEventsApi.getByKey, () => {
       it('returns ok with key events for specific key on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-events/by-key/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: [mockedKeyEvent] })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-events/by-key/:keyId`, () =>
+            HttpResponse.json({ content: [mockedKeyEvent] }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.getByKey(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyEvent])
+        expect(result.data).toEqual([expectedKeyEvent])
       })
 
       it('returns ok with limit parameter', async () => {
-        nock(config.keysService.url)
-          .get(
-            '/key-events/by-key/00000000-0000-0000-0000-000000000001?limit=5'
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-events/by-key/:keyId`, () =>
+            HttpResponse.json({ content: [mockedKeyEvent] }, { status: 200 })
           )
-          .reply(200, { content: [mockedKeyEvent] })
+        )
 
         const result = await keysAdapter.KeyEventsApi.getByKey(
           '00000000-0000-0000-0000-000000000001',
@@ -647,13 +564,16 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual([mockedKeyEvent])
+        expect(result.data).toEqual([expectedKeyEvent])
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-events/by-key/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-events/by-key/:keyId`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.getByKey(
           '00000000-0000-0000-0000-000000000001'
@@ -665,22 +585,27 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
     describe(keysAdapter.KeyEventsApi.get, () => {
       it('returns ok with key event on 200', async () => {
-        nock(config.keysService.url)
-          .get('/key-events/00000000-0000-0000-0000-000000000001')
-          .reply(200, { content: mockedKeyEvent })
+        mockServer.use(
+          http.get(`${config.keysService.url}/key-events/:id`, () =>
+            HttpResponse.json({ content: mockedKeyEvent }, { status: 200 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.get(
           '00000000-0000-0000-0000-000000000001'
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKeyEvent)
+        expect(result.data).toEqual(expectedKeyEvent)
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .get('/key-events/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-events/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.get(
           '00000000-0000-0000-0000-000000000999'
@@ -690,9 +615,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .get('/key-events/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.get(
+            `${config.keysService.url}/key-events/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.get(
           '00000000-0000-0000-0000-000000000001'
@@ -710,18 +638,25 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
           status: 'ORDERED' as const,
         }
 
-        nock(config.keysService.url)
-          .post('/key-events', createPayload)
-          .reply(201, { content: mockedKeyEvent })
+        mockServer.use(
+          http.post(`${config.keysService.url}/key-events`, () =>
+            HttpResponse.json({ content: mockedKeyEvent }, { status: 201 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.create(createPayload)
 
         assert(result.ok)
-        expect(result.data).toEqual(mockedKeyEvent)
+        expect(result.data).toEqual(expectedKeyEvent)
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url).post('/key-events').reply(400)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-events`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.create({} as any)
 
@@ -729,7 +664,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns conflict on 409', async () => {
-        nock(config.keysService.url).post('/key-events').reply(409)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-events`,
+            () => new HttpResponse(null, { status: 409 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.create({
           keys: ['key-1'],
@@ -741,7 +681,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url).post('/key-events').reply(500)
+        mockServer.use(
+          http.post(
+            `${config.keysService.url}/key-events`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.create({
           keys: ['key-1'],
@@ -758,12 +703,11 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         const updatePayload = { status: 'COMPLETED' as const }
         const updatedEvent = { ...mockedKeyEvent, status: 'COMPLETED' }
 
-        nock(config.keysService.url)
-          .patch(
-            '/key-events/00000000-0000-0000-0000-000000000001',
-            updatePayload
+        mockServer.use(
+          http.put(`${config.keysService.url}/key-events/:id`, () =>
+            HttpResponse.json({ content: updatedEvent }, { status: 200 })
           )
-          .reply(200, { content: updatedEvent })
+        )
 
         const result = await keysAdapter.KeyEventsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -771,13 +715,16 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
         )
 
         assert(result.ok)
-        expect(result.data).toEqual(updatedEvent)
+        expect(result.data).toEqual(KeyEventSchema.parse(updatedEvent))
       })
 
       it('returns not-found on 404', async () => {
-        nock(config.keysService.url)
-          .patch('/key-events/00000000-0000-0000-0000-000000000999')
-          .reply(404)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-events/:id`,
+            () => new HttpResponse(null, { status: 404 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.update(
           '00000000-0000-0000-0000-000000000999',
@@ -788,9 +735,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns bad-request on 400', async () => {
-        nock(config.keysService.url)
-          .patch('/key-events/00000000-0000-0000-0000-000000000001')
-          .reply(400)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-events/:id`,
+            () => new HttpResponse(null, { status: 400 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.update(
           '00000000-0000-0000-0000-000000000001',
@@ -801,9 +751,12 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
       })
 
       it('returns unknown on 500', async () => {
-        nock(config.keysService.url)
-          .patch('/key-events/00000000-0000-0000-0000-000000000001')
-          .reply(500)
+        mockServer.use(
+          http.put(
+            `${config.keysService.url}/key-events/:id`,
+            () => new HttpResponse(null, { status: 500 })
+          )
+        )
 
         const result = await keysAdapter.KeyEventsApi.update(
           '00000000-0000-0000-0000-000000000001',
