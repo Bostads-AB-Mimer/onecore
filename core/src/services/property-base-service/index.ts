@@ -847,19 +847,19 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /properties/{propertyId}:
+   * /properties/{propertyCode}:
    *   get:
-   *     summary: Get property by property id
+   *     summary: Get property by property code
    *     tags:
    *       - Property base Service
-   *     description: Retrieves property by property id
+   *     description: Retrieves property by property code
    *     parameters:
    *       - in: path
-   *         name: propertyId
+   *         name: propertyCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the property
+   *         description: The code of the property
    *     responses:
    *       200:
    *         description: Successfully retrieved property
@@ -893,12 +893,12 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/properties/:propertyId', async (ctx) => {
+  router.get('(.*)/properties/:propertyCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { propertyId } = ctx.params
+    const { propertyCode } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getPropertyDetails(propertyId)
+      const result = await propertyBaseAdapter.getPropertyDetails(propertyCode)
 
       if (!result.ok) {
         if (result.err === 'not-found') {
