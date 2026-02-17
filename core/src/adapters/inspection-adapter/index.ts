@@ -53,8 +53,10 @@ export const getXpandInspections = async ({
       ok: true,
       data: {
         content: fetchResponse.data.content,
-        _meta: fetchResponse.data._meta as PaginatedResponse<XpandInspection>['_meta'],
-        _links: fetchResponse.data._links as PaginatedResponse<XpandInspection>['_links'],
+        _meta: fetchResponse.data
+          ._meta as PaginatedResponse<XpandInspection>['_meta'],
+        _links: fetchResponse.data
+          ._links as PaginatedResponse<XpandInspection>['_links'],
       },
     }
   } catch (error) {

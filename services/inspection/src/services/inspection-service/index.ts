@@ -442,10 +442,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await dbAdapter.createInspection(
-        db,
-        validationResult.data
-      )
+      const result = await dbAdapter.createInspection(db, validationResult.data)
 
       if (!result.ok) {
         ctx.status = 500
