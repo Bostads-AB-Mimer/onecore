@@ -12,7 +12,7 @@ import { Lease } from '@/services/api/core'
 
 interface LeaseContractSectionProps {
   leaseContracts: Lease[]
-  selectedLease: string
+  selectedLease?: string | null
   costCentre?: string
   propertyCode?: string
   onLeaseSelect: (leaseId: string) => void
@@ -34,7 +34,7 @@ export function LeaseContractSection({
       <div className="space-y-2">
         <Label htmlFor="hyreskontrakt">Hyreskontrakt</Label>
         <Select
-          value={selectedLease}
+          value={selectedLease ?? undefined}
           onValueChange={onLeaseSelect}
           disabled={disabled || leaseContracts.length === 0}
         >
