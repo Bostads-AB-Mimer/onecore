@@ -33,7 +33,6 @@ export default async () => {
     const pde = dotenv.config({
       path: process.env.DOTENV_CONFIG_PATH,
     }).parsed
-    console.log(pde)
     if (!pde) throw new Error('Failed to load test dotenv config')
     if (!pde.PORT) {
       throw new Error('Test dotenv does not specify a port')
