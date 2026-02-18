@@ -50,7 +50,7 @@ describe('keys-service', () => {
       const res = await request(app.callback()).get('/keys?page=1&limit=20')
 
       expect(res.status).toBe(200)
-      expect(listSpy).toHaveBeenCalledWith(1, 20, false)
+      expect(listSpy).toHaveBeenCalledWith({ page: '1', limit: '20' })
       expect(res.body.content).toHaveLength(2)
       expect(res.body._meta).toEqual({
         totalRecords: 2,
@@ -750,7 +750,7 @@ describe('keys-service', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(listSpy).toHaveBeenCalledWith(1, 20)
+      expect(listSpy).toHaveBeenCalledWith({ page: '1', limit: '20' })
       expect(res.body.content).toHaveLength(2)
       expect(res.body._meta).toEqual({
         totalRecords: 2,
@@ -1147,7 +1147,7 @@ describe('keys-service', () => {
       const res = await request(app.callback()).get('/logs?page=1&limit=20')
 
       expect(res.status).toBe(200)
-      expect(listSpy).toHaveBeenCalledWith(1, 20)
+      expect(listSpy).toHaveBeenCalledWith({ page: '1', limit: '20' })
       expect(res.body.content).toHaveLength(2)
       expect(res.body._meta).toEqual({
         totalRecords: 2,
@@ -1997,7 +1997,7 @@ describe('keys-service', () => {
       expect(res.status).toBe(200)
       expect(getByKeySpy).toHaveBeenCalledWith(
         '00000000-0000-0000-0000-000000000001',
-        5
+        { limit: '5' }
       )
     })
 

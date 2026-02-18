@@ -13,13 +13,11 @@ import {
 
 export const KeysApi = {
   list: async (
-    page?: number,
-    limit?: number,
-    includeKeySystem?: boolean
+    query: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<PaginatedResponse<Key>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/keys', {
-        params: { query: { page, limit, includeKeySystem } },
+        params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
       return ok(parsePaginated(KeySchema, data))
@@ -48,11 +46,7 @@ export const KeysApi = {
 
   getByRentalObjectCode: async (
     rentalObjectCode: string,
-    options?: {
-      includeLoans?: boolean
-      includeEvents?: boolean
-      includeKeySystem?: boolean
-    }
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<KeyDetails[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -60,11 +54,7 @@ export const KeysApi = {
         {
           params: {
             path: { rentalObjectCode },
-            query: {
-              includeLoans: options?.includeLoans,
-              includeEvents: options?.includeEvents,
-              includeKeySystem: options?.includeKeySystem,
-            },
+            query: query as any,
           },
         }
       )

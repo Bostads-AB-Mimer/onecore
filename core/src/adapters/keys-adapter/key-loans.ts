@@ -1,6 +1,13 @@
 import { logger } from '@onecore/utilities'
 import { z } from 'zod'
-import { client, mapFetchError, ok, fail, parsePaginated } from './helpers'
+import {
+  client,
+  mapFetchError,
+  ok,
+  fail,
+  parsePaginated,
+  lenient,
+} from './helpers'
 import {
   KeyLoan,
   KeyLoanWithDetails,
@@ -13,12 +20,16 @@ import {
   AdapterResult,
 } from './types'
 
+// Lenient schemas that accept null for optional string fields (SQL NULL → undefined)
+const LenientKeyLoanSchema = lenient(KeyLoanSchema)
+const LenientKeyLoanWithDetailsSchema = lenient(KeyLoanWithDetailsSchema)
+
 export const KeyLoansApi = {
   list: async (): Promise<AdapterResult<KeyLoan[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/key-loans')
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(KeyLoanSchema).parse(data.content))
+      return ok(z.array(LenientKeyLoanSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans failed')
       return fail('unknown')
@@ -38,7 +49,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(parsePaginated(KeyLoanSchema, data))
+      return ok(parsePaginated(LenientKeyLoanSchema, data))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans/search failed')
       return fail('unknown')
@@ -56,7 +67,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(KeyLoanSchema).parse(data.content))
+      return ok(z.array(LenientKeyLoanSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans/by-key failed')
       return fail('unknown')
@@ -74,7 +85,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(KeyLoanSchema).parse(data.content))
+      return ok(z.array(LenientKeyLoanSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans/by-card failed')
       return fail('unknown')
@@ -83,10 +94,7 @@ export const KeyLoansApi = {
 
   getByRentalObject: async (
     rentalObjectCode: string,
-    contact?: string,
-    contact2?: string,
-    includeReceipts?: boolean,
-    returned?: boolean
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -94,12 +102,12 @@ export const KeyLoansApi = {
         {
           params: {
             path: { rentalObjectCode },
-            query: { contact, contact2, includeReceipts, returned } as any,
+            query: query as any,
           },
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(KeyLoanWithDetailsSchema).parse(data.content))
+      return ok(z.array(LenientKeyLoanWithDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
@@ -111,12 +119,7 @@ export const KeyLoansApi = {
 
   get: async (
     id: string,
-    options?: {
-      includeKeySystem?: boolean
-      includeCards?: boolean
-      includeLoans?: boolean
-      includeEvents?: boolean
-    }
+    query?: Record<string, string | string[] | undefined>
   ): Promise<
     AdapterResult<KeyLoan | KeyLoanWithDetails, 'not-found' | CommonErr>
   > => {
@@ -124,12 +127,7 @@ export const KeyLoansApi = {
       const { data, error, response } = await client().GET('/key-loans/{id}', {
         params: {
           path: { id },
-          query: {
-            includeKeySystem: options?.includeKeySystem,
-            includeCards: options?.includeCards,
-            includeLoans: options?.includeLoans,
-            includeEvents: options?.includeEvents,
-          } as any,
+          query: query as any,
         },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
@@ -150,7 +148,7 @@ export const KeyLoansApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(KeyLoanSchema.parse(data.content))
+      return ok(LenientKeyLoanSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: POST /key-loans failed')
       return fail('unknown')
@@ -169,7 +167,7 @@ export const KeyLoansApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(KeyLoanSchema.parse(data.content))
+      return ok(LenientKeyLoanSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: PUT /key-loans/{id} failed')
       return fail('unknown')
@@ -193,8 +191,7 @@ export const KeyLoansApi = {
 
   getByContactWithKeys: async (
     contact: string,
-    loanType?: 'TENANT' | 'MAINTENANCE',
-    returned?: boolean
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -202,12 +199,12 @@ export const KeyLoansApi = {
         {
           params: {
             path: { contact },
-            query: { loanType, returned },
+            query: query as any,
           },
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(KeyLoanWithDetailsSchema).parse(data.content))
+      return ok(z.array(LenientKeyLoanWithDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
@@ -219,8 +216,7 @@ export const KeyLoansApi = {
 
   getByBundleWithKeys: async (
     bundleId: string,
-    loanType?: 'TENANT' | 'MAINTENANCE',
-    returned?: boolean
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<KeyLoanWithDetails[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -228,12 +224,12 @@ export const KeyLoansApi = {
         {
           params: {
             path: { bundleId },
-            query: { loanType, returned },
+            query: query as any,
           },
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(KeyLoanWithDetailsSchema).parse(data.content))
+      return ok(z.array(LenientKeyLoanWithDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },

@@ -1,20 +1,14 @@
 import { logger } from '@onecore/utilities'
 import { client, mapFetchError, ok, fail } from './helpers'
-import {
-  CardOwner,
-  Card,
-  QueryCardOwnersParams,
-  CommonErr,
-  AdapterResult,
-} from './types'
+import { CardOwner, Card, CommonErr, AdapterResult } from './types'
 
 export const DaxApi = {
   searchCardOwners: async (
-    params: Partial<QueryCardOwnersParams>
+    query: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<CardOwner[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/dax/card-owners', {
-        params: { query: params as any },
+        params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
       return ok(data.cardOwners as CardOwner[])
@@ -26,7 +20,7 @@ export const DaxApi = {
 
   getCardOwner: async (
     cardOwnerId: string,
-    expand?: string
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<CardOwner, 'not-found' | CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -34,7 +28,7 @@ export const DaxApi = {
         {
           params: {
             path: { cardOwnerId },
-            query: { expand } as any,
+            query: query as any,
           },
         }
       )
@@ -51,7 +45,7 @@ export const DaxApi = {
 
   getCard: async (
     cardId: string,
-    expand?: string
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<Card, 'not-found' | CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -59,7 +53,7 @@ export const DaxApi = {
         {
           params: {
             path: { cardId },
-            query: { expand },
+            query: query as any,
           },
         }
       )

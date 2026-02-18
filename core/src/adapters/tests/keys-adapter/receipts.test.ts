@@ -560,7 +560,7 @@ describe('keys-adapter - Receipts, KeyNotes & KeyEvents', () => {
 
         const result = await keysAdapter.KeyEventsApi.getByKey(
           '00000000-0000-0000-0000-000000000001',
-          5
+          { limit: '5' }
         )
 
         assert(result.ok)

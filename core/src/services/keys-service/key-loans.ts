@@ -374,24 +374,9 @@ export const routes = (router: KoaRouter) => {
       'returned',
     ])
 
-    const contact = ctx.query.contact as string | undefined
-    const contact2 = ctx.query.contact2 as string | undefined
-    const includeReceipts = ctx.query.includeReceipts === 'true'
-    const returnedParam = ctx.query.returned
-
-    let returned: boolean | undefined = undefined
-    if (returnedParam === 'true') {
-      returned = true
-    } else if (returnedParam === 'false') {
-      returned = false
-    }
-
     const result = await KeyLoansApi.getByRentalObject(
       ctx.params.rentalObjectCode,
-      contact,
-      contact2,
-      includeReceipts,
-      returned
+      ctx.query
     )
 
     if (!result.ok) {
@@ -459,25 +444,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-loans/by-contact/:contact/with-keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
 
-    const loanTypeParam = ctx.query.loanType as string | undefined
-    const returnedParam = ctx.query.returned
-
-    let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
-    if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
-      loanType = loanTypeParam
-    }
-
-    let returned: boolean | undefined = undefined
-    if (returnedParam === 'true') {
-      returned = true
-    } else if (returnedParam === 'false') {
-      returned = false
-    }
-
     const result = await KeyLoansApi.getByContactWithKeys(
       ctx.params.contact,
-      loanType,
-      returned
+      ctx.query
     )
 
     if (!result.ok) {
@@ -545,25 +514,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-loans/by-bundle/:bundleId/with-keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
 
-    const loanTypeParam = ctx.query.loanType as string | undefined
-    const returnedParam = ctx.query.returned
-
-    let loanType: 'TENANT' | 'MAINTENANCE' | undefined = undefined
-    if (loanTypeParam === 'TENANT' || loanTypeParam === 'MAINTENANCE') {
-      loanType = loanTypeParam
-    }
-
-    let returned: boolean | undefined = undefined
-    if (returnedParam === 'true') {
-      returned = true
-    } else if (returnedParam === 'false') {
-      returned = false
-    }
-
     const result = await KeyLoansApi.getByBundleWithKeys(
       ctx.params.bundleId,
-      loanType,
-      returned
+      ctx.query
     )
 
     if (!result.ok) {
@@ -658,17 +611,8 @@ export const routes = (router: KoaRouter) => {
       'includeLoans',
       'includeEvents',
     ])
-    const includeKeySystem = ctx.query.includeKeySystem === 'true'
-    const includeCards = ctx.query.includeCards === 'true'
-    const includeLoans = ctx.query.includeLoans === 'true'
-    const includeEvents = ctx.query.includeEvents === 'true'
 
-    const result = await KeyLoansApi.get(ctx.params.id, {
-      includeKeySystem,
-      includeCards,
-      includeLoans,
-      includeEvents,
-    })
+    const result = await KeyLoansApi.get(ctx.params.id, ctx.query)
 
     if (!result.ok) {
       if (result.err === 'not-found') {

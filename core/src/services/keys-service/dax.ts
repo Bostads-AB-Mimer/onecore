@@ -1,7 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { DaxApi } from '../../adapters/keys-adapter'
-import { keys } from '@onecore/types'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -81,11 +80,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/dax/card-owners', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const params: Partial<keys.QueryCardOwnersParams> = { ...ctx.query }
-    if (params.offset) params.offset = parseInt(params.offset as any)
-    if (params.limit) params.limit = parseInt(params.limit as any)
-
-    const result = await DaxApi.searchCardOwners(params)
+    const result = await DaxApi.searchCardOwners(ctx.query)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error searching card owners')
@@ -146,9 +141,8 @@ export const routes = (router: KoaRouter) => {
   router.get('/dax/card-owners/:cardOwnerId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { cardOwnerId } = ctx.params
-    const expand = ctx.query.expand as string | undefined
 
-    const result = await DaxApi.getCardOwner(cardOwnerId, expand)
+    const result = await DaxApi.getCardOwner(cardOwnerId, ctx.query)
 
     if (!result.ok) {
       logger.error(
@@ -218,9 +212,8 @@ export const routes = (router: KoaRouter) => {
   router.get('/dax/cards/:cardId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { cardId } = ctx.params
-    const expand = ctx.query.expand as string | undefined
 
-    const result = await DaxApi.getCard(cardId, expand)
+    const result = await DaxApi.getCard(cardId, ctx.query)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata, cardId }, 'Error fetching card')
