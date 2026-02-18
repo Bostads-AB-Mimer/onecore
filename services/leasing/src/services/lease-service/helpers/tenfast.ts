@@ -96,6 +96,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
       ? mapToOnecoreRentalObject(lease.hyresobjekt[0])
       : undefined,
     type: lease.hyresobjekt[0]?.typ ?? 'missing', // TODO: Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+    rentRows: lease.hyror.map(mapToOnecoreRentRow),
   }
 }
 

@@ -38,7 +38,7 @@ export function FacilityView() {
     queryFn: () =>
       leaseService.getByRentalPropertyId(
         facility!.rentalInformation!.rentalId!,
-        { includeContacts: true, includeRentInfo: true }
+        { includeContacts: true }
       ),
     enabled: !!facility?.rentalInformation?.rentalId,
   })
