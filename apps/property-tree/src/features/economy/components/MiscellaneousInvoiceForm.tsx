@@ -113,6 +113,14 @@ export function MiscellaneousInvoiceForm() {
     setErrors((prev) => ({ ...prev, leaseId: undefined }))
   }
 
+  const handleCostCentreChange = (value: string) => {
+    setCostCentre(value)
+  }
+
+  const handlePropertyCodeChange = (value: string) => {
+    setPropertyCode(value)
+  }
+
   useEffect(() => {
     setCostCentre(miscellaneousInvoiceDataForLease?.costCentre)
     setPropertyCode(miscellaneousInvoiceDataForLease?.propertyCode)
@@ -182,8 +190,8 @@ export function MiscellaneousInvoiceForm() {
       contactCode: selectedTenant?.contactCode ?? '',
       tenantName: selectedTenant?.fullName ?? '',
       leaseId: leaseId ?? '',
-      costCentre: miscellaneousInvoiceDataForLease?.costCentre ?? '',
-      propertyCode: miscellaneousInvoiceDataForLease?.propertyCode ?? '',
+      costCentre: costCentre ?? '',
+      propertyCode: propertyCode ?? '',
       projectCode: projectCode,
       comment: comment,
       invoiceRows: rows,
@@ -285,6 +293,8 @@ export function MiscellaneousInvoiceForm() {
               costCentre={costCentre}
               propertyCode={propertyCode}
               onLeaseSelect={handleLeaseSelect}
+              onCostCentreChange={handleCostCentreChange}
+              onPropertyCodeChange={handlePropertyCodeChange}
               error={errors.leaseId}
               disabled={!selectedTenant}
             />

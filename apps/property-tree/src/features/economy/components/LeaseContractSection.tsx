@@ -16,6 +16,8 @@ interface LeaseContractSectionProps {
   costCentre?: string
   propertyCode?: string
   onLeaseSelect: (leaseId: string) => void
+  onCostCentreChange: (value: string) => void
+  onPropertyCodeChange: (value: string) => void
   error?: string
   disabled?: boolean
 }
@@ -26,6 +28,8 @@ export function LeaseContractSection({
   costCentre,
   propertyCode,
   onLeaseSelect,
+  onCostCentreChange,
+  onPropertyCodeChange,
   error,
   disabled = false,
 }: LeaseContractSectionProps) {
@@ -69,10 +73,9 @@ export function LeaseContractSection({
         <Input
           id="kst"
           value={costCentre ?? ''}
-          readOnly
-          disabled
+          onChange={(e) => onCostCentreChange(e.target.value)}
           placeholder="Fylls i automatiskt"
-          className="bg-muted"
+          disabled={disabled}
         />
       </div>
 
@@ -81,10 +84,9 @@ export function LeaseContractSection({
         <Input
           id="fastighet"
           value={propertyCode ?? ''}
-          readOnly
-          disabled
+          onChange={(e) => onPropertyCodeChange(e.target.value)}
           placeholder="Fylls i automatiskt"
-          className="bg-muted"
+          disabled={disabled}
         />
       </div>
     </div>
