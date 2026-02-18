@@ -694,7 +694,7 @@ export async function getLeasesByRentalPropertyId(
   try {
     const res = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${rentalPropertyId}/avtal?populate=hyresobjekt,hyresgaster`,
     })
 
     // Not sure we want to fail completely here if parsing fails
