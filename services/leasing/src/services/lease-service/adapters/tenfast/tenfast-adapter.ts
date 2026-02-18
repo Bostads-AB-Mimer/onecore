@@ -646,7 +646,13 @@ export const preliminaryTerminateLease = async (
   }
 }
 const defaultFilters: GetLeasesFilters = {
-  status: ['current', 'upcoming', 'about-to-end', 'ended'],
+  status: [
+    'current',
+    'upcoming',
+    'about-to-end',
+    'ended',
+    'preliminary-terminated',
+  ],
 }
 
 export async function getLeasesByTenantId(
