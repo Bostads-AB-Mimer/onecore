@@ -125,7 +125,10 @@ export const makeKnexResource = ({
       })
     },
     healthcheck: {
-      interval: msInterval(config.healthCheckInterval ?? 1, 'm'),
+      interval: msInterval(
+        config.healthCheckInterval ?? 1,
+        config.healthCheckTimeUnit ?? 'm'
+      ),
       intervalUnit: 'ms',
       check,
     },

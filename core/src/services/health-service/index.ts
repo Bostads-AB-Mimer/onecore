@@ -35,8 +35,8 @@ const oneCoreServiceProbe = async (
 
 const subsystems: HealthCheckTarget[] = [
   {
-    probe: async (): Promise<SystemHealth> => {
-      return await oneCoreServiceProbe(
+    probe: (): Promise<SystemHealth> => {
+      return oneCoreServiceProbe(
         config.health.leasing.systemName,
         config.health.leasing.minimumMinutesBetweenRequests,
         config.tenantsLeasesService.url + '/health'
@@ -44,8 +44,8 @@ const subsystems: HealthCheckTarget[] = [
     },
   },
   {
-    probe: async (): Promise<SystemHealth> => {
-      return await oneCoreServiceProbe(
+    probe: (): Promise<SystemHealth> => {
+      return oneCoreServiceProbe(
         config.health.propertyBase.systemName,
         config.health.propertyBase.minimumMinutesBetweenRequests,
         config.propertyBaseService.url + '/health'
@@ -53,8 +53,8 @@ const subsystems: HealthCheckTarget[] = [
     },
   },
   {
-    probe: async (): Promise<SystemHealth> => {
-      return await oneCoreServiceProbe(
+    probe: (): Promise<SystemHealth> => {
+      return oneCoreServiceProbe(
         config.health.propertyManagement.systemName,
         config.health.propertyManagement.minimumMinutesBetweenRequests,
         config.propertyInfoService.url + '/health'
@@ -62,8 +62,8 @@ const subsystems: HealthCheckTarget[] = [
     },
   },
   {
-    probe: async (): Promise<SystemHealth> => {
-      return await oneCoreServiceProbe(
+    probe: (): Promise<SystemHealth> => {
+      return oneCoreServiceProbe(
         config.health.communication.systemName,
         config.health.communication.minimumMinutesBetweenRequests,
         config.communicationService.url + '/health'
@@ -71,8 +71,8 @@ const subsystems: HealthCheckTarget[] = [
     },
   },
   {
-    probe: async (): Promise<SystemHealth> => {
-      return await oneCoreServiceProbe(
+    probe: (): Promise<SystemHealth> => {
+      return oneCoreServiceProbe(
         config.health.workOrder.systemName,
         config.health.workOrder.minimumMinutesBetweenRequests,
         config.workOrderService.url + '/health'
@@ -84,7 +84,7 @@ const subsystems: HealthCheckTarget[] = [
       return await oneCoreServiceProbe(
         config.health.contacts.systemName,
         config.health.contacts.minimumMinutesBetweenRequests,
-        config.workOrderService.url + '/health'
+        config.contactsService.url + '/health'
       )
     },
   },
