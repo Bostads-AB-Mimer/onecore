@@ -51,12 +51,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
-
-    const result = await LogsApi.list(page, limit)
+    const result = await LogsApi.list(ctx.query)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching logs')
@@ -442,22 +437,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs/rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
-
-    const filters = {
-      eventType: ctx.query.eventType as string | undefined,
-      objectType: ctx.query.objectType as string | undefined,
-      userName: ctx.query.userName as string | undefined,
-    }
-
     const result = await LogsApi.getByRentalObjectCode(
       ctx.params.rentalObjectCode,
-      page,
-      limit,
-      filters
+      ctx.query
     )
 
     if (!result.ok) {
@@ -552,23 +534,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/logs/contact/:contactId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
-
-    const filters = {
-      eventType: ctx.query.eventType as string | undefined,
-      objectType: ctx.query.objectType as string | undefined,
-      userName: ctx.query.userName as string | undefined,
-    }
-
-    const result = await LogsApi.getByContactId(
-      ctx.params.contactId,
-      page,
-      limit,
-      filters
-    )
+    const result = await LogsApi.getByContactId(ctx.params.contactId, ctx.query)
 
     if (!result.ok) {
       logger.error(

@@ -10,12 +10,11 @@ import {
 
 export const KeySystemsApi = {
   list: async (
-    page?: number,
-    limit?: number
+    query: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<PaginatedResponse<KeySystem>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/key-systems', {
-        params: { query: { page, limit } },
+        params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
       return ok(parsePaginated(KeySystemSchema, data))

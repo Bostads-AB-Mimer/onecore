@@ -24,7 +24,7 @@ export const KeyEventsApi = {
 
   getByKey: async (
     keyId: string,
-    limit?: number
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<KeyEvent[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -32,7 +32,7 @@ export const KeyEventsApi = {
         {
           params: {
             path: { keyId },
-            query: { limit },
+            query: query as any,
           },
         }
       )

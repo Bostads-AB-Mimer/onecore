@@ -452,7 +452,7 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           )
         )
 
-        const result = await keysAdapter.LogsApi.list()
+        const result = await keysAdapter.LogsApi.list({})
 
         assert(result.ok)
         expect(result.data).toEqual({
@@ -474,7 +474,7 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           )
         )
 
-        const result = await keysAdapter.LogsApi.list(2, 10)
+        const result = await keysAdapter.LogsApi.list({ page: '2', limit: '10' })
 
         assert(result.ok)
         expect(result.data).toEqual(paginatedResponse)
@@ -488,7 +488,7 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           )
         )
 
-        const result = await keysAdapter.LogsApi.list()
+        const result = await keysAdapter.LogsApi.list({})
 
         expect(result).toEqual({ ok: false, err: 'unknown' })
       })

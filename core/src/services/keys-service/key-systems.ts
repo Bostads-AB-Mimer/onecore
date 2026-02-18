@@ -53,12 +53,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-systems', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
-
-    const result = await KeySystemsApi.list(page, limit)
+    const result = await KeySystemsApi.list(ctx.query)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching key systems')

@@ -87,11 +87,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/key-events/by-key/:keyId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
 
-    const result = await KeyEventsApi.getByKey(ctx.params.keyId, limit)
+    const result = await KeyEventsApi.getByKey(ctx.params.keyId, ctx.query)
 
     if (!result.ok) {
       logger.error(

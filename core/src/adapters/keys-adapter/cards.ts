@@ -20,9 +20,7 @@ export const CardsApi = {
 
   getByRentalObjectCode: async (
     rentalObjectCode: string,
-    options?: {
-      includeLoans?: boolean
-    }
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<CardDetails[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -30,7 +28,7 @@ export const CardsApi = {
         {
           params: {
             path: { rentalObjectCode },
-            query: { includeLoans: options?.includeLoans },
+            query: query as any,
           },
         }
       )

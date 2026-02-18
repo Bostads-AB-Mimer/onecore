@@ -52,12 +52,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/key-bundles', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const page = ctx.query.page ? parseInt(ctx.query.page as string) : undefined
-    const limit = ctx.query.limit
-      ? parseInt(ctx.query.limit as string)
-      : undefined
-
-    const result = await KeyBundlesApi.list(page, limit)
+    const result = await KeyBundlesApi.list(ctx.query)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching key bundles')
@@ -507,15 +502,10 @@ export const routes = (router: KoaRouter) => {
       'includeKeySystem',
     ])
 
-    const includeLoans = ctx.query.includeLoans === 'true'
-    const includeEvents = ctx.query.includeEvents === 'true'
-    const includeKeySystem = ctx.query.includeKeySystem === 'true'
-
-    const result = await KeyBundlesApi.getWithLoanStatus(ctx.params.id, {
-      includeLoans,
-      includeEvents,
-      includeKeySystem,
-    })
+    const result = await KeyBundlesApi.getWithLoanStatus(
+      ctx.params.id,
+      ctx.query
+    )
 
     if (!result.ok) {
       if (result.err === 'not-found') {

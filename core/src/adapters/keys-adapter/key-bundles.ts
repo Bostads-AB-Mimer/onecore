@@ -12,12 +12,11 @@ import {
 
 export const KeyBundlesApi = {
   list: async (
-    page?: number,
-    limit?: number
+    query: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<PaginatedResponse<KeyBundle>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/key-bundles', {
-        params: { query: { page, limit } },
+        params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
       return ok(data as unknown as PaginatedResponse<KeyBundle>)
@@ -142,11 +141,7 @@ export const KeyBundlesApi = {
 
   getWithLoanStatus: async (
     id: string,
-    options?: {
-      includeLoans?: boolean
-      includeEvents?: boolean
-      includeKeySystem?: boolean
-    }
+    query?: Record<string, string | string[] | undefined>
   ): Promise<
     AdapterResult<KeyBundleDetailsResponse, 'not-found' | CommonErr>
   > => {
@@ -156,11 +151,7 @@ export const KeyBundlesApi = {
         {
           params: {
             path: { id },
-            query: {
-              includeLoans: options?.includeLoans,
-              includeEvents: options?.includeEvents,
-              includeKeySystem: options?.includeKeySystem,
-            } as any,
+            query: query as any,
           },
         }
       )

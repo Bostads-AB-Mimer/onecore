@@ -34,6 +34,35 @@ export function fail<E extends CommonErr>(err: E): AdapterResult<never, E> {
   return { ok: false, err }
 }
 
+/**
+ * Make a Zod schema lenient by accepting null for z.string().optional() fields.
+ * The keys service DB returns SQL NULL for optional string fields, but the schema
+ * defines them as z.string().optional() (accepts string | undefined, not null).
+ * This wrapper accepts null and transforms it to undefined for those fields.
+ */
+export function lenient<S extends z.ZodObject<z.ZodRawShape>>(schema: S) {
+  const shape = schema.shape
+  const overrides: Record<string, z.ZodTypeAny> = {}
+
+  for (const [key, fieldSchema] of Object.entries(shape)) {
+    // Unwrap .optional() to check the inner type
+    const inner =
+      fieldSchema instanceof z.ZodOptional ? fieldSchema._def.innerType : null
+    // Only target z.string().optional() fields (not already nullable)
+    if (inner instanceof z.ZodString) {
+      overrides[key] = z
+        .string()
+        .nullable()
+        .optional()
+        .transform((v) => v ?? undefined)
+    }
+  }
+
+  return Object.keys(overrides).length > 0
+    ? (schema.extend(overrides) as unknown as S)
+    : schema
+}
+
 export function parsePaginated<S extends z.ZodTypeAny>(
   itemSchema: S,
   data: unknown

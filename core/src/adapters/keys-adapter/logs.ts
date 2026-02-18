@@ -12,12 +12,11 @@ import {
 
 export const LogsApi = {
   list: async (
-    page?: number,
-    limit?: number
+    query: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/logs', {
-        params: { query: { page, limit } },
+        params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
       return ok(parsePaginated(LogSchema, data))
@@ -94,13 +93,7 @@ export const LogsApi = {
 
   getByRentalObjectCode: async (
     rentalObjectCode: string,
-    page?: number,
-    limit?: number,
-    filters?: {
-      eventType?: string
-      objectType?: string
-      userName?: string
-    }
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -108,13 +101,7 @@ export const LogsApi = {
         {
           params: {
             path: { rentalObjectCode },
-            query: {
-              page,
-              limit,
-              eventType: filters?.eventType,
-              objectType: filters?.objectType,
-              userName: filters?.userName,
-            } as any,
+            query: query as any,
           },
         }
       )
@@ -128,13 +115,7 @@ export const LogsApi = {
 
   getByContactId: async (
     contactId: string,
-    page?: number,
-    limit?: number,
-    filters?: {
-      eventType?: string
-      objectType?: string
-      userName?: string
-    }
+    query?: Record<string, string | string[] | undefined>
   ): Promise<AdapterResult<PaginatedResponse<Log>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET(
@@ -142,13 +123,7 @@ export const LogsApi = {
         {
           params: {
             path: { contactId },
-            query: {
-              page,
-              limit,
-              eventType: filters?.eventType,
-              objectType: filters?.objectType,
-              userName: filters?.userName,
-            } as any,
+            query: query as any,
           },
         }
       )
