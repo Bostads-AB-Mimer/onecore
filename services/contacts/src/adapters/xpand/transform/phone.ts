@@ -40,7 +40,7 @@ type ExtractResult = {
 }
 
 /**
-m * Expands extracted phone numbers by inferring missing area codes
+ * Expands extracted phone numbers by inferring missing area codes
  * or expanding slash-separated extensions where they can be derived
  * from within the same extraction result.
  *

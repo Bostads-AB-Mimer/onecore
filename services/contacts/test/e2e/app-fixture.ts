@@ -73,7 +73,7 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
 
   await prepareDataSet(pool, opts.dataSet)
 
-  pool.close()
+  await pool.close()
 
   return {
     async start(): Promise<void> {

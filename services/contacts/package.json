@@ -1,7 +1,7 @@
 {
   "name": "@onecore/contacts",
   "version": "1.5.0",
-  "private": "true",
+  "private": true,
   "description": "",
   "license": "MIT",
   "author": "",
