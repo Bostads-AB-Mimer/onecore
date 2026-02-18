@@ -2,7 +2,6 @@ import {
   Contact,
   ContactCode,
   ContactTypeFilter,
-  EmailAddress,
   NationalIdNumber,
   PhoneNumber,
 } from '@src/domain/contact'
