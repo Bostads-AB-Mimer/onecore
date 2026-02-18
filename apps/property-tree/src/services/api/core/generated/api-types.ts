@@ -285,86 +285,6 @@ export interface paths {
       };
     };
   };
-  "/leases/contacts-by-filters": {
-    /**
-     * Get unique contacts from leases matching filters
-     * @description Returns deduplicated contacts for all leases matching the filter criteria. Used for bulk SMS/email operations.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search */
-          q?: string;
-          /** @description Object types */
-          objectType?: string[];
-          /** @description Contract status filter */
-          status?: string[];
-          startDateFrom?: string;
-          startDateTo?: string;
-          endDateFrom?: string;
-          endDateTo?: string;
-          property?: string[];
-          districtNames?: string[];
-        };
-      };
-      responses: {
-        /** @description List of unique contacts */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ContactInfo"][];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/export": {
-    /**
-     * Export leases to Excel
-     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search */
-          q?: string;
-          /** @description Object types */
-          objectType?: string[];
-          /** @description Contract status filter */
-          status?: string[];
-          /** @description Minimum start date */
-          startDateFrom?: string;
-          /** @description Maximum start date */
-          startDateTo?: string;
-          /** @description Minimum end date */
-          endDateFrom?: string;
-          /** @description Maximum end date */
-          endDateTo?: string;
-          /** @description Property names */
-          property?: string[];
-          /** @description District names */
-          districtNames?: string[];
-        };
-      };
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
   "/leases/by-rental-property-id/{rentalPropertyId}": {
     /**
      * Get leases with related entities for a specific rental property id
@@ -2957,7 +2877,7 @@ export interface paths {
             /** @description The subject of the email. */
             subject?: string;
             /** @description The message to be sent in the email. */
-            message?: string;
+            text?: string;
           };
         };
       };
