@@ -1,13 +1,6 @@
 import { logger } from '@onecore/utilities'
 import { z } from 'zod'
-import {
-  client,
-  mapFetchError,
-  ok,
-  fail,
-  parsePaginated,
-  lenient,
-} from './helpers'
+import { client, mapFetchError, ok, fail, parsePaginated } from './helpers'
 import {
   KeyLoan,
   KeyLoanWithDetails,
@@ -20,16 +13,12 @@ import {
   AdapterResult,
 } from './types'
 
-// Lenient schemas that accept null for optional string fields (SQL NULL → undefined)
-const LenientKeyLoanSchema = lenient(KeyLoanSchema)
-const LenientKeyLoanWithDetailsSchema = lenient(KeyLoanWithDetailsSchema)
-
 export const KeyLoansApi = {
   list: async (): Promise<AdapterResult<KeyLoan[], CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/key-loans')
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(LenientKeyLoanSchema).parse(data.content))
+      return ok(z.array(KeyLoanSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans failed')
       return fail('unknown')
@@ -49,7 +38,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(parsePaginated(LenientKeyLoanSchema, data))
+      return ok(parsePaginated(KeyLoanSchema, data))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans/search failed')
       return fail('unknown')
@@ -67,7 +56,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(LenientKeyLoanSchema).parse(data.content))
+      return ok(z.array(KeyLoanSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans/by-key failed')
       return fail('unknown')
@@ -85,7 +74,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(LenientKeyLoanSchema).parse(data.content))
+      return ok(z.array(KeyLoanSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-loans/by-card failed')
       return fail('unknown')
@@ -107,7 +96,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(LenientKeyLoanWithDetailsSchema).parse(data.content))
+      return ok(z.array(KeyLoanWithDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
@@ -148,7 +137,7 @@ export const KeyLoansApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(LenientKeyLoanSchema.parse(data.content))
+      return ok(KeyLoanSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: POST /key-loans failed')
       return fail('unknown')
@@ -167,7 +156,7 @@ export const KeyLoansApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(LenientKeyLoanSchema.parse(data.content))
+      return ok(KeyLoanSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: PUT /key-loans/{id} failed')
       return fail('unknown')
@@ -204,7 +193,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(LenientKeyLoanWithDetailsSchema).parse(data.content))
+      return ok(z.array(KeyLoanWithDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
@@ -229,7 +218,7 @@ export const KeyLoansApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(z.array(LenientKeyLoanWithDetailsSchema).parse(data.content))
+      return ok(z.array(KeyLoanWithDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
