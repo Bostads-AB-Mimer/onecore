@@ -474,7 +474,10 @@ describe('keys-adapter - KeyLoans & Logs', () => {
           )
         )
 
-        const result = await keysAdapter.LogsApi.list({ page: '2', limit: '10' })
+        const result = await keysAdapter.LogsApi.list({
+          page: '2',
+          limit: '10',
+        })
 
         assert(result.ok)
         expect(result.data).toEqual(paginatedResponse)

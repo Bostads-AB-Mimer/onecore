@@ -27,6 +27,7 @@ export async function getReceiptsByKeyLoanId(
   return await dbConnection(TABLE)
     .where({ keyLoanId })
     .orderBy('createdAt', 'desc')
+    .orderBy('id', 'desc')
 }
 
 export async function createReceipt(

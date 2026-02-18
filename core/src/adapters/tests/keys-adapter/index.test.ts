@@ -83,7 +83,10 @@ describe('keys-adapter', () => {
           )
         )
 
-        const result = await keysAdapter.KeysApi.list({ page: '2', limit: '10' })
+        const result = await keysAdapter.KeysApi.list({
+          page: '2',
+          limit: '10',
+        })
 
         assert(result.ok)
         expect(result.data).toEqual(expectedPaginatedKeys)
@@ -478,7 +481,10 @@ describe('keys-adapter', () => {
           )
         )
 
-        const result = await keysAdapter.KeySystemsApi.list({ page: '2', limit: '10' })
+        const result = await keysAdapter.KeySystemsApi.list({
+          page: '2',
+          limit: '10',
+        })
 
         assert(result.ok)
         expect(result.data).toEqual(expectedPaginatedKeySystems)
