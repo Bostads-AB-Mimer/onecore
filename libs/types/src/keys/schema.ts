@@ -45,7 +45,7 @@ export const LoanTypeSchema = z.enum(['TENANT', 'MAINTENANCE'])
 export const KeySchema = z.object({
   id: z.string().uuid(),
   keyName: z.string(),
-  keySequenceNumber: z.number().optional(),
+  keySequenceNumber: z.number().nullable().optional(),
   flexNumber: z.number().nullable().optional(),
   rentalObjectCode: z.string().nullable().optional(),
   keyType: KeyTypeSchema,
@@ -165,7 +165,7 @@ export const BundleWithLoanedKeysInfoSchema = z.object({
 // Request schemas for API endpoints
 export const CreateKeyRequestSchema = z.object({
   keyName: z.string(),
-  keySequenceNumber: z.number().optional(),
+  keySequenceNumber: z.number().nullable().optional(),
   flexNumber: z.number().nullable().optional(),
   rentalObjectCode: z.string().nullable().optional(),
   keyType: KeyTypeSchema,
@@ -175,7 +175,7 @@ export const CreateKeyRequestSchema = z.object({
 
 export const UpdateKeyRequestSchema = z.object({
   keyName: z.string().optional(),
-  keySequenceNumber: z.number().optional(),
+  keySequenceNumber: z.number().nullable().optional(),
   flexNumber: z.number().nullable().optional(),
   rentalObjectCode: z.string().nullable().optional(),
   keyType: KeyTypeSchema.optional(),
