@@ -40,7 +40,8 @@ function isCurrentLease(l: TenfastLease, now: Date) {
     l.startDate < now &&
     (!l.endDate || l.endDate > now) &&
     !isPreliminaryTerminated(l) &&
-    !l.cancellation.handledAt
+    !l.cancellation.cancelled &&
+    !isPendingSignature(l)
   )
 }
 
@@ -57,5 +58,6 @@ function isEndedLease(l: TenfastLease, now: Date) {
 }
 
 export const isPreliminaryTerminated = (lease: TenfastLease): boolean => {
-  return !!lease.simplesignTermination?.sentAt && !lease.cancellation.handledAt
+  return !!lease.simplesignTermination?.sentAt && !lease.cancellation.cancelled
+}
 }
