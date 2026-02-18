@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "EsNext",
+    "moduleResolution": "bundler",
+    "rootDir": "./src",
+    "outDir": "./build",
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["./src/*"],
+      "@xpand/*": ["./src/adapters/xpand/*"]
+    }
+  },
+  "include": ["./src/**/*.ts"]
+}
