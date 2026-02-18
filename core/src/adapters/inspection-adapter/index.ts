@@ -53,8 +53,10 @@ export const getXpandInspections = async ({
       ok: true,
       data: {
         content: fetchResponse.data.content,
-        _meta: fetchResponse.data._meta!,
-        _links: fetchResponse.data._links!,
+        _meta: fetchResponse.data
+          ._meta as PaginatedResponse<XpandInspection>['_meta'],
+        _links: fetchResponse.data
+          ._links as PaginatedResponse<XpandInspection>['_links'],
       },
     }
   } catch (error) {
@@ -131,5 +133,31 @@ export const getXpandInspectionById = async (
     )
 
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export const createInspection = async (
+  body: components['schemas']['CreateInspection']
+): Promise<AdapterResult<DetailedXpandInspection, string>> => {
+  try {
+    const fetchResponse = await client().POST('/inspections', {
+      body,
+    })
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.inspection) {
+      return { ok: false, err: 'Failed to create inspection' }
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.inspection,
+    }
+  } catch (error) {
+    logger.error({ error }, 'inspection-adapter.createInspection')
+    return { ok: false, err: 'Failed to create inspection' }
   }
 }

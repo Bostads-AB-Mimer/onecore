@@ -37,6 +37,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('TenantContactsResponse', schemas.TenantContactsResponseSchema)
   registerSchema('SendProtocolRequest', schemas.SendProtocolRequestSchema)
   registerSchema('SendProtocolResponse', schemas.SendProtocolResponseSchema)
+  registerSchema(
+    'CreateInspectionRequest',
+    schemas.CreateInspectionRequestSchema
+  )
 
   /**
    * @swagger
@@ -906,6 +910,79 @@ export const routes = (router: KoaRouter) => {
         },
         ...metadata,
       }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Create a new inspection
+   *     description: Creates a new inspection in the local inspection database
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateInspectionRequest'
+   *     responses:
+   *       '201':
+   *         description: Inspection created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/DetailedInspection'
+   *       '400':
+   *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await inspectionAdapter.createInspection(ctx.request.body)
+
+      if (result.ok) {
+        ctx.status = 201
+        ctx.body = {
+          content: {
+            inspection: result.data,
+          },
+          ...metadata,
+        }
+      } else {
+        ctx.status = 400
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error({ error }, 'Error creating inspection')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
 }

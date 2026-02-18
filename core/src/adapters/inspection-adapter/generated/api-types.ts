@@ -69,14 +69,14 @@ export interface paths {
             'application/json': {
               content?: components['schemas']['XpandInspection'][]
               _meta?: {
-                totalRecords: number
-                page: number
-                limit: number
-                count: number
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
               }
               _links?: {
-                href: string
-                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+                href?: string
+                rel?: string
               }[]
             }
           }
@@ -168,6 +168,49 @@ export interface paths {
       }
     }
   }
+  '/inspections': {
+    /** Create a new inspection */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateInspection']
+        }
+      }
+      responses: {
+        /** @description Inspection created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: {
+                inspection?: components['schemas']['DetailedXpandInspection']
+              }
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              details?: unknown[]
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -182,7 +225,7 @@ export interface components {
       inspector: string
       type: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       leaseId: string
       masterKeyAccess: string | null
     }
@@ -197,7 +240,7 @@ export interface components {
       type: string
       residenceId: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       isFurnished: boolean
       leaseId: string
       isTenantPresent: boolean
@@ -237,7 +280,7 @@ export interface components {
       type: string
       residenceId: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       isFurnished: boolean
       leaseId: string
       isTenantPresent: boolean
@@ -277,7 +320,7 @@ export interface components {
       type: string
       residenceId: string
       address: string
-      apartmentCode: string
+      apartmentCode: string | null
       isFurnished: boolean
       leaseId: string
       isTenantPresent: boolean
@@ -287,6 +330,44 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      rooms: {
+        room: string
+        remarks: {
+          remarkId: string
+          location: string | null
+          buildingComponent: string | null
+          notes: string | null
+          remarkGrade: number
+          remarkStatus: string | null
+          cost: number
+          invoice: boolean
+          quantity: number
+          isMissing: boolean
+          fixedDate: string | null
+          workOrderCreated: boolean
+          workOrderStatus: number | null
+        }[]
+      }[]
+    }
+    CreateInspection: {
+      status: string
+      /** Format: date-time */
+      date: string
+      startedAt: string | null
+      endedAt: string | null
+      inspector: string
+      type: string
+      residenceId: string
+      address: string
+      apartmentCode: string | null
+      isFurnished: boolean
+      leaseId: string
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      masterKeyAccess: string | null
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
       rooms: {
         room: string
         remarks: {

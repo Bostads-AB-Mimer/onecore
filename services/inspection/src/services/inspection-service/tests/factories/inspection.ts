@@ -10,6 +10,7 @@ import {
   DetailedXpandInspectionRoom,
   DetailedXpandInspectionRemark,
 } from '../../schemas'
+import { CreateInspectionParams } from '../../adapters/db-adapter/schemas'
 
 export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
   () => ({
@@ -140,4 +141,47 @@ export const DetailedXpandInspectionRemarkFactory =
     fixedDate: new Date('2023-02-01T00:00:00Z'),
     workOrderCreated: true,
     workOrderStatus: null,
+  }))
+
+export const CreateInspectionParamsFactory =
+  Factory.define<CreateInspectionParams>(() => ({
+    status: 'ongoing',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: new Date('2023-01-01T10:15:00Z'),
+    endedAt: null,
+    inspector: 'Test Inspector',
+    type: 'Move-in',
+    residenceId: 'RESIDENCE001',
+    address: '123 Test Street',
+    apartmentCode: 'APT001',
+    isFurnished: false,
+    leaseId: 'LEASE001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: 'Yes',
+    hasRemarks: true,
+    notes: 'Test notes',
+    totalCost: 1000,
+    rooms: [
+      {
+        room: 'Kitchen',
+        remarks: [
+          {
+            remarkId: 'R1',
+            location: 'Kitchen sink',
+            buildingComponent: 'Sink',
+            notes: 'Minor scratch',
+            remarkGrade: 1,
+            remarkStatus: 'Open',
+            cost: 200,
+            invoice: false,
+            quantity: 1,
+            isMissing: false,
+            fixedDate: null,
+            workOrderCreated: false,
+            workOrderStatus: null,
+          },
+        ],
+      },
+    ],
   }))

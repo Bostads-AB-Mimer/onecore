@@ -171,7 +171,7 @@ export const TenantContactsResponseSchema = z.object({
   inspection: z.object({
     id: z.string(),
     address: z.string(),
-    apartmentCode: z.string(),
+    apartmentCode: z.string().nullable(),
   }),
   new_tenant: TenantInfoSchema.optional(),
   tenant: TenantInfoSchema.optional(),
@@ -192,6 +192,16 @@ export const SendProtocolResponseSchema = z.object({
   error: z.string().optional(),
 })
 
+export const CreateInspectionRequestSchema = DetailedXpandInspectionSchema.omit(
+  {
+    id: true,
+    remarkCount: true,
+  }
+)
+
+export type CreateInspectionRequest = z.infer<
+  typeof CreateInspectionRequestSchema
+>
 export type TenantContact = z.infer<typeof TenantContactSchema>
 export type TenantInfo = z.infer<typeof TenantInfoSchema>
 export type TenantContactsResponse = z.infer<
