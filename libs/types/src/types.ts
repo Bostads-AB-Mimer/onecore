@@ -81,6 +81,7 @@ interface Lease {
   lastDebitDate: Date | undefined
   approvalDate: Date | undefined
   residentialArea?: ResidentialArea
+  rentRows: Array<LeaseRentRow>
 }
 
 interface ResidentialArea {
