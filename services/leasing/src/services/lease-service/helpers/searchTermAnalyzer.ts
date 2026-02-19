@@ -23,6 +23,11 @@ export const normalizePersonalNumber = (input: string): string => {
  * Checks if input looks like a personal number (all digits after normalization)
  */
 const isLikelyPersonalNumber = (input: string): boolean => {
+  // Personal numbers have at most 1 dash (e.g., "YYMMDD-NNNN")
+  // Lease IDs like "406-022-05-0201" have multiple dashes
+  const dashCount = (input.match(/-/g) || []).length
+  if (dashCount > 1) return false
+
   const normalized = normalizePersonalNumber(input)
   return /^\d+$/.test(normalized) && normalized.length >= 4
 }
