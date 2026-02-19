@@ -5,7 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/v2/Collapsible'
-import { ChevronDown, ChevronUp, MapPin } from 'lucide-react'
+import { ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import type { Tenant } from '@/services/types'
 import { CopyableField } from '@/components/ui/CopyableField'
@@ -43,6 +43,11 @@ export function TenantCard({ tenant }: TenantCardProps) {
     const formattedAddress = formatAddress(address)
     const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(formattedAddress)}`
     window.open(mapsUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  // Initiate phone call
+  const handleCall = (phoneNumber: string) => {
+    window.location.href = `tel:${phoneNumber.replace(/[\s-]/g, '')}`
   }
 
   // Get main phone number or first available
@@ -100,6 +105,14 @@ export function TenantCard({ tenant }: TenantCardProps) {
                     key={index}
                     label={phone.type || 'Telefon'}
                     value={phone.phoneNumber}
+                    actions={[
+                      {
+                        icon: <Phone className="h-4 w-4" />,
+                        onClick: () => handleCall(phone.phoneNumber),
+                        tooltip: 'Ring',
+                        ariaLabel: `Ring ${phone.phoneNumber}`,
+                      },
+                    ]}
                   />
                 ))
               ) : (
