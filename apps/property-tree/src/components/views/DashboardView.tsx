@@ -214,16 +214,9 @@ export function DashboardView() {
         </h1>
       </header>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="max-w-2xl mx-auto"
-      >
-        <ReleaseNotesCard />
-      </motion.div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+      <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
+        {/* Link cards grid */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {cardConfigs.map((config, index) => {
           const IconComponent = config.icon
           return (
@@ -265,6 +258,17 @@ export function DashboardView() {
             </motion.div>
           )
         })}
+        </div>
+
+        {/* Release notes sidebar - right side on desktop, top on mobile */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="order-first lg:order-last lg:w-80 lg:flex-shrink-0"
+        >
+          <ReleaseNotesCard />
+        </motion.div>
       </div>
     </div>
   )

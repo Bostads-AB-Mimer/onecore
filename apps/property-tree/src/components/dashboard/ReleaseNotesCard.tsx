@@ -7,6 +7,8 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Info,
   AlertTriangle,
   Pin,
@@ -105,6 +107,7 @@ function ReleaseNoteItem({ note, index }: ReleaseNoteItemProps) {
 
 export function ReleaseNotesCard() {
   const [page, setPage] = useState(0)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   // Sort notes: pinned first, then by date
   const sortedNotes = useMemo(() => {
@@ -132,31 +135,28 @@ export function ReleaseNotesCard() {
           <Newspaper className="h-5 w-5 text-primary" />
           Nyheter och uppdateringar
         </CardTitle>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={!canGoPrev}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label="Föregående"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="text-sm text-muted-foreground px-2">
-              {page + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!canGoNext}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label="Nästa"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        )}
+        <button
+          onClick={() => setIsCollapsed((c) => !c)}
+          className="lg:hidden p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label={isCollapsed ? 'Visa' : 'Dölj'}
+        >
+          {isCollapsed ? (
+            <ChevronDown className="h-5 w-5" />
+          ) : (
+            <ChevronUp className="h-5 w-5" />
+          )}
+        </button>
       </CardHeader>
-      <CardContent>
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <CardContent>
         <AnimatePresence mode="wait">
           <motion.div
             key={page}
@@ -179,7 +179,34 @@ export function ReleaseNotesCard() {
             här för att stötta dig!
           </p>
         </div>
-      </CardContent>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1 mt-4 pt-4 border-t">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={!canGoPrev}
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Föregående"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-xs text-muted-foreground px-1">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!canGoNext}
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Nästa"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+            </CardContent>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   )
 }
