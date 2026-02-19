@@ -30,6 +30,11 @@ export const requireAuth = async (ctx: Context, next: Next) => {
           newTokens.access_token
         )
 
+        console.log(
+          JSON.stringify(verifiedToken, null, 2),
+          'Verified token claims after refresh'
+        ) // Debug log to inspect verified token claims
+
         // Set user on context manually (same as extractJwtToken does)
         ctx.state.user = {
           id: verifiedToken.sub,
@@ -40,6 +45,8 @@ export const requireAuth = async (ctx: Context, next: Next) => {
           realm_access: verifiedToken.realm_access, // For role checking
           resource_access: verifiedToken.resource_access, // Client-specific roles
           groups: verifiedToken.groups, // Azure AD groups
+          jobTitle: verifiedToken.jobTitle, // Entra ID claim
+          department: verifiedToken.department, // Entra ID claim
         }
 
         // Continue to next middleware (skip extractJwtToken)
@@ -56,6 +63,8 @@ export const requireAuth = async (ctx: Context, next: Next) => {
     // If no refresh needed OR refresh failed, verify token and extract all claims
     const verifiedToken = await auth.jwksService.verifyToken(accessToken)
 
+    console.log(JSON.stringify(verifiedToken, null, 2), 'Verified token claims') // Debug log to inspect verified token claims
+
     // Set user with all claims (including role-related ones)
     ctx.state.user = {
       id: verifiedToken.sub,
@@ -66,6 +75,8 @@ export const requireAuth = async (ctx: Context, next: Next) => {
       realm_access: verifiedToken.realm_access,
       resource_access: verifiedToken.resource_access,
       groups: verifiedToken.groups,
+      jobTitle: verifiedToken.jobTitle,
+      department: verifiedToken.department,
     }
 
     return await next()

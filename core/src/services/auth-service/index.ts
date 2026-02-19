@@ -240,6 +240,9 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/auth/profile', requireAuth, async (ctx) => {
     const user = ctx.state.user
 
+    console.log('Here comes the user object!')
+    console.log('User object in /auth/profile:', JSON.stringify(user, null, 2)) // Debug log to inspect user object
+
     // Transform user object to match frontend contract
     const roles = extractRolesFromToken(
       {
@@ -255,6 +258,8 @@ export const routes = (router: KoaRouter) => {
       name: user.name,
       email: user.email,
       roles,
+      jobTitle: user.jobTitle,
+      department: user.department,
     }
   })
 
