@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-02-19-v194-1",
+    "date": "2026-02-19",
+    "title": "Buggfix i sökning på hyreskontrakt",
+    "description": "Fixar ett problem där sökning på kontraktsnummer (t.ex. 406-022-05-0201) inte gav några träffar.",
+    "category": "fix"
+  }
+]
