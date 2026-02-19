@@ -21,9 +21,9 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
   const { expandedCompanyCodes } = useCompanyExpansion()
 
-  const isInHierarchy = isCompanyInHierarchy(company.id)
+  const isInHierarchy = isCompanyInHierarchy(company.organizationNumber!)
   const isDirectlySelected =
-    selectionState.selectedCompanyId === company.id &&
+    selectionState.selectedOrganizationNumber === company.organizationNumber &&
     matchesRoute(routes.company, location.pathname)
 
   // Check if this company should be expanded via context
@@ -54,7 +54,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={paths.company(company.id)}
+          to={paths.company(company.organizationNumber!)}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <Building2 />
