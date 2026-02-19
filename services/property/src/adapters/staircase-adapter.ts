@@ -5,7 +5,10 @@ import { prisma } from './db'
 
 //todo: add types
 
-async function getStaircasesByBuildingCode(buildingCode: string) {
+async function getStaircasesByBuildingCode(
+  buildingCode: string,
+  staircaseCode?: string
+) {
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
       buildingCode: {
@@ -16,6 +19,7 @@ async function getStaircasesByBuildingCode(buildingCode: string) {
       },
       residenceId: null,
       localeId: null,
+      ...(staircaseCode ? { staircaseCode } : {}),
     },
   })
 

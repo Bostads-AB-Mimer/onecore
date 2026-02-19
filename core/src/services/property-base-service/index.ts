@@ -1816,6 +1816,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Code for the building to fetch staircases for
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the staircase (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved staircases.
@@ -1859,10 +1865,13 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { errors: queryParams.error.errors }
       return
     }
-    const { buildingCode } = queryParams.data
+    const { buildingCode, staircaseCode } = queryParams.data
 
     try {
-      const result = await propertyBaseAdapter.getStaircases(buildingCode)
+      const result = await propertyBaseAdapter.getStaircases(
+        buildingCode,
+        staircaseCode
+      )
       if (!result.ok) {
         logger.error({ metadata, err: result.err }, 'Internal server error')
         ctx.status = 500

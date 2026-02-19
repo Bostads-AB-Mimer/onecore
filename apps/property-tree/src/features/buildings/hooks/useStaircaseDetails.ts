@@ -4,22 +4,20 @@ import { buildingService, residenceService } from '@/services/api/core'
 import { staircaseService } from '@/services/api/core/staircaseService'
 
 export function useStaircaseDetails(
-  buildingId: string | undefined,
-  staircaseId: string | undefined
+  buildingCode: string | undefined,
+  staircaseCode: string | undefined
 ) {
   const buildingQuery = useQuery({
-    queryKey: ['building', buildingId],
-    queryFn: () => buildingService.getById(buildingId!),
-    enabled: !!buildingId,
+    queryKey: ['building', buildingCode],
+    queryFn: () => buildingService.getByBuildingCode(buildingCode!),
+    enabled: !!buildingCode,
   })
 
-  const buildingCode = buildingQuery.data?.code
-
   const staircaseQuery = useQuery({
-    queryKey: ['staircase', buildingId, staircaseId],
+    queryKey: ['staircase', buildingCode, staircaseCode],
     queryFn: () =>
-      staircaseService.getByBuildingCodeAndId(buildingCode!, staircaseId!),
-    enabled: !!buildingCode && !!staircaseId,
+      staircaseService.getByBuildingCode(buildingCode!, staircaseCode!),
+    enabled: !!buildingCode && !!staircaseCode,
   })
 
   const residencesQuery = useQuery({
@@ -30,7 +28,7 @@ export function useStaircaseDetails(
 
   return {
     building: buildingQuery.data,
-    staircase: staircaseQuery.data,
+    staircase: staircaseQuery.data?.[0],
     residences: residencesQuery.data,
     isLoading:
       buildingQuery.isLoading ||
