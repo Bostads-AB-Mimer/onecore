@@ -5,7 +5,10 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { getCompanies, getCompany } from '../adapters/company-adapter'
+import {
+  getCompanies,
+  getCompanyByOrganizationNumber,
+} from '../adapters/company-adapter'
 import { HttpStatusCode } from 'axios'
 import { CompanySchema, CompanyDetailsSchema } from '../types/company'
 
@@ -65,20 +68,20 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/{id}:
+   * /companies/{organizationNumber}:
    *   get:
    *     summary: Get detailed information about a specific company
    *     description: |
-   *       Retrieves comprehensive information about a company using its unique identifier.
+   *       Retrieves comprehensive information about a company using its organization number.
    *     tags:
    *       - Companies
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: organizationNumber
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the company.
+   *         description: The organization number of the company.
    *     responses:
    *       200:
    *         description: Successfully retrieved the company.
@@ -94,12 +97,12 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/companies/:id', async (ctx) => {
+  router.get('(.*)/companies/:organizationNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const id = ctx.params.id
+    const organizationNumber = ctx.params.organizationNumber
 
     try {
-      const company = await getCompany(id)
+      const company = await getCompanyByOrganizationNumber(organizationNumber)
 
       if (!company) {
         ctx.status = 404

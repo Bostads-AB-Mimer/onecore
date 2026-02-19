@@ -14,13 +14,13 @@ import { ResidenceList } from './ResidenceList'
 interface BuildingNavigationProps {
   building: Building
   property: Property
-  companyId?: string
+  organizationNumber?: string
 }
 
 export function BuildingNavigation({
   building,
   property,
-  companyId,
+  organizationNumber,
 }: BuildingNavigationProps) {
   const location = useLocation()
   const { isBuildingInHierarchy, selectionState } = useHierarchicalSelection()
@@ -61,7 +61,7 @@ export function BuildingNavigation({
           state={{
             propertyId: property.id,
             buildingCode: building.code,
-            companyId,
+            organizationNumber,
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
@@ -74,7 +74,7 @@ export function BuildingNavigation({
           <ResidenceList
             building={building}
             propertyId={property.id}
-            companyId={companyId}
+            organizationNumber={organizationNumber}
           />
         </div>
       )}

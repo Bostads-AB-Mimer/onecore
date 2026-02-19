@@ -61,19 +61,19 @@ const companyDetailsSelect: Prisma.CompanySelect = {
   timestamp: true,
 }
 
-export const getCompany = async (
-  id: string
+export const getCompanyByOrganizationNumber = async (
+  organizationNumber: string
 ): Promise<CompanyDetails | null> => {
   try {
-    const row = await prisma.company.findUnique({
-      where: { id },
+    const row = await prisma.company.findFirst({
+      where: { organizationNumber },
       select: companyDetailsSelect,
     })
 
     if (!row) return null
     return trimStrings(row)
   } catch (err) {
-    logger.error({ err }, 'company-adapter.getCompany')
+    logger.error({ err }, 'company-adapter.getCompanyByOrganizationNumber')
     throw err
   }
 }

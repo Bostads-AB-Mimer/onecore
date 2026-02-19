@@ -14,20 +14,20 @@ interface PropertyBreadcrumbProps {
   property?: { id: string; name: string }
   building?: { id: string; name: string }
   residence?: { id: string; name: string }
-  companyId?: string
+  organizationNumber?: string
 }
 
 export const PropertyBreadcrumb = ({
   property,
   building,
   residence,
-  companyId,
+  organizationNumber,
 }: PropertyBreadcrumbProps) => {
   const breadcrumbs = generateBreadcrumbs(
     property,
     building,
     residence,
-    companyId
+    organizationNumber
   )
 
   return (
@@ -42,7 +42,7 @@ export const PropertyBreadcrumb = ({
                   <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link to={breadcrumb.path} state={{ companyId }}>
+                    <Link to={breadcrumb.path} state={{ organizationNumber }}>
                       {breadcrumb.label}
                     </Link>
                   </BreadcrumbLink>

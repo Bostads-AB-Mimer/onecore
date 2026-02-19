@@ -3986,16 +3986,16 @@ export interface paths {
       };
     };
   };
-  "/companies/{id}": {
+  "/companies/{organizationNumber}": {
     /**
      * Get detailed information about a specific company
-     * @description Retrieves comprehensive information about a company using its unique identifier.
+     * @description Retrieves comprehensive information about a company using its organization number.
      */
     get: {
       parameters: {
         path: {
-          /** @description The ID of the company. */
-          id: string;
+          /** @description The organization number of the company. */
+          organizationNumber: string;
         };
       };
       responses: {
@@ -5219,6 +5219,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include cost information in the PDF. */
+          includeCosts?: boolean;
+        };
         path: {
           /** @description The ID of the inspection to generate a PDF for. */
           inspectionId: string;
@@ -7835,7 +7839,7 @@ export interface components {
       inspection: {
         id: string;
         address: string;
-        apartmentCode: string;
+        apartmentCode: string | null;
       };
       new_tenant?: {
         contacts: {

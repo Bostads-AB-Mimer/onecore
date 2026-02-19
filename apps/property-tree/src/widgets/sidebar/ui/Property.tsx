@@ -14,12 +14,12 @@ import { BuildingList } from './BuildingList'
 
 interface PropertyNavigationProps {
   property: Property
-  companyId?: string
+  organizationNumber?: string
 }
 
 export function PropertyNavigation({
   property,
-  companyId,
+  organizationNumber,
 }: PropertyNavigationProps) {
   const location = useLocation()
   const { isPropertyInHierarchy, selectionState } = useHierarchicalSelection()
@@ -54,7 +54,7 @@ export function PropertyNavigation({
       >
         <Link
           to={paths.property(property.id)}
-          state={{ companyId }}
+          state={{ organizationNumber }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <Building />
@@ -63,7 +63,10 @@ export function PropertyNavigation({
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">
-          <BuildingList property={property} companyId={companyId} />
+          <BuildingList
+            property={property}
+            organizationNumber={organizationNumber}
+          />
         </div>
       )}
     </SidebarMenuItem>

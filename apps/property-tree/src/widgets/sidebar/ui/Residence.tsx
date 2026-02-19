@@ -15,7 +15,7 @@ interface ResidenceNavigationProps {
   buildingCode: string
   staircaseCode: string
   propertyId?: string
-  companyId?: string
+  organizationNumber?: string
 }
 
 export function ResidenceNavigation({
@@ -23,7 +23,7 @@ export function ResidenceNavigation({
   buildingCode,
   staircaseCode,
   propertyId,
-  companyId,
+  organizationNumber,
 }: ResidenceNavigationProps) {
   const { isResidenceSelected } = useHierarchicalSelection()
 
@@ -39,7 +39,12 @@ export function ResidenceNavigation({
       <SidebarMenuButton asChild tooltip={residence.name} isActive={isSelected}>
         <Link
           to={paths.residence(residence.id)}
-          state={{ buildingCode, staircaseCode, propertyId, companyId }}
+          state={{
+            buildingCode,
+            staircaseCode,
+            propertyId,
+            organizationNumber,
+          }}
         >
           <Hotel />
           <span>LGH-{toTitleCase(residence.code)}</span>

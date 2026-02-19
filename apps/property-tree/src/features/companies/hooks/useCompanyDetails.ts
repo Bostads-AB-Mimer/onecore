@@ -2,15 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 
 import { companyService, propertyService } from '@/services/api/core'
 
-export function useCompanyDetails(companyId: string | undefined) {
+export function useCompanyDetails(organizationNumber: string | undefined) {
   const companyQuery = useQuery({
-    queryKey: ['company', companyId],
-    queryFn: () => companyService.getById(companyId!),
-    enabled: !!companyId,
+    queryKey: ['company', organizationNumber],
+    queryFn: () => companyService.getByOrganizationNumber(organizationNumber!),
+    enabled: !!organizationNumber,
   })
 
   const propertiesQuery = useQuery({
-    queryKey: ['properties', companyId],
+    queryKey: ['properties', organizationNumber],
     queryFn: () => propertyService.getFromCompany(companyQuery.data!),
     enabled: !!companyQuery.data,
   })
