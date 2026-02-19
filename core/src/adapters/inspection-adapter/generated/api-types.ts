@@ -168,7 +168,95 @@ export interface paths {
       }
     }
   }
-  '/inspections': {
+  '/inspections/internal/residence/{residenceId}': {
+    /** Get inspections from local database by residence ID */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: 'ongoing' | 'completed'
+        }
+        path: {
+          /** @description The ID of the residence to fetch inspections for */
+          residenceId: string
+        }
+      }
+      responses: {
+        /** @description A list of inspections for the specified residence from local database */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                inspections?: components['schemas']['XpandInspection'][]
+              }
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal Server Error - Failed to fetch inspections */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/internal': {
+    /** Get inspections from local database */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number for pagination. */
+          page?: number
+          /** @description Maximum number of records to return. */
+          limit?: number
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: 'ongoing' | 'completed'
+          /** @description Whether to sort the results in ascending order. */
+          sortAscending?: true | false
+          /** @description Filter inspections by inspector name. */
+          inspector?: string
+          /** @description Filter inspections by address. */
+          address?: string
+        }
+      }
+      responses: {
+        /** @description A paginated list of inspections from local database */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['XpandInspection'][]
+              _meta?: {
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
+              }
+              _links?: {
+                href?: string
+                rel?: string
+              }[]
+            }
+          }
+        }
+        /** @description Internal Server Error - Failed to fetch inspections */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
     /** Create a new inspection */
     post: {
       requestBody: {

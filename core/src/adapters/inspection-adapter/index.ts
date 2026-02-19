@@ -136,11 +136,97 @@ export const getXpandInspectionById = async (
   }
 }
 
+export const getInternalInspections = async ({
+  page = 1,
+  limit = 25,
+  statusFilter,
+  sortAscending,
+  inspector,
+  address,
+}: {
+  page?: number
+  limit?: number
+  statusFilter?: InspectionStatusFilter
+  sortAscending?: boolean
+  inspector?: string
+  address?: string
+} = {}): Promise<
+  AdapterResult<PaginatedResponse<XpandInspection>, 'unknown'>
+> => {
+  try {
+    const fetchResponse = await client().GET('/inspections/internal', {
+      params: {
+        query: { page, limit, statusFilter, sortAscending, inspector, address },
+      },
+    })
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: {
+        content: fetchResponse.data.content,
+        _meta: fetchResponse.data
+          ._meta as PaginatedResponse<XpandInspection>['_meta'],
+        _links: fetchResponse.data
+          ._links as PaginatedResponse<XpandInspection>['_links'],
+      },
+    }
+  } catch (error) {
+    logger.error({ error }, 'inspection-adapter.getInternalInspections')
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getInternalInspectionsByResidenceId = async (
+  residenceId: string,
+  statusFilter?: InspectionStatusFilter
+): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/inspections/internal/residence/{residenceId}',
+      {
+        params: {
+          path: { residenceId },
+          query: { statusFilter },
+        },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.inspections) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data?.content.inspections,
+    }
+  } catch (error) {
+    logger.error(
+      { error, residenceId },
+      'inspection-adapter.getInternalInspectionsByResidenceId'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const createInspection = async (
   body: components['schemas']['CreateInspection']
 ): Promise<AdapterResult<DetailedXpandInspection, string>> => {
   try {
-    const fetchResponse = await client().POST('/inspections', {
+    const fetchResponse = await client().POST('/inspections/internal', {
       body,
     })
 

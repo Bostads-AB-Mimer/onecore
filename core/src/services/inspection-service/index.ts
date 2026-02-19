@@ -41,6 +41,366 @@ export const routes = (router: KoaRouter) => {
     'CreateInspectionRequest',
     schemas.CreateInspectionRequestSchema
   )
+  registerSchema('InspectionWithSource', schemas.InspectionWithSourceSchema)
+
+  /**
+   * @swagger
+   * /inspections:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections from all sources
+   *     description: Retrieves inspections from both the local database and Xpand, merged with a source indicator per item.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 25
+   *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *       - in: query
+   *         name: sortAscending
+   *         schema:
+   *           type: string
+   *           enum: [true, false]
+   *         description: Whether to sort the results in ascending order.
+   *       - in: query
+   *         name: inspector
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by inspector name.
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by address.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections from all sources.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/InspectionWithSource'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       '400':
+   *         description: Invalid query parameters.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedParams = schemas.GetInspectionsFromXpandQuerySchema.safeParse(
+      ctx.query
+    )
+    if (!parsedParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        ...metadata,
+      }
+      return
+    }
+
+    const { page, limit, statusFilter, sortAscending, inspector, address } =
+      parsedParams.data
+
+    try {
+      const [internalResult, xpandResult] = await Promise.allSettled([
+        inspectionAdapter.getInternalInspections({
+          page,
+          limit,
+          statusFilter,
+          sortAscending,
+          inspector,
+          address,
+        }),
+        inspectionAdapter.getXpandInspections({
+          page,
+          limit,
+          statusFilter,
+          sortAscending,
+          inspector,
+          address,
+        }),
+      ])
+
+      const internalInspections =
+        internalResult.status === 'fulfilled' && internalResult.value.ok
+          ? (internalResult.value.data.content ?? [])
+          : []
+      const internalTotal =
+        internalResult.status === 'fulfilled' && internalResult.value.ok
+          ? (internalResult.value.data._meta?.totalRecords ?? 0)
+          : 0
+
+      const xpandInspections =
+        xpandResult.status === 'fulfilled' && xpandResult.value.ok
+          ? (xpandResult.value.data.content ?? [])
+          : []
+      const xpandTotal =
+        xpandResult.status === 'fulfilled' && xpandResult.value.ok
+          ? (xpandResult.value.data._meta?.totalRecords ?? 0)
+          : 0
+
+      if (
+        internalResult.status === 'rejected' ||
+        (internalResult.status === 'fulfilled' && !internalResult.value.ok)
+      ) {
+        logger.error(
+          {
+            err:
+              internalResult.status === 'fulfilled'
+                ? internalResult.value
+                : internalResult.reason,
+          },
+          'Error getting internal inspections, continuing with xpand only'
+        )
+      }
+
+      if (
+        xpandResult.status === 'rejected' ||
+        (xpandResult.status === 'fulfilled' && !xpandResult.value.ok)
+      ) {
+        logger.error(
+          {
+            err:
+              xpandResult.status === 'fulfilled'
+                ? xpandResult.value
+                : xpandResult.reason,
+          },
+          'Error getting xpand inspections, continuing with internal only'
+        )
+      }
+
+      const allInspections = [
+        ...internalInspections.map((i) => ({
+          ...i,
+          source: 'internal' as const,
+        })),
+        ...xpandInspections.map((i) => ({ ...i, source: 'xpand' as const })),
+      ]
+
+      const leaseIds = allInspections
+        .filter((i) => i.leaseId !== null && i.leaseId !== '')
+        .map((i) => i.leaseId)
+
+      const leasesById =
+        leaseIds.length > 0
+          ? await leasingAdapter.getLeases(leaseIds, 'true')
+          : {}
+
+      const inspectionsWithLeaseData = allInspections.map((inspection) => ({
+        ...inspection,
+        lease: inspection.leaseId
+          ? (leasesById[inspection.leaseId] ?? null)
+          : null,
+      }))
+
+      const totalRecords = internalTotal + xpandTotal
+
+      ctx.status = 200
+      ctx.body = {
+        content: inspectionsWithLeaseData,
+        _meta: {
+          totalRecords,
+          page: page ?? 1,
+          limit: limit ?? 25,
+          count: inspectionsWithLeaseData.length,
+        },
+        _links:
+          xpandResult.status === 'fulfilled' && xpandResult.value.ok
+            ? xpandResult.value.data._links
+            : [],
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting inspections from all sources')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/residence/{residenceId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections by residence ID from all sources
+   *     description: Retrieves inspections associated with a specific residence ID from both the local database and Xpand.
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence to retrieve inspections for.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections for the specified residence ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/InspectionWithSource'
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/residence/:residenceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { residenceId } = ctx.params
+
+    const parsedQuery =
+      schemas.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+    const statusFilter = parsedQuery.success
+      ? parsedQuery.data.statusFilter
+      : undefined
+
+    try {
+      const [internalResult, xpandResult] = await Promise.allSettled([
+        inspectionAdapter.getInternalInspectionsByResidenceId(
+          residenceId,
+          statusFilter
+        ),
+        inspectionAdapter.getXpandInspectionsByResidenceId(
+          residenceId,
+          statusFilter
+        ),
+      ])
+
+      const internalInspections =
+        internalResult.status === 'fulfilled' && internalResult.value.ok
+          ? internalResult.value.data
+          : []
+      const xpandInspections =
+        xpandResult.status === 'fulfilled' && xpandResult.value.ok
+          ? xpandResult.value.data
+          : []
+
+      if (
+        internalResult.status === 'rejected' ||
+        (internalResult.status === 'fulfilled' && !internalResult.value.ok)
+      ) {
+        logger.error(
+          {
+            err:
+              internalResult.status === 'fulfilled'
+                ? internalResult.value
+                : internalResult.reason,
+            residenceId,
+          },
+          'Error getting internal inspections by residenceId, continuing with xpand only'
+        )
+      }
+
+      if (
+        xpandResult.status === 'rejected' ||
+        (xpandResult.status === 'fulfilled' && !xpandResult.value.ok)
+      ) {
+        logger.error(
+          {
+            err:
+              xpandResult.status === 'fulfilled'
+                ? xpandResult.value
+                : xpandResult.reason,
+            residenceId,
+          },
+          'Error getting xpand inspections by residenceId, continuing with internal only'
+        )
+      }
+
+      const allInspections = [
+        ...internalInspections.map((i) => ({
+          ...i,
+          source: 'internal' as const,
+        })),
+        ...xpandInspections.map((i) => ({ ...i, source: 'xpand' as const })),
+      ]
+
+      const leaseIds = allInspections
+        .filter((i) => i.leaseId !== null && i.leaseId !== '')
+        .map((i) => i.leaseId)
+
+      const leasesById =
+        leaseIds.length > 0
+          ? await leasingAdapter.getLeases(leaseIds, 'true')
+          : {}
+
+      const inspectionsWithLeaseData = allInspections.map((inspection) => ({
+        ...inspection,
+        lease: inspection.leaseId
+          ? (leasesById[inspection.leaseId] ?? null)
+          : null,
+      }))
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspections: inspectionsWithLeaseData,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        { error, residenceId },
+        'Error getting inspections by residenceId from all sources'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 
   /**
    * @swagger

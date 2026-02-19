@@ -375,6 +375,261 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /inspections/internal/residence/{residenceId}:
+   *   get:
+   *     tags:
+   *       - Inspection
+   *     summary: Get inspections from local database by residence ID
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence to fetch inspections for
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *     responses:
+   *       200:
+   *         description: A list of inspections for the specified residence from local database
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/XpandInspection'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       500:
+   *         description: Internal Server Error - Failed to fetch inspections
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   */
+  router.get(
+    '(.*)/inspections/internal/residence/:residenceId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { residenceId } = ctx.params
+
+      const parsedQuery = GetInspectionsByResidenceIdQuerySchema.safeParse(
+        ctx.query
+      )
+      const statusFilter = parsedQuery.success
+        ? parsedQuery.data.statusFilter
+        : undefined
+
+      try {
+        const result = await dbAdapter.getInspectionsByResidenceId(
+          db,
+          residenceId,
+          statusFilter
+        )
+
+        if (!result.ok) {
+          ctx.status = 500
+          ctx.body = {
+            error: `Failed to fetch inspections: ${result.err}`,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            inspections: result.data,
+          },
+          ...metadata,
+        }
+      } catch (error) {
+        logger.error(
+          error,
+          `Error fetching inspections for residenceId: ${residenceId}`
+        )
+        ctx.status = 500
+
+        if (error instanceof Error) {
+          ctx.body = {
+            error: error.message,
+            ...metadata,
+          }
+        }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /inspections/internal:
+   *   get:
+   *     tags:
+   *       - Inspection
+   *     summary: Get inspections from local database
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 25
+   *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *       - in: query
+   *         name: sortAscending
+   *         schema:
+   *           type: string
+   *           enum: [true, false]
+   *         description: Whether to sort the results in ascending order.
+   *       - in: query
+   *         name: inspector
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by inspector name.
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by address.
+   *     responses:
+   *       200:
+   *         description: A paginated list of inspections from local database
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/XpandInspection'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       500:
+   *         description: Internal Server Error - Failed to fetch inspections
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   */
+  router.get('(.*)/inspections/internal', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedQuery = GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedQuery.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: parsedQuery.error,
+        ...metadata,
+      }
+      return
+    }
+
+    const { page, limit, statusFilter, sortAscending, inspector, address } =
+      parsedQuery.data
+
+    try {
+      const result = await dbAdapter.getInspections(db, {
+        page,
+        limit,
+        statusFilter,
+        sortAscending,
+        inspector,
+        address,
+      })
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to fetch inspections: ${result.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      const { inspections, totalRecords } = result.data
+
+      const additionalParams: Record<string, string> = {}
+      if (statusFilter) additionalParams.statusFilter = statusFilter
+      if (sortAscending !== undefined)
+        additionalParams.sortAscending = String(sortAscending)
+      if (inspector) additionalParams.inspector = inspector
+      if (address) additionalParams.address = address
+
+      ctx.status = 200
+      ctx.body = buildPaginatedResponse({
+        content: inspections,
+        totalRecords,
+        ctx,
+        additionalParams,
+        defaultLimit: 25,
+      })
+    } catch (error) {
+      logger.error(error, 'Error fetching inspections from local database')
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /inspections:
    *   post:
    *     tags:

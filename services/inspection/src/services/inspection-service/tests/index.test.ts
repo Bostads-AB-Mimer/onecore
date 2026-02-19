@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import { routes } from '../index'
 import * as xpandAdapter from '../adapters/xpand-adapter'
+import * as dbAdapter from '../adapters/db-adapter'
 import {
   XpandInspectionFactory,
   DetailedXpandInspectionFactory,
@@ -215,6 +216,108 @@ describe('inspection-service', () => {
       )
 
       expect(getInspectionByIdSpy).toHaveBeenCalledWith(inspectionId)
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Database connection failed')
+    })
+  })
+
+  describe('GET /inspections/internal', () => {
+    it('responds with a paginated list of inspections from local DB', async () => {
+      const mockInspections = [
+        XpandInspectionFactory.build({ id: '1', status: 'ongoing' }),
+        XpandInspectionFactory.build({ id: '2', status: 'completed' }),
+      ]
+      const getInspectionsSpy = jest
+        .spyOn(dbAdapter, 'getInspections')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            inspections: mockInspections,
+            totalRecords: 2,
+          },
+        })
+
+      const res = await request(app.callback()).get('/inspections/internal')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toBeInstanceOf(Array)
+      expect(getInspectionsSpy).toHaveBeenCalled()
+      expect(res.body.content.length).toBe(2)
+    })
+
+    it('handles adapter errors', async () => {
+      const getInspectionsSpy = jest
+        .spyOn(dbAdapter, 'getInspections')
+        .mockResolvedValueOnce({ ok: false, err: 'schema-error' })
+
+      const res = await request(app.callback()).get('/inspections/internal')
+
+      expect(getInspectionsSpy).toHaveBeenCalled()
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Failed to fetch inspections: schema-error')
+    })
+
+    it('handles unhandled errors', async () => {
+      jest.spyOn(dbAdapter, 'getInspections').mockImplementation(() => {
+        throw new Error('Database connection failed')
+      })
+
+      const res = await request(app.callback()).get('/inspections/internal')
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Database connection failed')
+    })
+  })
+
+  describe('GET /inspections/internal/residence/:residenceId', () => {
+    it('responds with inspections for the residence from local DB', async () => {
+      const residenceId = 'RES001'
+      const mockInspections = [
+        XpandInspectionFactory.build({ id: '1', status: 'ongoing' }),
+      ]
+      const getInspectionsByResidenceIdSpy = jest
+        .spyOn(dbAdapter, 'getInspectionsByResidenceId')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: mockInspections,
+        })
+
+      const res = await request(app.callback()).get(
+        `/inspections/internal/residence/${residenceId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspections).toBeInstanceOf(Array)
+      expect(getInspectionsByResidenceIdSpy).toHaveBeenCalled()
+      expect(res.body.content.inspections.length).toBe(1)
+    })
+
+    it('handles adapter errors', async () => {
+      const residenceId = 'RES001'
+      jest
+        .spyOn(dbAdapter, 'getInspectionsByResidenceId')
+        .mockResolvedValueOnce({ ok: false, err: 'schema-error' })
+
+      const res = await request(app.callback()).get(
+        `/inspections/internal/residence/${residenceId}`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Failed to fetch inspections: schema-error')
+    })
+
+    it('handles unhandled errors', async () => {
+      const residenceId = 'RES001'
+      jest
+        .spyOn(dbAdapter, 'getInspectionsByResidenceId')
+        .mockImplementation(() => {
+          throw new Error('Database connection failed')
+        })
+
+      const res = await request(app.callback()).get(
+        `/inspections/internal/residence/${residenceId}`
+      )
+
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Database connection failed')
     })

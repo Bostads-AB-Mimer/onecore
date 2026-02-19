@@ -150,7 +150,26 @@ export const GetInspectionsByResidenceIdQuerySchema = z.object({
     .optional(),
 })
 
+export const INSPECTION_SOURCE = {
+  XPAND: 'xpand',
+  INTERNAL: 'internal',
+} as const
+
+export type InspectionSource =
+  (typeof INSPECTION_SOURCE)[keyof typeof INSPECTION_SOURCE]
+
+export const InspectionSourceSchema = z.enum([
+  INSPECTION_SOURCE.XPAND,
+  INSPECTION_SOURCE.INTERNAL,
+])
+
+export const InspectionWithSourceSchema = XpandInspectionSchema.extend({
+  source: InspectionSourceSchema,
+  lease: Lease.nullable(),
+})
+
 export type XpandInspection = z.infer<typeof XpandInspectionSchema>
+export type InspectionWithSource = z.infer<typeof InspectionWithSourceSchema>
 export type Inspection = z.infer<typeof InspectionSchema>
 export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
 export type DetailedInspection = z.infer<typeof DetailedInspectionSchema>

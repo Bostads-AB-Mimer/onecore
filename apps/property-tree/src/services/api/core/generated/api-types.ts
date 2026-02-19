@@ -5060,6 +5060,131 @@ export interface paths {
       };
     };
   };
+  "/inspections": {
+    /**
+     * Retrieve inspections from all sources
+     * @description Retrieves inspections from both the local database and Xpand, merged with a source indicator per item.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number for pagination. */
+          page?: number;
+          /** @description Maximum number of records to return. */
+          limit?: number;
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: "ongoing" | "completed";
+          /** @description Whether to sort the results in ascending order. */
+          sortAscending?: true | false;
+          /** @description Filter inspections by inspector name. */
+          inspector?: string;
+          /** @description Filter inspections by address. */
+          address?: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved inspections from all sources. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["InspectionWithSource"][];
+              _meta?: {
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
+              _links?: {
+                  href?: string;
+                  rel?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create a new inspection
+     * @description Creates a new inspection in the local inspection database
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateInspectionRequest"];
+        };
+      };
+      responses: {
+        /** @description Inspection created successfully */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                inspection?: components["schemas"]["DetailedInspection"];
+              };
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/residence/{residenceId}": {
+    /**
+     * Retrieve inspections by residence ID from all sources
+     * @description Retrieves inspections associated with a specific residence ID from both the local database and Xpand.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter inspections by status (ongoing or completed). */
+          statusFilter?: "ongoing" | "completed";
+        };
+        path: {
+          /** @description The ID of the residence to retrieve inspections for. */
+          residenceId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved inspections for the specified residence ID. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                inspections?: components["schemas"]["InspectionWithSource"][];
+              };
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/inspections/xpand": {
     /**
      * Retrieve inspections from Xpand
@@ -5219,6 +5344,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include cost information in the PDF. */
+          includeCosts?: boolean;
+        };
         path: {
           /** @description The ID of the inspection to generate a PDF for. */
           inspectionId: string;
@@ -5348,47 +5477,6 @@ export interface paths {
           content: {
             "application/json": {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections": {
-    /**
-     * Create a new inspection
-     * @description Creates a new inspection in the local inspection database
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateInspectionRequest"];
-        };
-      };
-      responses: {
-        /** @description Inspection created successfully */
-        201: {
-          content: {
-            "application/json": {
-              content?: {
-                inspection?: components["schemas"]["DetailedInspection"];
-              };
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": {
               error?: string;
             };
           };
@@ -7835,7 +7923,7 @@ export interface components {
       inspection: {
         id: string;
         address: string;
-        apartmentCode: string;
+        apartmentCode: string | null;
       };
       new_tenant?: {
         contacts: {
@@ -7909,6 +7997,123 @@ export interface components {
               workOrderStatus: number | null;
             })[];
         })[];
+    };
+    InspectionWithSource: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      inspector: string;
+      type: string;
+      address: string;
+      apartmentCode: string | null;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      /** @enum {string} */
+      source: "xpand" | "internal";
+      lease: ({
+        leaseId: string;
+        leaseNumber: string;
+        /** Format: date-time */
+        leaseStartDate: string;
+        /** Format: date-time */
+        leaseEndDate?: string;
+        /** @enum {string} */
+        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+        tenantContactIds?: string[];
+        rentalPropertyId: string;
+        rentalProperty?: {
+          rentalPropertyId: string;
+          apartmentNumber: number;
+          size: number;
+          type: string;
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          rentalPropertyType: string;
+          additionsIncludedInRent: string;
+          otherInfo?: string;
+          roomTypes?: {
+              roomTypeId: string;
+              name: string;
+            }[];
+          /** Format: date-time */
+          lastUpdated?: string;
+        };
+        type: string;
+        rentInfo?: {
+          currentRent: {
+            rentId?: string;
+            leaseId?: string;
+            currentRent: number;
+            vat: number;
+            additionalChargeDescription?: string;
+            additionalChargeAmount?: number;
+            /** Format: date-time */
+            rentStartDate?: string;
+            /** Format: date-time */
+            rentEndDate?: string;
+          };
+        };
+        address?: {
+          street?: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
+        noticeGivenBy?: string;
+        /** Format: date-time */
+        noticeDate?: string;
+        noticeTimeTenant?: string | number;
+        /** Format: date-time */
+        preferredMoveOutDate?: string;
+        /** Format: date-time */
+        terminationDate?: string;
+        /** Format: date-time */
+        contractDate?: string;
+        /** Format: date-time */
+        lastDebitDate?: string;
+        /** Format: date-time */
+        approvalDate?: string;
+        residentialArea?: {
+          code: string;
+          caption: string;
+        };
+        tenants?: {
+            contactCode: string;
+            contactKey: string;
+            leaseIds?: string[];
+            firstName: string;
+            lastName: string;
+            fullName: string;
+            nationalRegistrationNumber: string;
+            /** Format: date-time */
+            birthDate: string;
+            address?: {
+              street?: string;
+              number: string;
+              postalCode: string;
+              city: string;
+            };
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: boolean;
+              }[];
+            emailAddress?: string;
+            isTenant: boolean;
+            parkingSpaceWaitingList?: {
+              /** Format: date-time */
+              queueTime: string;
+              queuePoints: number;
+              type: number;
+            };
+            specialAttention?: boolean;
+          }[];
+      }) | null;
     };
     FileListItem: {
       /** @description Full file path/name */

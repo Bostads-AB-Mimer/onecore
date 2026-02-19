@@ -359,4 +359,160 @@ describe('db-adapter', () => {
       }
     })
   })
+
+  describe('getInspections', () => {
+    function createMockQueryDb(rows: Record<string, unknown>[]) {
+      const chain: Record<string, jest.Mock> = {}
+
+      chain.select = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockReturnValue(chain)
+      chain.whereNot = jest.fn().mockReturnValue(chain)
+      chain.orderBy = jest.fn().mockReturnValue(chain)
+      chain.offset = jest.fn().mockReturnValue(chain)
+      chain.limit = jest.fn().mockResolvedValue(rows)
+      chain.clone = jest.fn().mockReturnValue(chain)
+      chain.clearSelect = jest.fn().mockReturnValue(chain)
+      chain.clearOrder = jest.fn().mockReturnValue(chain)
+      chain.count = jest.fn().mockReturnValue(chain)
+      chain.first = jest.fn().mockResolvedValue({ count: rows.length })
+
+      const mockDb = jest.fn().mockReturnValue(chain)
+      return mockDb as unknown as Knex
+    }
+
+    it('returns paginated inspections from local database', async () => {
+      const mockRows = [
+        {
+          id: 1,
+          status: 'ongoing',
+          date: new Date('2024-01-01'),
+          inspector: 'Inspector A',
+          type: 'Move-in',
+          address: '123 Main St',
+          apartmentCode: 'APT001',
+          leaseId: 'LEASE001',
+          masterKeyAccess: null,
+        },
+        {
+          id: 2,
+          status: 'completed',
+          date: new Date('2024-02-01'),
+          inspector: 'Inspector B',
+          type: 'Move-out',
+          address: '456 Oak Ave',
+          apartmentCode: null,
+          leaseId: 'LEASE002',
+          masterKeyAccess: 'Key A',
+        },
+      ]
+      const mockDb = createMockQueryDb(mockRows)
+
+      const result = await dbAdapter.getInspections(mockDb)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.inspections).toHaveLength(2)
+        expect(result.data.totalRecords).toBe(2)
+        expect(result.data.inspections[0].id).toBe('1')
+        expect(result.data.inspections[1].id).toBe('2')
+      }
+    })
+
+    it('returns empty results when no inspections found', async () => {
+      const mockDb = createMockQueryDb([])
+
+      const result = await dbAdapter.getInspections(mockDb)
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.inspections).toHaveLength(0)
+        expect(result.data.totalRecords).toBe(0)
+      }
+    })
+
+    it('returns error when database query fails', async () => {
+      const mockDb = jest.fn().mockImplementation(() => {
+        throw new Error('DB connection failed')
+      }) as unknown as Knex
+
+      const result = await dbAdapter.getInspections(mockDb)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
+
+  describe('getInspectionsByResidenceId', () => {
+    function createMockQueryDb(rows: Record<string, unknown>[]) {
+      const chain: Record<string, jest.Mock> = {}
+
+      chain.select = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockReturnValue(chain)
+      chain.whereNot = jest.fn().mockReturnValue(chain)
+      chain.orderBy = jest.fn().mockResolvedValue(rows)
+
+      const mockDb = jest.fn().mockReturnValue(chain)
+      return mockDb as unknown as Knex
+    }
+
+    it('returns inspections for a specific residence', async () => {
+      const mockRows = [
+        {
+          id: 1,
+          status: 'ongoing',
+          date: new Date('2024-01-01'),
+          inspector: 'Inspector A',
+          type: 'Move-in',
+          address: '123 Main St',
+          apartmentCode: 'APT001',
+          leaseId: 'LEASE001',
+          masterKeyAccess: null,
+        },
+      ]
+      const mockDb = createMockQueryDb(mockRows)
+
+      const result = await dbAdapter.getInspectionsByResidenceId(
+        mockDb,
+        'RES001'
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].id).toBe('1')
+      }
+    })
+
+    it('returns empty results when no inspections found', async () => {
+      const mockDb = createMockQueryDb([])
+
+      const result = await dbAdapter.getInspectionsByResidenceId(
+        mockDb,
+        'RES001'
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data).toHaveLength(0)
+      }
+    })
+
+    it('returns error when database query fails', async () => {
+      const mockDb = jest.fn().mockImplementation(() => {
+        throw new Error('DB connection failed')
+      }) as unknown as Knex
+
+      const result = await dbAdapter.getInspectionsByResidenceId(
+        mockDb,
+        'RES001'
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
 })
