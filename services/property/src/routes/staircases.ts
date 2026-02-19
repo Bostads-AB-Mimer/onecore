@@ -34,6 +34,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The building code of the building.
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the staircase (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved the staircases.
@@ -55,12 +61,15 @@ export const routes = (router: KoaRouter) => {
     ['(.*)/staircases'],
     parseRequest({ query: staircasesQueryParamsSchema }),
     async (ctx) => {
-      const { buildingCode } = ctx.request.parsedQuery
+      const { buildingCode, staircaseCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const response = await getStaircasesByBuildingCode(buildingCode)
+        const response = await getStaircasesByBuildingCode(
+          buildingCode,
+          staircaseCode
+        )
         const responseContent = response.map((staircase) => {
           return {
             ...staircase,

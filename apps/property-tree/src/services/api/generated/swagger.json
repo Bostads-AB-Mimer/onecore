@@ -863,6 +863,13 @@
             "required": true,
             "schema": { "type": "string" },
             "description": "The building code of the building."
+          },
+          {
+            "in": "query",
+            "name": "staircaseCode",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "The code of the staircase (optional)."
           }
         ],
         "responses": {

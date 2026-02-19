@@ -24,7 +24,7 @@ export function StaircaseNavigation({
     <SidebarMenuItem>
       <SidebarMenuButton asChild tooltip={staircase.name || staircase.code}>
         <Link
-          to={paths.staircase(building.code, staircase.id)}
+          to={paths.staircase(building.code, staircase.code)}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <GitGraph />

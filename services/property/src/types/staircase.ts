@@ -4,6 +4,7 @@ export const staircasesQueryParamsSchema = z.object({
   buildingCode: z
     .string()
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
+  staircaseCode: z.string().optional(),
 })
 
 export const StaircaseSchema = z.object({

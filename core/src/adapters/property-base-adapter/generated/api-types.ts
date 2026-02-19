@@ -1630,9 +1630,17 @@ export interface paths {
       parameters: {
         query: {
           /** @description The building code of the building. */
+<<<<<<< HEAD
           buildingCode: string
         }
       }
+=======
+          buildingCode: string;
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
+        };
+      };
+>>>>>>> 8fb7e3849 (use staircaseCode instead of staircaseId through full stack)
       responses: {
         /** @description Successfully retrieved the staircases. */
         200: {

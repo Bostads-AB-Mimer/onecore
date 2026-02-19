@@ -4568,6 +4568,8 @@ export interface paths {
         query: {
           /** @description Code for the building to fetch staircases for */
           buildingCode: string;
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
         };
       };
       responses: {
