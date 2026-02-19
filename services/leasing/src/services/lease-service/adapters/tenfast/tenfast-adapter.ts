@@ -480,7 +480,7 @@ function buildLeaseRequestData(
     vatEnabled: includeVAT,
     originalTemplate: template._id,
     template: template,
-    method: 'bankid',
+    method: 'simplesign',
   }
 }
 
