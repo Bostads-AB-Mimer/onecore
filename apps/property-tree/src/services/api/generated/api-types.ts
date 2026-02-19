@@ -1665,6 +1665,8 @@ export interface paths {
         query: {
           /** @description The id of the residence. */
           residenceId: string;
+          /** @description The code of the room (optional). */
+          roomCode?: string;
         };
       };
       responses: {

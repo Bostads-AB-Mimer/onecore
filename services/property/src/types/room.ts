@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const roomsQueryParamsSchema = z.object({
   residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+  roomCode: z.string().optional(),
 })
 
 export const roomsByFacilityQueryParamsSchema = z.object({

@@ -4610,6 +4610,8 @@ export interface paths {
         query: {
           /** @description The id of the residence. */
           residenceId: string;
+          /** @description The code of the room (optional). */
+          roomCode?: string;
         };
       };
       responses: {
@@ -5219,6 +5221,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include cost information in the PDF. */
+          includeCosts?: boolean;
+        };
         path: {
           /** @description The ID of the inspection to generate a PDF for. */
           inspectionId: string;
@@ -7835,7 +7841,7 @@ export interface components {
       inspection: {
         id: string;
         address: string;
-        apartmentCode: string;
+        apartmentCode: string | null;
       };
       new_tenant?: {
         contacts: {
