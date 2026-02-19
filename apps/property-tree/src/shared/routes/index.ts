@@ -16,7 +16,7 @@ export const routes = {
   building: '/byggnader/:buildingCode', // klar
   staircase: '/uppgangar/:buildingCode/:staircaseId', // -- byts ut mot :buildingCode/:staircaseCode
   residence: '/bostader/:residenceId', // -- byts ut mot :rentalId
-  room: '/bostader/:residenceId/rum/:roomId', // -- byts ut mot :rentalId/rum/:roomCode
+  room: '/bostader/:residenceId/rum/:roomCode', // roomCode klar -- byts ut :residenceId mot :rentalId
   parkingSpace: '/bilplatser/:rentalId', // klar
   maintenanceUnit: '/underhallsenheter/:code', // klar
   facility: '/lokaler/:rentalId', // klar
@@ -49,8 +49,8 @@ export const paths = {
     generatePath(routes.staircase, { buildingCode, staircaseId }),
   residence: (residenceId: string) =>
     generatePath(routes.residence, { residenceId }),
-  room: (residenceId: string, roomId: string) =>
-    generatePath(routes.room, { residenceId, roomId }),
+  room: (residenceId: string, roomCode: string) =>
+    generatePath(routes.room, { residenceId, roomCode }),
   parkingSpace: (rentalId: string) =>
     generatePath(routes.parkingSpace, { rentalId }),
   maintenanceUnit: (code: string) =>

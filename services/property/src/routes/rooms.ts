@@ -33,6 +33,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The id of the residence.
+   *       - in: query
+   *         name: roomCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the room (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved the rooms.
@@ -54,12 +60,12 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rooms',
     parseRequest({ query: roomsQueryParamsSchema }),
     async (ctx) => {
-      const { residenceId } = ctx.request.parsedQuery
+      const { residenceId, roomCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const rooms = await getRooms(residenceId)
+        const rooms = await getRooms(residenceId, roomCode)
         ctx.body = {
           content: rooms,
           ...metadata,

@@ -913,6 +913,13 @@
             "required": true,
             "schema": { "type": "string" },
             "description": "The residence code where the rooms are located."
+          },
+          {
+            "in": "query",
+            "name": "roomCode",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "The code of the room (optional)."
           }
         ],
         "responses": {
