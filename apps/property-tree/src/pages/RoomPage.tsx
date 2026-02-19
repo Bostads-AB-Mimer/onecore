@@ -15,7 +15,7 @@ import { Grid } from '@/shared/ui/Grid'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function RoomPage() {
-  const { roomId, apartmentId } = useParams()
+  const { roomCode, residenceId } = useParams()
   const [room, setRoom] = React.useState<Room | null>(null)
   const [components, setComponents] = React.useState<Component[]>([])
   const [issues, setIssues] = React.useState<Issue[]>([])
@@ -26,13 +26,13 @@ export function RoomPage() {
     const loadRoom = async () => {
       try {
         // In a real app, these would be actual API calls
-        const roomData = await fetch(`/api/rooms/${roomId}`).then((res) =>
+        const roomData = await fetch(`/api/rooms/${roomCode}`).then((res) =>
           res.json()
         )
         const componentsData = await fetch(
-          `/api/rooms/${roomId}/components`
+          `/api/rooms/${roomCode}/components`
         ).then((res) => res.json())
-        const issuesData = await fetch(`/api/rooms/${roomId}/issues`).then(
+        const issuesData = await fetch(`/api/rooms/${roomCode}/issues`).then(
           (res) => res.json()
         )
 
@@ -48,7 +48,7 @@ export function RoomPage() {
     }
 
     loadRoom()
-  }, [roomId])
+  }, [roomCode])
 
   const handleAddComponent = async (_data: unknown) => {
     // TODO: Implementation for adding a component
@@ -69,12 +69,12 @@ export function RoomPage() {
         error={error}
         data={room}
         notFoundMessage="Rummet kunde inte hittas"
-        searchedFor={roomId}
+        searchedFor={roomCode}
       >
         {(room) => (
           <>
             <h1 className="text-3xl font-bold mb-2">{room.name ?? ''}</h1>
-            <p className="text-muted-foreground mb-8">Lägenhet {apartmentId}</p>
+            <p className="text-muted-foreground mb-8">Bostad {residenceId}</p>
 
             <Grid cols={3} className="mb-8">
               <Card>

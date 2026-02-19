@@ -382,11 +382,12 @@ export async function getStaircases(
 type GetRoomsResponse = components['schemas']['Room'][]
 
 export async function getRooms(
-  residenceId: string
+  residenceId: string,
+  roomCode?: string
 ): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/rooms', {
-      params: { query: { residenceId } },
+      params: { query: { residenceId, roomCode } },
     })
 
     if (!fetchResponse.data?.content) {
