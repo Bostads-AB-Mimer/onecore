@@ -4568,6 +4568,8 @@ export interface paths {
         query: {
           /** @description Code for the building to fetch staircases for */
           buildingCode: string;
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
         };
       };
       responses: {
@@ -5219,6 +5221,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include cost information in the PDF. */
+          includeCosts?: boolean;
+        };
         path: {
           /** @description The ID of the inspection to generate a PDF for. */
           inspectionId: string;
@@ -7835,7 +7841,7 @@ export interface components {
       inspection: {
         id: string;
         address: string;
-        apartmentCode: string;
+        apartmentCode: string | null;
       };
       new_tenant?: {
         contacts: {

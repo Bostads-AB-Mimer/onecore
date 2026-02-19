@@ -11,10 +11,10 @@ import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { StatCard } from '@/shared/ui/StatCard'
 
 export function StaircasePage() {
-  const { staircaseId, buildingId } = useParams()
+  const { staircaseCode, buildingCode } = useParams()
   const navigate = useNavigate()
   const { building, staircase, residences, isLoading, error } =
-    useStaircaseDetails(buildingId, staircaseId)
+    useStaircaseDetails(buildingCode, staircaseCode)
 
   return (
     <ViewLayout>
@@ -23,7 +23,7 @@ export function StaircasePage() {
         error={error}
         data={staircase}
         notFoundMessage="Uppgång hittades inte"
-        searchedFor={staircaseId}
+        searchedFor={staircaseCode}
       >
         <h1 className="text-3xl font-bold mb-2">{building?.name}</h1>
         <p className="text-muted-foreground mb-8">Uppgång {staircase?.name}</p>
