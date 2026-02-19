@@ -14,12 +14,11 @@ export const PropertyBuildingCard = ({
 }: PropertyBuildingCardProps) => {
   const navigate = useNavigate()
   const { state } = useLocation()
-  const companyId = state?.companyId
+  const organizationNumber = state?.organizationNumber
 
   const handleOpenBuilding = () => {
-    // Create a URL-friendly building name
     navigate(paths.building(building.code), {
-      state: { companyId },
+      state: { organizationNumber },
     })
   }
 

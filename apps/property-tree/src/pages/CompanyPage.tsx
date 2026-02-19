@@ -13,8 +13,9 @@ import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { StatCard } from '@/shared/ui/StatCard'
 
 export function CompanyPage() {
-  const { companyId } = useParams()
-  const { company, properties, isLoading, error } = useCompanyDetails(companyId)
+  const { organizationNumber } = useParams()
+  const { company, properties, isLoading, error } =
+    useCompanyDetails(organizationNumber)
 
   return (
     <ViewLayout>
@@ -23,7 +24,7 @@ export function CompanyPage() {
         error={error}
         data={company}
         notFoundMessage="Företaget kunde inte hittas"
-        searchedFor={companyId}
+        searchedFor={organizationNumber}
       >
         {(company) => (
           <>
@@ -41,7 +42,7 @@ export function CompanyPage() {
               <div className="lg:col-span-2">
                 <PropertyList
                   properties={properties || []}
-                  companyId={companyId}
+                  organizationNumber={organizationNumber}
                 />
               </div>
 
