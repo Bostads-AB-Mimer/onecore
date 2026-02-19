@@ -55,7 +55,7 @@ function SidebarNavigationContent() {
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
-    selectionState.selectedCompanyId !== null ||
+    selectionState.selectedOrganizationNumber !== null ||
     selectionState.selectedPropertyCode !== null
 
   // Auto-expand Fastighetsdata when hierarchy is selected
@@ -67,10 +67,10 @@ function SidebarNavigationContent() {
 
   // Auto-expand Företag when any entity in the hierarchy is selected
   React.useEffect(() => {
-    if (shouldAutoExpandFastighetsdata) {
+    if (selectionState.selectedOrganizationNumber !== null) {
       setIsForetagExpanded(true)
     }
-  }, [shouldAutoExpandFastighetsdata])
+  }, [selectionState.selectedOrganizationNumber])
 
   const handleFastighetsdataClick = () => {
     setIsFastighetsdataExpanded(true)
