@@ -1,13 +1,14 @@
 import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
+import bodyParser from 'koa-bodyparser'
+
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as workOrderAdapter from '../../../adapters/work-order-adapter'
 import { routes } from '../index'
-import bodyParser from 'koa-bodyparser'
 import * as factory from '../../../../test/factories'
 import * as schemas from '../schemas'
 
@@ -37,7 +38,7 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalledWith('123', 'true')
+      expect(getLeaseSpy).toHaveBeenCalledWith('123', { includeContacts: true })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
@@ -48,7 +49,7 @@ describe('work-order-service index', () => {
         .mockResolvedValue(rentalPropertyInfoMock)
 
       const getLeasesForPropertyIdSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
         .mockResolvedValue([leaseMock])
 
       const res = await request(app.callback()).get(
@@ -58,16 +59,18 @@ describe('work-order-service index', () => {
       expect(res.status).toBe(200)
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith('123-456-789', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: true,
       })
       expect(res.body.content).toBeDefined()
     })
 
     it('should handle pnr case', async () => {
-      const getLeasesForPnrSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
+      const getContactForPnrSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactForPnr')
+        .mockResolvedValue(contactMock)
+      const getLeasesForContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
@@ -79,11 +82,14 @@ describe('work-order-service index', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getLeasesForPnrSpy).toHaveBeenCalledWith('123', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: true,
-      })
+      expect(getContactForPnrSpy).toHaveBeenCalledWith('123')
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
+        contactMock.contactCode,
+        {
+          status: ['current', 'upcoming'],
+          includeContacts: true,
+        }
+      )
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
@@ -93,7 +99,7 @@ describe('work-order-service index', () => {
         .spyOn(tenantLeaseAdapter, 'getContactByPhoneNumber')
         .mockResolvedValue(contactMock)
       const getLeasesForContactCodeSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
@@ -107,17 +113,17 @@ describe('work-order-service index', () => {
       expect(res.status).toBe(200)
       expect(getContactByPhoneNumberSpy).toHaveBeenCalledWith('1234567890')
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P158770', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: false,
       })
+
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')
       expect(res.body.content).toBeDefined()
     })
 
     it('should handle contactCode case', async () => {
       const getLeasesForContactCodeSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
 
       const getRentalPropertyInfoSpy = jest
@@ -130,8 +136,7 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(200)
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
+        status: ['current', 'upcoming'],
         includeContacts: true,
       })
       expect(getRentalPropertyInfoSpy).toHaveBeenCalledWith('123-456-789')

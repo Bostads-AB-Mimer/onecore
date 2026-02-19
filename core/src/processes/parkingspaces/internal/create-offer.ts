@@ -221,7 +221,7 @@ export const createOfferForInternalParkingSpace = async (
             : '',
           availableFrom: calculateVacantFrom(listing).toISOString(),
           deadlineDate: new Date(offer.data.expiresAt).toISOString(),
-          rent: String(listing.rentalObject.monthlyRent),
+          rent: String(listing.rentalObject.rent?.amount ?? ''),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
