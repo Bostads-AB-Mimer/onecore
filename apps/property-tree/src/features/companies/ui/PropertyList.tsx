@@ -10,10 +10,13 @@ import { Grid } from '@/shared/ui/Grid'
 
 interface PropertyListProps {
   properties: Property[]
-  companyId?: string
+  organizationNumber?: string
 }
 
-export function PropertyList({ properties, companyId }: PropertyListProps) {
+export function PropertyList({
+  properties,
+  organizationNumber,
+}: PropertyListProps) {
   const navigate = useNavigate()
 
   return (
@@ -25,7 +28,9 @@ export function PropertyList({ properties, companyId }: PropertyListProps) {
             whileHover={{ scale: 1.02 }}
             className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer group"
             onClick={() =>
-              navigate(paths.property(property.id), { state: { companyId } })
+              navigate(paths.property(property.id), {
+                state: { organizationNumber },
+              })
             }
           >
             <div className="flex items-center justify-between">

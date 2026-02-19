@@ -13,7 +13,7 @@ interface SelectionState {
   selectedBuildingId: string | null
   selectedBuildingCode: string | null
   selectedPropertyId: string | null
-  selectedCompanyId: string | null
+  selectedOrganizationNumber: string | null
 }
 
 export function useHierarchicalSelection() {
@@ -27,16 +27,16 @@ export function useHierarchicalSelection() {
       : undefined
   const { data: selectedResidence } = useResidence(residenceId)
 
-  const buildingId =
-    params.buildingId &&
+  const buildingCodeForQuery =
+    params.buildingCode &&
     matchesRoute(routes.building, location.pathname) &&
     !state?.propertyId
-      ? params.buildingId
+      ? params.buildingCode
       : undefined
-  const { data: selectedBuilding } = useBuilding(buildingId)
+  const { data: selectedBuilding } = useBuilding(buildingCodeForQuery)
 
   const needsProperty =
-    !state?.companyId &&
+    !state?.organizationNumber &&
     (matchesRoute(routes.property, location.pathname) ||
       matchesRoute(routes.building, location.pathname) ||
       matchesRoute(routes.residence, location.pathname))
@@ -46,12 +46,15 @@ export function useHierarchicalSelection() {
   const { data: selectedProperty } = useProperty(propertyIdForQuery)
 
   const companyPropertyId =
-    selectedProperty && !state?.companyId ? selectedProperty.id : undefined
+    selectedProperty && !state?.organizationNumber
+      ? selectedProperty.id
+      : undefined
   const { data: propertyCompany } = useCompanyByPropertyId(companyPropertyId)
 
   const selectionState = useMemo((): SelectionState => {
     const path = location.pathname
-    const companyId = state?.companyId || propertyCompany?.id || null
+    const organizationNumber =
+      state?.organizationNumber || propertyCompany?.organizationNumber || null
 
     if (matchesRoute(routes.residence, path) && params.residenceId) {
       return {
@@ -64,7 +67,7 @@ export function useHierarchicalSelection() {
           state?.propertyCode ||
           selectedResidence?.property?.code ||
           null,
-        selectedCompanyId: companyId,
+        selectedOrganizationNumber: organizationNumber,
       }
     }
 
@@ -74,29 +77,32 @@ export function useHierarchicalSelection() {
         selectedBuildingId: null,
         selectedBuildingCode: null,
         selectedPropertyId: params.propertyId,
-        selectedCompanyId: companyId,
+        selectedOrganizationNumber: organizationNumber,
       }
     }
 
-    if (matchesRoute(routes.company, path) && params.companyId) {
+    if (matchesRoute(routes.company, path) && params.organizationNumber) {
       return {
         selectedResidenceId: null,
         selectedBuildingId: null,
         selectedBuildingCode: null,
         selectedPropertyId: null,
-        selectedCompanyId: params.companyId,
+        selectedOrganizationNumber: params.organizationNumber,
       }
     }
 
-    if (matchesRoute(routes.building, path) && params.buildingId) {
+    if (matchesRoute(routes.building, path) && params.buildingCode) {
       return {
         selectedResidenceId: null,
-        selectedBuildingId: params.buildingId,
+        selectedBuildingId: null,
         selectedBuildingCode:
-          state?.buildingCode || selectedBuilding?.code || null,
+          params.buildingCode ||
+          state?.buildingCode ||
+          selectedBuilding?.code ||
+          null,
         selectedPropertyId:
           state?.propertyId || selectedBuilding?.property?.id || null,
-        selectedCompanyId: companyId,
+        selectedOrganizationNumber: organizationNumber,
       }
     }
 
@@ -105,7 +111,7 @@ export function useHierarchicalSelection() {
       selectedBuildingId: null,
       selectedBuildingCode: null,
       selectedPropertyId: null,
-      selectedCompanyId: null,
+      selectedOrganizationNumber: null,
     }
   }, [
     location.pathname,
@@ -137,8 +143,9 @@ export function useHierarchicalSelection() {
   )
 
   const isCompanyInHierarchy = useCallback(
-    (companyId: string) => selectionState.selectedCompanyId === companyId,
-    [selectionState.selectedCompanyId]
+    (organizationNumber: string) =>
+      selectionState.selectedOrganizationNumber === organizationNumber,
+    [selectionState.selectedOrganizationNumber]
   )
 
   return {

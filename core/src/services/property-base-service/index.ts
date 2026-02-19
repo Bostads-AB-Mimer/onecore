@@ -502,20 +502,20 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/{id}:
+   * /companies/{organizationNumber}:
    *   get:
    *     summary: Get detailed information about a specific company
    *     tags:
    *       - Property base Service
    *     description: |
-   *       Retrieves comprehensive information about a company using its unique identifier.
+   *       Retrieves comprehensive information about a company using its organization number.
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: organizationNumber
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the company.
+   *         description: The organization number of the company.
    *     responses:
    *       '200':
    *         description: Successfully retrieved company information
@@ -549,12 +549,15 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/companies/:id', async (ctx) => {
+  router.get('(.*)/companies/:organizationNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { id } = ctx.params
+    const { organizationNumber } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getCompanyById(id)
+      const result =
+        await propertyBaseAdapter.getCompanyByOrganizationNumber(
+          organizationNumber
+        )
 
       if (!result.ok) {
         if (result.err === 'not-found') {

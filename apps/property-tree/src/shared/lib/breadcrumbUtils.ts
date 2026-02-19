@@ -7,14 +7,14 @@ export const generateBreadcrumbs = (
   property?: { id: string; name: string },
   building?: { id: string; name: string },
   residence?: { id: string; name: string },
-  companyId?: string
+  organizationNumber?: string
 ): BreadcrumbItem[] => {
   const breadcrumbs: BreadcrumbItem[] = []
 
   // Always start with Properties - link to company if available
   breadcrumbs.push({
     label: 'Fastigheter',
-    path: companyId ? `/companies/${companyId}` : '/',
+    path: organizationNumber ? `/foretag/${organizationNumber}` : '/',
   })
 
   // Add property breadcrumb if provided

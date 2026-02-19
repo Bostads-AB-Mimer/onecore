@@ -19,7 +19,7 @@ export function CompanyList() {
   return (
     <SidebarMenu>
       {visibleCompanies?.map((company) => (
-        <CompanyNavigation key={company.id} company={company} />
+        <CompanyNavigation key={company.organizationNumber} company={company} />
       ))}
     </SidebarMenu>
   )

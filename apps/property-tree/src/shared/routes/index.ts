@@ -20,7 +20,7 @@ export const routes = {
   parkingSpace: '/bilplatser/:rentalId', // klar
   maintenanceUnit: '/underhallsenheter/:code', // klar
   facility: '/lokaler/:rentalId', // klar
-  company: '/foretag/:companyId', // -- byts ut mot :organizationNumber
+  company: '/foretag/:organizationNumber', // klar
   tenants: '/hyresgaster',
   tenant: '/hyresgaster/:contactCode', // klar
   rentalBlocks: '/sparrar',
@@ -56,7 +56,8 @@ export const paths = {
   maintenanceUnit: (code: string) =>
     generatePath(routes.maintenanceUnit, { code }),
   facility: (rentalId: string) => generatePath(routes.facility, { rentalId }),
-  company: (companyId: string) => generatePath(routes.company, { companyId }),
+  company: (organizationNumber: string) =>
+    generatePath(routes.company, { organizationNumber }),
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
 }
 

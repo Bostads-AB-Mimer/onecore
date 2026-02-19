@@ -26,7 +26,7 @@ export function PropertyList({ company }: PropertyListProps) {
             <PropertyNavigation
               key={property.id}
               property={property}
-              companyId={company.id}
+              organizationNumber={company.organizationNumber ?? undefined}
             />
           ))}
     </div>

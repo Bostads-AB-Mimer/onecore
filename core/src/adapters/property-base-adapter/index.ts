@@ -193,15 +193,21 @@ export async function getCompanies(): Promise<
   }
 }
 
-type GetCompanyByIdResponse = components['schemas']['CompanyDetails']
+type GetCompanyByOrganizationNumberResponse =
+  components['schemas']['CompanyDetails']
 
-export async function getCompanyById(
-  id: string
-): Promise<AdapterResult<GetCompanyByIdResponse, 'not-found' | 'unknown'>> {
+export async function getCompanyByOrganizationNumber(
+  organizationNumber: string
+): Promise<
+  AdapterResult<GetCompanyByOrganizationNumberResponse, 'not-found' | 'unknown'>
+> {
   try {
-    const fetchResponse = await client().GET('/companies/{id}', {
-      params: { path: { id } },
-    })
+    const fetchResponse = await client().GET(
+      '/companies/{organizationNumber}',
+      {
+        params: { path: { organizationNumber } },
+      }
+    )
 
     if (fetchResponse.data?.content) {
       return {
@@ -216,7 +222,10 @@ export async function getCompanyById(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(err, '@onecore/property-adapter.getCompanyById')
+    logger.error(
+      err,
+      '@onecore/property-adapter.getCompanyByOrganizationNumber'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

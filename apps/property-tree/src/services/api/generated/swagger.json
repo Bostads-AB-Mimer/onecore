@@ -991,18 +991,18 @@
         }
       }
     },
-    "/companies/{id}": {
+    "/companies/{organizationNumber}": {
       "get": {
         "summary": "Get detailed information about a specific company",
-        "description": "Retrieves comprehensive information about a company using its unique identifier.\n",
+        "description": "Retrieves comprehensive information about a company using its organization number.\n",
         "tags": ["Companies"],
         "parameters": [
           {
             "in": "path",
-            "name": "id",
+            "name": "organizationNumber",
             "required": true,
             "schema": { "type": "string" },
-            "description": "The ID of the company."
+            "description": "The organization number of the company."
           }
         ],
         "responses": {
