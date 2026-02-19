@@ -1633,6 +1633,8 @@ export interface paths {
         query: {
           /** @description The building code of the building. */
           buildingCode: string;
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string;
         };
       };
       responses: {

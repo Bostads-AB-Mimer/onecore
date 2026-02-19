@@ -2,10 +2,13 @@ import { Staircase } from '../../types'
 import { GET } from './baseApi'
 
 export const staircaseService = {
-  // Get all staircases for a building
-  async getByBuildingCode(buildingCode: string): Promise<Staircase[]> {
+  // Get staircases for a building, optionally filtered by staircase code
+  async getByBuildingCode(
+    buildingCode: string,
+    staircaseCode?: string
+  ): Promise<Staircase[]> {
     const { data, error } = await GET('/staircases', {
-      params: { query: { buildingCode } },
+      params: { query: { buildingCode, staircaseCode } },
     })
     if (error) throw error
     return data?.content || []
