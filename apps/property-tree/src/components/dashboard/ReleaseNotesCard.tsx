@@ -157,52 +157,52 @@ export function ReleaseNotesCard() {
             className="overflow-hidden"
           >
             <CardContent>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={page}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            {visibleNotes.map((note, index) => (
-              <ReleaseNoteItem key={note.id} note={note} index={index} />
-            ))}
-          </motion.div>
-        </AnimatePresence>
-        <div className="mt-6 pt-4 border-t text-center">
-          <p className="text-sm text-muted-foreground">
-            Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
-            <span className="font-semibold text-primary">David</span> eller{' '}
-            <span className="font-semibold text-primary">Lina</span> - vi finns
-            här för att stötta dig!
-          </p>
-        </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-1 mt-4 pt-4 border-t">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={!canGoPrev}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label="Föregående"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-xs text-muted-foreground px-1">
-              {page + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!canGoNext}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              aria-label="Nästa"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={page}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  {visibleNotes.map((note, index) => (
+                    <ReleaseNoteItem key={note.id} note={note} index={index} />
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+              <div className="mt-6 pt-4 border-t text-center">
+                <p className="text-sm text-muted-foreground">
+                  Har du frågor eller behöver hjälp? Tveka inte att höra av dig
+                  till <span className="font-semibold text-primary">David</span>{' '}
+                  eller <span className="font-semibold text-primary">Lina</span>{' '}
+                  - vi finns här för att stötta dig!
+                </p>
+              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-1 mt-4 pt-4 border-t">
+                  <button
+                    onClick={() => setPage((p) => p - 1)}
+                    disabled={!canGoPrev}
+                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Föregående"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs text-muted-foreground px-1">
+                    {page + 1} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={!canGoNext}
+                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Nästa"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </CardContent>
           </motion.div>
         )}

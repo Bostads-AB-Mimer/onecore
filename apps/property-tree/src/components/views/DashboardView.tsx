@@ -217,47 +217,47 @@ export function DashboardView() {
       <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
         {/* Link cards grid */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cardConfigs.map((config, index) => {
-          const IconComponent = config.icon
-          return (
-            <motion.div
-              key={config.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + index * 0.05 }}
-            >
-              <Card
-                className={`h-full transition-all duration-200 ${
-                  config.isDisabled
-                    ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-                    : 'hover:scale-105 cursor-pointer'
-                }`}
-                onClick={() => handleCardClick(config)}
+          {cardConfigs.map((config, index) => {
+            const IconComponent = config.icon
+            return (
+              <motion.div
+                key={config.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + index * 0.05 }}
               >
-                <CardHeader className="pb-3 relative">
-                  <CardTitle
-                    className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}
-                  >
-                    <IconComponent
-                      className={`h-5 w-5 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`}
-                    />
-                    {config.title}
-                  </CardTitle>
-                  {config.isExternal && !config.isDisabled && (
-                    <ExternalLink className="h-4 w-4 text-muted-foreground absolute top-4 right-4" />
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <p
-                    className={`text-sm ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-muted-foreground'}`}
-                  >
-                    {config.description}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )
-        })}
+                <Card
+                  className={`h-full transition-all duration-200 ${
+                    config.isDisabled
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+                      : 'hover:scale-105 cursor-pointer'
+                  }`}
+                  onClick={() => handleCardClick(config)}
+                >
+                  <CardHeader className="pb-3 relative">
+                    <CardTitle
+                      className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}
+                    >
+                      <IconComponent
+                        className={`h-5 w-5 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`}
+                      />
+                      {config.title}
+                    </CardTitle>
+                    {config.isExternal && !config.isDisabled && (
+                      <ExternalLink className="h-4 w-4 text-muted-foreground absolute top-4 right-4" />
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <p
+                      className={`text-sm ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-muted-foreground'}`}
+                    >
+                      {config.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
         </div>
 
         {/* Release notes sidebar - right side on desktop, top on mobile */}
