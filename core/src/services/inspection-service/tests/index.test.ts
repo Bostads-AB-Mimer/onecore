@@ -31,6 +31,146 @@ describe('inspection-service index', () => {
     jest.restoreAllMocks()
   })
 
+  describe('GET /inspections (combined)', () => {
+    const mockInternalInspections = XpandInspectionFactory.buildList(1, {
+      id: 'INT-1',
+    })
+    const mockXpandInspections = XpandInspectionFactory.buildList(1, {
+      id: 'XPN-1',
+    })
+
+    const mockInternalPaginatedResponse = {
+      content: mockInternalInspections,
+      _meta: { totalRecords: 1, page: 1, limit: 25, count: 1 },
+      _links: [],
+    }
+
+    const mockXpandPaginatedResponse = {
+      content: mockXpandInspections,
+      _meta: { totalRecords: 1, page: 1, limit: 25, count: 1 },
+      _links: [
+        { href: '/inspections/xpand?page=1&limit=25', rel: 'self' as const },
+      ],
+    }
+
+    it('should return merged inspections from both sources with source field', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspections')
+        .mockResolvedValue({ ok: true, data: mockInternalPaginatedResponse })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({ ok: true, data: mockXpandPaginatedResponse })
+
+      const res = await request(app.callback()).get('/inspections')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body.content[0].source).toBe('internal')
+      expect(res.body.content[0].id).toBe('INT-1')
+      expect(res.body.content[1].source).toBe('xpand')
+      expect(res.body.content[1].id).toBe('XPN-1')
+      expect(res.body._meta.totalRecords).toBe(2)
+    })
+
+    it('should return only xpand results when internal fails', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspections')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({ ok: true, data: mockXpandPaginatedResponse })
+
+      const res = await request(app.callback()).get('/inspections')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].source).toBe('xpand')
+    })
+
+    it('should return only internal results when xpand fails', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspections')
+        .mockResolvedValue({ ok: true, data: mockInternalPaginatedResponse })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/inspections')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].source).toBe('internal')
+    })
+
+    it('should return 400 on invalid query params', async () => {
+      const res = await request(app.callback()).get('/inspections?page=invalid')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid query parameters')
+    })
+  })
+
+  describe('GET /inspections/residence/:residenceId (combined)', () => {
+    const mockInternalInspections = XpandInspectionFactory.buildList(1, {
+      id: 'INT-1',
+    })
+    const mockXpandInspections = XpandInspectionFactory.buildList(1, {
+      id: 'XPN-1',
+    })
+
+    it('should return merged inspections from both sources with source field', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionsByResidenceId')
+        .mockResolvedValue({ ok: true, data: mockInternalInspections })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({ ok: true, data: mockXpandInspections })
+
+      const res = await request(app.callback()).get(
+        '/inspections/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspections).toHaveLength(2)
+      expect(res.body.content.inspections[0].source).toBe('internal')
+      expect(res.body.content.inspections[1].source).toBe('xpand')
+    })
+
+    it('should return only xpand results when internal fails', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionsByResidenceId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({ ok: true, data: mockXpandInspections })
+
+      const res = await request(app.callback()).get(
+        '/inspections/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspections).toHaveLength(1)
+      expect(res.body.content.inspections[0].source).toBe('xpand')
+    })
+
+    it('should return only internal results when xpand fails', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionsByResidenceId')
+        .mockResolvedValue({ ok: true, data: mockInternalInspections })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/inspections/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspections).toHaveLength(1)
+      expect(res.body.content.inspections[0].source).toBe('internal')
+    })
+  })
+
   describe('GET /inspections/xpand', () => {
     const mockInspections = XpandInspectionFactory.buildList(2)
 
