@@ -17,6 +17,7 @@ docker exec -i onecore-sql bash -c "$SQLCMD_PATH -S localhost -U SA -P \"s3cr3t_
     CREATE DATABASE [tenants-leases-test];
     CREATE DATABASE [property-info];
     CREATE DATABASE [economy];
+    CREATE DATABASE [keys-management];
 EOSQL
 
 echo "Database initialization completed!"

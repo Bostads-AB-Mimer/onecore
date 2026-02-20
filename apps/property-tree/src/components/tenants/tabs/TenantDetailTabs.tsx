@@ -21,6 +21,7 @@ export const TenantDetailTabs = ({ children }: TenantDetailTabsProps) => {
         <TabsTrigger value="work-orders">Ärenden</TabsTrigger>
         <TabsTrigger value="ledger">Fakturor & betalningar</TabsTrigger>
         <TabsTrigger value="notes">Noteringar</TabsTrigger>
+        <TabsTrigger value="keys">Nyckellån</TabsTrigger>
       </TabsList>
       {children}
     </Tabs>

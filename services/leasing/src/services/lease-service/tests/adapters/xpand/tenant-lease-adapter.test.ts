@@ -42,7 +42,7 @@ jest.mock('knex', () => () => ({
         {
           phoneNumber: '070123456 ',
           type: 'mobil  ',
-          isMainNumber: true,
+          isMainNumber: 1,
         },
       ])
     })
@@ -79,7 +79,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
           {
             phoneNumber: '070123456',
             type: 'mobil',
-            isMainNumber: true,
+            isMainNumber: 1,
           },
         ],
         specialAttention: false,
@@ -432,7 +432,7 @@ describe('transformFromDbContact', () => {
     const phoneNumbers: {
       phoneNumber: string
       type: string
-      isMainNumber: boolean
+      isMainNumber: number
     }[] = []
     const leases: Lease[] = []
 
@@ -470,7 +470,7 @@ describe('transformFromDbContact', () => {
     const phoneNumbers: {
       phoneNumber: string
       type: string
-      isMainNumber: boolean
+      isMainNumber: number
     }[] = []
     const leases: Lease[] = []
 

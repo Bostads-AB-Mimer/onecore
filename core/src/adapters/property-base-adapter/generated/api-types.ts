@@ -1171,10 +1171,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Search term (min 3 chars). Searches across rentalId, address, propertyName, blockReason */
+          /** @description Search term (min 2 chars). Searches across rentalId, address, blockReason */
           q?: string;
-          /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
-          fields?: string;
           /** @description Filter by category (supports multiple values) */
           kategori?: ("Bostad" | "Bilplats" | "Lokal" | "Förråd" | "Övrigt")[];
           /** @description Filter by district (supports multiple values) */

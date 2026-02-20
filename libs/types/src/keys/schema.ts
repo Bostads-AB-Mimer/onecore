@@ -1,0 +1,535 @@
+import { z } from 'zod'
+
+// Pagination schemas (reusable across all endpoints)
+export const PaginationMetaSchema = z.object({
+  totalRecords: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  count: z.number(),
+})
+
+export const PaginationLinksSchema = z.object({
+  href: z.string(),
+  rel: z.enum(['self', 'first', 'last', 'prev', 'next']),
+})
+
+// Generic pagination response wrapper (for OpenAPI allOf pattern)
+export const PaginatedResponseSchema = z.object({
+  content: z.array(z.any()),
+  _meta: PaginationMetaSchema,
+  _links: z.array(PaginationLinksSchema),
+})
+
+export const KeyTypeSchema = z.enum([
+  'HN',
+  'FS',
+  'MV',
+  'LGH',
+  'PB',
+  'GAR',
+  'LOK',
+  'HL',
+  'FÖR',
+  'SOP',
+  'ÖVR',
+])
+export const KeySystemTypeSchema = z.enum([
+  'MECHANICAL',
+  'ELECTRONIC',
+  'HYBRID',
+])
+
+// Loan type schema (defined early for use in KeyLoanSchema)
+export const LoanTypeSchema = z.enum(['TENANT', 'MAINTENANCE'])
+
+export const KeySchema = z.object({
+  id: z.string().uuid(),
+  keyName: z.string(),
+  keySequenceNumber: z.number().nullable().optional(),
+  flexNumber: z.number().nullable().optional(),
+  rentalObjectCode: z.string().nullable().optional(),
+  keyType: KeyTypeSchema,
+  keySystemId: z.string().uuid().nullable().optional(),
+  disposed: z.boolean().default(false),
+  notes: z.string().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export const KeyLoanSchema = z.object({
+  id: z.string().uuid(),
+  loanType: LoanTypeSchema,
+  contact: z.string().optional(),
+  contact2: z.string().nullable().optional(),
+  contactPerson: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  availableToNextTenantFrom: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  createdBy: z.string().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
+})
+
+export const KeySystemSchema = z.object({
+  id: z.string().uuid(),
+  systemCode: z.string(),
+  name: z.string(),
+  manufacturer: z.string(),
+  managingSupplier: z.string().nullable().optional(),
+  type: KeySystemTypeSchema,
+  propertyIds: z.string().optional(),
+  installationDate: z.coerce.date().nullable().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+  schemaFileId: z.string().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  createdBy: z.string().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
+})
+
+export const LogSchema = z.object({
+  id: z.string().uuid(),
+  userName: z.string(),
+  eventType: z.enum(['creation', 'update', 'delete']),
+  objectType: z.enum([
+    'key',
+    'keySystem',
+    'keyLoan',
+    'keyBundle',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
+  ]),
+  objectId: z.string().uuid().nullable().optional(),
+  eventTime: z.coerce.date(),
+  description: z.string().nullable().optional(),
+  eventTypeLabel: z.string().optional(),
+  objectTypeLabel: z.string().optional(),
+})
+
+export const KeyNoteSchema = z.object({
+  id: z.string().uuid(),
+  rentalObjectCode: z.string(),
+  description: z.string(),
+})
+
+export const KeyBundleSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  keys: z.string(),
+  description: z.string().nullable().optional(),
+})
+
+// Removed: KeyLoanMaintenanceKeysSchema - unified into KeyLoanSchema
+// Removed: KeyLoanMaintenanceKeysWithDetailsSchema - use KeyLoanWithDetailsSchema instead
+
+// Key Event schemas (defined here before usage in KeyWithMaintenanceLoanStatusSchema)
+export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
+export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
+
+export const KeyEventSchema = z.object({
+  id: z.string().uuid(),
+  type: KeyEventTypeSchema,
+  status: KeyEventStatusSchema,
+  workOrderId: z.string().uuid().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+// Key with all optional relations (for API responses with include parameters)
+export const KeyDetailsSchema = KeySchema.extend({
+  keySystem: KeySystemSchema.optional().nullable(),
+  loans: z.array(KeyLoanSchema).optional().nullable(),
+  events: z.array(KeyEventSchema).optional().nullable(),
+})
+
+// Response schema for key bundle with loan status endpoint
+export const KeyBundleDetailsResponseSchema = z.object({
+  bundle: KeyBundleSchema,
+  keys: z.array(KeyDetailsSchema),
+})
+
+// Response schema for bundles with keys loaned to a specific contact
+export const BundleWithLoanedKeysInfoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  loanedKeyCount: z.number(),
+  totalKeyCount: z.number(),
+})
+
+// Request schemas for API endpoints
+export const CreateKeyRequestSchema = z.object({
+  keyName: z.string(),
+  keySequenceNumber: z.number().nullable().optional(),
+  flexNumber: z.number().nullable().optional(),
+  rentalObjectCode: z.string().nullable().optional(),
+  keyType: KeyTypeSchema,
+  keySystemId: z.string().uuid().nullable().optional(),
+  notes: z.string().nullable().optional(),
+})
+
+export const UpdateKeyRequestSchema = z.object({
+  keyName: z.string().optional(),
+  keySequenceNumber: z.number().nullable().optional(),
+  flexNumber: z.number().nullable().optional(),
+  rentalObjectCode: z.string().nullable().optional(),
+  keyType: KeyTypeSchema.optional(),
+  keySystemId: z.string().uuid().nullable().optional(),
+  disposed: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+})
+
+// Request schemas for key systems
+
+export const CreateKeySystemRequestSchema = z.object({
+  systemCode: z.string(),
+  name: z.string(),
+  manufacturer: z.string(),
+  type: KeySystemTypeSchema,
+  propertyIds: z.string().optional(),
+  installationDate: z.coerce.date().nullable().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+})
+
+export const UpdateKeySystemRequestSchema = z.object({
+  systemCode: z.string().optional(),
+  name: z.string().optional(),
+  manufacturer: z.string().optional(),
+  type: KeySystemTypeSchema.optional(),
+  propertyIds: z.string().optional(),
+  installationDate: z.coerce.date().nullable().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
+  schemaFileId: z.string().nullable().optional(),
+})
+
+// Request schemas for key loans
+
+export const CreateKeyLoanRequestSchema = z.object({
+  keys: z.array(z.string()).optional(),
+  keyCards: z.array(z.string()).optional(),
+  loanType: LoanTypeSchema,
+  contact: z.string().optional(),
+  contact2: z.string().nullable().optional(),
+  contactPerson: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
+  availableToNextTenantFrom: z.coerce.date().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+})
+
+export const UpdateKeyLoanRequestSchema = z.object({
+  keys: z.array(z.string()).optional(),
+  keyCards: z.array(z.string()).optional(),
+  loanType: LoanTypeSchema.optional(),
+  contact: z.string().optional(),
+  contact2: z.string().nullable().optional(),
+  contactPerson: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  returnedAt: z.coerce.date().nullable().optional(),
+  availableToNextTenantFrom: z.coerce.date().nullable().optional(),
+  pickedUpAt: z.coerce.date().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
+})
+
+// Search parameters schema for key loans
+export const KeyLoanSearchParamsSchema = z.object({
+  q: z.string().optional(),
+  fields: z.string().optional(),
+  keyNameOrObjectCode: z.string().optional(),
+  minKeys: z.coerce.number().optional(),
+  maxKeys: z.coerce.number().optional(),
+  hasPickedUp: z.coerce.boolean().optional(),
+  hasReturned: z.coerce.boolean().optional(),
+  loanType: LoanTypeSchema.optional(),
+  contact: z.string().optional(),
+  contact2: z.string().optional(),
+  pickedUpAt: z.string().optional(),
+  returnedAt: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+})
+
+// Request schemas for logs
+
+export const CreateLogRequestSchema = z.object({
+  userName: z.string(),
+  eventType: z.enum(['creation', 'update', 'delete']),
+  objectType: z.enum([
+    'key',
+    'keySystem',
+    'keyLoan',
+    'keyBundle',
+    'receipt',
+    'keyEvent',
+    'signature',
+    'keyNote',
+  ]),
+  objectId: z.string().uuid().nullable().optional(),
+  description: z.string().nullable().optional(),
+  // rentalObjectCode and contactId removed - context fetched via JOINs when needed
+
+  // Optional fields for auto-description generation
+  autoGenerateDescription: z.boolean().optional(),
+  entityData: z.any().optional(), // The entity object for description building
+  action: z.enum(['Skapad', 'Uppdaterad', 'Kasserad', 'Raderad']).optional(),
+  eventTime: z.coerce.date().optional(),
+})
+
+// Receipt schemas
+
+export const ReceiptTypeSchema = z.enum(['LOAN', 'RETURN'])
+export const ReceiptFormatSchema = z.enum(['DIGITAL', 'PHYSICAL'])
+
+export const ReceiptSchema = z.object({
+  id: z.string().uuid(),
+  keyLoanId: z.string().uuid(),
+  receiptType: ReceiptTypeSchema,
+  type: ReceiptFormatSchema,
+  fileId: z.string().nullable().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export const CreateReceiptRequestSchema = z.object({
+  keyLoanId: z.string().uuid(),
+  receiptType: ReceiptTypeSchema,
+  type: ReceiptFormatSchema.optional(),
+  fileId: z.string().optional(),
+  /** Base64 encoded file content (optional - if provided, file will be uploaded) */
+  fileData: z.string().optional(),
+  /** MIME type of the file (defaults to application/pdf) */
+  fileContentType: z.string().optional(),
+})
+
+export const UpdateReceiptRequestSchema = z.object({
+  fileId: z.string().optional(),
+})
+
+export const UploadBase64RequestSchema = z.object({
+  fileContent: z.string().min(1, 'File content is required'),
+  fileName: z.string().optional(),
+  metadata: z.record(z.string()).optional(),
+})
+
+// Error response schemas (for OpenAPI/Swagger documentation)
+export const ErrorResponseSchema = z.object({
+  error: z.string().optional(),
+  reason: z.string().optional(),
+})
+
+export const NotFoundResponseSchema = z.object({
+  reason: z.string(),
+})
+
+export const BadRequestResponseSchema = z.object({
+  reason: z.string(),
+})
+
+// File operation response schemas
+export const SchemaDownloadUrlResponseSchema = z.object({
+  url: z.string(),
+  expiresIn: z.number(),
+})
+
+// Request schemas for key notes
+
+export const CreateKeyNoteRequestSchema = z.object({
+  rentalObjectCode: z.string(),
+  description: z.string(),
+})
+
+export const UpdateKeyNoteRequestSchema = z.object({
+  rentalObjectCode: z.string().optional(),
+  description: z.string().optional(),
+})
+
+// Request schemas for key bundles
+
+export const CreateKeyBundleRequestSchema = z.object({
+  name: z.string(),
+  keys: z.string(),
+  description: z.string().nullable().optional(),
+})
+
+export const UpdateKeyBundleRequestSchema = z.object({
+  name: z.string().optional(),
+  keys: z.string().optional(),
+  description: z.string().nullable().optional(),
+})
+
+// Removed: CreateKeyLoanMaintenanceKeysRequestSchema - use CreateKeyLoanRequestSchema with loanType: 'MAINTENANCE'
+// Removed: UpdateKeyLoanMaintenanceKeysRequestSchema - use UpdateKeyLoanRequestSchema
+
+// Request schemas for key events
+
+export const CreateKeyEventRequestSchema = z.object({
+  keys: z.array(z.string()),
+  type: KeyEventTypeSchema,
+  status: KeyEventStatusSchema,
+  workOrderId: z.string().uuid().nullable().optional(),
+})
+
+export const UpdateKeyEventRequestSchema = z.object({
+  keys: z.array(z.string()).optional(),
+  type: KeyEventTypeSchema.optional(),
+  status: KeyEventStatusSchema.optional(),
+  workOrderId: z.string().uuid().nullable().optional(),
+})
+
+// Bulk flex update request schema
+export const BulkUpdateFlexRequestSchema = z.object({
+  rentalObjectCode: z.string(),
+  flexNumber: z.number().int().min(1).max(3),
+})
+
+// Bulk delete keys request schema
+export const BulkDeleteKeysRequestSchema = z.object({
+  keyIds: z.array(z.string().uuid()).min(1).max(100),
+})
+
+// Bulk update keys request schema
+export const BulkUpdateKeysRequestSchema = z.object({
+  keyIds: z.array(z.string().uuid()).min(1).max(100),
+  updates: z.object({
+    keyName: z.string().optional(),
+    flexNumber: z.number().int().min(1).max(3).nullable().optional(),
+    keySystemId: z.string().uuid().nullable().optional(),
+    rentalObjectCode: z.string().optional(),
+    disposed: z.boolean().optional(),
+    notes: z.string().nullable().optional(),
+    clearNotes: z.boolean().optional(),
+  }),
+})
+
+// Signature schemas (polymorphic - supports any document type)
+
+export const SignatureResourceTypeSchema = z.enum([
+  'receipt',
+  // Future: 'lease_agreement', 'work_order', 'inspection_report'
+])
+
+export const SignatureSchema = z.object({
+  id: z.string().uuid(),
+  resourceType: SignatureResourceTypeSchema,
+  resourceId: z.string().uuid(),
+  simpleSignDocumentId: z.number().int(),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().nullable().optional(),
+  status: z.string(),
+  sentAt: z.coerce.date(),
+  completedAt: z.coerce.date().nullable().optional(),
+  lastSyncedAt: z.coerce.date().nullable().optional(),
+})
+
+export const CreateSignatureRequestSchema = z.object({
+  resourceType: SignatureResourceTypeSchema,
+  resourceId: z.string().uuid(),
+  simpleSignDocumentId: z.number().int(),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().nullable().optional(),
+  status: z.string().default('sent'),
+})
+
+export const UpdateSignatureRequestSchema = z.object({
+  status: z.string().optional(),
+  completedAt: z.coerce.date().nullable().optional(),
+  lastSyncedAt: z.coerce.date().nullable().optional(),
+})
+
+// SimpleSign API request schema
+export const SendSignatureRequestSchema = z.object({
+  resourceType: SignatureResourceTypeSchema,
+  resourceId: z.string().uuid(),
+  recipientEmail: z.string().email(),
+  recipientName: z.string().optional(),
+  pdfBase64: z.string().min(1, 'PDF content is required'),
+})
+
+// SimpleSign webhook payload schema (minimal - we only need key fields)
+export const SimpleSignWebhookPayloadSchema = z.object({
+  id: z.number().int(), // SimpleSign document ID
+  status: z.string(),
+  status_updated_at: z.string(),
+  // Other fields can be added as needed
+})
+
+// DAX API schemas (for Amido DAX access control integration)
+// These schemas match the types from dax-client library
+
+export const CardSchema = z.object({
+  cardId: z.string(),
+  name: z.string().nullable().optional(),
+  owner: z.any().optional(),
+  appearanceCode: z.string().nullable().optional(),
+  classification: z.string().nullable().optional(),
+  disabled: z.boolean().optional(),
+  startTime: z.string().nullable().optional(),
+  stopTime: z.string().nullable().optional(),
+  createTime: z.string(),
+  pinCode: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  archivedAt: z.string().nullable().optional(),
+  codes: z.array(z.any()).nullable().optional(),
+})
+
+export const CardOwnerSchema = z.object({
+  cardOwnerId: z.string(),
+  cardOwnerType: z.string().nullable().optional(),
+  familyName: z.string().nullable().optional(),
+  specificName: z.string().nullable().optional(),
+  primaryOrganization: z.any().optional(),
+  cards: z.array(CardSchema).nullable().optional(),
+  comment: z.string().nullable().optional(),
+  folderId: z.number().nullable().optional(),
+  disabled: z.boolean().optional(),
+  startTime: z.string().nullable().optional(),
+  stopTime: z.string().nullable().optional(),
+  pinCode: z.string().nullable().optional(),
+  attributes: z.record(z.string()).nullable().optional(),
+  state: z.string().nullable().optional(),
+  archivedAt: z.string().nullable().optional(),
+  createTime: z.string().optional(),
+})
+
+// Card with loan information (for API responses with loan tracking)
+export const CardDetailsSchema = CardSchema.extend({
+  loans: z.array(KeyLoanSchema).optional().nullable(),
+})
+
+export const GetCardOwnerResponseSchema = z.object({
+  cardOwner: CardOwnerSchema,
+})
+
+export const GetCardOwnersResponseSchema = z.object({
+  cardOwners: z.array(CardOwnerSchema),
+})
+
+export const QueryCardOwnersParamsSchema = z.object({
+  nameFilter: z.string().optional(),
+  expand: z.string().optional(),
+  idfilter: z.string().optional(),
+  attributeFilter: z.string().optional(),
+  selectedAttributes: z.string().optional(),
+  folderFilter: z.string().optional(),
+  organisationFilter: z.string().optional(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+})
+
+// Key loan with enriched keys and receipts data (for optimized endpoint)
+export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
+  // Array of full key objects with optional keySystem (use includeKeySystem=true to populate)
+  keysArray: z.array(KeyDetailsSchema),
+  // Array of full card objects from DAX
+  keyCardsArray: z.array(CardSchema),
+  // Array of receipts for this loan
+  receipts: z.array(ReceiptSchema),
+})
