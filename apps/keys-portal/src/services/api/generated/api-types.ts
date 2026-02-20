@@ -2554,7 +2554,7 @@ export interface components {
     };
     CreateKeyRequest: {
       keyName: string;
-      keySequenceNumber?: number;
+      keySequenceNumber?: number | null;
       flexNumber?: number | null;
       rentalObjectCode?: string | null;
       /** @enum {string} */
@@ -2565,7 +2565,7 @@ export interface components {
     };
     UpdateKeyRequest: {
       keyName?: string;
-      keySequenceNumber?: number;
+      keySequenceNumber?: number | null;
       flexNumber?: number | null;
       rentalObjectCode?: string | null;
       /** @enum {string} */
@@ -2599,7 +2599,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       keyName: string;
-      keySequenceNumber?: number;
+      keySequenceNumber?: number | null;
       flexNumber?: number | null;
       rentalObjectCode?: string | null;
       /** @enum {string} */
@@ -2662,7 +2662,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       keyName: string;
-      keySequenceNumber?: number;
+      keySequenceNumber?: number | null;
       flexNumber?: number | null;
       rentalObjectCode?: string | null;
       /** @enum {string} */
