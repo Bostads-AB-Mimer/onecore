@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Mail, User, AlertTriangle } from 'lucide-react'
+import { Mail, User, AlertTriangle, ChevronDown, Info } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/v2/Badge'
 import { Label } from '@/components/ui/Label'
+import { cn } from '@/lib/utils'
 
 export interface EmailRecipient {
   id: string
@@ -24,6 +25,7 @@ interface BulkEmailModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   recipients: EmailRecipient[]
+  totalSelectedItems?: number
   onSend?: (
     subject: string,
     body: string,
@@ -35,11 +37,13 @@ export function BulkEmailModal({
   open,
   onOpenChange,
   recipients,
+  totalSelectedItems,
   onSend,
 }: BulkEmailModalProps) {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [showAllInvalid, setShowAllInvalid] = useState(false)
 
   const { validRecipients, invalidRecipients } = useMemo(() => {
     const valid = recipients.filter((r) => r.email)
@@ -75,8 +79,10 @@ export function BulkEmailModal({
             Skicka mejl
           </DialogTitle>
           <DialogDescription>
-            Skicka mejl till {validRecipients.length} av {recipients.length}{' '}
-            valda kunder
+            {totalSelectedItems != null &&
+            totalSelectedItems !== recipients.length
+              ? `${totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
+              : `Skicka mejl till ${validRecipients.length} av ${recipients.length} valda kunder`}
           </DialogDescription>
         </DialogHeader>
 
@@ -99,20 +105,48 @@ export function BulkEmailModal({
             </div>
           </div>
 
-          {invalidRecipients.length > 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <span className="font-medium">
-                  {invalidRecipients.length} mottagare saknar e-postadress:
-                </span>{' '}
-                {invalidRecipients
-                  .slice(0, 3)
-                  .map((r) => r.name)
-                  .join(', ')}
-                {invalidRecipients.length > 3 &&
-                  ` och ${invalidRecipients.length - 3} till`}
-              </div>
+          {((totalSelectedItems != null &&
+            totalSelectedItems > recipients.length) ||
+            invalidRecipients.length > 0) && (
+            <div className="space-y-2">
+              {totalSelectedItems != null &&
+                totalSelectedItems > recipients.length && (
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800">
+                    <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span className="text-sm">
+                      {totalSelectedItems - recipients.length} kontakter
+                      förekommer på flera kontrakt och visas bara en gång
+                    </span>
+                  </div>
+                )}
+
+              {invalidRecipients.length > 0 && (
+                <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800">
+                  <button
+                    type="button"
+                    className="flex items-start gap-2 w-full text-left"
+                    onClick={() => setShowAllInvalid((prev) => !prev)}
+                  >
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span className="text-sm font-medium flex-1">
+                      {invalidRecipients.length} mottagare saknar e-postadress
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 mt-0.5 shrink-0 transition-transform',
+                        showAllInvalid && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                  {showAllInvalid && (
+                    <div className="mt-2 ml-6 text-sm space-y-1 max-h-32 overflow-y-auto">
+                      {invalidRecipients.map((r) => (
+                        <div key={r.id}>{r.name}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -898,6 +898,27 @@ const deleteListingTextContent = async (
   }
 }
 
+const getContactsByFilters = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<{ content: leasing.v1.ContactInfo[] }> => {
+  const params = new URLSearchParams()
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (Array.isArray(value)) {
+      value.forEach((v) => params.append(key, v))
+    } else {
+      params.append(key, value)
+    }
+  })
+
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/contacts-by-filters?${params.toString()}`
+  )
+
+  return response.data
+}
+
 interface ExportLeasesResult {
   data: Buffer
   contentType: string
@@ -941,6 +962,7 @@ export {
   addApplicantToWaitingList,
   createLease,
   exportLeasesToExcel,
+  getContactsByFilters,
   getApplicantByContactCodeAndListingId,
   getApplicantsAndListingByContactCode,
   getApplicantsByContactCode,
