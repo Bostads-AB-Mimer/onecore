@@ -429,6 +429,27 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/leases/contacts-by-filters', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.getContactsByFilters(ctx.query)
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching contacts by filters')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching contacts',
+        ...metadata,
+      }
+    }
+  })
+
   /**
    * @swagger
    * /leases/by-rental-property-id/{rentalPropertyId}:

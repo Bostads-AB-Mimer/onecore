@@ -250,6 +250,10 @@ const LeasesPage = () => {
           selectedProperties.length > 0 ? selectedProperties : undefined,
         districtNames:
           selectedDistricts.length > 0 ? selectedDistricts : undefined,
+        buildingManager:
+          selectedBuildingManagers.length > 0
+            ? selectedBuildingManagers
+            : undefined,
         startDateFrom: startDateFrom || undefined,
         startDateTo: startDateTo || undefined,
         endDateFrom: endDateFrom || undefined,
@@ -322,6 +326,10 @@ const LeasesPage = () => {
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
+      buildingManager:
+        selectedBuildingManagers.length > 0
+          ? selectedBuildingManagers
+          : undefined,
       startDateFrom: startDateFrom || undefined,
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
@@ -333,6 +341,7 @@ const LeasesPage = () => {
       selectedStatuses,
       selectedProperties,
       selectedDistricts,
+      selectedBuildingManagers,
       startDateFrom,
       startDateTo,
       endDateFrom,
@@ -751,6 +760,7 @@ const LeasesPage = () => {
         open={showSmsModal}
         onOpenChange={setShowSmsModal}
         recipients={smsRecipients}
+        totalSelectedItems={selectedCount}
         onSend={handleSendSms}
       />
 
@@ -758,6 +768,7 @@ const LeasesPage = () => {
         open={showEmailModal}
         onOpenChange={setShowEmailModal}
         recipients={emailRecipients}
+        totalSelectedItems={selectedCount}
         onSend={handleSendEmail}
       />
     </div>

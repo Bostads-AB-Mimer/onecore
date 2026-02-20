@@ -1,5 +1,11 @@
 import { useState, useMemo, useCallback } from 'react'
-import { MessageSquare, User, AlertTriangle } from 'lucide-react'
+import {
+  MessageSquare,
+  User,
+  AlertTriangle,
+  ChevronDown,
+  Info,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,11 +23,8 @@ const MAX_SMS_LENGTH = 1600
 const COST_WARNING_THRESHOLD = 100
 const SMS_COST_SEK = 0.5
 
-function isValidSwedishMobile(phone: string | null): boolean {
-  if (!phone) return false
-  const cleaned = phone.replace(/[\s-]/g, '')
-  // Swedish mobile: 07XXXXXXXX, +467XXXXXXXX, 00467XXXXXXXX, or 467XXXXXXXX
-  return /^(07\d{8}|\+467\d{8}|00467\d{8}|467\d{8})$/.test(cleaned)
+function hasPhoneNumber(phone: string | null): boolean {
+  return phone !== null && phone.trim().length > 0
 }
 
 export interface SmsRecipient {
@@ -34,6 +37,7 @@ interface BulkSmsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   recipients: SmsRecipient[]
+  totalSelectedItems?: number
   onSend?: (message: string, recipients: SmsRecipient[]) => Promise<void>
 }
 
@@ -41,21 +45,27 @@ export function BulkSmsModal({
   open,
   onOpenChange,
   recipients,
+  totalSelectedItems,
   onSend,
 }: BulkSmsModalProps) {
   const [message, setMessage] = useState('')
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
+  const [showAllInvalid, setShowAllInvalid] = useState(false)
   const [isSending, setIsSending] = useState(false)
 
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
   const { validRecipients, invalidRecipients } = useMemo(() => {
-    const valid = recipients.filter((r) => isValidSwedishMobile(r.phone))
-    const invalid = recipients.filter((r) => !isValidSwedishMobile(r.phone))
+    const valid = recipients.filter((r) => hasPhoneNumber(r.phone))
+    const invalid = recipients.filter((r) => !hasPhoneNumber(r.phone))
     return { validRecipients: valid, invalidRecipients: invalid }
   }, [recipients])
 
   const estimatedCost = validRecipients.length * SMS_COST_SEK
+  const duplicatesRemoved =
+    totalSelectedItems != null && totalSelectedItems > recipients.length
+      ? totalSelectedItems - recipients.length
+      : 0
 
   const doSend = useCallback(async () => {
     if (!onSend || isSending) return
@@ -107,8 +117,10 @@ export function BulkSmsModal({
             Skicka SMS
           </DialogTitle>
           <DialogDescription>
-            Skicka SMS till {validRecipients.length} av {recipients.length}{' '}
-            valda kunder
+            {totalSelectedItems != null &&
+            totalSelectedItems !== recipients.length
+              ? `${totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
+              : `Skicka SMS till ${validRecipients.length} av ${recipients.length} valda kunder`}
           </DialogDescription>
         </DialogHeader>
 
@@ -131,20 +143,66 @@ export function BulkSmsModal({
             </div>
           </div>
 
-          {invalidRecipients.length > 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800">
+          {(duplicatesRemoved > 0 || invalidRecipients.length > 0) && (
+            <div className="space-y-2">
+              {duplicatesRemoved > 0 && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800">
+                  <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span className="text-sm">
+                    {duplicatesRemoved} kontakter förekommer på flera kontrakt
+                    och visas bara en gång
+                  </span>
+                </div>
+              )}
+
+              {invalidRecipients.length > 0 && (
+                <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800">
+                  <button
+                    type="button"
+                    className="flex items-start gap-2 w-full text-left"
+                    onClick={() => setShowAllInvalid((prev) => !prev)}
+                  >
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span className="text-sm font-medium flex-1">
+                      {invalidRecipients.length} mottagare saknar telefonnummer
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 mt-0.5 shrink-0 transition-transform',
+                        showAllInvalid && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                  {showAllInvalid && (
+                    <div className="mt-2 ml-6 text-sm space-y-1 max-h-32 overflow-y-auto">
+                      {invalidRecipients.map((r) => (
+                        <div key={r.id} className="flex justify-between gap-2">
+                          <span>{r.name}</span>
+                          <span className="text-yellow-600 shrink-0">
+                            {r.phone || 'Saknar nummer'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {validRecipients.length > COST_WARNING_THRESHOLD && (
+            <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <div className="text-sm">
+                Beräknad kostnad:{' '}
                 <span className="font-medium">
-                  {invalidRecipients.length} mottagare saknar giltigt
-                  mobilnummer:
+                  {estimatedCost.toLocaleString('sv-SE', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}{' '}
+                  kr
                 </span>{' '}
-                {invalidRecipients
-                  .slice(0, 3)
-                  .map((r) => r.name)
-                  .join(', ')}
-                {invalidRecipients.length > 3 &&
-                  ` och ${invalidRecipients.length - 3} till`}
+                ({validRecipients.length} mottagare &times; {SMS_COST_SEK} kr)
               </div>
             </div>
           )}

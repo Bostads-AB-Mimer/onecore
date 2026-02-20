@@ -466,6 +466,167 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/contacts-by-filters:
+   *   get:
+   *     summary: Get unique contacts matching lease filters
+   *     description: Returns deduplicated contacts for all leases matching the given filters. Uses same filters as /leases/search but without pagination.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property names
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: buildingManager
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building manager names
+   *     responses:
+   *       200:
+   *         description: Unique contacts matching the filters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ContactInfo'
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/contacts-by-filters', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'objectType',
+      'status',
+      'startDateFrom',
+      'startDateTo',
+      'endDateFrom',
+      'endDateTo',
+      'property',
+      'buildingCodes',
+      'areaCodes',
+      'districtNames',
+      'buildingManager',
+    ])
+
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      // Reuse searchLeases with paging to collect all unique contacts
+      const contactMap = new Map<string, leasing.v1.ContactInfo>()
+      let page = 1
+      const batchSize = 500
+      let totalCount: number | undefined
+
+      while (true) {
+        const paginationCtx = Object.create(ctx)
+        paginationCtx.query = {
+          ...ctx.query,
+          page: String(page),
+          limit: String(batchSize),
+        }
+
+        const result = await searchLeases(queryParams.data, paginationCtx, {
+          totalCount,
+        })
+
+        totalCount = result._meta.totalRecords
+
+        for (const lease of result.content) {
+          for (const contact of lease.contacts ?? []) {
+            if (!contactMap.has(contact.contactCode)) {
+              contactMap.set(contact.contactCode, contact)
+            }
+          }
+        }
+
+        if (page * batchSize >= totalCount) break
+        page++
+      }
+
+      ctx.status = 200
+      ctx.body = { content: Array.from(contactMap.values()), ...metadata }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching contacts by filters')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error ? error.message : 'Failed to fetch contacts',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/for/nationalRegistrationNumber/{pnr}:
    *   get:
    *     summary: Get leases by national registration number
