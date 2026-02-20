@@ -232,7 +232,7 @@ export const routes = (router: KoaRouter) => {
       )
 
       ctx.status = 200
-      ctx.body = { ...paginatedResult, ...metadata }
+      ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error searching key systems')
       ctx.status = 500

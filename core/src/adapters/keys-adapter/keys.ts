@@ -14,13 +14,13 @@ import {
 export const KeysApi = {
   list: async (
     query: Record<string, string | string[] | undefined>
-  ): Promise<AdapterResult<PaginatedResponse<Key>, CommonErr>> => {
+  ): Promise<AdapterResult<PaginatedResponse<KeyDetails>, CommonErr>> => {
     try {
       const { data, error, response } = await client().GET('/keys', {
         params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(parsePaginated(KeySchema, data))
+      return ok(parsePaginated(KeyDetailsSchema, data))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /keys failed')
       return fail('unknown')
@@ -30,14 +30,14 @@ export const KeysApi = {
   search: async (
     searchParams: Record<string, string | string[] | undefined>
   ): Promise<
-    AdapterResult<PaginatedResponse<Key>, 'bad-request' | CommonErr>
+    AdapterResult<PaginatedResponse<KeyDetails>, 'bad-request' | CommonErr>
   > => {
     try {
       const { data, error, response } = await client().GET('/keys/search', {
         params: { query: searchParams as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(parsePaginated(KeySchema, data))
+      return ok(parsePaginated(KeyDetailsSchema, data))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /keys/search failed')
       return fail('unknown')
