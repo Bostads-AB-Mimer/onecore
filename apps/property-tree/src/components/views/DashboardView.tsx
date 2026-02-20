@@ -29,6 +29,7 @@ import type { DashboardCard } from '@/services/types'
 import { ReleaseNotesCard } from '@/components/dashboard/ReleaseNotesCard'
 import { resolve } from '@/utils/env'
 import onecoreLogo from '@/components/assets/logos/stacked/onecore_logo_stacked_black.svg'
+import { GlobalSearchBar } from '../search/GlobalSearchBar'
 
 export function DashboardView() {
   const navigate = useNavigate()
@@ -213,6 +214,10 @@ export function DashboardView() {
           />
         </h1>
       </header>
+
+      <div className="mx-auto max-w-2xl">
+        <GlobalSearchBar placeholder="Sök..." />
+      </div>
 
       <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
         {/* Link cards grid */}
