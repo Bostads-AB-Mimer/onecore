@@ -1,0 +1,16 @@
+[
+  {
+    "id": "rn-2026-02-20-v195-1",
+    "date": "2026-02-20",
+    "title": "Sökfält på startsidan",
+    "description": "Global sökning finns nu direkt på startsidan för snabbare åtkomst till fastigheter, lägenheter och kunder.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-02-20-v195-2",
+    "date": "2026-02-20",
+    "title": "Förbättrad mobilsökning",
+    "description": "Sökfunktionen fungerar nu bättre på mobila enheter med kortare platshållartext och direktåtkomst till sökmodalen.",
+    "category": "improvement"
+  }
+]
