@@ -8,137 +8,98 @@ import { useResidence } from '@/features/residences'
 
 import { matchesRoute, routes } from '@/shared/routes'
 
+interface LocationState {
+  companyId?: string
+  propertyCode?: string
+  buildingCode?: string
+}
+
 interface SelectionState {
   selectedResidenceId: string | null
-  selectedBuildingId: string | null
   selectedBuildingCode: string | null
-  selectedPropertyId: string | null
+  selectedPropertyCode: string | null
   selectedCompanyId: string | null
 }
 
 export function useHierarchicalSelection() {
-  const location = useLocation()
+  const { pathname, state: rawState } = useLocation()
   const params = useParams()
-  const state = location.state as Record<string, string> | null
+  const state = (rawState ?? {}) as LocationState
 
-  const residenceId =
-    params.residenceId && matchesRoute(routes.residence, location.pathname)
-      ? params.residenceId
-      : undefined
-  const { data: selectedResidence } = useResidence(residenceId)
+  // Which route are we on?
+  const onResidence = matchesRoute(routes.residence, pathname)
+  const onBuilding = matchesRoute(routes.building, pathname)
+  const onProperty = matchesRoute(routes.property, pathname)
+  const onCompany = matchesRoute(routes.company, pathname)
 
-  const buildingId =
-    params.buildingId &&
-    matchesRoute(routes.building, location.pathname) &&
-    !state?.propertyId
-      ? params.buildingId
-      : undefined
-  const { data: selectedBuilding } = useBuilding(buildingId)
+  // Fetch the directly selected entity to resolve its ancestors
+  const { data: residence } = useResidence(
+    onResidence ? params.residenceId : undefined
+  )
+  const { data: building } = useBuilding(
+    onBuilding ? params.buildingCode : undefined
+  )
 
-  const needsProperty =
-    !state?.companyId &&
-    (matchesRoute(routes.property, location.pathname) ||
-      matchesRoute(routes.building, location.pathname) ||
-      matchesRoute(routes.residence, location.pathname))
-  const propertyIdForQuery = needsProperty
-    ? params.propertyId || selectedBuilding?.property?.id || undefined
-    : undefined
-  const { data: selectedProperty } = useProperty(propertyIdForQuery)
+  // Resolve each level: use route param if directly selected,
+  // otherwise fall back to navigation state → fetched data
+  const selectedResidenceId = onResidence ? (params.residenceId ?? null) : null
 
-  const companyPropertyId =
-    selectedProperty && !state?.companyId ? selectedProperty.id : undefined
-  const { data: propertyCompany } = useCompanyByPropertyId(companyPropertyId)
+  const selectedBuildingCode = onBuilding
+    ? (params.buildingCode ?? null)
+    : (state.buildingCode ?? residence?.building?.code ?? null)
 
-  const selectionState = useMemo((): SelectionState => {
-    const path = location.pathname
-    const companyId = state?.companyId || propertyCompany?.id || null
+  const selectedPropertyCode = onProperty
+    ? (params.propertyCode ?? null)
+    : (state.propertyCode ??
+      building?.property?.code ??
+      residence?.property?.code ??
+      null)
 
-    if (matchesRoute(routes.residence, path) && params.residenceId) {
-      return {
-        selectedResidenceId: params.residenceId,
-        selectedBuildingId: null,
-        selectedBuildingCode:
-          state?.buildingCode || selectedResidence?.building?.code || null,
-        selectedPropertyId:
-          state?.propertyId ||
-          state?.propertyCode ||
-          selectedResidence?.property?.code ||
-          null,
-        selectedCompanyId: companyId,
-      }
-    }
+  // Company requires a property fetch to resolve
+  const { data: property } = useProperty(
+    !state.companyId && selectedPropertyCode ? selectedPropertyCode : undefined
+  )
+  const { data: company } = useCompanyByPropertyId(
+    !state.companyId ? property?.id : undefined
+  )
 
-    if (matchesRoute(routes.property, path) && params.propertyId) {
-      return {
-        selectedResidenceId: null,
-        selectedBuildingId: null,
-        selectedBuildingCode: null,
-        selectedPropertyId: params.propertyId,
-        selectedCompanyId: companyId,
-      }
-    }
+  const selectedCompanyId = onCompany
+    ? (params.companyId ?? null)
+    : (state.companyId ?? company?.id ?? null)
 
-    if (matchesRoute(routes.company, path) && params.companyId) {
-      return {
-        selectedResidenceId: null,
-        selectedBuildingId: null,
-        selectedBuildingCode: null,
-        selectedPropertyId: null,
-        selectedCompanyId: params.companyId,
-      }
-    }
-
-    if (matchesRoute(routes.building, path) && params.buildingId) {
-      return {
-        selectedResidenceId: null,
-        selectedBuildingId: params.buildingId,
-        selectedBuildingCode:
-          state?.buildingCode || selectedBuilding?.code || null,
-        selectedPropertyId:
-          state?.propertyId || selectedBuilding?.property?.id || null,
-        selectedCompanyId: companyId,
-      }
-    }
-
-    return {
-      selectedResidenceId: null,
-      selectedBuildingId: null,
-      selectedBuildingCode: null,
-      selectedPropertyId: null,
-      selectedCompanyId: null,
-    }
-  }, [
-    location.pathname,
-    params,
-    state,
-    selectedResidence,
-    selectedBuilding,
-    propertyCompany,
-  ])
+  const selectionState = useMemo(
+    (): SelectionState => ({
+      selectedResidenceId,
+      selectedBuildingCode,
+      selectedPropertyCode,
+      selectedCompanyId,
+    }),
+    [
+      selectedResidenceId,
+      selectedBuildingCode,
+      selectedPropertyCode,
+      selectedCompanyId,
+    ]
+  )
 
   const isPropertyInHierarchy = useCallback(
-    (propertyId: string) => selectionState.selectedPropertyId === propertyId,
-    [selectionState.selectedPropertyId]
+    (code: string) => selectedPropertyCode === code,
+    [selectedPropertyCode]
   )
 
   const isBuildingInHierarchy = useCallback(
-    (buildingCode: string, propertyId: string, buildingId?: string) =>
-      (!!buildingId && selectionState.selectedBuildingId === buildingId) ||
-      selectionState.selectedBuildingCode === buildingCode ||
-      (selectionState.selectedResidenceId !== null &&
-        selectionState.selectedBuildingCode === buildingCode &&
-        selectionState.selectedPropertyId === propertyId),
-    [selectionState]
+    (code: string) => selectedBuildingCode === code,
+    [selectedBuildingCode]
   )
 
   const isResidenceSelected = useCallback(
-    (residenceId: string) => selectionState.selectedResidenceId === residenceId,
-    [selectionState.selectedResidenceId]
+    (id: string) => selectedResidenceId === id,
+    [selectedResidenceId]
   )
 
   const isCompanyInHierarchy = useCallback(
-    (companyId: string) => selectionState.selectedCompanyId === companyId,
-    [selectionState.selectedCompanyId]
+    (id: string) => selectedCompanyId === id,
+    [selectedCompanyId]
   )
 
   return {

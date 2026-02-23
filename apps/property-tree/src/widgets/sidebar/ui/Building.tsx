@@ -25,11 +25,7 @@ export function BuildingNavigation({
   const location = useLocation()
   const { isBuildingInHierarchy, selectionState } = useHierarchicalSelection()
 
-  const isInHierarchy = isBuildingInHierarchy(
-    building.code,
-    property.id,
-    building.id
-  )
+  const isInHierarchy = isBuildingInHierarchy(building.code)
   const isDirectlySelected =
     selectionState.selectedBuildingCode === building.code &&
     matchesRoute(routes.building, location.pathname)
@@ -59,7 +55,7 @@ export function BuildingNavigation({
         <Link
           to={paths.building(building.code)}
           state={{
-            propertyId: property.id,
+            propertyCode: property.code,
             buildingCode: building.code,
             companyId,
           }}
@@ -73,7 +69,7 @@ export function BuildingNavigation({
         <div className="pl-4 mt-1">
           <ResidenceList
             building={building}
-            propertyId={property.id}
+            propertyCode={property.code}
             companyId={companyId}
           />
         </div>

@@ -42,7 +42,7 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
       label: 'Åtgärd',
       render: (property: Property) => (
         <Button asChild variant="link" size="sm">
-          <Link to={paths.property(property.id)}>Visa detaljer</Link>
+          <Link to={paths.property(property.code)}>Visa detaljer</Link>
         </Button>
       ),
       className: 'text-right',
@@ -64,7 +64,7 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
       </div>
       <div className="flex justify-end items-center pt-1">
         <Button asChild variant="link" size="sm" className="h-auto p-0">
-          <Link to={paths.property(property.id)}>Visa detaljer</Link>
+          <Link to={paths.property(property.code)}>Visa detaljer</Link>
         </Button>
       </div>
     </div>

@@ -24,9 +24,9 @@ export function PropertyNavigation({
   const location = useLocation()
   const { isPropertyInHierarchy, selectionState } = useHierarchicalSelection()
 
-  const isInHierarchy = isPropertyInHierarchy(property.id)
+  const isInHierarchy = isPropertyInHierarchy(property.code)
   const isDirectlySelected =
-    selectionState.selectedPropertyId === property.id &&
+    selectionState.selectedPropertyCode === property.code &&
     matchesRoute(routes.property, location.pathname)
 
   const shouldAutoExpand = isInHierarchy || isDirectlySelected
@@ -53,7 +53,7 @@ export function PropertyNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={paths.property(property.id)}
+          to={paths.property(property.code)}
           state={{ companyId }}
           onClick={() => setIsExpanded(!isExpanded)}
         >

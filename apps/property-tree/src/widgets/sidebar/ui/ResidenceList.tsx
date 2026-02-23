@@ -9,13 +9,13 @@ import { ResidenceNavigation } from './Residence'
 
 interface ResidenceListProps {
   building: Building
-  propertyId?: string
+  propertyCode?: string
   companyId?: string
 }
 
 export function ResidenceList({
   building,
-  propertyId,
+  propertyCode,
   companyId,
 }: ResidenceListProps) {
   const { data: residences, isLoading, error } = useResidences(building.code)
@@ -32,7 +32,7 @@ export function ResidenceList({
             residence={residence}
             buildingCode={building.code}
             staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
-            propertyId={propertyId}
+            propertyCode={propertyCode}
             companyId={companyId}
           />
         ))}
