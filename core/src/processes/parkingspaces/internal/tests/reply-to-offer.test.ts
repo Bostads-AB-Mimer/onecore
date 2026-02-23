@@ -16,7 +16,6 @@ import {
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as replyProcesses from '../reply-to-offer'
 import * as createOfferProcesses from '../create-offer'
-import * as processUtils from '../../utils'
 import * as factory from '../../../../../test/factories'
 import { AdapterResult } from '@/adapters/types'
 
@@ -67,11 +66,6 @@ describe('replyToOffer', () => {
         >
       >,
       [contactCode: string, districtCode: string],
-      any
-    >,
-    validateRentalRules: jest.SpyInstance<
-      AdapterResult<{ reason: string }, string>,
-      [validationResult: any, applicationType: 'Replace' | 'Additional'],
       any
     >,
     createLeaseSpy: jest.SpyInstance<
