@@ -13,19 +13,11 @@ import {
 } from 'lucide-react'
 
 import { debounce } from '@/shared/lib/debounce'
+import { paths } from '@/shared/routes'
 
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { type CombinedSearchResult, useSearch } from '../hooks/useSearch'
 import { SearchResultItem } from '../ui/SearchResultItem'
-
-const routeMap = {
-  property: '/properties',
-  building: '/buildings',
-  residence: '/residences',
-  contact: '/tenants',
-  'parking-space': '/parking-spaces',
-  'maintenance-unit': '/maintenance-units',
-} as const
 
 const iconMap = {
   property: Building2,
@@ -45,14 +37,14 @@ function getResultProps(item: CombinedSearchResult) {
         icon,
         label: item.name ?? '-',
         subtitle: item.property?.name,
-        path: `${routeMap.building}/${item.id}`,
-        state: { propertyId: item.property?.id || null },
+        path: paths.building(item.code),
+        state: { propertyCode: item.property?.code || null },
       }
     case 'property':
       return {
         icon,
         label: item.name,
-        path: `${routeMap.property}/${item.id}`,
+        path: paths.property(item.code),
         state: {},
       }
     case 'residence':
@@ -61,7 +53,7 @@ function getResultProps(item: CombinedSearchResult) {
         label: item.rentalId ?? '[rental id missing]',
         prefix: '[LGH]',
         subtitle: item.building?.name,
-        path: `${routeMap.residence}/${item.id}`,
+        path: paths.residence(item.id),
         state: {
           buildingCode: item.building?.code || null,
           propertyCode: item.property?.code || null,
@@ -72,7 +64,7 @@ function getResultProps(item: CombinedSearchResult) {
         icon,
         label: item.contactCode,
         subtitle: item.fullName,
-        path: `${routeMap.contact}/${item.contactCode}`,
+        path: paths.tenant(item.contactCode),
         state: {},
       }
     case 'parking-space':
@@ -81,7 +73,7 @@ function getResultProps(item: CombinedSearchResult) {
         label: item.rentalId,
         prefix: '[P]',
         subtitle: item.property?.name,
-        path: `${routeMap['parking-space']}/${item.rentalId}`,
+        path: paths.parkingSpace(item.rentalId),
         state: {
           buildingCode: item.building?.code || null,
           propertyCode: item.property?.code || null,
@@ -93,7 +85,7 @@ function getResultProps(item: CombinedSearchResult) {
         label: item.code,
         prefix: '[UE]',
         subtitle: item.estate,
-        path: `${routeMap['maintenance-unit']}/${item.code}`,
+        path: paths.maintenanceUnit(item.code),
         state: {},
       }
     default:

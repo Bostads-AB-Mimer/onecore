@@ -16,7 +16,6 @@ export type PropertyWithObject = Prisma.PropertyGetPayload<{
 const getPropertyByCode = async (
   code: string
 ): Promise<PropertyWithObject | null> => {
-  // Debug log
   try {
     const result = await prisma.property.findUnique({
       where: {

@@ -6867,6 +6867,8 @@ export interface components {
        * @enum {string}
        */
       type: "property";
+      /** @description Property code */
+      code: string;
       /** @description Name or designation of the property */
       name: string;
     };
@@ -6878,6 +6880,8 @@ export interface components {
        * @enum {string}
        */
       type: "building";
+      /** @description Building code */
+      code: string;
       /** @description Name of the building */
       name: string | null;
       property?: ({
@@ -6915,6 +6919,8 @@ export interface components {
        * @enum {string}
        */
       type: "property";
+      /** @description Property code */
+      code: string;
       /** @description Name or designation of the property */
       name: string;
     } | ({
@@ -6925,6 +6931,8 @@ export interface components {
        * @enum {string}
        */
       type: "building";
+      /** @description Building code */
+      code: string;
       /** @description Name of the building */
       name: string | null;
       property?: ({

@@ -3,12 +3,14 @@ import { z } from 'zod'
 export const PropertySearchResultSchema = z.object({
   id: z.string().describe('Unique identifier for the search result'),
   type: z.literal('property').describe('Indicates this is a property result'),
+  code: z.string().describe('Property code'),
   name: z.string().describe('Name or designation of the property'),
 })
 
 export const BuildingSearchResultSchema = z.object({
   id: z.string().describe('Unique identifier for the search result'),
   type: z.literal('building').describe('Indicates this is a building result'),
+  code: z.string().describe('Building code'),
   name: z.string().nullable().describe('Name of the building'),
   property: z
     .object({

@@ -9,10 +9,10 @@ import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 const BuildingPage = () => {
   const { buildingCode } = useParams()
   const { state } = useLocation()
-  const propertyId = state?.propertyId
+  const propertyCode = state?.propertyCode
 
   const { data, isLoading, error } = useBuildingDetails(
-    propertyId,
+    propertyCode,
     buildingCode
   )
 
