@@ -223,7 +223,7 @@ interface Applicant {
   nationalRegistrationNumber?: string | undefined
   contactCode: string
   applicationDate: Date
-  applicationType?: string | undefined //todo: "Additional" or "Replace". Should be an enum in the future
+  applicationType: 'Replace' | 'Additional'
   status: ApplicantStatus
   listingId: number
 }

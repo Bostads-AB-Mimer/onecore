@@ -318,7 +318,7 @@ export const routes = (router: KoaRouter) => {
     nationalRegistrationNumber: z.string().optional(),
     contactCode: z.string(),
     applicationDate: z.coerce.date(),
-    applicationType: z.string().optional(),
+    applicationType: z.enum(['Replace', 'Additional']),
     status: z.nativeEnum(ApplicantStatus),
     listingId: z.number(),
   })

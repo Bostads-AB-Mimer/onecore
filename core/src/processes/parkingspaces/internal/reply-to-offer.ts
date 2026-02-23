@@ -13,7 +13,7 @@ import {
 } from '../../../common/types'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
-import { makeProcessError } from '../utils'
+import { makeProcessError, validateRentalRules } from '../utils'
 import { AdapterResult } from '../../../adapters/types'
 import { createOfferForInternalParkingSpace } from './create-offer'
 import { calculateVacantFrom } from '../../../common/helpers'
@@ -25,6 +25,8 @@ type ReplyToOfferError =
   | ReplyToOfferErrorCodes.CreateLeaseFailure
   | ReplyToOfferErrorCodes.CloseOfferFailure
   | ReplyToOfferErrorCodes.Unknown
+  | ReplyToOfferErrorCodes.ApplicantNotTenant
+  | ReplyToOfferErrorCodes.NotEligibleToRent
 
 // PROCESS Part 3 - Accept Offer for Scored Parking Space
 export const acceptOffer = async (
@@ -103,6 +105,59 @@ export const acceptOffer = async (
         ReplyToOfferErrorCodes.NoListing,
         404,
         `The listing ${offer.listingId.toString()} does not exist or is no longer available.`
+      )
+    }
+
+    //Check if applicant is tenant
+    const leases = await leasingAdapter.getLeasesForContactCode(
+      offer.offeredApplicant.contactCode,
+      {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      }
+    )
+
+    if (leases.length < 1) {
+      return endFailingProcess(
+        log,
+        ReplyToOfferErrorCodes.ApplicantNotTenant,
+        403,
+        `Applicant ${offer.offeredApplicant.contactCode} is not a tenant`
+      )
+    }
+    //Check if applicant is eligible for renting in area with specific rental rule
+    const [validationResultResArea, validationResultProperty] =
+      await Promise.all([
+        leasingAdapter.validateResidentialAreaRentalRules(
+          offer.offeredApplicant.contactCode,
+          listing.rentalObject.residentialAreaCode
+        ),
+        leasingAdapter.validatePropertyRentalRules(
+          offer.offeredApplicant.contactCode,
+          offer.rentalObjectCode
+        ),
+      ]).then((results) =>
+        results.map((res) =>
+          validateRentalRules(res, offer.offeredApplicant.applicationType)
+        )
+      )
+
+    if (!validationResultResArea.ok) {
+      return endFailingProcess(
+        log,
+        validationResultResArea.err ?? ReplyToOfferErrorCodes.NotEligibleToRent,
+        400,
+        `Applicant ${offer.offeredApplicant.contactCode} is not eligible for renting due to Residential Area Rental Rules`
+      )
+    }
+    if (!validationResultProperty.ok) {
+      return endFailingProcess(
+        log,
+        validationResultProperty.err ??
+          ReplyToOfferErrorCodes.NotEligibleToRent,
+        400,
+        `Applicant ${offer.offeredApplicant.contactCode} is not eligible for renting due to Property Rental Rules`
       )
     }
 
