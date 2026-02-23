@@ -123,53 +123,6 @@ const transformFromDbContact = (
   return contact
 }
 
-const getLeasesForContactCode = async (
-  contactCode: string,
-  options: GetLeasesOptions
-): Promise<AdapterResult<Array<Lease>, unknown>> => {
-  logger.info({ contactCode }, 'Getting leases for contact code from Xpand DB')
-  try {
-    const contact = await xpandDb
-      .from('cmctc')
-      .select('cmctc.keycmctc as contactKey')
-      .limit(1)
-      .where({
-        cmctckod: contactCode,
-      })
-      .limit(1)
-
-    //todo: assert actual string value, now undefined equals false and every other value true
-    if (contact != undefined) {
-      logger.info(
-        { contactCode },
-        'Getting leases for contact code from Xpand DB complete'
-      )
-
-      let leases = await getLeasesByContactKey(contact[0].contactKey)
-
-      leases = filterLeasesByOptions(leases, options)
-
-      if (options.includeContacts) {
-        for (const lease of leases) {
-          const tenants = await getContactsByLeaseId(lease.leaseId)
-          lease.tenants = tenants
-        }
-      }
-
-      return { ok: true, data: leases }
-    }
-
-    logger.info(
-      { contactCode },
-      'Getting leases for contact code from Xpand DB complete - no leases found'
-    )
-
-    return { ok: true, data: [] }
-  } catch (err) {
-    logger.error(err, 'tenantLeaseAdapter.getLeasesForContactCode')
-    return { ok: false, err }
-  }
-}
 const getResidentialAreaByRentalPropertyId = async (
   rentalPropertyId: string
 ): Promise<AdapterResult<{ code: any; caption: any } | undefined, unknown>> => {
@@ -535,36 +488,6 @@ const getLeaseIds = async (
   return rows.map((x) => x.leaseId)
 }
 
-const getLeasesByContactKey = async (keycmctc: string) => {
-  const rows = await xpandDb
-    .from('hyavk')
-    .select(
-      'hyobj.hyobjben as leaseId',
-      'hyhav.hyhavben as leaseType',
-      'hyobj.uppsagtav as noticeGivenBy',
-      'hyobj.avtalsdat as contractDate',
-      'hyobj.sistadeb as lastDebitDate',
-      'hyobj.godkdatum as approvalDate',
-      'hyobj.uppsdatum as noticeDate',
-      'hyobj.fdate as fromDate',
-      'hyobj.tdate as toDate',
-      'hyobj.uppstidg as noticeTimeTenant',
-      'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate'
-    )
-    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
-    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
-    .where({ keycmctc: keycmctc })
-
-  const leases: any[] = []
-  for (const row of rows) {
-    const lease = transformFromXPandDb.toLease(row, [], [])
-    leases.push(lease)
-  }
-
-  return leases
-}
-
 const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
@@ -622,7 +545,6 @@ const formatDate = (date: Date) => {
 }
 
 export {
-  getLeasesForContactCode,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactByPhoneNumber,
