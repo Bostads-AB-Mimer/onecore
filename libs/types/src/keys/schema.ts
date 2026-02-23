@@ -120,8 +120,8 @@ export const KeyNoteSchema = z.object({
 export const KeyBundleSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  keys: z.string(),
   description: z.string().nullable().optional(),
+  keyCount: z.number().optional(),
 })
 
 // Removed: KeyLoanMaintenanceKeysSchema - unified into KeyLoanSchema
@@ -355,13 +355,13 @@ export const UpdateKeyNoteRequestSchema = z.object({
 
 export const CreateKeyBundleRequestSchema = z.object({
   name: z.string(),
-  keys: z.string(),
+  keys: z.array(z.string()),
   description: z.string().nullable().optional(),
 })
 
 export const UpdateKeyBundleRequestSchema = z.object({
   name: z.string().optional(),
-  keys: z.string().optional(),
+  keys: z.array(z.string()).optional(),
   description: z.string().nullable().optional(),
 })
 

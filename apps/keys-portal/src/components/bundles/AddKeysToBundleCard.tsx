@@ -38,16 +38,13 @@ export function AddKeysToBundleCard({
 
   const handleAccept = async (selectedKeys: Key[]) => {
     try {
-      // Parse existing keys
-      const existingKeyIds = JSON.parse(bundle.keys) as string[]
-
-      // Add new keys
+      // Add new keys to existing ones
       const newKeyIds = selectedKeys.map((k) => k.id)
-      const updatedKeyIds = [...existingKeyIds, ...newKeyIds]
+      const updatedKeyIds = [...currentKeyIds, ...newKeyIds]
 
       // Update bundle via API
       await updateKeyBundle(bundle.id, {
-        keys: JSON.stringify(updatedKeyIds),
+        keys: updatedKeyIds,
       })
 
       toast({

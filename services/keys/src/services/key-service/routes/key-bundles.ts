@@ -328,26 +328,6 @@ export const routes = (router: KoaRouter) => {
       try {
         const payload: CreateKeyBundleRequest = ctx.request.body
 
-        // Validate the keys array format
-        try {
-          const keyIds = JSON.parse(payload.keys)
-          if (!Array.isArray(keyIds)) {
-            ctx.status = 400
-            ctx.body = {
-              reason: 'Keys must be a JSON array',
-              ...metadata,
-            }
-            return
-          }
-        } catch (_err) {
-          ctx.status = 400
-          ctx.body = {
-            reason: 'Invalid keys format. Must be a valid JSON array.',
-            ...metadata,
-          }
-          return
-        }
-
         const row = await keyBundlesAdapter.createKeyBundle(payload, db)
         ctx.status = 201
         ctx.body = { content: row satisfies KeyBundleResponse, ...metadata }
@@ -403,28 +383,6 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       try {
         const payload: UpdateKeyBundleRequest = ctx.request.body
-
-        // Validate the keys array format if provided
-        if (payload.keys) {
-          try {
-            const keyIds = JSON.parse(payload.keys)
-            if (!Array.isArray(keyIds)) {
-              ctx.status = 400
-              ctx.body = {
-                reason: 'Keys must be a JSON array',
-                ...metadata,
-              }
-              return
-            }
-          } catch (_err) {
-            ctx.status = 400
-            ctx.body = {
-              reason: 'Invalid keys format. Must be a valid JSON array.',
-              ...metadata,
-            }
-            return
-          }
-        }
 
         const row = await keyBundlesAdapter.updateKeyBundle(
           ctx.params.id,

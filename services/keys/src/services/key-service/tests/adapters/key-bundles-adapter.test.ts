@@ -9,7 +9,7 @@ import { withContext } from '../testUtils'
  *
  * These tests verify:
  * - CRUD operations on key_bundles table
- * - JSON array handling for keys field
+ * - Junction table (key_bundle_keys) handling for keys
  * - Complex getKeyBundleDetails query
  * - Search functionality
  *
@@ -18,31 +18,78 @@ import { withContext } from '../testUtils'
 
 describe('key-bundles-adapter', () => {
   describe('createKeyBundle', () => {
-    it('creates a key bundle in the database', () =>
+    it('creates a key bundle with keys in junction table', () =>
       withContext(async (ctx) => {
-        const bundleData = factory.keyBundle.build({
-          name: 'Main Building Bundle',
-          description: 'Keys for main entrance',
-          keys: JSON.stringify(['key-1', 'key-2', 'key-3']),
-        })
+        // Create real keys for FK constraints
+        const key1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 1' }),
+          ctx.db
+        )
+        const key2 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 2' }),
+          ctx.db
+        )
+        const key3 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 3' }),
+          ctx.db
+        )
 
         const bundle = await keyBundlesAdapter.createKeyBundle(
-          bundleData,
+          {
+            name: 'Main Building Bundle',
+            description: 'Keys for main entrance',
+            keys: [key1.id, key2.id, key3.id],
+          },
           ctx.db
         )
 
         expect(bundle.id).toBeDefined()
         expect(bundle.name).toBe('Main Building Bundle')
         expect(bundle.description).toBe('Keys for main entrance')
-        expect(bundle.keys).toBe(JSON.stringify(['key-1', 'key-2', 'key-3']))
+
+        // Verify keys are in junction table
+        const junctionRows = await ctx.db('key_bundle_keys').where({
+          keyBundleId: bundle.id,
+        })
+        expect(junctionRows).toHaveLength(3)
+      }))
+
+    it('deduplicates keys when creating', () =>
+      withContext(async (ctx) => {
+        const key1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 1' }),
+          ctx.db
+        )
+
+        const bundle = await keyBundlesAdapter.createKeyBundle(
+          {
+            name: 'Dedup Bundle',
+            keys: [key1.id, key1.id, key1.id],
+          },
+          ctx.db
+        )
+
+        const junctionRows = await ctx.db('key_bundle_keys').where({
+          keyBundleId: bundle.id,
+        })
+        expect(junctionRows).toHaveLength(1)
       }))
   })
 
   describe('getKeyBundleById', () => {
-    it('returns bundle when it exists', () =>
+    it('returns bundle with keyCount when it exists', () =>
       withContext(async (ctx) => {
+        const key1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 1' }),
+          ctx.db
+        )
+        const key2 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 2' }),
+          ctx.db
+        )
+
         const created = await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({ name: 'Test Bundle' }),
+          { name: 'Test Bundle', keys: [key1.id, key2.id] },
           ctx.db
         )
 
@@ -54,6 +101,7 @@ describe('key-bundles-adapter', () => {
         expect(bundle).toBeDefined()
         expect(bundle?.id).toBe(created.id)
         expect(bundle?.name).toBe('Test Bundle')
+        expect(bundle?.keyCount).toBe(2)
       }))
   })
 
@@ -61,15 +109,15 @@ describe('key-bundles-adapter', () => {
     it('returns all bundles ordered by name ascending', () =>
       withContext(async (ctx) => {
         await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({ name: 'Zebra Bundle' }),
+          { name: 'Zebra Bundle', keys: [] },
           ctx.db
         )
         await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({ name: 'Alpha Bundle' }),
+          { name: 'Alpha Bundle', keys: [] },
           ctx.db
         )
         await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({ name: 'Middle Bundle' }),
+          { name: 'Middle Bundle', keys: [] },
           ctx.db
         )
 
@@ -88,34 +136,36 @@ describe('key-bundles-adapter', () => {
   describe('getKeyBundlesByKeyId', () => {
     it('returns bundles containing specific key', () =>
       withContext(async (ctx) => {
-        const targetKeyId = 'target-key-123'
-
-        await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({
-            name: 'Bundle A',
-            keys: JSON.stringify([targetKeyId, 'other-key-1']),
-          }),
+        const targetKey = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Target Key' }),
+          ctx.db
+        )
+        const otherKey1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Other Key 1' }),
+          ctx.db
+        )
+        const otherKey2 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Other Key 2' }),
           ctx.db
         )
 
         await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({
-            name: 'Bundle B',
-            keys: JSON.stringify(['different-key']),
-          }),
+          { name: 'Bundle A', keys: [targetKey.id, otherKey1.id] },
           ctx.db
         )
 
         await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({
-            name: 'Bundle C',
-            keys: JSON.stringify(['another-key', targetKeyId]),
-          }),
+          { name: 'Bundle B', keys: [otherKey2.id] },
+          ctx.db
+        )
+
+        await keyBundlesAdapter.createKeyBundle(
+          { name: 'Bundle C', keys: [otherKey1.id, targetKey.id] },
           ctx.db
         )
 
         const bundles = await keyBundlesAdapter.getKeyBundlesByKeyId(
-          targetKeyId,
+          targetKey.id,
           ctx.db
         )
 
@@ -128,14 +178,27 @@ describe('key-bundles-adapter', () => {
   })
 
   describe('updateKeyBundle', () => {
-    it('updates bundle fields successfully', () =>
+    it('updates bundle fields and keys successfully', () =>
       withContext(async (ctx) => {
+        const key1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 1' }),
+          ctx.db
+        )
+        const key2 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 2' }),
+          ctx.db
+        )
+        const key3 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 3' }),
+          ctx.db
+        )
+
         const bundle = await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({
+          {
             name: 'Original Name',
             description: 'Original Description',
-            keys: JSON.stringify(['key-1']),
-          }),
+            keys: [key1.id],
+          },
           ctx.db
         )
 
@@ -144,7 +207,7 @@ describe('key-bundles-adapter', () => {
           {
             name: 'Updated Name',
             description: 'Updated Description',
-            keys: JSON.stringify(['key-1', 'key-2', 'key-3']),
+            keys: [key1.id, key2.id, key3.id],
           },
           ctx.db
         )
@@ -152,15 +215,49 @@ describe('key-bundles-adapter', () => {
         expect(updated).toBeDefined()
         expect(updated?.name).toBe('Updated Name')
         expect(updated?.description).toBe('Updated Description')
-        expect(updated?.keys).toBe(JSON.stringify(['key-1', 'key-2', 'key-3']))
+
+        // Verify junction table updated
+        const junctionRows = await ctx.db('key_bundle_keys').where({
+          keyBundleId: bundle.id,
+        })
+        expect(junctionRows).toHaveLength(3)
+      }))
+
+    it('allows clearing keys with empty array', () =>
+      withContext(async (ctx) => {
+        const key1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 1' }),
+          ctx.db
+        )
+
+        const bundle = await keyBundlesAdapter.createKeyBundle(
+          { name: 'Bundle', keys: [key1.id] },
+          ctx.db
+        )
+
+        await keyBundlesAdapter.updateKeyBundle(
+          bundle.id,
+          { keys: [] },
+          ctx.db
+        )
+
+        const junctionRows = await ctx.db('key_bundle_keys').where({
+          keyBundleId: bundle.id,
+        })
+        expect(junctionRows).toHaveLength(0)
       }))
   })
 
   describe('deleteKeyBundle', () => {
-    it('deletes bundle from database', () =>
+    it('deletes bundle and cascades to junction table', () =>
       withContext(async (ctx) => {
+        const key1 = await keysAdapter.createKey(
+          factory.key.build({ keyName: 'Key 1' }),
+          ctx.db
+        )
+
         const bundle = await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({ name: 'To Delete' }),
+          { name: 'To Delete', keys: [key1.id] },
           ctx.db
         )
 
@@ -170,6 +267,12 @@ describe('key-bundles-adapter', () => {
         )
 
         expect(deleted).toBe(1)
+
+        // Verify junction rows were cascaded
+        const junctionRows = await ctx.db('key_bundle_keys').where({
+          keyBundleId: bundle.id,
+        })
+        expect(junctionRows).toHaveLength(0)
       }))
   })
 
@@ -192,10 +295,10 @@ describe('key-bundles-adapter', () => {
 
         // Create bundle with these keys
         const bundle = await keyBundlesAdapter.createKeyBundle(
-          factory.keyBundle.build({
+          {
             name: 'Test Bundle',
-            keys: JSON.stringify([key1.id, key2.id, key3.id]),
-          }),
+            keys: [key1.id, key2.id, key3.id],
+          },
           ctx.db
         )
 

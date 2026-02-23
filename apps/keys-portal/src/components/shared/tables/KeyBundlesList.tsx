@@ -14,14 +14,6 @@ interface KeyBundlesListProps {
   bundles: KeyBundle[]
 }
 
-function getKeyCount(keysString: string) {
-  try {
-    const keys = JSON.parse(keysString)
-    return Array.isArray(keys) ? keys.length : 0
-  } catch {
-    return 0
-  }
-}
 
 /** Simple table for displaying a list of key bundles */
 export function KeyBundlesList({ bundles }: KeyBundlesListProps) {
@@ -48,7 +40,7 @@ export function KeyBundlesList({ bundles }: KeyBundlesListProps) {
             <TableCell className="font-medium">{bundle.name}</TableCell>
             <TableCellMuted>{bundle.description || '-'}</TableCellMuted>
             <TableCell>
-              <Badge variant="secondary">{getKeyCount(bundle.keys)}</Badge>
+              <Badge variant="secondary">{bundle.keyCount ?? 0}</Badge>
             </TableCell>
           </TableRow>
         ))}
