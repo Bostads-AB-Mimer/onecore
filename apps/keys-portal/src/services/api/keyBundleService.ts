@@ -160,7 +160,7 @@ export async function getKeyBundleDetails(
     throw new Error('Failed to fetch key bundle with loan status')
   }
 
-  return (data as KeyBundleDetailsResponse) ?? null
+  return (data?.content as KeyBundleDetailsResponse) ?? null
 }
 
 /**
