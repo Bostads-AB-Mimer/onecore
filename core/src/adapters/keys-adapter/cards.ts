@@ -1,6 +1,14 @@
 import { logger } from '@onecore/utilities'
+import { z } from 'zod'
 import { client, mapFetchError, ok, fail } from './helpers'
-import { Card, CardDetails, CommonErr, AdapterResult } from './types'
+import {
+  Card,
+  CardDetails,
+  CardSchema,
+  CardDetailsSchema,
+  CommonErr,
+  AdapterResult,
+} from './types'
 
 export const CardsApi = {
   getById: async (
@@ -11,7 +19,7 @@ export const CardsApi = {
         params: { path: { cardId } },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as Card)
+      return ok(CardSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /cards/{cardId} failed')
       return fail('unknown')
@@ -33,7 +41,7 @@ export const CardsApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as CardDetails[])
+      return ok(z.array(CardDetailsSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },

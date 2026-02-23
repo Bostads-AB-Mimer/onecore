@@ -1,10 +1,13 @@
 import { logger } from '@onecore/utilities'
-import { client, mapFetchError, ok, fail } from './helpers'
+import { z } from 'zod'
+import { client, mapFetchError, ok, fail, parsePaginated } from './helpers'
 import {
   KeyBundle,
   KeyBundleDetailsResponse,
   BundleWithLoanedKeysInfo,
+  KeyBundleSchema,
   KeyBundleDetailsResponseSchema,
+  BundleWithLoanedKeysInfoSchema,
   PaginatedResponse,
   CommonErr,
   AdapterResult,
@@ -19,7 +22,7 @@ export const KeyBundlesApi = {
         params: { query: query as any },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data as unknown as PaginatedResponse<KeyBundle>)
+      return ok(parsePaginated(KeyBundleSchema, data))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-bundles failed')
       return fail('unknown')
@@ -39,7 +42,7 @@ export const KeyBundlesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data as unknown as PaginatedResponse<KeyBundle>)
+      return ok(parsePaginated(KeyBundleSchema, data))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-bundles/search failed')
       return fail('unknown')
@@ -57,7 +60,7 @@ export const KeyBundlesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyBundle[])
+      return ok(z.array(KeyBundleSchema).parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-bundles/by-key failed')
       return fail('unknown')
@@ -75,7 +78,7 @@ export const KeyBundlesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyBundle)
+      return ok(KeyBundleSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-bundles/{id} failed')
       return fail('unknown')
@@ -92,7 +95,7 @@ export const KeyBundlesApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyBundle)
+      return ok(KeyBundleSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: POST /key-bundles failed')
       return fail('unknown')
@@ -117,7 +120,7 @@ export const KeyBundlesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyBundle)
+      return ok(KeyBundleSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: PUT /key-bundles/{id} failed')
       return fail('unknown')
@@ -156,7 +159,7 @@ export const KeyBundlesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(KeyBundleDetailsResponseSchema.parse(data))
+      return ok(KeyBundleDetailsResponseSchema.parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
@@ -177,7 +180,7 @@ export const KeyBundlesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as BundleWithLoanedKeysInfo[])
+      return ok(z.array(BundleWithLoanedKeysInfoSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },

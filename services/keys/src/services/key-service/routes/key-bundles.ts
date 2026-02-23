@@ -494,7 +494,10 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/KeyBundleDetailsResponse'
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KeyBundleDetailsResponse'
    *       404:
    *         description: Key bundle not found
    *       500:

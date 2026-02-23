@@ -41,7 +41,12 @@ export const {
   ReceiptSchema,
   KeyEventSchema,
   SignatureSchema,
+  KeyBundleSchema,
   KeyBundleDetailsResponseSchema,
+  BundleWithLoanedKeysInfoSchema,
+  KeyNoteSchema,
+  CardSchema,
+  CardDetailsSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
 } = keys

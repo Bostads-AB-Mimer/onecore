@@ -475,7 +475,9 @@ export interface paths {
         /** @description Bundle information and keys with optional related data */
         200: {
           content: {
-            'application/json': components['schemas']['KeyBundleDetailsResponse']
+            'application/json': {
+              content?: components['schemas']['KeyBundleDetailsResponse']
+            }
           }
         }
         /** @description Key bundle not found */
@@ -2535,7 +2537,7 @@ export interface components {
             /** @enum {string} */
             loanType: 'TENANT' | 'MAINTENANCE'
             contact?: string
-            contact2?: string
+            contact2?: string | null
             contactPerson?: string | null
             notes?: string | null
             /** Format: date-time */
@@ -2555,7 +2557,7 @@ export interface components {
     }
     CreateKeyRequest: {
       keyName: string
-      keySequenceNumber?: number
+      keySequenceNumber?: number | null
       flexNumber?: number | null
       rentalObjectCode?: string | null
       /** @enum {string} */
@@ -2577,7 +2579,7 @@ export interface components {
     }
     UpdateKeyRequest: {
       keyName?: string
-      keySequenceNumber?: number
+      keySequenceNumber?: number | null
       flexNumber?: number | null
       rentalObjectCode?: string | null
       /** @enum {string} */
@@ -2622,7 +2624,7 @@ export interface components {
       /** Format: uuid */
       id: string
       keyName: string
-      keySequenceNumber?: number
+      keySequenceNumber?: number | null
       flexNumber?: number | null
       rentalObjectCode?: string | null
       /** @enum {string} */
@@ -2676,7 +2678,7 @@ export interface components {
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
       contact?: string
-      contact2?: string
+      contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
       /** Format: date-time */
@@ -2696,7 +2698,7 @@ export interface components {
       /** Format: uuid */
       id: string
       keyName: string
-      keySequenceNumber?: number
+      keySequenceNumber?: number | null
       flexNumber?: number | null
       rentalObjectCode?: string | null
       /** @enum {string} */
@@ -2750,7 +2752,7 @@ export interface components {
             /** @enum {string} */
             loanType: 'TENANT' | 'MAINTENANCE'
             contact?: string
-            contact2?: string
+            contact2?: string | null
             contactPerson?: string | null
             notes?: string | null
             /** Format: date-time */
@@ -2840,7 +2842,7 @@ export interface components {
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
       contact?: string
-      contact2?: string
+      contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
       /** Format: date-time */
@@ -2857,7 +2859,7 @@ export interface components {
       /** @enum {string} */
       loanType?: 'TENANT' | 'MAINTENANCE'
       contact?: string
-      contact2?: string
+      contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
       /** Format: date-time */

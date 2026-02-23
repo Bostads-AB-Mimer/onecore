@@ -1,6 +1,7 @@
 import { logger } from '@onecore/utilities'
+import { z } from 'zod'
 import { client, mapFetchError, ok, fail } from './helpers'
-import { KeyNote, CommonErr, AdapterResult } from './types'
+import { KeyNote, KeyNoteSchema, CommonErr, AdapterResult } from './types'
 
 export const KeyNotesApi = {
   getByRentalObjectCode: async (
@@ -14,7 +15,7 @@ export const KeyNotesApi = {
         }
       )
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyNote[])
+      return ok(z.array(KeyNoteSchema).parse(data.content))
     } catch (e) {
       logger.error(
         { err: e },
@@ -32,7 +33,7 @@ export const KeyNotesApi = {
         params: { path: { id } },
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyNote)
+      return ok(KeyNoteSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: GET /key-notes/{id} failed')
       return fail('unknown')
@@ -47,7 +48,7 @@ export const KeyNotesApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyNote)
+      return ok(KeyNoteSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: POST /key-notes failed')
       return fail('unknown')
@@ -66,7 +67,7 @@ export const KeyNotesApi = {
         body: payload as any,
       })
       if (error || !response.ok) return fail(mapFetchError(response))
-      return ok(data.content as KeyNote)
+      return ok(KeyNoteSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: PUT /key-notes/{id} failed')
       return fail('unknown')

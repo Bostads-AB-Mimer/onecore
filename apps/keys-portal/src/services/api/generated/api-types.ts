@@ -476,7 +476,9 @@ export interface paths {
         /** @description Bundle information and keys with optional related data */
         200: {
           content: {
-            "application/json": components["schemas"]["KeyBundleDetailsResponse"];
+            "application/json": {
+              content?: components["schemas"]["KeyBundleDetailsResponse"];
+            };
           };
         };
         /** @description Key bundle not found */
