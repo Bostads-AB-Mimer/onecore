@@ -11,20 +11,12 @@ import config from '../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
-type GetLeaseOptions = z.infer<typeof leasing.v1.GetLeaseOptionsSchema>
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
 
-export const getLease = async (
-  leaseId: string,
-  options: GetLeaseOptions
-): Promise<Lease | null> => {
-  const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
-  })
-
+export const getLease = async (leaseId: string): Promise<Lease | null> => {
   const leaseResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}`
   )
 
   if (leaseResponse.status === 404) {
@@ -38,9 +30,7 @@ export const getLeasesByContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
-  const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
-  })
+  const queryParams = new URLSearchParams()
 
   if (options.status) {
     queryParams.set('status', options.status.join(','))
@@ -57,9 +47,7 @@ export const getLeasesByRentalObjectCode = async (
   rentalObjectCode: string,
   options: GetLeasesOptions
 ): Promise<Lease[]> => {
-  const queryParams = new URLSearchParams({
-    includeContacts: options.includeContacts.toString(),
-  })
+  const queryParams = new URLSearchParams()
 
   if (options.status) {
     queryParams.set('status', options.status.join(','))

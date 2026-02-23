@@ -7,7 +7,11 @@ import {
 import { leasing, schemas } from '@onecore/types'
 import z from 'zod'
 
-import { mapLease } from './schemas/lease'
+import {
+  GetLeaseOptionsSchema,
+  GetLeasesOptionsSchema,
+  mapLease,
+} from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
@@ -435,7 +439,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+    const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -447,16 +451,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // TODO(BREAKING): includeContacts no longer defaults to true
     const responseData = await leasingAdapter.getLeasesByContactCode(
       ctx.params.contactCode,
       queryParams.data
     )
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
+    ctx.body = makeSuccessResponseBody(responseData, metadata)
   })
 
   /**
@@ -489,7 +489,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = leasing.v1.GetLeaseOptionsSchema.safeParse(ctx.query)
+    const queryParams = GetLeaseOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -501,11 +501,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // TODO(BREAKING): includeContacts no longer defaults to true
-    const responseData = await leasingAdapter.getLease(
-      ctx.params.id,
-      queryParams.data
-    )
+    const responseData = await leasingAdapter.getLease(ctx.params.id)
 
     ctx.body = {
       content: responseData,
@@ -591,9 +587,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
-        includeContacts: false,
-      })
+      const lease = await leasingAdapter.getLease(ctx.params.leaseId)
       if (!lease) {
         ctx.status = 404
         ctx.body = {
@@ -680,9 +674,7 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
-          includeContacts: false,
-        })
+        const lease = await leasingAdapter.getLease(ctx.params.leaseId)
 
         if (!lease) {
           ctx.status = 404
@@ -818,9 +810,7 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(leasing.v1.CancelLeaseHomeInsuranceRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const lease = await leasingAdapter.getLease(ctx.params.leaseId, {
-        includeContacts: false,
-      })
+      const lease = await leasingAdapter.getLease(ctx.params.leaseId)
 
       if (!lease) {
         ctx.status = 404

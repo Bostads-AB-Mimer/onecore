@@ -291,7 +291,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/for/nationalRegistrationNumber/{pnr}:
+   * /leases/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get leases by contact code
    *     description: Retrieve leases associated with a contact by contact code.
@@ -308,11 +308,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The status of the leases to include.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -330,7 +325,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['status', 'includeContacts'])
+    const metadata = generateRouteMetadata(ctx, ['status'])
 
     const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 

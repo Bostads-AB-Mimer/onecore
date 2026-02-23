@@ -1,4 +1,4 @@
-import { Lease as OnecoreTypesLease } from '@onecore/types'
+import { leasing, Lease as OnecoreTypesLease } from '@onecore/types'
 import { z } from 'zod'
 
 /**
@@ -155,3 +155,16 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     tenants: lease.tenants,
   }
 }
+
+const IncludeContactsQueryParamSchema = z.object({
+  includeContacts: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
+export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
+  IncludeContactsQueryParamSchema
+)
+
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
