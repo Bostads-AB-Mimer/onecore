@@ -1114,7 +1114,6 @@ const quote = (s: string | number) => `"${s}"`
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {
-  // console.log('hit', JSON.stringify(invoice, null, 2))
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
 
   const nodes = invoice.invoiceRows.map(
@@ -1126,7 +1125,7 @@ export const submitMiscellaneousInvoice = async (
           product: {
             code: ${quote(ir.articleId)}
           }
-          text: ${quote(ir.articleName)}
+          text: ${quote(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
           quantity: 1
           unitPrice: ${ir.price}
           glObject1: {
@@ -1190,7 +1189,7 @@ export const submitMiscellaneousInvoice = async (
 }
 
 interface InvoiceRow {
-  text: string
+  text?: string
   price: number
   articleName: string
   articleId: string

@@ -20,6 +20,7 @@ export interface InvoiceRow {
   price: number
   articleName: string
   articleId: string
+  text?: string
 }
 
 export interface MiscellaneousInvoicePayload {
