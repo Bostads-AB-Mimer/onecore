@@ -187,12 +187,10 @@ export const routes = (router: KoaRouter) => {
   */
   router.get('(.*)/invoices/miscellaneous/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const year = (ctx.request.query.year ?? new Date().getFullYear()).toString()
 
     try {
       const result = await getPropertyCodeAndCostCentreForLease(
-        ctx.params.rentalId,
-        year
+        ctx.params.rentalId
       )
 
       ctx.status = 200

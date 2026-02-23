@@ -84,7 +84,7 @@ export async function getMiscellaneousInvoiceDataForLease(
 ): Promise<
   AdapterResult<{ costCentre: string; propertyCode: string }, 'unknown'>
 > {
-  const url = `${config.economyService.url}/invoices/miscellaneous/${rentalId}?year=${year ?? new Date().getFullYear()}`
+  const url = `${config.economyService.url}/invoices/miscellaneous/${rentalId}`
   const response = await axios.get(url)
   if (response.status === 200) {
     return { ok: true, data: response.data.content }

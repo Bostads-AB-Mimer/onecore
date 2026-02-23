@@ -418,8 +418,7 @@ export const getContacts = async (
 }
 
 export const getPropertyCodeAndCostCentreForLease = async (
-  rentalId: string,
-  year: string
+  rentalId: string
 ): Promise<{ costCentre: string; propertyCode: string } | null> => {
   const queries = [
     // First try: join via babyg when keyobjbyg exists
@@ -429,8 +428,9 @@ export const getPropertyCodeAndCostCentreForLease = async (
       .innerJoin('babyg', 'babyg.keycmobj', 'babuf.keyobjbyg')
       .innerJoin('repsk', 'repsk.keycode', 'babyg.keybabyg')
       .where('babuf.hyresid', rentalId)
-      .andWhere('repsk.year', year)
-      .whereNotNull('babuf.keyobjbyg'),
+      .whereNotNull('babuf.keyobjbyg')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
 
     // Second try: join via keyobjyta when keyobjbyg is null
     db
@@ -438,9 +438,10 @@ export const getPropertyCodeAndCostCentreForLease = async (
       .from('babuf')
       .innerJoin('repsk', 'repsk.keycode', 'babuf.keyobjyta')
       .where('babuf.hyresid', rentalId)
-      .andWhere('repsk.year', year)
       .whereNull('babuf.keyobjbyg')
-      .whereNotNull('babuf.keyobjyta'),
+      .whereNotNull('babuf.keyobjyta')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
 
     // Third try: join via fstcode as fallback
     db
@@ -448,8 +449,9 @@ export const getPropertyCodeAndCostCentreForLease = async (
       .from('babuf')
       .innerJoin('repsk', 'repsk.p3', 'babuf.fstcode')
       .where('babuf.hyresid', rentalId)
-      .andWhere('repsk.year', year)
-      .whereNotNull('babuf.fstcode'),
+      .whereNotNull('babuf.fstcode')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
   ]
 
   for (const query of queries) {
