@@ -88,7 +88,7 @@ export async function createKeyBundle(
       )
     }
 
-    return row
+    return { ...row, keyCount: keyIds?.length ? new Set(keyIds).size : 0 }
   })
 }
 
@@ -100,12 +100,8 @@ export async function updateKeyBundle(
   const { keys: keyIds, ...bundleData } = keyBundleData
 
   return dbConnection.transaction(async (trx) => {
-    let row: KeyBundle | undefined
-
     if (Object.keys(bundleData).length > 0) {
-      ;[row] = await trx(TABLE).where({ id }).update(bundleData).returning('*')
-    } else {
-      row = await trx(TABLE).where({ id }).first()
+      await trx(TABLE).where({ id }).update(bundleData)
     }
 
     if (keyIds !== undefined) {
@@ -118,7 +114,10 @@ export async function updateKeyBundle(
       }
     }
 
-    return row
+    return await withKeyCount(
+      trx(TABLE).select(`${TABLE}.*`).where({ id }),
+      trx
+    ).first()
   })
 }
 
