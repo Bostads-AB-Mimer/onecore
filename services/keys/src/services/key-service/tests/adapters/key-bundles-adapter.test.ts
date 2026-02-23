@@ -235,11 +235,7 @@ describe('key-bundles-adapter', () => {
           ctx.db
         )
 
-        await keyBundlesAdapter.updateKeyBundle(
-          bundle.id,
-          { keys: [] },
-          ctx.db
-        )
+        await keyBundlesAdapter.updateKeyBundle(bundle.id, { keys: [] }, ctx.db)
 
         const junctionRows = await ctx.db('key_bundle_keys').where({
           keyBundleId: bundle.id,

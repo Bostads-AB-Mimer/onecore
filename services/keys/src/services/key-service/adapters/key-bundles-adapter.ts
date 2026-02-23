@@ -56,7 +56,7 @@ export async function getKeyBundleById(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyBundle | undefined> {
   return await withKeyCount(
-    dbConnection(TABLE).where({ id }),
+    dbConnection(TABLE).select(`${TABLE}.*`).where({ id }),
     dbConnection
   ).first()
 }
@@ -100,10 +100,13 @@ export async function updateKeyBundle(
   const { keys: keyIds, ...bundleData } = keyBundleData
 
   return dbConnection.transaction(async (trx) => {
-    const [row] = await trx(TABLE)
-      .where({ id })
-      .update(bundleData)
-      .returning('*')
+    let row: KeyBundle | undefined
+
+    if (Object.keys(bundleData).length > 0) {
+      ;[row] = await trx(TABLE).where({ id }).update(bundleData).returning('*')
+    } else {
+      row = await trx(TABLE).where({ id }).first()
+    }
 
     if (keyIds !== undefined) {
       await trx(JUNCTION_TABLE).where({ keyBundleId: id }).del()

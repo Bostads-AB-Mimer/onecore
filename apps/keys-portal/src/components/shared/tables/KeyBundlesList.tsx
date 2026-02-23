@@ -14,7 +14,6 @@ interface KeyBundlesListProps {
   bundles: KeyBundle[]
 }
 
-
 /** Simple table for displaying a list of key bundles */
 export function KeyBundlesList({ bundles }: KeyBundlesListProps) {
   if (bundles.length === 0) {
