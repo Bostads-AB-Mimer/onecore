@@ -117,7 +117,7 @@ export async function create(
           name: applicant.Name,
           listingId: applicant.ListingId,
           status: applicant.Status,
-          applicationType: applicant.ApplicationType ?? undefined,
+          applicationType: applicant.ApplicationType,
           applicationDate: applicant.ApplicationDate,
           contactCode: applicant.ContactCode,
           nationalRegistrationNumber: applicant.NationalRegistrationNumber,
@@ -199,7 +199,11 @@ export async function getOffersForContact(
         name: ApplicantName,
         nationalRegistrationNumber: ApplicantNationalRegistrationNumber,
         status: ApplicantStatus,
-        applicationType: ApplicantApplicationType ?? undefined,
+        applicationType:
+          ApplicantApplicationType === 'Replace' ||
+          ApplicantApplicationType === 'Additional'
+            ? ApplicantApplicationType
+            : 'Replace',
       },
       rentalObjectCode: RentalObjectCode,
     }
@@ -496,7 +500,7 @@ export async function getActiveOfferByListingId(
           name: offeredApplicant.Name,
           listingId: offeredApplicant.ListingId,
           status: offeredApplicant.Status,
-          applicationType: offeredApplicant.ApplicationType ?? undefined,
+          applicationType: offeredApplicant.ApplicationType,
           applicationDate: new Date(offeredApplicant.ApplicationDate),
           contactCode: offeredApplicant.ContactCode,
           nationalRegistrationNumber:
@@ -602,7 +606,7 @@ const transformOfferWithOfferApplicantsQueryResult = (
       name: offeredApplicant.Name,
       listingId: offeredApplicant.ListingId,
       status: offeredApplicant.Status,
-      applicationType: offeredApplicant.ApplicationType ?? undefined,
+      applicationType: offeredApplicant.ApplicationType,
       applicationDate: new Date(offeredApplicant.ApplicationDate),
       contactCode: offeredApplicant.ContactCode,
       nationalRegistrationNumber: offeredApplicant.NationalRegistrationNumber,
@@ -638,7 +642,7 @@ const transformToDetailedOfferFromDbOffer = (
     ...offer,
     offeredApplicant: {
       ...dbUtils.pascalToCamel(a),
-      applicationType: a.ApplicationType || undefined,
+      applicationType: a.ApplicationType,
     },
   }
 }
