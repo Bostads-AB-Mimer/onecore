@@ -115,12 +115,9 @@ export function CommandPalette() {
     }
   }, [isOpen])
 
-  const handleSelect = (item: CombinedSearchResult) => {
-    const props = getResultProps(item)
-    if (props) {
-      navigate(props.path, { state: props.state })
-      close()
-    }
+  const handleSelect = (path: string, state: Record<string, unknown>) => {
+    navigate(path, { state })
+    close()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -134,10 +131,12 @@ export function CommandPalette() {
         e.preventDefault()
         setSelectedIndex((i) => (i > 0 ? i - 1 : searchQuery.data.length - 1))
         break
-      case 'Enter':
-        if (searchQuery.data[selectedIndex]) {
-          handleSelect(searchQuery.data[selectedIndex])
+      case 'Enter': {
+        const props = getResultProps(searchQuery.data[selectedIndex])
+        if (props) {
+          handleSelect(props.path, props.state)
         }
+      }
         break
       case 'Escape':
         close()
@@ -208,7 +207,7 @@ export function CommandPalette() {
                         prefix={props.prefix}
                         subtitle={props.subtitle}
                         isSelected={selectedIndex === index}
-                        onClick={() => handleSelect(item)}
+                        onClick={() => handleSelect(props.path, props.state)}
                       />
                     )
                   })}
