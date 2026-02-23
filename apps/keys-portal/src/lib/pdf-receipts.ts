@@ -10,6 +10,7 @@ import type {
 } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
+import { sortKeys } from '@/utils/sortKeys'
 
 import { registerCustomFonts, FONT_BISON, FONT_GRAPHIK } from './pdf-fonts'
 import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
@@ -159,19 +160,29 @@ const addTenantInfo = async (
   doc.text(leaseIdLines, rightCol, rightY)
   rightY += Array.isArray(leaseIdLines) ? leaseIdLines.length * 5 : 5
 
-  // Fetch and display address
-  try {
-    const address = await rentalObjectSearchService.getAddressByRentalId(
-      lease.rentalPropertyId
-    )
-    if (address && address !== 'Okänd adress') {
-      doc.text(`Adress: ${address}`, rightCol, rightY)
-    } else {
-      doc.text(`Adress: -`, rightCol, rightY)
-    }
-  } catch {
-    doc.text(`Adress: -`, rightCol, rightY)
+  // Display address from lease data, with API search fallback
+  let addressStr: string | null = null
+  const addr = lease.rentalProperty?.address
+  if (addr) {
+    const street = [addr.street, addr.number].filter(Boolean).join(' ')
+    const city = [addr.postalCode, addr.city].filter(Boolean).join(' ')
+    addressStr = [street, city].filter(Boolean).join(', ') || null
   }
+
+  if (!addressStr) {
+    try {
+      const fetched = await rentalObjectSearchService.getAddressByRentalId(
+        lease.rentalPropertyId
+      )
+      if (fetched && fetched !== 'Okänd adress') {
+        addressStr = fetched
+      }
+    } catch {
+      // ignore - will show "-"
+    }
+  }
+
+  doc.text(`Adress: ${addressStr || '-'}`, rightCol, rightY)
   rightY += 5
 
   return Math.max(leftY, rightY) + 10
@@ -716,8 +727,8 @@ const addReturnConfirmation = (
   doc.setFontSize(FONT_SIZE.BODY)
 
   const confirmText = hasMissingItems
-    ? 'Ovanstående nycklar och droppar har återlämnats och kontrollerats av fastighetspersonal. Observera att vissa nycklar eller droppar saknas (se lista ovan).'
-    : 'Ovanstående nycklar har återlämnats och kontrollerats av fastighetspersonal.'
+    ? 'Ovanstående nycklar och droppar har återlämnats och kontrollerats av Mimers personal. Observera att vissa nycklar eller droppar saknas (se lista ovan).'
+    : 'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.'
 
   const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
   lines.forEach((line: string) => {
@@ -828,8 +839,8 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   y = addMeta(doc, y, 'loan')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
 
-  // Combined keys and cards table
-  y = renderItemsTable(doc, data.keys, data.cards, y, 55)
+  // Combined keys and cards table (sorted by type, system, name, flex, sequence)
+  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y, 55)
 
   y = addLoanConfirmation(doc, y, data.tenants)
   addComment(doc, y, data.comment)
@@ -857,13 +868,14 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
   const hasMissingItems = hasMissingKeys || hasMissingCards
 
   // Combined keys and cards table (returned, missing, disposed sections)
+  // Sort each category for consistent löpnummer ordering
   y = renderReturnItemsTable(
     doc,
-    data.keys,
+    sortKeys(data.keys),
     data.cards,
-    data.missingKeys,
+    data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
-    data.disposedKeys,
+    data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
     y,
     35
   )
@@ -895,8 +907,8 @@ async function buildMaintenanceLoanDoc(
   y = addMeta(doc, y, 'loan')
   y = addMaintenanceInfo(doc, data, y)
 
-  // Combined keys and cards table
-  y = renderItemsTable(doc, data.keys, data.cards, y, 55)
+  // Combined keys and cards table (sorted)
+  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y, 55)
 
   y = addMaintenanceLoanConfirmation(doc, y)
   addComment(doc, y, data.description ?? undefined)
@@ -926,14 +938,14 @@ async function buildMaintenanceReturnDoc(
   const hasMissingCards = data.missingCards && data.missingCards.length > 0
   const hasMissingItems = hasMissingKeys || hasMissingCards
 
-  // Combined keys and cards table (returned, missing, disposed sections)
+  // Combined keys and cards table (returned, missing, disposed sections, sorted)
   y = renderReturnItemsTable(
     doc,
-    data.keys,
+    sortKeys(data.keys),
     data.cards,
-    data.missingKeys,
+    data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
-    data.disposedKeys,
+    data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
     y,
     35
   )
