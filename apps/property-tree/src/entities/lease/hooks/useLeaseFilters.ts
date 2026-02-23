@@ -8,7 +8,7 @@ import {
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
 import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
 
-import { useLeaseSearch } from '../../../entities/lease/hooks/useLeaseSearch'
+import { useLeaseSearch } from './useLeaseSearch'
 
 const PAGE_SIZE = 50
 

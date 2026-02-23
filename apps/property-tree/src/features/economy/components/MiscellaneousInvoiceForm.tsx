@@ -32,6 +32,7 @@ import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { ArticleSection } from './ArticleSection'
 import { LeaseContractSection } from './LeaseContractSection'
 import { TenantSearchSection } from './TenantSearchSection'
+import { useRentalProperties } from '@/entities/rental-property'
 
 interface FormErrors {
   contactCode?: string
@@ -77,6 +78,10 @@ export function MiscellaneousInvoiceForm() {
   const [selectedTenant, setSelectedTenant] =
     useState<TenantSearchResult | null>(null)
   const { data: leases } = useLeasesByContactCode(selectedTenant?.contactCode)
+
+  const { data: rentalProperties } = useRentalProperties(
+    leases?.map((l) => l.rentalPropertyId) || []
+  )
 
   const [leaseId, setLeaseId] = useState<string | null>(null)
   const [selectedLease, setSelectedLease] = useState<CoreLease | null>(null)
@@ -285,6 +290,7 @@ export function MiscellaneousInvoiceForm() {
             <h3 className="font-medium">Kontraktsinformation</h3>
             <LeaseContractSection
               leaseContracts={leases ?? []}
+              rentalProperties={rentalProperties}
               selectedLease={leaseId}
               costCentre={costCentre}
               propertyCode={propertyCode}
