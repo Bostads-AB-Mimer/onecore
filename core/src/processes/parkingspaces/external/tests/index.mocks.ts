@@ -110,12 +110,6 @@ export const failedConsumerReport: ConsumerReport = {
 
 export const mockedLease: Lease = {
   leaseId: '123-456-789/0',
-  address: {
-    street: 'Gatustigen',
-    number: '123',
-    city: 'Västerås',
-    postalCode: '12345',
-  },
   approvalDate: undefined,
   contractDate: undefined,
   lastDebitDate: undefined,
@@ -126,24 +120,13 @@ export const mockedLease: Lease = {
   noticeGivenBy: 'tenant',
   noticeTimeTenant: '',
   preferredMoveOutDate: undefined,
-  rentalProperty: undefined,
   rentalPropertyId: '123-456-789',
-  rentInfo: {
-    currentRent: {
-      currentRent: 123,
-      additionalChargeAmount: undefined,
-      additionalChargeDescription: undefined,
-      rentEndDate: undefined,
-      rentStartDate: undefined,
-      vat: 0,
-    },
-    futureRents: undefined,
-  },
   status: LeaseStatus.Current,
   tenantContactIds: ['P12345'],
   tenants: undefined,
   terminationDate: undefined,
   type: '',
+  rentRows: [],
 }
 
 export const mockedPaidInvoice: Invoice = {

@@ -195,178 +195,54 @@ export interface paths {
   };
   "security": {
   };
-  "/leases/search": {
+  "/leases/by-lease-id/{leaseId}/preliminary-termination": {
     /**
-     * Search and filter leases
-     * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+     * Preliminary termination of a lease
+     * @description Initiates a preliminary termination for the specified lease.
      */
-    get: {
+    post: {
       parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string;
-          /** @description Object types (e.g., residence, parking)) */
-          objectType?: string[];
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string;
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string;
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string;
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string;
-          /** @description Property/estate names */
-          property?: string[];
-          /** @description Building codes */
-          buildingCodes?: string[];
-          /** @description Area codes (Område) */
-          areaCodes?: string[];
-          /** @description District names */
-          districtNames?: string[];
-          /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[];
-          /** @description Page number */
-          page?: number;
-          /** @description Items per page */
-          limit?: number;
-          /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
-          /** @description Sort direction */
-          sortOrder?: "asc" | "desc";
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved lease search results with pagination */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["LeaseSearchResult"][];
-              _meta?: components["schemas"]["PaginationMeta"];
-              _links?: components["schemas"]["PaginationLinks"][];
-            };
-          };
-        };
-        /** @description Invalid query parameters */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/building-managers": {
-    /**
-     * Get all building managers
-     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
-     */
-    get: {
-      responses: {
-        /** @description List of building managers */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                  code?: string;
-                  name?: string;
-                  district?: string;
-                }[];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/by-rental-property-id/{rentalPropertyId}": {
-    /**
-     * Get leases with related entities for a specific rental property id
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean;
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean;
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean;
-          /** @description Whether to include rent information in the response */
-          includeRentInfo?: boolean;
-        };
         path: {
-          /** @description Rental roperty id of the building/residence to fetch leases for. */
-          rentalPropertyId: string;
+          /** @description The unique identifier of the lease to terminate. */
+          leaseId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description The contact code of the tenant */
+            contactCode: string;
+            /**
+             * Format: date-time
+             * @description The last debit date for the lease
+             */
+            lastDebitDate: string;
+            /**
+             * Format: date-time
+             * @description The desired move-out date
+             */
+            desiredMoveDate: string;
+          };
         };
       };
       responses: {
-        /** @description Successful response with leases and related entities */
+        /** @description Preliminary termination initiated successfully */
         200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-            };
-          };
-        };
-        /** @description Invalid query parameters */
-        400: {
           content: {
             "application/json": Record<string, never>;
           };
         };
-      };
-    };
-  };
-  "/leases/by-pnr/{pnr}": {
-    /**
-     * Get leases with related entities for a specific Personal Number (PNR)
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string;
+        /** @description Invalid request body or tenant missing valid email address */
+        400: {
+          content: never;
         };
-      };
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            "application/json": Record<string, never>[];
-          };
+        /** @description Lease not found */
+        404: {
+          content: never;
         };
-      };
-    };
-  };
-  "/leases/by-contact-code/{contactCode}": {
-    /**
-     * Get leases with related entities for a specific contact code
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Contact code of the individual to fetch leases for. */
-          contactCode: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["Lease"][];
-            };
-          };
+        /** @description Internal server error. Failed to terminate lease. */
+        500: {
+          content: never;
         };
       };
     };
@@ -791,30 +667,6 @@ export interface paths {
         200: {
           content: {
             "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
-  };
-  "/leases/{id}": {
-    /**
-     * Get lease by ID
-     * @description Retrieves lease details along with related entities based on the provided ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease to retrieve. */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Successful response with the requested lease and related entities */
-        200: {
-          content: {
-            "application/json": {
-              data?: Record<string, never>;
-            };
           };
         };
       };
@@ -1300,6 +1152,317 @@ export interface paths {
       };
     };
   };
+  "/leases/search": {
+    /**
+     * Search and filter leases
+     * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string;
+          /** @description Object types (e.g., residence, parking)) */
+          objectType?: string[];
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: ("0" | "1" | "2" | "3")[];
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string;
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string;
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string;
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string;
+          /** @description Property/estate names */
+          property?: string[];
+          /** @description Building codes */
+          buildingCodes?: string[];
+          /** @description Area codes (Område) */
+          areaCodes?: string[];
+          /** @description District names */
+          districtNames?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
+          /** @description Page number */
+          page?: number;
+          /** @description Items per page */
+          limit?: number;
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved lease search results with pagination */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["LeaseSearchResult"][];
+              _meta?: components["schemas"]["PaginationMeta"];
+              _links?: components["schemas"]["PaginationLinks"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/building-managers": {
+    /**
+     * Get all building managers
+     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+     */
+    get: {
+      responses: {
+        /** @description List of building managers */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  code?: string;
+                  name?: string;
+                  district?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/by-rental-object-code/{rentalObjectCode}": {
+    /**
+     * Get leases with related entities for a specific rental object code.
+     * @description Retrieves lease information along with related entities (such as tenants) for the specified rental object code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include related contacts in the response. */
+          includeContacts?: boolean;
+          /** @description Comma-separated list of statuses to include leases by. Valid values are "current", "upcoming", "about-to-end", and "ended". Default is all statuses. */
+          status?: string;
+        };
+        path: {
+          /** @description Rental roperty id of the building/residence to fetch leases for. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            "application/json": Record<string, never>;
+          };
+        };
+      };
+    };
+  };
+  "/leases/by-pnr/{pnr}": {
+    /**
+     * Get leases with related entities for a specific Personal Number (PNR)
+     * @description Retrieves lease information along with related entities (such as tenants) for the specified Personal Number (PNR).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include related contacts in the response. */
+          includeContacts?: boolean;
+          /** @description Comma-separated list of statuses to include leases by. Valid values are "current", "upcoming", "about-to-end", and "ended". Default is all statuses. */
+          status?: string;
+        };
+        path: {
+          /** @description Personal Number (PNR) of the individual to fetch leases for. */
+          pnr: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/leases/by-contact-code/{contactCode}": {
+    /**
+     * Get leases with related entities for a specific contact code
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include related contacts in the response. */
+          includeContacts?: boolean;
+          /** @description Comma-separated list of statuses to include leases by. Valid values are "current", "upcoming", "about-to-end", and "ended". Default is all statuses. */
+          status?: string;
+        };
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Lease"][];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/leases/{id}": {
+    /**
+     * Get lease by ID
+     * @description Retrieves lease details along with related entities based on the provided ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease to retrieve. */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Successful response with the requested lease and related entities */
+        200: {
+          content: {
+            "application/json": {
+              data?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/home-insurance": {
+    /** Get home insurance for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Home insurance retrieved. */
+        200: {
+          content: never;
+        };
+        /** @description Lease or home insurance not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /** Add home insurance to a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully added home insurance. */
+        201: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/home-insurance/offer": {
+    /** Get home insurance offer for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      responses: {
+        /** @description Home insurance offer retrieved. */
+        200: {
+          content: never;
+        };
+        /** @description Lease or rental object not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/{leaseId}/home-insurance/cancel": {
+    /** Cancel home insurance for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date-time
+             * @description Desired end date for home insurance.
+             */
+            endDate: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Home insurance cancelled. */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/listings": {
     /**
      * Get listings
@@ -1558,7 +1721,9 @@ export interface paths {
               content?: {
                   rentalObjectCode?: string;
                   address?: string;
-                  monthlyRent?: number;
+                  rent?: {
+                    amount?: number;
+                  };
                   propertyCaption?: string;
                   propertyCode?: string;
                   residentialAreaCode?: string;
@@ -1606,7 +1771,9 @@ export interface paths {
               content?: {
                   rentalObjectCode?: string;
                   address?: string;
-                  monthlyRent?: number;
+                  rent?: {
+                    amount?: number;
+                  };
                   propertyCaption?: string;
                   propertyCode?: string;
                   residentialAreaCode?: string;
@@ -1619,6 +1786,99 @@ export interface paths {
                   districtCode?: string;
                   braArea?: number;
                 }[];
+            };
+          };
+        };
+        /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/rental-objects/by-code/{rentalObjectCode}/rent": {
+    /**
+     * Get rent for a rental object
+     * @description Fetches rent for a rental object by Rental Object Code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the rent to fetch. */
+          rentalObjectCode: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental object. */
+        200: {
+          content: {
+            "application/json": {
+              rent?: number;
+            };
+          };
+        };
+        /** @description Not found. The rent of the specified rental object was not found. */
+        404: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/rental-objects/rent": {
+    /**
+     * Get rent for rental objects
+     * @description Fetches rent for rental objects by Rental Object Codes.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          "application/json": {
+            /**
+             * @description Array of rental object codes to include.
+             * @example [
+             *   "ABC123",
+             *   "DEF456",
+             *   "GHI789"
+             * ]
+             */
+            rentalObjectCodes?: string[];
+          };
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the rental object. */
+        200: {
+          content: {
+            "application/json": {
+              rent?: number;
+            };
+          };
+        };
+        /** @description Not found. The rent of the specified rental object was not found. */
+        404: {
+          content: {
+            "application/json": {
+              /** @description The error message. */
+              error?: string;
             };
           };
         };

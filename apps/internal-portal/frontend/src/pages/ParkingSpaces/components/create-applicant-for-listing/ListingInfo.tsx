@@ -56,7 +56,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
         <Typography>Hyra</Typography>
         <Box>
           <Typography>{`${numberFormatter.format(
-            props.listing.rentalObject.monthlyRent
+            props.listing.rentalObject.rent?.amount ?? 0
           )}/mån`}</Typography>
         </Box>
       </Box>
