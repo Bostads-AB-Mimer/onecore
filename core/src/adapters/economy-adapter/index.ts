@@ -113,12 +113,17 @@ export async function submitMiscellaneousInvoice(
 
   formData.append('invoice', JSON.stringify(invoice))
 
-  const url = `${config.economyService.url}/invoices/miscellaneous`
-  const response = await axios.postForm(url, formData)
+  try {
+    const url = `${config.economyService.url}/invoices/miscellaneous`
+    const response = await axios.postForm(url, formData)
 
-  if (response.status === 200) {
-    return { ok: true, data: response.data.content }
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err: unknown) {
+    logger.error(err, 'Error submitting miscellaneous invoice')
+    return { ok: false, err: 'unknown' }
   }
-
-  return { ok: false, err: 'unknown' }
 }
