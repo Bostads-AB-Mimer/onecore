@@ -1183,17 +1183,17 @@ export const submitMiscellaneousInvoice = async (
       }
     }
   `
-  console.log('mutation', mutation)
 
   try {
     const result = await makeXledgerRequest(
       { query: mutation },
       invoice.attachment
     )
+
     return result.data.addInvoiceBaseItems.edges
   } catch (err: unknown) {
     logger.error(err, 'Error creating miscellaneous invoice')
-    return
+    throw err
   }
 }
 

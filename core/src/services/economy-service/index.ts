@@ -111,7 +111,6 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         error: 'Unknown error',
       }
-      return
     } else {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
