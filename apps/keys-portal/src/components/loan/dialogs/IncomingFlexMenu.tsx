@@ -359,7 +359,7 @@ export function IncomingFlexMenu({
       isProcessing={isProcessing}
       onAccept={handleAccept}
       acceptButtonText="Markera som inkommen"
-      totalCount={totalSelectedKeys}
+      totalCount={selectedKeys.length}
     />
   )
 }
