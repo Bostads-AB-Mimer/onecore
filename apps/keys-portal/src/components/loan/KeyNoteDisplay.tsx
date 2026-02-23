@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   FileText,
   Edit,
   Check,
@@ -437,6 +438,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
           const isSaving = savingObjects.has(objectId)
           const lineClamp = lineClamps.get(objectId)
           const isTruncated = lineClamp !== undefined && lineClamp !== null
+          const isExpanded = expandedNotes.has(objectId)
           const hasTruncatedNotes = lineClamps.size > 0
 
           return (
@@ -505,9 +507,27 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                 </div>
               ) : (
                 <div
-                  className={`cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors ${!isTruncated && !hasTruncatedNotes ? 'group' : ''}`}
+                  className={`relative cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors ${!isTruncated && !isExpanded && !hasTruncatedNotes ? 'group' : ''}`}
                   onClick={() => handleToggleExpand(objectId)}
                 >
+                  {isExpanded && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute top-1 right-1 h-7 w-7"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExpandedNotes((prev) => {
+                          const next = new Set(prev)
+                          next.delete(objectId)
+                          return next
+                        })
+                      }}
+                      title="Dölj"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  )}
                   {note?.description ? (
                     <div
                       data-object-id={objectId}
@@ -532,14 +552,17 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
                         : 'Inga noteringar - klicka för att lägga till'}
                     </p>
                   )}
-                  {!isTruncated && !hasTruncatedNotes && note?.description && (
-                    <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Edit className="h-3 w-3" />
-                        Klicka för att redigera
-                      </span>
-                    </div>
-                  )}
+                  {!isTruncated &&
+                    !isExpanded &&
+                    !hasTruncatedNotes &&
+                    note?.description && (
+                      <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Edit className="h-3 w-3" />
+                          Klicka för att redigera
+                        </span>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
