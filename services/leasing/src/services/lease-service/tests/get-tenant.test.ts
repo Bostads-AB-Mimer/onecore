@@ -7,6 +7,7 @@ import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
 import * as estateCodeAdapter from '../adapters/xpand/estate-code-adapter'
 import * as priorityListService from '../priority-list-service'
 import { leaseTypes } from '../../../constants/leaseTypes'
+import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as factory from './factories'
 import { getTenant } from '../get-tenant'
 
@@ -16,13 +17,8 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
-describe('getTenant', () => {
+describe(getTenant, () => {
   it("returns no-valid-housing-contract if contact doesn't have a current or upcoming housing contract", async () => {
-    const lease = factory.lease.build({
-      type: leaseTypes.housingContract,
-      leaseStartDate: new Date('2021-01-01'),
-      leaseEndDate: new Date('2022-01-01'),
-    })
     const contact = factory.contact.build()
     const residentialArea = { code: '1', caption: 'ett' }
 
@@ -34,8 +30,21 @@ describe('getTenant', () => {
       })
 
     jest
-      .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
-      .mockResolvedValueOnce({ ok: true, data: [lease] })
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.tenfastTenant.build() })
+
+    jest.spyOn(tenfastAdapter, 'getLeasesByTenantId').mockResolvedValueOnce({
+      ok: true,
+      data: [
+        factory.tenfastLease.build({
+          hyresobjekt: [
+            factory.tenfastRentalObject.build({
+              typ: leaseTypes.housingContract,
+            }),
+          ],
+        }),
+      ],
+    })
 
     jest
       .spyOn(tenantLeaseAdapter, 'getResidentialAreaByRentalPropertyId')
