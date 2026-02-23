@@ -9,9 +9,11 @@ import {
 } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 import { Lease } from '@/services/api/core'
+import { RentalPropertyInfo } from '@onecore/types'
 
 interface LeaseContractSectionProps {
   leaseContracts: Lease[]
+  rentalProperties: Record<string, RentalPropertyInfo | null>
   selectedLease?: string | null
   costCentre?: string
   propertyCode?: string
@@ -24,6 +26,7 @@ interface LeaseContractSectionProps {
 
 export function LeaseContractSection({
   leaseContracts,
+  rentalProperties,
   selectedLease,
   costCentre,
   propertyCode,
@@ -55,14 +58,20 @@ export function LeaseContractSection({
             />
           </SelectTrigger>
           <SelectContent>
-            {leaseContracts.map((lease) => (
-              <SelectItem key={lease.leaseId} value={lease.leaseId}>
-                <span className="font-medium">{lease.leaseId}</span>
-                <span className="ml-2">
-                  {lease.rentalProperty?.address?.street}
-                </span>
-              </SelectItem>
-            ))}
+            {leaseContracts.map((lease) => {
+              const rentalProperty = rentalProperties[lease.rentalPropertyId]
+
+              return (
+                <SelectItem key={lease.leaseId} value={lease.leaseId}>
+                  <span className="font-medium">{lease.leaseId}</span>
+                  {rentalProperty && (
+                    <span className="ml-2">
+                      {`${rentalProperty.property.address}: ${rentalProperty.type}`}
+                    </span>
+                  )}
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
         {error && <p className="text-sm text-destructive">{error}</p>}

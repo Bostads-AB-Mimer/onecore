@@ -28,6 +28,7 @@ import { economyService } from '@/services/api/core/economyService'
 import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
 import { useMiscellaneousInvoiceDataForLease } from '@/components/hooks/useMiscellaneousInvoiceDataForLease'
 import { Lease as CoreLease } from '@/services/api/core'
+import { useRentalProperties } from '@/components/hooks/useRentalProperties'
 
 interface FormErrors {
   contactCode?: string
@@ -77,6 +78,10 @@ export function MiscellaneousInvoiceForm() {
     error: leasesError,
     isLoading: leasesIsLoading,
   } = useLeases(selectedTenant?.contactCode)
+
+  const { data: rentalProperties } = useRentalProperties(
+    leases?.map((l) => l.rentalPropertyId) || []
+  )
 
   const [leaseId, setLeaseId] = useState<string | null>(null)
   const [selectedLease, setSelectedLease] = useState<CoreLease | null>(null)
@@ -288,6 +293,7 @@ export function MiscellaneousInvoiceForm() {
             <h3 className="font-medium">Kontraktsinformation</h3>
             <LeaseContractSection
               leaseContracts={leases ?? []}
+              rentalProperties={rentalProperties}
               selectedLease={leaseId}
               costCentre={costCentre}
               propertyCode={propertyCode}
