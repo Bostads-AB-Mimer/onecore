@@ -10,11 +10,13 @@ import {
   RentalObject,
   ReplyToOfferErrorCodes,
   WaitingListType,
+  Lease,
 } from '@onecore/types'
 
 import { ProcessResult, ProcessStatus } from '../../../../common/types'
 import * as replyProcesses from '../reply-to-offer'
 import * as createOfferProcesses from '../create-offer'
+import * as processUtils from '../../utils'
 import * as factory from '../../../../../test/factories'
 import { AdapterResult } from '@/adapters/types'
 
@@ -30,6 +32,46 @@ describe('replyToOffer', () => {
     getListingByListingIdSpy: jest.SpyInstance<
       Promise<Listing | undefined>,
       [listingId: number],
+      any
+    >,
+    getLeasesForContactCode: jest.SpyInstance<
+      Promise<Lease[]>,
+      [contactCode: string, options: any],
+      any
+    >,
+    validatePropertyRentalRules: jest.SpyInstance<
+      Promise<
+        AdapterResult<
+          { reason: string; applicationType: 'Replace' | 'Additional' },
+          {
+            tag:
+              | 'not-found'
+              | 'unknown'
+              | 'not-tenant-in-the-property'
+              | 'not-a-parking-space'
+            data: unknown
+          }
+        >
+      >,
+      [contactCode: string, rentalObjectCode: string],
+      any
+    >,
+    validateResidentialAreaRentalRules: jest.SpyInstance<
+      Promise<
+        AdapterResult<
+          { reason: string; applicationType: 'Replace' | 'Additional' },
+          {
+            tag: 'not-found' | 'unknown' | 'no-housing-contract-in-the-area'
+            data: unknown
+          }
+        >
+      >,
+      [contactCode: string, districtCode: string],
+      any
+    >,
+    validateRentalRules: jest.SpyInstance<
+      AdapterResult<{ reason: string }, string>,
+      [validationResult: any, applicationType: 'Replace' | 'Additional'],
       any
     >,
     createLeaseSpy: jest.SpyInstance<
@@ -95,6 +137,18 @@ describe('replyToOffer', () => {
     getListingByListingIdSpy = jest.spyOn(
       leasingAdapter,
       'getListingByListingId'
+    )
+    getLeasesForContactCode = jest.spyOn(
+      leasingAdapter,
+      'getLeasesForContactCode'
+    )
+    validatePropertyRentalRules = jest.spyOn(
+      leasingAdapter,
+      'validatePropertyRentalRules'
+    )
+    validateResidentialAreaRentalRules = jest.spyOn(
+      leasingAdapter,
+      'validateResidentialAreaRentalRules'
     )
     createLeaseSpy = jest.spyOn(leasingAdapter, 'createLease')
     getOffersForContactSpy = jest.spyOn(leasingAdapter, 'getOffersForContact')
@@ -182,6 +236,16 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -241,6 +305,16 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+
       createLeaseSpy.mockImplementation(() => {
         throw new Error('Lease not created')
       })
@@ -278,6 +352,15 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -334,6 +417,15 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -384,6 +476,15 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -429,6 +530,15 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
@@ -484,6 +594,15 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       createLeaseSpy.mockResolvedValueOnce({
         ok: true,
@@ -543,6 +662,15 @@ describe('replyToOffer', () => {
           .build(),
       })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
       createLeaseSpy.mockResolvedValueOnce({
         ok: true,
@@ -589,6 +717,15 @@ describe('replyToOffer', () => {
       })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
@@ -627,6 +764,15 @@ describe('replyToOffer', () => {
       })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
@@ -671,6 +817,15 @@ describe('replyToOffer', () => {
       })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
@@ -715,6 +870,15 @@ describe('replyToOffer', () => {
       })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
@@ -772,6 +936,15 @@ describe('replyToOffer', () => {
       })
       resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
 
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
       denyOfferSpy.mockResolvedValue({
         processStatus: ProcessStatus.successful,
       } as ProcessResult)
@@ -795,6 +968,215 @@ describe('replyToOffer', () => {
       const callArgs = createLeaseSpy.mock.calls[0]
       // Kontrollera att lease-datumet är samma dag som idag (UTC)
       expect(new Date(callArgs[2])).toBeSameDayAs(new Date())
+    })
+
+    it('should fail if applicant is not a tenant (leases.length < 1)', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(factory.listing.build())
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace.build(),
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([]) // Not a tenant
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.failed,
+        error: ReplyToOfferErrorCodes.ApplicantNotTenant,
+        httpStatus: 403,
+        response: expect.objectContaining({
+          errorCode: ReplyToOfferErrorCodes.ApplicantNotTenant,
+        }),
+      })
+    })
+
+    it('should call validateResidentialAreaRentalRules and validatePropertyRentalRules with correct arguments', async () => {
+      const offer = factory.detailedOffer.build()
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      createLeaseSpy.mockResolvedValueOnce({ ok: true, data: 'lease-id' })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      getOffersForContactSpy.mockResolvedValueOnce({ ok: true, data: [] })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      await replyProcesses.acceptOffer(123)
+
+      expect(validateResidentialAreaRentalRules).toHaveBeenCalledWith(
+        offer.offeredApplicant.contactCode,
+        parkingSpace.residentialAreaCode
+      )
+      expect(validatePropertyRentalRules).toHaveBeenCalledWith(
+        offer.offeredApplicant.contactCode,
+        offer.rentalObjectCode
+      )
+    })
+
+    it('should fail if validateResidentialAreaRentalRules returns no-housing-contract-in-the-area', async () => {
+      const offer = factory.detailedOffer.build()
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: false,
+        err: {
+          tag: 'no-housing-contract-in-the-area',
+          data: {},
+        },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.failed,
+        error: 'no-contract-in-the-area',
+        httpStatus: 400,
+        response: expect.objectContaining({
+          errorCode: 'no-contract-in-the-area',
+        }),
+      })
+    })
+
+    it('should fail if validatePropertyRentalRules returns not-tenant-in-the-property', async () => {
+      const applicant = factory.detailedApplicant.build({
+        applicationType: 'Replace',
+      })
+      const offer = factory.detailedOffer.build({
+        offeredApplicant: applicant,
+      })
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: false,
+        err: {
+          tag: 'not-tenant-in-the-property',
+          data: {},
+        },
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.failed,
+        error: 'no-contract-in-the-area',
+        httpStatus: 400,
+        response: expect.objectContaining({
+          errorCode: 'no-contract-in-the-area',
+        }),
+      })
+    })
+
+    it('should succeed if applicant is a tenant and both rental rule validations pass', async () => {
+      const applicant = factory.detailedApplicant.build({
+        applicationType: 'Replace',
+      })
+      const offer = factory.detailedOffer.build({
+        offeredApplicant: applicant,
+      })
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      createLeaseSpy.mockResolvedValueOnce({ ok: true, data: 'lease-id' })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      getOffersForContactSpy.mockResolvedValueOnce({ ok: true, data: [] })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
     })
   })
 
