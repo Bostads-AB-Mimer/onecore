@@ -17,6 +17,7 @@ export default function KeyBundles() {
   const [editingKeyBundle, setEditingKeyBundle] = useState<KeyBundle | null>(
     null
   )
+  const [editingKeyIds, setEditingKeyIds] = useState<string[]>([])
   const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null)
   const [keysForExpandedBundle, setKeysForExpandedBundle] = useState<
     KeyDetails[]
@@ -109,7 +110,14 @@ export default function KeyBundles() {
     }
   }
 
-  const handleEdit = (keyBundle: KeyBundle) => {
+  const handleEdit = async (keyBundle: KeyBundle) => {
+    try {
+      const details = await keyBundleService.getKeyBundleDetails(keyBundle.id)
+      const keyIds = details?.keys.map((k) => k.id) ?? []
+      setEditingKeyIds(keyIds)
+    } catch {
+      setEditingKeyIds([])
+    }
     setEditingKeyBundle(keyBundle)
     setShowAddForm(true)
   }
@@ -120,10 +128,9 @@ export default function KeyBundles() {
     keys: string[]
   }) => {
     try {
-      // Convert keys array to JSON string
-      const bundleWithStringKeys = {
+      const bundlePayload = {
         name: keyBundleData.name,
-        keys: JSON.stringify(keyBundleData.keys),
+        keys: keyBundleData.keys,
         description: keyBundleData.description,
       }
 
@@ -131,7 +138,7 @@ export default function KeyBundles() {
         // Update existing key bundle
         const updated = await keyBundleService.updateKeyBundle(
           editingKeyBundle.id,
-          bundleWithStringKeys
+          bundlePayload
         )
         setKeyBundles((prev) =>
           prev.map((kb) => (kb.id === editingKeyBundle.id ? updated : kb))
@@ -143,7 +150,7 @@ export default function KeyBundles() {
       } else {
         // Create new key bundle
         const newKeyBundle =
-          await keyBundleService.createKeyBundle(bundleWithStringKeys)
+          await keyBundleService.createKeyBundle(bundlePayload)
         setKeyBundles((prev) => [...prev, newKeyBundle])
         toast({
           title: 'Nyckelsamling skapad',
@@ -165,6 +172,7 @@ export default function KeyBundles() {
   const handleCancel = () => {
     setShowAddForm(false)
     setEditingKeyBundle(null)
+    setEditingKeyIds([])
   }
 
   const handleDelete = (id: string) => {
@@ -250,6 +258,7 @@ export default function KeyBundles() {
           onSave={handleSave}
           onCancel={handleCancel}
           editingKeyBundle={editingKeyBundle}
+          editingKeyIds={editingKeyIds}
         />
       )}
 

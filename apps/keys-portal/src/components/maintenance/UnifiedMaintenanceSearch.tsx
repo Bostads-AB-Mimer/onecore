@@ -161,13 +161,7 @@ export function UnifiedMaintenanceSearch({
   }
 
   const formatBundle = (bundle: KeyBundle) => {
-    let keyCount = 0
-    try {
-      const keyIds = JSON.parse(bundle.keys)
-      keyCount = Array.isArray(keyIds) ? keyIds.length : 0
-    } catch (e) {
-      keyCount = 0
-    }
+    const keyCount = bundle.keyCount ?? 0
 
     return {
       primary: bundle.name,

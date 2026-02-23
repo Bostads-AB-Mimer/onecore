@@ -157,7 +157,7 @@ export function KeyBundleKeysTable({
       )
 
       await updateKeyBundle(bundleId, {
-        keys: JSON.stringify(updatedKeyIds),
+        keys: updatedKeyIds,
       })
 
       toast({
@@ -342,7 +342,7 @@ export function KeyBundleKeysTable({
             const updatedKeyIds = [...currentKeyIds, ...createdKeyIds]
 
             await updateKeyBundle(bundleId, {
-              keys: JSON.stringify(updatedKeyIds),
+              keys: updatedKeyIds,
             })
 
             toast({

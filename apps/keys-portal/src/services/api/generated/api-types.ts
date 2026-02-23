@@ -2958,20 +2958,20 @@ export interface components {
     };
     CreateKeyBundleRequest: {
       name: string;
-      keys: string;
+      keys: string[];
       description?: string | null;
     };
     UpdateKeyBundleRequest: {
       name?: string;
-      keys?: string;
+      keys?: string[];
       description?: string | null;
     };
     KeyBundle: {
       /** Format: uuid */
       id: string;
       name: string;
-      keys: string;
       description?: string | null;
+      keyCount?: number;
     };
     BundleWithLoanedKeysInfo: {
       /** Format: uuid */

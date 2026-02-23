@@ -17,6 +17,7 @@ interface AddKeyBundleFormProps {
   onSave: (keyBundle: KeyBundleFormData) => void | Promise<void>
   onCancel: () => void
   editingKeyBundle?: KeyBundle | null
+  editingKeyIds?: string[]
 }
 
 const emptyFormData: KeyBundleFormData = {
@@ -29,6 +30,7 @@ export function AddKeyBundleForm({
   onSave,
   onCancel,
   editingKeyBundle,
+  editingKeyIds = [],
 }: AddKeyBundleFormProps) {
   const [formData, setFormData] = useState<KeyBundleFormData>(emptyFormData)
   const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
@@ -38,30 +40,17 @@ export function AddKeyBundleForm({
 
   useEffect(() => {
     if (editingKeyBundle) {
-      let keyIds: string[] = []
-      if (editingKeyBundle.keys) {
-        try {
-          const parsed =
-            typeof editingKeyBundle.keys === 'string'
-              ? JSON.parse(editingKeyBundle.keys)
-              : editingKeyBundle.keys
-          keyIds = Array.isArray(parsed) ? parsed : []
-        } catch (e) {
-          console.error('Failed to parse keys:', e)
-        }
-      }
-
       setFormData({
         name: editingKeyBundle.name,
         description: editingKeyBundle.description || '',
-        keys: keyIds,
+        keys: editingKeyIds,
       })
       setSelectedKeys([])
     } else {
       setFormData(emptyFormData)
       setSelectedKeys([])
     }
-  }, [editingKeyBundle])
+  }, [editingKeyBundle, editingKeyIds])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

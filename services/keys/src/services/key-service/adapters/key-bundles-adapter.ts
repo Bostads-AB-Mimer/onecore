@@ -10,12 +10,27 @@ type CreateKeyBundleRequest = keys.CreateKeyBundleRequest
 type UpdateKeyBundleRequest = keys.UpdateKeyBundleRequest
 
 const TABLE = 'key_bundles'
+const JUNCTION_TABLE = 'key_bundle_keys'
 const KEY_LOANS_TABLE = 'key_loans'
 
 /**
  * Database adapter functions for key bundles.
- * These functions wrap database calls to make them easier to test.
+ * Keys are stored in the key_bundle_keys junction table, not on the bundle entity.
  */
+
+/**
+ * Helper to add keyCount subquery to a query builder.
+ */
+function withKeyCount(
+  query: Knex.QueryBuilder,
+  dbConnection: Knex | Knex.Transaction
+): Knex.QueryBuilder {
+  return query.select(
+    dbConnection.raw(
+      `(SELECT COUNT(*) FROM ${JUNCTION_TABLE} WHERE keyBundleId = ${TABLE}.id) as keyCount`
+    )
+  )
+}
 
 /**
  * Returns a query builder for fetching all key bundles.
@@ -24,7 +39,10 @@ const KEY_LOANS_TABLE = 'key_loans'
 export function getAllKeyBundlesQuery(
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*').orderBy('name', 'asc')
+  return withKeyCount(
+    dbConnection(TABLE).select(`${TABLE}.*`).orderBy('name', 'asc'),
+    dbConnection
+  )
 }
 
 export async function getAllKeyBundles(
@@ -37,7 +55,10 @@ export async function getKeyBundleById(
   id: string,
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyBundle | undefined> {
-  return await dbConnection(TABLE).where({ id }).first()
+  return await withKeyCount(
+    dbConnection(TABLE).where({ id }),
+    dbConnection
+  ).first()
 }
 
 export async function getKeyBundlesByKeyId(
@@ -45,29 +66,57 @@ export async function getKeyBundlesByKeyId(
   dbConnection: Knex | Knex.Transaction = db
 ): Promise<KeyBundle[]> {
   return await dbConnection(TABLE)
-    .whereRaw('keys LIKE ?', [`%"${keyId}"%`])
+    .join(JUNCTION_TABLE, `${TABLE}.id`, `${JUNCTION_TABLE}.keyBundleId`)
+    .where(`${JUNCTION_TABLE}.keyId`, keyId)
+    .select(`${TABLE}.*`)
     .orderBy('name', 'asc')
 }
 
 export async function createKeyBundle(
   keyBundleData: CreateKeyBundleRequest,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex = db
 ): Promise<KeyBundle> {
-  const [row] = await dbConnection(TABLE).insert(keyBundleData).returning('*')
-  return row
+  const { keys: keyIds, ...bundleData } = keyBundleData
+
+  return dbConnection.transaction(async (trx) => {
+    const [row] = await trx(TABLE).insert(bundleData).returning('*')
+
+    if (keyIds?.length) {
+      const uniqueKeyIds = [...new Set(keyIds)]
+      await trx(JUNCTION_TABLE).insert(
+        uniqueKeyIds.map((keyId) => ({ keyBundleId: row.id, keyId }))
+      )
+    }
+
+    return row
+  })
 }
 
 export async function updateKeyBundle(
   id: string,
   keyBundleData: UpdateKeyBundleRequest,
-  dbConnection: Knex | Knex.Transaction = db
+  dbConnection: Knex = db
 ): Promise<KeyBundle | undefined> {
-  const [row] = await dbConnection(TABLE)
-    .where({ id })
-    .update(keyBundleData)
-    .returning('*')
+  const { keys: keyIds, ...bundleData } = keyBundleData
 
-  return row
+  return dbConnection.transaction(async (trx) => {
+    const [row] = await trx(TABLE)
+      .where({ id })
+      .update(bundleData)
+      .returning('*')
+
+    if (keyIds !== undefined) {
+      await trx(JUNCTION_TABLE).where({ keyBundleId: id }).del()
+      if (keyIds.length) {
+        const uniqueKeyIds = [...new Set(keyIds)]
+        await trx(JUNCTION_TABLE).insert(
+          uniqueKeyIds.map((keyId) => ({ keyBundleId: id, keyId }))
+        )
+      }
+    }
+
+    return row
+  })
 }
 
 export async function deleteKeyBundle(
@@ -84,7 +133,7 @@ export async function deleteKeyBundle(
 export function getKeyBundlesSearchQuery(
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*')
+  return withKeyCount(dbConnection(TABLE).select(`${TABLE}.*`), dbConnection)
 }
 
 /**
@@ -111,13 +160,12 @@ export async function getKeyBundleDetails(
     throw new Error('Bundle not found')
   }
 
-  // 2. Parse key IDs from bundle
-  let keyIds: string[] = []
-  try {
-    keyIds = JSON.parse(bundle.keys)
-  } catch (_e) {
-    keyIds = []
-  }
+  // 2. Get key IDs from junction table
+  const keyIds = (
+    await dbConnection(JUNCTION_TABLE)
+      .where({ keyBundleId: bundleId })
+      .select('keyId')
+  ).map((r) => r.keyId)
 
   if (keyIds.length === 0) {
     return { bundle, keys: [] }
@@ -156,6 +204,21 @@ export async function getKeyBundlesByContactWithLoanedKeys(
     return []
   }
 
+  // Get all bundle-key mappings in one query
+  const allBundleKeyRows = await dbConnection(JUNCTION_TABLE).select(
+    'keyBundleId',
+    'keyId'
+  )
+
+  // Build Map<bundleId, keyId[]>
+  const keysByBundle = new Map<string, string[]>()
+  for (const row of allBundleKeyRows) {
+    if (!keysByBundle.has(row.keyBundleId)) {
+      keysByBundle.set(row.keyBundleId, [])
+    }
+    keysByBundle.get(row.keyBundleId)!.push(row.keyId)
+  }
+
   // Get all bundles
   const allBundles = await dbConnection(TABLE).select('*')
 
@@ -163,12 +226,7 @@ export async function getKeyBundlesByContactWithLoanedKeys(
   const bundlesWithLoanedKeys: BundleWithLoanedKeysInfo[] = []
 
   for (const bundle of allBundles) {
-    let bundleKeyIds: string[] = []
-    try {
-      bundleKeyIds = JSON.parse(bundle.keys)
-    } catch (_e) {
-      continue
-    }
+    const bundleKeyIds = keysByBundle.get(bundle.id) || []
 
     // Count how many keys from this bundle are loaned to the contact
     const loanedKeysInBundle = bundleKeyIds.filter((keyId) =>

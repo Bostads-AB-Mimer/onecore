@@ -62,13 +62,7 @@ export function KeyBundlesTable({
           ) : (
             keyBundles.map((bundle) => {
               const isExpanded = expandedBundleId === bundle.id
-              let keyCount = 0
-              try {
-                const keys = JSON.parse(bundle.keys)
-                keyCount = Array.isArray(keys) ? keys.length : 0
-              } catch (e) {
-                keyCount = 0
-              }
+              const keyCount = bundle.keyCount ?? 0
 
               return (
                 <React.Fragment key={bundle.id}>

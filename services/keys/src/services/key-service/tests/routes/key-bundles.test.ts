@@ -50,7 +50,6 @@ describe('GET /key-bundles', () => {
     expect(res.body.content).toHaveLength(3)
     expect(res.body.content[0]).toHaveProperty('id')
     expect(res.body.content[0]).toHaveProperty('name')
-    expect(res.body.content[0]).toHaveProperty('keys')
   })
 })
 
@@ -67,7 +66,6 @@ describe('GET /key-bundles/:id', () => {
     const mockBundle = factory.keyBundle.build({
       id: 'bundle-123',
       name: 'Master Bundle',
-      keys: JSON.stringify(['key-1', 'key-2']),
     })
 
     const getKeyBundleByIdSpy = jest
@@ -94,15 +92,12 @@ describe('GET /key-bundles/:id', () => {
  * Testing create key bundle:
  * - Successful creation
  * - Missing required fields
- * - Invalid keys array format
- * - Empty keys array
- * - Database errors
+ * - Invalid keys format (Zod validates array)
  */
 describe('POST /key-bundles', () => {
   it('creates a key bundle and responds with 201', async () => {
     const mockBundle = factory.keyBundle.build({
       name: 'New Bundle',
-      keys: JSON.stringify(['key-1', 'key-2']),
     })
 
     const createKeyBundleSpy = jest
@@ -113,14 +108,14 @@ describe('POST /key-bundles', () => {
       .post('/key-bundles')
       .send({
         name: 'New Bundle',
-        keys: JSON.stringify(['key-1', 'key-2']),
+        keys: ['key-1', 'key-2'],
         description: 'Test bundle',
       })
 
     expect(createKeyBundleSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'New Bundle',
-        keys: JSON.stringify(['key-1', 'key-2']),
+        keys: ['key-1', 'key-2'],
       }),
       expect.anything()
     )
@@ -134,7 +129,7 @@ describe('POST /key-bundles', () => {
     const res = await request(app.callback())
       .post('/key-bundles')
       .send({
-        keys: JSON.stringify(['key-1']),
+        keys: ['key-1'],
         // name is missing
       })
 
@@ -152,26 +147,14 @@ describe('POST /key-bundles', () => {
     expect(res.body).toHaveProperty('status', 'error')
   })
 
-  it('validates invalid keys format (not JSON) and returns 400', async () => {
+  it('validates invalid keys format (not an array) and returns 400', async () => {
     const res = await request(app.callback()).post('/key-bundles').send({
       name: 'Test Bundle',
-      keys: 'not-valid-json',
+      keys: 'not-an-array',
     })
 
     expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('Invalid keys format')
-  })
-
-  it('validates keys must be a JSON array and returns 400', async () => {
-    const res = await request(app.callback())
-      .post('/key-bundles')
-      .send({
-        name: 'Test Bundle',
-        keys: JSON.stringify({ not: 'an array' }),
-      })
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('Keys must be a JSON array')
+    expect(res.body).toHaveProperty('status', 'error')
   })
 })
 
@@ -183,15 +166,13 @@ describe('POST /key-bundles', () => {
  * - Partial update (name only)
  * - Partial update (keys only)
  * - Not found (404)
- * - Invalid keys array format
- * - Database errors
+ * - Invalid keys format (Zod validates array)
  */
 describe('PUT /key-bundles/:id', () => {
   it('updates a key bundle and responds with 200', async () => {
     const mockUpdatedBundle = factory.keyBundle.build({
       id: 'bundle-123',
       name: 'Updated Bundle',
-      keys: JSON.stringify(['key-3', 'key-4']),
     })
 
     const updateKeyBundleSpy = jest
@@ -202,14 +183,14 @@ describe('PUT /key-bundles/:id', () => {
       .put('/key-bundles/bundle-123')
       .send({
         name: 'Updated Bundle',
-        keys: JSON.stringify(['key-3', 'key-4']),
+        keys: ['key-3', 'key-4'],
       })
 
     expect(updateKeyBundleSpy).toHaveBeenCalledWith(
       'bundle-123',
       expect.objectContaining({
         name: 'Updated Bundle',
-        keys: JSON.stringify(['key-3', 'key-4']),
+        keys: ['key-3', 'key-4'],
       }),
       expect.anything()
     )
@@ -242,10 +223,9 @@ describe('PUT /key-bundles/:id', () => {
   })
 
   it('updates only the keys (partial update)', async () => {
-    const newKeys = JSON.stringify(['key-10', 'key-11', 'key-12'])
+    const newKeys = ['key-10', 'key-11', 'key-12']
     const mockUpdatedBundle = factory.keyBundle.build({
       id: 'bundle-123',
-      keys: newKeys,
     })
 
     jest
@@ -259,29 +239,17 @@ describe('PUT /key-bundles/:id', () => {
       })
 
     expect(res.status).toBe(200)
-    expect(res.body.content.keys).toBe(newKeys)
   })
 
-  it('validates invalid keys format (not JSON) and returns 400', async () => {
+  it('validates invalid keys format (not an array) and returns 400', async () => {
     const res = await request(app.callback())
       .put('/key-bundles/bundle-123')
       .send({
-        keys: 'invalid-json',
+        keys: 'invalid-not-array',
       })
 
     expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('Invalid keys format')
-  })
-
-  it('validates keys must be a JSON array and returns 400', async () => {
-    const res = await request(app.callback())
-      .put('/key-bundles/bundle-123')
-      .send({
-        keys: JSON.stringify('not an array'),
-      })
-
-    expect(res.status).toBe(400)
-    expect(res.body.reason).toContain('Keys must be a JSON array')
+    expect(res.body).toHaveProperty('status', 'error')
   })
 })
 
@@ -386,9 +354,7 @@ describe('GET /key-bundles/search', () => {
  */
 describe('GET /key-bundles/by-key/:keyId', () => {
   it('returns all bundles containing the specified key', async () => {
-    const mockBundles = factory.keyBundle.buildList(2, {
-      keys: JSON.stringify(['key-123', 'key-456']),
-    })
+    const mockBundles = factory.keyBundle.buildList(2)
 
     const getKeyBundlesByKeyIdSpy = jest
       .spyOn(keyBundlesAdapter, 'getKeyBundlesByKeyId')
@@ -427,7 +393,6 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
         ...factory.key.build({ id: 'key-1' }),
         loan: {
           id: 'loan-1',
-          keys: JSON.stringify(['key-1']),
           loanType: 'MAINTENANCE' as const,
           contact: 'ACME Corp',
           contactPerson: 'John Doe',
@@ -497,9 +462,7 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
   })
 
   it('returns bundle with empty keys array when bundle has no keys', async () => {
-    const mockBundle = factory.keyBundle.build({
-      keys: JSON.stringify([]),
-    })
+    const mockBundle = factory.keyBundle.build()
 
     jest.spyOn(keyBundlesAdapter, 'getKeyBundleDetails').mockResolvedValueOnce({
       bundle: mockBundle,
@@ -521,7 +484,6 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
         ...factory.key.build({ id: 'key-1', keyName: 'Key with loan' }),
         loan: {
           id: 'loan-1',
-          keys: JSON.stringify(['key-1']),
           loanType: 'MAINTENANCE' as const,
           contact: 'Company A',
           contactPerson: 'Person A',
@@ -540,7 +502,6 @@ describe('GET /key-bundles/:id/keys-with-loan-status', () => {
         ...factory.key.build({ id: 'key-3', keyName: 'Another loaned key' }),
         loan: {
           id: 'loan-2',
-          keys: JSON.stringify(['key-3']),
           loanType: 'MAINTENANCE' as const,
           contact: 'Company B',
           contactPerson: 'Person B',

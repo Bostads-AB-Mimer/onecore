@@ -601,13 +601,12 @@ export async function getKeyLoansWithKeysByBundle(
     return []
   }
 
-  // Parse the bundle's keys
-  let bundleKeyIds: string[] = []
-  try {
-    bundleKeyIds = JSON.parse(bundle.keys)
-  } catch (_e) {
-    return []
-  }
+  // Get the bundle's keys from junction table
+  const bundleKeyIds = (
+    await dbConnection('key_bundle_keys')
+      .where({ keyBundleId: bundleId })
+      .select('keyId')
+  ).map((r) => r.keyId)
 
   if (bundleKeyIds.length === 0) {
     return []

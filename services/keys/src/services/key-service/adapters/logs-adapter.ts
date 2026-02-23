@@ -692,7 +692,6 @@ export async function buildKeyBundleDescription(
   bundle: {
     id: string
     name: string
-    keys: string
   },
   action: 'Skapad' | 'Uppdaterad' | 'Kasserad' | 'Raderad',
   db: Knex
@@ -702,35 +701,33 @@ export async function buildKeyBundleDescription(
   // Bundle name
   parts.push(`"${bundle.name}"`)
 
-  // Key count and names
-  try {
-    const keyIds = JSON.parse(bundle.keys)
-    const keyCount = Array.isArray(keyIds) ? keyIds.length : 0
-    parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
+  // Key count and names from junction table
+  const keyIds = (
+    await db('key_bundle_keys')
+      .where({ keyBundleId: bundle.id })
+      .select('keyId')
+  ).map((r) => r.keyId)
 
-    // Only fetch key names if 5 or fewer keys (DIRECT DB QUERY)
-    if (Array.isArray(keyIds) && keyIds.length > 0 && keyIds.length <= 5) {
-      const keys = await db('keys')
-        .whereIn('id', keyIds)
-        .select('keyName', 'keySequenceNumber')
+  const keyCount = keyIds.length
+  parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
 
-      const keyNames = keys
-        .map((key: any) => {
-          return key.keySequenceNumber
-            ? `${key.keyName} ${key.keySequenceNumber}`
-            : key.keyName
-        })
-        .filter((name) => name !== '')
+  // Only fetch key names if 5 or fewer keys
+  if (keyIds.length > 0 && keyIds.length <= 5) {
+    const keys = await db('keys')
+      .whereIn('id', keyIds)
+      .select('keyName', 'keySequenceNumber')
 
-      if (keyNames.length > 0) {
-        parts.push(`(${keyNames.join(', ')})`)
-      }
+    const keyNames = keys
+      .map((key: any) => {
+        return key.keySequenceNumber
+          ? `${key.keyName} ${key.keySequenceNumber}`
+          : key.keyName
+      })
+      .filter((name) => name !== '')
+
+    if (keyNames.length > 0) {
+      parts.push(`(${keyNames.join(', ')})`)
     }
-  } catch (error) {
-    logger.warn(
-      { error, bundleId: bundle.id },
-      'Failed to parse keys for bundle log description'
-    )
   }
 
   return parts.join(', ')
