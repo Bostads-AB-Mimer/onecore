@@ -545,11 +545,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
    *     responses:
    *       200:
    *         description: Successfully retrieved lease details.
@@ -567,14 +562,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve lease details.
    */
   router.get('(.*)/leases/:leaseId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
-    const queryParams = leasing.v1.GetLeaseOptionsSchema.safeParse(ctx.query)
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { error: queryParams.error.issues, ...metadata }
-      return
-    }
+    const metadata = generateRouteMetadata(ctx)
 
     try {
       const getLease = await tenfastAdapter.getLeaseByExternalId(
@@ -603,16 +591,8 @@ export const routes = (router: KoaRouter) => {
 
       const onecoreLease = tenfastHelpers.mapToOnecoreLease(getLease.data)
 
-      if (queryParams.data.includeContacts) {
-        const contacts = await getContactsByLeaseId(onecoreLease.leaseId)
-        const lease = { ...onecoreLease, tenants: contacts }
-
-        ctx.status = 200
-        ctx.body = makeSuccessResponseBody(lease, metadata)
-      } else {
-        ctx.status = 200
-        ctx.body = makeSuccessResponseBody(onecoreLease, metadata)
-      }
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(onecoreLease, metadata)
     } catch (error) {
       logger.error(error, 'Error when getting lease')
       ctx.status = 500

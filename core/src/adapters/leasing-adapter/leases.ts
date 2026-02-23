@@ -45,11 +45,11 @@ export const getLeasesByContactCode = async (
 
 export const getLeasesByRentalObjectCode = async (
   rentalObjectCode: string,
-  options: GetLeasesOptions
+  options?: GetLeasesOptions
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams()
 
-  if (options.status) {
+  if (options?.status) {
     queryParams.set('status', options.status.join(','))
   }
 

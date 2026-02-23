@@ -23,18 +23,6 @@ describe('leases routes', () => {
   describe('GET /leases/by-rental-object-code/:rentalObjectCode', () => {
     it('responds with 400 for invalid query parameters', async () => {
       const res = await request(app.callback()).get(
-        '/leases/by-rental-object-code/123?includeContacts=invalid'
-      )
-
-      expect(res.status).toBe(400)
-      expect(res.body).toMatchObject({
-        reason: 'Invalid query parameters',
-        error: expect.any(Object),
-      })
-    })
-
-    it('responds with 400 for invalid query parameters', async () => {
-      const res = await request(app.callback()).get(
         '/leases/by-rental-object-code/123?status=invalid'
       )
 
@@ -63,7 +51,7 @@ describe('leases routes', () => {
         .mockResolvedValue(factory.lease.buildList(1))
 
       const res = await request(app.callback()).get(
-        '/leases/by-rental-object-code/123?status=current&includeContacts=true'
+        '/leases/by-rental-object-code/123?status=current'
       )
 
       expect(res.status).toBe(200)
@@ -71,7 +59,6 @@ describe('leases routes', () => {
         '123',
         expect.objectContaining({
           status: ['current'],
-          includeContacts: true,
         })
       )
 
@@ -234,9 +221,7 @@ describe('leases routes', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalledWith('1337', {
-        includeContacts: false,
-      })
+      expect(getLeaseSpy).toHaveBeenCalledWith('1337')
       expect(() =>
         schemas.v1.LeaseHomeInsuranceOfferSchema.parse(res.body.content)
       ).not.toThrow()

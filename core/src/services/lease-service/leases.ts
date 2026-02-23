@@ -489,23 +489,69 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = GetLeaseOptionsSchema.safeParse(ctx.query)
+    try {
+      const queryParams = GetLeaseOptionsSchema.safeParse(ctx.query)
 
-    if (!queryParams.success) {
-      ctx.status = 400
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid query parameters',
+          error: queryParams.error,
+          ...metadata,
+        }
+        return
+      }
+
+      const lease = await leasingAdapter.getLease(ctx.params.id)
+
+      if (!lease) {
+        ctx.status = 404
+        return
+      }
+
+      if (!queryParams.data.includeContacts) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(lease, metadata)
+        return
+      }
+
+      if (!lease.tenantContactIds) {
+        logger.error(
+          { metadata, leaseId: lease.leaseId },
+          'Lease has no tenant contact IDs'
+        )
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(lease, metadata)
+        return
+      }
+
+      const contacts = await Promise.all(
+        lease.tenantContactIds.map(async (contactCode) => {
+          const contact =
+            await leasingAdapter.getContactByContactCode(contactCode)
+
+          if (!contact.ok) {
+            throw new Error(
+              `Failed to get contact by contact code: ${contactCode}`
+            )
+          }
+
+          return contact.data
+        })
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        { ...lease, tenants: contacts },
+        metadata
+      )
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching lease')
+      ctx.status = 500
       ctx.body = {
-        reason: 'Invalid query parameters',
-        error: queryParams.error,
+        error: 'Internal server error',
         ...metadata,
       }
-      return
-    }
-
-    const responseData = await leasingAdapter.getLease(ctx.params.id)
-
-    ctx.body = {
-      content: responseData,
-      ...metadata,
     }
   })
 
