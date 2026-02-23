@@ -488,36 +488,6 @@ const getLeaseIds = async (
   return rows.map((x) => x.leaseId)
 }
 
-const getLeasesByContactKey = async (keycmctc: string) => {
-  const rows = await xpandDb
-    .from('hyavk')
-    .select(
-      'hyobj.hyobjben as leaseId',
-      'hyhav.hyhavben as leaseType',
-      'hyobj.uppsagtav as noticeGivenBy',
-      'hyobj.avtalsdat as contractDate',
-      'hyobj.sistadeb as lastDebitDate',
-      'hyobj.godkdatum as approvalDate',
-      'hyobj.uppsdatum as noticeDate',
-      'hyobj.fdate as fromDate',
-      'hyobj.tdate as toDate',
-      'hyobj.uppstidg as noticeTimeTenant',
-      'hyobj.onskflytt AS preferredMoveOutDate',
-      'hyobj.makuldatum AS terminationDate'
-    )
-    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
-    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
-    .where({ keycmctc: keycmctc })
-
-  const leases: any[] = []
-  for (const row of rows) {
-    const lease = transformFromXPandDb.toLease(row, [], [])
-    leases.push(lease)
-  }
-
-  return leases
-}
-
 const filterLeasesByOptions = (
   leases: Array<Lease>,
   options: GetLeasesOptions
