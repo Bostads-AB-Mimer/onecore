@@ -224,7 +224,19 @@ export function LeaseItemsList({
                 loan={latestLoan}
                 lease={lease}
                 onRefresh={onRefresh}
-                onReturn={onReturn}
+                onReturn={
+                  onReturn
+                    ? () => {
+                        const keyIds: string[] = []
+                        const cardIds: string[] = []
+                        for (const item of groupItems) {
+                          if (item.itemType === 'key') keyIds.push(item.data.id)
+                          else cardIds.push(item.data.cardId)
+                        }
+                        onReturn(keyIds, cardIds)
+                      }
+                    : undefined
+                }
               />
             </div>
           </div>
