@@ -62,6 +62,10 @@ export function MiscellaneousInvoiceForm() {
       setIsSubmitting(false)
     },
   })
+
+  const reference =
+    userState.tag === 'success' ? userState.user.name : 'Ej inloggad'
+
   const [errors, setErrors] = useState<FormErrors>({})
 
   // Form state
@@ -189,6 +193,7 @@ export function MiscellaneousInvoiceForm() {
 
     // Prepare invoice payload
     const invoicePayload: MiscellaneousInvoicePayload = {
+      reference,
       invoiceDate: invoiceDate,
       contactCode: selectedTenant?.contactCode ?? '',
       tenantName: selectedTenant?.fullName ?? '',
@@ -259,16 +264,7 @@ export function MiscellaneousInvoiceForm() {
 
             <div className="space-y-3">
               <Label>Referens</Label>
-              <Input
-                value={
-                  userState.tag === 'success'
-                    ? userState.user.name
-                    : 'Ej inloggad'
-                }
-                readOnly
-                disabled
-                className="bg-muted"
-              />
+              <Input value={reference} readOnly disabled className="bg-muted" />
             </div>
           </div>
 

@@ -1114,6 +1114,17 @@ export const submitMiscellaneousInvoice = async (
 ) => {
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
 
+  /*
+    TODO
+    Hur ska vi sätta ourRef? Behöver hämta contact för att få dbId baserat på något, men vad?
+    Hur kan vi få användare i Xledger från inloggad användare i Onecore?
+    Behöver vi hämta alla contacts från Xledger och välja manuellt ur en lista när fakturaunderlaget skapas?
+
+    ourRef: {
+      dbId: "12345"
+    }
+  */
+
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
       {
@@ -1194,6 +1205,7 @@ interface InvoiceRow {
 }
 
 interface MiscellaneousInvoicePayload {
+  reference: string
   invoiceDate: Date
   contactCode: string
   tenantName: string

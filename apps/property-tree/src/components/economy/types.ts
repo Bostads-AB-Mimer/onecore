@@ -24,6 +24,7 @@ export interface InvoiceRow {
 }
 
 export interface MiscellaneousInvoicePayload {
+  reference: string
   invoiceDate: Date
   contactCode: string
   tenantName: string
