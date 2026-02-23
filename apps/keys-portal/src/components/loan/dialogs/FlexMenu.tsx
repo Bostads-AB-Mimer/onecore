@@ -198,7 +198,7 @@ export function FlexMenu({
                     {key.flexNumber !== undefined &&
                       ` • Flex ${key.flexNumber}`}
                     {key.keySequenceNumber !== undefined &&
-                      ` • Sekv: ${key.keySequenceNumber}`}
+                      ` • Löpnr: ${key.keySequenceNumber}`}
                   </div>
                 </div>
               ))}
@@ -232,7 +232,7 @@ export function FlexMenu({
 
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        Flex {newFlexNumber} • Sekvens 1-{group.count}
+                        Flex {newFlexNumber} • Löpnr 1-{group.count}
                       </span>
                       <div className="flex items-center gap-2">
                         <Button

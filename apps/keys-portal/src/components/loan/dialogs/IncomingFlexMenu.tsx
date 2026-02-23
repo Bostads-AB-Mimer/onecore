@@ -333,7 +333,7 @@ export function IncomingFlexMenu({
                           ? `Flex ${key.flexNumber}`
                           : 'Flex -'}
                         {key.keySequenceNumber !== undefined &&
-                          ` • Sekv: ${key.keySequenceNumber}`}
+                          ` • Löpnr: ${key.keySequenceNumber}`}
                       </div>
                     </div>
                   </div>

@@ -96,7 +96,7 @@ export function ReturnKeysDialogBase({
                         {key.flexNumber !== undefined &&
                           ` • Flex: ${key.flexNumber}`}
                         {key.keySequenceNumber !== undefined &&
-                          ` • Sekv: ${key.keySequenceNumber}`}
+                          ` • Löpnr: ${key.keySequenceNumber}`}
                       </div>
                     </div>
                   </div>
@@ -124,7 +124,7 @@ export function ReturnKeysDialogBase({
                       {key.flexNumber !== undefined &&
                         ` • Flex: ${key.flexNumber}`}
                       {key.keySequenceNumber !== undefined &&
-                        ` • Sekv: ${key.keySequenceNumber}`}
+                        ` • Löpnr: ${key.keySequenceNumber}`}
                     </div>
                   </div>
                 ))}

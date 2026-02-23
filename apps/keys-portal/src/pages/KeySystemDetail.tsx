@@ -584,7 +584,7 @@ export default function KeySystemDetail() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('keySequenceNumber')}
                   >
-                    Sekvens{' '}
+                    Löpnr{' '}
                     {sortBy === 'keySequenceNumber' &&
                       (sortOrder === 'asc' ? '↑' : '↓')}
                   </TableHead>
@@ -592,7 +592,7 @@ export default function KeySystemDetail() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('flexNumber')}
                   >
-                    Flex Nr{' '}
+                    Flexnr{' '}
                     {sortBy === 'flexNumber' &&
                       (sortOrder === 'asc' ? '↑' : '↓')}
                   </TableHead>
@@ -698,8 +698,8 @@ export default function KeySystemDetail() {
                           <TableHeader>
                             <TableRow>
                               <TableHead className="pl-4">Nyckelnamn</TableHead>
-                              <TableHead>Sekvens</TableHead>
-                              <TableHead>Flex Nr</TableHead>
+                              <TableHead>Löpnr</TableHead>
+                              <TableHead>Flexnr</TableHead>
                               <TableHead>Typ</TableHead>
                               <TableHead className="pr-4">Skapad</TableHead>
                             </TableRow>

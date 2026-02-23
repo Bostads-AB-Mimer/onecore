@@ -161,7 +161,7 @@ export function KeyLoanTransferDialog({
                     {key.flexNumber !== undefined &&
                       ` • Flex: ${key.flexNumber}`}
                     {key.keySequenceNumber !== undefined &&
-                      ` • Sekv: ${key.keySequenceNumber}`}
+                      ` • Löpnr: ${key.keySequenceNumber}`}
                   </div>
                 </div>
               ))}
@@ -205,7 +205,7 @@ export function KeyLoanTransferDialog({
                     {key.flexNumber !== undefined &&
                       ` • Flex: ${key.flexNumber}`}
                     {key.keySequenceNumber !== undefined &&
-                      ` • Sekv: ${key.keySequenceNumber}`}
+                      ` • Löpnr: ${key.keySequenceNumber}`}
                   </div>
                 </div>
               ))}
@@ -232,7 +232,7 @@ export function KeyLoanTransferDialog({
                 {KeyTypeLabels[key.keyType]}
                 {key.flexNumber !== undefined && ` • Flex: ${key.flexNumber}`}
                 {key.keySequenceNumber !== undefined &&
-                  ` • Sekv: ${key.keySequenceNumber}`}
+                  ` • Löpnr: ${key.keySequenceNumber}`}
               </div>
             </div>
           ))}
@@ -255,7 +255,7 @@ export function KeyLoanTransferDialog({
                 {KeyTypeLabels[key.keyType]}
                 {key.flexNumber !== undefined && ` • Flex: ${key.flexNumber}`}
                 {key.keySequenceNumber !== undefined &&
-                  ` • Sekv: ${key.keySequenceNumber}`}
+                  ` • Löpnr: ${key.keySequenceNumber}`}
               </div>
             </div>
           ))}

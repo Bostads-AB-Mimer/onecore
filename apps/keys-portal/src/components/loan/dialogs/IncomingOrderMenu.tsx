@@ -159,7 +159,7 @@ export function IncomingOrderMenu({
                 <div className="text-xs text-muted-foreground">
                   {KeyTypeLabels[key.keyType]}
                   {key.keySequenceNumber !== undefined &&
-                    ` • Sekv: ${key.keySequenceNumber}`}
+                    ` • Löpnr: ${key.keySequenceNumber}`}
                 </div>
               </div>
             </div>
