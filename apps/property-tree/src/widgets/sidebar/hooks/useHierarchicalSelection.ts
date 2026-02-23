@@ -42,20 +42,18 @@ export function useHierarchicalSelection() {
 
   // Resolve each level: use route param if directly selected,
   // otherwise fall back to navigation state → fetched data
-  const selectedResidenceId = onResidence
-    ? params.residenceId ?? null
-    : null
+  const selectedResidenceId = onResidence ? (params.residenceId ?? null) : null
 
   const selectedBuildingCode = onBuilding
-    ? params.buildingCode ?? null
-    : state.buildingCode ?? residence?.building?.code ?? null
+    ? (params.buildingCode ?? null)
+    : (state.buildingCode ?? residence?.building?.code ?? null)
 
   const selectedPropertyCode = onProperty
-    ? params.propertyCode ?? null
-    : state.propertyCode ??
+    ? (params.propertyCode ?? null)
+    : (state.propertyCode ??
       building?.property?.code ??
       residence?.property?.code ??
-      null
+      null)
 
   // Company requires a property fetch to resolve
   const { data: property } = useProperty(
@@ -66,8 +64,8 @@ export function useHierarchicalSelection() {
   )
 
   const selectedCompanyId = onCompany
-    ? params.companyId ?? null
-    : state.companyId ?? company?.id ?? null
+    ? (params.companyId ?? null)
+    : (state.companyId ?? company?.id ?? null)
 
   const selectionState = useMemo(
     (): SelectionState => ({

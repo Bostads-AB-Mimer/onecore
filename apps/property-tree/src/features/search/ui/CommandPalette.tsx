@@ -131,12 +131,13 @@ export function CommandPalette() {
         e.preventDefault()
         setSelectedIndex((i) => (i > 0 ? i - 1 : searchQuery.data.length - 1))
         break
-      case 'Enter': {
-        const props = getResultProps(searchQuery.data[selectedIndex])
-        if (props) {
-          handleSelect(props.path, props.state)
+      case 'Enter':
+        {
+          const props = getResultProps(searchQuery.data[selectedIndex])
+          if (props) {
+            handleSelect(props.path, props.state)
+          }
         }
-      }
         break
       case 'Escape':
         close()
