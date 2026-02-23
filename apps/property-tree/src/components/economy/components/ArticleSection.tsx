@@ -42,6 +42,12 @@ export function ArticleSection({
     onInvoiceRowsChange(newRows)
   }
 
+  const handleChangeRowText = (index: number, value: string) => {
+    const newRows = [...invoiceRows]
+    newRows[index] = { ...newRows[index], text: value }
+    onInvoiceRowsChange(newRows)
+  }
+
   const handleChangeRowArticle = (index: number, articleId: string) => {
     const newRows = [...invoiceRows]
     const article = SelectableInvoiceArticles.find((a) => a.id === articleId)
@@ -118,6 +124,14 @@ export function ArticleSection({
               </div>
             </div>
             <div className="grid grid-cols-3 items-center gap-2">
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Text</Label>
+                <Input
+                  value={row.text}
+                  onChange={(e) => handleChangeRowText(index, e.target.value)}
+                  placeholder="Beskrivning..."
+                />
+              </div>
               <div className="space-y-1 sm:space-y-0">
                 <Label>Pris (ink. moms)</Label>
                 <Input
