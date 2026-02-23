@@ -55,9 +55,6 @@ async function getMiscellaneousInvoiceDataForLease(
     {
       params: {
         path: { rentalId },
-        query: {
-          year: new Date().getFullYear(),
-        },
       },
     }
   )
