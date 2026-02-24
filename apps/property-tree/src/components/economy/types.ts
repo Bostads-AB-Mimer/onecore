@@ -33,7 +33,6 @@ export interface MiscellaneousInvoicePayload {
   propertyCode?: string
   invoiceRows: InvoiceRow[]
   administrativeCosts: boolean
-  handlingFee: boolean
   comment?: string
   projectCode?: string
   attachment?: File
