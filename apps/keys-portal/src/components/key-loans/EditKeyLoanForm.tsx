@@ -49,15 +49,13 @@ export function EditKeyLoanForm({
     contactPerson: editingKeyLoan.contactPerson || '',
     notes: editingKeyLoan.notes || '',
     pickedUpAt: editingKeyLoan.pickedUpAt
-      ? new Date(editingKeyLoan.pickedUpAt).toISOString().split('T')[0]
+      ? format(new Date(editingKeyLoan.pickedUpAt), 'yyyy-MM-dd')
       : '',
     returnedAt: editingKeyLoan.returnedAt
-      ? new Date(editingKeyLoan.returnedAt).toISOString().split('T')[0]
+      ? format(new Date(editingKeyLoan.returnedAt), 'yyyy-MM-dd')
       : '',
     availableToNextTenantFrom: editingKeyLoan.availableToNextTenantFrom
-      ? new Date(editingKeyLoan.availableToNextTenantFrom)
-          .toISOString()
-          .split('T')[0]
+      ? format(new Date(editingKeyLoan.availableToNextTenantFrom), 'yyyy-MM-dd')
       : '',
   })
 
