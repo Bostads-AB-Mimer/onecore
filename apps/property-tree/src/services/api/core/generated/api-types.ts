@@ -5763,7 +5763,7 @@ export interface components {
       /** Format: date-time */
       lastDebitDate: string | null;
       /** @enum {number} */
-      status: 0 | 1 | 2 | 3;
+      status: 0 | 1 | 2 | 3 | 4;
       property?: string | null;
       buildingCode?: string | null;
       area?: string | null;
