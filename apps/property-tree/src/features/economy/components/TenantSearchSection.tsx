@@ -11,15 +11,14 @@ import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 
 interface TenantSearchSectionProps {
-  value?: string
   tenantName?: string
-  onCustomerSelect: (tenant: TenantSearchResult | null) => void
+  onSelectTenant: (tenant: TenantSearchResult | null) => void
   error?: string
 }
 
 export function TenantSearchSection({
-  tenantName: customerName,
-  onCustomerSelect,
+  tenantName,
+  onSelectTenant,
   error,
 }: TenantSearchSectionProps) {
   const { searchQuery, setSearchQuery, searchResults } = useTenantSearch()
@@ -45,12 +44,12 @@ export function TenantSearchSection({
 
   const handleSelectCustomer = (tenant: TenantSearchResult) => {
     setIsOpen(false)
-    onCustomerSelect(tenant)
+    onSelectTenant(tenant)
   }
 
   const handleClear = () => {
     setSearchQuery('')
-    onCustomerSelect(null)
+    onSelectTenant(null)
   }
 
   return (
@@ -119,7 +118,7 @@ export function TenantSearchSection({
         <Label htmlFor="kundnamn">Kundnamn</Label>
         <Input
           id="kundnamn"
-          value={customerName}
+          value={tenantName ?? ''}
           readOnly
           disabled
           placeholder="Fylls i automatiskt"
