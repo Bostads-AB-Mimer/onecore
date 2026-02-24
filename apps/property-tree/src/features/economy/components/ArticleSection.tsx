@@ -19,10 +19,8 @@ import { SelectableInvoiceArticles } from '@/data/articles/MiscellaneousInvoiceA
 interface ArticleSectionProps {
   invoiceRows: MiscellaneousInvoiceRow[]
   administrativaKostnader: boolean
-  hanteringsavgift: boolean
   onInvoiceRowsChange: (rows: MiscellaneousInvoiceRow[]) => void
   onAdministrativaKostnaderChange: (checked: boolean) => void
-  onHanteringsavgiftChange: (checked: boolean) => void
   errors?: {
     articles?: string
   }
@@ -31,10 +29,8 @@ interface ArticleSectionProps {
 export function ArticleSection({
   invoiceRows,
   administrativaKostnader,
-  hanteringsavgift,
   onInvoiceRowsChange,
   onAdministrativaKostnaderChange,
-  onHanteringsavgiftChange,
   errors,
 }: ArticleSectionProps) {
   const handleChangeRowPrice = (index: number, value: string | number) => {
@@ -179,20 +175,6 @@ export function ArticleSection({
             className="text-sm font-normal cursor-pointer"
           >
             Administrativa kostnader
-          </Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="hanteringsavgift"
-            checked={hanteringsavgift}
-            onCheckedChange={onHanteringsavgiftChange}
-          />
-          <Label
-            htmlFor="hanteringsavgift"
-            className="text-sm font-normal cursor-pointer"
-          >
-            Hanteringsavgift
           </Label>
         </div>
       </div>

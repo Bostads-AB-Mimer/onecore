@@ -82,11 +82,6 @@ export const MiscellaneousInvoiceArticles: MiscellaneousInvoiceArticle[] = [
     standardPrice: 0,
   },
   {
-    id: '329001',
-    name: 'Hanteringsavgift',
-    standardPrice: 595,
-  },
-  {
     id: '329014',
     name: 'Kostnader i samband med avflytt',
     standardPrice: 0,

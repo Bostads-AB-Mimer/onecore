@@ -102,7 +102,6 @@ export function MiscellaneousInvoiceForm() {
   const [projectCode, setProjectCode] = useState('')
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
-  const [handlingFee, setHandlingFee] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
   const handleCustomerSelect = (tenant: TenantSearchResult | null) => {
@@ -180,16 +179,6 @@ export function MiscellaneousInvoiceForm() {
         })
       }
     }
-    if (handlingFee) {
-      const article = getArticleById('329001')
-      if (article) {
-        rows.push({
-          articleId: article.id,
-          articleName: article.name,
-          price: article.standardPrice,
-        })
-      }
-    }
 
     setIsSubmitting(true)
 
@@ -206,7 +195,6 @@ export function MiscellaneousInvoiceForm() {
       comment: comment,
       invoiceRows: rows,
       administrativeCosts: administrativeCosts,
-      handlingFee: handlingFee,
       attachment: attachedFile ?? undefined,
     }
 
@@ -222,7 +210,6 @@ export function MiscellaneousInvoiceForm() {
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)
-    setHandlingFee(false)
     setErrors({})
   }
 
@@ -310,10 +297,8 @@ export function MiscellaneousInvoiceForm() {
             <ArticleSection
               invoiceRows={invoiceRows}
               administrativaKostnader={administrativeCosts}
-              hanteringsavgift={handlingFee}
               onInvoiceRowsChange={setInvoiceRows}
               onAdministrativaKostnaderChange={setAdministrativeCosts}
-              onHanteringsavgiftChange={setHandlingFee}
               errors={{
                 articles: errors.articles,
               }}
