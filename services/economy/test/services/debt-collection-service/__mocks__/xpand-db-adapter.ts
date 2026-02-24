@@ -23,7 +23,7 @@ export const createMockContact = (
     city: 'Test City',
   },
   phoneNumbers: [
-    { phoneNumber: '0701234567', type: 'mobile', isMainNumber: 1 },
+    { phoneNumber: '0701234567', type: 'mobile', isMainNumber: true },
   ],
   emailAddress: 'john.doe@example.com',
   isTenant: true,

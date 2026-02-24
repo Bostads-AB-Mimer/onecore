@@ -42,7 +42,7 @@ jest.mock('knex', () => () => ({
         {
           phoneNumber: '070123456 ',
           type: 'mobil  ',
-          isMainNumber: 1,
+          isMainNumber: true,
         },
       ])
     })
@@ -79,7 +79,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
           {
             phoneNumber: '070123456',
             type: 'mobil',
-            isMainNumber: 1,
+            isMainNumber: true,
           },
         ],
         specialAttention: false,

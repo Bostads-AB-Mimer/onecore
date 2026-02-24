@@ -51,7 +51,7 @@ describe('lease-service', () => {
             {
               phoneNumber: '+460123456789',
               type: 'mobtel',
-              isMainNumber: 1,
+              isMainNumber: true,
             },
           ],
           emailAddress: 'kalle.testsson@test.se',
@@ -108,7 +108,7 @@ describe('lease-service', () => {
             {
               phoneNumber: '+460759429414',
               type: 'mobtel',
-              isMainNumber: 1,
+              isMainNumber: true,
             },
           ],
           emailAddress: 'majbritt-123@mimer.nu',
@@ -165,7 +165,7 @@ describe('lease-service', () => {
             {
               phoneNumber: '+460759429414',
               type: 'mobtel',
-              isMainNumber: 1,
+              isMainNumber: true,
             },
           ],
           emailAddress: 'erik.lundberg@mimer.nu',
