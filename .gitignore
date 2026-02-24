@@ -63,3 +63,5 @@ lib-cov
 !.claude/commands/
 .claude/commands/*
 !.claude/commands/prereview.md
+
+CLAUDE.md
