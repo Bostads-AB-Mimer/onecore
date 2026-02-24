@@ -98,4 +98,40 @@ export const routes = (router: KoaRouter) => {
       )
     }
   })
+
+  router.post('/invoices/miscellaneous', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.submitMiscellaneousInvoice(
+      JSON.parse(ctx.request.body.invoice),
+      ctx.request.files?.attachment
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
+    }
+  })
+
+  router.get('/invoices/miscellaneous/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getMiscellaneousInvoiceDataForLease(
+      ctx.params.rentalId
+    )
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
+    }
+  })
 }
