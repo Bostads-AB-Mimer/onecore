@@ -10,8 +10,16 @@ export const swaggerSpec = {
       version: '1.0.0',
     },
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
       schemas: {},
     },
+    security: [{ bearerAuth: [] }],
   },
   apis: [
     `${basePath}/services/auth-service/*.{ts,js}`,
