@@ -104,7 +104,7 @@ const transformXledgerContactToXpandContact = (
       {
         phoneNumber: xledgerContact.phoneNumber ?? '',
         type: '',
-        isMainNumber: true,
+        isMainNumber: 1,
       },
     ],
     // TODO These properties are only here to satisfy the Contact type, should refactor to use some other type
