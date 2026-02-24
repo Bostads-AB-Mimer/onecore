@@ -104,6 +104,10 @@ describe('leases routes', () => {
     })
 
     it('responds with a list of leases for valid query parameters', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+
       const getLeasesByContactCodeSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])

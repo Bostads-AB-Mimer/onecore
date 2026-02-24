@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { leasing, schemas } from '@onecore/types'
+import { Contact, Lease, leasing, schemas } from '@onecore/types'
 import z from 'zod'
 
 import {
@@ -16,6 +16,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
+import { AdapterResult } from '@/adapters/types'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -283,7 +284,7 @@ export const routes = (router: KoaRouter) => {
   // TODO(BREAKING): Changed the path by-rental-property-id => by-rental-object-code
   router.get('/leases/by-rental-object-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+    const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       ctx.status = 400
@@ -292,6 +293,7 @@ export const routes = (router: KoaRouter) => {
         error: queryParams.error,
         ...metadata,
       }
+
       return
     }
 
@@ -301,11 +303,26 @@ export const routes = (router: KoaRouter) => {
         queryParams.data
       )
 
-      ctx.status = 200
-      ctx.body = {
-        content: leases.map(mapLease),
-        ...metadata,
+      if (!queryParams.data.includeContacts) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(leases.map(mapLease), metadata)
+        return
       }
+
+      const patchedLeases = await patchLeasesWithContacts(leases)
+
+      if (!patchedLeases.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: patchedLeases.err,
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(patchedLeases.data, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -362,7 +379,7 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
       if (!queryParams.success) {
         ctx.status = 400
@@ -382,10 +399,24 @@ export const routes = (router: KoaRouter) => {
         queryParams.data
       )
 
-      ctx.body = {
-        content: leases,
-        ...metadata,
+      if (!queryParams.data.includeContacts) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(leases, metadata)
+        return
       }
+
+      const patchedLeases = await patchLeasesWithContacts(leases)
+      if (!patchedLeases.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: patchedLeases.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(patchedLeases.data, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -439,25 +470,76 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
+    try {
+      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
-    if (!queryParams.success) {
-      ctx.status = 400
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid query parameters',
+          error: queryParams.error,
+          ...metadata,
+        }
+        return
+      }
+
+      const leases = await leasingAdapter.getLeasesByContactCode(
+        ctx.params.contactCode,
+        queryParams.data
+      )
+
+      if (!queryParams.data.includeContacts) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(leases, metadata)
+        return
+      }
+
+      const patchedLeases = await patchLeasesWithContacts(leases)
+      if (!patchedLeases.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: patchedLeases.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(patchedLeases.data, metadata)
+    } catch (err) {
+      logger.error({ err, metadata }, 'Error fetching leases from leasing')
+      ctx.status = 500
       ctx.body = {
-        reason: 'Invalid query parameters',
-        error: queryParams.error,
+        error: 'Internal server error',
         ...metadata,
       }
-      return
+    }
+  })
+
+  async function patchLeasesWithContacts(
+    leases: Lease[]
+  ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
+    for (const lease of leases) {
+      if (!lease.tenantContactIds) {
+        continue
+      }
+
+      let contacts: Contact[] = []
+      for (const contactCode of lease.tenantContactIds) {
+        const contact =
+          await leasingAdapter.getContactByContactCode(contactCode)
+        if (!contact.ok || !contact.data) {
+          return { ok: false, err: 'no-contact' }
+        }
+
+        contacts.push(contact.data)
+      }
+
+      lease.tenants = contacts
     }
 
-    const responseData = await leasingAdapter.getLeasesByContactCode(
-      ctx.params.contactCode,
-      queryParams.data
-    )
-
-    ctx.body = makeSuccessResponseBody(responseData, metadata)
-  })
+    return { ok: true, data: leases }
+  }
 
   /**
    * @swagger

@@ -5,12 +5,9 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { Contact, Lease, leasing, schemas } from '@onecore/types'
+import { leasing, schemas } from '@onecore/types'
 
-import {
-  getContactByContactCode,
-  getContactsByLeaseId,
-} from '../adapters/xpand/tenant-lease-adapter'
+import { getContactByContactCode } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
@@ -18,7 +15,6 @@ import {
 } from '../adapters/xpand/lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
-import { AdapterResult } from '../adapters/types'
 import config from '../../../common/config'
 import { toYearMonthDayString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -380,25 +376,8 @@ export const routes = (router: KoaRouter) => {
       tenfastHelpers.mapToOnecoreLease(lease)
     )
 
-    // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
-    if (!queryParams.data.includeContacts) {
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
-    } else {
-      const patchLeases = await patchLeasesWithContacts(onecoreLeases)
-      if (!patchLeases.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: patchLeases.err,
-          ...metadata,
-        }
-
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
-    }
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
   })
 
   /**
@@ -509,25 +488,8 @@ export const routes = (router: KoaRouter) => {
         tenfastHelpers.mapToOnecoreLease(lease)
       )
 
-      // TODO: When tenfast lease contains hyresgaster as contact codes, we can rewrite this
-      if (!queryParams.data.includeContacts) {
-        ctx.status = 200
-        ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
-      } else {
-        const patchLeases = await patchLeasesWithContacts(onecoreLeases)
-        if (!patchLeases.ok) {
-          ctx.status = 500
-          ctx.body = {
-            error: 'Not found',
-            ...metadata,
-          }
-
-          return
-        }
-
-        ctx.status = 200
-        ctx.body = makeSuccessResponseBody(patchLeases.data, metadata)
-      }
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
     }
   )
 
@@ -1139,28 +1101,4 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
-}
-
-async function patchLeasesWithContacts(
-  leases: Lease[]
-): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
-  for (const lease of leases) {
-    if (!lease.tenantContactIds) {
-      continue
-    }
-
-    let contacts: Contact[] = []
-    for (const contactCode of lease.tenantContactIds) {
-      const contact = await getContactByContactCode(contactCode, false)
-      if (!contact.ok || !contact.data) {
-        return { ok: false, err: 'no-contact' }
-      }
-
-      contacts.push(contact.data)
-    }
-
-    lease.tenants = contacts
-  }
-
-  return { ok: true, data: leases }
 }
