@@ -8068,7 +8068,7 @@ export interface components {
           phoneNumbers?: {
               phoneNumber: string;
               type: string;
-              isMainNumber: number;
+              isMainNumber: boolean;
             }[];
           emailAddress?: string;
           isTenant: boolean;
@@ -8144,7 +8144,7 @@ export interface components {
       phoneNumbers: {
           phoneNumber: string;
           type: string;
-          isMainNumber: number;
+          isMainNumber: boolean;
         }[];
       emailAddress: string | null;
       isTenant: boolean;

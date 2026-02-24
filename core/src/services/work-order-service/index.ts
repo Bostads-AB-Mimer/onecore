@@ -1633,6 +1633,7 @@ export const routes = (router: KoaRouter) => {
 
       const result = await workOrderAdapter.createWorkOrder({
         rentalProperty: rentalPropertyInfo,
+        // @ts-expect-error phoneNumbers.isMainNumber is typed as boolean, but it is actually a number
         tenant: tenant.data,
         // @ts-expect-error leaseStartDate and other dates are typed as Date, but they are actually strings
         lease,

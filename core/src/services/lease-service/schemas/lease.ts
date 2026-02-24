@@ -35,7 +35,7 @@ export const Contact = z.object({
     z.object({
       phoneNumber: z.string(),
       type: z.string(),
-      isMainNumber: z.number(),
+      isMainNumber: z.boolean(),
     })
   ),
   emailAddress: z.string().nullable(),
@@ -140,7 +140,7 @@ export const Lease = z.object({
             z.object({
               phoneNumber: z.string(),
               type: z.string(),
-              isMainNumber: z.number(),
+              isMainNumber: z.boolean(),
             })
           )
           .optional(),
