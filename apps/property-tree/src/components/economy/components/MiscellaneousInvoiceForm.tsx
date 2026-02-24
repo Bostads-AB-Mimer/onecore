@@ -107,7 +107,7 @@ export function MiscellaneousInvoiceForm() {
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
-  const handleCustomerSelect = (tenant: TenantSearchResult | null) => {
+  const handleSelectTenant = (tenant: TenantSearchResult | null) => {
     setSelectedTenant(tenant)
     setLeaseId(null)
     setCostCentre(undefined)
@@ -266,9 +266,8 @@ export function MiscellaneousInvoiceForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Kundinformation</h3>
             <TenantSearchSection
-              value={selectedTenant?.contactCode}
               tenantName={selectedTenant?.fullName}
-              onCustomerSelect={handleCustomerSelect}
+              onSelectTenant={handleSelectTenant}
               error={errors.contactCode}
             />
           </div>

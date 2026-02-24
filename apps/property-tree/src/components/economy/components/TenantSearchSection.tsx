@@ -6,16 +6,14 @@ import { cn } from '@/lib/utils'
 import { TenantSearchResult, useTenantSearch } from '@/hooks/useTenantSearch'
 
 interface TenantSearchSectionProps {
-  value?: string
   tenantName?: string
-  onCustomerSelect: (tenant: TenantSearchResult | null) => void
+  onSelectTenant: (tenant: TenantSearchResult | null) => void
   error?: string
 }
 
 export function TenantSearchSection({
-  value,
-  tenantName: customerName,
-  onCustomerSelect,
+  tenantName,
+  onSelectTenant,
   error,
 }: TenantSearchSectionProps) {
   const {
@@ -47,12 +45,12 @@ export function TenantSearchSection({
 
   const handleSelectCustomer = (tenant: TenantSearchResult) => {
     setIsOpen(false)
-    onCustomerSelect(tenant)
+    onSelectTenant(tenant)
   }
 
   const handleClear = () => {
     setSearchQuery('')
-    onCustomerSelect(null)
+    onSelectTenant(null)
   }
 
   return (
@@ -121,7 +119,7 @@ export function TenantSearchSection({
         <Label htmlFor="kundnamn">Kundnamn</Label>
         <Input
           id="kundnamn"
-          value={customerName}
+          value={tenantName ?? ''}
           readOnly
           disabled
           placeholder="Fylls i automatiskt"
