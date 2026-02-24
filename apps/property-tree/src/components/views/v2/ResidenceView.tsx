@@ -9,6 +9,7 @@ import { TabsContent } from '@radix-ui/react-tabs'
 import {
   ClipboardList,
   Info,
+  KeyRound,
   MessageSquare,
   Users,
   FileText,
@@ -28,6 +29,7 @@ import { ContextType } from '@/types/ui'
 import { DocumentsTab } from '@/components/documents/DocumentsTab'
 import RentalBlocksTab from '@/components/residence/RentalBlocksTab'
 import { MaintenanceUnitsTab } from '@/components/object-pages/MaintenanceUnitsTab'
+import { RentalObjectKeys } from '@/components/residence/RentalObjectKeys'
 
 export const ResidenceView = () => {
   const { residenceId } = useParams()
@@ -105,6 +107,10 @@ export const ResidenceView = () => {
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Kontrakt</span>
               </TabsTrigger>
+              <TabsTrigger value="keys" className="flex items-center gap-1.5">
+                <KeyRound className="h-4 w-4" />
+                <span className="hidden sm:inline">Nycklar</span>
+              </TabsTrigger>
               <TabsTrigger
                 value="workorders"
                 className="flex items-center gap-1.5"
@@ -170,6 +176,13 @@ export const ResidenceView = () => {
               {residence?.propertyObject.rentalId && (
                 <RentalObjectContracts
                   rentalPropertyId={residence.propertyObject.rentalId}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="keys">
+              {residence?.propertyObject.rentalId && (
+                <RentalObjectKeys
+                  rentalObjectCode={residence.propertyObject.rentalId}
                 />
               )}
             </TabsContent>

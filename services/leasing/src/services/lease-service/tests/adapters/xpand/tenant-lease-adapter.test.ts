@@ -432,7 +432,7 @@ describe('transformFromDbContact', () => {
     const phoneNumbers: {
       phoneNumber: string
       type: string
-      isMainNumber: boolean
+      isMainNumber: number
     }[] = []
     const leases: Lease[] = []
 
@@ -470,7 +470,7 @@ describe('transformFromDbContact', () => {
     const phoneNumbers: {
       phoneNumber: string
       type: string
-      isMainNumber: boolean
+      isMainNumber: number
     }[] = []
     const leases: Lease[] = []
 

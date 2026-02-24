@@ -372,7 +372,11 @@ describe('lease-service', () => {
     it('returns 200 and a list of contact data', async () => {
       const contacts = factory.contact
         .buildList(1)
-        .map(({ fullName, contactCode }) => ({ fullName, contactCode }))
+        .map(({ fullName, contactCode, nationalRegistrationNumber }) => ({
+          fullName,
+          contactCode,
+          nationalRegistrationNumber,
+        }))
 
       const getContactsDataBySearchQuery = jest
         .spyOn(tenantLeaseAdapter, 'getContactsDataBySearchQuery')

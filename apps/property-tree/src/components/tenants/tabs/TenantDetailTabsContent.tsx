@@ -7,7 +7,7 @@ import { TenantNotes } from '@/components/tenants/TenantNotes'
 // import { TenantEventLog } from '@/components/tenants/TenantEventLog'
 // import { TenantDocuments } from '@/components/tenants/TenantDocuments'
 // import { TenantLedger } from '@/components/tenants/TenantLedger'
-// import { TenantKeys } from '@/components/tenants/TenantKeys'
+import { TenantKeyLoans } from '@/components/tenants/TenantKeyLoans'
 import { StickyNote } from 'lucide-react'
 
 import { Lease } from '@/services/api/core/lease-service'
@@ -67,10 +67,11 @@ export const TenantDetailTabsContent = ({
         <TenantNotes contactCode={contactCode} />
       </TabsContent>
 
-      {/*
       <TabsContent value="keys">
-        <div>Placeholder Nyckelknippa</div>
+        <TenantKeyLoans contactCode={contactCode} leases={leases} />
       </TabsContent>
+
+      {/*
 
       <TabsContent value="events">
         <div>Placeholder Händelselogg</div>
