@@ -26,6 +26,7 @@ type Props = {
   onAccept: () => void
   acceptButtonText: string
   totalCount: number
+  acceptDisabled?: boolean
 }
 
 export function BeforeAfterDialogBase({
@@ -42,6 +43,7 @@ export function BeforeAfterDialogBase({
   onAccept,
   acceptButtonText,
   totalCount,
+  acceptDisabled,
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,7 +101,7 @@ export function BeforeAfterDialogBase({
           </Button>
           <Button
             onClick={onAccept}
-            disabled={isProcessing || totalCount === 0}
+            disabled={isProcessing || totalCount === 0 || acceptDisabled}
           >
             {isProcessing ? (
               <>
