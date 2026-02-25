@@ -36,7 +36,7 @@ function transformDbApplicant(row: DbApplicant): Applicant {
     nationalRegistrationNumber: row.NationalRegistrationNumber,
     contactCode: row.ContactCode,
     applicationDate: row.ApplicationDate,
-    applicationType: row.ApplicationType || undefined,
+    applicationType: row.ApplicationType,
     status: row.Status,
     listingId: row.ListingId,
   }
