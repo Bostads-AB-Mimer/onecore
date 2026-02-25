@@ -6,6 +6,7 @@ import { routes as propertyBaseRoutes } from './services/property-base-service'
 import { routes as searchRoutes } from './services/search-service'
 import { routes as economyRoutes } from './services/economy-service'
 import { routes as fileStorageRoutes } from './services/file-storage-service'
+import { routes as communicationRoutes } from './services/communication-service'
 
 import { routes as keyRoutes } from './services/keys-service'
 import { updateSwaggerSchemas } from './swagger'
@@ -21,6 +22,8 @@ keyRoutes(router)
 searchRoutes(router)
 economyRoutes(router)
 fileStorageRoutes(router)
+communicationRoutes(router)
+
 updateSwaggerSchemas()
 
 export default router

@@ -900,23 +900,23 @@ const deleteListingTextContent = async (
 
 const getContactsByFilters = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<{ content: leasing.v1.ContactInfo[] }> => {
-  const params = new URLSearchParams()
+): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/contacts-by-filters`,
+      {
+        params: queryParams,
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
 
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value === undefined) return
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v))
-    } else {
-      params.append(key, value)
-    }
-  })
-
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/contacts-by-filters?${params.toString()}`
-  )
-
-  return response.data
+    return { ok: true, data: response.data }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 interface ExportLeasesResult {
@@ -943,7 +943,7 @@ const exportLeasesToExcel = async (
     return {
       ok: true,
       data: {
-        data: Buffer.from(response.data),
+        data: response.data,
         contentType:
           response.headers['content-type'] ||
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

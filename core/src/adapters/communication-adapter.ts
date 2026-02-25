@@ -239,27 +239,16 @@ export const sendBulkSms = async ({
   text,
 }: BulkSms): Promise<AdapterResult<BulkSmsResult, 'error'>> => {
   try {
-    const axiosOptions = {
-      method: 'POST',
-      headers: {
-        'Content-type': 'application/json',
-      },
-    }
-
-    const result = await axios(
+    const result = await axios.post(
       `${config.communicationService.url}/sendBulkSms`,
-      {
-        ...axiosOptions,
-        data: { phoneNumbers, text },
-      }
+      { phoneNumbers, text }
     )
 
-    if (result.status !== 200) {
-      return { ok: false, err: 'error', statusCode: result.status }
-    }
-
     return { ok: true, data: result.data.content }
-  } catch {
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }
@@ -270,27 +259,16 @@ export const sendBulkEmail = async ({
   text,
 }: BulkEmail): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
   try {
-    const axiosOptions = {
-      method: 'POST',
-      headers: {
-        'Content-type': 'application/json',
-      },
-    }
-
-    const result = await axios(
+    const result = await axios.post(
       `${config.communicationService.url}/sendBulkEmail`,
-      {
-        ...axiosOptions,
-        data: { emails, subject, text },
-      }
+      { emails, subject, text }
     )
 
-    if (result.status !== 200) {
-      return { ok: false, err: 'error', statusCode: result.status }
-    }
-
     return { ok: true, data: result.data.content }
-  } catch {
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }
