@@ -1172,6 +1172,198 @@ describe('replyToOffer', () => {
         data: null,
       })
     })
+
+    it('should fail with not-allowed-to-rent-additional if applicant applicationType is Additional and validation result returns applicationType Replace', async () => {
+      const applicant = factory.detailedApplicant.build({
+        applicationType: 'Additional',
+      })
+      const offer = factory.detailedOffer.build({ offeredApplicant: applicant })
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' }, // <-- Replace returned
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.failed,
+        error: 'not-allowed-to-rent-additional',
+        httpStatus: 400,
+        response: expect.objectContaining({
+          errorCode: 'not-allowed-to-rent-additional',
+        }),
+      })
+    })
+
+    it('should succeed if applicant applicationType is Replace and validation result returns applicationType Replace', async () => {
+      const applicant = factory.detailedApplicant.build({
+        applicationType: 'Replace',
+      })
+      const offer = factory.detailedOffer.build({ offeredApplicant: applicant })
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+      createLeaseSpy.mockResolvedValueOnce({ ok: true, data: 'lease-id' })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      getOffersForContactSpy.mockResolvedValueOnce({ ok: true, data: [] })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+    })
+
+    it('should succeed if applicant applicationType is Additional and validation result returns applicationType Additional', async () => {
+      const applicant = factory.detailedApplicant.build({
+        applicationType: 'Additional',
+      })
+      const offer = factory.detailedOffer.build({ offeredApplicant: applicant })
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      createLeaseSpy.mockResolvedValueOnce({ ok: true, data: 'lease-id' })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      getOffersForContactSpy.mockResolvedValueOnce({ ok: true, data: [] })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+    })
+
+    it('should succeed if applicant applicationType is Replace and validation result returns applicationType Additional (edge case)', async () => {
+      const applicant = factory.detailedApplicant.build({
+        applicationType: 'Replace',
+      })
+      const offer = factory.detailedOffer.build({ offeredApplicant: applicant })
+      const listing = factory.listing.build()
+      const parkingSpace = factory.vacantParkingSpace.build({
+        residentialAreaCode: 'AREA1',
+      })
+
+      getOfferByIdSpy.mockResolvedValueOnce({ ok: true, data: offer })
+      getListingByListingIdSpy.mockResolvedValue(listing)
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: parkingSpace,
+      })
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      createLeaseSpy.mockResolvedValueOnce({ ok: true, data: 'lease-id' })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      getOffersForContactSpy.mockResolvedValueOnce({ ok: true, data: [] })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+      denyOfferSpy.mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+      } as ProcessResult)
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: null,
+      })
+    })
   })
 
   describe('denyOffer', () => {
