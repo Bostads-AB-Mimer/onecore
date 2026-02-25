@@ -264,9 +264,6 @@ export const createOfferForInternalParkingSpace = async (
       }
     }
 
-    // sentAt is now set during createOffer, so no need to update it separately.
-    // If this changes, see ticket #TODO-1234.
-
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 200,
