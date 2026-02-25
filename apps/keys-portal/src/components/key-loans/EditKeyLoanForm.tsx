@@ -18,6 +18,7 @@ import {
   Receipt,
 } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { X, FileText, Download, Trash2, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -32,6 +33,8 @@ type EditKeyLoanFormProps = {
   onReceiptUpload?: (loanId: string, file: File) => Promise<void>
   onReceiptDownload?: (loanId: string) => Promise<void>
   onReceiptDelete?: (loanId: string) => Promise<void>
+  onDelete?: (loanId: string) => Promise<void>
+  hideCard?: boolean
 }
 
 export function EditKeyLoanForm({
@@ -41,6 +44,8 @@ export function EditKeyLoanForm({
   onReceiptUpload,
   onReceiptDownload,
   onReceiptDelete,
+  onDelete,
+  hideCard,
 }: EditKeyLoanFormProps) {
   const [formData, setFormData] = useState<UpdateKeyLoanRequest>({
     contact: editingKeyLoan.contact || '',
@@ -63,6 +68,7 @@ export function EditKeyLoanForm({
     null
   )
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [loanReceipt, setLoanReceipt] = useState<Receipt | null>(null)
   const [loadingReceipt, setLoadingReceipt] = useState(true)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -243,18 +249,9 @@ export function EditKeyLoanForm({
     return '-'
   }
 
-  return (
-    <Card className="animate-fade-in mb-6">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base">Redigera nyckellån</CardTitle>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-
-      <CardContent className="space-y-3 p-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Loan type and created date */}
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      {/* Loan type and created date */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="loanType" className="text-xs">
@@ -543,13 +540,57 @@ export function EditKeyLoanForm({
           </div>
 
           {/* Form actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Avbryt
-            </Button>
-            <Button type="submit">Uppdatera</Button>
+          <div className="flex justify-between pt-2">
+            {onDelete ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:text-destructive border-destructive/50"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={!!editingKeyLoan.pickedUpAt && !editingKeyLoan.returnedAt}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Ta bort
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Avbryt
+              </Button>
+              <Button type="submit">Uppdatera</Button>
+            </div>
           </div>
+
+          <ConfirmDialog
+            open={showDeleteConfirm}
+            onOpenChange={setShowDeleteConfirm}
+            title="Ta bort nyckellån"
+            description="Är du säker på att du vill ta bort detta lån? Detta går inte att ångra."
+            confirmLabel="Ta bort"
+            onConfirm={() => {
+              setShowDeleteConfirm(false)
+              onDelete?.(editingKeyLoan.id)
+            }}
+          />
         </form>
+  )
+
+  if (hideCard) {
+    return formContent
+  }
+
+  return (
+    <Card className="animate-fade-in mb-6">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-base">Redigera nyckellån</CardTitle>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          <X className="h-4 w-4" />
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3 p-4">
+        {formContent}
       </CardContent>
     </Card>
   )
