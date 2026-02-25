@@ -17,7 +17,9 @@ import { keyLoanService } from '@/services/api/keyLoanService'
 import { useToast } from '@/hooks/use-toast'
 import type { KeyLoan, KeyLoanWithDetails, Lease } from '@/services/types'
 
-function isEnriched(loan: KeyLoan | KeyLoanWithDetails): loan is KeyLoanWithDetails {
+function isEnriched(
+  loan: KeyLoan | KeyLoanWithDetails
+): loan is KeyLoanWithDetails {
   return 'keysArray' in loan && loan.keysArray !== undefined
 }
 
@@ -105,11 +107,14 @@ export function LoanActionMenu({
     }
   }, [hasOpened, loan.id])
 
-  const handleMenuOpenChange = useCallback((open: boolean) => {
-    if (open && !hasOpened) {
-      setHasOpened(true)
-    }
-  }, [hasOpened])
+  const handleMenuOpenChange = useCallback(
+    (open: boolean) => {
+      if (open && !hasOpened) {
+        setHasOpened(true)
+      }
+    },
+    [hasOpened]
+  )
 
   const handlePrintLoanReceipt = async () => {
     setLoading(true)
