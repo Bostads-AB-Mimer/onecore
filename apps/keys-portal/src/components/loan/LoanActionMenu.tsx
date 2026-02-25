@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Printer, Upload, Eye, Pencil, RotateCcw } from 'lucide-react'
 import {
   DropdownMenuItem,
@@ -27,7 +27,7 @@ export interface LoanActionMenuProps {
   loan: KeyLoan | KeyLoanWithDetails
   lease?: Lease
   onRefresh?: () => void
-  onReturn?: (keyIds: string[], cardIds: string[]) => void
+  onReturn?: (loan: KeyLoanWithDetails) => void
   onEdit?: (loan: KeyLoanWithDetails) => void
 }
 
@@ -60,16 +60,9 @@ export function LoanActionMenu({
   // Check if loan can be returned (not already returned)
   const canReturn = !loan.returnedAt
 
-  // Get key and card IDs from the enriched loan
-  const { keyIds, cardIds } = useMemo(() => {
-    const keyIds = enrichedLoan?.keysArray?.map((k) => k.id) || []
-    const cardIds = enrichedLoan?.keyCardsArray?.map((c) => c.cardId) || []
-    return { keyIds, cardIds }
-  }, [enrichedLoan?.keysArray, enrichedLoan?.keyCardsArray])
-
   const handleReturn = () => {
-    if (onReturn && canReturn) {
-      onReturn(keyIds, cardIds)
+    if (onReturn && canReturn && enrichedLoan) {
+      onReturn(enrichedLoan)
     }
   }
 
@@ -362,7 +355,7 @@ export function LoanActionMenu({
             {/* Return keys */}
             <DropdownMenuItem
               onClick={handleReturn}
-              disabled={loading || !canReturn || !onReturn}
+              disabled={loading || !canReturn || !onReturn || !enrichedLoan}
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               Återlämna
