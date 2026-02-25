@@ -7982,6 +7982,205 @@ export interface paths {
       }
     }
   }
+  '/v1/contacts': {
+    /**
+     * List and filter(search) for contact information
+     * @description Filtering can be done by wildcard search
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Wildcard search string */
+          q?: string[]
+          /** @description Filter on contact type */
+          type?: 'individual' | 'organisation'
+          /** @description Page number for paginated results */
+          page?: number
+          /** @description Page size number for paginated results */
+          pageSize?: number
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                contacts: components['schemas']['ContactV1'][]
+              }
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/{contactCode}': {
+    /** Get a single contact by canonical id (contact code) */
+    get: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: components['schemas']['ContactV1']
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/{contactCode}/trustee': {
+    /** Get the trustee of a contact */
+    get: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: components['schemas']['ContactV1']
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/by-phone-number/{phoneNumber}': {
+    /** List contacts by phone number */
+    get: {
+      parameters: {
+        path: {
+          /** @description Phone Number */
+          phoneNumber: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: components['schemas']['ContactV1']
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/by-email-address/{emailAddress}': {
+    /** List contacts by email address */
+    get: {
+      parameters: {
+        path: {
+          /** @description Email Address */
+          emailAddress: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: components['schemas']['ContactV1']
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/by-national-id/{nid}': {
+    /** List contacts by national id (Personnummer / Org.nr) */
+    get: {
+      parameters: {
+        path: {
+          /** @description National ID */
+          nid: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: components['schemas']['ContactV1']
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -9806,11 +10005,11 @@ export interface components {
     }
     KeyBundle: {
       /** Format: uuid */
-      id: string;
-      name: string;
-      description?: string | null;
-      keyCount?: number;
-    };
+      id: string
+      name: string
+      keys: string
+      description?: string | null
+    }
     BundleWithLoanedKeysInfo: {
       /** Format: uuid */
       id: string
@@ -9820,24 +10019,53 @@ export interface components {
       totalKeyCount: number
     }
     CreateKeyBundleRequest: {
-      name: string;
-      keys: string[];
-      description?: string | null;
-    };
+      name: string
+      keys: string
+      description?: string | null
+    }
     UpdateKeyBundleRequest: {
-      name?: string;
-      keys?: string[];
-      description?: string | null;
-    };
+      name?: string
+      keys?: string
+      description?: string | null
+    }
     KeyBundleDetailsResponse: {
       bundle: {
         /** Format: uuid */
-        id: string;
-        name: string;
-        description?: string | null;
-        keyCount?: number;
-      };
-      keys: ({
+        id: string
+        name: string
+        keys: string
+        description?: string | null
+      }
+      keys: {
+        /** Format: uuid */
+        id: string
+        keyName: string
+        keySequenceNumber?: number | null
+        flexNumber?: number | null
+        rentalObjectCode?: string | null
+        /** @enum {string} */
+        keyType:
+          | 'HN'
+          | 'FS'
+          | 'MV'
+          | 'LGH'
+          | 'PB'
+          | 'GAR'
+          | 'LOK'
+          | 'HL'
+          | 'FÖR'
+          | 'SOP'
+          | 'ÖVR'
+        /** Format: uuid */
+        keySystemId?: string | null
+        /** @default false */
+        disposed?: boolean
+        notes?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+        keySystem?: {
           /** Format: uuid */
           id: string
           systemCode: string
@@ -10344,6 +10572,92 @@ export interface components {
         }
       }
     }
+    ContactV1:
+      | {
+          contactCode: string
+          communication: {
+            phoneNumbers: {
+              phoneNumber: string
+              /** @enum {string} */
+              type:
+                | 'work'
+                | 'home'
+                | 'mobile'
+                | 'direct-line'
+                | 'fax'
+                | 'pager'
+                | 'unspecified'
+              comment?: string
+              isPrimary: boolean
+            }[]
+            emailAddresses: {
+              emailAddress: string
+              type: string
+              isPrimary: boolean
+            }[]
+            specialAttention: boolean
+          }
+          addresses: {
+            careOf?: string
+            street: string | null
+            zipCode: string | null
+            city: string | null
+            region: string | null
+            country: string | null
+          }[]
+          /** @enum {string} */
+          type: 'individual'
+          personal: {
+            nationalRegistrationNumber: string | null
+            birthDate: string | null
+            firstName: string | null
+            lastName: string | null
+            fullName: string
+          }
+          trustee?: {
+            contactCode: string
+            fullName?: string
+          }
+        }
+      | {
+          contactCode: string
+          communication: {
+            phoneNumbers: {
+              phoneNumber: string
+              /** @enum {string} */
+              type:
+                | 'work'
+                | 'home'
+                | 'mobile'
+                | 'direct-line'
+                | 'fax'
+                | 'pager'
+                | 'unspecified'
+              comment?: string
+              isPrimary: boolean
+            }[]
+            emailAddresses: {
+              emailAddress: string
+              type: string
+              isPrimary: boolean
+            }[]
+            specialAttention: boolean
+          }
+          addresses: {
+            careOf?: string
+            street: string | null
+            zipCode: string | null
+            city: string | null
+            region: string | null
+            country: string | null
+          }[]
+          /** @enum {string} */
+          type: 'organisation'
+          organisation: {
+            organisationNumber: string
+            name: string
+          }
+        }
   }
   responses: never
   parameters: never
