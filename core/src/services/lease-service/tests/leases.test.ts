@@ -125,9 +125,7 @@ describe('leases routes', () => {
         })
       )
 
-      expect(JSON.stringify(res.body.content[0])).toEqual(
-        JSON.stringify(leaseMock)
-      )
+      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
     })
   })
 
@@ -145,10 +143,7 @@ describe('leases routes', () => {
       )
       expect(res.status).toBe(200)
       expect(getLeasesSpy).toHaveBeenCalled()
-      expect(res.body.content).toBeInstanceOf(Array)
-      expect(JSON.stringify(res.body.content[0])).toEqual(
-        JSON.stringify(leaseMock)
-      )
+      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
     })
   })
 
@@ -161,9 +156,24 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/leases/1337')
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.content)).toEqual(
-        JSON.stringify(leaseMock)
+      expect(() => LeaseSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('responds with lease with contacts', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValue({ ...leaseMock, tenantContactIds: ['123'] })
+
+      const getContactSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: factory.contact.build() })
+
+      const res = await request(app.callback()).get(
+        '/leases/1337?includeContacts=true'
       )
+      expect(getContactSpy).toHaveBeenCalledWith('123')
+      expect(res.status).toBe(200)
+      expect(() => LeaseSchema.parse(res.body.content)).not.toThrow()
     })
   })
 

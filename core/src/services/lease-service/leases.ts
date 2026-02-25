@@ -322,7 +322,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(patchedLeases.data, metadata)
+      ctx.body = makeSuccessResponseBody(
+        patchedLeases.data.map(mapLease),
+        metadata
+      )
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -401,7 +404,7 @@ export const routes = (router: KoaRouter) => {
 
       if (!queryParams.data.includeContacts) {
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(leases, metadata)
+        ctx.body = makeSuccessResponseBody(leases.map(mapLease), metadata)
         return
       }
 
@@ -416,7 +419,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(patchedLeases.data, metadata)
+      ctx.body = makeSuccessResponseBody(
+        patchedLeases.data.map(mapLease),
+        metadata
+      )
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -490,7 +496,7 @@ export const routes = (router: KoaRouter) => {
 
       if (!queryParams.data.includeContacts) {
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(leases, metadata)
+        ctx.body = makeSuccessResponseBody(leases.map(mapLease), metadata)
         return
       }
 
@@ -505,7 +511,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(patchedLeases.data, metadata)
+      ctx.body = makeSuccessResponseBody(
+        patchedLeases.data.map(mapLease),
+        metadata
+      )
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -593,7 +602,7 @@ export const routes = (router: KoaRouter) => {
 
       if (!queryParams.data.includeContacts) {
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(lease, metadata)
+        ctx.body = makeSuccessResponseBody(mapLease(lease), metadata)
         return
       }
 
@@ -603,7 +612,7 @@ export const routes = (router: KoaRouter) => {
           'Lease has no tenant contact IDs'
         )
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(lease, metadata)
+        ctx.body = makeSuccessResponseBody(mapLease(lease), metadata)
         return
       }
 
@@ -624,7 +633,7 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(
-        { ...lease, tenants: contacts },
+        mapLease({ ...lease, tenants: contacts }),
         metadata
       )
     } catch (err) {
