@@ -8,56 +8,38 @@ describe(filterByStatus, () => {
     const currentLease = factory.tenfastLease.build({
       startDate: sub(new Date(), { days: 1 }),
       endDate: null,
-      cancellation: {
-        cancelled: false,
-        doneAutomatically: false,
-        receivedCancellationAt: null,
-        notifiedAt: null,
-        handledAt: null,
-        handledBy: null,
-        preferredMoveOutDate: null,
-      },
-      simplesignTermination: undefined,
+      stage: 'signed',
+      signed: true,
     })
     const upcomingLease = factory.tenfastLease.build({
       startDate: add(new Date(), { days: 1 }),
       endDate: null,
+      stage: 'signed',
+      signed: true,
     })
     const aboutToEndLease = factory.tenfastLease.build({
       startDate: sub(new Date(), { days: 1 }),
       endDate: add(new Date(), { days: 1 }),
-      cancellation: {
-        cancelled: true,
-        doneAutomatically: false,
-        receivedCancellationAt: null,
-        notifiedAt: null,
-        handledAt: new Date(),
-        handledBy: 'admin-user-id',
-        preferredMoveOutDate: null,
-      },
-      simplesignTermination: undefined,
+      stage: 'cancelled',
+      signed: true,
     })
     const preliminaryTerminatedLease = factory.tenfastLease.build({
       startDate: sub(new Date(), { days: 1 }),
       endDate: add(new Date(), { days: 30 }),
-      cancellation: {
-        cancelled: false,
-        doneAutomatically: false,
-        receivedCancellationAt: null,
-        notifiedAt: null,
-        handledAt: null,
-        handledBy: null,
-        preferredMoveOutDate: null,
-      },
-      simplesignTermination: {
-        signatures: [],
-        sentAt: new Date(),
-        signedAt: null,
-      },
+      stage: 'requestedCancellation',
+      signed: true,
     })
     const endedLease = factory.tenfastLease.build({
       startDate: sub(new Date(), { days: 1 }),
       endDate: sub(new Date(), { days: 1 }),
+      stage: 'cancelled',
+      signed: true,
+    })
+    const pendingSignatureLease = factory.tenfastLease.build({
+      startDate: sub(new Date(), { days: 1 }),
+      endDate: null,
+      stage: 'signingInProgress',
+      signed: false,
     })
 
     const leases = [
@@ -66,6 +48,7 @@ describe(filterByStatus, () => {
       aboutToEndLease,
       preliminaryTerminatedLease,
       endedLease,
+      pendingSignatureLease,
     ]
 
     expect(filterByStatus(leases, ['current'])).toEqual([currentLease])
@@ -75,5 +58,8 @@ describe(filterByStatus, () => {
       preliminaryTerminatedLease,
     ])
     expect(filterByStatus(leases, ['ended'])).toEqual([endedLease])
+    expect(filterByStatus(leases, ['pending-signature'])).toEqual([
+      pendingSignatureLease,
+    ])
   })
 })
