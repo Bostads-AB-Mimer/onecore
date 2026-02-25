@@ -44,7 +44,7 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Utlåning */}
+              {/* In- och utlämning */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -52,7 +52,7 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 >
                   <Link to="/KeyLoan">
                     <KeyRound className="h-4 w-4" />
-                    <span>Utlåning</span>
+                    <span>In- och utlämning</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
