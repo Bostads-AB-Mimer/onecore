@@ -56,7 +56,12 @@ const isUpcomingLease = (l: TenfastLease, now: Date) => {
 }
 
 const isAboutToEndLease = (l: TenfastLease, now: Date) => {
-  return l.endDate !== null && l.endDate >= now
+  return (
+    l.endDate !== null &&
+    l.endDate >= now &&
+    !isPreliminaryTerminated(l) &&
+    !isPendingSignature(l)
+  )
 }
 
 const isEndedLease = (l: TenfastLease, now: Date) => {
