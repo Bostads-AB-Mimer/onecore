@@ -18,7 +18,7 @@ import {
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as utils from '../../../utils'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
-import { makeProcessError } from '../utils'
+import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import config from '../../../common/config'
 import { calculateVacantFrom } from '../../../common/helpers'
@@ -106,7 +106,8 @@ export const createOfferForInternalParkingSpace = async (
 
     const eligibleApplicant = await getFirstEligibleApplicant(
       listing,
-      allApplicants.data
+      allApplicants.data,
+      log
     )
 
     // discard the first applicant since that is our eligibleApplicant
@@ -288,9 +289,10 @@ async function getActiveApplicants(applicants: DetailedApplicant[]) {
 }
 
 // Check if applicant is eligible for renting in area with specific rental rules and for the specific property with its rental rules. If any of the validations fail, the applicant is not eligible for the offer.
-async function isEligibleForOffer(
+export async function isEligibleForOffer(
   listing: Listing,
-  applicant: DetailedApplicant
+  applicant: DetailedApplicant,
+  log: string[]
 ) {
   const [validationResultResArea, validationResultProperty] = await Promise.all(
     [
@@ -303,9 +305,38 @@ async function isEligibleForOffer(
         listing.rentalObjectCode
       ),
     ]
+  ).then((results) =>
+    results.map((res) => validateRentalRules(res, applicant.applicationType))
   )
 
   if (!validationResultResArea.ok || !validationResultProperty.ok) {
+    try {
+      await leasingAdapter.updateApplicantStatus({
+        applicantId: applicant.id,
+        contactCode: applicant.contactCode,
+        status: ApplicantStatus.Disqualified,
+      })
+      log.push(
+        `Updated status for disqualified applicant ${applicant.id} due to failing rental rules validation`
+      )
+    } catch (_err) {
+      if (_err instanceof Error) {
+        log.push(
+          _err.message ??
+            `Unknown error updating disqualified applicant status for applicant ${applicant.id}`
+        )
+        logger.debug(log)
+      }
+      logger.error(
+        {
+          error: _err,
+          applicantId: applicant.id,
+          listingId: listing.id,
+          rentalObjectCode: listing.rentalObjectCode,
+        },
+        'Error updating disqualified applicant status'
+      )
+    }
     return false
   }
 
@@ -315,13 +346,14 @@ async function isEligibleForOffer(
 // Finds the first applicant who has a priority and is active and is also eligible for offer based on rental rules validation
 async function getFirstEligibleApplicant(
   listing: Listing,
-  applicants: DetailedApplicant[]
+  applicants: DetailedApplicant[],
+  log: string[]
 ) {
   for (const a of applicants) {
     if (
       a.priority !== null &&
       a.status === ApplicantStatus.Active &&
-      (await isEligibleForOffer(listing, a))
+      (await isEligibleForOffer(listing, a, log))
     ) {
       return a
     }

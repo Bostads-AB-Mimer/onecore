@@ -1,10 +1,14 @@
 import {
+  ApplicantStatus,
   CreateOfferErrorCodes,
   ListingStatus,
   UpdateListingStatusErrorCodes,
 } from '@onecore/types'
 
-import { createOfferForInternalParkingSpace } from '../create-offer'
+import {
+  createOfferForInternalParkingSpace,
+  isEligibleForOffer,
+} from '../create-offer'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import * as factory from '../../../../../test/factories'
@@ -255,7 +259,7 @@ describe('createOfferForInternalParkingSpace', () => {
     })
   })
 
-  it('passes applicants that are not eligible for renting in property with specific rental rule', async () => {
+  it('skips applicants that fail property rental rules validation and selects the next eligible applicant', async () => {
     const rentalObject = factory.rentalObject
       .params({
         residentialAreaCaption: 'Centrum',
@@ -682,5 +686,324 @@ describe('createOfferForInternalParkingSpace', () => {
         errorCode: 'rental-object-not-vacant',
       },
     })
+  })
+})
+
+describe('isEligibleForOffer', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({
+      advanceTimers: false,
+      doNotFake: ['setTimeout', 'setInterval', 'setImmediate', 'nextTick'],
+    })
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+
+    jest.clearAllMocks()
+    jest.resetAllMocks()
+  })
+
+  it('should call validateResidentialAreaRentalRules and validatePropertyRentalRules with correct arguments', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    const validateResidentialAreaRentalRulesSpy = jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    const validatePropertyRentalRulesSpy = jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    await isEligibleForOffer(listing, applicant, log)
+
+    expect(validateResidentialAreaRentalRulesSpy).toHaveBeenCalledWith(
+      applicant.contactCode,
+      listing.rentalObject.residentialAreaCode
+    )
+    expect(validatePropertyRentalRulesSpy).toHaveBeenCalledWith(
+      applicant.contactCode,
+      listing.rentalObjectCode
+    )
+  })
+  it('should update status to Disqualified if a user doesnt pass validation', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: {
+          tag: 'no-housing-contract-in-the-area',
+          data: {},
+        },
+      })
+
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    const updateApplicantStatusSpy = jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValue(null)
+
+    const result = await isEligibleForOffer(listing, applicant, log)
+
+    expect(result).toBe(false)
+    expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
+      applicantId: applicant.id,
+      contactCode: applicant.contactCode,
+      status: ApplicantStatus.Disqualified,
+    })
+    expect(log).toContain(
+      `Updated status for disqualified applicant ${applicant.id} due to failing rental rules validation`
+    )
+  })
+
+  it('should return false and update applicant status to Disqualified if residential area rental rule validation fails', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: false,
+        err: {
+          tag: 'no-housing-contract-in-the-area',
+          data: {},
+        },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    const updateApplicantStatusSpy = jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValue(null)
+
+    const result = await isEligibleForOffer(listing, applicant, log)
+
+    expect(result).toBe(false)
+    expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
+      applicantId: applicant.id,
+      contactCode: applicant.contactCode,
+      status: ApplicantStatus.Disqualified,
+    })
+  })
+
+  it('should return false and update applicant status to Disqualified if property rental rule validation fails', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: false,
+        err: { tag: 'not-tenant-in-the-property', data: {} },
+      })
+
+    const updateApplicantStatusSpy = jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValue(null)
+
+    const result = await isEligibleForOffer(listing, applicant, log)
+
+    expect(result).toBe(false)
+    expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
+      applicantId: applicant.id,
+      contactCode: applicant.contactCode,
+      status: ApplicantStatus.Disqualified,
+    })
+  })
+
+  it('should log disqualification reason if applicant fails rental rule validation', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: false,
+        err: { tag: 'no-housing-contract-in-the-area', data: {} },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    jest.spyOn(leasingAdapter, 'updateApplicantStatus').mockResolvedValue(null)
+
+    await isEligibleForOffer(listing, applicant, log)
+
+    expect(log).toContain(
+      `Updated status for disqualified applicant ${applicant.id} due to failing rental rules validation`
+    )
+  })
+
+  it('should handle errors from updateApplicantStatus gracefully and log them', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: false,
+        err: { tag: 'no-housing-contract-in-the-area', data: {} },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockRejectedValue(new Error('Update failed'))
+
+    await isEligibleForOffer(listing, applicant, log)
+
+    expect(log.some((entry) => entry.includes('Update failed'))).toBe(true)
+  })
+
+  it('should return true if applicant passes both validations and updateApplicantStatus is not called', async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Replace',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    const updateApplicantStatusSpy = jest.spyOn(
+      leasingAdapter,
+      'updateApplicantStatus'
+    )
+
+    const result = await isEligibleForOffer(listing, applicant, log)
+
+    expect(result).toBe(true)
+    expect(updateApplicantStatusSpy).not.toHaveBeenCalled()
   })
 })
