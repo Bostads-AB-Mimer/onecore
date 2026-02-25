@@ -30,6 +30,7 @@ describe('offers', () => {
         applicantId: 1,
         selectedApplicants: [factory.offerApplicant.build({ applicantId: 1 })],
         expiresAt: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
       }
 
       const res = await request(app.callback()).post('/offer').send(payload)
@@ -59,6 +60,7 @@ describe('offers', () => {
         applicantId: 1,
         selectedApplicants: [factory.offerApplicant.build({ applicantId: 1 })],
         expiresAt: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
       }
 
       const res = await request(app.callback()).post('/offer').send(payload)
@@ -90,6 +92,7 @@ describe('offers', () => {
         applicantId: 1,
         selectedApplicants: [factory.offerApplicant.build({ applicantId: 1 })],
         expiresAt: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
       }
       const resSubsequentOffer = await request(app.callback())
         .post('/offer')
@@ -116,6 +119,7 @@ describe('offers', () => {
         applicantId: 1,
         selectedApplicants: [factory.offerApplicant.build({ applicantId: 1 })],
         expiresAt: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
       }
       const resSubsequentOffer = await request(app.callback())
         .post('/offer')
