@@ -23,18 +23,6 @@ describe('leases routes', () => {
   describe('GET /leases/by-rental-object-code/:rentalObjectCode', () => {
     it('responds with 400 for invalid query parameters', async () => {
       const res = await request(app.callback()).get(
-        '/leases/by-rental-object-code/123?includeContacts=invalid'
-      )
-
-      expect(res.status).toBe(400)
-      expect(res.body).toMatchObject({
-        reason: 'Invalid query parameters',
-        error: expect.any(Object),
-      })
-    })
-
-    it('responds with 400 for invalid query parameters', async () => {
-      const res = await request(app.callback()).get(
         '/leases/by-rental-object-code/123?status=invalid'
       )
 
@@ -63,7 +51,7 @@ describe('leases routes', () => {
         .mockResolvedValue(factory.lease.buildList(1))
 
       const res = await request(app.callback()).get(
-        '/leases/by-rental-object-code/123?status=current&includeContacts=true'
+        '/leases/by-rental-object-code/123?status=current'
       )
 
       expect(res.status).toBe(200)
@@ -71,7 +59,6 @@ describe('leases routes', () => {
         '123',
         expect.objectContaining({
           status: ['current'],
-          includeContacts: true,
         })
       )
 
@@ -117,6 +104,10 @@ describe('leases routes', () => {
     })
 
     it('responds with a list of leases for valid query parameters', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+
       const getLeasesByContactCodeSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
@@ -134,9 +125,7 @@ describe('leases routes', () => {
         })
       )
 
-      expect(JSON.stringify(res.body.content[0])).toEqual(
-        JSON.stringify(leaseMock)
-      )
+      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
     })
   })
 
@@ -154,10 +143,7 @@ describe('leases routes', () => {
       )
       expect(res.status).toBe(200)
       expect(getLeasesSpy).toHaveBeenCalled()
-      expect(res.body.content).toBeInstanceOf(Array)
-      expect(JSON.stringify(res.body.content[0])).toEqual(
-        JSON.stringify(leaseMock)
-      )
+      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
     })
   })
 
@@ -170,9 +156,24 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/leases/1337')
       expect(res.status).toBe(200)
       expect(getLeaseSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.content)).toEqual(
-        JSON.stringify(leaseMock)
+      expect(() => LeaseSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('responds with lease with contacts', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValue({ ...leaseMock, tenantContactIds: ['123'] })
+
+      const getContactSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: factory.contact.build() })
+
+      const res = await request(app.callback()).get(
+        '/leases/1337?includeContacts=true'
       )
+      expect(getContactSpy).toHaveBeenCalledWith('123')
+      expect(res.status).toBe(200)
+      expect(() => LeaseSchema.parse(res.body.content)).not.toThrow()
     })
   })
 
@@ -234,9 +235,7 @@ describe('leases routes', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalledWith('1337', {
-        includeContacts: false,
-      })
+      expect(getLeaseSpy).toHaveBeenCalledWith('1337')
       expect(() =>
         schemas.v1.LeaseHomeInsuranceOfferSchema.parse(res.body.content)
       ).not.toThrow()

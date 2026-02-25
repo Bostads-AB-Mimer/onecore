@@ -10,7 +10,7 @@ type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 
 async function getByRentalPropertyId(
   rentalObjectCode: string,
-  params?: GetLeasesOptions
+  params?: GetLeasesOptions & { includeContacts: boolean }
 ): Promise<Array<Lease>> {
   const { data, error } = await GET(
     '/leases/by-rental-object-code/{rentalObjectCode}',

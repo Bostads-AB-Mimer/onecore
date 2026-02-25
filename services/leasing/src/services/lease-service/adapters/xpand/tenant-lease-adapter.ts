@@ -1,5 +1,4 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
-import transformFromXPandDb from './../../helpers/xpand-db'
 
 import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
 import { Context } from 'koa'
@@ -10,7 +9,6 @@ import { trimRow } from '../utils'
 interface GetLeasesOptions {
   includeUpcomingLeases: boolean
   includeTerminatedLeases: boolean
-  includeContacts: boolean
   includeRentInfo?: boolean // defaults to true for backwards compatibility
 }
 

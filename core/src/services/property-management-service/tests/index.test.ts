@@ -19,11 +19,12 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { MaintenanceUnitInfo } from '@onecore/types'
+
 import { routes } from '../index'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as factory from '../../../../test/factories'
-import { MaintenanceUnitInfo } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -144,7 +145,6 @@ describe('rental-property-service index', () => {
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
-        includeContacts: false,
         status: ['current', 'upcoming'],
       })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
@@ -166,7 +166,6 @@ describe('rental-property-service index', () => {
       expect(res.body.reason).toBe('No maintenance units found')
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
         status: ['current', 'upcoming'],
-        includeContacts: false,
       })
     })
   })
