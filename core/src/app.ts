@@ -11,8 +11,10 @@ import { routes as healthRoutes } from './services/health-service'
 
 import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swagggerRoutes } from './services/swagger'
+import { routes as apiRoutes } from './api/index'
+import { routes as swaggerRoutes } from './services/swagger'
 import { requireAuth } from './middlewares/keycloak-auth'
+import { makeOkapiRouter } from 'koa-okapi-router'
 
 const app = new Koa()
 
@@ -48,7 +50,6 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
-swagggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // JWT middleware with multiple options
@@ -63,5 +64,17 @@ app.use((ctx, next) => {
 })
 
 app.use(api.routes())
+
+const apiRouter = makeOkapiRouter(new KoaRouter(), {
+  openapi: {
+    info: { title: `ONECore API` },
+  },
+})
+
+apiRoutes(apiRouter, config)
+
+app.use(apiRouter.routes())
+
+swaggerRoutes(publicRouter, apiRouter)
 
 export default app

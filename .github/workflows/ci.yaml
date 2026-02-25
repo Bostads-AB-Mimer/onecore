@@ -109,6 +109,15 @@ jobs:
         with:
           run-generate-static: ${{ matrix.runGenerateStatic }}
 
+      - name: Build dependencies
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build && \
+          pnpm install
+
       - name: Run Typecheck
         run: pnpm run --filter ${{ matrix.package }} typecheck
 
@@ -132,7 +141,14 @@ jobs:
           run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Build
-        run: pnpm run --filter ${{ matrix.package }} build
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build && \
+          pnpm install && \
+          pnpm run --filter ${{ matrix.package }} build
 
 
   test:
@@ -151,6 +167,15 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/pnpm-setup
+
+      - name: Build dependencies
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build && \
+          pnpm install
 
       - name: Run tests
         run: pnpm run --filter "${{ matrix.package }}" test

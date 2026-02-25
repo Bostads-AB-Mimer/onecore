@@ -1,0 +1,39 @@
+{
+  "type": "individual",
+  "contactCode": "P184660",
+  "contactKey": "_6QB0ZX3T658SQP",
+  "personal": {
+    "firstName": "Bellatrix",
+    "lastName": "Julaftonsson",
+    "fullName": "Julaftonsson Bellatrix",
+    "nationalId": "810218877181",
+    "birthDate": "1988-02-03T01:00:00.000Z"
+  },
+  "communication": {
+    "phoneNumbers": [
+      {
+        "phoneNumber": "0737948111",
+        "type": "unspecified",
+        "isPrimary": false
+      }
+    ],
+    "emailAddresses": [
+      {
+        "emailAddress": "ola@korv.mock-domain.se",
+        "type": "unspecified",
+        "isPrimary": true
+      }
+    ],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Kängurutorp 34D",
+      "zipCode": "11667",
+      "city": "STOCKHOLM",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Kängurutorp 34D, 11667, STOCKHOLM, SVERIGE"
+    }
+  ]
+}
