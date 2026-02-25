@@ -155,6 +155,82 @@ export interface paths {
   };
   "openapi": {
   };
+  "security": {
+  };
+  "/contacts/send-bulk-sms": {
+    /**
+     * Send SMS to multiple contacts
+     * @description Send SMS messages to multiple phone numbers
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of phone numbers */
+            phoneNumbers: string[];
+            /** @description SMS message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description SMS sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkSmsResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/contacts/send-bulk-email": {
+    /**
+     * Send email to multiple contacts
+     * @description Send email messages to multiple email addresses
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of email addresses */
+            emails: string[];
+            /** @description Email subject */
+            subject: string;
+            /** @description Email message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Email sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkEmailResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -192,8 +268,6 @@ export interface paths {
         };
       };
     };
-  };
-  "security": {
   };
   "/leases/search": {
     /**
