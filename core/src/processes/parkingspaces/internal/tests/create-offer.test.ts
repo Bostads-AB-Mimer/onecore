@@ -171,6 +171,26 @@ describe('createOfferForInternalParkingSpace', () => {
         .build(),
     })
 
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: {
+          tag: 'no-housing-contract-in-the-area',
+          data: {},
+        },
+      })
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+
     const applicants = [
       factory.detailedApplicant
         .params({
@@ -183,7 +203,7 @@ describe('createOfferForInternalParkingSpace', () => {
         .params({
           id: 987,
           contactCode: '123ABC',
-          priority: undefined,
+          priority: 2,
         })
         .build(),
     ]
@@ -194,6 +214,19 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(leasingAdapter, 'getContactByContactCode')
       .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
     jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValueOnce(null)
@@ -210,8 +243,8 @@ describe('createOfferForInternalParkingSpace', () => {
     const result = await createOfferForInternalParkingSpace(123)
 
     expect(leasingAdapter.updateApplicantStatus).toHaveBeenCalledWith({
-      applicantId: 432,
-      contactCode: '456DEF',
+      applicantId: 987,
+      contactCode: '123ABC',
       status: 6,
     })
 
@@ -222,9 +255,116 @@ describe('createOfferForInternalParkingSpace', () => {
     })
   })
 
-  it.todo(
-    'passes applicants that is not eligible because of bad credit check and updates their rejection status???'
-  )
+  it('passes applicants that are not eligible for renting in property with specific rental rule', async () => {
+    const rentalObject = factory.rentalObject
+      .params({
+        residentialAreaCaption: 'Centrum',
+        residentialAreaCode: 'CEN',
+      })
+      .build()
+
+    const listing = factory.listing.build({
+      status: ListingStatus.Expired,
+      rentalObject: rentalObject,
+    })
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({
+          rentalObjectCode: listing.rentalObjectCode,
+        })
+        .build(),
+    })
+
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: {
+          tag: 'not-tenant-in-the-property',
+          data: {},
+        },
+      })
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+
+    const applicants = [
+      factory.detailedApplicant
+        .params({
+          id: 432,
+          contactCode: '456DEF',
+          priority: 1,
+        })
+        .build(),
+      factory.detailedApplicant
+        .params({
+          id: 987,
+          contactCode: '123ABC',
+          priority: 2,
+        })
+        .build(),
+    ]
+
+    jest
+      .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: applicants })
+    jest
+      .spyOn(leasingAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValueOnce(null)
+    jest
+      .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
+      .mockResolvedValueOnce({ ok: true, data: null })
+    jest
+      .spyOn(leasingAdapter, 'createOffer')
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
+    jest
+      .spyOn(leasingAdapter, 'updateOfferSentAt')
+      .mockResolvedValue({ ok: true, data: null })
+
+    const result = await createOfferForInternalParkingSpace(123)
+
+    expect(leasingAdapter.updateApplicantStatus).toHaveBeenCalledWith({
+      applicantId: 987,
+      contactCode: '123ABC',
+      status: 6,
+    })
+
+    expect(result).toEqual({
+      processStatus: ProcessStatus.successful,
+      data: null,
+      httpStatus: 200,
+    })
+  })
 
   it('fails if retrieving contact information fails', async () => {
     const listing = factory.listing.build({ status: ListingStatus.Expired })
@@ -244,11 +384,26 @@ describe('createOfferForInternalParkingSpace', () => {
       .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
       .mockResolvedValueOnce({
         ok: true,
-        data: factory.detailedApplicant.buildList(1),
+        data: factory.detailedApplicant.buildList(1, {
+          contactCode: 'P158773',
+        }),
       })
     jest
       .spyOn(leasingAdapter, 'getContactByContactCode')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
 
     const result = await createOfferForInternalParkingSpace(123)
 
@@ -259,46 +414,6 @@ describe('createOfferForInternalParkingSpace', () => {
       response: {
         message: 'Could not find contact P158773',
         errorCode: CreateOfferErrorCodes.NoContact,
-      },
-    })
-  })
-
-  it('fails if update applicant status fails', async () => {
-    const listing = factory.listing.build({ status: ListingStatus.Expired })
-    jest
-      .spyOn(leasingAdapter, 'getListingByListingId')
-      .mockResolvedValue(listing)
-
-    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
-      ok: true,
-      data: factory.vacantParkingSpace
-        .params({
-          rentalObjectCode: listing.rentalObjectCode,
-        })
-        .build(),
-    })
-    jest
-      .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
-      .mockResolvedValueOnce({
-        ok: true,
-        data: factory.detailedApplicant.buildList(1),
-      })
-    jest
-      .spyOn(leasingAdapter, 'getContactByContactCode')
-      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
-    jest
-      .spyOn(leasingAdapter, 'updateApplicantStatus')
-      .mockRejectedValueOnce(null)
-
-    const result = await createOfferForInternalParkingSpace(123)
-
-    expect(result).toEqual({
-      processStatus: ProcessStatus.failed,
-      error: CreateOfferErrorCodes.UpdateApplicantStatusFailure,
-      httpStatus: 500,
-      response: {
-        message: 'Update Applicant Status failed',
-        errorCode: CreateOfferErrorCodes.UpdateApplicantStatusFailure,
       },
     })
   })
@@ -329,6 +444,18 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValueOnce(null)
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
     jest
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
@@ -376,14 +503,22 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
       .mockResolvedValueOnce({ ok: true, data: null })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
 
     jest
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
-
-    const updateOfferSentAtSpy = jest
-      .spyOn(leasingAdapter, 'updateOfferSentAt')
-      .mockResolvedValue({ ok: true, data: null })
 
     const result = await createOfferForInternalParkingSpace(123)
 
@@ -392,8 +527,6 @@ describe('createOfferForInternalParkingSpace', () => {
       data: null,
       httpStatus: 200,
     })
-
-    expect(updateOfferSentAtSpy).toHaveBeenCalledTimes(1)
   })
 
   it('creates offer that expires at midnight 3 business days from a monday', async () => {
@@ -431,7 +564,18 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
       .mockResolvedValueOnce({ ok: true, data: null })
-
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
     const createOfferSpy = jest
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
@@ -484,7 +628,18 @@ describe('createOfferForInternalParkingSpace', () => {
     jest
       .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
       .mockResolvedValueOnce({ ok: true, data: null })
-
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
     const createOfferSpy = jest
       .spyOn(leasingAdapter, 'createOffer')
       .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })

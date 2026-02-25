@@ -52,14 +52,16 @@ export async function create(
         `INSERT INTO offer (
           Status,
           ExpiresAt,
+          SentAt,
           ListingId,
           ApplicantId
         ) OUTPUT INSERTED.*
-        VALUES (?, ?, ?, ?) 
+        VALUES (?, ?, ?, ?, ?) 
         `,
         [
           offerParams.status,
           offerParams.expiresAt,
+          offerParams.sentAt,
           offerParams.listingId,
           offerParams.applicantId,
         ]
