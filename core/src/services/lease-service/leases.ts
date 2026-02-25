@@ -616,26 +616,20 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const contacts = await Promise.all(
-        lease.tenantContactIds.map(async (contactCode) => {
-          const contact =
-            await leasingAdapter.getContactByContactCode(contactCode)
+      const patchedLease = await patchLeasesWithContacts([lease])
 
-          if (!contact.ok) {
-            throw new Error(
-              `Failed to get contact by contact code: ${contactCode}`
-            )
-          }
+      if (!patchedLease.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: patchedLease.err,
+          ...metadata,
+        }
+        return
+      }
 
-          return contact.data
-        })
-      )
-
+      const [leaseWithContacts] = patchedLease.data
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(
-        mapLease({ ...lease, tenants: contacts }),
-        metadata
-      )
+      ctx.body = makeSuccessResponseBody(mapLease(leaseWithContacts), metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching lease')
       ctx.status = 500
