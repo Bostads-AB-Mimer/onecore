@@ -343,16 +343,22 @@ interface ItemDisposedBadgeProps {
   isDisposed: boolean
   /** Whether this is a card (affects label text) */
   isCard?: boolean
+  /** Whether the card is archived (state === 'Archived') */
+  isArchived?: boolean
 }
 
 /**
- * Badge showing if a key is kasserad or a card is inaktiv/aktiv.
+ * Badge showing if a key is kasserad or a card is inaktiv/arkiverad.
  * Always shows the status (unlike DisposedBadge which can hide active state).
  */
 export function ItemDisposedBadge({
   isDisposed,
   isCard = false,
+  isArchived = false,
 }: ItemDisposedBadgeProps) {
+  if (isArchived) {
+    return <Badge variant="destructive">Arkiverad</Badge>
+  }
   if (isDisposed) {
     return (
       <Badge variant="destructive">{isCard ? 'Inaktiv' : 'Kasserad'}</Badge>
