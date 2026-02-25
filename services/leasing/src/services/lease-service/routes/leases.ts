@@ -312,7 +312,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
+   *                 content:
    *                   type: array
    *                   items:
    *                     type: object
@@ -407,7 +407,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
+   *                 content:
    *                   type: array
    *                   items:
    *                     type: object
@@ -510,7 +510,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
+   *                 content:
    *                   type: object
    *                   description: Lease details.
    *       404:
