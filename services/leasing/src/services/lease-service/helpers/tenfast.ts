@@ -5,40 +5,49 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
-import { isPreliminaryTerminated, isPendingSignature } from '../adapters/tenfast/filters'
+import {
+  isPreliminaryTerminated,
+  isPendingSignature,
+} from '../adapters/tenfast/filters'
 
-const calculateLeaseStatus = (
-  lease: TenfastLease
-): LeaseStatus => {
+const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const today = new Date()
   const { startDate, endDate, stage } = lease
-  
+
   // Check pending signature first (unsigned leases)
   if (isPendingSignature(lease)) return LeaseStatus.PendingSignature
-  
+
   // Check preliminary termination
   if (isPreliminaryTerminated(lease)) return LeaseStatus.PreliminaryTerminated
-  
+
   // Check ended leases (must be cancelled/archived with past end date)
-  if ((stage === 'cancelled' || stage === 'archived') && endDate && endDate < today) {
+  if (
+    (stage === 'cancelled' || stage === 'archived') &&
+    endDate &&
+    endDate < today
+  ) {
     return LeaseStatus.Ended
   }
-  
+
   // Check about to end (cancelled with future end date)
   if (stage === 'cancelled' && endDate && endDate >= today) {
     return LeaseStatus.AboutToEnd
   }
-  
+
   // Check upcoming (signed with future start date)
   if (startDate >= today && stage === 'signed') {
     return LeaseStatus.Upcoming
   }
-  
+
   // Current lease (signed, started, not ending)
-  if (stage === 'signed' && startDate < today && (!endDate || endDate > today)) {
+  if (
+    stage === 'signed' &&
+    startDate < today &&
+    (!endDate || endDate > today)
+  ) {
     return LeaseStatus.Current
   }
-  
+
   // Default fallback
   return LeaseStatus.Current
 }

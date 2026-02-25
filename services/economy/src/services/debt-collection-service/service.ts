@@ -1,10 +1,14 @@
 import { logger } from '@onecore/utilities'
 import {
   getInvoices,
-  getContacts,
+  getContacts as getXpandContacts,
   getRentalProperties,
   getInvoiceRows,
 } from '../common/adapters/xpand-db-adapter'
+import {
+  getContacts as getXledgerContacts,
+  XledgerContact,
+} from '../common/adapters/xledger-adapter'
 import generateBalanceCorrectionFile from './converters/generateBalanceCorrectionFile'
 import generateInkassoSergelFile from './converters/generateInkassoSergelFile'
 import { getDateString, joinStrings, rightPad } from './converters/utils'
@@ -21,6 +25,7 @@ import {
   RentInvoice,
   EnrichedXledgerBalanceCorrection,
 } from '../common/types'
+import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
 
 export const importInvoicesFromCsv = (
   csv: string,
@@ -82,6 +87,37 @@ export const importBalanceCorrectionsFromCsv = (
   })
 }
 
+const transformXledgerContactToXpandContact = (
+  xledgerContact: XledgerContact
+): XpandContact => {
+  return {
+    contactCode: xledgerContact.contactCode,
+    address: {
+      street: xledgerContact.address.street,
+      city: xledgerContact.address.city,
+      postalCode: xledgerContact.address.postalCode,
+      number: '',
+    },
+    fullName: xledgerContact.fullName,
+    nationalRegistrationNumber: xledgerContact.nationalRegistrationNumber,
+    phoneNumbers: [
+      {
+        phoneNumber: xledgerContact.phoneNumber ?? '',
+        type: '',
+        isMainNumber: true,
+      },
+    ],
+    // TODO These properties are only here to satisfy the Contact type, should refactor to use some other type
+    contactKey: '',
+    birthDate: new Date(),
+    firstName: '',
+    lastName: '',
+    isTenant: false,
+    autogiro: false,
+    invoiceDeliveryMethod: InvoiceDeliveryMethod.Other,
+  }
+}
+
 export type EnrichResponse =
   | {
       ok: true
@@ -96,7 +132,7 @@ export const enrichRentInvoices = async (
     const rows = importInvoicesFromCsv(csv, ';')
 
     const [contacts, invoices, allInvoiceRows] = await Promise.all([
-      getContacts(rows.map((row) => row.contactCode)),
+      getXpandContacts(rows.map((row) => row.contactCode)),
       getInvoices(rows.map((row) => row.invoiceNumber)),
       getInvoiceRows(rows.map((row) => row.invoiceNumber)),
     ])
@@ -190,13 +226,18 @@ export const enrichOtherInvoices = async (
 ): Promise<EnrichResponse> => {
   try {
     const rows = importInvoicesFromCsv(csv, ';')
+    const contactCodes = rows.map((row) => row.contactCode)
 
-    const [contacts] = await Promise.all([
-      getContacts(rows.map((row) => row.contactCode)),
+    const [xpandContacts, xledgerContacts] = await Promise.all([
+      getXpandContacts(contactCodes),
+      getXledgerContacts(contactCodes),
     ])
+    const allContacts = xpandContacts.concat(
+      xledgerContacts.map(transformXledgerContactToXpandContact)
+    )
 
     const enrichedInvoices = rows.map((row): EnrichedXledgerRentCase => {
-      const contact = contacts.find((c) => c.contactCode === row.contactCode)
+      const contact = allContacts.find((c) => c.contactCode === row.contactCode)
       if (!contact) {
         // TODO how to handle this?
         throw new Error(

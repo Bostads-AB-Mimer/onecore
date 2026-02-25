@@ -234,6 +234,32 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
 }
 
+export interface XledgerContact {
+  contactCode: string
+  address: {
+    street: string
+    postalCode: string
+    city: string
+  }
+  fullName: string
+  nationalRegistrationNumber: string
+  phoneNumber?: string
+}
+
+const transformToContact = (contactData: any): XledgerContact => {
+  return {
+    contactCode: contactData.code,
+    address: {
+      street: contactData.address.streetAddress,
+      postalCode: contactData.address.zipCode,
+      city: contactData.address.place,
+    },
+    fullName: contactData.description,
+    nationalRegistrationNumber: contactData.company.companyNumber,
+    phoneNumber: contactData.phone,
+  }
+}
+
 const getContact = async (contactCode: string) => {
   const query = {
     query: `{
@@ -344,6 +370,64 @@ const getContactDbId = async (contactCode: string): Promise<string | null> => {
   const result = await makeXledgerRequest(query)
 
   return result.data?.customers?.edges?.[0].node.dbId ?? null
+}
+
+export const getContacts = async (
+  contactCodes: string[],
+  after?: string
+): Promise<XledgerContact[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int!, $filter: Customer_Filter, $after: String) {
+        customers(first: $first, filter: $filter, after: $after) {
+          edges {
+            cursor
+            node {
+              code
+              description
+              phone
+              address {
+                streetAddress
+                zipCode
+                place
+              }
+              company {
+                companyNumber
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: {
+      first: 100,
+      filter: {
+        code_in: contactCodes,
+      },
+      after: after,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  if (!result.data && result.data.errors) {
+    logger.error(result.data.errors[0], 'Error querying Xledger')
+  }
+
+  const contacts = result.data.customers.edges.map((e: any) =>
+    transformToContact(e.node)
+  )
+
+  if (result.data.customers.pageInfo.hasNextPage) {
+    const lastEdge = result.data.customers.edges.at(-1)
+    const nextContacts = await getContacts(contactCodes, lastEdge.cursor)
+    contacts.push(...nextContacts)
+  }
+
+  return contacts
 }
 
 const invoiceNodeFragment = `
@@ -864,12 +948,13 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number) => {
+const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
   const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
+  const accounts208 = ['3012', '3014', '3016']
 
   switch (vatRate) {
     case 25:
-      return '2'
+      return accounts208.includes(account) ? '208' : '2'
     case 12:
       return '21'
     case 6:
@@ -924,7 +1009,7 @@ export const transformAggregatedInvoiceRow = (
     posting2: invoiceRow.ProjectCode,
     posting3: invoiceRow.Property,
     posting4: invoiceRow.FreeCode,
-    posting5: '',
+    posting5: invoiceRow.CounterPart,
     periodStart: periodInformation.periodStart,
     noOfPeriods: periodInformation.periods,
     subledgerNo: '',
@@ -935,7 +1020,8 @@ export const transformAggregatedInvoiceRow = (
     text: '',
     taxRule: getTaxRule(
       invoiceRow.totalAmount as number,
-      invoiceRow.totalVat as number
+      invoiceRow.totalVat as number,
+      invoiceRow.Account as string
     ).toString(),
     amount: -invoiceRow.totalAmount,
     totalAccount: invoiceRow.TotalAccount,

@@ -66,7 +66,7 @@ const createRoundOffRow = async (
     ledgerAccount = counterPartCustomer.ledgerAccount
   }
 
-  return {
+  const roundOffRow: InvoiceDataRow = {
     account: roundOffInformation.account,
     costCode: roundOffInformation.costCode,
     amount: invoice.roundoff as number,
@@ -83,6 +83,12 @@ const createRoundOffRow = async (
     tenantName,
     invoiceTotalAmount: invoice.invoicetotal as number,
   }
+
+  if (counterPartCustomer) {
+    roundOffRow['counterPart'] = counterPartCustomer.counterPartCode
+  }
+
+  return roundOffRow
 }
 
 /**
@@ -105,10 +111,23 @@ export const processInvoiceRows = async (
 }> => {
   const addedContactCodes: Record<string, boolean> = {}
 
+  const counterPartCustomers = await getCounterPartCustomers()
+
   const rowsByInvoiceNumber: Record<string, InvoiceDataRow[]> = {}
   invoiceDataRows.forEach((invoiceDataRow) => {
     if (rowsByInvoiceNumber[invoiceDataRow.invoiceNumber] === undefined) {
       rowsByInvoiceNumber[invoiceDataRow.invoiceNumber] = []
+    }
+
+    if (invoiceDataRow.tenantName) {
+      const counterPartCustomer = counterPartCustomers.find(
+        counterPartCustomers.customers,
+        invoiceDataRow.tenantName.toString()
+      )
+
+      if (counterPartCustomer) {
+        invoiceDataRow.counterPart = counterPartCustomer.counterPartCode
+      }
     }
 
     rowsByInvoiceNumber[invoiceDataRow.invoiceNumber].push(invoiceDataRow)
@@ -130,8 +149,6 @@ export const processInvoiceRows = async (
       invoicetotal: invoiceRow.invoiceTotalAmount,
     }
   })
-
-  const counterPartCustomers = await getCounterPartCustomers()
 
   for (const invoice of invoices) {
     if ((invoice.roundoff as number) !== 0) {
@@ -178,7 +195,7 @@ export const createLedgerTotalRow = (
     posting2: '',
     posting3: '',
     posting4: '',
-    posting5: '',
+    posting5: ledgerRows[0].posting5,
     periodStart: ledgerRows[0].periodStart,
     noOfPeriods: ledgerRows[0].noOfPeriods,
     subledgerNo: '',
@@ -189,6 +206,7 @@ export const createLedgerTotalRow = (
     text: '',
     taxRule: '',
     amount: 0,
+    counterPart: ledgerRows[0].counterPart,
   }
 
   const totalRow = ledgerRows.reduce((acc: InvoiceDataRow, row) => {
@@ -230,6 +248,7 @@ export const createLedgerRows = async (
     const invoice = rowsByInvoiceNumber[invoiceNumbers[currentStart]][0]
     const ledgerAccount = invoice.LedgerAccount
     const invoiceDate = invoice.InvoiceDate
+    const counterPart = invoice.CounterPart
     const chunkInvoiceRows: InvoiceDataRow[] = []
     const startTime = Date.now()
 
@@ -244,7 +263,8 @@ export const createLedgerRows = async (
 
       if (
         currentInvoice.LedgerAccount === ledgerAccount &&
-        currentInvoice.InvoiceDate === invoiceDate
+        currentInvoice.InvoiceDate === invoiceDate &&
+        currentInvoice.CounterPart === counterPart
       ) {
         currentInvoices.push({
           contractCode: currentInvoice.ContractCode as string,
@@ -340,7 +360,7 @@ export const createAggregateTotalRow = (
     posting2: '',
     posting3: '',
     posting4: '',
-    posting5: '',
+    posting5: aggregatedRows[0].posting5,
     periodStart: aggregatedRows[0].periodStart,
     noOfPeriods: aggregatedRows[0].noOfPeriods,
     subledgerNo: '',
@@ -351,6 +371,7 @@ export const createAggregateTotalRow = (
     text: '',
     taxRule: '',
     amount: 0,
+    counterPart: aggregatedRows[0].counterPart,
   }
 
   const totalRow = aggregatedRows.reduce((acc: InvoiceDataRow, row) => {
@@ -387,6 +408,7 @@ export const createAggregateRows = async (batchId: string) => {
     const startDate = invoices[currentStart].invoiceFromDate
     const endDate = invoices[currentStart].invoiceToDate
     const totalAccount = invoices[currentStart].totalAccount
+    const counterPart = invoices[currentStart].counterPart
 
     for (
       let currentInvoicesIndex = currentStart;
@@ -399,7 +421,8 @@ export const createAggregateRows = async (batchId: string) => {
       if (
         currentInvoice.invoiceFromDate == startDate &&
         currentInvoice.invoiceToDate == endDate &&
-        currentInvoice.totalAccount == totalAccount
+        currentInvoice.totalAccount == totalAccount &&
+        currentInvoice.counterPart == counterPart
       ) {
         currentInvoices.push(invoices[currentInvoicesIndex])
       } else {

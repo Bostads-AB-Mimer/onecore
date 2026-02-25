@@ -1,14 +1,14 @@
 import { Button } from './ui/Button'
-import { useState } from 'react'
 import { GlobalSearchBar } from './search/GlobalSearchBar'
 import { Menu, Search } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useUser } from '@/auth/useUser'
 import { Link } from 'react-router-dom'
 import onecoreLogo from '@/components/assets/logos/full/onecore_logo_black.svg'
+import { useCommandPalette } from './hooks/useCommandPalette'
 
 export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
-  const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const { open: openSearch } = useCommandPalette()
 
   const { logout } = useAuth()
   const userState = useUser()
@@ -25,16 +25,16 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
     onMenuClick()
   }
 
-  const handleSearchToggle = (e: React.MouseEvent) => {
+  const handleSearchClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setShowMobileSearch(!showMobileSearch)
+    openSearch()
   }
 
   const handleSearchTouch = (e: React.TouchEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setShowMobileSearch(!showMobileSearch)
+    openSearch()
   }
 
   return (
@@ -70,7 +70,7 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
             variant="ghost"
             size="icon"
             className="sm:hidden min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform"
-            onClick={handleSearchToggle}
+            onClick={handleSearchClick}
             onTouchStart={handleSearchTouch}
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
@@ -90,13 +90,6 @@ export function NavigationBar({ onMenuClick }: { onMenuClick: () => void }) {
           )}
         </div>
       </div>
-
-      {/* Mobile search bar */}
-      {showMobileSearch && (
-        <div className="px-4 py-2 bg-background sm:hidden border-t relative z-[60]">
-          <GlobalSearchBar />
-        </div>
-      )}
     </nav>
   )
 }

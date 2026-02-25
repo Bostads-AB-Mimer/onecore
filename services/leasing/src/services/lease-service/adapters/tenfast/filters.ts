@@ -80,9 +80,5 @@ export const isPreliminaryTerminated = (lease: TenfastLease): boolean => {
 }
 
 export const isPendingSignature = (lease: TenfastLease): boolean => {
-  return (
-    lease.stage === 'signingInProgress' ||
-    lease.stage === 'acceptedByHyresgast' ||
-    lease.stage === 'start'
-  )
+  return lease.stage === 'signingInProgress'
 }

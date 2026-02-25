@@ -142,6 +142,7 @@ describe('Rental Invoice Service', () => {
             account: '3999',
             amount: mockInvoiceDataRows[0].roundoff,
             costCode: '123',
+            counterPart: '123456',
             contactCode: mockInvoiceDataRows[0].contactCode,
             contractCode: mockInvoiceDataRows[0].contractCode,
             fromDate: mockInvoiceDataRows[0].fromDate,
