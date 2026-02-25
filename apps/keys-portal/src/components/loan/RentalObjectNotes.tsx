@@ -102,7 +102,9 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Noteringar för objekt {rentalObjectCode}</DialogTitle>
+          <DialogTitle>
+            Noteringar för nycklar till {rentalObjectCode}
+          </DialogTitle>
           <DialogDescription>
             Lägg till eller redigera Noteringar.
           </DialogDescription>
