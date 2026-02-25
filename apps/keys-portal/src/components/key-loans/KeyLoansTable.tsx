@@ -22,7 +22,6 @@ import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropd
 import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter-dropdown'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
-import { ActionMenu } from '@/components/shared/tables/ActionMenu'
 import { NotePopover } from '@/components/shared/tables/NotePopover'
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
@@ -85,7 +84,6 @@ export function KeyLoansTable({
   isLoading,
   onRefresh,
   onEdit,
-  onDelete,
   loanTypeFilter,
   onLoanTypeFilterChange,
   minKeys,
@@ -323,8 +321,6 @@ export function KeyLoansTable({
                   isExpanded &&
                   expansion.isLoading &&
                   expansion.expandedId === loan.id
-                const isActive = !!loan.pickedUpAt && !loan.returnedAt
-
                 return (
                   <React.Fragment key={loan.id}>
                     <TableRow className="hover:bg-muted/50">
@@ -398,24 +394,26 @@ export function KeyLoansTable({
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
                           <NotePopover text={loan.notes} />
-                          {isExpanded &&
-                          !isLoadingThis &&
-                          expansion.loadedData ? (
-                            <LoanActionMenu
-                              loan={expansion.loadedData.loanDetails}
-                              onRefresh={onRefresh}
-                              onReturn={() =>
-                                setReturnLoan(expansion.loadedData!.loanDetails)
+                          <LoanActionMenu
+                            loan={
+                              isExpanded && expansion.loadedData
+                                ? expansion.loadedData.loanDetails
+                                : loan
+                            }
+                            onRefresh={onRefresh}
+                            onEdit={
+                              onEdit
+                                ? (enrichedLoan) => onEdit(enrichedLoan)
+                                : undefined
+                            }
+                            onReturn={() => {
+                              const loanDetails =
+                                expansion.loadedData?.loanDetails
+                              if (loanDetails) {
+                                setReturnLoan(loanDetails)
                               }
-                            />
-                          ) : (
-                            <ActionMenu
-                              onEdit={() => onEdit?.(loan)}
-                              onDelete={
-                                isActive ? undefined : () => onDelete?.(loan)
-                              }
-                            />
-                          )}
+                            }}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>

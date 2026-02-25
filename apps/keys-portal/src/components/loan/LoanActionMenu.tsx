@@ -1,26 +1,32 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { Printer, Upload, Eye, ExternalLink, RotateCcw } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { Printer, Upload, Eye, Pencil, RotateCcw } from 'lucide-react'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
+import { EditKeyLoanDialog } from './EditKeyLoanDialog'
 import { receiptService } from '@/services/api/receiptService'
 import {
   fetchReceiptData,
   openPdfInNewTab,
   openMaintenanceReceiptInNewTab,
 } from '@/services/receiptHandlers'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import { useToast } from '@/hooks/use-toast'
-import type { KeyLoanWithDetails, Lease } from '@/services/types'
+import type { KeyLoan, KeyLoanWithDetails, Lease } from '@/services/types'
+
+function isEnriched(loan: KeyLoan | KeyLoanWithDetails): loan is KeyLoanWithDetails {
+  return 'keysArray' in loan && loan.keysArray !== undefined
+}
 
 export interface LoanActionMenuProps {
-  loan: KeyLoanWithDetails
+  loan: KeyLoan | KeyLoanWithDetails
   lease?: Lease
   onRefresh?: () => void
   onReturn?: (keyIds: string[], cardIds: string[]) => void
+  onEdit?: (loan: KeyLoanWithDetails) => void
 }
 
 export function LoanActionMenu({
@@ -28,10 +34,14 @@ export function LoanActionMenu({
   lease,
   onRefresh,
   onReturn,
+  onEdit,
 }: LoanActionMenuProps) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const [enrichedLoan, setEnrichedLoan] = useState<KeyLoanWithDetails | null>(
+    isEnriched(loan) ? loan : null
+  )
   const [loading, setLoading] = useState(false)
   const [loanReceipt, setLoanReceipt] = useState<{
     id: string
@@ -43,16 +53,17 @@ export function LoanActionMenu({
   } | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [showReplaceWarning, setShowReplaceWarning] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   // Check if loan can be returned (not already returned)
   const canReturn = !loan.returnedAt
 
   // Get key and card IDs from the enriched loan
   const { keyIds, cardIds } = useMemo(() => {
-    const keyIds = loan.keysArray?.map((k) => k.id) || []
-    const cardIds = loan.keyCardsArray?.map((c) => c.cardId) || []
+    const keyIds = enrichedLoan?.keysArray?.map((k) => k.id) || []
+    const cardIds = enrichedLoan?.keyCardsArray?.map((c) => c.cardId) || []
     return { keyIds, cardIds }
-  }, [loan.keysArray, loan.keyCardsArray])
+  }, [enrichedLoan?.keysArray, enrichedLoan?.keyCardsArray])
 
   const handleReturn = () => {
     if (onReturn && canReturn) {
@@ -60,8 +71,19 @@ export function LoanActionMenu({
     }
   }
 
-  // Load receipt info on mount
+  const [hasOpened, setHasOpened] = useState(false)
+
+  // Sync enrichedLoan when prop changes and is already enriched
   useEffect(() => {
+    if (isEnriched(loan)) {
+      setEnrichedLoan(loan)
+    }
+  }, [loan])
+
+  // Load receipt info and enrich loan lazily (only after menu is first opened)
+  useEffect(() => {
+    if (!hasOpened) return
+
     const loadReceipts = async () => {
       try {
         const receipts = await receiptService.getByKeyLoan(loan.id)
@@ -74,7 +96,20 @@ export function LoanActionMenu({
       }
     }
     loadReceipts()
-  }, [loan.id])
+
+    if (!isEnriched(loan)) {
+      keyLoanService
+        .get(loan.id, { includeKeySystem: true, includeCards: true })
+        .then((details) => setEnrichedLoan(details as KeyLoanWithDetails))
+        .catch((error) => console.error('Failed to enrich loan:', error))
+    }
+  }, [hasOpened, loan.id])
+
+  const handleMenuOpenChange = useCallback((open: boolean) => {
+    if (open && !hasOpened) {
+      setHasOpened(true)
+    }
+  }, [hasOpened])
 
   const handlePrintLoanReceipt = async () => {
     setLoading(true)
@@ -238,8 +273,6 @@ export function LoanActionMenu({
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const editLoanUrl = `/key-loans?editLoanId=${loan.id}`
-
   return (
     <>
       {/* Hidden file input for upload */}
@@ -271,7 +304,17 @@ export function LoanActionMenu({
         onConfirm={handleConfirmReplace}
       />
 
+      {enrichedLoan && (
+        <EditKeyLoanDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          loan={enrichedLoan}
+          onSuccess={() => onRefresh?.()}
+        />
+      )}
+
       <ActionMenu
+        onOpenChange={handleMenuOpenChange}
         extraItems={
           <>
             {/* Loan receipt section */}
@@ -321,11 +364,17 @@ export function LoanActionMenu({
             </DropdownMenuItem>
 
             {/* Edit loan */}
-            <DropdownMenuItem asChild>
-              <Link to={editLoanUrl}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Redigera lån
-              </Link>
+            <DropdownMenuItem
+              onClick={() => {
+                if (onEdit && enrichedLoan) {
+                  onEdit(enrichedLoan)
+                } else {
+                  setShowEditDialog(true)
+                }
+              }}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Redigera lån
             </DropdownMenuItem>
           </>
         }
