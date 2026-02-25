@@ -201,11 +201,7 @@ export async function getOffersForContact(
         name: ApplicantName,
         nationalRegistrationNumber: ApplicantNationalRegistrationNumber,
         status: ApplicantStatus,
-        applicationType:
-          ApplicantApplicationType === 'Replace' ||
-          ApplicantApplicationType === 'Additional'
-            ? ApplicantApplicationType
-            : 'Replace',
+        applicationType: ApplicantApplicationType,
       },
       rentalObjectCode: RentalObjectCode,
     }
