@@ -435,16 +435,23 @@ export const contactsQuery = () => {
        * @param wc - The wildcard string to search for
        */
       const wildcardUnion = (wc: string) => {
+        const words = wc.split(/\s+/).filter(Boolean)
+
         const cmctcPart = db
           .select('keycmobj')
           .from('cmctc')
           .modify(baseFilters)
-          .andWhere((b) =>
-            b
-              .whereRaw(...wildcard('fnamn', wc))
-              .orWhereRaw(...wildcard('enamn', wc))
-              .orWhereRaw(...wildcard('cmctcben', wc))
-          )
+          .modify((qb) => {
+            for (const word of words) {
+              qb.andWhere((b) =>
+                b
+                  .whereRaw(...wildcard('cmctckod', word))
+                  .orWhereRaw(...wildcard('fnamn', word))
+                  .orWhereRaw(...wildcard('enamn', word))
+                  .orWhereRaw(...wildcard('cmctcben', word))
+              )
+            }
+          })
 
         const cmadrPart = db
           .select({ keycmobj: 'cmadr.keycode' })
