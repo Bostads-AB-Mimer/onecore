@@ -1,0 +1,16 @@
+[
+  {
+    "id": "rn-2026-02-25-v197-1",
+    "date": "2026-02-25",
+    "title": "Meny för desktop",
+    "description": "Menyn på uthyrning finns nu också anpassad för desktop.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-02-25-v197-2",
+    "date": "2026-02-25",
+    "title": "Karta visas på erbjudande-mail för parkeringsplatser",
+    "description": "Erbjudande-mail för parkeringsplatser innehåller nu en karta som visar var parkeringsplatsen är belägen, vilket gör det enklare för mottagaren att förstå vilken bilplats erbjudandet gäller.",
+    "category": "improvement"
+  }
+]
