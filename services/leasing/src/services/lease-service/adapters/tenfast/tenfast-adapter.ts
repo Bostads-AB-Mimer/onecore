@@ -652,6 +652,7 @@ const defaultFilters: GetLeasesFilters = {
     'about-to-end',
     'ended',
     'preliminary-terminated',
+    'pending-signature',
   ],
 }
 

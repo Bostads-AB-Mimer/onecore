@@ -5,25 +5,52 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
-import { isPreliminaryTerminated } from '../adapters/tenfast/filters'
+import {
+  isPreliminaryTerminated,
+  isPendingSignature,
+} from '../adapters/tenfast/filters'
 
-const calculateLeaseStatus = (
-  startDate: Date,
-  endDate: Date | null,
-  isPreliminaryTerminated: boolean
-): LeaseStatus => {
-  // TODO: Verify this logic
+const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const today = new Date()
-  if (endDate && endDate < today) return LeaseStatus.Ended
-  if (startDate >= today) return LeaseStatus.Upcoming
-  if (isPreliminaryTerminated) return LeaseStatus.PreliminaryTerminated
-  if (endDate && endDate >= today) return LeaseStatus.AboutToEnd
+  const { startDate, endDate, stage } = lease
+
+  // Check pending signature first (unsigned leases)
+  if (isPendingSignature(lease)) return LeaseStatus.PendingSignature
+
+  // Check preliminary termination
+  if (isPreliminaryTerminated(lease)) return LeaseStatus.PreliminaryTerminated
+
+  // Check ended leases (must be cancelled/archived with past end date)
+  if (
+    (stage === 'cancelled' || stage === 'archived') &&
+    endDate &&
+    endDate < today
+  ) {
+    return LeaseStatus.Ended
+  }
+
+  // Check about to end - any lease with a future end date
+  if (endDate && endDate >= today) {
+    return LeaseStatus.AboutToEnd
+  }
+
+  // Check upcoming (signed with future start date)
+  if (startDate >= today && stage === 'signed') {
+    return LeaseStatus.Upcoming
+  }
+
+  // Current lease (signed, started, no end date)
+  if (stage === 'signed' && startDate < today && !endDate) {
+    return LeaseStatus.Current
+  }
+
+  // Default fallback
   return LeaseStatus.Current
 }
 
-function mapToOnecoreRentalObject(
+const mapToOnecoreRentalObject = (
   rentalObject: TenfastRentalObject
-): RentalObject | undefined {
+): RentalObject | undefined => {
   // Only map if we have populated fields (not just a reference)
   if (!rentalObject.postadress) {
     return undefined
@@ -69,17 +96,13 @@ function mapToOnecoreRentalObject(
 // lastDebitDate: Date | undefined // Sista betaldatum
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
-export function mapToOnecoreLease(lease: TenfastLease): Lease {
+export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
     leaseStartDate: lease.startDate,
     leaseEndDate: lease.endDate ?? undefined,
-    status: calculateLeaseStatus(
-      lease.startDate,
-      lease.endDate,
-      isPreliminaryTerminated(lease)
-    ),
+    status: calculateLeaseStatus(lease),
     noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
     noticeDate: lease.cancellation.handledAt ?? undefined,
     noticeTimeTenant: lease.uppsagningstid,
@@ -100,7 +123,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
   }
 }
 
-export function mapToOnecoreRentRow(row: TenfastInvoiceRow): LeaseRentRow {
+export const mapToOnecoreRentRow = (row: TenfastInvoiceRow): LeaseRentRow => {
   return {
     id: row._id,
     amount: row.amount,

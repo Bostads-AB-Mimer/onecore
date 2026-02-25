@@ -173,6 +173,7 @@ export const TenfastLeaseSchema = z.object({
   betalasForskott: z.boolean(),
   vatEnabled: z.boolean(),
   method: z.string(),
+  signed: z.boolean(),
   file: z
     .object({
       key: z.string(),
@@ -233,6 +234,7 @@ export const TenfastLeaseSchema = z.object({
   updatedAt: z.coerce.date(),
   startInvoicingFrom: optionalDateField,
   signedAt: optionalDateField, // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
+  stage: z.string(),
   tags: z.array(z.unknown()),
 })
 
