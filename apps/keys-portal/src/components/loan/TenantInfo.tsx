@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Tenant, Lease, TenantAddress as Address } from '@/services/types'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ContractCard } from './ContractCard'
 import { KeyNoteDisplay } from './KeyNoteDisplay'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { getPriorityContractId } from '@/utils/contractPriority'
 import { getTenantViewLink } from '@/utils/externalLinks'
+import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
 function formatAddress(addr?: Address): string {
   if (!addr) return 'Okänd adress'
@@ -93,6 +94,49 @@ export function TenantInfo({
     () => getPriorityContractId(contracts),
     [contracts]
   )
+
+  // Fetch addresses once per unique rentalPropertyId, shared across all ContractCards
+  // Uses lease type to query only the relevant endpoint (1 request instead of 3)
+  const uniqueProperties = useMemo(() => {
+    const seen = new Map<string, string>()
+    contracts.forEach((c) => {
+      if (!seen.has(c.rentalPropertyId)) {
+        seen.set(c.rentalPropertyId, c.type ?? '')
+      }
+    })
+    return seen
+  }, [contracts])
+
+  const uniquePropertiesKey = useMemo(
+    () => [...uniqueProperties.keys()].join(','),
+    [uniqueProperties]
+  )
+
+  const [addressMap, setAddressMap] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let cancelled = false
+
+    const fetchAddresses = async () => {
+      const results = await Promise.all(
+        [...uniqueProperties.entries()].map(async ([id, leaseType]) => {
+          const addr = await rentalObjectSearchService.getAddressByRentalId(
+            id,
+            leaseType
+          )
+          return [id, addr ?? ''] as const
+        })
+      )
+      if (!cancelled) {
+        setAddressMap(Object.fromEntries(results))
+      }
+    }
+    fetchAddresses()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniquePropertiesKey])
 
   const totalEnded = endedRecentContracts.length + endedOlderContracts.length
 
@@ -238,6 +282,7 @@ export function TenantInfo({
                 <ContractCard
                   key={lease.leaseId}
                   lease={lease}
+                  rentalAddress={addressMap[lease.rentalPropertyId]}
                   defaultTab={
                     lease.leaseId === priorityContractId ? 'keys' : ''
                   }
@@ -257,6 +302,7 @@ export function TenantInfo({
                 <ContractCard
                   key={lease.leaseId}
                   lease={lease}
+                  rentalAddress={addressMap[lease.rentalPropertyId]}
                   defaultTab={
                     lease.leaseId === priorityContractId ? 'keys' : ''
                   }
@@ -277,6 +323,7 @@ export function TenantInfo({
                   <ContractCard
                     key={lease.leaseId}
                     lease={lease}
+                    rentalAddress={addressMap[lease.rentalPropertyId]}
                     defaultTab={
                       lease.leaseId === priorityContractId ? 'keys' : ''
                     }
