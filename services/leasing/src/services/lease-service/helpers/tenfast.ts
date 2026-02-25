@@ -29,8 +29,8 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     return LeaseStatus.Ended
   }
 
-  // Check about to end (cancelled with future end date)
-  if (stage === 'cancelled' && endDate && endDate >= today) {
+  // Check about to end - any lease with a future end date
+  if (endDate && endDate >= today) {
     return LeaseStatus.AboutToEnd
   }
 
@@ -39,12 +39,8 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     return LeaseStatus.Upcoming
   }
 
-  // Current lease (signed, started, not ending)
-  if (
-    stage === 'signed' &&
-    startDate < today &&
-    (!endDate || endDate > today)
-  ) {
+  // Current lease (signed, started, no end date)
+  if (stage === 'signed' && startDate < today && !endDate) {
     return LeaseStatus.Current
   }
 
@@ -52,9 +48,9 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   return LeaseStatus.Current
 }
 
-function mapToOnecoreRentalObject(
+const mapToOnecoreRentalObject = (
   rentalObject: TenfastRentalObject
-): RentalObject | undefined {
+): RentalObject | undefined => {
   // Only map if we have populated fields (not just a reference)
   if (!rentalObject.postadress) {
     return undefined
@@ -100,7 +96,7 @@ function mapToOnecoreRentalObject(
 // lastDebitDate: Date | undefined // Sista betaldatum
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
-export function mapToOnecoreLease(lease: TenfastLease): Lease {
+export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
@@ -127,7 +123,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
   }
 }
 
-export function mapToOnecoreRentRow(row: TenfastInvoiceRow): LeaseRentRow {
+export const mapToOnecoreRentRow = (row: TenfastInvoiceRow): LeaseRentRow => {
   return {
     id: row._id,
     amount: row.amount,

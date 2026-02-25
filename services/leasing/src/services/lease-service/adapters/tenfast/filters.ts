@@ -13,10 +13,10 @@ export type GetLeasesFilters = {
   )[]
 }
 
-export function filterByStatus(
+export const filterByStatus = (
   leases: TenfastLease[],
   statuses: GetLeasesFilters['status']
-) {
+) => {
   const now = new Date()
   const seenIds = new Set<string>()
 
@@ -47,24 +47,19 @@ export function filterByStatus(
   )
 }
 
-function isCurrentLease(l: TenfastLease, now: Date) {
-  return (
-    l.startDate < now && (!l.endDate || l.endDate > now) && l.stage === 'signed'
-  )
+const isCurrentLease = (l: TenfastLease, now: Date) => {
+  return l.startDate < now && !l.endDate && l.stage === 'signed'
 }
 
-function isUpcomingLease(l: TenfastLease, now: Date) {
-  return (
-    l.startDate >= now &&
-    (l.stage === 'signed' || l.stage === 'acceptedByHyresgast')
-  )
+const isUpcomingLease = (l: TenfastLease, now: Date) => {
+  return l.startDate >= now && l.stage === 'signed'
 }
 
-function isAboutToEndLease(l: TenfastLease, now: Date) {
-  return l.stage === 'cancelled' && l.endDate !== null && l.endDate >= now
+const isAboutToEndLease = (l: TenfastLease, now: Date) => {
+  return l.endDate !== null && l.endDate >= now
 }
 
-function isEndedLease(l: TenfastLease, now: Date) {
+const isEndedLease = (l: TenfastLease, now: Date) => {
   return (
     (l.stage === 'cancelled' || l.stage === 'archived') &&
     l.endDate !== null &&
@@ -79,6 +74,11 @@ export const isPreliminaryTerminated = (lease: TenfastLease): boolean => {
   )
 }
 
+// TODO: Verify that acceptedByHyresgast and start actually means pending signature.
 export const isPendingSignature = (lease: TenfastLease): boolean => {
-  return lease.stage === 'signingInProgress'
+  return (
+    lease.stage === 'signingInProgress' ||
+    lease.stage === 'acceptedByHyresgast' ||
+    lease.stage === 'start'
+  )
 }
