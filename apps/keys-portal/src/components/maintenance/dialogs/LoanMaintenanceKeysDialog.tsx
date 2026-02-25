@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 import { useToast } from '@/hooks/use-toast'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 import {
   searchContacts,
   fetchContactByContactCode,
@@ -37,6 +38,7 @@ export function LoanMaintenanceKeysDialog({
 }: LoanMaintenanceKeysDialogProps) {
   const { toast } = useToast()
   const { addSignature } = useCommentWithSignature()
+  const checkStale = useStaleGuard()
 
   // Form state
   const [companySearch, setCompanySearch] = useState('')
@@ -72,9 +74,11 @@ export function LoanMaintenanceKeysDialog({
     }
   }, [open, keys])
 
-  // Check which keys already have active loans, auto-uncheck them
+  // Check which keys already have active loans
   useEffect(() => {
     if (!open || keys.length === 0) return
+
+    const isStale = checkStale()
 
     const checkActiveLoans = async () => {
       setIsCheckingLoans(true)
@@ -93,8 +97,9 @@ export function LoanMaintenanceKeysDialog({
         })
       )
 
-      setLoanedKeyIds(loaned)
+      if (isStale()) return
 
+      setLoanedKeyIds(loaned)
       setIsCheckingLoans(false)
     }
 
