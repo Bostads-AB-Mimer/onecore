@@ -21,6 +21,8 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     betalasForskott: false,
     vatEnabled: false,
     method: 'digital',
+    signed: true,
+    stage: 'signed',
     file: {
       key: `file-key-${sequence}`,
       location: 'https://files.example.com/file.pdf',
@@ -36,6 +38,7 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
       handledAt: null,
       handledBy: null,
       preferredMoveOutDate: null,
+      cancelledByType: null,
     },
     deposit: {
       ekoNotifications: [],

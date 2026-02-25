@@ -4,6 +4,7 @@ enum LeaseStatus {
   AboutToEnd = 2, // Uppsagt, kommer att upphöra
   Ended = 3, // Upphört
   PreliminaryTerminated = 4, // Preliminärt uppsagt
+  PendingSignature = 5, // Väntar på signering
 }
 
 enum ParkingSpaceType {
