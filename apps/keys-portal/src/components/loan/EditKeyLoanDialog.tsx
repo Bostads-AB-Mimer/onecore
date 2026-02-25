@@ -71,9 +71,7 @@ export function EditKeyLoanDialog({
         }
 
         toast({
-          title: loanReceipt?.fileId
-            ? 'Kvittens ersatt'
-            : 'Kvittens uppladdad',
+          title: loanReceipt?.fileId ? 'Kvittens ersatt' : 'Kvittens uppladdad',
           description: loanReceipt?.fileId
             ? 'Den nya kvittensen har ersatt den gamla'
             : 'Kvittensen har laddats upp',
