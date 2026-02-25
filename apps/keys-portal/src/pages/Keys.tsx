@@ -16,7 +16,8 @@ import { keyEventService } from '@/services/api/keyEventService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
-import { Pencil, Trash2 } from 'lucide-react'
+import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
+import { Pencil, Trash2, KeyRound } from 'lucide-react'
 
 const Index = () => {
   const pagination = useUrlPagination()
@@ -52,6 +53,7 @@ const Index = () => {
   const keySelection = useItemSelection()
   const [showBulkEditForm, setShowBulkEditForm] = useState(false)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [showLoanDialog, setShowLoanDialog] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [keysWithActiveLoans, setKeysWithActiveLoans] = useState<Key[]>([])
 
@@ -685,6 +687,11 @@ const Index = () => {
             onClick: () => setShowBulkEditForm(true),
           },
           {
+            label: 'Skapa lån',
+            icon: <KeyRound className="mr-2 h-4 w-4" />,
+            onClick: () => setShowLoanDialog(true),
+          },
+          {
             label: hasNonDeletableSelected
               ? 'Ta bort (innehåller skyddade nycklar)'
               : 'Ta bort',
@@ -694,6 +701,17 @@ const Index = () => {
             disabled: hasNonDeletableSelected,
           },
         ]}
+      />
+
+      {/* Loan Maintenance Keys Dialog */}
+      <LoanMaintenanceKeysDialog
+        open={showLoanDialog}
+        onOpenChange={setShowLoanDialog}
+        keys={selectedKeys}
+        onSuccess={() => {
+          keySelection.deselectAll()
+          fetchKeys(pagination.currentPage, pagination.currentLimit)
+        }}
       />
 
       {/* Bulk Delete Dialog */}

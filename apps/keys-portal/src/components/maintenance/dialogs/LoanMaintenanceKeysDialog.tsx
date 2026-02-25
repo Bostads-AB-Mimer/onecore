@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import type { KeyDetails, Contact } from '@/services/types'
+import { KeyTypeLabels } from '@/services/types'
+import { cn } from '@/lib/utils'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 import { useToast } from '@/hooks/use-toast'
+import { useStaleGuard } from '@/hooks/useStaleGuard'
 import {
   searchContacts,
   fetchContactByContactCode,
@@ -14,6 +17,7 @@ import { receiptService } from '@/services/api/receiptService'
 import { BeforeAfterDialogBase } from '@/components/loan/dialogs/BeforeAfterDialogBase'
 import { ReceiptDialog } from '@/components/loan/dialogs/ReceiptDialog'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface LoanMaintenanceKeysDialogProps {
   open: boolean
@@ -34,6 +38,7 @@ export function LoanMaintenanceKeysDialog({
 }: LoanMaintenanceKeysDialogProps) {
   const { toast } = useToast()
   const { addSignature } = useCommentWithSignature()
+  const checkStale = useStaleGuard()
 
   // Form state
   const [companySearch, setCompanySearch] = useState('')
@@ -48,12 +53,58 @@ export function LoanMaintenanceKeysDialog({
   // Receipt dialog state
   const [createdLoanId, setCreatedLoanId] = useState<string | null>(null)
 
+  // Active loan check state
+  const [loanedKeyIds, setLoanedKeyIds] = useState<Set<string>>(new Set())
+  const [isCheckingLoans, setIsCheckingLoans] = useState(false)
+
+  // Key selection state within dialog (all keys checked by default)
+  const [checkedKeyIds, setCheckedKeyIds] = useState<Set<string>>(new Set())
+
   // Set pre-selected company when dialog opens
   useEffect(() => {
     if (open && preSelectedCompany) {
       handleSelectCompany(preSelectedCompany)
     }
   }, [open, preSelectedCompany])
+
+  // Initialize all keys as checked when dialog opens
+  useEffect(() => {
+    if (open && keys.length > 0) {
+      setCheckedKeyIds(new Set(keys.map((k) => k.id)))
+    }
+  }, [open, keys])
+
+  // Check which keys already have active loans
+  useEffect(() => {
+    if (!open || keys.length === 0) return
+
+    const isStale = checkStale()
+
+    const checkActiveLoans = async () => {
+      setIsCheckingLoans(true)
+      const loaned = new Set<string>()
+
+      await Promise.all(
+        keys.map(async (key) => {
+          try {
+            const loans = await keyLoanService.getByKeyId(key.id)
+            if (loans.some((l) => !l.returnedAt)) {
+              loaned.add(key.id)
+            }
+          } catch {
+            // Ignore — allow optimistic attempt
+          }
+        })
+      )
+
+      if (isStale()) return
+
+      setLoanedKeyIds(loaned)
+      setIsCheckingLoans(false)
+    }
+
+    checkActiveLoans()
+  }, [open, keys])
 
   // Fetch companies that have active loans on keys in the bundle (for pre-suggestions)
   useEffect(() => {
@@ -117,7 +168,7 @@ export function LoanMaintenanceKeysDialog({
     setIsSubmitting(true)
 
     try {
-      const keyIds = keys.map((k) => k.id)
+      const keyIds = Array.from(checkedKeyIds)
       const payload = {
         keys: keyIds,
         loanType: 'MAINTENANCE' as const,
@@ -139,9 +190,10 @@ export function LoanMaintenanceKeysDialog({
         console.error('Failed to create receipt:', receiptErr)
       }
 
+      const count = checkedKeyIds.size
       toast({
         title: 'Lån skapat',
-        description: `${keys.length} ${keys.length === 1 ? 'nyckel' : 'nycklar'} har lånats ut till ${selectedCompany.fullName}`,
+        description: `${count} ${count === 1 ? 'nyckel' : 'nycklar'} har lånats ut till ${selectedCompany.fullName}`,
       })
 
       // Show receipt dialog instead of immediately closing
@@ -168,6 +220,9 @@ export function LoanMaintenanceKeysDialog({
     setDescription('')
     setRecentCompanies([])
     setCreatedLoanId(null)
+    setLoanedKeyIds(new Set())
+    setIsCheckingLoans(false)
+    setCheckedKeyIds(new Set())
     onOpenChange(false)
   }
 
@@ -241,20 +296,99 @@ export function LoanMaintenanceKeysDialog({
     </div>
   )
 
+  const checkedCount = checkedKeyIds.size
+
+  const toggleKey = (keyId: string) => {
+    // Loaned keys can only be unchecked, not re-checked
+    if (loanedKeyIds.has(keyId) && !checkedKeyIds.has(keyId)) return
+
+    setCheckedKeyIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(keyId)) {
+        next.delete(keyId)
+      } else {
+        next.add(keyId)
+      }
+      return next
+    })
+  }
+
+  const leftContent = (
+    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      {isCheckingLoans && (
+        <div className="text-sm text-muted-foreground py-2">
+          Kontrollerar lånestatus…
+        </div>
+      )}
+      {keys.map((key) => {
+        const isLoaned = loanedKeyIds.has(key.id)
+        const isChecked = checkedKeyIds.has(key.id)
+        return (
+          <label
+            key={key.id}
+            className={cn(
+              'flex items-center gap-3 p-3 border rounded-lg text-sm cursor-pointer',
+              isLoaned && isChecked
+                ? 'border-destructive/50 bg-destructive/5'
+                : isLoaned && !isChecked
+                  ? 'border-destructive/50 bg-destructive/5 opacity-60 cursor-not-allowed'
+                  : isChecked
+                    ? 'bg-muted/50'
+                    : 'bg-background opacity-60'
+            )}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => toggleKey(key.id)}
+              disabled={isLoaned && !isChecked}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="font-medium">{key.keyName}</div>
+                {isLoaned && (
+                  <span className="text-xs font-medium text-destructive">
+                    Utlånad
+                  </span>
+                )}
+              </div>
+              <div className="text-muted-foreground">
+                {KeyTypeLabels[key.keyType]}
+                {key.flexNumber !== undefined && ` • Flex: ${key.flexNumber}`}
+                {key.keySequenceNumber !== undefined &&
+                  ` • Löpnr: ${key.keySequenceNumber}`}
+              </div>
+            </div>
+          </label>
+        )
+      })}
+      {!isCheckingLoans &&
+        keys.some((k) => loanedKeyIds.has(k.id) && checkedKeyIds.has(k.id)) && (
+          <p className="text-xs text-destructive mt-2">
+            Avmarkera utlånade nycklar för att kunna skapa lånet.
+          </p>
+        )}
+    </div>
+  )
+
   return (
     <BeforeAfterDialogBase
       open={open}
       onOpenChange={onOpenChange}
       title="Låna ut nycklar"
       description={`Välj företag och fyll i detaljer för lånet av ${keys.length} ${keys.length === 1 ? 'nyckel' : 'nycklar'}`}
-      selectedKeys={keys}
-      leftTitle={`Valda nycklar (${keys.length})`}
+      leftContent={leftContent}
+      leftTitle={`Valda nycklar (${checkedCount} av ${keys.length})`}
       rightTitle="Låneinformation"
       rightContent={rightContent}
       isProcessing={isSubmitting}
       onAccept={handleAccept}
       acceptButtonText="Skapa lån"
-      totalCount={keys.length}
+      totalCount={checkedCount}
+      acceptDisabled={
+        isCheckingLoans ||
+        !selectedCompany ||
+        keys.some((k) => loanedKeyIds.has(k.id) && checkedKeyIds.has(k.id))
+      }
     />
   )
 }
