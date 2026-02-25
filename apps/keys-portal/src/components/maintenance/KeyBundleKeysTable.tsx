@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from 'react'
-import type { KeyDetails } from '@/services/types'
+import type { KeyDetails, KeyLoanWithDetails } from '@/services/types'
 import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { useItemSelection } from '@/hooks/useItemSelection'
@@ -48,7 +48,9 @@ export function KeyBundleKeysTable({
   const [pendingReturnKeyIds, setPendingReturnKeyIds] = useState<string[]>([])
 
   // Handler for returning keys from the loan action menu
-  const handleReturnFromMenu = (keyIds: string[]) => {
+  const handleReturnFromMenu = (loan: KeyLoanWithDetails) => {
+    const keyIds = loan.keysArray?.map((k) => k.id) || []
+
     // Check if keys have active MAINTENANCE loans
     const keysToReturn = keys.filter((k) => keyIds.includes(k.id))
     const hasReturnableMaintenance = keysToReturn.some((k) => {
