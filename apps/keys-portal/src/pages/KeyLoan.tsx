@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useUnifiedSearch } from '@/components/loan/UnifiedSearch'
 import { SearchInput } from '@/components/loan/SearchInput'
@@ -60,6 +60,25 @@ export default function KeyLoan() {
   } = useUnifiedSearch({
     onResultFound: handleResultFound,
   })
+
+  // Handle deep-linking: trigger search from URL params on initial mount only
+  const hasInitialized = useRef(false)
+  useEffect(() => {
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+
+    const tenantParam = searchParams.get('tenant')
+    const objectParam = searchParams.get('object')
+
+    if (tenantParam) {
+      setSearchValue(tenantParam)
+      handleSearch(tenantParam)
+    } else if (objectParam) {
+      setSearchValue(objectParam)
+      handleSearch(objectParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="container mx-auto p-6 space-y-8">

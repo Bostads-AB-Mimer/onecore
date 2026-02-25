@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import {
   fetchTenantAndLeasesByPnr,
@@ -44,7 +43,6 @@ function pickPrimaryTenant(contracts: Lease[]): Tenant | null {
 }
 
 export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
-  const [searchParams] = useSearchParams()
   const [searchValue, setSearchValue] = useState('')
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -117,8 +115,8 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
   )
 
   // Exact match search on Enter/button click
-  const handleSearch = async () => {
-    const value = searchValue.trim()
+  const handleSearch = async (override?: string) => {
+    const value = (override ?? searchValue).trim()
     if (!value) {
       toast({
         title: 'Saknar värde',
@@ -143,24 +141,6 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
       })
     }
   }
-
-  // Trigger search when URL parameters are present
-  useEffect(() => {
-    const tenantParam = searchParams.get('tenant')
-    const objectParam = searchParams.get('object')
-
-    if (tenantParam && isValidPnr(tenantParam)) {
-      setSearchValue(tenantParam)
-      handleSearchByPnr(tenantParam)
-    } else if (tenantParam && isContactCode(tenantParam)) {
-      setSearchValue(tenantParam)
-      handleSearchByContactCode(tenantParam)
-    } else if (objectParam && objectParam.trim()) {
-      setSearchValue(objectParam)
-      handleSearchByObjectId(objectParam)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
 
   const handleSearchByPnr = async (pnr: string) => {
     setLoading(true)

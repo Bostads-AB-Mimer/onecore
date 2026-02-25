@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +21,6 @@ import { LeaseKeyStatusList } from './LeaseKeyStatusList'
 import { KeyLoansHistory } from './KeyLoansHistory'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
-import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
 const getLeaseTypeIcon = (type: string) => {
   const t = (type ?? '').toLowerCase()
@@ -52,10 +51,8 @@ type Props = {
 
 export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
   const [activeTab, setActiveTab] = useState<string>(defaultTab)
-  const [addressStr, setAddressStr] = useState<string | null>(
-    rentalAddress ?? null
-  )
-  const [addrLoading, setAddrLoading] = useState<boolean>(!rentalAddress)
+  const addressStr = rentalAddress ?? null
+  const addrLoading = !rentalAddress
 
   const [copied, setCopied] = useState(false)
   const [keyLoansRefreshKey, setKeyLoansRefreshKey] = useState(0)
@@ -83,25 +80,6 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
       console.error('Failed to copy:', err)
     }
   }
-
-  useEffect(() => {
-    let cancelled = false
-    async function loadAddr() {
-      if (rentalAddress) return
-      setAddrLoading(true)
-      const addr = await rentalObjectSearchService.getAddressByRentalId(
-        lease.rentalPropertyId
-      )
-      if (!cancelled) {
-        setAddressStr(addr)
-        setAddrLoading(false)
-      }
-    }
-    loadAddr()
-    return () => {
-      cancelled = true
-    }
-  }, [lease.rentalPropertyId, rentalAddress])
 
   const derived = deriveDisplayStatus(lease)
   const { label, variant } = statusBadge(derived)

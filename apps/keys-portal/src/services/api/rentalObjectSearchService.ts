@@ -131,9 +131,48 @@ export class RentalObjectSearchService {
     }
   }
 
-  async getAddressByRentalId(rentalId: string): Promise<string> {
+  async getAddressByRentalId(
+    rentalId: string,
+    leaseType?: string
+  ): Promise<string> {
+    const endpoint = this.getEndpointForLeaseType(leaseType)
+    if (endpoint) {
+      try {
+        const result = await GET(endpoint, {
+          params: { query: { q: rentalId } },
+        })
+        const item = (result.data?.content ?? []).find(
+          (r: { rentalId: string }) => r.rentalId === rentalId
+        )
+        if (item?.name) return item.name
+      } catch {
+        // fall through to full search
+      }
+    }
     const results = await this.searchByRentalId(rentalId)
     return results[0]?.address ?? 'Okänd adress'
+  }
+
+  private getEndpointForLeaseType(
+    leaseType?: string
+  ):
+    | '/residences/search'
+    | '/parking-spaces/search'
+    | '/facilities/search'
+    | null {
+    switch (leaseType?.trim()) {
+      case 'Bostadskontrakt':
+      case 'Campuskontrakt':
+      case 'Kooperativ hyresrätt':
+        return '/residences/search'
+      case 'P-Platskontrakt':
+      case 'Garagekontrakt':
+        return '/parking-spaces/search'
+      case 'Lokalkontrakt':
+        return '/facilities/search'
+      default:
+        return null
+    }
   }
 
   async getAddressesByRentalIds(

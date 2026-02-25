@@ -243,10 +243,31 @@ export default function MaintenanceKeys() {
     fetchBundleKeys()
   }, [searchResult, toast])
 
-  const { handleSelectContact, handleSelectBundle, loading } =
-    useUnifiedMaintenanceSearch({
-      onResultFound: handleResultFound,
-    })
+  const {
+    handleSelectContact,
+    handleSelectBundle,
+    handleSearchByBundleId,
+    loading,
+  } = useUnifiedMaintenanceSearch({
+    onResultFound: handleResultFound,
+  })
+
+  // Handle deep-linking: trigger search from URL params on initial mount only
+  const hasInitialized = useRef(false)
+  useEffect(() => {
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+
+    const contactParam = searchParams.get('contact')
+    const bundleParam = searchParams.get('bundle')
+
+    if (contactParam) {
+      handleSelectContact(contactParam)
+    } else if (bundleParam) {
+      handleSearchByBundleId(bundleParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="container mx-auto p-6 space-y-8">
@@ -293,8 +314,8 @@ export default function MaintenanceKeys() {
                 <ContactBundlesWithLoanedKeysCard
                   contactCode={searchResult.contact.contactCode}
                   onBundleClick={(bundleId) => {
-                    // Navigate to bundle by setting URL params
-                    setSearchParams({ bundle: bundleId })
+                    setHasLoadedLoans(false)
+                    handleSearchByBundleId(bundleId)
                   }}
                 />
               </div>
