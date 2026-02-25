@@ -67,6 +67,7 @@ enum ApplicantStatus {
   OfferAccepted = 7,
   OfferDeclined = 8,
   OfferExpired = 9,
+  Disqualified = 10, // Applicant has been disqualified from the listing for no longer meeting the requirements to rent this object.
   //PendingReview = 6 // ?
   //Rejected = 7 // ?
 }
