@@ -406,12 +406,8 @@ export function KeyLoansTable({
                                 ? (enrichedLoan) => onEdit(enrichedLoan)
                                 : undefined
                             }
-                            onReturn={() => {
-                              const loanDetails =
-                                expansion.loadedData?.loanDetails
-                              if (loanDetails) {
-                                setReturnLoan(loanDetails)
-                              }
+                            onReturn={(enrichedLoan) => {
+                              setReturnLoan(enrichedLoan)
                             }}
                           />
                         </div>
