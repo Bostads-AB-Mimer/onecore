@@ -69,12 +69,14 @@ export function LeaseItemsList({
   }
 
   const items: LeaseItem[] = useMemo(() => {
-    const keyItems: LeaseItem[] = keys
-      .filter((k) => !k.disposed || getActiveLoan(k))
-      .map((k) => ({ itemType: 'key', data: k }))
-    const cardItems: LeaseItem[] = cards
-      .filter((c) => !c.disabled || getActiveLoan(c))
-      .map((c) => ({ itemType: 'card', data: c }))
+    const keyItems: LeaseItem[] = keys.map((k) => ({
+      itemType: 'key',
+      data: k,
+    }))
+    const cardItems: LeaseItem[] = cards.map((c) => ({
+      itemType: 'card',
+      data: c,
+    }))
     return [...keyItems, ...cardItems]
   }, [keys, cards])
 
@@ -306,7 +308,11 @@ function CardRow({
           <PickupAvailabilityBadge itemData={card} />
         </TableCell>
         <TableCell className="w-[10%]">
-          <ItemDisposedBadge isDisposed={!!card.disabled} isCard />
+          <ItemDisposedBadge
+            isDisposed={!!card.disabled}
+            isCard
+            isArchived={card.state === 'Archived'}
+          />
         </TableCell>
       </TableRow>
       {expanded &&

@@ -246,6 +246,15 @@ export function LeaseKeyStatusList({
     })
   }, [keys])
 
+  // Filter out archived/disabled cards (unless they have active loans)
+  const visibleCards = useMemo(() => {
+    return cards.filter((card) => {
+      const isArchived = card.disabled || card.state === 'Archived'
+      if (!isArchived) return true
+      return !!getActiveLoan(card)
+    })
+  }, [cards])
+
   // Summary counts by type (only visible keys)
   const countsByType = useMemo(() => {
     const m = new Map<string, number>()
@@ -261,11 +270,11 @@ export function LeaseKeyStatusList({
     )
   }
 
-  if (visibleKeys.length === 0) {
+  if (visibleKeys.length === 0 && visibleCards.length === 0) {
     return (
       <div className="space-y-3">
         <div className="text-sm text-muted-foreground">
-          Inga nycklar hittades för detta hyresobjekt.
+          Inga nycklar eller droppar hittades för detta hyresobjekt.
         </div>
         <div className="flex gap-2">
           {!showAddKeyForm && (
@@ -312,7 +321,7 @@ export function LeaseKeyStatusList({
             selectedKeys={keySelection.selectedIds}
             selectedCards={cardSelection.selectedIds}
             keysWithStatus={visibleKeys}
-            cardsWithStatus={cards}
+            cardsWithStatus={visibleCards}
             leaseIsNotPast={leaseIsNotPast}
             isProcessing={isProcessing}
             onRent={onRent}
@@ -343,7 +352,7 @@ export function LeaseKeyStatusList({
         {/* Keys and cards table */}
         <LeaseItemsList
           keys={visibleKeys}
-          cards={cards}
+          cards={visibleCards}
           lease={lease}
           selectable={true}
           selectedKeys={keySelection.selectedIds}
@@ -359,12 +368,8 @@ export function LeaseKeyStatusList({
           onRefresh={refreshStatuses}
           onReturn={onReturn}
           onSelectAll={() => {
-            const visibleKeyIds = visibleKeys
-              .filter((k) => !k.disposed || getActiveLoan(k))
-              .map((k) => k.id)
-            const visibleCardIds = cards
-              .filter((c) => !c.disabled || getActiveLoan(c))
-              .map((c) => c.cardId)
+            const visibleKeyIds = visibleKeys.map((k) => k.id)
+            const visibleCardIds = visibleCards.map((c) => c.cardId)
             keySelection.selectAll(visibleKeyIds)
             cardSelection.selectAll(visibleCardIds)
           }}
