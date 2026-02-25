@@ -69,8 +69,14 @@ export function LeaseItemsList({
   }
 
   const items: LeaseItem[] = useMemo(() => {
-    const keyItems: LeaseItem[] = keys.map((k) => ({ itemType: 'key', data: k }))
-    const cardItems: LeaseItem[] = cards.map((c) => ({ itemType: 'card', data: c }))
+    const keyItems: LeaseItem[] = keys.map((k) => ({
+      itemType: 'key',
+      data: k,
+    }))
+    const cardItems: LeaseItem[] = cards.map((c) => ({
+      itemType: 'card',
+      data: c,
+    }))
     return [...keyItems, ...cardItems]
   }, [keys, cards])
 
