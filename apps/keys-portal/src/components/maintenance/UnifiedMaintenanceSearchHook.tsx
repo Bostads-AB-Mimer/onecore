@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import {
@@ -27,22 +26,8 @@ interface UnifiedMaintenanceSearchHookProps {
 export function useUnifiedMaintenanceSearch({
   onResultFound,
 }: UnifiedMaintenanceSearchHookProps) {
-  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
-
-  // Trigger search when URL parameters are present
-  useEffect(() => {
-    const contactParam = searchParams.get('contact')
-    const bundleParam = searchParams.get('bundle')
-
-    if (contactParam) {
-      handleSearchByContactCode(contactParam)
-    } else if (bundleParam) {
-      handleSearchByBundleId(bundleParam)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
 
   const handleSearchByContactCode = async (contactCode: string) => {
     setLoading(true)
@@ -111,6 +96,7 @@ export function useUnifiedMaintenanceSearch({
   return {
     handleSelectContact: handleSearchByContactCode,
     handleSelectBundle: handleSelectBundle,
+    handleSearchByBundleId,
     loading,
   }
 }
