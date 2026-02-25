@@ -13,6 +13,8 @@ const STATUS_ENUM_MAP: Record<string, string> = {
   [LeaseStatus.Upcoming]: 'upcoming',
   [LeaseStatus.AboutToEnd]: 'abouttoend',
   [LeaseStatus.Ended]: 'ended',
+  [LeaseStatus.PreliminaryTerminated]: 'preliminaryterminated',
+  [LeaseStatus.PendingSignature]: 'pendingsignature',
 }
 
 /** Maps normalized status keys to SQL WHERE conditions */

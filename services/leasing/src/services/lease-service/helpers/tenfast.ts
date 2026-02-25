@@ -5,19 +5,41 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
-import { isPreliminaryTerminated } from '../adapters/tenfast/filters'
+import { isPreliminaryTerminated, isPendingSignature } from '../adapters/tenfast/filters'
 
 const calculateLeaseStatus = (
-  startDate: Date,
-  endDate: Date | null,
-  isPreliminaryTerminated: boolean
+  lease: TenfastLease
 ): LeaseStatus => {
-  // TODO: Verify this logic
   const today = new Date()
-  if (endDate && endDate < today) return LeaseStatus.Ended
-  if (startDate >= today) return LeaseStatus.Upcoming
-  if (isPreliminaryTerminated) return LeaseStatus.PreliminaryTerminated
-  if (endDate && endDate >= today) return LeaseStatus.AboutToEnd
+  const { startDate, endDate, stage } = lease
+  
+  // Check pending signature first (unsigned leases)
+  if (isPendingSignature(lease)) return LeaseStatus.PendingSignature
+  
+  // Check preliminary termination
+  if (isPreliminaryTerminated(lease)) return LeaseStatus.PreliminaryTerminated
+  
+  // Check ended leases (must be cancelled/archived with past end date)
+  if ((stage === 'cancelled' || stage === 'archived') && endDate && endDate < today) {
+    return LeaseStatus.Ended
+  }
+  
+  // Check about to end (cancelled with future end date)
+  if (stage === 'cancelled' && endDate && endDate >= today) {
+    return LeaseStatus.AboutToEnd
+  }
+  
+  // Check upcoming (signed with future start date)
+  if (startDate >= today && stage === 'signed') {
+    return LeaseStatus.Upcoming
+  }
+  
+  // Current lease (signed, started, not ending)
+  if (stage === 'signed' && startDate < today && (!endDate || endDate > today)) {
+    return LeaseStatus.Current
+  }
+  
+  // Default fallback
   return LeaseStatus.Current
 }
 
@@ -75,11 +97,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
     leaseNumber: lease.externalId.split('/')[1],
     leaseStartDate: lease.startDate,
     leaseEndDate: lease.endDate ?? undefined,
-    status: calculateLeaseStatus(
-      lease.startDate,
-      lease.endDate,
-      isPreliminaryTerminated(lease)
-    ),
+    status: calculateLeaseStatus(lease),
     noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
     noticeDate: lease.cancellation.handledAt ?? undefined,
     noticeTimeTenant: lease.uppsagningstid,
