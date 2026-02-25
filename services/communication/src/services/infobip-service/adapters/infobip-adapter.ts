@@ -52,6 +52,11 @@ export const sendEmail = async (message: Email) => {
   }
 }
 
+const getParkingSpaceImageUrl = (rentalObjectCode: string) => {
+  const identifier = rentalObjectCode.slice(0, 7)
+  return `https://pub.mimer.nu/bofaktablad/mediabank/Bilplatser/${identifier}.jpg`
+}
+
 export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
   logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending template email')
   try {
@@ -67,6 +72,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
         parkingSpaceId: email.parkingSpaceId,
         objectId: email.objectId,
         offerURL: email.offerURL,
+        parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
       },
     })
     const response = await infobip.channels.email.send({
@@ -106,6 +112,7 @@ export const sendParkingSpaceAcceptOffer = async (
       objectId: email.objectId,
       type: email.type,
       rent: formatToSwedishCurrency(email.rent),
+      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
     },
   })
   try {
