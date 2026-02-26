@@ -276,7 +276,18 @@ export function getKeyLoansSearchQuery(
   options: KeyLoansSearchOptions = {},
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  let query = dbConnection(TABLE).select(`${TABLE}.*`)
+  let query = dbConnection(TABLE)
+    .select(`${TABLE}.*`)
+    .select(
+      dbConnection.raw(
+        `(SELECT COUNT(*) FROM key_loan_keys WHERE keyLoanId = ${TABLE}.id) as keyCount`
+      )
+    )
+    .select(
+      dbConnection.raw(
+        `(SELECT COUNT(*) FROM key_loan_cards WHERE keyLoanId = ${TABLE}.id) as cardCount`
+      )
+    )
 
   // Filter by key name, rental object code, or contact
   if (options.keyNameOrObjectCode) {

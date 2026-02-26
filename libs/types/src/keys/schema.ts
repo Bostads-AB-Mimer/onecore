@@ -70,6 +70,8 @@ export const KeyLoanSchema = z.object({
   updatedAt: z.coerce.date(),
   createdBy: z.string().nullable().optional(),
   updatedBy: z.string().nullable().optional(),
+  keyCount: z.number().optional(),
+  cardCount: z.number().optional(),
 })
 
 export const KeySystemSchema = z.object({
