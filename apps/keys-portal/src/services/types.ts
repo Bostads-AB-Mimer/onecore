@@ -205,6 +205,7 @@ export const KeyEventTypeLabels = {
   FLEX: 'Flex',
   ORDER: 'Extranyckel',
   LOST: 'Bortappad',
+  REPLACEMENT: 'Ersättning',
 } as const
 
 export type KeyEventType = keyof typeof KeyEventTypeLabels
