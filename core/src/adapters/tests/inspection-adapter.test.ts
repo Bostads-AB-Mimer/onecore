@@ -199,4 +199,85 @@ describe('inspection-adapter', () => {
       })
     })
   })
+
+  describe(inspectionAdapter.updateInspectionStatus, () => {
+    const inspectionId = 'inspection-123'
+    const detailedXpandInspectionMock = factory.DetailedXpandInspection.build({
+      id: inspectionId,
+      status: 'Påbörjad',
+    })
+
+    it('returns err with statusCode if request fails', async () => {
+      mockServer.use(
+        http.patch(
+          `${config.inspectionService.url}/inspections/${inspectionId}`,
+          () =>
+            HttpResponse.json(
+              { error: 'Inspection with ID inspection-123 not found' },
+              { status: 404 }
+            )
+        )
+      )
+
+      const result = await inspectionAdapter.updateInspectionStatus(
+        inspectionId,
+        { status: 'Påbörjad' }
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('Inspection with ID inspection-123 not found')
+        expect(result.statusCode).toBe(404)
+      }
+    })
+
+    it('returns err for invalid status transition', async () => {
+      mockServer.use(
+        http.patch(
+          `${config.inspectionService.url}/inspections/${inspectionId}`,
+          () =>
+            HttpResponse.json(
+              { error: 'Invalid status transition' },
+              { status: 400 }
+            )
+        )
+      )
+
+      const result = await inspectionAdapter.updateInspectionStatus(
+        inspectionId,
+        { status: 'Genomförd' }
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('Invalid status transition')
+        expect(result.statusCode).toBe(400)
+      }
+    })
+
+    it('returns updated inspection data', async () => {
+      mockServer.use(
+        http.patch(
+          `${config.inspectionService.url}/inspections/${inspectionId}`,
+          () =>
+            HttpResponse.json(
+              {
+                content: { inspection: detailedXpandInspectionMock },
+              },
+              { status: 200 }
+            )
+        )
+      )
+
+      const result = await inspectionAdapter.updateInspectionStatus(
+        inspectionId,
+        { status: 'Påbörjad' }
+      )
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: detailedXpandInspectionMock,
+      })
+    })
+  })
 })

@@ -166,3 +166,40 @@ export const createInspection = async (
     return { ok: false, err: 'Failed to create inspection' }
   }
 }
+
+export const updateInspectionStatus = async (
+  inspectionId: string,
+  body: components['schemas']['UpdateInspectionStatus']
+): Promise<AdapterResult<DetailedXpandInspection, string>> => {
+  try {
+    const fetchResponse = await client().PATCH('/inspections/{inspectionId}', {
+      params: { path: { inspectionId } },
+      body,
+    })
+
+    if (fetchResponse.error) {
+      const statusCode = fetchResponse.response.status
+      const errorBody = fetchResponse.error as { error?: string }
+      return {
+        ok: false,
+        err: errorBody.error || 'Failed to update inspection status',
+        statusCode,
+      }
+    }
+
+    if (!fetchResponse.data.content?.inspection) {
+      return { ok: false, err: 'Failed to update inspection status' }
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.inspection,
+    }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId },
+      'inspection-adapter.updateInspectionStatus'
+    )
+    return { ok: false, err: 'Failed to update inspection status' }
+  }
+}

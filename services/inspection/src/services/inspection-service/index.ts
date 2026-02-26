@@ -13,7 +13,10 @@ import {
 } from './schemas'
 import * as xpandAdapter from './adapters/xpand-adapter'
 import * as dbAdapter from './adapters/db-adapter'
-import { CreateInspectionSchema } from './adapters/db-adapter/schemas'
+import {
+  CreateInspectionSchema,
+  UpdateInspectionStatusSchema,
+} from './adapters/db-adapter/schemas'
 import { db } from './adapters/db'
 
 /**
@@ -30,6 +33,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedXpandInspectionRoom', DetailedXpandInspectionSchema)
   registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
   registerSchema('CreateInspection', CreateInspectionSchema)
+  registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)
 
   /**
    * @swagger
@@ -462,6 +466,142 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (error) {
       logger.error(error, 'Error creating inspection')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/{inspectionId}:
+   *   patch:
+   *     tags:
+   *       - Inspection
+   *     summary: Update inspection status
+   *     description: Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateInspectionStatus'
+   *     responses:
+   *       200:
+   *         description: Inspection status updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/DetailedXpandInspection'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       400:
+   *         description: Invalid request body or invalid status transition
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   *       404:
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 metadata:
+   *                   type: object
+   */
+  router.patch('(.*)/inspections/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const validationResult = UpdateInspectionStatusSchema.safeParse(
+      ctx.request.body
+    )
+    if (!validationResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: validationResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await dbAdapter.updateInspectionStatus(
+        db,
+        inspectionId,
+        validationResult.data.status
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: `Inspection with ID ${inspectionId} not found`,
+            ...metadata,
+          }
+          return
+        }
+
+        if (result.err === 'invalid-status-transition') {
+          ctx.status = 400
+          ctx.body = {
+            error: `Invalid status transition`,
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to update inspection status: ${result.err}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspection: result.data,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(error, 'Error updating inspection status')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

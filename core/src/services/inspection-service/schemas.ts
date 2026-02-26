@@ -202,6 +202,18 @@ export const CreateInspectionRequestSchema = DetailedXpandInspectionSchema.omit(
 export type CreateInspectionRequest = z.infer<
   typeof CreateInspectionRequestSchema
 >
+
+export const UpdateInspectionStatusRequestSchema = z.object({
+  status: z.enum(['Registrerad', 'Påbörjad', 'Genomförd'], {
+    required_error: 'Status is required',
+    invalid_type_error: 'Invalid status value',
+  }),
+})
+
+export type UpdateInspectionStatusRequest = z.infer<
+  typeof UpdateInspectionStatusRequestSchema
+>
+
 export type TenantContact = z.infer<typeof TenantContactSchema>
 export type TenantInfo = z.infer<typeof TenantInfoSchema>
 export type TenantContactsResponse = z.infer<
