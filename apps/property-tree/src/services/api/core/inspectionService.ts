@@ -8,6 +8,7 @@ type DetailedInspection = components['schemas']['DetailedInspection']
 type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 type SendProtocolRequest = components['schemas']['SendProtocolRequest']
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
+type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
 
 export interface PaginatedInspectionsResponse {
   content: Inspection[]
@@ -115,6 +116,17 @@ export const inspectionService = {
     if (!response.data.content) throw new Error('No data returned from API')
 
     return response.data.content as TenantContactsResponse
+  },
+
+  async createInspection(
+    body: CreateInspectionRequest
+  ): Promise<DetailedInspection> {
+    const response = await POST('/inspections', { body })
+    if (response.error) throw response.error
+    if (!response.data.content?.inspection)
+      throw new Error('Failed to create inspection')
+
+    return response.data.content.inspection
   },
 
   async sendProtocol(

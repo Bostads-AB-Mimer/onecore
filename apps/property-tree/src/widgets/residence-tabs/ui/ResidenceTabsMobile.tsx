@@ -68,6 +68,7 @@ export const ResidenceTabsMobile = ({
         <InspectionsTabContent
           residenceId={residence.id}
           rentalId={rentalId || undefined}
+          leaseId={currentLease?.leaseId}
           residence={residence}
         />
       ),
