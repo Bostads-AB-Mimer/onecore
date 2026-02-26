@@ -1,6 +1,10 @@
 import { Knex } from 'knex'
 import * as dbAdapter from '../../../adapters/db-adapter'
-import { CreateInspectionSchema } from '../../../adapters/db-adapter/schemas'
+import {
+  CreateInspectionSchema,
+  UpdateInspectionStatusSchema,
+  validateStatusTransition,
+} from '../../../adapters/db-adapter/schemas'
 import { CreateInspectionParamsFactory } from '../../factories/inspection'
 
 jest.mock('@onecore/utilities', () => ({
@@ -357,6 +361,268 @@ describe('db-adapter', () => {
           'At least one room is required for an inspection'
         )
       }
+    })
+  })
+
+  describe('updateInspectionStatus', () => {
+    const mockInspectionRow = {
+      id: 1,
+      status: 'Registrerad',
+      date: new Date('2023-01-01T10:00:00Z'),
+      startedAt: null,
+      endedAt: null,
+      inspector: 'Test Inspector',
+      type: 'Move-in',
+      residenceId: 'RES-001',
+      address: '123 Test Street',
+      apartmentCode: 'APT-001',
+      isFurnished: false,
+      leaseId: 'LEASE-001',
+      isTenantPresent: true,
+      isNewTenantPresent: false,
+      masterKeyAccess: null,
+      hasRemarks: false,
+      notes: null,
+      totalCost: null,
+      remarkCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    function createMockTrxForUpdate(
+      inspection: typeof mockInspectionRow | undefined,
+      rooms: Array<{
+        id: number
+        inspectionId: number
+        roomName: string
+        createdAt: Date
+      }> = [],
+      remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
+    ) {
+      let currentOperation: 'select' | 'update' = 'select'
+      let tableName = ''
+      let updateData: Record<string, unknown> = {}
+
+      const chain: Record<string, jest.Mock> = {
+        select: jest.fn(() => {
+          currentOperation = 'select'
+          return chain
+        }),
+        update: jest.fn((data: Record<string, unknown>) => {
+          currentOperation = 'update'
+          updateData = data
+          return chain
+        }),
+        from: jest.fn((table: string) => {
+          tableName = table
+          return chain
+        }),
+        where: jest.fn((_column: string, value: unknown) => {
+          if (currentOperation === 'select') {
+            if (tableName === 'inspection') {
+              return Promise.resolve(inspection ? [inspection] : [])
+            }
+            if (tableName === 'inspection_room') {
+              return Promise.resolve(rooms)
+            }
+            if (tableName === 'inspection_remark') {
+              return Promise.resolve(remarksByRoomId[value as number] || [])
+            }
+            return Promise.resolve([])
+          }
+          return chain
+        }),
+        returning: jest.fn(() => {
+          if (currentOperation === 'update' && tableName === 'inspection') {
+            return Promise.resolve(
+              inspection ? [{ ...inspection, ...updateData }] : []
+            )
+          }
+          return Promise.resolve([])
+        }),
+      }
+
+      return chain
+    }
+
+    function createMockDbForUpdate(
+      inspection: typeof mockInspectionRow | undefined,
+      rooms: Array<{
+        id: number
+        inspectionId: number
+        roomName: string
+        createdAt: Date
+      }> = [],
+      remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
+    ) {
+      const mockTrx = createMockTrxForUpdate(inspection, rooms, remarksByRoomId)
+
+      return {
+        transaction: jest.fn((callback) => callback(mockTrx)),
+      } as unknown as Knex
+    }
+
+    it('updates status from Registrerad to Påbörjad', async () => {
+      const mockDb = createMockDbForUpdate(mockInspectionRow, [
+        {
+          id: 1,
+          inspectionId: 1,
+          roomName: 'Kitchen',
+          createdAt: new Date(),
+        },
+      ])
+
+      const result = await dbAdapter.updateInspectionStatus(
+        mockDb,
+        '1',
+        'Påbörjad'
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.status).toBe('Påbörjad')
+        expect(result.data.rooms).toHaveLength(1)
+      }
+    })
+
+    it('updates status from Påbörjad to Genomförd', async () => {
+      const inspectionInProgress = {
+        ...mockInspectionRow,
+        status: 'Påbörjad',
+      }
+      const mockDb = createMockDbForUpdate(inspectionInProgress)
+
+      const result = await dbAdapter.updateInspectionStatus(
+        mockDb,
+        '1',
+        'Genomförd'
+      )
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.status).toBe('Genomförd')
+      }
+    })
+
+    it('rejects invalid transition from Registrerad to Genomförd', async () => {
+      const mockDb = createMockDbForUpdate(mockInspectionRow)
+
+      const result = await dbAdapter.updateInspectionStatus(
+        mockDb,
+        '1',
+        'Genomförd'
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('invalid-status-transition')
+      }
+    })
+
+    it('rejects backward transition from Genomförd to Registrerad', async () => {
+      const completedInspection = {
+        ...mockInspectionRow,
+        status: 'Genomförd',
+      }
+      const mockDb = createMockDbForUpdate(completedInspection)
+
+      const result = await dbAdapter.updateInspectionStatus(
+        mockDb,
+        '1',
+        'Registrerad'
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('invalid-status-transition')
+      }
+    })
+
+    it('returns not-found when inspection does not exist', async () => {
+      const mockDb = createMockDbForUpdate(undefined)
+
+      const result = await dbAdapter.updateInspectionStatus(
+        mockDb,
+        '999',
+        'Påbörjad'
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+
+    it('returns error when database fails', async () => {
+      const mockDb = {
+        transaction: jest.fn(() => {
+          throw new Error('DB connection failed')
+        }),
+      } as unknown as Knex
+
+      const result = await dbAdapter.updateInspectionStatus(
+        mockDb,
+        '1',
+        'Påbörjad'
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
+
+  describe('validateStatusTransition', () => {
+    it('allows Registrerad to Påbörjad', () => {
+      const result = validateStatusTransition('Registrerad', 'Påbörjad')
+      expect(result.ok).toBe(true)
+    })
+
+    it('allows Påbörjad to Genomförd', () => {
+      const result = validateStatusTransition('Påbörjad', 'Genomförd')
+      expect(result.ok).toBe(true)
+    })
+
+    it('rejects Registrerad to Genomförd', () => {
+      const result = validateStatusTransition('Registrerad', 'Genomförd')
+      expect(result.ok).toBe(false)
+    })
+
+    it('rejects Genomförd to Registrerad', () => {
+      const result = validateStatusTransition('Genomförd', 'Registrerad')
+      expect(result.ok).toBe(false)
+    })
+
+    it('rejects Genomförd to Påbörjad', () => {
+      const result = validateStatusTransition('Genomförd', 'Påbörjad')
+      expect(result.ok).toBe(false)
+    })
+
+    it('rejects same status transition', () => {
+      const result = validateStatusTransition('Registrerad', 'Registrerad')
+      expect(result.ok).toBe(false)
+    })
+  })
+
+  describe('UpdateInspectionStatusSchema', () => {
+    it('accepts valid status', () => {
+      const result = UpdateInspectionStatusSchema.safeParse({
+        status: 'Påbörjad',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects invalid status', () => {
+      const result = UpdateInspectionStatusSchema.safeParse({
+        status: 'InvalidStatus',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects missing status', () => {
+      const result = UpdateInspectionStatusSchema.safeParse({})
+      expect(result.success).toBe(false)
     })
   })
 })

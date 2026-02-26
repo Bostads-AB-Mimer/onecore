@@ -41,6 +41,10 @@ export const routes = (router: KoaRouter) => {
     'CreateInspectionRequest',
     schemas.CreateInspectionRequestSchema
   )
+  registerSchema(
+    'UpdateInspectionStatusRequest',
+    schemas.UpdateInspectionStatusRequestSchema
+  )
 
   /**
    * @swagger
@@ -981,6 +985,99 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (error) {
       logger.error({ error }, 'Error creating inspection')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/{inspectionId}:
+   *   patch:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Update inspection status
+   *     description: Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateInspectionStatusRequest'
+   *     responses:
+   *       '200':
+   *         description: Inspection status updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/DetailedInspection'
+   *       '400':
+   *         description: Invalid request body or invalid status transition
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch('/inspections/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await inspectionAdapter.updateInspectionStatus(
+        inspectionId,
+        ctx.request.body
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            inspection: result.data,
+          },
+          ...metadata,
+        }
+      } else {
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error({ error, inspectionId }, 'Error updating inspection status')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

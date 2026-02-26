@@ -5404,6 +5404,61 @@ export interface paths {
       };
     };
   };
+  "/inspections/{inspectionId}": {
+    /**
+     * Update inspection status
+     * @description Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to update */
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["UpdateInspectionStatusRequest"];
+        };
+      };
+      responses: {
+        /** @description Inspection status updated successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                inspection?: components["schemas"]["DetailedInspection"];
+              };
+            };
+          };
+        };
+        /** @description Invalid request body or invalid status transition */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Inspection not found */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/files": {
     /** List files with optional prefix */
     get: {
@@ -7925,6 +7980,10 @@ export interface components {
               workOrderStatus: number | null;
             })[];
         })[];
+    };
+    UpdateInspectionStatusRequest: {
+      /** @enum {string} */
+      status: "Registrerad" | "Påbörjad" | "Genomförd";
     };
     FileListItem: {
       /** @description Full file path/name */
