@@ -4,8 +4,7 @@ import {
   logger,
   loggedAxios as axios,
 } from '@onecore/utilities'
-import { requireAllowedIp } from '../../middlewares/ip-allowlist'
-import { requireRole } from '../../middlewares/keycloak-auth'
+import { requireServiceAccountAuth } from '../../middlewares/service-account-auth'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { ReceiptsApi, KeyLoansApi } from '../../adapters/keys-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
@@ -35,7 +34,6 @@ async function sendErrorNotification(subject: string, message: string) {
 
 export const routes = (router: KoaRouter) => {
   // WebDAV: OPTIONS handler
-  // TODO: Restore requireAllowedIp on all routes before deploying
   router.options(
     '/scan-receipt',
     /* requireAllowedIp, */ (ctx) => {
@@ -76,11 +74,9 @@ export const routes = (router: KoaRouter) => {
   )
 
   // WebDAV: PUT — the actual scan upload
-  // TODO: Restore requireAllowedIp and requireRole('scanner-upload') before deploying
   router.put(
     '/scan-receipt/:filename',
-    // requireAllowedIp,
-    // requireRole('scanner-upload'),
+    requireServiceAccountAuth('scanner-upload'),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const filename = ctx.params.filename
