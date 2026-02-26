@@ -143,7 +143,7 @@ type GetOffersForContactQueryResult = Array<
     ApplicantNationalRegistrationNumber: string
     ApplicantContactCode: string
     ApplicantApplicationDate: Date
-    ApplicantApplicationType: string | null
+    ApplicantApplicationType: 'Replace' | 'Additional'
     ApplicantStatus: Applicant['status']
     ApplicantListingId: number
   }
