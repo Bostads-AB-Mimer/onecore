@@ -189,33 +189,6 @@ export const createOfferForInternalParkingSpace = async (
 
     log.push(`Created offer ${offer.data.id}`)
 
-    try {
-      await leasingAdapter.updateApplicantStatus({
-        applicantId: eligibleApplicant.id,
-        contactCode: eligibleApplicant.contactCode,
-        status: ApplicantStatus.Offered,
-      })
-      log.push(`Updated status for applicant ${eligibleApplicant.id}`)
-    } catch (_err) {
-      if (_err instanceof Error) {
-        log.push(
-          _err.message ??
-            `Unknown error updating applicant status for applicant ${eligibleApplicant.id}`
-        )
-        logger.debug(log)
-      }
-      logger.error(
-        {
-          error: _err,
-          applicantId: eligibleApplicant.id,
-          offerId: offer.data.id,
-          listingId: listing.id,
-          rentalObjectCode: listing.rentalObjectCode,
-        },
-        'Error updating applicant status'
-      )
-    }
-
     if (!contact.emailAddress) {
       log.push(`Contact ${contact.contactCode} has no email address`)
       logger.error(
