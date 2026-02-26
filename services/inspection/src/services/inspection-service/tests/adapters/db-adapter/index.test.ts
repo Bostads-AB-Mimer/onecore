@@ -403,7 +403,7 @@ describe('db-adapter', () => {
       let tableName = ''
       let updateData: Record<string, unknown> = {}
 
-      const chain = {
+      const chain: Record<string, jest.Mock> = {
         select: jest.fn(() => {
           currentOperation = 'select'
           return chain
