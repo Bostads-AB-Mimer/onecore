@@ -168,6 +168,63 @@ export interface paths {
       }
     }
   }
+  '/inspections/{inspectionId}': {
+    /** Update inspection status */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to update */
+          inspectionId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateInspectionStatus']
+        }
+      }
+      responses: {
+        /** @description Inspection status updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                inspection?: components['schemas']['DetailedXpandInspection']
+              }
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid request body or invalid status transition */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Inspection not found */
+        404: {
+          content: {
+            'application/json': {
+              error?: string
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
   '/inspections': {
     /** Create a new inspection */
     post: {
@@ -348,6 +405,10 @@ export interface components {
           workOrderStatus: number | null
         }[]
       }[]
+    }
+    UpdateInspectionStatus: {
+      /** @enum {string} */
+      status: 'Registrerad' | 'Påbörjad' | 'Genomförd'
     }
     CreateInspection: {
       status: string

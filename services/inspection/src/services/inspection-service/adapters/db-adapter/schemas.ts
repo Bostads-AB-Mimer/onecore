@@ -56,3 +56,39 @@ export const CreateInspectionSchema = z.object({
 })
 
 export type CreateInspectionParams = z.infer<typeof CreateInspectionSchema>
+
+export const INSPECTION_STATUSES = [
+  'Registrerad',
+  'Påbörjad',
+  'Genomförd',
+] as const
+
+export const VALID_STATUS_TRANSITIONS: Record<string, string> = {
+  Registrerad: 'Påbörjad',
+  Påbörjad: 'Genomförd',
+}
+
+export const UpdateInspectionStatusSchema = z.object({
+  status: z.enum(INSPECTION_STATUSES, {
+    required_error: 'Status is required',
+    invalid_type_error: 'Invalid status value',
+  }),
+})
+
+export type UpdateInspectionStatusParams = z.infer<
+  typeof UpdateInspectionStatusSchema
+>
+
+export function validateStatusTransition(
+  currentStatus: string,
+  newStatus: string
+): { ok: true } | { ok: false; err: string } {
+  const allowedNext = VALID_STATUS_TRANSITIONS[currentStatus]
+  if (!allowedNext || allowedNext !== newStatus) {
+    return {
+      ok: false,
+      err: `Invalid status transition from '${currentStatus}' to '${newStatus}'`,
+    }
+  }
+  return { ok: true }
+}
