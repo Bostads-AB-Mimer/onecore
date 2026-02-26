@@ -154,7 +154,7 @@ describe('acceptOffer', () => {
         ctx.db
       )
       expect(listingFromDB?.status).toBe(listing.data.status)
-      expect(applicantFromDB?.status).toBe(applicant?.status)
+      expect(applicantFromDB?.status).toBe(offer.data.offeredApplicant.status)
     }))
 
   it('updates listing, applicant and offer', () =>
@@ -362,7 +362,7 @@ describe('denyOffer', () => {
         applicant.id,
         ctx.db
       )
-      expect(applicantFromDb?.status).toBe(applicant.status)
+      expect(applicantFromDb?.status).toBe(offer.data.offeredApplicant.status)
     }))
 
   it('updates applicant and offer', () =>

@@ -243,11 +243,11 @@ describe('createOfferForInternalParkingSpace', () => {
 
     const result = await createOfferForInternalParkingSpace(123)
 
-    expect(leasingAdapter.updateApplicantStatus).toHaveBeenCalledWith({
-      applicantId: 987,
-      contactCode: '123ABC',
-      status: 6,
-    })
+    expect(leasingAdapter.createOffer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicantId: 987,
+      })
+    )
 
     expect(result).toEqual({
       processStatus: ProcessStatus.successful,
@@ -351,11 +351,11 @@ describe('createOfferForInternalParkingSpace', () => {
 
     const result = await createOfferForInternalParkingSpace(123)
 
-    expect(leasingAdapter.updateApplicantStatus).toHaveBeenCalledWith({
-      applicantId: 987,
-      contactCode: '123ABC',
-      status: 6,
-    })
+    expect(leasingAdapter.createOffer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicantId: 987,
+      })
+    )
 
     expect(result).toEqual({
       processStatus: ProcessStatus.successful,

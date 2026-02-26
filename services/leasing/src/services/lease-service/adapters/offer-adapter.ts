@@ -42,6 +42,9 @@ export async function create(
       return { ok: false, err: 'no-applicant' }
     }
 
+    // Update the applicant status to "Offered" for the applicant that the offer is being made to
+    applicant.Status = ApplicantStatus.Offered
+
     if (!params.selectedApplicants.length) {
       return { ok: false, err: 'no-offer-applicants' }
     }
@@ -102,6 +105,10 @@ export async function create(
         VALUES ${placeholders}`,
         offerApplicantsValues.flat()
       )
+
+      await trx('applicant')
+        .where('Id', params.applicantId)
+        .update({ Status: applicant.Status })
 
       return offer
     })
