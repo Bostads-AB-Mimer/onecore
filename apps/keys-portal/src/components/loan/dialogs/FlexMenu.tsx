@@ -8,6 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus, Minus } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import type { Key, KeyType } from '@/services/types'
@@ -23,6 +30,8 @@ type KeyGroup = {
   sampleKey: Key
   currentFlexNumber: number
   hasFlexConflict: boolean
+  hasNullFlex: boolean
+  isAtMaxFlex: boolean
 }
 
 type Props = {
@@ -46,6 +55,11 @@ export function FlexMenu({
   // Group keys by name and type, with a default count of 3
   const [keyGroups, setKeyGroups] = useState<Map<string, KeyGroup>>(new Map())
 
+  // Track user-specified flex for groups with null flex
+  const [flexOverrides, setFlexOverrides] = useState<Map<string, number>>(
+    new Map()
+  )
+
   // Initialize key groups when selectedKeys changes
   useMemo(() => {
     const groups = new Map<string, KeyGroup>()
@@ -66,22 +80,27 @@ export function FlexMenu({
 
         const uniqueFlexNumbers = new Set(flexNumbers)
         const hasFlexConflict = uniqueFlexNumbers.size > 1
+        const hasNullFlex = flexNumbers.length === 0
 
         // Use the first flex number found, or 0 if none
         const currentFlexNumber = flexNumbers.length > 0 ? flexNumbers[0] : 0
+        const isAtMaxFlex = currentFlexNumber === 3
 
         groups.set(groupKey, {
           keyName: key.keyName,
           keyType: key.keyType,
-          count: 3,
+          count: isAtMaxFlex ? 0 : 3,
           sampleKey: key,
           currentFlexNumber,
           hasFlexConflict,
+          hasNullFlex,
+          isAtMaxFlex,
         })
       }
     })
 
     setKeyGroups(groups)
+    setFlexOverrides(new Map())
   }, [selectedKeys])
 
   const incrementCount = (groupKey: string) => {
@@ -106,29 +125,42 @@ export function FlexMenu({
     })
   }
 
+  const handleFlexOverride = (groupKey: string, value: string) => {
+    const flexNumber = parseInt(value, 10)
+    setFlexOverrides((prev) => {
+      const newOverrides = new Map(prev)
+      newOverrides.set(groupKey, flexNumber)
+      return newOverrides
+    })
+  }
+
+  const getEffectiveFlexNumber = (group: KeyGroup, groupKey: string) => {
+    if (group.hasNullFlex) {
+      return flexOverrides.get(groupKey) ?? null
+    }
+    return group.currentFlexNumber
+  }
+
   const handleCreate = async () => {
     setIsCreating(true)
     try {
       const createdKeys: Key[] = []
 
-      // Calculate total keys to create across all groups
-      let totalKeysToCreate = 0
-      for (const group of keyGroups.values()) {
-        totalKeysToCreate += group.count
-      }
+      // Create keys for each group (skip max-flex groups)
+      for (const [groupKey, group] of keyGroups.entries()) {
+        if (group.isAtMaxFlex || group.count === 0) continue
 
-      // Create keys for each group
-      for (const group of keyGroups.values()) {
-        // Calculate the new flex number (current + 1)
-        const currentFlexNumber = group.currentFlexNumber ?? 0
-        const newFlexNumber = currentFlexNumber + 1
+        const effectiveFlex = getEffectiveFlexNumber(group, groupKey)
+        if (effectiveFlex === null) continue
+
+        const newFlexNumber = effectiveFlex + 1
 
         // Create 'count' number of keys with sequence numbers 1, 2, 3, etc.
         for (let i = 1; i <= group.count; i++) {
           const newKey = await keyService.createKey({
             keyName: group.keyName,
             keyType: group.keyType,
-            keySequenceNumber: i, // Sequence number: 1, 2, 3, etc.
+            keySequenceNumber: i,
             flexNumber: newFlexNumber,
             rentalObjectCode: group.sampleKey.rentalObjectCode,
             keySystemId: group.sampleKey.keySystemId,
@@ -165,9 +197,16 @@ export function FlexMenu({
     }
   }
 
-  const totalKeysToCreate = Array.from(keyGroups.values()).reduce(
-    (sum, group) => sum + group.count,
+  // Only count groups that can actually create keys
+  const totalKeysToCreate = Array.from(keyGroups.entries()).reduce(
+    (sum, [, group]) => (group.isAtMaxFlex ? sum : sum + group.count),
     0
+  )
+
+  // Check if any null-flex group is missing a user override
+  const hasUnresolvedNullFlex = Array.from(keyGroups.entries()).some(
+    ([groupKey, group]) =>
+      group.hasNullFlex && !group.isAtMaxFlex && !flexOverrides.has(groupKey)
   )
 
   return (
@@ -195,8 +234,9 @@ export function FlexMenu({
                   <div className="font-medium">{key.keyName}</div>
                   <div className="text-muted-foreground">
                     {KeyTypeLabels[key.keyType]}
-                    {key.flexNumber !== undefined &&
-                      ` • Flex ${key.flexNumber}`}
+                    {key.flexNumber != null
+                      ? ` • Flex ${key.flexNumber}`
+                      : ' • Flex saknas'}
                     {key.keySequenceNumber !== undefined &&
                       ` • Löpnr: ${key.keySequenceNumber}`}
                   </div>
@@ -212,7 +252,10 @@ export function FlexMenu({
             </h3>
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {Array.from(keyGroups.entries()).map(([groupKey, group]) => {
-                const newFlexNumber = group.currentFlexNumber + 1
+                const effectiveFlex = getEffectiveFlexNumber(group, groupKey)
+                const newFlexNumber =
+                  effectiveFlex !== null ? effectiveFlex + 1 : null
+
                 return (
                   <div
                     key={groupKey}
@@ -225,41 +268,89 @@ export function FlexMenu({
                       </div>
                       {group.hasFlexConflict && (
                         <div className="text-xs text-destructive mt-1">
-                          ⚠️ Varning: Valda nycklar har olika flex-nummer
+                          Varning: Valda nycklar har olika flex-nummer
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        Flex {newFlexNumber} • Löpnr 1-{group.count}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          className="h-7 w-7"
-                          onClick={() => decrementCount(groupKey)}
-                          disabled={group.count === 0 || isCreating}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">
-                          {group.count}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          className="h-7 w-7"
-                          onClick={() => incrementCount(groupKey)}
-                          disabled={isCreating}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                    {/* Max flex warning */}
+                    {group.isAtMaxFlex && (
+                      <div className="text-xs text-destructive">
+                        Kan inte flexa – redan på flex 3
                       </div>
-                    </div>
+                    )}
+
+                    {/* Null flex - require user to set flex */}
+                    {group.hasNullFlex && !group.isAtMaxFlex && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-destructive">
+                          Flex saknas – ange nuvarande flex innan du flexar
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            Nuvarande flex:
+                          </span>
+                          <Select
+                            value={
+                              flexOverrides.has(groupKey)
+                                ? String(flexOverrides.get(groupKey))
+                                : undefined
+                            }
+                            onValueChange={(v) =>
+                              handleFlexOverride(groupKey, v)
+                            }
+                          >
+                            <SelectTrigger className="w-20 h-7 text-xs">
+                              <SelectValue placeholder="–" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1</SelectItem>
+                              <SelectItem value="2">2</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {newFlexNumber !== null && (
+                            <span className="text-xs text-muted-foreground">
+                              → Ny flex: {newFlexNumber}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Normal group or null-flex with override set - show quantity controls */}
+                    {!group.isAtMaxFlex &&
+                      (!group.hasNullFlex || flexOverrides.has(groupKey)) && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            Flex {newFlexNumber} • Löpnr 1-{group.count}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => decrementCount(groupKey)}
+                              disabled={group.count === 0 || isCreating}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">
+                              {group.count}
+                            </span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => incrementCount(groupKey)}
+                              disabled={isCreating}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                   </div>
                 )
               })}
@@ -277,7 +368,9 @@ export function FlexMenu({
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={isCreating || totalKeysToCreate === 0}
+            disabled={
+              isCreating || totalKeysToCreate === 0 || hasUnresolvedNullFlex
+            }
           >
             {isCreating ? (
               <>
