@@ -221,7 +221,11 @@ export function CreateInspectionDialog({
         </div>
 
         <div className="flex gap-3 justify-end pt-4 border-t">
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting}
+          >
             Avbryt
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
