@@ -42,11 +42,15 @@ export async function create(
       return { ok: false, err: 'no-applicant' }
     }
 
-    // Update the applicant status to "Offered" for the applicant that the offer is being made to
-    applicant.Status = ApplicantStatus.Offered
-
     if (!params.selectedApplicants.length) {
       return { ok: false, err: 'no-offer-applicants' }
+    }
+
+    const updateApplicantStatus = params.status == OfferStatus.Active
+
+    if (updateApplicantStatus) {
+      // Update the applicant status to "Offered" for the applicant that the offer is being made to
+      applicant.Status = ApplicantStatus.Offered
     }
 
     const offer = await db.transaction(async (trx) => {
@@ -106,9 +110,11 @@ export async function create(
         offerApplicantsValues.flat()
       )
 
-      await trx('applicant')
-        .where('Id', params.applicantId)
-        .update({ Status: applicant.Status })
+      if (updateApplicantStatus) {
+        await trx('applicant')
+          .where('Id', params.applicantId)
+          .update({ Status: applicant.Status })
+      }
 
       return offer
     })
@@ -120,7 +126,7 @@ export async function create(
         listingId: offer.ListingId,
         status: offer.Status,
         expiresAt: offer.ExpiresAt,
-        sentAt: offer.CreatedAt,
+        sentAt: offer.SentAt,
         offeredApplicant: {
           id: applicant.Id,
           name: applicant.Name,
