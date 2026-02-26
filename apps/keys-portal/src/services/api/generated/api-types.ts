@@ -2552,6 +2552,8 @@ export interface components {
           updatedAt: string;
           createdBy?: string | null;
           updatedBy?: string | null;
+          keyCount?: number;
+          cardCount?: number;
         })[]) | null;
     };
     CreateKeyRequest: {
@@ -2659,6 +2661,8 @@ export interface components {
       updatedAt: string;
       createdBy?: string | null;
       updatedBy?: string | null;
+      keyCount?: number;
+      cardCount?: number;
     };
     KeyDetails: {
       /** Format: uuid */
@@ -2721,6 +2725,8 @@ export interface components {
           updatedAt: string;
           createdBy?: string | null;
           updatedBy?: string | null;
+          keyCount?: number;
+          cardCount?: number;
         })[]) | null;
       events?: (({
           /** Format: uuid */
@@ -2850,6 +2856,8 @@ export interface components {
       updatedAt: components["schemas"]["KeyLoan"]["updatedAt"];
       createdBy?: components["schemas"]["KeyLoan"]["createdBy"];
       updatedBy?: components["schemas"]["KeyLoan"]["updatedBy"];
+      keyCount?: components["schemas"]["KeyLoan"]["keyCount"];
+      cardCount?: components["schemas"]["KeyLoan"]["cardCount"];
       keysArray: components["schemas"]["KeyDetails"][];
       keyCardsArray: components["schemas"]["Card"][];
       receipts: components["schemas"]["Receipt"][];

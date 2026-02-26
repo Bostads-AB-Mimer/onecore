@@ -9366,6 +9366,8 @@ export interface components {
       updatedAt: string;
       createdBy?: string | null;
       updatedBy?: string | null;
+      keyCount?: number;
+      cardCount?: number;
     };
     KeyDetails: {
       /** Format: uuid */
@@ -9423,6 +9425,8 @@ export interface components {
       updatedAt: string;
       createdBy?: string | null;
       updatedBy?: string | null;
+      keyCount?: number;
+      cardCount?: number;
       keysArray: ({
           /** Format: uuid */
           id: string;
@@ -9477,6 +9481,8 @@ export interface components {
               updatedAt: components["schemas"]["KeyLoanWithDetails"]["updatedAt"];
               createdBy?: components["schemas"]["KeyLoanWithDetails"]["createdBy"];
               updatedBy?: components["schemas"]["KeyLoanWithDetails"]["updatedBy"];
+              keyCount?: components["schemas"]["KeyLoanWithDetails"]["keyCount"];
+              cardCount?: components["schemas"]["KeyLoanWithDetails"]["cardCount"];
             }[] | null;
           events?: (({
               /** Format: uuid */
@@ -9977,6 +9983,8 @@ export interface components {
           updatedAt: string;
           createdBy?: string | null;
           updatedBy?: string | null;
+          keyCount?: number;
+          cardCount?: number;
         })[]) | null;
     };
     QueryCardOwnersParams: {
