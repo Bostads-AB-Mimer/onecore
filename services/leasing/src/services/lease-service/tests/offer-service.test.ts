@@ -39,6 +39,7 @@ describe('acceptOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       assert(offer.ok)
@@ -78,6 +79,7 @@ describe('acceptOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       updateApplicantStatusSpy.mockResolvedValueOnce({
@@ -127,6 +129,7 @@ describe('acceptOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       updateOfferSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
@@ -151,7 +154,7 @@ describe('acceptOffer', () => {
         ctx.db
       )
       expect(listingFromDB?.status).toBe(listing.data.status)
-      expect(applicantFromDB?.status).toBe(applicant?.status)
+      expect(applicantFromDB?.status).toBe(offer.data.offeredApplicant.status)
     }))
 
   it('updates listing, applicant and offer', () =>
@@ -188,6 +191,7 @@ describe('acceptOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       assert(offer.ok)
@@ -247,6 +251,7 @@ describe('acceptOffer', () => {
         applicantId: applicant.id,
         selectedApplicants: [offeredApplicant],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       assert(offer.ok)
@@ -300,6 +305,7 @@ describe('denyOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
       assert(offer.ok)
 
@@ -338,6 +344,7 @@ describe('denyOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       assert(offer.ok)
@@ -355,7 +362,7 @@ describe('denyOffer', () => {
         applicant.id,
         ctx.db
       )
-      expect(applicantFromDb?.status).toBe(applicant.status)
+      expect(applicantFromDb?.status).toBe(offer.data.offeredApplicant.status)
     }))
 
   it('updates applicant and offer', () =>
@@ -387,6 +394,7 @@ describe('denyOffer', () => {
           factory.offerApplicant.build({ applicantId: applicant.id }),
         ],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       assert(offer.ok)
@@ -438,6 +446,7 @@ describe('denyOffer', () => {
         applicantId: applicant.id,
         selectedApplicants: [offeredApplicant],
         expiresAt: new Date(),
+        sentAt: new Date(),
       })
 
       assert(offer.ok)

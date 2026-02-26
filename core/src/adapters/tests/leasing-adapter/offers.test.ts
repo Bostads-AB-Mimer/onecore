@@ -14,6 +14,7 @@ describe(leasingAdapter.createOffer, () => {
 
     const result = await leasingAdapter.createOffer({
       expiresAt: new Date(),
+      sentAt: new Date(),
       listingId: 1,
       applicantId: 1,
       selectedApplicants: [],

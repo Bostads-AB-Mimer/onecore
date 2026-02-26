@@ -4,6 +4,7 @@ import {
   CreateOfferErrorCodes,
   DetailedApplicant,
   LeaseStatus,
+  Listing,
   ListingStatus,
   OfferStatus,
 } from '@onecore/types'
@@ -17,7 +18,7 @@ import {
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as utils from '../../../utils'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
-import { makeProcessError } from '../utils'
+import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import config from '../../../common/config'
 import { calculateVacantFrom } from '../../../common/helpers'
@@ -95,11 +96,18 @@ export const createOfferForInternalParkingSpace = async (
       await leasingAdapter.getDetailedApplicantsByListingId(listingId)
 
     if (!allApplicants.ok) {
-      throw new Error('Could not get applicants')
+      return endFailingProcess(
+        log,
+        CreateOfferErrorCodes.NoApplicants,
+        500,
+        `Could not get applicants for listing with id ${listingId} - ${allApplicants.err}`
+      )
     }
 
     const eligibleApplicant = await getFirstEligibleApplicant(
-      allApplicants.data
+      listing,
+      allApplicants.data,
+      log
     )
 
     // discard the first applicant since that is our eligibleApplicant
@@ -146,25 +154,6 @@ export const createOfferForInternalParkingSpace = async (
 
     const contact = getContact.data
 
-    try {
-      // TODO: Maybe this should happen in leasing so we dont get inconsintent
-      // state if offer creation fails?
-      await leasingAdapter.updateApplicantStatus({
-        applicantId: eligibleApplicant.id,
-        contactCode: eligibleApplicant.contactCode,
-        status: ApplicantStatus.Offered,
-      })
-      log.push(`Updated status for applicant ${eligibleApplicant.id}`)
-    } catch (_err) {
-      return endFailingProcess(
-        log,
-        CreateOfferErrorCodes.UpdateApplicantStatusFailure,
-        500,
-        `Update Applicant Status failed`,
-        _err
-      )
-    }
-
     const updatedApplicant: DetailedApplicant = {
       ...eligibleApplicant,
       status: ApplicantStatus.Offered,
@@ -181,6 +170,7 @@ export const createOfferForInternalParkingSpace = async (
     const offer = await leasingAdapter.createOffer({
       applicantId: eligibleApplicant.id,
       expiresAt: utcOfferExpiresDate,
+      sentAt: new Date(),
       listingId: listing.id,
       status: OfferStatus.Active,
       selectedApplicants: [updatedApplicant, ...activeApplicants].map(
@@ -248,22 +238,6 @@ export const createOfferForInternalParkingSpace = async (
       }
     }
 
-    const updateOfferSentAt = await leasingAdapter.updateOfferSentAt(
-      offer.data.id,
-      new Date()
-    )
-
-    if (updateOfferSentAt.ok)
-      log.push(`Updated sent at for offer ${offer.data.id}`)
-    else
-      return endFailingProcess(
-        log,
-        CreateOfferErrorCodes.UpdateSentAtFailure,
-        500,
-        `Update SentAt failed - ${updateOfferSentAt.err}`,
-        updateOfferSentAt.err
-      )
-
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 200,
@@ -287,11 +261,77 @@ async function getActiveApplicants(applicants: DetailedApplicant[]) {
   })
 }
 
-async function getFirstEligibleApplicant(applicants: DetailedApplicant[]) {
-  // Find the first applicant who has a priority and is active
-  return applicants.find((a): a is DetailedApplicant => {
-    return a.priority !== null && a.status === ApplicantStatus.Active
-  })
+// Check if applicant is eligible for renting in area with specific rental rules and for the specific property with its rental rules. If any of the validations fail, the applicant is not eligible for the offer.
+export async function isEligibleForOffer(
+  listing: Listing,
+  applicant: DetailedApplicant,
+  log: string[]
+) {
+  const [validationResultResArea, validationResultProperty] = await Promise.all(
+    [
+      leasingAdapter.validateResidentialAreaRentalRules(
+        applicant.contactCode,
+        listing.rentalObject.residentialAreaCode
+      ),
+      leasingAdapter.validatePropertyRentalRules(
+        applicant.contactCode,
+        listing.rentalObjectCode
+      ),
+    ]
+  ).then((results) =>
+    results.map((res) => validateRentalRules(res, applicant.applicationType))
+  )
+
+  if (!validationResultResArea.ok || !validationResultProperty.ok) {
+    try {
+      await leasingAdapter.updateApplicantStatus({
+        applicantId: applicant.id,
+        contactCode: applicant.contactCode,
+        status: ApplicantStatus.Disqualified,
+      })
+      log.push(
+        `Updated status for disqualified applicant ${applicant.id} due to failing rental rules validation`
+      )
+    } catch (_err) {
+      if (_err instanceof Error) {
+        log.push(
+          _err.message ??
+            `Unknown error updating disqualified applicant status for applicant ${applicant.id}`
+        )
+        logger.debug(log)
+      }
+      logger.error(
+        {
+          error: _err,
+          applicantId: applicant.id,
+          listingId: listing.id,
+          rentalObjectCode: listing.rentalObjectCode,
+        },
+        'Error updating disqualified applicant status'
+      )
+    }
+    return false
+  }
+
+  return true
+}
+
+// Finds the first applicant who has a priority and is active and is also eligible for offer based on rental rules validation
+async function getFirstEligibleApplicant(
+  listing: Listing,
+  applicants: DetailedApplicant[],
+  log: string[]
+) {
+  for (const a of applicants) {
+    if (
+      a.priority !== null &&
+      a.status === ApplicantStatus.Active &&
+      (await isEligibleForOffer(listing, a, log))
+    ) {
+      return a
+    }
+  }
+  return undefined
 }
 
 // Ends a process gracefully by debugging log, logging the error, sending the error to the dev team and return a process error with the error code and details

@@ -194,6 +194,7 @@ const applicantStatusFormatMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.OfferAccepted]: 'Erbjudande accepterat',
   [ApplicantStatus.OfferDeclined]: 'Erbjudande nekat',
   [ApplicantStatus.OfferExpired]: 'Erbjudande utgånget',
+  [ApplicantStatus.Disqualified]: 'Ej kvalificerad',
 }
 
 const formatApplicantStatus = (v: ApplicantStatus) =>
@@ -209,6 +210,7 @@ const applicantStatusResponseMap: Record<ApplicantStatus, string> = {
   [ApplicantStatus.OfferAccepted]: 'Ja',
   [ApplicantStatus.OfferDeclined]: 'Nej',
   [ApplicantStatus.OfferExpired]: 'Utgånget',
+  [ApplicantStatus.Disqualified]: '',
 }
 const formatApplicantStatusResponse = (v: ApplicantStatus) =>
   applicantStatusResponseMap[v] || ''

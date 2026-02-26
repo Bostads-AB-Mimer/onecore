@@ -1,4 +1,4 @@
-import { OfferStatus } from '@onecore/types'
+import { ApplicantStatus, OfferStatus } from '@onecore/types'
 import assert from 'node:assert'
 
 import * as offerAdapter from '../../adapters/offer-adapter'
@@ -18,6 +18,7 @@ describe('offer-adapter', () => {
         assert(listing.ok)
         const offer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -49,6 +50,7 @@ describe('offer-adapter', () => {
 
         const insertedOffer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -108,6 +110,7 @@ describe('offer-adapter', () => {
 
         const insertedOffer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [offerApplicant, offerApplicantWithPriorityNull],
           listingId: listing.data.id,
@@ -155,6 +158,43 @@ describe('offer-adapter', () => {
           },
         ])
       }))
+
+    it('should update the applicant status to Offered when creating an offer', async () => {
+      await withContext(async (ctx) => {
+        const listing = await listingAdapter.createListing(
+          factory.listing.build({ rentalObjectCode: '1' }),
+          ctx.db
+        )
+        assert(listing.ok)
+        const applicant = await listingAdapter.createApplication(
+          factory.applicant.build({ listingId: listing.data.id }),
+          ctx.db
+        )
+
+        const insertedOffer = await offerAdapter.create(ctx.db, {
+          expiresAt: new Date(),
+          sentAt: new Date(),
+          status: OfferStatus.Active,
+          selectedApplicants: [
+            factory.offerApplicant.build({
+              listingId: listing.data.id,
+              applicantId: applicant.id,
+            }),
+          ],
+          listingId: listing.data.id,
+          applicantId: applicant.id,
+        })
+
+        assert(insertedOffer.ok)
+
+        // Fetch the applicant from DB and check status
+        const updatedApplicant = await ctx
+          .db('applicant')
+          .where({ Id: applicant.id })
+          .first()
+        expect(updatedApplicant.Status).toBe(ApplicantStatus.Offered)
+      })
+    })
   })
 
   describe(offerAdapter.getOffersForContact, () => {
@@ -172,6 +212,7 @@ describe('offer-adapter', () => {
 
         const insertOffer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -208,6 +249,7 @@ describe('offer-adapter', () => {
 
         const insertOffer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -244,6 +286,7 @@ describe('offer-adapter', () => {
 
         const offer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -301,6 +344,7 @@ describe('offer-adapter', () => {
 
         const offer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -337,6 +381,7 @@ describe('offer-adapter', () => {
 
         const offer = await offerAdapter.create(ctx.db, {
           expiresAt: new Date(),
+          sentAt: new Date(),
           status: OfferStatus.Active,
           selectedApplicants: [
             factory.offerApplicant.build({
@@ -391,6 +436,7 @@ describe('offer-adapter', () => {
         const insertedOffer_1 = await offerAdapter.create(ctx.db, {
           status: OfferStatus.Active,
           expiresAt: new Date(),
+          sentAt: new Date(),
           listingId: listing.data.id,
           applicantId: insertedApplicants[0].id,
           selectedApplicants: [
@@ -408,6 +454,7 @@ describe('offer-adapter', () => {
         const insertedOffer_2 = await offerAdapter.create(ctx.db, {
           status: OfferStatus.Expired,
           expiresAt: new Date(),
+          sentAt: new Date(),
           listingId: listing.data.id,
           applicantId: insertedApplicants[1].id,
           selectedApplicants: [
@@ -429,7 +476,7 @@ describe('offer-adapter', () => {
         expect(res.data).toEqual([
           expect.objectContaining({
             id: insertedOffer_1.data.id,
-            sentAt: null,
+            sentAt: expect.any(Date),
             expiresAt: expect.any(Date),
             answeredAt: null,
             status: OfferStatus.Active,
@@ -441,7 +488,7 @@ describe('offer-adapter', () => {
               contactCode: insertedApplicants[0].contactCode,
               applicationDate: expect.any(Date),
               applicationType: insertedApplicants[0].applicationType,
-              status: insertedApplicants[0].status,
+              status: ApplicantStatus.Offered,
               listingId: listing.data.id,
               nationalRegistrationNumber:
                 insertedApplicants[0].nationalRegistrationNumber,
@@ -503,6 +550,7 @@ describe('offer-adapter', () => {
           }),
           applicantId: applicant.id,
           expiresAt: new Date(),
+          sentAt: new Date(),
           listingId: listing.data.id,
           status: OfferStatus.Active,
         })

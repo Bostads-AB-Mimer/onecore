@@ -46,20 +46,29 @@ export async function create(
       return { ok: false, err: 'no-offer-applicants' }
     }
 
+    const updateApplicantStatus = params.status == OfferStatus.Active
+
+    if (updateApplicantStatus) {
+      // Update the applicant status to "Offered" for the applicant that the offer is being made to
+      applicant.Status = ApplicantStatus.Offered
+    }
+
     const offer = await db.transaction(async (trx) => {
       const { selectedApplicants, ...offerParams } = params
       const [offer] = await trx.raw<Array<DbOffer>>(
         `INSERT INTO offer (
           Status,
           ExpiresAt,
+          SentAt,
           ListingId,
           ApplicantId
         ) OUTPUT INSERTED.*
-        VALUES (?, ?, ?, ?) 
+        VALUES (?, ?, ?, ?, ?) 
         `,
         [
           offerParams.status,
           offerParams.expiresAt,
+          offerParams.sentAt,
           offerParams.listingId,
           offerParams.applicantId,
         ]
@@ -101,6 +110,12 @@ export async function create(
         offerApplicantsValues.flat()
       )
 
+      if (updateApplicantStatus) {
+        await trx('applicant')
+          .where('Id', params.applicantId)
+          .update({ Status: applicant.Status })
+      }
+
       return offer
     })
 
@@ -111,13 +126,13 @@ export async function create(
         listingId: offer.ListingId,
         status: offer.Status,
         expiresAt: offer.ExpiresAt,
-        sentAt: offer.CreatedAt,
+        sentAt: offer.SentAt,
         offeredApplicant: {
           id: applicant.Id,
           name: applicant.Name,
           listingId: applicant.ListingId,
           status: applicant.Status,
-          applicationType: applicant.ApplicationType ?? undefined,
+          applicationType: applicant.ApplicationType,
           applicationDate: applicant.ApplicationDate,
           contactCode: applicant.ContactCode,
           nationalRegistrationNumber: applicant.NationalRegistrationNumber,
@@ -141,7 +156,7 @@ type GetOffersForContactQueryResult = Array<
     ApplicantNationalRegistrationNumber: string
     ApplicantContactCode: string
     ApplicantApplicationDate: Date
-    ApplicantApplicationType: string | null
+    ApplicantApplicationType: 'Replace' | 'Additional'
     ApplicantStatus: Applicant['status']
     ApplicantListingId: number
   }
@@ -199,7 +214,7 @@ export async function getOffersForContact(
         name: ApplicantName,
         nationalRegistrationNumber: ApplicantNationalRegistrationNumber,
         status: ApplicantStatus,
-        applicationType: ApplicantApplicationType ?? undefined,
+        applicationType: ApplicantApplicationType,
       },
       rentalObjectCode: RentalObjectCode,
     }
@@ -496,7 +511,7 @@ export async function getActiveOfferByListingId(
           name: offeredApplicant.Name,
           listingId: offeredApplicant.ListingId,
           status: offeredApplicant.Status,
-          applicationType: offeredApplicant.ApplicationType ?? undefined,
+          applicationType: offeredApplicant.ApplicationType,
           applicationDate: new Date(offeredApplicant.ApplicationDate),
           contactCode: offeredApplicant.ContactCode,
           nationalRegistrationNumber:
@@ -602,7 +617,7 @@ const transformOfferWithOfferApplicantsQueryResult = (
       name: offeredApplicant.Name,
       listingId: offeredApplicant.ListingId,
       status: offeredApplicant.Status,
-      applicationType: offeredApplicant.ApplicationType ?? undefined,
+      applicationType: offeredApplicant.ApplicationType,
       applicationDate: new Date(offeredApplicant.ApplicationDate),
       contactCode: offeredApplicant.ContactCode,
       nationalRegistrationNumber: offeredApplicant.NationalRegistrationNumber,
@@ -638,7 +653,7 @@ const transformToDetailedOfferFromDbOffer = (
     ...offer,
     offeredApplicant: {
       ...dbUtils.pascalToCamel(a),
-      applicationType: a.ApplicationType || undefined,
+      applicationType: a.ApplicationType,
     },
   }
 }
