@@ -12,7 +12,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
 import { InfoIcon, Loader2 } from 'lucide-react'
-import { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/lease-service'
+import { Link } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import type { ReactNode } from 'react'
@@ -133,13 +134,48 @@ export function TenantContracts({
     },
     {
       key: 'identifier',
-      label: 'Lägenhetsnummer/Skyltnummer',
+      label: 'Lägenhets/Skyltnummer',
       render: (lease: Lease) =>
         renderPropertyField(
           lease,
           (property) => getPropertyIdentifier(property),
           'Data ej tillgänglig'
         ),
+    },
+    {
+      key: 'tenant',
+      label: 'Hyresgäst',
+      render: (lease: Lease) => {
+        if (!lease.tenants || lease.tenants.length === 0) {
+          return <span className="text-muted-foreground">-</span>
+        }
+        return (
+          <div className="space-y-1">
+            {lease.tenants.map((tenant) => {
+              const isValidContact =
+                tenant.contactCode.startsWith('P') ||
+                tenant.contactCode.startsWith('F')
+              return (
+                <div key={tenant.contactCode}>
+                  {isValidContact ? (
+                    <Link
+                      to={`/tenants/${tenant.contactCode}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {tenant.fullName}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{tenant.fullName}</span>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    {tenant.contactCode}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      },
     },
     {
       key: 'startDate',
