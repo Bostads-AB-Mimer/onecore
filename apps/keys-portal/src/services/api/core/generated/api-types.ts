@@ -9627,7 +9627,7 @@ export interface components {
           /** Format: uuid */
           id: string;
           /** @enum {string} */
-          type: "FLEX" | "ORDER" | "LOST";
+          type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
           /** @enum {string} */
           status: "ORDERED" | "RECEIVED" | "COMPLETED";
           /** Format: uuid */
@@ -9718,7 +9718,7 @@ export interface components {
               /** Format: uuid */
               id: string;
               /** @enum {string} */
-              type: "FLEX" | "ORDER" | "LOST";
+              type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
               /** @enum {string} */
               status: "ORDERED" | "RECEIVED" | "COMPLETED";
               /** Format: uuid */
@@ -9801,7 +9801,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** @enum {string} */
-      type: "FLEX" | "ORDER" | "LOST";
+      type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
       /** @enum {string} */
       status: "ORDERED" | "RECEIVED" | "COMPLETED";
       /** Format: uuid */
@@ -10031,7 +10031,7 @@ export interface components {
               /** Format: uuid */
               id: string;
               /** @enum {string} */
-              type: "FLEX" | "ORDER" | "LOST";
+              type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
               /** @enum {string} */
               status: "ORDERED" | "RECEIVED" | "COMPLETED";
               /** Format: uuid */
@@ -10046,7 +10046,7 @@ export interface components {
     CreateKeyEventRequest: {
       keys: string[];
       /** @enum {string} */
-      type: "FLEX" | "ORDER" | "LOST";
+      type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
       /** @enum {string} */
       status: "ORDERED" | "RECEIVED" | "COMPLETED";
       /** Format: uuid */
@@ -10055,7 +10055,7 @@ export interface components {
     UpdateKeyEventRequest: {
       keys?: string[];
       /** @enum {string} */
-      type?: "FLEX" | "ORDER" | "LOST";
+      type?: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
       /** @enum {string} */
       status?: "ORDERED" | "RECEIVED" | "COMPLETED";
       /** Format: uuid */

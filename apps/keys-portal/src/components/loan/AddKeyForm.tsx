@@ -43,7 +43,7 @@ type Props = {
   keys: Key[]
   selectedKeyIds?: string[]
   rentalObjectCode: string
-  onKeyCreated: (key: Key) => void
+  onComplete: () => void
   onCancel: () => void
 }
 
@@ -51,7 +51,7 @@ export function AddKeyForm({
   keys,
   selectedKeyIds = [],
   rentalObjectCode,
-  onKeyCreated,
+  onComplete,
   onCancel,
 }: Props) {
   const { toast } = useToast()
@@ -341,14 +341,11 @@ export function AddKeyForm({
 
       // Create all keys and collect their IDs
       const createdKeyIds: string[] = []
-      let createdCount = 0
       for (const keyPayload of keysToCreate) {
         const created = await keyService.createKey({
           ...keyPayload,
         })
         createdKeyIds.push(created.id)
-        onKeyCreated(created)
-        createdCount++
       }
 
       // Create ORDER event for all created keys
@@ -363,12 +360,13 @@ export function AddKeyForm({
 
       toast({
         title: 'Nycklar skapade',
-        description: `${createdCount} ${createdCount === 1 ? 'nyckel skapad' : 'nycklar skapade'}`,
+        description: `${createdKeyIds.length} ${createdKeyIds.length === 1 ? 'nyckel skapad' : 'nycklar skapade'}`,
       })
 
       setRows([])
       setKeySystemSearch('')
       setSelectedKeySystem(null)
+      onComplete()
     } catch (e: any) {
       toast({
         title: 'Kunde inte skapa nycklar',

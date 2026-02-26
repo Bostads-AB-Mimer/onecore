@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Copy, Trash2 } from 'lucide-react'
+import { Plus, Copy, RefreshCw, Trash2 } from 'lucide-react'
 
 import type { KeyDetails, CardDetails } from '@/services/types'
 import { getActiveLoan } from '@/utils/loanHelpers'
 import { FlexMenu } from './dialogs/FlexMenu'
 import { IncomingFlexMenu } from './dialogs/IncomingFlexMenu'
 import { IncomingOrderMenu } from './dialogs/IncomingOrderMenu'
+import { ReplacementMenu } from './dialogs/ReplacementMenu'
+import { IncomingReplacementMenu } from './dialogs/IncomingReplacementMenu'
 
 type Props = {
   selectedKeys: string[]
@@ -40,6 +42,9 @@ export function KeyActionButtons({
   const [flexMenuOpen, setFlexMenuOpen] = useState(false)
   const [incomingFlexMenuOpen, setIncomingFlexMenuOpen] = useState(false)
   const [incomingOrderMenuOpen, setIncomingOrderMenuOpen] = useState(false)
+  const [replacementMenuOpen, setReplacementMenuOpen] = useState(false)
+  const [incomingReplacementMenuOpen, setIncomingReplacementMenuOpen] =
+    useState(false)
 
   // Helper to check if a key's or card's loan matches current tenant
   const matchesCurrentTenant = (item: KeyDetails | CardDetails) => {
@@ -97,6 +102,22 @@ export function KeyActionButtons({
       latestEvent.type === 'ORDER' &&
       latestEvent.status === 'ORDERED'
     )
+  })
+
+  // Keys that have "beställd ersättning" status (latest event is REPLACEMENT type with ORDERED status)
+  const incomingReplacementKeys = selectedKeysData.filter((k) => {
+    const latestEvent = k.events?.[0] // Events are sorted by createdAt desc
+    return (
+      latestEvent &&
+      latestEvent.type === 'REPLACEMENT' &&
+      latestEvent.status === 'ORDERED'
+    )
+  })
+
+  // Keys eligible for replacement (no active/non-completed event)
+  const replacementEligibleKeys = selectedKeysData.filter((k) => {
+    const latestEvent = k.events?.[0]
+    return !latestEvent || latestEvent.status === 'COMPLETED'
   })
 
   // All available keys (excluding disposed keys)
@@ -206,6 +227,18 @@ export function KeyActionButtons({
                 Inkommen extranyckel ({incomingOrderKeys.length})
               </Button>
             )}
+            {incomingReplacementKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIncomingReplacementMenuOpen(true)}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Inkommen ersättning ({incomingReplacementKeys.length})
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -216,6 +249,18 @@ export function KeyActionButtons({
               <Copy className="h-3 w-3" />
               Flex ({selectedKeys.length})
             </Button>
+            {replacementEligibleKeys.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReplacementMenuOpen(true)}
+                disabled={isProcessing}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Ersättning ({replacementEligibleKeys.length})
+              </Button>
+            )}
             {onDispose && (
               <Button
                 size="sm"
@@ -288,6 +333,20 @@ export function KeyActionButtons({
       <IncomingOrderMenu
         open={incomingOrderMenuOpen}
         onOpenChange={setIncomingOrderMenuOpen}
+        selectedKeys={selectedKeysData}
+        onSuccess={onRefresh}
+      />
+
+      <ReplacementMenu
+        open={replacementMenuOpen}
+        onOpenChange={setReplacementMenuOpen}
+        selectedKeys={selectedKeysData}
+        onSuccess={onRefresh}
+      />
+
+      <IncomingReplacementMenu
+        open={incomingReplacementMenuOpen}
+        onOpenChange={setIncomingReplacementMenuOpen}
         selectedKeys={selectedKeysData}
         onSuccess={onRefresh}
       />
