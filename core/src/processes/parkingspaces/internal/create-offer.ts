@@ -98,7 +98,7 @@ export const createOfferForInternalParkingSpace = async (
     if (!allApplicants.ok) {
       return endFailingProcess(
         log,
-        CreateOfferErrorCodes.ListingNotExpired,
+        CreateOfferErrorCodes.NoApplicants,
         500,
         `Could not get applicants for listing with id ${listingId} - ${allApplicants.err}`
       )

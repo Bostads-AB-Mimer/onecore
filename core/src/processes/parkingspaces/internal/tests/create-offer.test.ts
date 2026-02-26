@@ -220,18 +220,6 @@ describe('createOfferForInternalParkingSpace', () => {
       .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
 
     jest
-      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
-      .mockResolvedValue({
-        ok: true,
-        data: { reason: '', applicationType: 'Additional' },
-      })
-    jest
-      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
-      .mockResolvedValue({
-        ok: true,
-        data: { reason: '', applicationType: 'Additional' },
-      })
-    jest
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValueOnce(null)
     jest
