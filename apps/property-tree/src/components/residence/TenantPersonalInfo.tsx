@@ -65,6 +65,10 @@ export function TenantPersonalInfo({
         </div>
       )}
       <div>
+        <p className="text-sm text-muted-foreground">Kundnummer</p>
+        <p className="font-medium">{contactCode}</p>
+      </div>
+      <div>
         <p className="text-sm text-muted-foreground">
           {isOrganization ? 'Organisationsnummer' : 'Personnummer'}
         </p>

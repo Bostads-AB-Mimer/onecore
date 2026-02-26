@@ -12,7 +12,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
 import { InfoIcon, Loader2 } from 'lucide-react'
-import { Lease } from '@/services/api/core/lease-service'
+import type { Lease } from '@/services/api/core/lease-service'
+import { Link } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import type { ReactNode } from 'react'
@@ -133,13 +134,48 @@ export function TenantContracts({
     },
     {
       key: 'identifier',
-      label: 'Lägenhetsnummer/Skyltnummer',
+      label: 'Lägenhets/Skyltnummer',
       render: (lease: Lease) =>
         renderPropertyField(
           lease,
           (property) => getPropertyIdentifier(property),
           'Data ej tillgänglig'
         ),
+    },
+    {
+      key: 'tenant',
+      label: 'Hyresgäst',
+      render: (lease: Lease) => {
+        if (!lease.tenants || lease.tenants.length === 0) {
+          return <span className="text-muted-foreground">-</span>
+        }
+        return (
+          <div className="space-y-1">
+            {lease.tenants.map((tenant) => {
+              const isValidContact =
+                tenant.contactCode.startsWith('P') ||
+                tenant.contactCode.startsWith('F')
+              return (
+                <div key={tenant.contactCode}>
+                  {isValidContact ? (
+                    <Link
+                      to={`/tenants/${tenant.contactCode}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {tenant.fullName}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{tenant.fullName}</span>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    {tenant.contactCode}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      },
     },
     {
       key: 'startDate',
@@ -227,6 +263,10 @@ export function TenantContracts({
                 <span>{formatAddress(property.property.address)}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Objektkod:</span>
+                <span>{lease.rentalPropertyId}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Nummer:</span>
                 <span>{getPropertyIdentifier(property)}</span>
               </div>
@@ -241,6 +281,39 @@ export function TenantContracts({
             </>
           )}
         </div>
+
+        {/* Tenant Info Section */}
+        {lease.tenants && lease.tenants.length > 0 && (
+          <div className="space-y-2 text-sm">
+            {lease.tenants.map((tenant, index) => {
+              const isValidContact =
+                tenant.contactCode.startsWith('P') ||
+                tenant.contactCode.startsWith('F')
+              return (
+                <div key={tenant.contactCode} className="space-y-1">
+                  {index > 0 && <div className="border-t pt-2" />}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Hyresgäst:</span>
+                    {isValidContact ? (
+                      <Link
+                        to={`/tenants/${tenant.contactCode}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {tenant.fullName}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{tenant.fullName}</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kundnummer:</span>
+                    <span>{tenant.contactCode}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Action Button */}
         <div className="flex justify-end pt-2 border-t">
