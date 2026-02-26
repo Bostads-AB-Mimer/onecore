@@ -113,6 +113,7 @@ export const ResidenceTabs = ({
         <InspectionsTabContent
           residenceId={residence.id}
           rentalId={residence.propertyObject.rentalId ?? undefined}
+          leaseId={currentLease?.leaseId}
           residence={residence}
         />
       </TabsContent>
