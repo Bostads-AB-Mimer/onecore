@@ -38,7 +38,14 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser({ jsonLimit: '50mb' }))
+const jsonBodyParser = bodyParser({ jsonLimit: '50mb' })
+app.use(async (ctx, next) => {
+  // Skip body parsing for scan-receipt — raw binary handled by route
+  if (ctx.path.startsWith('/scan-receipt')) {
+    return next()
+  }
+  return jsonBodyParser(ctx, next)
+})
 
 // Log the start and completion of all incoming requests
 app.use(loggerMiddlewares.pre)

@@ -12,6 +12,7 @@ import { routes as signatureRoutes } from './signatures'
 import { routes as keyEventRoutes } from './key-events'
 import { routes as keyBundleRoutes } from './key-bundles'
 import { routes as daxRoutes } from './dax'
+import { routes as scanReceiptRoutes } from './scan-receipt'
 
 const {
   KeySchema,
@@ -159,4 +160,5 @@ export const routes = (router: KoaRouter) => {
   keyEventRoutes(router)
   keyBundleRoutes(router)
   daxRoutes(router)
+  scanReceiptRoutes(router)
 }

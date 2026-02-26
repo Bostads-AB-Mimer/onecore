@@ -2407,6 +2407,40 @@ export interface paths {
       };
     };
   };
+  "/scan-receipt": {
+    /**
+     * Process a scanned receipt image
+     * @description Receives a scanned receipt image, extracts the key loan UUID
+     * from the QR code, validates the loan exists, and creates a
+     * receipt record. Returns the receipt ID and loan ID so the
+     * caller (core) can handle file storage and loan activation.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      responses: {
+        /** @description Receipt created from scanned image */
+        201: {
+          content: never;
+        };
+        /** @description Missing image data */
+        400: {
+          content: never;
+        };
+        /** @description Key loan not found */
+        404: {
+          content: never;
+        };
+        /** @description Could not extract valid QR code from image */
+        422: {
+          content: never;
+        };
+      };
+    };
+  };
   "/signatures/send": {
     /** Send a document for digital signature via SimpleSign */
     post: {
