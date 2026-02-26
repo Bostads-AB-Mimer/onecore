@@ -882,6 +882,53 @@ describe('isEligibleForOffer', () => {
     })
   })
 
+  it("should return false and update applicant status when applicant is 'Additional' but validation returns 'Replace'", async () => {
+    const listing = factory.listing.build({
+      rentalObject: factory.rentalObject.build({
+        residentialAreaCode: 'AREA123',
+        rentalObjectCode: 'OBJ456',
+      }),
+      rentalObjectCode: 'OBJ456',
+    })
+    const applicant = factory.detailedApplicant.build({
+      contactCode: 'CONTACT789',
+      id: 1,
+      status: ApplicantStatus.Active,
+      priority: 1,
+      applicationType: 'Additional',
+    })
+    const log: string[] = []
+
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Replace' },
+      })
+
+    const updateApplicantStatusSpy = jest
+      .spyOn(leasingAdapter, 'updateApplicantStatus')
+      .mockResolvedValue(null)
+
+    const result = await isEligibleForOffer(listing, applicant, log)
+
+    expect(result).toBe(false)
+    expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
+      applicantId: applicant.id,
+      contactCode: applicant.contactCode,
+      status: ApplicantStatus.Disqualified,
+    })
+    expect(log).toContain(
+      `Updated status for disqualified applicant ${applicant.id} due to failing rental rules validation`
+    )
+  })
+
   it('should log disqualification reason if applicant fails rental rule validation', async () => {
     const listing = factory.listing.build({
       rentalObject: factory.rentalObject.build({
