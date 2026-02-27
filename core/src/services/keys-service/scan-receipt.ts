@@ -8,7 +8,6 @@ import { requireServiceAccountAuth } from '../../middlewares/service-account-aut
 import { requireAllowedIp } from '../../middlewares/ip-allowlist'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { ReceiptsApi, KeyLoansApi } from '../../adapters/keys-adapter'
-import * as communicationAdapter from '../../adapters/communication-adapter'
 import config from '../../common/config'
 
 const WEBDAV_MULTISTATUS_XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -27,7 +26,11 @@ async function sendErrorNotification(subject: string, message: string) {
   if (!email) return
 
   try {
-    await communicationAdapter.sendNotificationToRole('dev', subject, message)
+    await axios.post(`${config.communicationService.url}/sendMessage`, {
+      to: email,
+      subject,
+      text: message,
+    })
   } catch (err) {
     logger.error(err, 'Failed to send scan error notification')
   }
