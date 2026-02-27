@@ -10,6 +10,12 @@ import { logger } from '@onecore/utilities'
  */
 const serviceAccountRoutes: string[] = ['/scan-receipt']
 
+const jwks = jose.createRemoteJWKSet(
+  new URL(
+    `${config.auth.keycloak.url}/realms/${config.auth.keycloak.realm}/protocol/openid-connect/certs`
+  )
+)
+
 export const isServiceAccountRoute = (path: string): boolean =>
   serviceAccountRoutes.some((prefix) => path.startsWith(prefix))
 
@@ -88,10 +94,10 @@ export const requireServiceAccountAuth = (requiredRole?: string) => {
         return
       }
 
-      const decoded = jose.decodeJwt(accessToken)
+      const { payload } = await jose.jwtVerify(accessToken, jwks)
 
       if (requiredRole) {
-        const realmAccess = decoded.realm_access as
+        const realmAccess = payload.realm_access as
           | { roles?: string[] }
           | undefined
         const roles = realmAccess?.roles || []
@@ -108,10 +114,10 @@ export const requireServiceAccountAuth = (requiredRole?: string) => {
       }
 
       ctx.state.user = {
-        id: decoded.sub,
-        preferred_username: decoded.preferred_username,
+        id: payload.sub,
+        preferred_username: payload.preferred_username,
         source: 'service-account',
-        realm_access: decoded.realm_access,
+        realm_access: payload.realm_access,
       }
 
       return next()
