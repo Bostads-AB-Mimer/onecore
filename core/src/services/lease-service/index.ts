@@ -69,8 +69,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
   registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
   registerSchema('Contact', Contact)
-  registerSchema('BulkSmsResult', BulkSmsResult)
-  registerSchema('BulkEmailResult', BulkEmailResult)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
