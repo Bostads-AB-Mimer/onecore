@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/v2/Button'
-import { Loader2, FileText } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { TabLayout } from '@/components/ui/TabLayout'
 import type { ReactNode } from 'react'
@@ -48,7 +48,7 @@ export function RentalObjectContracts({
 
     return (
       <div className="space-y-1">
-        {lease.tenants.map((tenant, index) => {
+        {lease.tenants.map((tenant) => {
           const isValidContact =
             tenant.contactCode.startsWith('P') ||
             tenant.contactCode.startsWith('F')
@@ -65,11 +65,9 @@ export function RentalObjectContracts({
               ) : (
                 <span className="font-medium">{tenant.fullName}</span>
               )}
-              {index === 0 && (
-                <div className="text-sm text-muted-foreground">
-                  {tenant.contactCode}
-                </div>
-              )}
+              <div className="text-sm text-muted-foreground">
+                {tenant.contactCode}
+              </div>
             </div>
           )
         })}
@@ -83,16 +81,22 @@ export function RentalObjectContracts({
       return <span className="text-muted-foreground">-</span>
     }
 
-    const primaryTenant = lease.tenants[0]
-    const phone = primaryTenant.phoneNumbers?.find((p) => p.isMainNumber)
-
     return (
-      <div className="space-y-1 text-sm">
-        {primaryTenant.emailAddress && <div>{primaryTenant.emailAddress}</div>}
-        {phone && <div>{phone.phoneNumber}</div>}
-        {!primaryTenant.emailAddress && !phone && (
-          <span className="text-muted-foreground">Ej tillgänglig</span>
-        )}
+      <div className="space-y-2">
+        {lease.tenants.map((tenant) => {
+          const phone = tenant.phoneNumbers?.find((p) => p.isMainNumber)
+          return (
+            <div key={tenant.contactCode} className="text-sm">
+              {tenant.emailAddress && <div>{tenant.emailAddress}</div>}
+              {phone && (
+                <div className="text-muted-foreground">{phone.phoneNumber}</div>
+              )}
+              {!tenant.emailAddress && !phone && (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -157,11 +161,6 @@ export function RentalObjectContracts({
   // Mobile card renderer
   const mobileCardRenderer = (lease: Lease) => {
     const hasTenants = lease.tenants && lease.tenants.length > 0
-    const primaryTenant = hasTenants ? lease.tenants?.[0] : null
-    const phone = primaryTenant?.phoneNumbers?.find((p) => p.isMainNumber)
-    const isValidContact =
-      primaryTenant?.contactCode.startsWith('P') ||
-      primaryTenant?.contactCode.startsWith('F')
 
     return (
       <div className="space-y-3 w-full">
@@ -182,37 +181,47 @@ export function RentalObjectContracts({
         {/* Tenant Info Section */}
         <div className="space-y-2 text-sm">
           {hasTenants ? (
-            <>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Hyresgäst:</span>
-                {isValidContact ? (
-                  <Link
-                    to={`/tenants/${primaryTenant?.contactCode}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {primaryTenant?.fullName}
-                  </Link>
-                ) : (
-                  <span className="font-medium">{primaryTenant?.fullName}</span>
-                )}
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Kundnummer:</span>
-                <span>{primaryTenant?.contactCode}</span>
-              </div>
-              {primaryTenant?.emailAddress && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">E-post:</span>
-                  <span>{primaryTenant.emailAddress}</span>
+            lease.tenants?.map((tenant, index) => {
+              const isValidContact =
+                tenant.contactCode.startsWith('P') ||
+                tenant.contactCode.startsWith('F')
+              const phone = tenant.phoneNumbers?.find((p) => p.isMainNumber)
+
+              return (
+                <div key={tenant.contactCode} className="space-y-1">
+                  {index > 0 && <div className="border-t pt-2" />}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Hyresgäst:</span>
+                    {isValidContact ? (
+                      <Link
+                        to={`/tenants/${tenant.contactCode}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {tenant.fullName}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{tenant.fullName}</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kundnummer:</span>
+                    <span>{tenant.contactCode}</span>
+                  </div>
+                  {tenant.emailAddress && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">E-post:</span>
+                      <span>{tenant.emailAddress}</span>
+                    </div>
+                  )}
+                  {phone && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Telefon:</span>
+                      <span>{phone.phoneNumber}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {phone && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Telefon:</span>
-                  <span>{phone.phoneNumber}</span>
-                </div>
-              )}
-            </>
+              )
+            })
           ) : (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Hyresgäst:</span>

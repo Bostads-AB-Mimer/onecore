@@ -13,6 +13,7 @@ import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 import { routes as swagggerRoutes } from './services/swagger'
 import { requireAuth } from './middlewares/keycloak-auth'
+import { isServiceAccountRoute } from './middlewares/service-account-auth'
 
 const app = new Koa()
 
@@ -38,7 +39,13 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser({ jsonLimit: '50mb' }))
+const jsonBodyParser = bodyParser({ jsonLimit: '50mb' })
+app.use(async (ctx, next) => {
+  if (isServiceAccountRoute(ctx.path)) {
+    return next()
+  }
+  return jsonBodyParser(ctx, next)
+})
 
 // Log the start and completion of all incoming requests
 app.use(loggerMiddlewares.pre)
@@ -51,8 +58,12 @@ healthRoutes(publicRouter)
 swagggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
-// JWT middleware with multiple options
+// JWT middleware — service account routes handle their own auth
 app.use((ctx, next) => {
+  if (isServiceAccountRoute(ctx.path)) {
+    return next()
+  }
+
   if (ctx.cookies.get('auth_token') === undefined) {
     return jwt({
       secret: config.auth.secret,

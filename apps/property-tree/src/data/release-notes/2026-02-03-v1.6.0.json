@@ -5,6 +5,6 @@
     "title": "Undvik automatisk översättning i webbläsaren",
     "description": "Vissa användare har upplevt problem med belopp och summor som ändras felaktigt. Detta beror på webbläsarens automatiska översättning. Stäng av \"Översätt sidan\" i din webbläsare för att undvika detta.",
     "category": "warning",
-    "pinned": true
+    "pinned": false
   }
 ]

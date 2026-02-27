@@ -37,7 +37,7 @@ Fokusera på dessa typer av vitvaror:
 
 Svara ENDAST med JSON i följande format (inget annat text):
 {
-  "componentCategory": "övergripande kategori (för vitvaror: 'Vitvara')",
+  "componentCategory": "övergripande kategori (för vitvaror: 'Vitvaror')",
   "componentType": "typ av komponent (t.ex. 'Kylskåp', 'Diskmaskin', 'Tvättmaskin', 'Spis')",
   "componentSubtype": "specifik variant (t.ex. '60cm integrerad', 'Fristående 190-215 liter', 'Kyl/frys-kombination', annars null)",
   "manufacturer": "tillverkare/märke (om synligt, annars null)",
