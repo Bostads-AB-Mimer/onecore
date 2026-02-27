@@ -155,6 +155,82 @@ export interface paths {
   };
   "openapi": {
   };
+  "security": {
+  };
+  "/contacts/send-bulk-sms": {
+    /**
+     * Send SMS to multiple contacts
+     * @description Send SMS messages to multiple phone numbers
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of phone numbers */
+            phoneNumbers: string[];
+            /** @description SMS message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description SMS sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkSmsResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/contacts/send-bulk-email": {
+    /**
+     * Send email to multiple contacts
+     * @description Send email messages to multiple email addresses
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Array of email addresses */
+            emails: string[];
+            /** @description Email subject */
+            subject: string;
+            /** @description Email message content */
+            text: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Email sent successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["BulkEmailResult"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -192,8 +268,6 @@ export interface paths {
         };
       };
     };
-  };
-  "security": {
   };
   "/leases/search": {
     /**
@@ -275,6 +349,102 @@ export interface paths {
                   name?: string;
                   district?: string;
                 }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/export": {
+    /**
+     * Export leases to Excel
+     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string;
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[];
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: ("0" | "1" | "2" | "3")[];
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string;
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string;
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string;
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string;
+          /** @description Property/estate names */
+          property?: string[];
+          /** @description Building codes */
+          buildingCodes?: string[];
+          /** @description Area codes (Område) */
+          areaCodes?: string[];
+          /** @description District names */
+          districtNames?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
+        };
+      };
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/contacts-by-filters": {
+    /**
+     * Get contacts matching lease search filters
+     * @description Retrieves contact information for tenants matching the given lease search filters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string;
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[];
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: ("0" | "1" | "2" | "3")[];
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string;
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string;
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string;
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string;
+          /** @description Property/estate names */
+          property?: string[];
+          /** @description Building codes */
+          buildingCodes?: string[];
+          /** @description Area codes (Område) */
+          areaCodes?: string[];
+          /** @description District names */
+          districtNames?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
+        };
+      };
+      responses: {
+        /** @description Successful response with contact information */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ContactInfo"][];
             };
           };
         };
@@ -2833,7 +3003,7 @@ export interface paths {
             /** @description The subject of the email. */
             subject?: string;
             /** @description The message to be sent in the email. */
-            message?: string;
+            text?: string;
           };
         };
       };
@@ -8159,6 +8329,12 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+      /** @default [] */
+      links?: {
+          name: string;
+          /** Format: uri */
+          url: string;
+        }[];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -8171,6 +8347,11 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+      links?: {
+          name: string;
+          /** Format: uri */
+          url: string;
+        }[];
     };
     UpdateListingTextContentRequest: {
       contentBlocks?: ({
@@ -8178,6 +8359,11 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+      links?: {
+          name: string;
+          /** Format: uri */
+          url: string;
+        }[];
     };
     WorkOrder: {
       accessCaption: string;
@@ -10230,6 +10416,22 @@ export interface components {
        * @default 3600
        */
       expirySeconds?: number;
+    };
+    BulkSmsResult: {
+      /** @description Phone numbers that received SMS */
+      successful: string[];
+      /** @description Invalid phone numbers */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
+    };
+    BulkEmailResult: {
+      /** @description Email addresses that received email */
+      successful: string[];
+      /** @description Invalid email addresses */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
     };
     RentalPropertyResponse: {
       content?: {

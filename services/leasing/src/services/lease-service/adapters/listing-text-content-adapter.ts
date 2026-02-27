@@ -14,13 +14,17 @@ type UpdateListingTextContentRequest = z.infer<
   typeof leasing.v1.UpdateListingTextContentRequestSchema
 >
 
+type ContentBlock = z.infer<typeof leasing.v1.ContentBlockSchema>
+
 function transformFromDbListingTextContent(
   row: DbListingTextContent
 ): ListingTextContent {
+  const contentBlocks = JSON.parse(row.ContentBlocks) as ContentBlock[]
+
   return {
     id: row.Id,
     rentalObjectCode: row.RentalObjectCode,
-    contentBlocks: JSON.parse(row.ContentBlocks),
+    contentBlocks,
     createdAt: row.CreatedAt,
     updatedAt: row.UpdatedAt,
   }
@@ -110,7 +114,7 @@ const update = async (
   dbConnection = db
 ): Promise<AdapterResult<ListingTextContent, Error>> => {
   try {
-    const updateFields: Record<string, any> = {}
+    const updateFields: Record<string, unknown> = {}
 
     if (updateData.contentBlocks !== undefined) {
       updateFields.ContentBlocks = JSON.stringify(updateData.contentBlocks)

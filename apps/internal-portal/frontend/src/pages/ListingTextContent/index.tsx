@@ -121,7 +121,7 @@ const ListingTextContent = () => {
 
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Antal textelement:{' '}
+                    Antal innehållsblock:{' '}
                     <strong>{data.contentBlocks.length}</strong>
                   </Typography>
                 </Box>

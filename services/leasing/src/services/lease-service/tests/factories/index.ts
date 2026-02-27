@@ -17,5 +17,6 @@ export {
 } from './application-profile'
 export {
   ListingTextContentFactory as listingTextContent,
-  ContentBlockFactory as contentBlock,
+  TextContentBlockFactory as textContentBlock,
+  LinkContentBlockFactory as linkContentBlock,
 } from './listing-text-content'

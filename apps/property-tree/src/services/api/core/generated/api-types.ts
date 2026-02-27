@@ -8320,22 +8320,6 @@ export interface components {
       isTenant: boolean;
       specialAttention?: boolean;
     };
-    BulkSmsResult: {
-      /** @description Phone numbers that received SMS */
-      successful: string[];
-      /** @description Invalid phone numbers */
-      invalid: string[];
-      totalSent: number;
-      totalInvalid: number;
-    };
-    BulkEmailResult: {
-      /** @description Email addresses that received email */
-      successful: string[];
-      /** @description Invalid email addresses */
-      invalid: string[];
-      totalSent: number;
-      totalInvalid: number;
-    };
     ListingTextContent: {
       /** Format: uuid */
       id: string;
@@ -8345,6 +8329,12 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+      /** @default [] */
+      links?: {
+          name: string;
+          /** Format: uri */
+          url: string;
+        }[];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -8357,6 +8347,11 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+      links?: {
+          name: string;
+          /** Format: uri */
+          url: string;
+        }[];
     };
     UpdateListingTextContentRequest: {
       contentBlocks?: ({
@@ -8364,6 +8359,11 @@ export interface components {
           type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
           content: string;
         })[];
+      links?: {
+          name: string;
+          /** Format: uri */
+          url: string;
+        }[];
     };
     WorkOrder: {
       accessCaption: string;
@@ -10416,6 +10416,22 @@ export interface components {
        * @default 3600
        */
       expirySeconds?: number;
+    };
+    BulkSmsResult: {
+      /** @description Phone numbers that received SMS */
+      successful: string[];
+      /** @description Invalid phone numbers */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
+    };
+    BulkEmailResult: {
+      /** @description Email addresses that received email */
+      successful: string[];
+      /** @description Invalid email addresses */
+      invalid: string[];
+      totalSent: number;
+      totalInvalid: number;
     };
     RentalPropertyResponse: {
       content?: {

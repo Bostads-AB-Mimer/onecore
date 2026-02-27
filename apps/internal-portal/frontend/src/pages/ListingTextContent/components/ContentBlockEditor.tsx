@@ -15,19 +15,28 @@ import { z } from 'zod'
 
 type ContentBlockType = z.infer<typeof leasing.v1.ContentBlockTypeSchema>
 
+// ContentBlock can be either a text block or a link block
 export interface ContentBlock {
   id: string
   type: ContentBlockType
-  content: string
+  // Text block fields
+  content?: string
+  // Link block fields
+  name?: string
+  url?: string
 }
 
 interface ContentBlockEditorProps {
   block: ContentBlock
   index: number
-  onUpdate: (id: string, field: 'type' | 'content', value: string) => void
+  onUpdate: (
+    id: string,
+    field: 'type' | 'content' | 'name' | 'url',
+    value: string
+  ) => void
   onDelete: (id: string) => void
   isDragging?: boolean
-  dragListeners?: Record<string, any>
+  dragListeners?: Record<string, unknown>
 }
 
 const blockTypeLabels: Record<ContentBlockType, string> = {
@@ -36,6 +45,17 @@ const blockTypeLabels: Record<ContentBlockType, string> = {
   subtitle: 'Underrubrik',
   text: 'Text',
   bullet_list: 'Punktlista',
+  link: 'Länk',
+}
+
+const isValidUrl = (url: string): boolean => {
+  if (!url.trim()) return true
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export const ContentBlockEditor = ({
@@ -46,6 +66,9 @@ export const ContentBlockEditor = ({
   isDragging = false,
   dragListeners,
 }: ContentBlockEditorProps) => {
+  const isLinkBlock = block.type === 'link'
+  const urlValid = isLinkBlock ? isValidUrl(block.url || '') : true
+
   return (
     <Paper
       elevation={isDragging ? 8 : 2}
@@ -108,28 +131,76 @@ export const ContentBlockEditor = ({
               <MenuItem value="bullet_list">
                 {blockTypeLabels.bullet_list}
               </MenuItem>
+              <MenuItem value="link">{blockTypeLabels.link}</MenuItem>
             </Select>
           </FormControl>
 
-          <TextField
-            fullWidth
-            multiline
-            rows={
-              block.type === 'headline' || block.type === 'subtitle' ? 2 : 4
-            }
-            value={block.content}
-            onChange={(e) => onUpdate(block.id, 'content', e.target.value)}
-            placeholder={
-              block.type === 'bullet_list'
-                ? 'Skriv en punkt per rad...'
-                : 'Skriv innehåll...'
-            }
-            helperText={
-              block.type === 'bullet_list'
-                ? 'Skriv varje punkt på en ny rad'
-                : ''
-            }
-          />
+          {isLinkBlock ? (
+            // Link block: show name and URL fields
+            <Box display="flex" gap={2}>
+              <Box flex={1}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  Namn
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={block.name || ''}
+                  onChange={(e) => onUpdate(block.id, 'name', e.target.value)}
+                  placeholder="T.ex. Virtuell visning"
+                  error={!!block.url?.trim() && !block.name?.trim()}
+                  helperText={
+                    !!block.url?.trim() && !block.name?.trim()
+                      ? 'Namn krävs'
+                      : ''
+                  }
+                />
+              </Box>
+              <Box flex={2}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  URL
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={block.url || ''}
+                  onChange={(e) => onUpdate(block.id, 'url', e.target.value)}
+                  placeholder="https://example.com"
+                  error={!urlValid}
+                  helperText={!urlValid ? 'Ogiltig URL-format' : ''}
+                />
+              </Box>
+            </Box>
+          ) : (
+            // Text block: show content textarea
+            <TextField
+              fullWidth
+              multiline
+              rows={
+                block.type === 'headline' || block.type === 'subtitle' ? 2 : 4
+              }
+              value={block.content || ''}
+              onChange={(e) => onUpdate(block.id, 'content', e.target.value)}
+              placeholder={
+                block.type === 'bullet_list'
+                  ? 'Skriv en punkt per rad...'
+                  : 'Skriv innehåll...'
+              }
+              helperText={
+                block.type === 'bullet_list'
+                  ? 'Skriv varje punkt på en ny rad'
+                  : ''
+              }
+            />
+          )}
         </Box>
 
         {/* Delete Button */}

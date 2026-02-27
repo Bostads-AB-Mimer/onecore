@@ -6,12 +6,37 @@ export const ContentBlockTypeSchema = z.enum([
   'subtitle',
   'text',
   'bullet_list',
+  'link',
 ])
 
-export const ContentBlockSchema = z.object({
-  type: ContentBlockTypeSchema,
-  content: z.string(),
-})
+// Union of all content block types
+export const ContentBlockSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('preamble'),
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal('headline'),
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal('subtitle'),
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal('text'),
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal('bullet_list'),
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal('link'),
+    name: z.string().min(1, 'Link name is required'),
+    url: z.string().url('Invalid URL format'),
+  }),
+])
 
 export const ListingTextContentSchema = z.object({
   id: z.string().uuid(),

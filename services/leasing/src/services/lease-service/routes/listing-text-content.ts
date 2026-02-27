@@ -67,6 +67,8 @@ export const routes = (router: KoaRouter) => {
    *     summary: Create listing text content
    *     description: |
    *       Create new listing text content for a rental object.
+   *       Content blocks can be text-based (preamble, headline, subtitle, text, bullet_list)
+   *       or links (type: link with name and url fields).
    *     tags: [ListingTextContent]
    *     requestBody:
    *       required: true
@@ -74,21 +76,39 @@ export const routes = (router: KoaRouter) => {
    *         application/json:
    *           schema:
    *             type: object
+   *             required:
+   *               - rentalObjectCode
+   *               - contentBlocks
    *             properties:
    *               rentalObjectCode:
    *                 type: string
    *                 description: The rental object code
    *               contentBlocks:
    *                 type: array
-   *                 description: Array of content blocks
+   *                 description: Array of content blocks (text or links)
    *                 items:
-   *                   type: object
-   *                   properties:
-   *                     type:
-   *                       type: string
-   *                       enum: [preamble, headline, subtitle, text, bullet_list]
-   *                     content:
-   *                       type: string
+   *                   oneOf:
+   *                     - type: object
+   *                       description: Text content block
+   *                       properties:
+   *                         type:
+   *                           type: string
+   *                           enum: [preamble, headline, subtitle, text, bullet_list]
+   *                         content:
+   *                           type: string
+   *                     - type: object
+   *                       description: Link content block
+   *                       properties:
+   *                         type:
+   *                           type: string
+   *                           enum: [link]
+   *                         name:
+   *                           type: string
+   *                           description: Display text for the link
+   *                         url:
+   *                           type: string
+   *                           format: uri
+   *                           description: The URL the link points to
    *     responses:
    *       201:
    *         description: Listing text content created successfully
@@ -153,6 +173,8 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update listing text content
    *     description: |
    *       Update existing listing text content.
+   *       Content blocks can be text-based (preamble, headline, subtitle, text, bullet_list)
+   *       or links (type: link with name and url fields).
    *     tags: [ListingTextContent]
    *     parameters:
    *       - in: path
@@ -171,15 +193,30 @@ export const routes = (router: KoaRouter) => {
    *             properties:
    *               contentBlocks:
    *                 type: array
-   *                 description: Array of content blocks
+   *                 description: Array of content blocks (text or links)
    *                 items:
-   *                   type: object
-   *                   properties:
-   *                     type:
-   *                       type: string
-   *                       enum: [preamble, headline, subtitle, text, bullet_list]
-   *                     content:
-   *                       type: string
+   *                   oneOf:
+   *                     - type: object
+   *                       description: Text content block
+   *                       properties:
+   *                         type:
+   *                           type: string
+   *                           enum: [preamble, headline, subtitle, text, bullet_list]
+   *                         content:
+   *                           type: string
+   *                     - type: object
+   *                       description: Link content block
+   *                       properties:
+   *                         type:
+   *                           type: string
+   *                           enum: [link]
+   *                         name:
+   *                           type: string
+   *                           description: Display text for the link
+   *                         url:
+   *                           type: string
+   *                           format: uri
+   *                           description: The URL the link points to
    *     responses:
    *       200:
    *         description: Listing text content updated successfully

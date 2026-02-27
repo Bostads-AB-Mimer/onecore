@@ -85,18 +85,44 @@ const ListingTextContentForm = () => {
       return
     }
 
-    // Check for empty content
-    const hasEmptyContent = blocks.some((block) => !block.content.trim())
-    if (hasEmptyContent) {
-      toast.error('Alla block måste ha innehåll')
+    // Validate blocks
+    const hasInvalidBlock = blocks.some((block) => {
+      if (block.type === 'link') {
+        // Link blocks need both name and valid URL
+        if (!block.name?.trim() || !block.url?.trim()) return true
+        try {
+          new URL(block.url)
+          return false
+        } catch {
+          return true
+        }
+      } else {
+        // Text blocks need content
+        return !block.content?.trim()
+      }
+    })
+
+    if (hasInvalidBlock) {
+      toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
 
     try {
-      const contentBlocks = blocks.map(({ type, content }) => ({
-        type,
-        content,
-      }))
+      // Format blocks for API - remove the id field and ensure correct structure
+      const contentBlocks = blocks.map((block) => {
+        if (block.type === 'link') {
+          return {
+            type: block.type,
+            name: block.name || '',
+            url: block.url || '',
+          }
+        } else {
+          return {
+            type: block.type,
+            content: block.content || '',
+          }
+        }
+      })
 
       if (isEditMode && rentalObjectCode) {
         await updateMutation.mutateAsync({
