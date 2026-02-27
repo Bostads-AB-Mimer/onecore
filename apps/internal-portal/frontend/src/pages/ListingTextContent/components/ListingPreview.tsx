@@ -1,4 +1,4 @@
-import { Box, Paper, Typography } from '@mui/material'
+import { Box, Paper, Typography, Link } from '@mui/material'
 import { leasing } from '@onecore/types'
 import { z } from 'zod'
 
@@ -6,7 +6,11 @@ type ContentBlockType = z.infer<typeof leasing.v1.ContentBlockTypeSchema>
 
 interface ContentBlockBase {
   type: ContentBlockType
-  content: string
+  // Text block fields
+  content?: string
+  // Link block fields
+  name?: string
+  url?: string
 }
 
 interface ListingPreviewProps {
@@ -51,7 +55,7 @@ export const ListingPreview = ({
         return (
           <Box key={index} sx={{ marginBottom: 1 }}>
             {renderParagraphs(
-              block.content,
+              block.content || '',
               {
                 width: '100%',
                 fontSize: '1rem',
@@ -109,7 +113,7 @@ export const ListingPreview = ({
         return (
           <Box key={index} sx={{ marginBottom: 1 }}>
             {renderParagraphs(
-              block.content,
+              block.content || '',
               {
                 width: '100%',
                 fontSize: '1rem',
@@ -122,7 +126,7 @@ export const ListingPreview = ({
         )
 
       case 'bullet_list':
-        const items = block.content
+        const items = (block.content || '')
           .split('\n')
           .filter((line: string) => line.trim() !== '')
 
@@ -178,6 +182,42 @@ export const ListingPreview = ({
             >
               Punktlista...
             </Typography>
+          </Box>
+        )
+
+      case 'link':
+        const hasValidLink = block.name?.trim() && block.url?.trim()
+        return (
+          <Box key={index} sx={{ marginBottom: 1 }}>
+            {hasValidLink ? (
+              <Link
+                href={block.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  color: '#951b81',
+                  textDecoration: 'underline',
+                  fontSize: '1rem',
+                  fontFamily: 'graphikRegular',
+                  '&:hover': {
+                    color: '#7a1669',
+                  },
+                }}
+              >
+                {block.name}
+              </Link>
+            ) : (
+              <Typography
+                color="text.secondary"
+                sx={{
+                  fontSize: '1rem',
+                  fontFamily: 'graphikRegular',
+                  textDecoration: 'underline',
+                }}
+              >
+                Länk...
+              </Typography>
+            )}
           </Box>
         )
 

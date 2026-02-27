@@ -67,12 +67,38 @@ export const ContentBlocksList = ({
 
   const handleUpdateBlock = (
     id: string,
-    field: 'type' | 'content',
+    field: 'type' | 'content' | 'name' | 'url',
     value: string
   ) => {
-    const updatedBlocks = blocks.map((block) =>
-      block.id === id ? { ...block, [field]: value } : block
-    )
+    const updatedBlocks = blocks.map((block) => {
+      if (block.id !== id) return block
+
+      // When changing type, reset the appropriate fields
+      if (field === 'type') {
+        if (value === 'link') {
+          // Switching to link type - clear content, set name/url
+          return {
+            ...block,
+            type: value as ContentBlock['type'],
+            content: undefined,
+            name: '',
+            url: '',
+          }
+        } else {
+          // Switching to text type - clear name/url, set content
+          return {
+            ...block,
+            type: value as ContentBlock['type'],
+            content: '',
+            name: undefined,
+            url: undefined,
+          }
+        }
+      }
+
+      // Regular field update
+      return { ...block, [field]: value }
+    })
     onBlocksChange(updatedBlocks)
   }
 
@@ -91,7 +117,7 @@ export const ContentBlocksList = ({
         alignItems="center"
         marginBottom={2}
       >
-        <Typography variant="h6">Textelement ({blocks.length})</Typography>
+        <Typography variant="h6">Innehållsblock ({blocks.length})</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -114,7 +140,7 @@ export const ContentBlocksList = ({
           }}
         >
           <Typography color="text.secondary" gutterBottom>
-            Inga textelement ännu
+            Inga innehållsblock ännu
           </Typography>
           <Button
             variant="outlined"
@@ -122,7 +148,7 @@ export const ContentBlocksList = ({
             onClick={handleAddBlock}
             size="small"
           >
-            Lägg till din första text
+            Lägg till ditt första block
           </Button>
         </Box>
       ) : (
@@ -164,8 +190,9 @@ export const ContentBlocksList = ({
 
       <Box marginTop={2}>
         <Typography variant="caption" color="text.secondary">
-          Tips: Dra i handtaget (⋮⋮) för att ändra ordning på texterna.
-          Ordningen påverkar hur annonsen visas.
+          Tips: Dra i handtaget (⋮⋮) för att ändra ordning på blocken. Ordningen
+          påverkar hur annonsen visas. Använd blocktypen "Länk" för att lägga
+          till klickbara länkar.
         </Typography>
       </Box>
     </Box>
