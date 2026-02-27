@@ -14,6 +14,7 @@
 import { Knex } from 'knex'
 import { Jimp } from 'jimp'
 import jsQR from 'jsqr'
+import { logger } from '@onecore/utilities'
 import * as receiptsAdapter from './adapters/receipts-adapter'
 
 const UUID_REGEX =
@@ -92,7 +93,8 @@ export async function processScannedReceipt(
     )
 
     return { ok: true, data: { receiptId: receipt.id, keyLoanId } }
-  } catch {
+  } catch (err) {
+    logger.error({ err, keyLoanId }, 'Failed to create receipt')
     return { ok: false, err: 'receipt-creation-failed' }
   }
 }

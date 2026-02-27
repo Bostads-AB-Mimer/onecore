@@ -123,8 +123,13 @@ export const routes = (router: KoaRouter) => {
     const { receiptId, keyLoanId } = scanResult
 
     // Upload scanned image to file storage (MinIO)
+    const knownImageExts = ['jpg', 'jpeg', 'png', 'tiff', 'bmp', 'gif', 'webp']
+    const fileExt = filename.includes('.')
+      ? filename.split('.').pop()!.toLowerCase()
+      : ''
+    const ext = knownImageExts.includes(fileExt) ? fileExt : 'jpeg'
     const contentType = ctx.request.type || 'image/jpeg'
-    const storageFileName = `receipt-${receiptId}-${Date.now()}.${contentType.split('/')[1] || 'jpg'}`
+    const storageFileName = `receipt-${receiptId}-${Date.now()}.${ext}`
 
     const uploadResult = await fileStorageAdapter.uploadFile(
       storageFileName,
