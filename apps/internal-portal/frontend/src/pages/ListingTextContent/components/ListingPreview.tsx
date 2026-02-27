@@ -14,6 +14,33 @@ interface ListingPreviewProps {
   rentalObjectCode?: string
 }
 
+const renderParagraphs = (
+  content: string,
+  baseSx: Record<string, unknown>,
+  placeholder: string
+) => {
+  if (!content) {
+    return <Typography sx={baseSx}>{placeholder}</Typography>
+  }
+
+  const paragraphs = content.split('\n')
+  return (
+    <>
+      {paragraphs.map((paragraph, i) => (
+        <Typography
+          key={i}
+          sx={{
+            ...baseSx,
+            marginBottom: i < paragraphs.length - 1 ? '0.6em' : 0,
+          }}
+        >
+          {paragraph || '\u00A0'}
+        </Typography>
+      ))}
+    </>
+  )
+}
+
 export const ListingPreview = ({
   blocks,
   rentalObjectCode,
@@ -22,23 +49,19 @@ export const ListingPreview = ({
     switch (block.type) {
       case 'preamble':
         return (
-          <Typography
-            key={index}
-            variant="body1"
-            paragraph
-            sx={{
-              width: '100%',
-              fontSize: '1rem',
-              fontFamily: 'graphikRegular',
-              fontWeight: 700,
-              marginBottom: 4,
-              lineHeight: 1.6,
-              whiteSpace: 'pre-line',
-              '&:first-of-type': { paddingTop: 0 },
-            }}
-          >
-            {block.content || 'Ingress...'}
-          </Typography>
+          <Box key={index} sx={{ marginBottom: 1 }}>
+            {renderParagraphs(
+              block.content,
+              {
+                width: '100%',
+                fontSize: '1rem',
+                fontFamily: 'graphikRegular',
+                fontWeight: 700,
+                lineHeight: 1.6,
+              },
+              'Ingress...'
+            )}
+          </Box>
         )
 
       case 'headline':
@@ -54,7 +77,7 @@ export const ListingPreview = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               color: '#00a4b3',
-              marginBottom: 2,
+              marginBottom: 0.5,
               whiteSpace: 'pre-line',
             }}
           >
@@ -74,7 +97,7 @@ export const ListingPreview = ({
               fontFamily: 'bisonBold',
               fontWeight: 700,
               textTransform: 'uppercase',
-              marginBottom: 4,
+              marginBottom: 0.5,
               whiteSpace: 'pre-line',
             }}
           >
@@ -84,22 +107,18 @@ export const ListingPreview = ({
 
       case 'text':
         return (
-          <Typography
-            key={index}
-            variant="body1"
-            paragraph
-            sx={{
-              width: '100%',
-              fontSize: '1rem',
-              fontFamily: 'graphikRegular',
-              marginBottom: 4,
-              lineHeight: 1.7,
-              whiteSpace: 'pre-line',
-              '&:first-of-type': { paddingTop: 0 },
-            }}
-          >
-            {block.content || 'Text...'}
-          </Typography>
+          <Box key={index} sx={{ marginBottom: 1 }}>
+            {renderParagraphs(
+              block.content,
+              {
+                width: '100%',
+                fontSize: '1rem',
+                fontFamily: 'graphikRegular',
+                lineHeight: 1.7,
+              },
+              'Text...'
+            )}
+          </Box>
         )
 
       case 'bullet_list':
@@ -115,7 +134,7 @@ export const ListingPreview = ({
               width: '100%',
               fontSize: '1rem',
               fontFamily: 'graphikRegular',
-              marginBottom: 4,
+              marginBottom: 1,
               paddingLeft: 3,
               '&:first-of-type': { paddingTop: 0 },
             }}
@@ -143,7 +162,7 @@ export const ListingPreview = ({
               width: '100%',
               fontSize: '1rem',
               fontFamily: 'graphikRegular',
-              marginBottom: 4,
+              marginBottom: 1,
               paddingLeft: 3,
               '&:first-of-type': { paddingTop: 0 },
             }}
