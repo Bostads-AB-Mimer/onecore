@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, Download } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -10,23 +10,31 @@ import {
 import { Input } from '@/components/ui/Input'
 import { ResponsiveTable } from '@/components/ui/ResponsiveTable'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { MultiSelectFilterDropdown } from '@/components/ui/MultiSelectFilterDropdown'
 import {
   MultiSelectSearchFilterDropdown,
   SearchFilterOption,
 } from '@/components/ui/MultiSelectSearchFilterDropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/DateRangeFilterDropdown'
-import { useLeaseSearch } from '@/components/hooks/useLeaseSearch'
+import {
+  useLeaseSearch,
+  type LeaseSearchResult,
+} from '@/components/hooks/useLeaseSearch'
 import { useUrlPagination } from '@/components/hooks/useUrlPagination'
 import { useDebounce } from '@/components/hooks/useDebounce'
+import { useBulkMessaging } from '@/components/hooks/useBulkMessaging'
 import { Pagination } from '@/components/ui/Pagination'
 import { propertyService } from '@/services/api/core/propertyService'
 import {
   leaseSearchService,
-  type LeaseSearchResult,
   type BuildingManager,
 } from '@/services/api/core/leaseSearchService'
+import { tenantService } from '@/services/api/core/tenantService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
+import { BulkActionBar } from '@/components/ui/BulkActionBar'
+import { BulkSmsModal } from '@/components/ui/BulkSmsModal'
+import { BulkEmailModal } from '@/components/ui/BulkEmailModal'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -59,6 +67,7 @@ const formatDate = (date: Date | string | null | undefined) => {
 const PAGE_SIZE = 50
 
 const LeasesPage = () => {
+  const [isExporting, setIsExporting] = useState(false)
   const { page, setPage, searchParams, setSearchParams, updateUrlParams } =
     useUrlPagination({
       defaultLimit: PAGE_SIZE,
@@ -190,6 +199,7 @@ const LeasesPage = () => {
     isLoading,
     isFetching,
     error,
+    exportToExcel,
   } = useLeaseSearch(
     {
       q: debouncedSearch || undefined,
@@ -223,6 +233,47 @@ const LeasesPage = () => {
       mainContent.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleExport = async () => {
+    if (!meta?.totalRecords || meta.totalRecords === 0) return
+
+    setIsExporting(true)
+    try {
+      const blob = await exportToExcel({
+        q: debouncedSearch || undefined,
+        objectType:
+          selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
+        status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+        property:
+          selectedProperties.length > 0 ? selectedProperties : undefined,
+        districtNames:
+          selectedDistricts.length > 0 ? selectedDistricts : undefined,
+        buildingManager:
+          selectedBuildingManagers.length > 0
+            ? selectedBuildingManagers
+            : undefined,
+        startDateFrom: startDateFrom || undefined,
+        startDateTo: startDateTo || undefined,
+        endDateFrom: endDateFrom || undefined,
+        endDateTo: endDateTo || undefined,
+      })
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      setTimeout(() => {
+        URL.revokeObjectURL(url)
+        a.remove()
+      }, 1000)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -264,6 +315,92 @@ const LeasesPage = () => {
   )
 
   const displayLeases = leases || []
+
+  // Build current filter params for fetching all contacts
+  const currentFilterParams = useMemo(
+    () => ({
+      q: debouncedSearch || undefined,
+      objectType:
+        selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
+      status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+      property: selectedProperties.length > 0 ? selectedProperties : undefined,
+      districtNames:
+        selectedDistricts.length > 0 ? selectedDistricts : undefined,
+      buildingManager:
+        selectedBuildingManagers.length > 0
+          ? selectedBuildingManagers
+          : undefined,
+      startDateFrom: startDateFrom || undefined,
+      startDateTo: startDateTo || undefined,
+      endDateFrom: endDateFrom || undefined,
+      endDateTo: endDateTo || undefined,
+    }),
+    [
+      debouncedSearch,
+      selectedObjectTypes,
+      selectedStatuses,
+      selectedProperties,
+      selectedDistricts,
+      selectedBuildingManagers,
+      startDateFrom,
+      startDateTo,
+      endDateFrom,
+      endDateTo,
+    ]
+  )
+
+  // Bulk messaging hook
+  const {
+    selectedIds: selectedLeaseIds,
+    allResultsSelected,
+    selectedCount,
+    toggleSelection,
+    toggleSelectAll,
+    clearSelection,
+    isSelected,
+    showSmsModal,
+    showEmailModal,
+    setShowSmsModal,
+    setShowEmailModal,
+    smsRecipients,
+    emailRecipients,
+    handleOpenSmsModal,
+    handleOpenEmailModal,
+    handleSendSms,
+    handleSendEmail,
+    isLoadingContacts,
+  } = useBulkMessaging({
+    items: displayLeases,
+    totalCount: meta?.totalRecords ?? 0,
+    getItemId: (lease) => lease.leaseId,
+    getContacts: (lease) =>
+      (lease.contacts ?? []).map((c) => ({
+        contactCode: c.contactCode,
+        name: c.name,
+        phone: c.phone,
+        email: c.email,
+      })),
+    fetchAllContacts: () =>
+      leaseSearchService.getContactsByFilters(currentFilterParams),
+    sendBulkSms: tenantService.sendBulkSms,
+    sendBulkEmail: tenantService.sendBulkEmail,
+  })
+
+  // Clear selection when filters change
+  useEffect(() => {
+    clearSelection()
+  }, [
+    debouncedSearch,
+    selectedObjectTypes,
+    selectedStatuses,
+    selectedProperties,
+    selectedDistricts,
+    startDateFrom,
+    startDateTo,
+    endDateFrom,
+    endDateTo,
+    clearSelection,
+  ])
 
   const clearFilters = () => {
     setSearchInput('')
@@ -310,6 +447,15 @@ const LeasesPage = () => {
             <span className="text-sm text-muted-foreground">
               {displayLeases.length} av {meta?.totalRecords ?? 0} resultat
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={isExporting || (meta?.totalRecords ?? 0) === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? 'Exporterar...' : 'Exportera Excel'}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -409,6 +555,27 @@ const LeasesPage = () => {
             <ResponsiveTable
               data={displayLeases}
               columns={[
+                {
+                  key: 'select',
+                  label: (
+                    <Checkbox
+                      checked={
+                        allResultsSelected || selectedLeaseIds.length > 0
+                      }
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Välj alla"
+                    />
+                  ),
+                  className: 'w-10 px-2',
+                  render: (lease: LeaseSearchResult) => (
+                    <Checkbox
+                      checked={isSelected(lease.leaseId)}
+                      onCheckedChange={() => toggleSelection(lease.leaseId)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      aria-label={`Välj ${lease.leaseId}`}
+                    />
+                  ),
+                },
                 {
                   key: 'leaseId',
                   label: 'Kontraktsnummer',
@@ -580,6 +747,30 @@ const LeasesPage = () => {
           />
         </CardContent>
       </Card>
+
+      <BulkActionBar
+        selectedCount={selectedCount}
+        onClear={clearSelection}
+        onSendSms={handleOpenSmsModal}
+        onSendEmail={handleOpenEmailModal}
+        isLoading={isLoadingContacts}
+      />
+
+      <BulkSmsModal
+        open={showSmsModal}
+        onOpenChange={setShowSmsModal}
+        recipients={smsRecipients}
+        totalSelectedItems={selectedCount}
+        onSend={handleSendSms}
+      />
+
+      <BulkEmailModal
+        open={showEmailModal}
+        onOpenChange={setShowEmailModal}
+        recipients={emailRecipients}
+        totalSelectedItems={selectedCount}
+        onSend={handleSendEmail}
+      />
     </div>
   )
 }

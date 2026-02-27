@@ -106,6 +106,64 @@ describe('listing-text-content routes', () => {
 
       expect(res.status).toBe(409)
     })
+
+    it('responds with 201 when creating with link blocks', async () => {
+      const contentBlocksWithLinks = [
+        { type: 'headline' as const, content: 'Test Headline' },
+        {
+          type: 'link' as const,
+          name: 'Virtual Tour',
+          url: 'https://example.com/tour',
+        },
+      ]
+      const testData = factory.listingTextContent.build({
+        contentBlocks: contentBlocksWithLinks,
+      })
+      jest.spyOn(listingTextContentAdapter, 'create').mockResolvedValueOnce({
+        ok: true,
+        data: testData,
+      })
+
+      const res = await request(app.callback())
+        .post('/listing-text-content')
+        .send({
+          rentalObjectCode: testData.rentalObjectCode,
+          contentBlocks: contentBlocksWithLinks,
+        })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.contentBlocks).toEqual(contentBlocksWithLinks)
+    })
+
+    it('responds with 400 for invalid link URL in content block', async () => {
+      const res = await request(app.callback())
+        .post('/listing-text-content')
+        .send({
+          rentalObjectCode: 'TEST123',
+          contentBlocks: [
+            { type: 'text', content: 'test' },
+            { type: 'link', name: 'Bad Link', url: 'not-a-valid-url' },
+          ],
+        })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+    })
+
+    it('responds with 400 for empty link name in content block', async () => {
+      const res = await request(app.callback())
+        .post('/listing-text-content')
+        .send({
+          rentalObjectCode: 'TEST123',
+          contentBlocks: [
+            { type: 'text', content: 'test' },
+            { type: 'link', name: '', url: 'https://example.com' },
+          ],
+        })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+    })
   })
 
   describe('PUT /listing-text-content/:rentalObjectCode', () => {
@@ -152,6 +210,46 @@ describe('listing-text-content routes', () => {
         })
 
       expect(res.status).toBe(404)
+    })
+
+    it('responds with 200 when updating with link blocks', async () => {
+      const contentBlocksWithLinks = [
+        { type: 'headline' as const, content: 'Updated Headline' },
+        {
+          type: 'link' as const,
+          name: 'Updated Link',
+          url: 'https://example.com/updated',
+        },
+      ]
+      const testData = factory.listingTextContent.build({
+        contentBlocks: contentBlocksWithLinks,
+      })
+      jest.spyOn(listingTextContentAdapter, 'update').mockResolvedValueOnce({
+        ok: true,
+        data: testData,
+      })
+
+      const res = await request(app.callback())
+        .put(`/listing-text-content/${testData.rentalObjectCode}`)
+        .send({
+          contentBlocks: contentBlocksWithLinks,
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.contentBlocks).toEqual(contentBlocksWithLinks)
+    })
+
+    it('responds with 400 for invalid link URL in update', async () => {
+      const res = await request(app.callback())
+        .put('/listing-text-content/TEST123')
+        .send({
+          contentBlocks: [
+            { type: 'link', name: 'Bad Link', url: 'invalid-url' },
+          ],
+        })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
     })
   })
 

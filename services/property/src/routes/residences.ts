@@ -3,6 +3,9 @@ import {
   logger,
   generateRouteMetadata,
   buildPaginatedResponse,
+  setExcelDownloadHeaders,
+  createExcelFromPaginated,
+  formatDateForExcel,
 } from '@onecore/utilities'
 import { z } from 'zod'
 
@@ -17,7 +20,6 @@ import {
   getRentalBlocksByRentalId,
   getAllRentalBlocks,
   searchRentalBlocks,
-  getAllRentalBlocksForExport,
   getDistinctBlockReasons,
 } from '../adapters/residence-adapter'
 import {
@@ -28,6 +30,7 @@ import {
   GetResidenceByRentalIdResponse,
   ResidenceSummarySchema,
   RentalBlock,
+  RentalBlockWithRentalObject,
   getAllRentalBlocksQueryParamsSchema,
   searchRentalBlocksQueryParamsSchema,
   exportRentalBlocksQueryParamsSchema,
@@ -597,70 +600,69 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const allBlocks = await getAllRentalBlocksForExport(
-          ctx.request.parsedQuery
-        )
+        // Create Excel using streaming - fetches pages incrementally
+        // Pass all filter params to match search endpoint behavior
+        const { active, ...filterParams } = ctx.request.parsedQuery
 
-        // Dynamic import of ExcelJS to avoid loading it on every request
-        const ExcelJS = await import('exceljs')
-        const workbook = new ExcelJS.default.Workbook()
-        const worksheet = workbook.addWorksheet('Spärrlista')
+        const buffer =
+          await createExcelFromPaginated<RentalBlockWithRentalObject>(
+            async (page: number, limit: number, knownTotal?: number) => {
+              const offset = (page - 1) * limit
+              const { data, totalCount } = await searchRentalBlocks({
+                ...filterParams,
+                active,
+                limit,
+                offset,
+                totalCount: knownTotal,
+              })
+              // Wrap in PaginatedResponse format for the utility
+              return {
+                content: data,
+                _meta: {
+                  totalRecords: totalCount,
+                  page,
+                  limit,
+                  count: data.length,
+                },
+                _links: [],
+              }
+            },
+            {
+              sheetName: 'Spärrlista',
+              columns: [
+                { header: 'Hyresobjekt', key: 'rentalId', width: 15 },
+                { header: 'Kategori', key: 'category', width: 12 },
+                { header: 'Typ', key: 'type', width: 15 },
+                { header: 'Adress', key: 'address', width: 30 },
+                { header: 'Fastighet', key: 'property', width: 15 },
+                { header: 'Distrikt', key: 'distrikt', width: 15 },
+                { header: 'Orsak', key: 'blockReason', width: 35 },
+                { header: 'Startdatum', key: 'fromDate', width: 12 },
+                { header: 'Slutdatum', key: 'toDate', width: 12 },
+                { header: 'Årshyra (kr/år)', key: 'yearlyRent', width: 15 },
+              ],
+              rowMapper: (block: RentalBlockWithRentalObject) => ({
+                rentalId:
+                  block.rentalObject?.rentalId ||
+                  block.rentalObject?.code ||
+                  '',
+                category: block.rentalObject?.category || '',
+                type: block.rentalObject?.type || '',
+                address: block.rentalObject?.address || '',
+                property: block.property?.name || '',
+                distrikt: block.distrikt || '',
+                blockReason: block.blockReason || '',
+                fromDate: formatDateForExcel(block.fromDate),
+                toDate: formatDateForExcel(block.toDate),
+                yearlyRent: block.rentalObject?.yearlyRent
+                  ? Math.round(block.rentalObject.yearlyRent)
+                  : null,
+              }),
+              batchSize: 500,
+            }
+          )
 
-        // Add columns
-        worksheet.columns = [
-          { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
-          { header: 'Kategori', key: 'kategori', width: 12 },
-          { header: 'Typ', key: 'typ', width: 15 },
-          { header: 'Adress', key: 'adress', width: 30 },
-          { header: 'Fastighet', key: 'fastighet', width: 15 },
-          { header: 'Distrikt', key: 'distrikt', width: 15 },
-          { header: 'Orsak', key: 'orsak', width: 35 },
-          { header: 'Startdatum', key: 'startdatum', width: 12 },
-          { header: 'Slutdatum', key: 'slutdatum', width: 12 },
-          { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
-        ]
-
-        // Style header row
-        worksheet.getRow(1).font = { bold: true }
-
-        // Add rows
-        for (const block of allBlocks) {
-          worksheet.addRow({
-            hyresobjekt:
-              block.rentalObject?.rentalId || block.rentalObject?.code || '',
-            kategori: block.rentalObject?.category || '',
-            typ: block.rentalObject?.type || '',
-            adress: block.rentalObject?.address || '',
-            fastighet: block.property?.name || '',
-            distrikt: block.distrikt || '',
-            orsak: block.blockReason || '',
-            startdatum: block.fromDate
-              ? new Date(block.fromDate).toLocaleDateString('sv-SE')
-              : '',
-            slutdatum: block.toDate
-              ? new Date(block.toDate).toLocaleDateString('sv-SE')
-              : '',
-            hyra: block.rentalObject?.yearlyRent
-              ? Math.round(block.rentalObject.yearlyRent)
-              : null,
-          })
-        }
-
-        // Generate buffer
-        const buffer = await workbook.xlsx.writeBuffer()
-
-        // Set response headers for file download
-        const timestamp = new Date().toISOString().split('T')[0]
-        ctx.set(
-          'Content-Type',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        ctx.set(
-          'Content-Disposition',
-          `attachment; filename="sparrlista-${timestamp}.xlsx"`
-        )
-
-        ctx.status = 200
+        setExcelDownloadHeaders(ctx, 'sparrlista')
         ctx.body = buffer
       } catch (err) {
         logger.error(err, 'Error exporting rental blocks to Excel')

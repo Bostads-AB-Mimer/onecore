@@ -898,9 +898,71 @@ const deleteListingTextContent = async (
   }
 }
 
+const getContactsByFilters = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/contacts-by-filters`,
+      {
+        params: queryParams,
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+interface ExportLeasesResult {
+  data: Buffer
+  contentType: string
+  contentDisposition: string
+}
+
+const exportLeasesToExcel = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/export`,
+      {
+        params: queryParams,
+        responseType: 'arraybuffer',
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
+
+    return {
+      ok: true,
+      data: {
+        data: response.data,
+        contentType:
+          response.headers['content-type'] ||
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentDisposition:
+          response.headers['content-disposition'] ||
+          `attachment; filename="hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx"`,
+      },
+    }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
+  exportLeasesToExcel,
+  getContactsByFilters,
   getApplicantByContactCodeAndListingId,
   getApplicantsAndListingByContactCode,
   getApplicantsByContactCode,

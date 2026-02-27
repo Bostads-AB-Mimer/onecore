@@ -1276,6 +1276,11 @@ export interface SearchRentalBlocksOptions {
   active?: boolean
   limit?: number
   offset?: number
+  /**
+   * If provided, skip the COUNT query and use this value as totalCount.
+   * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
+   */
+  totalCount?: number
 }
 
 /**
@@ -1298,6 +1303,7 @@ async function searchRentalBlocksWithDistriktRaw(
     active,
     limit,
     offset,
+    totalCount,
   } = options
 
   const conditions: string[] = []
@@ -1391,16 +1397,21 @@ async function searchRentalBlocksWithDistriktRaw(
 
   const whereClause = conditions.join(' AND ')
 
-  // Get total count
-  const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
-    SELECT COUNT(*) AS count
-    FROM hyspt
-    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
-    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON bafen.code = babuf.fencode
-    WHERE ${whereClause}
-  `)
-  const totalCount = countResult[0]?.count ?? 0
+  // Skip COUNT query if totalCount is provided (e.g., from page 1 of export)
+  let resolvedTotal: number
+  if (totalCount !== undefined) {
+    resolvedTotal = totalCount
+  } else {
+    const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
+      SELECT COUNT(*) AS count
+      FROM hyspt
+      LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+      LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+      LEFT JOIN bafen ON bafen.code = babuf.fencode
+      WHERE ${whereClause}
+    `)
+    resolvedTotal = countResult[0]?.count ?? 0
+  }
 
   // Get paginated IDs with ordering
   const paginationClause =
@@ -1421,7 +1432,7 @@ async function searchRentalBlocksWithDistriktRaw(
 
   return {
     ids: rows.map((r) => r.id.trim()),
-    totalCount,
+    totalCount: resolvedTotal,
   }
 }
 
@@ -1470,7 +1481,7 @@ export const searchRentalBlocks = async (
   options: SearchRentalBlocksOptions
 ) => {
   try {
-    const { limit, offset, distrikt } = options
+    const { limit, offset, distrikt, totalCount: knownTotal } = options
 
     let totalCount: number
     let rentalBlocks: Awaited<
@@ -1511,10 +1522,10 @@ export const searchRentalBlocks = async (
       // No distrikt filter - use standard Prisma query
       const whereClause = buildRentalBlockWhereClause(options)
 
-      // Run count and data queries in parallel for better performance
-      const [count, blocks] = await Promise.all([
-        prisma.rentalBlock.count({ where: whereClause }),
-        prisma.rentalBlock.findMany({
+      // Skip COUNT query if knownTotal is provided (e.g., from page 1 of export)
+      if (knownTotal !== undefined) {
+        totalCount = knownTotal
+        rentalBlocks = await prisma.rentalBlock.findMany({
           where: whereClause,
           include: rentalBlockInclude,
           orderBy: {
@@ -1522,11 +1533,25 @@ export const searchRentalBlocks = async (
           },
           ...(limit && { take: limit }),
           ...(offset && { skip: offset }),
-        }),
-      ])
+        })
+      } else {
+        // Run count and data queries in parallel for better performance
+        const [count, blocks] = await Promise.all([
+          prisma.rentalBlock.count({ where: whereClause }),
+          prisma.rentalBlock.findMany({
+            where: whereClause,
+            include: rentalBlockInclude,
+            orderBy: {
+              fromDate: 'desc',
+            },
+            ...(limit && { take: limit }),
+            ...(offset && { skip: offset }),
+          }),
+        ])
 
-      totalCount = count
-      rentalBlocks = blocks
+        totalCount = count
+        rentalBlocks = blocks
+      }
     }
 
     // Get unique rental IDs for fetching rent data
@@ -1575,41 +1600,6 @@ export const searchRentalBlocks = async (
     }
   } catch (err) {
     logger.error({ err }, 'residence-adapter.searchRentalBlocks')
-    throw err
-  }
-}
-
-export type ExportRentalBlocksOptions = RentalBlockFilterOptions
-
-export const getAllRentalBlocksForExport = async (
-  options: ExportRentalBlocksOptions
-) => {
-  try {
-    // Fetch rental blocks using raw SQL with explicit JOINs
-    const rawBlocks = await fetchRentalBlocksRaw(options)
-
-    // Get unique rental IDs for fetching rent data
-    const uniqueRentalIds = [
-      ...new Set(
-        rawBlocks
-          .map((rb) => rb.rentalId?.trim())
-          .filter((id): id is string => !!id)
-      ),
-    ]
-
-    // Fetch rent data using batched queries
-    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
-
-    // Transform raw rows to API response format
-    const transformedBlocks = rawBlocks.map((row) => {
-      const rentalId = row.rentalId?.trim()
-      const rentRows = rentalId ? rentByRentalId.get(rentalId) || [] : []
-      return transformRawRentalBlockRow(row, rentRows)
-    })
-
-    return sortRentalBlocksByFutureThenActive(transformedBlocks)
-  } catch (err) {
-    logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
     throw err
   }
 }
