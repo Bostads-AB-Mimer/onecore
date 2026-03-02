@@ -40,6 +40,10 @@ app.on('error', (err) => {
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 
+// Body parsing for JSON routes (binary routes like /scan-receipt are naturally skipped
+// since koa-body only parses matching content types like application/json)
+app.use(bodyParser({ jsonLimit: '50mb' }))
+
 // Public routes (no auth required)
 const publicRouter = new KoaRouter()
 
@@ -51,14 +55,11 @@ app.use(publicRouter.routes())
 // Unified authentication (cookie + Basic Auth)
 app.use(requireAuth)
 
-// Role-based authorization and body parsing per path
-const jsonBodyParser = bodyParser({ jsonLimit: '50mb' })
-
+// Role-based authorization
 app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/scan-receipt')) {
     return requireRole('scanner-upload')(ctx, next)
   }
-  await jsonBodyParser(ctx, async () => {})
   return requireRole('api-access')(ctx, next)
 })
 

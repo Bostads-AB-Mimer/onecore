@@ -21,10 +21,7 @@ async function exchangeBasicForToken(
 
   if (separatorIndex === -1) {
     ctx.status = 401
-    ctx.set(
-      'WWW-Authenticate',
-      `Basic realm="${config.auth.keycloak.realm}"`
-    )
+    ctx.set('WWW-Authenticate', `Basic realm="${config.auth.keycloak.realm}"`)
     ctx.body = { message: 'Invalid Basic Auth format' }
     return undefined
   }
@@ -34,10 +31,7 @@ async function exchangeBasicForToken(
 
   if (!clientId || !clientSecret) {
     ctx.status = 401
-    ctx.set(
-      'WWW-Authenticate',
-      `Basic realm="${config.auth.keycloak.realm}"`
-    )
+    ctx.set('WWW-Authenticate', `Basic realm="${config.auth.keycloak.realm}"`)
     ctx.body = { message: 'Missing client credentials' }
     return undefined
   }
@@ -71,10 +65,7 @@ async function exchangeBasicForToken(
       'Service account authentication failed — Keycloak rejected credentials'
     )
     ctx.status = 401
-    ctx.set(
-      'WWW-Authenticate',
-      `Basic realm="${config.auth.keycloak.realm}"`
-    )
+    ctx.set('WWW-Authenticate', `Basic realm="${config.auth.keycloak.realm}"`)
     ctx.body = { message: 'Invalid credentials' }
     return undefined
   }
