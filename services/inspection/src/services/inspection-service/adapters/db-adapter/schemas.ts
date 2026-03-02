@@ -63,6 +63,8 @@ export const INSPECTION_STATUSES = [
   'Genomförd',
 ] as const
 
+export type InspectionStatus = (typeof INSPECTION_STATUSES)[number]
+
 export const VALID_STATUS_TRANSITIONS: Record<string, string> = {
   Registrerad: 'Påbörjad',
   Påbörjad: 'Genomförd',

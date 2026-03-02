@@ -210,7 +210,7 @@ describe('inspection-adapter', () => {
     it('returns err with statusCode if request fails', async () => {
       mockServer.use(
         http.patch(
-          `${config.inspectionService.url}/inspections/${inspectionId}`,
+          `${config.inspectionService.url}/inspections/internal/${inspectionId}`,
           () =>
             HttpResponse.json(
               { error: 'Inspection with ID inspection-123 not found' },
@@ -234,7 +234,7 @@ describe('inspection-adapter', () => {
     it('returns err for invalid status transition', async () => {
       mockServer.use(
         http.patch(
-          `${config.inspectionService.url}/inspections/${inspectionId}`,
+          `${config.inspectionService.url}/inspections/internal/${inspectionId}`,
           () =>
             HttpResponse.json(
               { error: 'Invalid status transition' },
@@ -258,7 +258,7 @@ describe('inspection-adapter', () => {
     it('returns updated inspection data', async () => {
       mockServer.use(
         http.patch(
-          `${config.inspectionService.url}/inspections/${inspectionId}`,
+          `${config.inspectionService.url}/inspections/internal/${inspectionId}`,
           () =>
             HttpResponse.json(
               {

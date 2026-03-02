@@ -992,7 +992,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /inspections/{inspectionId}:
+   * /inspections/internal/{inspectionId}:
    *   patch:
    *     tags:
    *       - Inspection Service
@@ -1054,7 +1054,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.patch('/inspections/:inspectionId', async (ctx) => {
+  router.patch('/inspections/internal/:inspectionId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 

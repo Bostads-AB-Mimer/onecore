@@ -3,8 +3,58 @@ import { logger } from '@onecore/utilities'
 import { db } from '../db'
 import { AdapterResult } from '../../types'
 import { DetailedXpandInspection } from '../../schemas'
-import { CreateInspectionParams, validateStatusTransition } from './schemas'
+import {
+  CreateInspectionParams,
+  InspectionStatus,
+  validateStatusTransition,
+} from './schemas'
 import { DbInspection, DbInspectionRoom, DbInspectionRemark } from './types'
+
+function mapDbRemarkToResponse(r: DbInspectionRemark) {
+  return {
+    remarkId: r.remarkId,
+    location: r.location,
+    buildingComponent: r.buildingComponent,
+    notes: r.notes,
+    remarkGrade: r.remarkGrade,
+    remarkStatus: r.remarkStatus,
+    cost: r.cost,
+    invoice: r.invoice,
+    quantity: r.quantity,
+    isMissing: r.isMissing,
+    fixedDate: r.fixedDate,
+    workOrderCreated: r.workOrderCreated,
+    workOrderStatus: r.workOrderStatus,
+  }
+}
+
+function mapDbInspectionToResponse(
+  inspection: DbInspection,
+  rooms: DetailedXpandInspection['rooms']
+): DetailedXpandInspection {
+  return {
+    id: String(inspection.id),
+    status: inspection.status,
+    date: inspection.date,
+    startedAt: inspection.startedAt,
+    endedAt: inspection.endedAt,
+    inspector: inspection.inspector,
+    type: inspection.type,
+    residenceId: inspection.residenceId,
+    address: inspection.address,
+    apartmentCode: inspection.apartmentCode,
+    isFurnished: inspection.isFurnished,
+    leaseId: inspection.leaseId,
+    isTenantPresent: inspection.isTenantPresent,
+    isNewTenantPresent: inspection.isNewTenantPresent,
+    masterKeyAccess: inspection.masterKeyAccess,
+    hasRemarks: inspection.hasRemarks,
+    notes: inspection.notes,
+    totalCost: inspection.totalCost,
+    remarkCount: inspection.remarkCount,
+    rooms,
+  }
+}
 
 export async function createInspection(
   dbConnection: Knex = db,
@@ -78,21 +128,7 @@ export async function createInspection(
             .into('inspection_remark')
             .returning<DbInspectionRemark[]>('*')
 
-          remarks.push({
-            remarkId: remark.remarkId,
-            location: remark.location,
-            buildingComponent: remark.buildingComponent,
-            notes: remark.notes,
-            remarkGrade: remark.remarkGrade,
-            remarkStatus: remark.remarkStatus,
-            cost: remark.cost,
-            invoice: remark.invoice,
-            quantity: remark.quantity,
-            isMissing: remark.isMissing,
-            fixedDate: remark.fixedDate,
-            workOrderCreated: remark.workOrderCreated,
-            workOrderStatus: remark.workOrderStatus,
-          })
+          remarks.push(mapDbRemarkToResponse(remark))
         }
 
         rooms.push({
@@ -101,28 +137,7 @@ export async function createInspection(
         })
       }
 
-      return {
-        id: String(inspection.id),
-        status: inspection.status,
-        date: inspection.date,
-        startedAt: inspection.startedAt,
-        endedAt: inspection.endedAt,
-        inspector: inspection.inspector,
-        type: inspection.type,
-        residenceId: inspection.residenceId,
-        address: inspection.address,
-        apartmentCode: inspection.apartmentCode,
-        isFurnished: inspection.isFurnished,
-        leaseId: inspection.leaseId,
-        isTenantPresent: inspection.isTenantPresent,
-        isNewTenantPresent: inspection.isNewTenantPresent,
-        masterKeyAccess: inspection.masterKeyAccess,
-        hasRemarks: inspection.hasRemarks,
-        notes: inspection.notes,
-        totalCost: inspection.totalCost,
-        remarkCount: inspection.remarkCount,
-        rooms,
-      }
+      return mapDbInspectionToResponse(inspection, rooms)
     })
 
     return {
@@ -138,7 +153,7 @@ export async function createInspection(
 export async function updateInspectionStatus(
   dbConnection: Knex = db,
   inspectionId: string,
-  newStatus: string
+  newStatus: InspectionStatus
 ): Promise<
   AdapterResult<
     DetailedXpandInspection,
@@ -184,48 +199,13 @@ export async function updateInspectionStatus(
 
         rooms.push({
           room: dbRoom.roomName,
-          remarks: dbRemarks.map((r) => ({
-            remarkId: r.remarkId,
-            location: r.location,
-            buildingComponent: r.buildingComponent,
-            notes: r.notes,
-            remarkGrade: r.remarkGrade,
-            remarkStatus: r.remarkStatus,
-            cost: r.cost,
-            invoice: r.invoice,
-            quantity: r.quantity,
-            isMissing: r.isMissing,
-            fixedDate: r.fixedDate,
-            workOrderCreated: r.workOrderCreated,
-            workOrderStatus: r.workOrderStatus,
-          })),
+          remarks: dbRemarks.map(mapDbRemarkToResponse),
         })
       }
 
       return {
         ok: true as const,
-        data: {
-          id: String(updated.id),
-          status: updated.status,
-          date: updated.date,
-          startedAt: updated.startedAt,
-          endedAt: updated.endedAt,
-          inspector: updated.inspector,
-          type: updated.type,
-          residenceId: updated.residenceId,
-          address: updated.address,
-          apartmentCode: updated.apartmentCode,
-          isFurnished: updated.isFurnished,
-          leaseId: updated.leaseId,
-          isTenantPresent: updated.isTenantPresent,
-          isNewTenantPresent: updated.isNewTenantPresent,
-          masterKeyAccess: updated.masterKeyAccess,
-          hasRemarks: updated.hasRemarks,
-          notes: updated.notes,
-          totalCost: updated.totalCost,
-          remarkCount: updated.remarkCount,
-          rooms,
-        },
+        data: mapDbInspectionToResponse(updated, rooms),
       }
     })
 
