@@ -10,9 +10,11 @@ import { logger } from '@onecore/utilities'
  * (in which case ctx.status and ctx.body are already set).
  */
 async function exchangeBasicForToken(
-  ctx: Context,
-  authHeader: string
+  ctx: Context
 ): Promise<string | undefined> {
+  const authHeader = ctx.get('Authorization')
+  if (!authHeader?.startsWith('Basic ')) return undefined
+
   const base64Credentials = authHeader.slice('Basic '.length)
   const credentialsString = Buffer.from(base64Credentials, 'base64').toString(
     'utf-8'
@@ -74,38 +76,29 @@ async function exchangeBasicForToken(
 // Middleware to protect routes with proactive token refresh and Basic Auth support
 export const requireAuth = async (ctx: Context, next: Next) => {
   try {
-    let accessToken = ctx.cookies.get('auth_token')
-    const isCookieAuth = !!accessToken
+    let accessToken =
+      ctx.cookies.get('auth_token') ?? (await exchangeBasicForToken(ctx))
 
-    // If no cookie, try Basic Auth header
     if (!accessToken) {
-      const authHeader = ctx.get('Authorization')
-      if (authHeader?.startsWith('Basic ')) {
-        accessToken = await exchangeBasicForToken(ctx, authHeader)
-        if (!accessToken) return
+      if (ctx.status !== 401) {
+        ctx.status = 401
+        ctx.body = { message: 'Authentication required' }
       }
-    }
-
-    if (!accessToken) {
-      ctx.status = 401
-      ctx.body = { message: 'Authentication required' }
       return
     }
 
     // Proactive token refresh (cookie path only)
-    if (isCookieAuth) {
-      const refreshToken = ctx.cookies.get('refresh_token')
-      if (auth.isTokenExpiringSoon(accessToken, 60) && refreshToken) {
-        try {
-          const newTokens = await auth.refreshAccessToken(refreshToken)
-          auth.tokenService.setCookies(ctx, newTokens)
-          accessToken = newTokens.access_token
-        } catch (refreshError) {
-          logger.error(
-            refreshError,
-            'Token refresh failed, falling back to existing token'
-          )
-        }
+    const refreshToken = ctx.cookies.get('refresh_token')
+    if (refreshToken && auth.isTokenExpiringSoon(accessToken, 60)) {
+      try {
+        const newTokens = await auth.refreshAccessToken(refreshToken)
+        auth.tokenService.setCookies(ctx, newTokens)
+        accessToken = newTokens.access_token
+      } catch (refreshError) {
+        logger.error(
+          refreshError,
+          'Token refresh failed, falling back to existing token'
+        )
       }
     }
 
@@ -117,7 +110,7 @@ export const requireAuth = async (ctx: Context, next: Next) => {
       email: verifiedToken.email,
       name: verifiedToken.name,
       preferred_username: verifiedToken.preferred_username,
-      source: isCookieAuth ? 'keycloak' : 'service-account',
+      source: 'keycloak',
       realm_access: verifiedToken.realm_access,
     }
 
