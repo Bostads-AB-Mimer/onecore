@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { INSPECTION_STATUS } from '../constants/statuses'
 import { INSPECTION_TYPE_LABELS } from '../constants/inspectionTypes'
+import { useCreateInspection } from '../hooks/useCreateInspection'
 
 import { Button } from '@/shared/ui/Button'
 import { Checkbox } from '@/shared/ui/Checkbox'
@@ -34,8 +35,9 @@ const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS).map(
 interface CreateInspectionDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: CreateInspectionRequest) => void
-  isSubmitting?: boolean
+  onSuccess: (data: { inspector: string }) => void
+  onError: () => void
+  rentalId?: string
   residenceId: string
   address: string
   apartmentCode: string | null
@@ -46,14 +48,16 @@ interface CreateInspectionDialogProps {
 export function CreateInspectionDialog({
   isOpen,
   onClose,
-  onSubmit,
-  isSubmitting,
+  onSuccess,
+  onError,
+  rentalId,
   residenceId,
   address,
   apartmentCode,
   leaseId,
   roomNames,
 }: CreateInspectionDialogProps) {
+  const createInspection = useCreateInspection({ rentalId })
   const [inspector, setInspector] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [type, setType] = useState('')
@@ -89,7 +93,13 @@ export function CreateInspectionDialog({
       rooms: roomNames.map((name) => ({ room: name, remarks: [] })),
     }
 
-    onSubmit(body)
+    createInspection.mutate(body, {
+      onSuccess: () => {
+        resetForm()
+        onSuccess({ inspector: body.inspector })
+      },
+      onError,
+    })
   }
 
   const resetForm = () => {
@@ -102,12 +112,6 @@ export function CreateInspectionDialog({
     setMasterKeyAccess('')
     setNotes('')
   }
-
-  useEffect(() => {
-    if (isOpen) {
-      resetForm()
-    }
-  }, [isOpen])
 
   const handleClose = () => {
     resetForm()
@@ -230,12 +234,15 @@ export function CreateInspectionDialog({
           <Button
             variant="outline"
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={createInspection.isPending}
           >
             Avbryt
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
-            {isSubmitting ? 'Skapar...' : 'Skapa besiktning'}
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit || createInspection.isPending}
+          >
+            {createInspection.isPending ? 'Skapar...' : 'Skapa besiktning'}
           </Button>
         </div>
       </DialogContent>

@@ -12,7 +12,6 @@ import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { isCompleted } from '../constants/statuses'
-import { useCreateInspection } from '../hooks/useCreateInspection'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
 import { InspectionsTable } from './InspectionsTable'
 
@@ -48,8 +47,6 @@ export function InspectionsTabContent({
     queryFn: () => roomService.getByResidenceId(residenceId),
     enabled: !!residenceId,
   })
-
-  const createInspection = useCreateInspection({ rentalId })
 
   const inspections = inspectionsQuery.data ?? []
 
@@ -147,25 +144,21 @@ export function InspectionsTabContent({
         <CreateInspectionDialog
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
-          onSubmit={(data) => {
-            createInspection.mutate(data, {
-              onSuccess: () => {
-                toast({
-                  title: 'Besiktning skapad',
-                  description: `Besiktning skapad av ${data.inspector}.`,
-                })
-                setIsCreateDialogOpen(false)
-              },
-              onError: () => {
-                toast({
-                  title: 'Fel',
-                  description: 'Kunde inte skapa besiktning.',
-                  variant: 'destructive',
-                })
-              },
+          onSuccess={({ inspector }) => {
+            toast({
+              title: 'Besiktning skapad',
+              description: `Besiktning skapad av ${inspector}.`,
+            })
+            setIsCreateDialogOpen(false)
+          }}
+          onError={() => {
+            toast({
+              title: 'Fel',
+              description: 'Kunde inte skapa besiktning.',
+              variant: 'destructive',
             })
           }}
-          isSubmitting={createInspection.isPending}
+          rentalId={rentalId}
           residenceId={residenceId}
           address={address}
           apartmentCode={apartmentCode}
