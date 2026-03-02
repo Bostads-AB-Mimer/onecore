@@ -38,6 +38,12 @@ export function ArticleSection({
     onInvoiceRowsChange(newRows)
   }
 
+  const handleChangeRowAmount = (index: number, value: string) => {
+    const newRows = [...invoiceRows]
+    newRows[index] = { ...newRows[index], amount: Number(value) || 0 }
+    onInvoiceRowsChange(newRows)
+  }
+
   const handleChangeRowText = (index: number, value: string) => {
     const newRows = [...invoiceRows]
     newRows[index] = { ...newRows[index], text: value }
@@ -60,7 +66,7 @@ export function ArticleSection({
   const handleAddRow = () => {
     onInvoiceRowsChange([
       ...invoiceRows,
-      { price: 0, articleId: '', articleName: '' },
+      { price: 0, amount: 1, articleId: '', articleName: '' },
     ])
   }
 
@@ -77,7 +83,7 @@ export function ArticleSection({
         <Label>Fakturarader</Label>
         {invoiceRows.map((row, index) => (
           <div
-            key={index}
+            key={`${row.articleId}-${index}`}
             className="space-y-2 sm:space-y-0 sm:grid grid-rows-2 gap-2"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -119,7 +125,7 @@ export function ArticleSection({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 items-center gap-2">
+            <div className="grid grid-cols-4 items-center gap-2">
               <div className="space-y-1 sm:space-y-0">
                 <Label>Text</Label>
                 <Input
@@ -135,6 +141,15 @@ export function ArticleSection({
                   value={row.price}
                   min={0}
                   onChange={(e) => handleChangeRowPrice(index, e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Antal</Label>
+                <Input
+                  type="number"
+                  value={row.amount}
+                  min={1}
+                  onChange={(e) => handleChangeRowAmount(index, e.target.value)}
                 />
               </div>
               {invoiceRows.length > 1 && (

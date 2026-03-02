@@ -1135,7 +1135,7 @@ export const submitMiscellaneousInvoice = async (
             code: ${quote(ir.articleId)}
           }
           text: ${quote(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
-          quantity: 1
+          quantity: ${ir.amount}
           unitPrice: ${ir.price}
           glObject1: {
             code: ${quote(invoice.costCentre)}
@@ -1200,6 +1200,7 @@ export const submitMiscellaneousInvoice = async (
 interface InvoiceRow {
   text?: string
   price: number
+  amount: number
   articleName: string
   articleId: string
 }

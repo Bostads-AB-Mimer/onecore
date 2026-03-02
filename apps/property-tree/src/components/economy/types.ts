@@ -18,6 +18,7 @@ export interface CustomerSearchResult {
 
 export interface InvoiceRow {
   price: number
+  amount: number
   articleName: string
   articleId: string
   text?: string
