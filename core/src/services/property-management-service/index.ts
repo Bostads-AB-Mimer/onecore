@@ -830,10 +830,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const leases = await leasingAdapter.getLeasesByContactCode(
         ctx.params.contactCode,
-        {
-          status: ['current', 'upcoming'],
-          includeContacts: false,
-        }
+        { status: ['current', 'upcoming'] }
       )
       const promises = leases
         .filter(

@@ -131,10 +131,7 @@ export const routes = (router: KoaRouter) => {
       rentalObjectId: async () => {
         const leases = await leasingAdapter.getLeasesByRentalObjectCode(
           ctx.params.identifier,
-          {
-            status: ['current', 'upcoming'],
-            includeContacts: true,
-          }
+          { status: ['current', 'upcoming'] }
         )
         if (leases && leases.length > 0) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -153,8 +150,7 @@ export const routes = (router: KoaRouter) => {
       },
       leaseId: async () => {
         const lease = await leasingAdapter.getLease(
-          encodeURIComponent(ctx.params.identifier),
-          { includeContacts: true }
+          encodeURIComponent(ctx.params.identifier)
         )
         if (lease) {
           await getRentalPropertyInfoWithLeases([lease])
@@ -166,10 +162,7 @@ export const routes = (router: KoaRouter) => {
         )
         const leases = await leasingAdapter.getLeasesByContactCode(
           contact.contactCode,
-          {
-            status: ['current', 'upcoming'],
-            includeContacts: true,
-          }
+          { status: ['current', 'upcoming'] }
         )
         if (leases) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -182,10 +175,7 @@ export const routes = (router: KoaRouter) => {
         if (contact) {
           const leases = await leasingAdapter.getLeasesByContactCode(
             contact.contactCode,
-            {
-              status: ['current', 'upcoming'],
-              includeContacts: false,
-            }
+            { status: ['current', 'upcoming'] }
           )
           if (leases) {
             await getRentalPropertyInfoWithLeases(leases)
@@ -195,10 +185,7 @@ export const routes = (router: KoaRouter) => {
       contactCode: async () => {
         const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.identifier,
-          {
-            status: ['current', 'upcoming'],
-            includeContacts: true,
-          }
+          { status: ['current', 'upcoming'] }
         )
         if (leases) {
           await getRentalPropertyInfoWithLeases(leases)

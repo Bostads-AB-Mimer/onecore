@@ -7,13 +7,6 @@ export const GetLeasesStatusSchema = z.enum([
   'ended',
 ])
 
-export const IncludeContactsQueryParamSchema = z.object({
-  includeContacts: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((value) => value === 'true'),
-})
-
 export const FilterLeasesQueryParamsSchema = z.object({
   status: z
     .string()
@@ -38,11 +31,7 @@ export const FilterLeasesQueryParamsSchema = z.object({
     .optional(),
 })
 
-export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema.merge(
-  IncludeContactsQueryParamSchema
-)
-
-export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema
+export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema
 
 export const PreliminaryTerminateLeaseRequestSchema = z.object({
   contactCode: z.string(),

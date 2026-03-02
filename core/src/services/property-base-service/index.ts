@@ -1707,10 +1707,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const leases = await leasingAdapter.getLeasesByRentalObjectCode(
-        getResidence.data.propertyObject.rentalId,
-        {
-          includeContacts: false,
-        }
+        getResidence.data.propertyObject.rentalId
       )
 
       const status = calculateResidenceStatus(leases)
@@ -2296,7 +2293,6 @@ export const routes = (router: KoaRouter) => {
           ctx.params.contactCode,
           {
             status: ['current', 'upcoming'],
-            includeContacts: true,
           }
         )
 
