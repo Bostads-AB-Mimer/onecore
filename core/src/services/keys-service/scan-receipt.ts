@@ -4,8 +4,6 @@ import {
   logger,
   loggedAxios as axios,
 } from '@onecore/utilities'
-import { requireServiceAccountAuth } from '../../middlewares/service-account-auth'
-import { requireAllowedIp } from '../../middlewares/ip-allowlist'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { ReceiptsApi, KeyLoansApi } from '../../adapters/keys-adapter'
 import config from '../../common/config'
@@ -37,20 +35,15 @@ async function sendErrorNotification(subject: string, message: string) {
 }
 
 export const routes = (router: KoaRouter) => {
-  const scanReceiptAuth = [
-    requireAllowedIp,
-    requireServiceAccountAuth('scanner-upload'),
-  ]
-
   // WebDAV: OPTIONS handler
-  router.options('/scan-receipt(.*)', ...scanReceiptAuth, (ctx) => {
+  router.options('/scan-receipt(.*)', (ctx) => {
     ctx.set('Allow', 'OPTIONS, PROPFIND, PUT')
     ctx.set('DAV', '1')
     ctx.status = 200
   })
 
   // WebDAV: PROPFIND stub — scanner/client checks if destination exists
-  router.all('/scan-receipt(.*)', ...scanReceiptAuth, async (ctx, next) => {
+  router.all('/scan-receipt(.*)', async (ctx, next) => {
     if (ctx.method !== 'PROPFIND') return next()
 
     const subpath = ctx.params[0] || ''
@@ -67,7 +60,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   // WebDAV: PUT — the actual scan upload
-  router.put('/scan-receipt/:filename', ...scanReceiptAuth, async (ctx) => {
+  router.put('/scan-receipt/:filename', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const filename = ctx.params.filename
 
