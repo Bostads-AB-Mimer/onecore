@@ -54,7 +54,7 @@ export function MiscellaneousInvoiceForm() {
         title: 'Underlag sparat',
         description: `Ströfaktura-underlag för ${variables.contactCode} har skapats.`,
       })
-      // handleReset()
+      handleReset()
     },
     onError: () => {
       toast({
