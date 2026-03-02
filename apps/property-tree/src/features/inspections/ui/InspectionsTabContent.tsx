@@ -11,7 +11,7 @@ import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
-import { INSPECTION_STATUS } from '../constants/statuses'
+import { isCompleted } from '../constants/statuses'
 import { useCreateInspection } from '../hooks/useCreateInspection'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
 import { InspectionsTable } from './InspectionsTable'
@@ -54,13 +54,11 @@ export function InspectionsTabContent({
   const inspections = inspectionsQuery.data ?? []
 
   const activeInspection = inspections.find(
-    (inspection: Inspection) =>
-      inspection.status !== INSPECTION_STATUS.COMPLETED
+    (inspection: Inspection) => !isCompleted(inspection.status)
   )
 
-  const completedInspections = inspections.filter(
-    (inspection: Inspection) =>
-      inspection.status === INSPECTION_STATUS.COMPLETED
+  const completedInspections = inspections.filter((inspection: Inspection) =>
+    isCompleted(inspection.status)
   )
 
   const renderInspectionsTable = (inspectionsData: Inspection[]) => {

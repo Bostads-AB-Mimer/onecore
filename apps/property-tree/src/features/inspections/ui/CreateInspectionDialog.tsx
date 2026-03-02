@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
@@ -102,6 +102,12 @@ export function CreateInspectionDialog({
     setMasterKeyAccess('')
     setNotes('')
   }
+
+  useEffect(() => {
+    if (isOpen) {
+      resetForm()
+    }
+  }, [isOpen])
 
   const handleClose = () => {
     resetForm()
