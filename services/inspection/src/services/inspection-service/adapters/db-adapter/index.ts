@@ -226,7 +226,7 @@ export async function getInspections(
   dbConnection: Knex = db,
   {
     page = 1,
-    limit = 100,
+    limit = 25,
     sortAscending,
     statusFilter,
     inspector,

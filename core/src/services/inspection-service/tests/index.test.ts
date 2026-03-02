@@ -108,6 +108,47 @@ describe('inspection-service index', () => {
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Invalid query parameters')
     })
+
+    it('should return empty results when both sources fail', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspections')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/inspections')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(0)
+      expect(res.body._meta.totalRecords).toBe(0)
+    })
+
+    it('should pass filter params to both adapters', async () => {
+      const getInternalSpy = jest
+        .spyOn(inspectionAdapter, 'getInternalInspections')
+        .mockResolvedValue({ ok: true, data: mockInternalPaginatedResponse })
+      const getXpandSpy = jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({ ok: true, data: mockXpandPaginatedResponse })
+
+      const res = await request(app.callback()).get(
+        '/inspections?statusFilter=ongoing&sortAscending=true&inspector=John&address=Main%20St'
+      )
+
+      expect(res.status).toBe(200)
+
+      const expectedParams = {
+        page: undefined,
+        limit: undefined,
+        statusFilter: 'ongoing',
+        sortAscending: true,
+        inspector: 'John',
+        address: 'Main St',
+      }
+      expect(getInternalSpy).toHaveBeenCalledWith(expectedParams)
+      expect(getXpandSpy).toHaveBeenCalledWith(expectedParams)
+    })
   })
 
   describe('GET /inspections/residence/:residenceId (combined)', () => {
@@ -168,6 +209,22 @@ describe('inspection-service index', () => {
       expect(res.status).toBe(200)
       expect(res.body.content.inspections).toHaveLength(1)
       expect(res.body.content.inspections[0].source).toBe('internal')
+    })
+
+    it('should return empty results when both sources fail', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionsByResidenceId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspectionsByResidenceId')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/inspections/residence/residence-123'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspections).toHaveLength(0)
     })
   })
 

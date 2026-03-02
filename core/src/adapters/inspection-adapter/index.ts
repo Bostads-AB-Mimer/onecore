@@ -51,7 +51,7 @@ export const getXpandInspections = async ({
     }
 
     if (!fetchResponse.data.content) {
-      throw 'missing-content'
+      throw new Error('missing-content')
     }
 
     return {
@@ -170,7 +170,7 @@ export const getInternalInspections = async ({
     }
 
     if (!fetchResponse.data.content) {
-      throw 'missing-content'
+      throw new Error('missing-content')
     }
 
     return {

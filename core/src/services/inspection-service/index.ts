@@ -12,6 +12,10 @@ import {
   sendProtocolToTenants,
 } from './helpers/email-sender'
 import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
+import {
+  logSourceError,
+  tagAndEnrichInspections,
+} from './helpers/merge-inspections'
 
 /**
  * @swagger
@@ -166,6 +170,15 @@ export const routes = (router: KoaRouter) => {
         }),
       ])
 
+      logSourceError(
+        internalResult,
+        'Error getting internal inspections, continuing with xpand only'
+      )
+      logSourceError(
+        xpandResult,
+        'Error getting xpand inspections, continuing with internal only'
+      )
+
       const internalInspections =
         internalResult.status === 'fulfilled' && internalResult.value.ok
           ? (internalResult.value.data.content ?? [])
@@ -184,59 +197,10 @@ export const routes = (router: KoaRouter) => {
           ? (xpandResult.value.data._meta?.totalRecords ?? 0)
           : 0
 
-      if (
-        internalResult.status === 'rejected' ||
-        (internalResult.status === 'fulfilled' && !internalResult.value.ok)
-      ) {
-        logger.error(
-          {
-            err:
-              internalResult.status === 'fulfilled'
-                ? internalResult.value
-                : internalResult.reason,
-          },
-          'Error getting internal inspections, continuing with xpand only'
-        )
-      }
-
-      if (
-        xpandResult.status === 'rejected' ||
-        (xpandResult.status === 'fulfilled' && !xpandResult.value.ok)
-      ) {
-        logger.error(
-          {
-            err:
-              xpandResult.status === 'fulfilled'
-                ? xpandResult.value
-                : xpandResult.reason,
-          },
-          'Error getting xpand inspections, continuing with internal only'
-        )
-      }
-
-      const allInspections = [
-        ...internalInspections.map((i) => ({
-          ...i,
-          source: 'internal' as const,
-        })),
-        ...xpandInspections.map((i) => ({ ...i, source: 'xpand' as const })),
-      ]
-
-      const leaseIds = allInspections
-        .filter((i) => i.leaseId !== null && i.leaseId !== '')
-        .map((i) => i.leaseId)
-
-      const leasesById =
-        leaseIds.length > 0
-          ? await leasingAdapter.getLeases(leaseIds, 'true')
-          : {}
-
-      const inspectionsWithLeaseData = allInspections.map((inspection) => ({
-        ...inspection,
-        lease: inspection.leaseId
-          ? (leasesById[inspection.leaseId] ?? null)
-          : null,
-      }))
+      const inspectionsWithLeaseData = await tagAndEnrichInspections(
+        internalInspections,
+        xpandInspections
+      )
 
       const totalRecords = internalTotal + xpandTotal
 
@@ -324,6 +288,17 @@ export const routes = (router: KoaRouter) => {
         ),
       ])
 
+      logSourceError(
+        internalResult,
+        'Error getting internal inspections by residenceId, continuing with xpand only',
+        { residenceId }
+      )
+      logSourceError(
+        xpandResult,
+        'Error getting xpand inspections by residenceId, continuing with internal only',
+        { residenceId }
+      )
+
       const internalInspections =
         internalResult.status === 'fulfilled' && internalResult.value.ok
           ? internalResult.value.data
@@ -333,61 +308,10 @@ export const routes = (router: KoaRouter) => {
           ? xpandResult.value.data
           : []
 
-      if (
-        internalResult.status === 'rejected' ||
-        (internalResult.status === 'fulfilled' && !internalResult.value.ok)
-      ) {
-        logger.error(
-          {
-            err:
-              internalResult.status === 'fulfilled'
-                ? internalResult.value
-                : internalResult.reason,
-            residenceId,
-          },
-          'Error getting internal inspections by residenceId, continuing with xpand only'
-        )
-      }
-
-      if (
-        xpandResult.status === 'rejected' ||
-        (xpandResult.status === 'fulfilled' && !xpandResult.value.ok)
-      ) {
-        logger.error(
-          {
-            err:
-              xpandResult.status === 'fulfilled'
-                ? xpandResult.value
-                : xpandResult.reason,
-            residenceId,
-          },
-          'Error getting xpand inspections by residenceId, continuing with internal only'
-        )
-      }
-
-      const allInspections = [
-        ...internalInspections.map((i) => ({
-          ...i,
-          source: 'internal' as const,
-        })),
-        ...xpandInspections.map((i) => ({ ...i, source: 'xpand' as const })),
-      ]
-
-      const leaseIds = allInspections
-        .filter((i) => i.leaseId !== null && i.leaseId !== '')
-        .map((i) => i.leaseId)
-
-      const leasesById =
-        leaseIds.length > 0
-          ? await leasingAdapter.getLeases(leaseIds, 'true')
-          : {}
-
-      const inspectionsWithLeaseData = allInspections.map((inspection) => ({
-        ...inspection,
-        lease: inspection.leaseId
-          ? (leasesById[inspection.leaseId] ?? null)
-          : null,
-      }))
+      const inspectionsWithLeaseData = await tagAndEnrichInspections(
+        internalInspections,
+        xpandInspections
+      )
 
       ctx.status = 200
       ctx.body = {
