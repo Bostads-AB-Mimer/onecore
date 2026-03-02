@@ -98,13 +98,13 @@ export const createOfferForInternalParkingSpace = async (
     if (!allApplicants.ok) {
       return endFailingProcess(
         log,
-        CreateOfferErrorCodes.NoApplicants,
+        CreateOfferErrorCodes.Unknown,
         500,
         `Could not get applicants for listing with id ${listingId} - ${allApplicants.err}`
       )
     }
 
-    const eligibleApplicant = await getFirstEligibleApplicant(
+    const eligibleApplicant = await findAndDisqualifyIneligibleApplicant(
       listing,
       allApplicants.data,
       log
@@ -262,7 +262,7 @@ async function getActiveApplicants(applicants: DetailedApplicant[]) {
 }
 
 // Check if applicant is eligible for renting in area with specific rental rules and for the specific property with its rental rules. If any of the validations fail, the applicant is not eligible for the offer.
-export async function isEligibleForOffer(
+export async function validateEligibilityAndDisqualifyIfNot(
   listing: Listing,
   applicant: DetailedApplicant,
   log: string[]
@@ -317,7 +317,7 @@ export async function isEligibleForOffer(
 }
 
 // Finds the first applicant who has a priority and is active and is also eligible for offer based on rental rules validation
-async function getFirstEligibleApplicant(
+async function findAndDisqualifyIneligibleApplicant(
   listing: Listing,
   applicants: DetailedApplicant[],
   log: string[]
@@ -326,7 +326,7 @@ async function getFirstEligibleApplicant(
     if (
       a.priority !== null &&
       a.status === ApplicantStatus.Active &&
-      (await isEligibleForOffer(listing, a, log))
+      (await validateEligibilityAndDisqualifyIfNot(listing, a, log))
     ) {
       return a
     }

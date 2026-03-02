@@ -46,13 +46,6 @@ export async function create(
       return { ok: false, err: 'no-offer-applicants' }
     }
 
-    const updateApplicantStatus = params.status == OfferStatus.Active
-
-    if (updateApplicantStatus) {
-      // Update the applicant status to "Offered" for the applicant that the offer is being made to
-      applicant.Status = ApplicantStatus.Offered
-    }
-
     const offer = await db.transaction(async (trx) => {
       const { selectedApplicants, ...offerParams } = params
       const [offer] = await trx.raw<Array<DbOffer>>(
@@ -110,7 +103,11 @@ export async function create(
         offerApplicantsValues.flat()
       )
 
+      const updateApplicantStatus = params.status == OfferStatus.Active
       if (updateApplicantStatus) {
+        // Update the applicant status to "Offered" for the applicant that the offer is being made to
+        applicant.Status = ApplicantStatus.Offered
+
         await trx('applicant')
           .where('Id', params.applicantId)
           .update({ Status: applicant.Status })

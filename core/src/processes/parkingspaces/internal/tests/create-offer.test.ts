@@ -7,7 +7,7 @@ import {
 
 import {
   createOfferForInternalParkingSpace,
-  isEligibleForOffer,
+  validateEligibilityAndDisqualifyIfNot,
 } from '../create-offer'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
@@ -671,7 +671,7 @@ describe('createOfferForInternalParkingSpace', () => {
   })
 })
 
-describe('isEligibleForOffer', () => {
+describe('validateEligibilityAndDisqualifyIfNot', () => {
   beforeEach(() => {
     jest.useFakeTimers({
       advanceTimers: false,
@@ -717,7 +717,7 @@ describe('isEligibleForOffer', () => {
         data: { reason: '', applicationType: 'Replace' },
       })
 
-    await isEligibleForOffer(listing, applicant, log)
+    await validateEligibilityAndDisqualifyIfNot(listing, applicant, log)
 
     expect(validateResidentialAreaRentalRulesSpy).toHaveBeenCalledWith(
       applicant.contactCode,
@@ -766,7 +766,11 @@ describe('isEligibleForOffer', () => {
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValue(null)
 
-    const result = await isEligibleForOffer(listing, applicant, log)
+    const result = await validateEligibilityAndDisqualifyIfNot(
+      listing,
+      applicant,
+      log
+    )
 
     expect(result).toBe(false)
     expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
@@ -816,7 +820,11 @@ describe('isEligibleForOffer', () => {
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValue(null)
 
-    const result = await isEligibleForOffer(listing, applicant, log)
+    const result = await validateEligibilityAndDisqualifyIfNot(
+      listing,
+      applicant,
+      log
+    )
 
     expect(result).toBe(false)
     expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
@@ -860,7 +868,11 @@ describe('isEligibleForOffer', () => {
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValue(null)
 
-    const result = await isEligibleForOffer(listing, applicant, log)
+    const result = await validateEligibilityAndDisqualifyIfNot(
+      listing,
+      applicant,
+      log
+    )
 
     expect(result).toBe(false)
     expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
@@ -904,7 +916,11 @@ describe('isEligibleForOffer', () => {
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockResolvedValue(null)
 
-    const result = await isEligibleForOffer(listing, applicant, log)
+    const result = await validateEligibilityAndDisqualifyIfNot(
+      listing,
+      applicant,
+      log
+    )
 
     expect(result).toBe(false)
     expect(updateApplicantStatusSpy).toHaveBeenCalledWith({
@@ -949,7 +965,7 @@ describe('isEligibleForOffer', () => {
 
     jest.spyOn(leasingAdapter, 'updateApplicantStatus').mockResolvedValue(null)
 
-    await isEligibleForOffer(listing, applicant, log)
+    await validateEligibilityAndDisqualifyIfNot(listing, applicant, log)
 
     expect(log).toContain(
       `Updated status for disqualified applicant ${applicant.id} due to failing rental rules validation`
@@ -990,7 +1006,7 @@ describe('isEligibleForOffer', () => {
       .spyOn(leasingAdapter, 'updateApplicantStatus')
       .mockRejectedValue(new Error('Update failed'))
 
-    await isEligibleForOffer(listing, applicant, log)
+    await validateEligibilityAndDisqualifyIfNot(listing, applicant, log)
 
     expect(log.some((entry) => entry.includes('Update failed'))).toBe(true)
   })
@@ -1030,7 +1046,11 @@ describe('isEligibleForOffer', () => {
       'updateApplicantStatus'
     )
 
-    const result = await isEligibleForOffer(listing, applicant, log)
+    const result = await validateEligibilityAndDisqualifyIfNot(
+      listing,
+      applicant,
+      log
+    )
 
     expect(result).toBe(true)
     expect(updateApplicantStatusSpy).not.toHaveBeenCalled()
