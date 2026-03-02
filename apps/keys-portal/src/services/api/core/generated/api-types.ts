@@ -8326,15 +8326,31 @@ export interface components {
       rentalObjectCode: string;
       contentBlocks: ({
           /** @enum {string} */
-          type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
+          type: "preamble";
           content: string;
-        })[];
-      /** @default [] */
-      links?: {
+        } | {
+          /** @enum {string} */
+          type: "headline";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "subtitle";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "text";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "bullet_list";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "link";
           name: string;
           /** Format: uri */
           url: string;
-        }[];
+        })[];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -8344,26 +8360,60 @@ export interface components {
       rentalObjectCode: string;
       contentBlocks: ({
           /** @enum {string} */
-          type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
+          type: "preamble";
           content: string;
-        })[];
-      links?: {
+        } | {
+          /** @enum {string} */
+          type: "headline";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "subtitle";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "text";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "bullet_list";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "link";
           name: string;
           /** Format: uri */
           url: string;
-        }[];
+        })[];
     };
     UpdateListingTextContentRequest: {
       contentBlocks?: ({
           /** @enum {string} */
-          type: "preamble" | "headline" | "subtitle" | "text" | "bullet_list";
+          type: "preamble";
           content: string;
-        })[];
-      links?: {
+        } | {
+          /** @enum {string} */
+          type: "headline";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "subtitle";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "text";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "bullet_list";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "link";
           name: string;
           /** Format: uri */
           url: string;
-        }[];
+        })[];
     };
     WorkOrder: {
       accessCaption: string;

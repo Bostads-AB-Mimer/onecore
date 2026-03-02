@@ -5,7 +5,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/v2/Collapsible'
-import { ChevronDown, ChevronUp, MapPin, Phone } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  MessageSquare,
+  Phone,
+} from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import type { Tenant } from '@/services/types'
 import { CopyableField } from '@/components/ui/CopyableField'
@@ -13,9 +19,10 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 
 interface TenantCardProps {
   tenant: Tenant
+  onSendSms?: (phoneNumber: string) => void
 }
 
-export function TenantCard({ tenant }: TenantCardProps) {
+export function TenantCard({ tenant, onSendSms }: TenantCardProps) {
   const isMobile = useIsMobile()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -112,6 +119,16 @@ export function TenantCard({ tenant }: TenantCardProps) {
                         tooltip: 'Ring',
                         ariaLabel: `Ring ${phone.phoneNumber}`,
                       },
+                      ...(onSendSms
+                        ? [
+                            {
+                              icon: <MessageSquare className="h-4 w-4" />,
+                              onClick: () => onSendSms(phone.phoneNumber),
+                              tooltip: 'Skicka SMS',
+                              ariaLabel: `Skicka SMS till ${phone.phoneNumber}`,
+                            },
+                          ]
+                        : []),
                     ]}
                   />
                 ))
