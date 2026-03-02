@@ -8,6 +8,7 @@ import {
 import {
   ChevronDown,
   ChevronUp,
+  Mail,
   MapPin,
   MessageSquare,
   Phone,
@@ -20,9 +21,14 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 interface TenantCardProps {
   tenant: Tenant
   onSendSms?: (phoneNumber: string) => void
+  onSendEmail?: (email: string) => void
 }
 
-export function TenantCard({ tenant, onSendSms }: TenantCardProps) {
+export function TenantCard({
+  tenant,
+  onSendSms,
+  onSendEmail,
+}: TenantCardProps) {
   const isMobile = useIsMobile()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -101,7 +107,22 @@ export function TenantCard({ tenant, onSendSms }: TenantCardProps) {
         </div>
 
         <div className="space-y-4">
-          <CopyableField label="E-post" value={tenant.emailAddress} />
+          <CopyableField
+            label="E-post"
+            value={tenant.emailAddress}
+            actions={
+              onSendEmail && tenant.emailAddress
+                ? [
+                    {
+                      icon: <Mail className="h-4 w-4" />,
+                      onClick: () => onSendEmail(tenant.emailAddress),
+                      tooltip: 'Skicka mejl',
+                      ariaLabel: `Skicka mejl till ${tenant.emailAddress}`,
+                    },
+                  ]
+                : undefined
+            }
+          />
 
           <div>
             <p className="text-sm text-muted-foreground">Telefon</p>
