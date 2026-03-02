@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTenant } from '@/components/hooks/useTenant'
 import { useLeases } from '@/components/hooks/useLeases'
 import { useRentalProperties } from '@/components/hooks/useRentalProperties'
+import { useToast } from '@/components/hooks/useToast'
 import { TenantCard } from '@/components/tenants/TenantCard'
 import {
   Tooltip,
@@ -11,11 +12,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/Tooltip'
 import { Card, CardContent } from '@/components/ui/v2/Card'
+import { SmsModal } from '@/components/ui/SmsModal'
 import { AlertTriangle } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
 import { TenantDetailTabsContent } from '@/components/tenants/tabs/TenantDetailTabsContent'
 import { TenantMobileAccordion } from '@/components/tenants/TenantMobileAccordion'
+import { tenantService } from '@/services/api/core/tenantService'
 import type { Tenant } from '@/services/types'
 import type { Lease } from '@/services/api/core/lease-service'
 import type { RentalPropertyInfo } from '@onecore/types'
@@ -114,6 +117,8 @@ function TenantTabsSection({
 
 const TenantView = () => {
   const { contactCode } = useParams<{ contactCode: string }>()
+  const [smsPhoneNumber, setSmsPhoneNumber] = useState<string | null>(null)
+  const { toast } = useToast()
 
   // Fetch tenant data
   const {
@@ -142,6 +147,27 @@ const TenantView = () => {
   } = useRentalProperties(rentalPropertyIds)
 
   const isMobile = useIsMobile()
+
+  const handleSendSms = useCallback(
+    async (message: string) => {
+      if (!smsPhoneNumber) return
+      try {
+        await tenantService.sendBulkSms([smsPhoneNumber], message)
+        toast({
+          title: 'SMS skickat',
+          description: `Meddelandet skickades till ${tenant!.firstName} ${tenant!.lastName}`,
+        })
+      } catch {
+        toast({
+          title: 'Kunde inte skicka SMS',
+          description: 'Försök igen senare',
+          variant: 'destructive',
+        })
+        throw new Error('SMS sending failed')
+      }
+    },
+    [smsPhoneNumber, tenant, toast]
+  )
 
   // Let the PageLayout handle sidebar state based on route
   useEffect(() => {
@@ -184,7 +210,10 @@ const TenantView = () => {
       <div className="w-full">
         <TenantHeader tenant={tenant} />
         <div className="grid grid-cols-1 gap-6 mb-6">
-          <TenantCard tenant={tenant} />
+          <TenantCard
+            tenant={tenant}
+            onSendSms={(phoneNumber) => setSmsPhoneNumber(phoneNumber)}
+          />
         </div>
         <TenantTabsSection
           tenant={tenant}
@@ -195,6 +224,18 @@ const TenantView = () => {
           rentalPropertiesLoading={rentalPropertiesLoading}
           isMobile={isMobile}
         />
+
+        {smsPhoneNumber && (
+          <SmsModal
+            open={!!smsPhoneNumber}
+            onOpenChange={(open) => {
+              if (!open) setSmsPhoneNumber(null)
+            }}
+            recipientName={`${tenant.firstName} ${tenant.lastName}`}
+            phoneNumber={smsPhoneNumber}
+            onSend={handleSendSms}
+          />
+        )}
       </div>
     )
   }
