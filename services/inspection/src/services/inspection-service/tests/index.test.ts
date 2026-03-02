@@ -221,7 +221,7 @@ describe('inspection-service', () => {
     })
   })
 
-  describe('PATCH /inspections/:inspectionId', () => {
+  describe('PATCH /inspections/internal/:inspectionId', () => {
     it('updates inspection status successfully', async () => {
       const inspectionId = '1'
       const mockInspection = DetailedXpandInspectionFactory.build({
@@ -233,7 +233,7 @@ describe('inspection-service', () => {
         .mockResolvedValueOnce({ ok: true, data: mockInspection })
 
       const res = await request(app.callback())
-        .patch(`/inspections/${inspectionId}`)
+        .patch(`/inspections/internal/${inspectionId}`)
         .send({ status: 'Påbörjad' })
 
       expect(res.status).toBe(200)
@@ -244,7 +244,7 @@ describe('inspection-service', () => {
 
     it('returns 400 for invalid request body', async () => {
       const res = await request(app.callback())
-        .patch('/inspections/1')
+        .patch('/inspections/internal/1')
         .send({ status: 'InvalidStatus' })
 
       expect(res.status).toBe(400)
@@ -252,7 +252,9 @@ describe('inspection-service', () => {
     })
 
     it('returns 400 for missing status', async () => {
-      const res = await request(app.callback()).patch('/inspections/1').send({})
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1')
+        .send({})
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Invalid request body')
@@ -265,7 +267,7 @@ describe('inspection-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'invalid-status-transition' })
 
       const res = await request(app.callback())
-        .patch(`/inspections/${inspectionId}`)
+        .patch(`/inspections/internal/${inspectionId}`)
         .send({ status: 'Genomförd' })
 
       expect(res.status).toBe(400)
@@ -279,7 +281,7 @@ describe('inspection-service', () => {
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
-        .patch(`/inspections/${inspectionId}`)
+        .patch(`/inspections/internal/${inspectionId}`)
         .send({ status: 'Påbörjad' })
 
       expect(res.status).toBe(404)
@@ -294,7 +296,7 @@ describe('inspection-service', () => {
       })
 
       const res = await request(app.callback())
-        .patch('/inspections/1')
+        .patch('/inspections/internal/1')
         .send({ status: 'Påbörjad' })
 
       expect(res.status).toBe(500)

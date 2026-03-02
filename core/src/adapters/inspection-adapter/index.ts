@@ -172,10 +172,13 @@ export const updateInspectionStatus = async (
   body: components['schemas']['UpdateInspectionStatus']
 ): Promise<AdapterResult<DetailedXpandInspection, string>> => {
   try {
-    const fetchResponse = await client().PATCH('/inspections/{inspectionId}', {
-      params: { path: { inspectionId } },
-      body,
-    })
+    const fetchResponse = await client().PATCH(
+      '/inspections/internal/{inspectionId}',
+      {
+        params: { path: { inspectionId } },
+        body,
+      }
+    )
 
     if (fetchResponse.error) {
       const statusCode = fetchResponse.response.status

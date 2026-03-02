@@ -5404,7 +5404,7 @@ export interface paths {
       };
     };
   };
-  "/inspections/{inspectionId}": {
+  "/inspections/internal/{inspectionId}": {
     /**
      * Update inspection status
      * @description Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
