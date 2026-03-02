@@ -51,6 +51,37 @@ export type AnalyzeComponentImageRequest = z.infer<
 >
 export type AIComponentAnalysis = z.infer<typeof AIComponentAnalysisSchema>
 
+// ==================== AI SCANNER ANALYSIS ====================
+
+// Request schema for scanner app AI analysis
+export const AnalyzeScannerImageRequestSchema = z.object({
+  imageBase64: z.string().min(1, 'Image base64 is required'),
+  feedback: z.string().optional(),
+  isTypePlate: z.boolean().optional().default(false),
+})
+
+export type AnalyzeScannerImageRequest = z.infer<
+  typeof AnalyzeScannerImageRequestSchema
+>
+
+// Result schema for scanner app AI analysis
+export const AIScannerAnalysisResultSchema = z.object({
+  type: z.string(),
+  categoryId: z.string().optional(),
+  categoryPath: z.string().optional(),
+  brand: z.string(),
+  model: z.string(),
+  typeNumber: z.string().nullable().optional(),
+  serialNumber: z.string().nullable().optional(),
+  estimatedAge: z.number(),
+  condition: z.enum(['good', 'fair', 'poor']),
+  confidence: z.number().min(0).max(1),
+})
+
+export type AIScannerAnalysisResult = z.infer<
+  typeof AIScannerAnalysisResultSchema
+>
+
 // TODO: Future enhancement - Add ComponentAnalysisModeEnum for GENERAL/TYPE_PLATE modes
 // TODO: Future enhancement - Add suggestions object with categoryNames, typeNames, subtypeNames
 // TODO: Future enhancement - Add warnings array for low confidence alerts
