@@ -99,7 +99,6 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     //step 3a. Check if applicant is tenant
     const leases = await getLeasesByContactCode(contactCode, {
       status: ['current', 'upcoming'],
-      includeContacts: false,
     })
 
     if (leases.length < 1) {

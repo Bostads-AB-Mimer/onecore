@@ -2199,7 +2199,6 @@ export const routes = (router: KoaRouter) => {
           ctx.params.contactCode,
           {
             status: ['current', 'upcoming'],
-            includeContacts: true,
           }
         )
 
