@@ -34,7 +34,10 @@ export const requireServiceAccountAuth = (requiredRole?: string) => {
 
       if (!authHeader || !authHeader.startsWith('Basic ')) {
         ctx.status = 401
-        ctx.set('WWW-Authenticate', 'Basic realm="onecore"')
+        ctx.set(
+          'WWW-Authenticate',
+          `Basic realm="${config.auth.keycloak.realm}"`
+        )
         ctx.body = { message: 'Authentication required' }
         return
       }

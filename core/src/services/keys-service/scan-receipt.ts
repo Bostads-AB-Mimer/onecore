@@ -72,8 +72,17 @@ export const routes = (router: KoaRouter) => {
     const filename = ctx.params.filename
 
     // Read raw binary body from request stream (koa-body is skipped for this path)
+    const MAX_UPLOAD_BYTES = 20 * 1024 * 1024 // 20 MB
     const chunks: Buffer[] = []
+    let totalBytes = 0
     for await (const chunk of ctx.req) {
+      totalBytes += chunk.length
+      if (totalBytes > MAX_UPLOAD_BYTES) {
+        ctx.req.destroy()
+        ctx.status = 413
+        ctx.body = { error: 'Upload exceeds 20 MB limit', ...metadata }
+        return
+      }
       chunks.push(chunk as Buffer)
     }
     const imageBuffer = Buffer.concat(chunks)
