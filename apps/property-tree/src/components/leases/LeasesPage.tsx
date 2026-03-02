@@ -33,8 +33,8 @@ import {
 import { tenantService } from '@/services/api/core/tenantService'
 import { LeaseStatusBadge, ObjectTypeBadge } from '@/components/ui/StatusBadges'
 import { BulkActionBar } from '@/components/ui/BulkActionBar'
-import { BulkSmsModal } from '@/components/ui/BulkSmsModal'
-import { BulkEmailModal } from '@/components/ui/BulkEmailModal'
+import { SmsModal } from '@/components/ui/SmsModal'
+import { EmailModal } from '@/components/ui/EmailModal'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
@@ -756,7 +756,7 @@ const LeasesPage = () => {
         isLoading={isLoadingContacts}
       />
 
-      <BulkSmsModal
+      <SmsModal
         open={showSmsModal}
         onOpenChange={setShowSmsModal}
         recipients={smsRecipients}
@@ -764,7 +764,7 @@ const LeasesPage = () => {
         onSend={handleSendSms}
       />
 
-      <BulkEmailModal
+      <EmailModal
         open={showEmailModal}
         onOpenChange={setShowEmailModal}
         recipients={emailRecipients}

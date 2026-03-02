@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useToast } from '@/components/hooks/useToast'
-import type { SmsRecipient } from '@/components/ui/BulkSmsModal'
-import type { EmailRecipient } from '@/components/ui/BulkEmailModal'
+import type { SmsRecipient } from '@/components/ui/SmsModal'
+import type { EmailRecipient } from '@/components/ui/EmailModal'
 
 export interface Contact {
   contactCode: string
