@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/Tooltip'
 import { Card, CardContent } from '@/components/ui/v2/Card'
 import { SmsModal } from '@/components/ui/SmsModal'
+import { EmailModal } from '@/components/ui/EmailModal'
 import { AlertTriangle } from 'lucide-react'
 import { useIsMobile } from '@/components/hooks/useMobile'
 import { TenantDetailTabs } from '@/components/tenants/tabs/TenantDetailTabs'
@@ -118,6 +119,7 @@ function TenantTabsSection({
 const TenantView = () => {
   const { contactCode } = useParams<{ contactCode: string }>()
   const [smsPhoneNumber, setSmsPhoneNumber] = useState<string | null>(null)
+  const [emailRecipient, setEmailRecipient] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Fetch tenant data
@@ -169,6 +171,27 @@ const TenantView = () => {
     [smsPhoneNumber, tenant, toast]
   )
 
+  const handleSendEmail = useCallback(
+    async (subject: string, body: string) => {
+      if (!emailRecipient) return
+      try {
+        await tenantService.sendBulkEmail([emailRecipient], subject, body)
+        toast({
+          title: 'Mejl skickat',
+          description: `Mejlet skickades till ${tenant!.firstName} ${tenant!.lastName}`,
+        })
+      } catch {
+        toast({
+          title: 'Kunde inte skicka mejl',
+          description: 'Försök igen senare',
+          variant: 'destructive',
+        })
+        throw new Error('Email sending failed')
+      }
+    },
+    [emailRecipient, tenant, toast]
+  )
+
   // Let the PageLayout handle sidebar state based on route
   useEffect(() => {
     // Default sidebar state is handled in PageLayout based on route
@@ -213,6 +236,7 @@ const TenantView = () => {
           <TenantCard
             tenant={tenant}
             onSendSms={(phoneNumber) => setSmsPhoneNumber(phoneNumber)}
+            onSendEmail={(email) => setEmailRecipient(email)}
           />
         </div>
         <TenantTabsSection
@@ -234,6 +258,18 @@ const TenantView = () => {
             recipientName={`${tenant.firstName} ${tenant.lastName}`}
             phoneNumber={smsPhoneNumber}
             onSend={handleSendSms}
+          />
+        )}
+
+        {emailRecipient && (
+          <EmailModal
+            open={!!emailRecipient}
+            onOpenChange={(open) => {
+              if (!open) setEmailRecipient(null)
+            }}
+            recipientName={`${tenant.firstName} ${tenant.lastName}`}
+            emailAddress={emailRecipient}
+            onSend={handleSendEmail}
           />
         )}
       </div>
