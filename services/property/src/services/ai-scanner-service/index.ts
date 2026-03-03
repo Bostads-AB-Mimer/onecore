@@ -133,6 +133,7 @@ export async function analyzeScannerImage(
   const prompt = buildPrompt(feedback, isTypePlate)
 
   try {
+    // eslint-disable-next-line
     const response = await fetch(BERGET_API_URL, {
       method: 'POST',
       headers: {
