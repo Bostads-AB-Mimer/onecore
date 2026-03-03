@@ -26,6 +26,10 @@ import {
 } from '../common/types'
 import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
 import { RentInvoiceRow } from '@onecore/types'
+import {
+  extractLeaseIdsFromInvoiceRows,
+  getRentalIdFromLeaseId,
+} from '../common/helpers'
 
 export const importInvoicesFromCsv = (
   csv: string,
@@ -425,26 +429,6 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
     })
 
     return acc
-  }, [])
-}
-
-const getRentalIdFromLeaseId = (leaseId: string) => {
-  return leaseId.split('/')[0]
-}
-
-const extractLeaseIdsFromInvoiceRows = (rows: RentInvoiceRow[]) => {
-  const leaseIdRegex = /^[A-Z\d]{3}-[A-Z\d]{3}-[A-Z\d]{2}-[A-Z\d]{4}\/\d{2}/i
-
-  return rows.reduce<string[]>((leaseIds, row) => {
-    if (row.rowType === 3) {
-      const match = row.text.match(leaseIdRegex)
-
-      if (match) {
-        leaseIds.push(match[0])
-      }
-    }
-
-    return leaseIds
   }, [])
 }
 
