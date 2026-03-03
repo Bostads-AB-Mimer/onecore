@@ -5488,47 +5488,6 @@ export interface paths {
       };
     };
   };
-  "/inspections": {
-    /**
-     * Create a new inspection
-     * @description Creates a new inspection in the local inspection database
-     */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["CreateInspectionRequest"];
-        };
-      };
-      responses: {
-        /** @description Inspection created successfully */
-        201: {
-          content: {
-            "application/json": {
-              content?: {
-                inspection?: components["schemas"]["DetailedInspection"];
-              };
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
   "/inspections/internal/{inspectionId}": {
     /**
      * Update inspection status

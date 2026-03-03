@@ -231,7 +231,7 @@ export const createInspection = async (
   body: components['schemas']['CreateInspection']
 ): Promise<AdapterResult<DetailedXpandInspection, string>> => {
   try {
-    const fetchResponse = await client().POST('/inspections/internal', {
+    const fetchResponse = await client().POST('/inspections', {
       body,
     })
 
