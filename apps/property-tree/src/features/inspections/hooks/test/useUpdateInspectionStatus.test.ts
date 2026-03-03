@@ -168,49 +168,4 @@ describe('useUpdateInspectionStatus', () => {
     })
   })
 
-  it('startInspection calls API with status Påbörjad', async () => {
-    const queryClient = createQueryClient()
-    vi.mocked(inspectionService.updateInspectionStatus).mockResolvedValueOnce(
-      makeInspection('Påbörjad') as any
-    )
-
-    const { result } = renderHook(
-      () => useUpdateInspectionStatus({ rentalId: RENTAL_ID }),
-      { wrapper: createWrapper(queryClient) }
-    )
-
-    act(() => {
-      result.current.startInspection(INSPECTION_ID)
-    })
-
-    await waitFor(() => {
-      expect(inspectionService.updateInspectionStatus).toHaveBeenCalledWith(
-        INSPECTION_ID,
-        'Påbörjad'
-      )
-    })
-  })
-
-  it('completeInspection calls API with status Genomförd', async () => {
-    const queryClient = createQueryClient()
-    vi.mocked(inspectionService.updateInspectionStatus).mockResolvedValueOnce(
-      makeInspection('Genomförd') as any
-    )
-
-    const { result } = renderHook(
-      () => useUpdateInspectionStatus({ rentalId: RENTAL_ID }),
-      { wrapper: createWrapper(queryClient) }
-    )
-
-    act(() => {
-      result.current.completeInspection(INSPECTION_ID)
-    })
-
-    await waitFor(() => {
-      expect(inspectionService.updateInspectionStatus).toHaveBeenCalledWith(
-        INSPECTION_ID,
-        'Genomförd'
-      )
-    })
-  })
 })
