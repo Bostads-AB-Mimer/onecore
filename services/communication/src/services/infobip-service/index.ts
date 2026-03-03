@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import validator from 'validator'
+import fs from 'node:fs'
 import { validator as phoneValidator, normalize } from 'telefonnummer'
 import {
   sendEmail,
@@ -33,7 +34,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
     try {
-      const result = await sendEmail(message)
+      const result = await sendEmail(message.to, message.subject, message.text)
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (error: any) {
@@ -216,6 +217,42 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.post('(.*)/send-email', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { to, subject, body } = ctx.request.body
+    const { files } = ctx.request
+
+    const attachments: { data: Buffer; name: string }[] = []
+
+    if (files?.attachments) {
+      toArray(files.attachments).forEach((f) => {
+        attachments.push({
+          data: fs.readFileSync(f.filepath),
+          name: f.originalFilename ?? '',
+        })
+      })
+    }
+
+    try {
+      const result = await sendEmail(to, subject, body, attachments)
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        error: error.message,
+        ...metadata,
+      }
+    }
+  })
+}
+
+const toArray = (input: unknown) => {
+  if (Array.isArray(input)) {
+    return input
+  }
+  return [input]
 }
 
 export const isParkingSpaceOfferEmail = (

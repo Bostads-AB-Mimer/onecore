@@ -27,28 +27,32 @@ const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
 const WorkOrderExternalContractorEmailTemplateId = 200000000173744
 
-export const sendEmail = async (message: Email) => {
-  logger.info({ to: message.to, subject: message.subject }, 'Sending email')
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  body: string,
+  attachments?: { data: Buffer; name: string }[]
+) => {
+  logger.info({ to: to, subject: subject }, 'Sending email')
+  const recipients = to.split(';')
 
-  try {
-    const response = await infobip.channels.email.send({
-      to: message.to,
+  for (const to of recipients) {
+    const infobipOptions = {
+      to,
       from: 'Bostads Mimer AB <noreply@mimer.nu>',
-      subject: message.subject,
-      text: message.text,
-    })
+      subject: subject,
+      text: body,
+      attachment: attachments,
+    }
+
+    const response = await infobip.channels.email.send(infobipOptions)
     if (response.status === 200) {
-      logger.info(
-        { to: message.to, subject: message.subject },
-        'Sending email complete'
-      )
+      logger.info({ to, subject: subject }, 'Sending email complete')
       return response.data
     } else {
+      logger.error(response, 'Error sending email')
       throw new Error(response.body)
     }
-  } catch (error) {
-    logger.error(error)
-    throw error
   }
 }
 

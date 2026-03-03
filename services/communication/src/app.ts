@@ -1,5 +1,5 @@
 import Koa from 'koa'
-import bodyParser from 'koa-bodyparser'
+import koaBody from 'koa-body'
 import cors from '@koa/cors'
 
 import api from './api'
@@ -19,7 +19,11 @@ app.use(loggerMiddlewares.post)
 
 app.use(errorHandler())
 
-app.use(bodyParser())
+app.use(
+  koaBody({
+    multipart: true,
+  })
+)
 app.use(api.routes())
 
 export default app
