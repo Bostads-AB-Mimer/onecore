@@ -1,5 +1,6 @@
 import { Context, Next } from 'koa'
 import axios from 'axios'
+import jwt from 'jsonwebtoken'
 import auth from '../services/auth-service/keycloak'
 import config from '../common/config'
 import { logger } from '@onecore/utilities'
@@ -73,13 +74,40 @@ async function exchangeBasicForToken(
   }
 }
 
-// Middleware to protect routes with proactive token refresh and Basic Auth support
+/**
+ * Try legacy Bearer JWT authentication (tokens from /auth/generatetoken).
+ * Returns true if the request was authenticated, false otherwise.
+ */
+async function tryLegacyBearerAuth(ctx: Context, next: Next): Promise<boolean> {
+  const authHeader = ctx.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) return false
+
+  const token = authHeader.slice('Bearer '.length)
+  const decoded = jwt.verify(token, config.auth.secret) as {
+    sub: string
+    username: string
+  }
+  ctx.state.user = {
+    id: decoded.sub,
+    username: decoded.username,
+    source: 'legacy-jwt',
+    // REMOVE WHEN INTERNAL PORTAL USES KEYCLOAK
+    realm_access: { roles: ['api-access'] },
+    //TODO: Fix auth in internal portal to use keycloak! we cannot support roles in legacy tokens without a major refactor, so we just give them api-access for now
+  }
+  await next()
+  return true
+}
+
+// Middleware to protect routes with proactive token refresh, Basic Auth, and legacy Bearer JWT support
 export const requireAuth = async (ctx: Context, next: Next) => {
   try {
     let accessToken =
       ctx.cookies.get('auth_token') ?? (await exchangeBasicForToken(ctx))
 
     if (!accessToken) {
+      if (await tryLegacyBearerAuth(ctx, next)) return
+
       if (ctx.status !== 401) {
         ctx.status = 401
         ctx.body = { message: 'Authentication required' }
