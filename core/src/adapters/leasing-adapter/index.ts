@@ -903,7 +903,7 @@ const getContactsByFilters = async (
 ): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/leases/contacts-by-filters`,
+      `${tenantsLeasesServiceUrl}/contacts/from-lease-search`,
       {
         params: queryParams,
         paramsSerializer: {

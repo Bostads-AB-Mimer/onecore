@@ -157,7 +157,7 @@ export interface paths {
   };
   "security": {
   };
-  "/contacts/send-bulk-sms": {
+  "/sendBulkSms": {
     /**
      * Send SMS to multiple contacts
      * @description Send SMS messages to multiple phone numbers
@@ -193,7 +193,7 @@ export interface paths {
       };
     };
   };
-  "/contacts/send-bulk-email": {
+  "/sendBulkEmail": {
     /**
      * Send email to multiple contacts
      * @description Send email messages to multiple email addresses
@@ -405,7 +405,7 @@ export interface paths {
       };
     };
   };
-  "/leases/contacts-by-filters": {
+  "/contacts/from-lease-search": {
     /**
      * Get contacts matching lease search filters
      * @description Retrieves contact information for tenants matching the given lease search filters.

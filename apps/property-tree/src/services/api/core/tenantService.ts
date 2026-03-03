@@ -53,7 +53,7 @@ async function sendBulkSms(
   phoneNumbers: string[],
   text: string
 ): Promise<BulkSmsResult> {
-  const { data, error } = await POST('/contacts/send-bulk-sms', {
+  const { data, error } = await POST('/sendBulkSms', {
     body: { phoneNumbers, text },
   })
 
@@ -68,7 +68,7 @@ async function sendBulkEmail(
   subject: string,
   text: string
 ): Promise<BulkEmailResult> {
-  const { data, error } = await POST('/contacts/send-bulk-email', {
+  const { data, error } = await POST('/sendBulkEmail', {
     body: { emails, subject, text },
   })
 

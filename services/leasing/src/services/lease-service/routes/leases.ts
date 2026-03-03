@@ -466,7 +466,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/contacts-by-filters:
+   * /contacts/from-lease-search:
    *   get:
    *     summary: Get unique contacts matching lease filters
    *     description: Returns deduplicated contacts for all leases matching the given filters. Uses same filters as /leases/search but without pagination.
@@ -549,7 +549,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/leases/contacts-by-filters', async (ctx) => {
+  router.get('(.*)/contacts/from-lease-search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'objectType',
