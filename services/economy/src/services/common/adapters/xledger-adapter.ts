@@ -213,6 +213,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     invoiceFileUrl: invoiceData.node.invoiceFile?.url,
     credit: getInvoiceCredit(invoiceData.node),
     accountCode: invoiceData.node.account?.code,
+    costCentre: invoiceData.node.glDimension?.glObject1?.code,
   }
 
   // TODO? handle overpaid invoices (negative remainingAmount)?
@@ -457,6 +458,11 @@ const invoiceNodeFragment = `
   invoiceFile {
     url
   }
+  glDimension {
+    glObject1 {
+      code
+    }
+  }
 `
 
 export async function getInvoicePaymentEvents(
@@ -659,17 +665,22 @@ export const getAllInvoicesWithMatchIds = async ({
   to,
   after,
   remainingAmountGreaterThan,
+  pageSize,
 }: {
   from?: Date
   to?: Date
   after?: string
   remainingAmountGreaterThan?: number
-}): Promise<Invoice[]> => {
+  pageSize?: number
+}): Promise<{
+  content: Invoice[]
+  pageInfo: { hasNextPage: boolean; endCursor?: string }
+}> => {
   const query = {
     query: gql`
-      query($after: String, $filter: ARTransaction_Filter) {
+      query($after: String, $filter: ARTransaction_Filter, $first: Int) {
         arTransactions(
-          first: 1000
+          first: $first
           after: $after
           filter: $filter
         ) {
@@ -688,6 +699,7 @@ export const getAllInvoicesWithMatchIds = async ({
     `,
     variables: {
       after: after ?? null,
+      first: pageSize ?? 100,
       filter: {
         invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
         invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
@@ -702,7 +714,7 @@ export const getAllInvoicesWithMatchIds = async ({
   const result = await makeXledgerRequest(query)
 
   if (!result.data?.arTransactions) {
-    return []
+    return { content: [], pageInfo: { hasNextPage: false } }
   }
 
   const invoicesWithMatchIds: Invoice[] = result.data.arTransactions.edges.map(
@@ -714,18 +726,14 @@ export const getAllInvoicesWithMatchIds = async ({
     }
   )
 
-  if (result.data.arTransactions.pageInfo.hasNextPage) {
-    const lastEdge = result.data.arTransactions.edges.at(-1)
-    const nextInvoices = await getAllInvoicesWithMatchIds({
-      from,
-      to,
-      after: lastEdge.cursor,
-      remainingAmountGreaterThan,
-    })
-    invoicesWithMatchIds.push(...nextInvoices)
+  const lastEdge = result.data.arTransactions.edges.at(-1)
+  const endCursor = lastEdge?.cursor
+  const pageInfo = {
+    hasNextPage: result.data.arTransactions.pageInfo.hasNextPage,
+    endCursor,
   }
 
-  return invoicesWithMatchIds
+  return { content: invoicesWithMatchIds, pageInfo }
 }
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {

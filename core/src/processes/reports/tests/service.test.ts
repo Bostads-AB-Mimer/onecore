@@ -44,6 +44,8 @@ const invoiceRowFactory = Factory.define<RentInvoiceRow>(({ sequence }) => ({
   type: 'Rent',
   rentType: 'Hyra bostad',
   printGroup: 'A',
+  fromDate: new Date(),
+  toDate: new Date(),
 }))
 
 describe('Report Service', () => {

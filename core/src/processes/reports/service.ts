@@ -1,16 +1,22 @@
 import assert from 'node:assert'
-import { InvoicePaymentSummary } from './types'
+import { BosocialaObject, InvoicePaymentSummary } from './types'
 
 import { logger } from '@onecore/utilities'
 import * as economyAdapter from '../../adapters/economy-adapter'
-import { RentInvoiceRow } from '@onecore/types'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { Lease, RentInvoiceRow } from '@onecore/types'
+import dayjs from 'dayjs'
 
 export const getUnpaidInvoicePaymentSummaries = async (
   from?: Date,
   to?: Date
 ) => {
   logger.info('Getting unpaid invoices')
-  const unpaidInvoices = await economyAdapter.getInvoices(from, to, 0)
+  const unpaidInvoices = await economyAdapter.getInvoices({
+    from,
+    to,
+    remainingAmountGreaterThan: 0,
+  })
 
   if (!unpaidInvoices.ok) {
     throw new Error('Failed to fetch unpaid invoices')
@@ -106,4 +112,71 @@ export const getUnpaidInvoicePaymentSummaries = async (
 const getVerksamhetskostnadTotal = (rows: RentInvoiceRow[], code: string) => {
   const vhkRow = rows.find((r) => r.code === code)
   return vhkRow ? vhkRow.amount + vhkRow.reduction + vhkRow.vat : 0
+}
+
+export const getBosociala = async (): Promise<BosocialaObject[]> => {
+  const now = new Date()
+
+  // Get ALL unpaid invoices
+  const invoicesResult = await economyAdapter.getInvoices({
+    remainingAmountGreaterThan: 0,
+  })
+  if (!invoicesResult.ok) {
+    throw new Error()
+  }
+
+  const expiredUnpaidInvoices = invoicesResult.data
+    .filter((i) => i.expirationDate && new Date(i.expirationDate) < now)
+    .slice(0, 20)
+  const allLeaseDetailsResult = await economyAdapter.getLeaseDetailsForInvoices(
+    expiredUnpaidInvoices
+      .filter((i) => i.type === 'Regular')
+      .map((i) => i.invoiceId)
+  )
+  if (!allLeaseDetailsResult.ok) {
+    throw new Error()
+  }
+
+  const allLeaseDetails = allLeaseDetailsResult.data
+  const [allLeases, allContacts] = await Promise.all([
+    leasingAdapter.getLeases(
+      allLeaseDetails
+        .map((ld) => ld.details[0]?.leaseId)
+        .filter((leaseId) => leaseId !== undefined)
+    ),
+    leasingAdapter.getContacts(expiredUnpaidInvoices.map((i) => i.reference)),
+  ])
+
+  const all: BosocialaObject[] = []
+  for (const i of expiredUnpaidInvoices) {
+    const daysSinceExpirationDate = dayjs(now).diff(
+      dayjs(i.expirationDate),
+      'days'
+    )
+    const contact = allContacts.find((c) => c.contactCode === i.reference)
+    let lease: Lease | undefined = undefined
+    let costCentre = i.costCentre
+
+    if (i.type === 'Regular') {
+      const leaseDetailsForInvoice = allLeaseDetails.find(
+        (ld) => ld.invoiceId === i.invoiceId
+      )
+      const mainLeaseDetails = leaseDetailsForInvoice?.details[0] // Assume that the first row is for the main lease
+
+      if (mainLeaseDetails) {
+        lease = allLeases.find((l) => l.leaseId === mainLeaseDetails.leaseId)
+        costCentre = mainLeaseDetails.costCentre
+      }
+    }
+
+    all.push({
+      ...i,
+      lease,
+      contact,
+      daysSinceExpirationDate,
+      costCentre,
+    })
+  }
+
+  return all
 }

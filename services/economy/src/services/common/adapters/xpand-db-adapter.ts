@@ -46,6 +46,8 @@ type XpandInvoiceRow = {
   printGroup: string | null
   invoiceRowType: string
   rentType: string | null
+  fromDate: Date
+  toDate: Date
 }
 
 const buildRentalPropertyQuery = ({
@@ -239,6 +241,8 @@ export const getInvoiceRows = async (
       'krfkr.code',
       'krfkr.rowtype AS rowType',
       'krfkr.printgroup AS printGroup',
+      'krfkr.fromdate AS fromDate',
+      'krfkr.todate AS toDate',
       'cmarg.caption AS invoiceRowType',
       'hysum.hysumben AS rentType'
     )
@@ -250,6 +254,7 @@ export const getInvoiceRows = async (
     .whereRaw(
       `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
     )
+    .whereNotNull('krfkh.fromdate')
     .orderBy('krfkr.printsort', 'asc')
     .then(trimStrings<XpandInvoiceRow[]>)
 
@@ -265,6 +270,8 @@ export const getInvoiceRows = async (
       code: row.code,
       rowType: row.rowType,
       printGroup: row.printGroup,
+      fromDate: new Date(row.fromDate),
+      toDate: new Date(row.toDate),
     }
   })
 }
@@ -409,4 +416,58 @@ export const getContacts = async (
   })
 
   return contacts
+}
+
+export const getCostCentreForRentalId = async (
+  rentalId: string,
+  year?: number
+): Promise<string | null> => {
+  // TODO vi behöver nog optimera genom att skicka med rentalproperty type och välja query utifrån det?
+  // TODO vi behöver nog också sätta en limit
+  const queries = [
+    // First try: join via babyg when keyobjbyg exists
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.year')
+      .from('babuf')
+      .innerJoin('babyg', 'babyg.keycmobj', 'babuf.keyobjbyg')
+      .innerJoin('repsk', 'repsk.keycode', 'babyg.keybabyg')
+      .where('babuf.hyresid', rentalId)
+      .whereNotNull('babuf.keyobjbyg'),
+
+    // Second try: join via keyobjyta when keyobjbyg is null
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.year')
+      .from('babuf')
+      .innerJoin('repsk', 'repsk.keycode', 'babuf.keyobjyta')
+      .where('babuf.hyresid', rentalId)
+      .whereNull('babuf.keyobjbyg')
+      .whereNotNull('babuf.keyobjyta'),
+
+    // Third try: join via fstcode as fallback
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.year')
+      .from('babuf')
+      .innerJoin('repsk', 'repsk.p3', 'babuf.fstcode')
+      .where('babuf.hyresid', rentalId)
+      .whereNotNull('babuf.fstcode'),
+  ]
+
+  for (const query of queries) {
+    let result
+
+    if (year) {
+      result = await query.where('repsk.year', year).limit(1).then(trimStrings)
+    } else {
+      result = await query
+        .orderBy('repsk.year', 'desc')
+        .limit(1)
+        .then(trimStrings)
+    }
+
+    if (result.length > 0) {
+      return result[0].costCentre ?? null
+    }
+  }
+
+  return null
 }

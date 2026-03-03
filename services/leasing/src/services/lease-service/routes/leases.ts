@@ -1,9 +1,11 @@
 import KoaRouter from '@koa/router'
 import {
   getLease,
+  getLeases,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   getLeasesForPropertyId,
+  getContacts,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
@@ -688,6 +690,47 @@ export const routes = (router: KoaRouter) => {
           error: error.message,
           ...metadata,
         }
+      }
+    }
+  })
+
+  router.post('(.*)/leases/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const leaseIds = (ctx.request.body as any).leaseIds as string[] // TODO schema
+
+    try {
+      const leases = await getLeases(leaseIds)
+
+      ctx.status = 200
+      ctx.body = {
+        content: leases,
+        ...metadata,
+      }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  // TODO This should be replaced with the contacts microservice that is currently under construction
+  router.post('(.*)/contacts/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const contactCodes = (ctx.request.body as any).contactCodes as string[] // TODO schema
+
+    try {
+      const contacts = await getContacts(contactCodes)
+
+      ctx.status = 200
+      ctx.body = {
+        content: contacts,
+        ...metadata,
+      }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
       }
     }
   })

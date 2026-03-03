@@ -108,11 +108,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     const metadata = generateRouteMetadata(ctx)
-    const result = await economyAdapter.getInvoices(
-      queryParams.data?.from,
-      queryParams.data?.to,
-      queryParams.data?.remainingAmountGreaterThan
-    )
+    const result = await economyAdapter.getInvoices({
+      from: queryParams.data?.from,
+      to: queryParams.data?.to,
+      remainingAmountGreaterThan: queryParams.data?.remainingAmountGreaterThan,
+    })
 
     if (!result.ok) {
       ctx.status = 500

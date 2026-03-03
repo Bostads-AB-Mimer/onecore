@@ -32,13 +32,21 @@ import {
 } from '../../common/types'
 import {
   createCustomerLedgerRow,
+  getAllInvoicePaymentEvents,
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
-import { Contact, RentInvoiceRow } from '@onecore/types'
+import { Contact } from '@onecore/types'
 import { logger } from '@onecore/utilities'
-import { getInvoiceRows } from '../common/adapters/xpand-db-adapter'
+import {
+  getCostCentreForRentalId,
+  getInvoiceRows,
+} from '../common/adapters/xpand-db-adapter'
+import {
+  extractLeaseIdsFromInvoiceRows,
+  getRentalIdFromLeaseId,
+} from '../common/helpers'
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -812,15 +820,39 @@ const verifyAccountTotals = (
 }
 
 export const fetchInvoiceRows = async (invoiceIds: string[]) => {
-  const chunkSize = 1000
-  const invoiceRows: RentInvoiceRow[] = []
+  return getInvoiceRows(invoiceIds)
+}
 
-  for (let start = 0; start < invoiceIds.length; start += chunkSize) {
-    const rowsInChunk = await getInvoiceRows(
-      invoiceIds.slice(start, start + chunkSize)
-    )
-    invoiceRows.push(...rowsInChunk)
-  }
+export const fetchPaymentEvents = async (matchIds: number[]) => {
+  return getAllInvoicePaymentEvents(matchIds)
+}
 
-  return invoiceRows
+export const getLeaseDetails = async (invoiceIds: string[]) => {
+  const invoiceRows = await getInvoiceRows(invoiceIds)
+
+  return Promise.all(
+    invoiceIds.map(async (id) => {
+      const invoiceRowsForInvoice = invoiceRows.filter(
+        (r) => r.invoiceNumber === id
+      )
+      const year = invoiceRowsForInvoice[0]?.fromDate.getFullYear()
+      const leaseIds = extractLeaseIdsFromInvoiceRows(invoiceRowsForInvoice)
+      const details = await Promise.all(
+        leaseIds.map(async (leaseId) => {
+          const rentalId = getRentalIdFromLeaseId(leaseId)
+          const costCentre = await getCostCentreForRentalId(rentalId, year)
+
+          return {
+            leaseId,
+            costCentre,
+          }
+        })
+      )
+
+      return {
+        invoiceId: id,
+        details,
+      }
+    })
+  )
 }
