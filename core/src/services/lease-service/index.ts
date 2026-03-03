@@ -412,7 +412,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/contacts-by-filters:
+   * /contacts/from-lease-search:
    *   get:
    *     summary: Get contacts matching lease search filters
    *     tags:
@@ -515,7 +515,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/contacts-by-filters', async (ctx) => {
+  router.get('/contacts/from-lease-search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const result = await leasingAdapter.getContactsByFilters(ctx.query)

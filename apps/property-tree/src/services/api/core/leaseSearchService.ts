@@ -83,7 +83,7 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
 async function getContactsByFilters(
   params: LeaseSearchQueryParams
 ): Promise<ContactInfo[]> {
-  const { data, error } = await GET('/leases/contacts-by-filters' as any, {
+  const { data, error } = await GET('/contacts/from-lease-search' as any, {
     params: {
       query: params,
     },

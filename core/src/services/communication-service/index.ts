@@ -43,7 +43,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contacts/send-bulk-sms:
+   * /sendBulkSms:
    *   post:
    *     summary: Send SMS to multiple contacts
    *     description: Send SMS messages to multiple phone numbers
@@ -84,7 +84,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/contacts/send-bulk-sms', async (ctx) => {
+  router.post('(.*)/sendBulkSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await communicationAdapter.sendBulkSms(ctx.request.body)
 
@@ -99,7 +99,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /contacts/send-bulk-email:
+   * /sendBulkEmail:
    *   post:
    *     summary: Send email to multiple contacts
    *     description: Send email messages to multiple email addresses
@@ -144,7 +144,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/contacts/send-bulk-email', async (ctx) => {
+  router.post('(.*)/sendBulkEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await communicationAdapter.sendBulkEmail(ctx.request.body)
 
