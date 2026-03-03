@@ -53,7 +53,7 @@ export type DbApplicant = {
   NationalRegistrationNumber: string
   ContactCode: string
   ApplicationDate: Date
-  ApplicationType: string | null
+  ApplicationType: 'Replace' | 'Additional'
   Status: ApplicantStatus
   ListingId: number
 }

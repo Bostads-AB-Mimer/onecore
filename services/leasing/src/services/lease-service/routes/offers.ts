@@ -21,6 +21,7 @@ import { db } from '../adapters/db'
 export const routes = (router: KoaRouter) => {
   const createOfferRequestParams = z.object({
     expiresAt: z.coerce.date(),
+    sentAt: z.coerce.date(),
     status: z.nativeEnum(OfferStatus),
     selectedApplicants: z.any().array().min(1),
     listingId: z.coerce.number(),

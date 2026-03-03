@@ -15,6 +15,7 @@ interface CreateOfferApplicantParams {
 interface CreateOfferParams {
   status: OfferStatus
   expiresAt: Date
+  sentAt: Date
   listingId: number
   applicantId: number
   selectedApplicants: Array<CreateOfferApplicantParams>

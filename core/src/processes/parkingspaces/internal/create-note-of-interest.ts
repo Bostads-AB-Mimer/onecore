@@ -354,7 +354,7 @@ const endFailingProcess = (
 
 const createApplicantRequestBody = (
   applicantContact: Contact,
-  applicationType: string,
+  applicationType: 'Replace' | 'Additional',
   listing: Listing
 ) => {
   const applicantRequestBody: Applicant = {

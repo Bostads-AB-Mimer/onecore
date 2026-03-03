@@ -4,16 +4,19 @@
 
 ```mermaid
 flowchart LR
-A[Start] --> E(Create Contract)
+A[Start] --> X{Is Applicant a Tenant?}
+X -- No --> O(End)
+X -- Yes --> B{Is Applicant Eligible <br/>to Rent Parking Space <br/>with Specific Rental Rule?}
+B -- No --> O
+B -- Yes --> E(Create Contract)
 E --> F(Close Offer By Accept)
 F --> H(Reset Waiting Parking Space Waiting)
 H --> G{Does the Applicant Have Other Offers?}
-
-G --> |Yes| I(Initiate Process to Decline All Other Active Offers)
-G --> |No| J(Notify Leasing Team)
+G -- Yes --> I(Initiate Process to Decline All Other Active Offers)
+G -- No --> J(Notify Leasing Team)
 I --> J
 J --> K(Notify Contact)
-K --> O(End)
+K --> O
 
 ```
 
@@ -49,6 +52,31 @@ sequenceDiagram
         Leasing ->>XPand DB: Get Parking Space
         XPand DB --> Leasing: Parking Space
         Leasing -->> Core: Parking Space
+
+    break when Applicant is not a tenant
+        Core-->User: show error message
+    end
+
+    Core ->> Leasing: Validate Residential Area Rental Rules
+    Leasing ->> XPand DB:Get Estate Code for Listing
+    XPand DB -->> Leasing: Estate Code for Listing
+    Leasing ->> XPand DB:Get Contact
+    XPand DB -->> Leasing: Contact
+
+    Leasing ->> XPand DB:Get Estate Code for Property
+    XPand DB -->> Leasing: Estate Code for Property
+    Leasing ->> XPand DB:For Each Parking Space Contract, Get Estate Code
+    XPand DB -->> Leasing: Estate Codes for Each Parking Space Contract
+    Leasing -->> Core: Residential Area Rental Rule Validation Result
+
+    Core ->> Leasing: Validate Property Rental Rules
+    Leasing ->> XPand DB:Get Contact
+    XPand DB --> Leasing: Contact
+    Leasing -->> Core: Property Rental Rule Validation Result
+
+    break when Applicant is not Eligible to Rent in Parking Space with Specific Rental Rule
+        Core-->User: show error message
+    end
 
     Core ->>Leasing: Create Lease
         Leasing ->>XPand SOAP: Create Lease
