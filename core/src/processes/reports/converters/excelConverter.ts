@@ -1,5 +1,6 @@
 import ExcelJs from 'exceljs'
-import { InvoicePaymentSummary } from '../types'
+import { BosocialaObject, InvoicePaymentSummary } from '../types'
+import { LeaseStatus } from '@onecore/types'
 
 const DateFormat = 'yyyy-mm-dd'
 const ColumnWidth = 20
@@ -105,5 +106,91 @@ const transformInvoicePaymentSummary = (
     vhk934Debt: summary.vhk934Debt,
     vhk936Total: summary.vhk936Total,
     vhk936Debt: summary.vhk936Debt,
+  }
+}
+
+type BosocialaRow = {
+  invoiceId: string
+  invoiceDate: Date
+  expirationDate: Date | undefined
+  invoiceAmount: number
+  remainingAmount: number
+  daysSinceExpirationDate: number | undefined
+  rentalPropertyId: string
+  tenantName: string
+  tenantContactCode: string
+  address: string
+  leaseStatus: string
+  costCentre: string | undefined
+}
+
+export const convertBosocialaToXlsx = async (bosociala: BosocialaObject[]) => {
+  const workbook = new ExcelJs.Workbook()
+  const worksheet = workbook.addWorksheet('Bosociala', {
+    properties: {
+      defaultColWidth: ColumnWidth,
+    },
+  })
+
+  worksheet.columns = [
+    { header: 'Fakturanummer', key: 'invoiceId' },
+    {
+      header: 'Fakturadatum',
+      key: 'invoiceDate',
+      style: { numFmt: DateFormat },
+      width: ColumnWidth,
+    },
+    {
+      header: 'Förfallodatum',
+      key: 'expirationDate',
+      style: { numFmt: DateFormat },
+      width: ColumnWidth,
+    },
+    { header: 'Totalbelopp', key: 'invoiceAmount' },
+    {
+      header: 'Skuld',
+      key: 'remainingAmount',
+      width: ColumnWidth,
+    },
+    { header: 'Dagar sen förfallodatum', key: 'daysSinceExpirationDate' },
+    { header: 'Objektsnummer', key: 'rentalPropertyId' },
+    { header: 'Namn', key: 'tenantName' },
+    { header: 'Kod', key: 'tenantContactCode' },
+    { header: 'Adress', key: 'address' },
+    { header: 'Status', key: 'leaseStatus' },
+    { header: 'Kostnadsställe', key: 'costCentre' },
+  ]
+
+  bosociala.forEach((bo) => {
+    worksheet.addRow(transformBosociala(bo))
+  })
+
+  const buffer = await workbook.xlsx.writeBuffer()
+  return Buffer.from(buffer)
+}
+
+const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
+  const Status: Record<LeaseStatus, string> = {
+    [LeaseStatus.Current]: 'Gällande',
+    [LeaseStatus.Upcoming]: 'Kommande',
+    [LeaseStatus.AboutToEnd]: 'Uppsagt',
+    [LeaseStatus.Ended]: 'Uppsagt',
+  }
+
+  return {
+    invoiceId: bosocial.invoiceId,
+    invoiceDate: bosocial.invoiceDate,
+    expirationDate: bosocial.expirationDate,
+    invoiceAmount: bosocial.amount,
+    remainingAmount: bosocial.paidAmount
+      ? bosocial.amount - bosocial.paidAmount
+      : bosocial.amount,
+    costCentre: bosocial.costCentre,
+    daysSinceExpirationDate: bosocial.daysSinceExpirationDate,
+    rentalPropertyId: bosocial.lease?.rentalPropertyId ?? '',
+    leaseStatus: bosocial.lease ? Status[bosocial.lease.status] : '',
+    tenantName: bosocial.contact?.fullName ?? '',
+    tenantContactCode: bosocial.contact?.contactCode ?? '',
+    address: bosocial.contact?.address?.street ?? '',
   }
 }

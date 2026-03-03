@@ -68,6 +68,8 @@ export const createMockRentInvoiceRow = (
   printGroup: 'N',
   code: '',
   rowType: 0,
+  fromDate: new Date(),
+  toDate: new Date(),
   ...overrides,
 })
 

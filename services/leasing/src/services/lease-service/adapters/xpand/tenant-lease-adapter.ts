@@ -830,6 +830,97 @@ const getLeaseById = async (hyobjben: string) => {
   return rows
 }
 
+const getLeases = async (leaseIds: string[]) => {
+  const rows = await xpandDb
+    .from('hyavk')
+    .select(
+      'hyobj.hyobjben as leaseId',
+      'hyhav.hyhavben as leaseType',
+      'hyobj.uppsagtav as noticeGivenBy',
+      'hyobj.avtalsdat as contractDate',
+      'hyobj.sistadeb as lastDebitDate',
+      'hyobj.godkdatum as approvalDate',
+      'hyobj.uppsdatum as noticeDate',
+      'hyobj.fdate as fromDate',
+      'hyobj.tdate as toDate',
+      'hyobj.uppstidg as noticeTimeTenant',
+      'hyobj.onskflytt AS preferredMoveOutDate',
+      'hyobj.makuldatum AS terminationDate'
+    )
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
+    .whereRaw(
+      `hyobj.hyobjben IN (${leaseIds.map((id) => `'${id}'`).join(', ')})`
+    )
+
+  return rows.map((row) => transformFromXPandDb.toLease(row, [], []))
+}
+
+const getContacts = async (contactCodes: string[]) => {
+  const rows = await xpandDb
+    .from('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.fnamn as firstName',
+      'cmctc.enamn as lastName',
+      'cmctc.cmctcben as fullName',
+      'cmctc.persorgnr as nationalRegistrationNumber',
+      'cmctc.birthdate as birthDate',
+      'cmadr.adress1 as street',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city',
+      'cmeml.cmemlben as emailAddress',
+      'cmctc.keycmobj as keycmobj',
+      'cmctc.keycmctc as contactKey',
+      'cmctc.lagsokt as protectedIdentity',
+      'cmctc.utslag as specialAttention'
+    )
+    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+    // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
+    .where(function () {
+      this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
+    })
+    .where(function () {
+      this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
+    })
+    .where('cmctc.deletemark', '=', '0')
+    .whereRaw(
+      `cmctc.cmctckod IN (${contactCodes.map((code) => `'${code}'`).join(', ')})`
+    )
+
+  return rows.map((row: any): Contact => {
+    const protectedIdentity = row.protectedIdentity !== null
+
+    return {
+      contactCode: row.contactCode,
+      contactKey: row.contactKey,
+      firstName: protectedIdentity ? undefined : row.firstName,
+      lastName: protectedIdentity ? undefined : row.lastName,
+      fullName: protectedIdentity ? undefined : row.fullName,
+      nationalRegistrationNumber: protectedIdentity
+        ? undefined
+        : row.nationalRegistrationNumber,
+      birthDate: protectedIdentity ? undefined : row.birthDate,
+      address: {
+        street: row.street,
+        number: '',
+        postalCode: row.postalCode,
+        city: row.city,
+      },
+      phoneNumbers: [],
+      emailAddress:
+        process.env.NODE_ENV === 'production'
+          ? row.emailAddress == null || protectedIdentity
+            ? undefined
+            : row.emailAddress
+          : 'redacted',
+      isTenant: false,
+      specialAttention: !!row.specialAttention,
+    }
+  })
+}
+
 // const isLeaseActive = (lease: Lease | PartialLease): boolean => {
 //   const { leaseStartDate } = lease
 //   const currentDate = new Date()
@@ -908,10 +999,12 @@ export {
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   getLeasesForPropertyId,
+  getLeases,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactByPhoneNumber,
   getContactForPhoneNumber,
+  getContacts,
   filterLeasesByOptions,
   isLeaseActive,
   isLeaseUpcoming,

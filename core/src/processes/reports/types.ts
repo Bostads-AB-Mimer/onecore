@@ -1,4 +1,4 @@
-import { Invoice } from '@onecore/types'
+import { Contact, Invoice, Lease } from '@onecore/types'
 
 export type InvoicePaymentSummary = Invoice & {
   fractionPaid: number
@@ -14,4 +14,11 @@ export type InvoicePaymentSummary = Invoice & {
   vhk934Debt: number
   vhk936Total: number
   vhk936Debt: number
+}
+
+export type BosocialaObject = Invoice & {
+  lease?: Lease
+  costCentre?: string
+  daysSinceExpirationDate: number
+  contact?: Contact
 }
