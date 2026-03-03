@@ -8,29 +8,32 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /scan-receipt:
    *   post:
-   *     summary: Process a scanned receipt image
+   *     summary: Process a scanned receipt image (single or batch)
    *     description: |
-   *       Receives a scanned receipt image, extracts the key loan UUID
-   *       from the QR code, validates the loan exists, and creates a
-   *       receipt record. Returns the receipt ID and loan ID so the
-   *       caller (core) can handle file storage and loan activation.
+   *       Receives a scanned receipt image (JPEG, PNG, BMP, or multi-page TIFF).
+   *       Extracts QR codes from each page, groups pages by loan UUID,
+   *       and creates a receipt for each unique loan.
+   *       Returns an array of results and any errors.
    *     tags: [Receipts]
    *     requestBody:
    *       required: true
    *       content:
-   *         application/octet-stream:
+   *         application/json:
    *           schema:
-   *             type: string
-   *             format: binary
+   *             type: object
+   *             properties:
+   *               imageData:
+   *                 type: string
+   *                 format: byte
    *     responses:
    *       201:
-   *         description: Receipt created from scanned image
+   *         description: All receipts created successfully
+   *       207:
+   *         description: Partial success — some receipts created, some failed
    *       400:
    *         description: Missing image data
-   *       404:
-   *         description: Key loan not found
    *       422:
-   *         description: Could not extract valid QR code from image
+   *         description: No receipts could be created (decode/QR errors)
    */
   router.post('/scan-receipt', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -52,49 +55,25 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await scanReceiptService.processScannedReceipt(
+    const batch = await scanReceiptService.processScannedReceipts(
       imageBuffer,
       db
     )
 
-    if (!result.ok) {
-      switch (result.err) {
-        case 'image-decode-failed':
-          ctx.status = 422
-          ctx.body = { error: 'Could not decode image', ...metadata }
-          return
-        case 'no-qr-found':
-          ctx.status = 422
-          ctx.body = { error: 'No QR code found in image', ...metadata }
-          return
-        case 'invalid-uuid':
-          logger.warn(
-            { qrData: result.details },
-            'QR code does not contain a valid UUID'
-          )
-          ctx.status = 422
-          ctx.body = {
-            error: 'QR code does not contain a valid UUID',
-            ...metadata,
-          }
-          return
-        case 'loan-not-found':
-          ctx.status = 404
-          ctx.body = {
-            error: 'Key loan not found',
-            keyLoanId: result.details,
-            ...metadata,
-          }
-          return
-        case 'receipt-creation-failed':
-          logger.error('Error creating receipt from scanned image')
-          ctx.status = 500
-          ctx.body = { error: 'Internal server error', ...metadata }
-          return
-      }
+    if (batch.results.length === 0) {
+      ctx.status = 422
+      ctx.body = { content: batch, ...metadata }
+      return
     }
 
-    ctx.status = 201
-    ctx.body = { content: result.data, ...metadata }
+    if (batch.errors.length > 0) {
+      logger.warn(
+        { errors: batch.errors },
+        'Partial scan receipt batch failure'
+      )
+    }
+
+    ctx.status = batch.errors.length > 0 ? 207 : 201
+    ctx.body = { content: batch, ...metadata }
   })
 }

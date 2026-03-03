@@ -65,8 +65,9 @@ const generateReceiptNumber = (type: 'loan' | 'return'): string => {
 }
 
 /**
- * Generates a QR code as a data URL and adds it to the top-right of the first page.
+ * Generates a QR code as a data URL and adds it to the top-right of every page.
  * Only added to loan receipts so scanners can read the loan UUID.
+ * QR on every page enables batch scanning — pages are grouped by UUID.
  */
 const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
   const qrDataUrl = await QRCode.toDataURL(loanId, {
@@ -77,8 +78,11 @@ const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
   const qrSize = 25
   const x = PAGE_W - MARGIN_X - qrSize
   const y = MARGIN_TOP
-  doc.setPage(1)
-  doc.addImage(qrDataUrl, 'PNG', x, y, qrSize, qrSize)
+  const totalPages = doc.getNumberOfPages()
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page)
+    doc.addImage(qrDataUrl, 'PNG', x, y, qrSize, qrSize)
+  }
 }
 
 /* ============================================================================

@@ -2409,32 +2409,35 @@ export interface paths {
   };
   "/scan-receipt": {
     /**
-     * Process a scanned receipt image
-     * @description Receives a scanned receipt image, extracts the key loan UUID
-     * from the QR code, validates the loan exists, and creates a
-     * receipt record. Returns the receipt ID and loan ID so the
-     * caller (core) can handle file storage and loan activation.
+     * Process a scanned receipt image (single or batch)
+     * @description Receives a scanned receipt image (JPEG, PNG, BMP, or multi-page TIFF).
+     * Extracts QR codes from each page, groups pages by loan UUID,
+     * and creates a receipt for each unique loan.
+     * Returns an array of results and any errors.
      */
     post: {
       requestBody: {
         content: {
-          "application/octet-stream": string;
+          "application/json": {
+            /** Format: byte */
+            imageData?: string;
+          };
         };
       };
       responses: {
-        /** @description Receipt created from scanned image */
+        /** @description All receipts created successfully */
         201: {
+          content: never;
+        };
+        /** @description Partial success — some receipts created, some failed */
+        207: {
           content: never;
         };
         /** @description Missing image data */
         400: {
           content: never;
         };
-        /** @description Key loan not found */
-        404: {
-          content: never;
-        };
-        /** @description Could not extract valid QR code from image */
+        /** @description No receipts could be created (decode/QR errors) */
         422: {
           content: never;
         };

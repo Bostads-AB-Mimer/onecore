@@ -87,19 +87,27 @@ export const routes = (router: KoaRouter) => {
     }
 
     // Forward image to keys service for QR scanning + receipt creation
-    let scanResult
+    let batch: {
+      results: Array<{
+        receiptId: string
+        keyLoanId: string
+        imageData: string
+      }>
+      errors: Array<{ error: string; details?: string; pageIndices: number[] }>
+    }
+
     try {
       const response = await axios.post(
         `${config.keysService.url}/scan-receipt`,
         { imageData: imageBuffer.toString('base64') },
         { headers: { 'Content-Type': 'application/json' } }
       )
-      scanResult = response.data.content
+      batch = response.data.content
     } catch (err: unknown) {
       const axiosErr = err as {
         response?: {
           status?: number
-          data?: { error?: string; keyLoanId?: string }
+          data?: { error?: string }
         }
       }
       const status = axiosErr.response?.status
@@ -122,64 +130,103 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { receiptId, keyLoanId } = scanResult
-
-    // Upload scanned image to file storage (MinIO)
-    const knownImageExts = ['jpg', 'jpeg', 'png', 'tiff', 'bmp', 'gif', 'webp']
-    const fileExt = filename.includes('.')
-      ? filename.split('.').pop()!.toLowerCase()
-      : ''
-    const ext = knownImageExts.includes(fileExt) ? fileExt : 'jpeg'
-    const contentType = ctx.request.type || 'image/jpeg'
-    const storageFileName = `receipt-${receiptId}-${Date.now()}.${ext}`
-
-    const uploadResult = await fileStorageAdapter.uploadFile(
-      storageFileName,
-      imageBuffer,
-      contentType
-    )
-
-    if (!uploadResult.ok) {
-      logger.error(
-        { err: uploadResult.err, receiptId, metadata },
-        'Failed to upload scanned receipt to file storage'
-      )
+    // Send error notifications for any batch errors
+    for (const error of batch.errors) {
       await sendErrorNotification(
-        'Scan receipt upload failed',
-        `Receipt ${receiptId} created but file upload failed for "${filename}"`
+        'Scan receipt failed',
+        `Error processing "${filename}": ${error.error}${error.details ? ` (${error.details})` : ''} — pages: ${error.pageIndices.join(', ')}`
       )
-      ctx.status = 500
-      ctx.body = { error: 'File upload failed', ...metadata }
+    }
+
+    if (batch.results.length === 0) {
+      ctx.status = 422
+      ctx.body = {
+        error: 'No receipts could be created',
+        errors: batch.errors,
+        ...metadata,
+      }
       return
     }
 
-    const fileId = uploadResult.data.fileName
+    // TODO: Extract shared upload→update receipt→activate loan helper.
+    // receipts.ts (manual upload) has the same flow — deduplicate into a
+    // common function so error handling stays consistent across both paths.
+    const processed: Array<{
+      receiptId: string
+      keyLoanId: string
+      fileId: string
+    }> = []
 
-    // Update receipt with fileId
-    const updateResult = await ReceiptsApi.update(receiptId, { fileId })
-    if (!updateResult.ok) {
-      await fileStorageAdapter.deleteFile(fileId)
-      logger.error(
-        { err: updateResult.err, receiptId, fileId, metadata },
-        'Failed to update receipt with fileId'
+    for (const result of batch.results) {
+      const receiptBuffer = Buffer.from(result.imageData, 'base64')
+      const isPdf =
+        receiptBuffer.length >= 4 &&
+        receiptBuffer[0] === 0x25 &&
+        receiptBuffer[1] === 0x50 &&
+        receiptBuffer[2] === 0x44 &&
+        receiptBuffer[3] === 0x46
+      const ext = isPdf ? 'pdf' : 'jpeg'
+      const contentType = isPdf ? 'application/pdf' : 'image/jpeg'
+      const storageFileName = `receipt-${result.receiptId}-${Date.now()}.${ext}`
+
+      const uploadResult = await fileStorageAdapter.uploadFile(
+        storageFileName,
+        receiptBuffer,
+        contentType
       )
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-      return
+
+      if (!uploadResult.ok) {
+        logger.error(
+          { err: uploadResult.err, receiptId: result.receiptId, metadata },
+          'Failed to upload scanned receipt to file storage'
+        )
+        await sendErrorNotification(
+          'Scan receipt upload failed',
+          `Receipt ${result.receiptId} created but file upload failed for "${filename}"`
+        )
+        continue
+      }
+
+      const fileId = uploadResult.data.fileName
+
+      const updateResult = await ReceiptsApi.update(result.receiptId, {
+        fileId,
+      })
+      if (!updateResult.ok) {
+        await fileStorageAdapter.deleteFile(fileId)
+        logger.error(
+          {
+            err: updateResult.err,
+            receiptId: result.receiptId,
+            fileId,
+            metadata,
+          },
+          'Failed to update receipt with fileId'
+        )
+        continue
+      }
+
+      const activateResult = await KeyLoansApi.activate(result.keyLoanId)
+      if (!activateResult.ok) {
+        logger.error(
+          { err: activateResult.err, keyLoanId: result.keyLoanId, metadata },
+          'Failed to activate key loan after scan receipt upload'
+        )
+      }
+
+      processed.push({
+        receiptId: result.receiptId,
+        keyLoanId: result.keyLoanId,
+        fileId,
+      })
     }
 
-    // Activate the key loan
-    const activateResult = await KeyLoansApi.activate(keyLoanId)
-    if (!activateResult.ok) {
-      logger.error(
-        { err: activateResult.err, keyLoanId, metadata },
-        'Failed to activate key loan after scan receipt upload'
-      )
-    }
-
-    ctx.status = 201
+    ctx.status = batch.errors.length > 0 ? 207 : 201
     ctx.body = {
-      content: { receiptId, keyLoanId, fileId },
+      content: {
+        processed,
+        errors: batch.errors,
+      },
       ...metadata,
     }
   })
