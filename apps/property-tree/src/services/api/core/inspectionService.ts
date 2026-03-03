@@ -1,6 +1,6 @@
 import { InspectionStatusFilter } from '@/shared/types/inspection'
 
-import { GET, POST } from './baseApi'
+import { GET, PATCH, POST } from './baseApi'
 import { components } from './generated/api-types'
 
 type Inspection = components['schemas']['Inspection']
@@ -9,6 +9,8 @@ type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 type SendProtocolRequest = components['schemas']['SendProtocolRequest']
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
+type UpdateInspectionStatusRequest =
+  components['schemas']['UpdateInspectionStatusRequest']
 
 export interface PaginatedInspectionsResponse {
   content: Inspection[]
@@ -141,5 +143,20 @@ export const inspectionService = {
     if (!response.data.content) throw new Error('No data returned from API')
 
     return response.data.content as SendProtocolResponse
+  },
+
+  async updateInspectionStatus(
+    inspectionId: string,
+    status: UpdateInspectionStatusRequest['status']
+  ): Promise<DetailedInspection> {
+    const response = await PATCH('/inspections/internal/{inspectionId}', {
+      params: { path: { inspectionId } },
+      body: { status },
+    })
+    if (response.error) throw response.error
+    if (!response.data.content?.inspection)
+      throw new Error('Failed to update inspection status')
+
+    return response.data.content.inspection
   },
 }
