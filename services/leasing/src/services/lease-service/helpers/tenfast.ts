@@ -14,7 +14,7 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const today = new Date()
   const { startDate, endDate, stage } = lease
 
-  // Check pending signature first (unsigned leases)
+  // Check pending signature first
   if (isPendingSignature(lease)) return LeaseStatus.PendingSignature
 
   // Check preliminary termination
