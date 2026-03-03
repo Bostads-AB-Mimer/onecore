@@ -2,16 +2,25 @@ import { Lease, LeaseStatus, LeaseRentRow } from '@onecore/types'
 
 import { TenfastLease, TenfastInvoiceRow } from '../adapters/tenfast/schemas'
 
-const calculateLeaseStatus = (
-  startDate: Date,
-  endDate: Date | null
-): LeaseStatus => {
-  // TODO: Verify this logic
-  const today = new Date()
-  if (endDate && endDate >= today) return LeaseStatus.AboutToEnd
-  if (endDate && endDate < today) return LeaseStatus.Ended
-  if (startDate >= today) return LeaseStatus.Upcoming
+export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
 
+  const startDate = new Date(lease.startDate)
+  startDate.setHours(0, 0, 0, 0)
+
+  const endDate = lease.endDate ? new Date(lease.endDate) : null
+  if (endDate) endDate.setHours(0, 0, 0, 0)
+
+  if (endDate && endDate >= now && lease.cancellation.cancelled) {
+    return LeaseStatus.AboutToEnd
+  }
+  if (endDate && endDate < now) {
+    return LeaseStatus.Ended
+  }
+  if (startDate >= now) {
+    return LeaseStatus.Upcoming
+  }
   return LeaseStatus.Current
 }
 
@@ -36,7 +45,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
     leaseNumber: lease.externalId.split('/')[1],
     leaseStartDate: lease.startDate,
     leaseEndDate: lease.endDate ?? undefined,
-    status: calculateLeaseStatus(lease.startDate, lease.endDate),
+    status: calculateLeaseStatus(lease),
     noticeGivenBy: lease.cancellation.handledBy ?? undefined,
     noticeDate: lease.cancellation.handledAt ?? undefined,
     noticeTimeTenant: lease.uppsagningstid,

@@ -7,6 +7,7 @@ import nock from 'nock'
 import { routes } from '../../index'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
+import * as tenfastLeaseSearchAdapter from '../../adapters/tenfast/tenfast-lease-search-adapter'
 import * as xpandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as factory from '../factories'
 import config from '../../../../common/config'
@@ -383,5 +384,93 @@ describe('DELETE /leases/:leaseId/rent-rows/:rentRowId', () => {
     expect(result.status).toBe(500)
 
     expect(deleteInvoiceRowSpy).toHaveBeenCalled()
+  })
+})
+
+describe('GET /leases/search-v2', () => {
+  it('should return 400 for invalid query parameters', async () => {
+    const res = await request(app.callback()).get(
+      '/leases/search-v2?limit=invalid'
+    )
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Invalid query parameters')
+  })
+
+  it('should return 200 with paginated results', async () => {
+    const mockResult = {
+      content: [
+        {
+          leaseId: 'test-lease-1',
+          objectTypeCode: 'Bostad',
+          leaseType: 'digital',
+          contacts: [
+            {
+              name: 'Test Person',
+              contactCode: 'P123456',
+              email: null,
+              phone: null,
+            },
+          ],
+          address: 'Testgatan 1',
+          startDate: new Date('2024-01-01'),
+          lastDebitDate: null,
+          status: 0,
+        },
+      ],
+      _meta: {
+        totalRecords: 1,
+        page: 1,
+        limit: 20,
+        count: 1,
+      },
+      _links: [],
+    }
+
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'searchLeases')
+      .mockResolvedValueOnce(mockResult)
+
+    const res = await request(app.callback()).get('/leases/search-v2')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
+    expect(res.body.content[0].leaseId).toBe('test-lease-1')
+    expect(res.body._meta.totalRecords).toBe(1)
+  })
+
+  it('should pass query parameters to searchLeases', async () => {
+    const searchSpy = jest
+      .spyOn(tenfastLeaseSearchAdapter, 'searchLeases')
+      .mockResolvedValueOnce({
+        content: [],
+        _meta: { totalRecords: 0, page: 1, limit: 20, count: 0 },
+        _links: [],
+      })
+
+    await request(app.callback()).get(
+      '/leases/search-v2?q=test&status=current&page=2&limit=10'
+    )
+
+    expect(searchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: 'test',
+        status: ['current'],
+        page: 2,
+        limit: 10,
+      }),
+      expect.anything()
+    )
+  })
+
+  it('should return 500 when searchLeases throws', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'searchLeases')
+      .mockRejectedValueOnce(new Error('Failed to fetch leases from Tenfast'))
+
+    const res = await request(app.callback()).get('/leases/search-v2')
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Failed to fetch leases from Tenfast')
   })
 })
