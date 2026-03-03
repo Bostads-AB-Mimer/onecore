@@ -57,6 +57,19 @@ describe(filterByStatus, () => {
     expect(filterByStatus(leases, ['preliminary-terminated'])).toEqual([
       preliminaryTerminatedLease,
     ])
+
+    // preliminaryCancellation stage should also be classified as preliminary-terminated
+    const preliminaryCancellationLease = factory.tenfastLease.build({
+      startDate: sub(new Date(), { days: 1 }),
+      endDate: add(new Date(), { days: 30 }),
+      stage: 'preliminaryCancellation',
+      signed: true,
+    })
+    expect(
+      filterByStatus([preliminaryCancellationLease], [
+        'preliminary-terminated',
+      ])
+    ).toEqual([preliminaryCancellationLease])
     expect(filterByStatus(leases, ['ended'])).toEqual([endedLease])
     expect(filterByStatus(leases, ['pending-signature'])).toEqual([
       pendingSignatureLease,
