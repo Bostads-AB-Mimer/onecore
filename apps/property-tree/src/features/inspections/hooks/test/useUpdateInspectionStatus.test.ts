@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { inspectionService } from '@/services/api/core'
 
-import { useUpdateInspectionStatus } from './useUpdateInspectionStatus'
+import { useUpdateInspectionStatus } from '../useUpdateInspectionStatus'
 
 // --- Mocks ---
 
@@ -167,5 +167,4 @@ describe('useUpdateInspectionStatus', () => {
       expect(cached?.[0].status).toBe('Påbörjad')
     })
   })
-
 })
