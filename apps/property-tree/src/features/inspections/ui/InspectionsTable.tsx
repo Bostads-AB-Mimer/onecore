@@ -7,12 +7,13 @@ import { inspectionService } from '@/services/api/core/inspectionService'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 import {
+  canStart,
   getCompletedInspectionColumns,
   getOngoingInspectionColumns,
+  INSPECTION_STATUS,
   type InspectionTableColumn,
   renderInspectionMobileCard,
 } from '../constants'
-import { INSPECTION_STATUS } from '../constants'
 import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
@@ -43,7 +44,7 @@ export function InspectionsTable({
     string | null
   >(null)
 
-  const { startInspection } = useUpdateInspectionStatus({ rentalId })
+  const { startInspection, isPending } = useUpdateInspectionStatus({ rentalId })
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
@@ -54,13 +55,15 @@ export function InspectionsTable({
   })
 
   const handleInspectionClick = (inspection: Inspection) => {
+    if (isPending) return
+
     setSelectedInspectionId(inspection.id)
 
     if (inspection.status === INSPECTION_STATUS.COMPLETED) {
       setIsProtocolDialogOpen(true)
       setIsResumeDialogOpen(false)
     } else {
-      if (inspection.status === INSPECTION_STATUS.REGISTERED) {
+      if (canStart(inspection.status)) {
         startInspection(inspection.id)
       }
       setIsResumeDialogOpen(true)
