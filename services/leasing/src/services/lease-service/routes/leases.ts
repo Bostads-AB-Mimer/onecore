@@ -13,6 +13,7 @@ import {
   searchLeases,
   getBuildingManagers,
 } from '../adapters/xpand/lease-search-adapter'
+import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
@@ -287,7 +288,171 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/by-contact-code/{contactCode}:
+   * /leases/search-v2:
+   *   get:
+   *     summary: Search and filter leases (Tenfast)
+   *     description: Search leases from Tenfast with comprehensive filtering options including text search, object type, status, date ranges. This endpoint mirrors /leases/search but fetches data from Tenfast instead of Xpand.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes (bostad, parkering, lokal, ovrigt)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
+   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: desc
+   *         description: Sort direction
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseSearchResult'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/search-v2', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'objectType',
+      'status',
+      'startDateFrom',
+      'startDateTo',
+      'endDateFrom',
+      'endDateTo',
+      'page',
+      'limit',
+      'sortBy',
+      'sortOrder',
+    ])
+
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        queryParams.data,
+        ctx
+      )
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          error: 'Unknown error occurred during lease search',
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/for/nationalRegistrationNumber/{pnr}:
    *   get:
    *     summary: Get leases by contact code
    *     description: Retrieve leases associated with a contact by contact code.
