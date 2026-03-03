@@ -63,6 +63,7 @@ export function InspectionsTabContent({
       <InspectionsTable
         inspections={inspectionsData}
         hiddenColumns={['address']}
+        rentalId={rentalId}
       />
     )
   }

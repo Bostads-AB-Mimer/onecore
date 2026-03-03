@@ -13,6 +13,7 @@ import {
   renderInspectionMobileCard,
 } from '../constants'
 import { INSPECTION_STATUS } from '../constants'
+import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
 
@@ -21,6 +22,7 @@ type DetailedInspection = components['schemas']['DetailedInspection']
 
 interface InspectionsTableProps {
   inspections: Inspection[]
+  rentalId?: string
   isCompleted?: boolean
   hiddenColumns?: string[]
   columns?: InspectionTableColumn[]
@@ -29,6 +31,7 @@ interface InspectionsTableProps {
 
 export function InspectionsTable({
   inspections,
+  rentalId,
   isCompleted = false,
   hiddenColumns = [],
   columns,
@@ -39,6 +42,8 @@ export function InspectionsTable({
   const [selectedInspectionId, setSelectedInspectionId] = useState<
     string | null
   >(null)
+
+  const { startInspection } = useUpdateInspectionStatus({ rentalId })
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
@@ -55,6 +60,9 @@ export function InspectionsTable({
       setIsProtocolDialogOpen(true)
       setIsResumeDialogOpen(false)
     } else {
+      if (inspection.status === INSPECTION_STATUS.REGISTERED) {
+        startInspection(inspection.id)
+      }
       setIsResumeDialogOpen(true)
       setIsProtocolDialogOpen(false)
     }
