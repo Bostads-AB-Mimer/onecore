@@ -268,58 +268,6 @@ export const getResidenceByRentalId = async (rentalId: string) => {
   }
 }
 
-export const getResidenceById = async (
-  id: string,
-  options?: { active?: boolean }
-): Promise<ResidenceWithRelations | null> => {
-  const activeFilter = buildActiveFilter(options?.active)
-  const hasActiveFilter = Object.keys(activeFilter).length > 0
-
-  const response = await prisma.residence
-    .findFirst({
-      where: {
-        id: id,
-      },
-      include: {
-        residenceType: true,
-        propertyObject: {
-          include: {
-            rentalInformation: { include: { rentalInformationType: true } },
-            rentalBlocks: {
-              ...(hasActiveFilter && { where: activeFilter }),
-              include: {
-                blockReason: true,
-              },
-            },
-            propertyStructures: {
-              select: {
-                rentalId: true,
-                buildingCode: true,
-                buildingName: true,
-                propertyCode: true,
-                propertyName: true,
-              },
-            },
-          },
-        },
-        comments: {
-          where: {
-            template: {
-              type: 'balgh',
-              caption: 'Anläggningsid',
-            },
-          },
-          select: {
-            text: true,
-          },
-        },
-      },
-    })
-    .then(trimStrings)
-
-  return response
-}
-
 export const getResidencesByBuildingCode = async (
   buildingCode: string
 ): Promise<Residence[]> => {
