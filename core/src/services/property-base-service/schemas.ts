@@ -227,7 +227,7 @@ export const StaircaseSchema = z.object({
     })
     .optional(),
   deleted: z.boolean(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string(),
 })
 
 export const ResidenceDetailsSchema = z.object({
