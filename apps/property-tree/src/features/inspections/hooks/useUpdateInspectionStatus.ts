@@ -3,8 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { inspectionService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 
-import { useToast } from '@/shared/hooks/useToast'
-
 import { INSPECTION_STATUS } from '../constants/statuses'
 
 type Inspection = components['schemas']['Inspection']
@@ -18,13 +16,16 @@ interface UpdateInspectionStatusVariables {
 
 interface UseUpdateInspectionStatusOptions {
   rentalId?: string
+  onSuccess?: () => void
+  onError?: (error: Error) => void
 }
 
-export function useUpdateInspectionStatus({
+export const useUpdateInspectionStatus = ({
   rentalId,
-}: UseUpdateInspectionStatusOptions = {}) {
+  onSuccess,
+  onError,
+}: UseUpdateInspectionStatusOptions = {}) => {
   const queryClient = useQueryClient()
-  const { toast } = useToast()
 
   const mutation = useMutation<
     Awaited<ReturnType<typeof inspectionService.updateInspectionStatus>>,
@@ -55,26 +56,19 @@ export function useUpdateInspectionStatus({
       return { previousInspections }
     },
 
-    onError: (_err, _vars, context) => {
+    onError: (err, _vars, context) => {
       if (context?.previousInspections) {
         queryClient.setQueryData(
           ['inspections', rentalId],
           context.previousInspections
         )
       }
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte uppdatera besiktningsstatus.',
-        variant: 'destructive',
-      })
+      onError?.(err)
     },
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspections'] })
-      toast({
-        title: 'Status uppdaterad',
-        description: 'Besiktningsstatus har uppdaterats.',
-      })
+      onSuccess?.()
     },
   })
 
