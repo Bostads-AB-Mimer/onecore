@@ -9,7 +9,7 @@ import { Lease } from '@/services/api/core'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export const ResidencePage = () => {
-  const { residenceId } = useParams()
+  const { rentalId } = useParams()
 
   const {
     residence,
@@ -19,7 +19,7 @@ export const ResidencePage = () => {
     leases,
     leasesIsLoading,
     leasesError,
-  } = useResidenceDetails(residenceId!)
+  } = useResidenceDetails(rentalId!)
 
   const currentLease: Lease | undefined = leases?.[0] as Lease
 
@@ -30,7 +30,7 @@ export const ResidencePage = () => {
         error={residenceError}
         data={residence}
         notFoundMessage="Bostaden kunde inte hittas"
-        searchedFor={residenceId}
+        searchedFor={rentalId}
       >
         {(residence) => (
           <>

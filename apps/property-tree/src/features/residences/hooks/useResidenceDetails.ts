@@ -5,8 +5,8 @@ import { Building } from '@/services/types'
 
 import { useResidence } from './useResidence'
 
-export function useResidenceDetails(residenceId: string) {
-  const residenceQuery = useResidence(residenceId)
+export function useResidenceDetails(rentalId: string) {
+  const residenceQuery = useResidence(rentalId)
 
   const residence = residenceQuery.data
 
