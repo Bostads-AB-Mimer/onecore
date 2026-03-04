@@ -11,16 +11,33 @@ import {
 } from '../adapters/tenfast/filters'
 
 const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+  const { stage } = lease
+
+  // New Tenfast stage values (from 2026-03-04)
+  switch (stage) {
+    case 'Inväntar signering':
+      return LeaseStatus.PendingSignature
+    case 'Kommande':
+      return LeaseStatus.Upcoming
+    case 'Gällande':
+      return LeaseStatus.Current
+    case 'Preliminärt uppsagt':
+      return LeaseStatus.PreliminaryTerminated
+    case 'Uppsagt':
+      return LeaseStatus.AboutToEnd
+    case 'Upphört':
+      return LeaseStatus.Ended
+    case 'Ej skickat':
+      return LeaseStatus.PendingSignature
+  }
+
+  // TODO START: Remove legacy Tenfast stage fallbacks once all leases have been migrated to new stage values
   const today = new Date()
-  const { startDate, endDate, stage } = lease
+  const { startDate, endDate } = lease
 
-  // Check pending signature first
   if (isPendingSignature(lease)) return LeaseStatus.PendingSignature
-
-  // Check preliminary termination
   if (isPreliminaryTerminated(lease)) return LeaseStatus.PreliminaryTerminated
 
-  // Check ended leases (must be cancelled/archived with past end date)
   if (
     (stage === 'cancelled' || stage === 'archived') &&
     endDate &&
@@ -29,22 +46,19 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     return LeaseStatus.Ended
   }
 
-  // Check about to end - any lease with a future end date
   if (endDate && endDate >= today) {
     return LeaseStatus.AboutToEnd
   }
 
-  // Check upcoming (signed with future start date)
   if (startDate >= today && stage === 'signed') {
     return LeaseStatus.Upcoming
   }
 
-  // Current lease (signed, started, no end date)
   if (stage === 'signed' && startDate < today && !endDate) {
     return LeaseStatus.Current
   }
+  // TODO END: Remove legacy Tenfast stage fallbacks
 
-  // Default fallback
   return LeaseStatus.Current
 }
 
