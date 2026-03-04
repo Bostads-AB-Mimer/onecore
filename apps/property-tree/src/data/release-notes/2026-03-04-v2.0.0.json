@@ -3,7 +3,7 @@
     "id": "rn-2026-03-04-v1100-1",
     "date": "2026-03-04",
     "title": "Massutskick av SMS och e-post",
-    "description": "Det går nu att skicka SMS och e-post till flera hyresgäster samtidigt direkt från hyreskontraktssidan. Man kan välja enskilda mottagare eller flera. Det går även att skicka SMS/Mail från kundkortet.",
+    "description": "Det går nu att skicka SMS och e-post till flera hyresgäster samtidigt direkt från hyreskontraktssidan. Man kan välja enskilda mottagare eller flera. Det går även att skicka SMS/Mejl från kundkortet.",
     "category": "feature"
   },
   {
@@ -18,7 +18,7 @@
     "date": "2026-03-04",
     "title": "Ändrat metod för SMS- och e-postutskick",
     "description": "Ändrat metod för att göra sms och epost-utskick i syfte att komma åt bugg med att meddelanden inte levererats.",
-    "category": "fix"
+    "category": "improvement"
   },
   {
     "id": "rn-2026-03-04-v1100-4",
@@ -32,6 +32,13 @@
     "date": "2026-03-04",
     "title": "Byta bilplats för sökande med bostad i område eller fastighet med utökade regler",
     "description": "På Mimer.nu går det nu går att välja att byta bilplats också för sökande med bostad i område eller fastighet med utökade regler. Tidigare har den typen av sökande behövt gå via kundtjänst för att byta bilplats.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-03-04-v1100-6",
+    "date": "2026-03-04",
+    "title": "Klickbara nyheter med popup",
+    "description": "Det går nu att klicka på nyheter och uppdateringar på startsidan för att öppna en popup som visar alla nyheter. Klicka på rubriken, en enskild nyhet eller 'Visa alla nyheter' för att se hela listan.",
     "category": "improvement"
   }
 ]
