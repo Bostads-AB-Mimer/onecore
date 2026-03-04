@@ -13,10 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/v2/Card'
-import {
-  RELEASE_NOTES,
-  sortReleaseNotesByPinned,
-} from '@/data/release-notes'
+import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/data/release-notes'
 import { ReleaseNoteItem } from './ReleaseNoteItem'
 import { ReleaseNotesModal } from './ReleaseNotesModal'
 import { SupportMessage } from './SupportMessage'
@@ -34,10 +31,7 @@ export function ReleaseNotesCard() {
     setIsModalOpen(true)
   }
 
-  const sortedNotes = useMemo(
-    () => sortReleaseNotesByPinned(RELEASE_NOTES),
-    []
-  )
+  const sortedNotes = useMemo(() => sortReleaseNotesByPinned(RELEASE_NOTES), [])
 
   const totalPages = Math.ceil(sortedNotes.length / ITEMS_PER_PAGE)
   const startIndex = page * ITEMS_PER_PAGE

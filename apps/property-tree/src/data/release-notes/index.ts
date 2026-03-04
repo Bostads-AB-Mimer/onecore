@@ -1,10 +1,4 @@
-import {
-  Sparkles,
-  Bug,
-  Zap,
-  Info,
-  AlertTriangle,
-} from 'lucide-react'
+import { Sparkles, Bug, Zap, Info, AlertTriangle } from 'lucide-react'
 import type { ReleaseNote, ReleaseNoteCategory } from '@/services/types'
 
 /**

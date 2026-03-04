@@ -6,10 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/v2/Dialog'
-import {
-  RELEASE_NOTES,
-  sortReleaseNotesByPinned,
-} from '@/data/release-notes'
+import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/data/release-notes'
 import { ReleaseNoteItem } from './ReleaseNoteItem'
 import { SupportMessage } from './SupportMessage'
 
@@ -27,10 +24,7 @@ export function ReleaseNotesModal({
   onOpenChange,
   scrollToNoteId,
 }: ReleaseNotesModalProps) {
-  const sortedNotes = useMemo(
-    () => sortReleaseNotesByPinned(RELEASE_NOTES),
-    []
-  )
+  const sortedNotes = useMemo(() => sortReleaseNotesByPinned(RELEASE_NOTES), [])
 
   useEffect(() => {
     if (open && scrollToNoteId) {
