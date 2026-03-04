@@ -35,10 +35,16 @@ export async function searchContacts(
 ): Promise<Contact[]> {
   if (!query.trim()) return []
 
+  // Strip hyphen from Swedish personal numbers (YYYYMMDD-XXXX or YYMMDD-XXXX)
+  let q = query.trim()
+  if (/^\d{6,8}-\d{0,4}$/.test(q)) {
+    q = q.replace('-', '')
+  }
+
   const { data, error } = await GET('/contacts/search', {
     params: {
       query: {
-        q: query.trim(),
+        q,
         ...(contactType && { contactType }),
       },
     },
