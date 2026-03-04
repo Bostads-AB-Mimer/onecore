@@ -9,11 +9,6 @@ import { useUpdateInspectionStatus } from '../useUpdateInspectionStatus'
 
 // --- Mocks ---
 
-const mockToast = vi.fn()
-vi.mock('@/shared/hooks/useToast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}))
-
 vi.mock('@/services/api/core', () => ({
   inspectionService: {
     updateInspectionStatus: vi.fn(),
@@ -72,14 +67,15 @@ describe('useUpdateInspectionStatus', () => {
     })
   })
 
-  it('shows success toast on success', async () => {
+  it('calls onSuccess callback on success', async () => {
     const queryClient = createQueryClient()
+    const onSuccess = vi.fn()
     vi.mocked(inspectionService.updateInspectionStatus).mockResolvedValueOnce(
       makeInspection('Påbörjad') as any
     )
 
     const { result } = renderHook(
-      () => useUpdateInspectionStatus({ rentalId: RENTAL_ID }),
+      () => useUpdateInspectionStatus({ rentalId: RENTAL_ID, onSuccess }),
       { wrapper: createWrapper(queryClient) }
     )
 
@@ -88,9 +84,7 @@ describe('useUpdateInspectionStatus', () => {
     })
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Status uppdaterad' })
-      )
+      expect(onSuccess).toHaveBeenCalled()
     })
   })
 
@@ -119,14 +113,15 @@ describe('useUpdateInspectionStatus', () => {
     })
   })
 
-  it('shows error toast on error', async () => {
+  it('calls onError callback on error', async () => {
     const queryClient = createQueryClient()
+    const onError = vi.fn()
     vi.mocked(inspectionService.updateInspectionStatus).mockRejectedValueOnce(
       new Error('API error')
     )
 
     const { result } = renderHook(
-      () => useUpdateInspectionStatus({ rentalId: RENTAL_ID }),
+      () => useUpdateInspectionStatus({ rentalId: RENTAL_ID, onError }),
       { wrapper: createWrapper(queryClient) }
     )
 
@@ -135,9 +130,7 @@ describe('useUpdateInspectionStatus', () => {
     })
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: 'destructive' })
-      )
+      expect(onError).toHaveBeenCalledWith(expect.any(Error))
     })
   })
 
