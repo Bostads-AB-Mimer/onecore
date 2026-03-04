@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 import { Lease } from '@/services/api/core'
-import { RentalPropertyInfo } from '@onecore/types'
+import { LeaseStatus, RentalPropertyInfo } from '@onecore/types'
 
 interface LeaseContractSectionProps {
   leaseContracts: Lease[]
@@ -22,6 +22,13 @@ interface LeaseContractSectionProps {
   onPropertyCodeChange: (value: string) => void
   error?: string
   disabled?: boolean
+}
+
+const LeaseStatusMap: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Gällande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Upphört',
 }
 
 export function LeaseContractSection({
@@ -60,14 +67,24 @@ export function LeaseContractSection({
           <SelectContent>
             {leaseContracts.map((lease) => {
               const rentalProperty = rentalProperties[lease.rentalPropertyId]
+              /*
+                FIXME: The typing is wrong here, TS thinks that lease.status is a string enum, but it is a number.
+                The root issue is in lease-service.ts or further upstream
+              */
+              // @ts-expect-error
+              const status = LeaseStatusMap[lease.status]
 
               return (
                 <SelectItem key={lease.leaseId} value={lease.leaseId}>
                   <span className="font-medium">{lease.leaseId}</span>
                   {rentalProperty && (
-                    <span className="ml-2">
-                      {`${rentalProperty.property.address}: ${rentalProperty.type}`}
-                    </span>
+                    <div>
+                      <span className="ml-2">
+                        {`${rentalProperty.property.address}: ${rentalProperty.type}`}
+                      </span>
+                      {}
+                      <div>Status: {status}</div>
+                    </div>
                   )}
                 </SelectItem>
               )
