@@ -80,6 +80,11 @@ export function LeaseItemsList({
     return [...keyItems, ...cardItems]
   }, [keys, cards])
 
+  const leaseContactCodes = useMemo(
+    () => (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean),
+    [lease]
+  )
+
   const columnCount = selectable ? 9 : 8
 
   // Calculate selection state for header checkbox
@@ -220,7 +225,10 @@ export function LeaseItemsList({
         )
         return latestLoan ? (
           <div className="flex items-center justify-between flex-1">
-            <DefaultLoanHeader loan={latestLoan} />
+            <DefaultLoanHeader
+              loan={latestLoan}
+              leaseContactCodes={leaseContactCodes}
+            />
             <div onClick={(e) => e.stopPropagation()}>
               <LoanActionMenu
                 loan={latestLoan}
