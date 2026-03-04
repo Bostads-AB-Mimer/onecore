@@ -62,6 +62,35 @@ export const Lease = z.object({
   ]),
   tenantContactIds: z.array(z.string()).optional(),
   rentalPropertyId: z.string(),
+  rentalObject: z
+    .object({
+      rentalObjectCode: z.string(),
+      address: z.string(),
+      rent: z
+        .object({
+          rentalObjectCode: z.string(),
+          amount: z.number(),
+          vat: z.number(),
+          rows: z.array(
+            z.object({
+              code: z.string(),
+              description: z.string(),
+              amount: z.number(),
+              vatPercentage: z.number(),
+              fromDate: z.coerce.date().optional(),
+              toDate: z.coerce.date().optional(),
+            })
+          ),
+        })
+        .optional(),
+      residentialAreaCaption: z.string(),
+      residentialAreaCode: z.string(),
+      objectTypeCaption: z.string(),
+      objectTypeCode: z.string(),
+      boaArea: z.number().optional(),
+      braArea: z.number().optional(),
+    })
+    .optional(),
   rentalProperty: z
     .object({
       rentalPropertyId: z.string(),
@@ -126,6 +155,19 @@ export const Lease = z.object({
       code: z.string(),
       caption: z.string(),
     })
+    .optional(),
+  rentRows: z
+    .array(
+      z.object({
+        id: z.string(),
+        amount: z.number(),
+        articleId: z.string(),
+        label: z.string(),
+        vat: z.number(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+    )
     .optional(),
   tenants: z
     .array(
@@ -196,6 +238,7 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     status: mapLeaseStatus(lease.status),
     tenantContactIds: lease.tenantContactIds,
     rentalPropertyId: lease.rentalPropertyId,
+    rentalObject: lease.rentalObject,
     type: lease.type,
     noticeGivenBy: lease.noticeGivenBy,
     noticeDate: lease.noticeDate,
@@ -206,6 +249,7 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     lastDebitDate: lease.lastDebitDate,
     approvalDate: lease.approvalDate,
     residentialArea: lease.residentialArea,
+    rentRows: lease.rentRows,
     tenants: lease.tenants,
   }
 }

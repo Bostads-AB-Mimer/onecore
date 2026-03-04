@@ -28,7 +28,7 @@ export const TenfastTenantSchema = z.object({
   moms: z.number(),
   alternatePhones: z.array(z.any()),
   comments: z.array(z.any()),
-  onlineInboxes: z.record(z.any()),
+  onlineInboxes: z.record(z.any()).optional(),
   signeringsMetod: z.string(),
   _id: z.string(),
   hyresvard: z.string(),
@@ -41,7 +41,7 @@ export const TenfastTenantSchema = z.object({
   externalId: z.string(),
   borgenarer: z.array(z.any()),
   firmatecknare: z.array(z.any()),
-  displayName: z.string(),
+  displayName: z.string().optional(),
 })
 
 export const TenfastRentalObjectSchema = z.object({
