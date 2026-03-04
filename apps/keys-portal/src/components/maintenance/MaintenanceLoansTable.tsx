@@ -24,6 +24,7 @@ import {
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
+import { sortKeys } from '@/utils/sortKeys'
 import type { KeyLoanWithDetails, KeyDetails, Card } from '@/services/types'
 
 const COLUMN_COUNT = 10
@@ -101,10 +102,10 @@ export function MaintenanceLoansTable({
     return format(new Date(date), 'd MMM yyyy', { locale: sv })
   }
 
-  // Flatten loans into key/card items
+  // Flatten loans into key/card items (keys sorted by type/system/name)
   const items = useMemo<MaintenanceLoanItem[]>(() => {
     return loans.flatMap((loan) => [
-      ...loan.keysArray.map(
+      ...sortKeys(loan.keysArray || []).map(
         (key) =>
           ({
             itemType: 'key',

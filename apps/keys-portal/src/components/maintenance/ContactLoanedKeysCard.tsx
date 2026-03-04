@@ -23,6 +23,7 @@ import {
   getBundlesByContactWithLoanedKeys,
   getKeyBundleDetails,
 } from '@/services/api/keyBundleService'
+import { sortKeys } from '@/utils/sortKeys'
 import type {
   BundleWithLoanedKeysInfo,
   KeyDetails,
@@ -126,7 +127,7 @@ export function ContactLoanedKeysCard({
     const bundledKeyIds = new Set<string>()
 
     Object.entries(bundleKeys).forEach(([bundleId, keys]) => {
-      keys.forEach((key) => {
+      sortKeys(keys).forEach((key) => {
         bundledItems.push({
           key,
           bundleId,
@@ -143,7 +144,7 @@ export function ContactLoanedKeysCard({
     const seenKeyIds = new Set<string>()
 
     activeLoans.forEach((loan) => {
-      loan.keysArray.forEach((key) => {
+      sortKeys(loan.keysArray || []).forEach((key) => {
         if (!bundledKeyIds.has(key.id) && !seenKeyIds.has(key.id)) {
           seenKeyIds.add(key.id)
           unbundledItems.push({
