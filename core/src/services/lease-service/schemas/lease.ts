@@ -1,4 +1,8 @@
-import { Lease as OnecoreTypesLease } from '@onecore/types'
+import {
+  LeaseStatus,
+  leasing,
+  Lease as OnecoreTypesLease,
+} from '@onecore/types'
 import { z } from 'zod'
 
 /**
@@ -48,7 +52,13 @@ export const Lease = z.object({
   leaseNumber: z.string(),
   leaseStartDate: z.coerce.date(),
   leaseEndDate: z.coerce.date().optional(),
-  status: z.enum(['Current', 'Upcoming', 'AboutToEnd', 'Ended']),
+  status: z.enum([
+    'Current',
+    'Upcoming',
+    'AboutToEnd',
+    'Ended',
+    'PreliminaryTerminated',
+  ]),
   tenantContactIds: z.array(z.string()).optional(),
   rentalPropertyId: z.string(),
   rentalProperty: z
@@ -159,24 +169,20 @@ export const Lease = z.object({
     .optional(),
 })
 
-export const GetLeasesByRentalPropertyIdQueryParams = z.object({
-  includeUpcomingLeases: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeTerminatedLeases: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeContacts: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeRentInfo: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value !== 'false'), // defaults to true
-})
+function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
+  switch (status) {
+    case LeaseStatus.Current:
+      return 'Current'
+    case LeaseStatus.Upcoming:
+      return 'Upcoming'
+    case LeaseStatus.AboutToEnd:
+      return 'AboutToEnd'
+    case LeaseStatus.Ended:
+      return 'Ended'
+    case LeaseStatus.PreliminaryTerminated:
+      return 'PreliminaryTerminated'
+  }
+}
 
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {
@@ -184,20 +190,10 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     leaseNumber: lease.leaseNumber,
     leaseStartDate: lease.leaseStartDate,
     leaseEndDate: lease.leaseEndDate,
-    status:
-      lease.status === 0
-        ? 'Current'
-        : lease.status === 1
-          ? 'Upcoming'
-          : lease.status === 2
-            ? 'AboutToEnd'
-            : 'Ended',
+    status: mapLeaseStatus(lease.status),
     tenantContactIds: lease.tenantContactIds,
     rentalPropertyId: lease.rentalPropertyId,
-    rentalProperty: lease.rentalProperty,
     type: lease.type,
-    rentInfo: lease.rentInfo,
-    address: lease.address,
     noticeGivenBy: lease.noticeGivenBy,
     noticeDate: lease.noticeDate,
     noticeTimeTenant: lease.noticeTimeTenant,
@@ -210,3 +206,16 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     tenants: lease.tenants,
   }
 }
+
+const IncludeContactsQueryParamSchema = z.object({
+  includeContacts: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
+export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
+  IncludeContactsQueryParamSchema
+)
+
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

@@ -109,12 +109,10 @@ export const acceptOffer = async (
     }
 
     //Check if applicant is tenant
-    const leases = await leasingAdapter.getLeasesForContactCode(
+    const leases = await leasingAdapter.getLeasesByContactCode(
       offer.offeredApplicant.contactCode,
       {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
+        status: ['current', 'about-to-end', 'upcoming'],
       }
     )
 
@@ -165,11 +163,13 @@ export const acceptOffer = async (
     let leaseId: string
 
     try {
+      const includeVAT = false
       const createLeaseResult = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
         calculateVacantFrom(listing).toISOString(),
-        '001'
+        '001',
+        includeVAT
       )
 
       if (!createLeaseResult.ok) {
@@ -283,7 +283,7 @@ export const acceptOffer = async (
           address: listing.rentalObject.address,
           firstName: contactResult.data.firstName,
           availableFrom: calculateVacantFrom(listing).toISOString(),
-          rent: String(listing.rentalObject.monthlyRent),
+          rent: String(listing.rentalObject.rent?.amount ?? ''),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),

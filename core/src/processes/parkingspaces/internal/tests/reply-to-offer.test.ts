@@ -75,6 +75,7 @@ describe('replyToOffer', () => {
         contactId: string,
         fromDate: string,
         companyCode: string,
+        includeVAT: boolean,
       ],
       any
     >,
@@ -134,7 +135,7 @@ describe('replyToOffer', () => {
     )
     getLeasesForContactCode = jest.spyOn(
       leasingAdapter,
-      'getLeasesForContactCode'
+      'getLeasesByContactCode'
     )
     validatePropertyRentalRules = jest.spyOn(
       leasingAdapter,
