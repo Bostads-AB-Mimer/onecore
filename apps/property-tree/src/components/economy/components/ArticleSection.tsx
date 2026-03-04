@@ -83,7 +83,7 @@ export function ArticleSection({
         <Label>Fakturarader</Label>
         {invoiceRows.map((row, index) => (
           <div
-            key={`${row.articleId}-${index}`}
+            key={index}
             className="space-y-2 sm:space-y-0 sm:grid grid-rows-2 gap-2"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
