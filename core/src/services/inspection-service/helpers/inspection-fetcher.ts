@@ -48,7 +48,7 @@ export const fetchEnrichedInspection = async (
       rawInspection.residenceId
     )
     if (res.ok) {
-      residence = ResidenceDetailsSchema.parse(res.data)
+      residence = ResidenceDetailsSchema.parse({ ...res.data, status: null })
     }
   }
 

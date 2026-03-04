@@ -362,6 +362,37 @@ describe('@onecore/property-service', () => {
       expect(() => ResidenceDetailsSchema.parse(res.body.content)).not.toThrow()
     })
 
+    it('computes status from leases when rentalId exists', async () => {
+      const residenceDetails = factory.residenceByRentalIdDetails.build({
+        propertyObject: {
+          energy: { energyClass: 1 },
+          rentalId: 'rental-123',
+          rentalInformation: null,
+          rentalBlocks: [],
+        },
+      })
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
+      jest
+        .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValueOnce([
+          {
+            leaseId: 'lease-1',
+            rentalPropertyId: 'rental-123',
+            status: LeaseStatus.Current,
+          } as any,
+        ])
+
+      const res = await request(app.callback()).get(
+        `/property/residences/by-rental-id/1234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.status).toBe('LEASED')
+      expect(() => ResidenceDetailsSchema.parse(res.body.content)).not.toThrow()
+    })
+
     it('returns 404 if no residence is found', async () => {
       const getResidenceDetailsSpy = jest
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')

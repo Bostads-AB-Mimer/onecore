@@ -233,7 +233,7 @@ export const InstancesTable = ({
         const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
 
         if (!rentalId) {
-          // Fallback: show location but not clickable if residence.id is missing
+          // Fallback: show location but not clickable if rentalId is missing
           return (
             <span className="text-muted-foreground" title={tooltipText}>
               {displayText}

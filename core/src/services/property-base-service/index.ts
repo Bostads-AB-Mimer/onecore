@@ -1006,7 +1006,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: { ...residence, status },
+      content: schemas.ResidenceDetailsSchema.parse({ ...residence, status }),
       ...metadata,
     }
   })
