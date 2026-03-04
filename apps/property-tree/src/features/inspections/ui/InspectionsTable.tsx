@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 
+import { useToast } from '@/shared/hooks/useToast'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 import {
@@ -44,7 +45,23 @@ export function InspectionsTable({
     string | null
   >(null)
 
-  const { startInspection, isPending } = useUpdateInspectionStatus({ rentalId })
+  const { toast } = useToast()
+  const { startInspection, isPending } = useUpdateInspectionStatus({
+    rentalId,
+    onSuccess: () => {
+      toast({
+        title: 'Status uppdaterad',
+        description: 'Besiktningsstatus har uppdaterats.',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte uppdatera besiktningsstatus.',
+        variant: 'destructive',
+      })
+    },
+  })
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
