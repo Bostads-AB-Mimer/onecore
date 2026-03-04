@@ -11,10 +11,15 @@ import { ExternalLink, Key, Loader2 } from 'lucide-react'
 import { CollapsibleTable } from '@/components/ui/CollapsibleTable'
 import { GET } from '@/services/api/core/base-api'
 import { resolve } from '@/utils/env'
+import { formatDate, LeaseStatus } from './lease-helpers'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Lease } from '@/services/api/core/lease-service'
 
 type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
+
+type TableRow =
+  | { kind: 'loan'; loan: KeyLoanWithDetails }
+  | { kind: 'no-loan'; lease: Lease }
 
 const KeyTypeLabels: Record<string, string> = {
   HN: 'Huvudnyckel',
@@ -64,9 +69,16 @@ function formatLoanType(loanType: string) {
   }
 }
 
-function formatDate(date: string | null | undefined) {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('sv-SE')
+function formatDateOrDash(date: string | null | undefined) {
+  return date ? formatDate(date) : '-'
+}
+
+function getLoanRentalObjects(loan: KeyLoanWithDetails): string[] {
+  const codes = new Set<string>()
+  for (const key of loan.keysArray) {
+    if (key.rentalObjectCode) codes.add(key.rentalObjectCode)
+  }
+  return [...codes]
 }
 
 function LoanKeysDetail({ loan }: { loan: KeyLoanWithDetails }) {
@@ -115,10 +127,19 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const rentalObjectCodes = useMemo(() => {
+  const activeLeases = useMemo(() => {
     if (!leases?.length) return []
-    return [...new Set(leases.map((l) => l.rentalPropertyId))]
+    return leases.filter(
+      (l) => Number(l.status) !== LeaseStatus.Ended && l.status !== 'Ended'
+    )
   }, [leases])
+
+  const rentalObjectCodes = useMemo(
+    () => [...new Set(activeLeases.map((l) => l.rentalPropertyId))],
+    [activeLeases]
+  )
+
+  const rentalObjectCodesKey = rentalObjectCodes.join(',')
 
   useEffect(() => {
     const fetchLoans = async () => {
@@ -169,19 +190,131 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     }
 
     fetchLoans()
-  }, [contactCode, rentalObjectCodes])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rentalObjectCodesKey is a stable string derived from rentalObjectCodes
+  }, [contactCode, rentalObjectCodesKey])
 
   const keysUrl = resolve('VITE_KEYS_URL', '')
 
-  const openLoanInKeysPortal = (loan: KeyLoanWithDetails) => {
+  const openInKeysPortal = (rentalObjectCode: string) => {
     if (!keysUrl) return
-    const rentalObjectCode = loan.keysArray[0]?.rentalObjectCode
-    if (rentalObjectCode) {
-      window.open(`${keysUrl}/KeyLoan?object=${rentalObjectCode}`, '_blank')
-    } else {
-      window.open(`${keysUrl}/key-loans?q=${contactCode}`, '_blank')
-    }
+    window.open(`${keysUrl}/KeyLoan?object=${rentalObjectCode}`, '_blank')
   }
+
+  // Build table rows: one row per loan, plus rows for active leases with no loans
+  const tableRows = useMemo<TableRow[]>(() => {
+    const rows: TableRow[] = loans.map((loan) => ({ kind: 'loan', loan }))
+
+    // Find active leases that have no associated key loans
+    const coveredRentalObjects = new Set(
+      loans.flatMap((loan) =>
+        loan.keysArray.map((k) => k.rentalObjectCode).filter(Boolean)
+      )
+    )
+    for (const lease of activeLeases) {
+      if (!coveredRentalObjects.has(lease.rentalPropertyId)) {
+        rows.push({ kind: 'no-loan', lease })
+      }
+    }
+
+    return rows
+  }, [loans, activeLeases])
+
+  const columns = useMemo(() => [
+    {
+      key: 'loanType',
+      label: 'Lånetyp',
+      render: (row: TableRow) =>
+        row.kind === 'loan' ? (
+          formatLoanType(row.loan.loanType)
+        ) : (
+          <span className="text-muted-foreground">{row.lease.type}</span>
+        ),
+    },
+    {
+      key: 'rentalObject',
+      label: 'Hyresobjekt',
+      render: (row: TableRow) => {
+        if (row.kind === 'no-loan') return row.lease.rentalPropertyId
+        const codes = getLoanRentalObjects(row.loan)
+        if (codes.length === 0)
+          return <span className="text-muted-foreground">-</span>
+        return (
+          <div className="space-y-0.5">
+            {codes.map((code) => (
+              <div key={code} className="text-sm">
+                {code}
+              </div>
+            ))}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'keyCount',
+      label: 'Antal nycklar',
+      render: (row: TableRow) =>
+        row.kind === 'loan' ? (
+          <Badge variant="secondary">{row.loan.keysArray.length}</Badge>
+        ) : (
+          <Badge variant="secondary">0</Badge>
+        ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row: TableRow) =>
+        row.kind === 'loan' ? (
+          getStatusBadge(row.loan)
+        ) : (
+          <Badge variant="success">Aktiv</Badge>
+        ),
+    },
+    {
+      key: 'createdAt',
+      label: 'Skapad',
+      render: (row: TableRow) =>
+        row.kind === 'loan' ? formatDateOrDash(row.loan.createdAt) : '-',
+    },
+    {
+      key: 'pickedUpAt',
+      label: 'Upphämtat',
+      render: (row: TableRow) =>
+        row.kind === 'loan' ? formatDateOrDash(row.loan.pickedUpAt) : '-',
+    },
+    {
+      key: 'returnedAt',
+      label: 'Återlämnat',
+      render: (row: TableRow) =>
+        row.kind === 'loan' ? formatDateOrDash(row.loan.returnedAt) : '-',
+    },
+    ...(keysUrl
+      ? [
+          {
+            key: 'actions',
+            label: '',
+            render: (row: TableRow) => {
+              const rentalObjectCode =
+                row.kind === 'loan'
+                  ? row.loan.keysArray[0]?.rentalObjectCode
+                  : row.lease.rentalPropertyId
+              if (!rentalObjectCode) return null
+              return (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    openInKeysPortal(rentalObjectCode)
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )
+            },
+          },
+        ]
+      : []),
+  ], [keysUrl])
 
   if (isLoading) {
     return (
@@ -218,61 +351,6 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     )
   }
 
-  const columns = [
-    {
-      key: 'loanType',
-      label: 'Lånetyp',
-      render: (loan: KeyLoanWithDetails) => formatLoanType(loan.loanType),
-    },
-    {
-      key: 'keyCount',
-      label: 'Antal nycklar',
-      render: (loan: KeyLoanWithDetails) => (
-        <Badge variant="secondary">{loan.keysArray.length}</Badge>
-      ),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (loan: KeyLoanWithDetails) => getStatusBadge(loan),
-    },
-    {
-      key: 'createdAt',
-      label: 'Skapad',
-      render: (loan: KeyLoanWithDetails) => formatDate(loan.createdAt),
-    },
-    {
-      key: 'pickedUpAt',
-      label: 'Upphämtat',
-      render: (loan: KeyLoanWithDetails) => formatDate(loan.pickedUpAt),
-    },
-    {
-      key: 'returnedAt',
-      label: 'Återlämnat',
-      render: (loan: KeyLoanWithDetails) => formatDate(loan.returnedAt),
-    },
-    ...(keysUrl
-      ? [
-          {
-            key: 'actions',
-            label: '',
-            render: (loan: KeyLoanWithDetails) => (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation()
-                  openLoanInKeysPortal(loan)
-                }}
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            ),
-          },
-        ]
-      : []),
-  ]
-
   return (
     <Card>
       <CardHeader>
@@ -282,52 +360,109 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <CollapsibleTable<KeyLoanWithDetails>
-          data={loans}
+        <CollapsibleTable<TableRow>
+          data={tableRows}
           columns={columns}
-          keyExtractor={(loan) => loan.id}
-          expandedContentRenderer={(loan) => <LoanKeysDetail loan={loan} />}
+          keyExtractor={(row) =>
+            row.kind === 'loan' ? row.loan.id : `lease-${row.lease.leaseId}`
+          }
+          expandedContentRenderer={(row) =>
+            row.kind === 'loan' ? (
+              <LoanKeysDetail loan={row.loan} />
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">
+                Inga nycklar eller nyckellån för detta hyresobjekt
+              </p>
+            )
+          }
           expansionConfig={{
             allowMultiple: true,
             chevronPosition: 'start',
           }}
-          isExpandable={(loan) => loan.keysArray.length > 0}
+          isExpandable={() => true}
           mobileCardConfig={{
-            summaryRenderer: (loan) => (
-              <div className="space-y-3 w-full">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-sm font-medium">
-                      {formatLoanType(loan.loanType)}
+            summaryRenderer: (row) => {
+              if (row.kind === 'no-loan') {
+                return (
+                  <div className="space-y-2 w-full">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-sm font-medium">
+                          {row.lease.rentalPropertyId}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {row.lease.type}
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Inga nyckellån
+                      </span>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatDate(loan.createdAt)}
-                      {loan.pickedUpAt &&
-                        ` · Upphämtat ${formatDate(loan.pickedUpAt)}`}
-                    </div>
+                    {keysUrl && (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            openInKeysPortal(row.lease.rentalPropertyId)
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Öppna
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  {getStatusBadge(loan)}
+                )
+              }
+              const { loan } = row
+              return (
+                <div className="space-y-3 w-full">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-sm font-medium">
+                        {formatLoanType(loan.loanType)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {formatDateOrDash(loan.createdAt)}
+                        {loan.pickedUpAt &&
+                          ` · Upphämtat ${formatDateOrDash(loan.pickedUpAt)}`}
+                      </div>
+                    </div>
+                    {getStatusBadge(loan)}
+                  </div>
+                  {(() => {
+                    const rentalCodes = getLoanRentalObjects(loan)
+                    return rentalCodes.length > 0 ? (
+                      <div className="text-xs text-muted-foreground">
+                        {rentalCodes.join(', ')}
+                      </div>
+                    ) : null
+                  })()}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">
+                      {loan.keysArray.length} nycklar
+                    </span>
+                    {keysUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation()
+                          openInKeysPortal(
+                            loan.keysArray[0]?.rentalObjectCode ?? ''
+                          )
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Öppna
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">
-                    {loan.keysArray.length} nycklar
-                  </span>
-                  {keysUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        openLoanInKeysPortal(loan)
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      Öppna
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ),
+              )
+            },
           }}
           emptyMessage="Inga nyckellån hittades"
         />
