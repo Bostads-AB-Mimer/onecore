@@ -81,6 +81,14 @@
     "imageName": "onecore-work-order"
   },
   {
+    "name": "contacts",
+    "label": "ONECore Contacts Service",
+    "package": "@onecore/contacts",
+    "path": "services/contacts",
+    "docker": true,
+    "imageName": "onecore-contacts"
+  },
+  {
     "name": "core",
     "label": "ONECore Core Orchestration Service",
     "package": "@onecore/core",

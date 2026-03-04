@@ -2,11 +2,6 @@ import { schemaRegistry } from './utils/openapi'
 
 const basePath = __dirname
 
-// apis: [
-//   './src/services/property-management-service/index.ts',
-//   './src/services/work-order-service/index.ts',
-// ],
-
 export const swaggerSpec = {
   definition: {
     openapi: '3.0.0',
@@ -15,8 +10,16 @@ export const swaggerSpec = {
       version: '1.0.0',
     },
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
       schemas: {},
     },
+    security: [{ bearerAuth: [] }],
   },
   apis: [
     `${basePath}/services/auth-service/*.{ts,js}`,
@@ -29,6 +32,7 @@ export const swaggerSpec = {
     `${basePath}/services/file-storage-service/*.{ts,js}`,
     `${basePath}/services/keys-service/*.{ts,js}`,
   ],
+  paths: [],
 }
 
 export function updateSwaggerSchemas() {
