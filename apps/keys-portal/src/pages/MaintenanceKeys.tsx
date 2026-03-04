@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { UnifiedMaintenanceSearch } from '@/components/maintenance/UnifiedMaintenanceSearch'
@@ -11,7 +11,7 @@ import { MaintenanceLoansTable } from '@/components/maintenance/MaintenanceLoans
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
 import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
-import { ContactBundlesWithLoanedKeysCard } from '@/components/maintenance/ContactBundlesWithLoanedKeysCard'
+import { ContactLoanedKeysCard } from '@/components/maintenance/ContactLoanedKeysCard'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
@@ -55,6 +55,8 @@ export default function MaintenanceKeys() {
   const returnLoan = returnLoanId
     ? (loans.find((l) => l.id === returnLoanId) ?? null)
     : null
+
+  const activeLoans = useMemo(() => loans.filter((l) => !l.returnedAt), [loans])
 
   const handleLoanReturn = (loanId: string) => {
     setReturnLoanId(loanId)
@@ -311,8 +313,10 @@ export default function MaintenanceKeys() {
                     }}
                   />
                 </div>
-                <ContactBundlesWithLoanedKeysCard
+                <ContactLoanedKeysCard
                   contactCode={searchResult.contact.contactCode}
+                  activeLoans={activeLoans}
+                  loansKeySystemMap={loansKeySystemMap}
                   onBundleClick={(bundleId) => {
                     setHasLoadedLoans(false)
                     handleSearchByBundleId(bundleId)
