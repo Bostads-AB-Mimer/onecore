@@ -230,43 +230,30 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/by-rental-property-id/{rentalPropertyId}:
+   * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get leases with related entities for a specific rental property id
+   *     summary: Get leases with related entities for a specific rental object code.
    *     tags:
    *       - Lease service
    *     description: Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
    *     parameters:
    *       - in: path
-   *         name: rentalPropertyId
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: Rental roperty id of the building/residence to fetch leases for.
+   *         description: Rental object code of the building/residence to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
-   *       - in: query
-   *         name: includeTerminatedLeases
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include terminated leases in the response
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *       - in: query
    *         name: includeContacts
    *         schema:
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
-   *       - in: query
-   *         name: includeRentInfo
-   *         schema:
-   *           type: boolean
-   *           default: true
-   *         description: Whether to include rent information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -288,7 +275,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/by-rental-property-id/:rentalPropertyId', async (ctx) => {
+  router.get('/leases/by-rental-object-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
@@ -304,8 +291,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const leases = await leasingAdapter.getLeasesForPropertyId(
-        ctx.params.rentalPropertyId,
+      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
+        ctx.params.rentalObjectCode,
         queryParams.data
       )
 
@@ -354,17 +341,16 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Personal Number (PNR) of the individual to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: includeContacts
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Whether to include terminated leases in the response
+   *         description: Whether to include contact information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -382,9 +368,18 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    try {
-      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
+    const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: queryParams.error,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
       const contact = await leasingAdapter.getContactForPnr(ctx.params.pnr)
 
       // TODO(BREAKING): includeContacts no longer defaults to true
@@ -436,17 +431,16 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Contact code of the individual to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
-   *       - in: query
    *         name: status
    *         schema:
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
    *           type: boolean
    *           default: false
-   *         description: Whether to include terminated leases in the response
+   *         description: Whether to include contact information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -553,6 +547,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease to retrieve.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include contact information in the response
    *     responses:
    *       '200':
    *         description: Successful response with the requested lease and related entities

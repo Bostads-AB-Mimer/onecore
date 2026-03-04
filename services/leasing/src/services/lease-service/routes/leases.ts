@@ -651,7 +651,7 @@ export const routes = (router: KoaRouter) => {
    *         name: status
    *         schema:
    *           type: string
-   *         description: The status of the leases to include.
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -746,7 +746,7 @@ export const routes = (router: KoaRouter) => {
    *         name: status
    *         schema:
    *           type: string
-   *         description: The status of the leases to include.
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.

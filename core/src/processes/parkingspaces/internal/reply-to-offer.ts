@@ -109,12 +109,10 @@ export const acceptOffer = async (
     }
 
     //Check if applicant is tenant
-    const leases = await leasingAdapter.getLeasesForContactCode(
+    const leases = await leasingAdapter.getLeasesByContactCode(
       offer.offeredApplicant.contactCode,
       {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
+        status: ['current', 'about-to-end', 'upcoming'],
       }
     )
 
