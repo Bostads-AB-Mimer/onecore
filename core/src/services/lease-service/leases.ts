@@ -304,7 +304,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const leases = await leasingAdapter.getLeasesForPropertyId(
+      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
         ctx.params.rentalPropertyId,
         queryParams.data
       )
@@ -382,9 +382,18 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/by-pnr/:pnr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    try {
-      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
+    const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: queryParams.error,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
       const contact = await leasingAdapter.getContactForPnr(ctx.params.pnr)
 
       // TODO(BREAKING): includeContacts no longer defaults to true
