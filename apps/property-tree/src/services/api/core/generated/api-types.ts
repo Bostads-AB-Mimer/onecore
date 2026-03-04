@@ -1254,14 +1254,10 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean;
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean;
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string;
           /** @description Whether to include contact information in the response */
           includeContacts?: boolean;
-          /** @description Whether to include rent information in the response */
-          includeRentInfo?: boolean;
         };
         path: {
           /** @description Rental object code of the building/residence to fetch leases for. */
@@ -1294,10 +1290,10 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean;
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean;
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string;
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean;
         };
         path: {
           /** @description Personal Number (PNR) of the individual to fetch leases for. */
@@ -1324,10 +1320,10 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean;
-          /** @description Whether to include terminated leases in the response */
-          status?: boolean;
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string;
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean;
         };
         path: {
           /** @description Contact code of the individual to fetch leases for. */
@@ -1353,6 +1349,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean;
+        };
         path: {
           /** @description The ID of the lease to retrieve. */
           id: string;

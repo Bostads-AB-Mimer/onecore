@@ -244,29 +244,16 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Rental object code of the building/residence to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
-   *       - in: query
-   *         name: includeTerminatedLeases
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include terminated leases in the response
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *       - in: query
    *         name: includeContacts
    *         schema:
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
-   *       - in: query
-   *         name: includeRentInfo
-   *         schema:
-   *           type: boolean
-   *           default: true
-   *         description: Whether to include rent information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -354,17 +341,16 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Personal Number (PNR) of the individual to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: includeContacts
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Whether to include terminated leases in the response
+   *         description: Whether to include contact information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -445,17 +431,16 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Contact code of the individual to fetch leases for.
    *       - in: query
-   *         name: includeUpcomingLeases
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Whether to include upcoming leases in the response
-   *       - in: query
    *         name: status
    *         schema:
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
    *           type: boolean
    *           default: false
-   *         description: Whether to include terminated leases in the response
+   *         description: Whether to include contact information in the response
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -562,6 +547,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease to retrieve.
+   *       - in: query
+   *         name: includeContacts
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Whether to include contact information in the response
    *     responses:
    *       '200':
    *         description: Successful response with the requested lease and related entities
