@@ -48,10 +48,12 @@
     "imageName": "onecore-keys-portal",
     "build_args": {
       "test": {
-        "VITE_PROPERTY_TREE_URL": "https://property-tree-test.mimer.nu"
+        "VITE_PROPERTY_TREE_URL": "https://property-tree-test.mimer.nu",
+        "VITE_ALLIERA_BASE_URL": "https://srvmimhk21.mimerbygg.local/Alliera"
       },
       "release": {
-        "VITE_PROPERTY_TREE_URL": "https://property-tree.mimer.nu"
+        "VITE_PROPERTY_TREE_URL": "https://property-tree.mimer.nu",
+        "VITE_ALLIERA_BASE_URL": "https://srvmimhk21.mimerbygg.local/Alliera"
       }
     }
   },
