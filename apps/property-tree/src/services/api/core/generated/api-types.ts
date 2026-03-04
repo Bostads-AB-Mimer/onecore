@@ -6041,7 +6041,6 @@ export interface components {
           buildingCode: string | null;
         };
         deleted: boolean;
-        /** Format: date-time */
         timestamp: string;
       }) | null;
       areaSize: number | null;
@@ -6107,7 +6106,6 @@ export interface components {
         buildingCode: string | null;
       };
       deleted: boolean;
-      /** Format: date-time */
       timestamp: string;
     };
     Room: {
@@ -7470,7 +7468,6 @@ export interface components {
             buildingCode: string | null;
           };
           deleted: boolean;
-          /** Format: date-time */
           timestamp: string;
         }) | null;
         areaSize: number | null;
@@ -7756,7 +7753,6 @@ export interface components {
             buildingCode: string | null;
           };
           deleted: boolean;
-          /** Format: date-time */
           timestamp: string;
         }) | null;
         areaSize: number | null;
@@ -8042,7 +8038,6 @@ export interface components {
             buildingCode: string | null;
           };
           deleted: boolean;
-          /** Format: date-time */
           timestamp: string;
         }) | null;
         areaSize: number | null;
