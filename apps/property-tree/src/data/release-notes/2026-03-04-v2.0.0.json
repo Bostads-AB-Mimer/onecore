@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rn-2026-03-04-v1100-1",
+    "date": "2026-03-04",
+    "title": "Massutskick av SMS och e-post",
+    "description": "Det går nu att skicka SMS och e-post till flera hyresgäster samtidigt direkt från hyreskontraktssidan. Man kan välja enskilda mottagare eller flera. Det går även att skicka SMS/Mail från kundkortet.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-04-v1100-2",
+    "date": "2026-03-04",
+    "title": "Exportera hyresavtal till Excel",
+    "description": "Excel-export som tidigare bara fanns för spärrar finns nu även för hyresavtal.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-04-v1100-3",
+    "date": "2026-03-04",
+    "title": "Ändrat metod för SMS- och e-postutskick",
+    "description": "Ändrat metod för att göra sms och epost-utskick i syfte att komma åt bugg med att meddelanden inte levererats.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-03-04-v1100-4",
+    "date": "2026-03-04",
+    "title": "Stöd för länkar i annonsinnehåll",
+    "description": "Annonsinnehåll stöder nu länkar, vilket gör det möjligt att inkludera klickbara URL:er i annonstexter.",
+    "category": "improvement"
+  }
+]
