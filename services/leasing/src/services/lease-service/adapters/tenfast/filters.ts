@@ -48,37 +48,52 @@ export const filterByStatus = (
 }
 
 const isCurrentLease = (l: TenfastLease, now: Date) => {
-  return l.startDate < now && !l.endDate && l.stage === 'signed'
+  return (
+    l.stage === 'Gällande' ||
+    // TODO START: Remove legacy stage fallbacks once all leases have been migrated to new stage values
+    (l.startDate < now && !l.endDate && l.stage === 'signed')
+  )
 }
 
 const isUpcomingLease = (l: TenfastLease, now: Date) => {
-  return l.startDate >= now && l.stage === 'signed'
+  return (
+    l.stage === 'Kommande' ||
+    (l.startDate >= now && l.stage === 'signed')
+  )
 }
 
 const isAboutToEndLease = (l: TenfastLease, now: Date) => {
   return (
-    l.endDate !== null &&
-    l.endDate >= now &&
-    !isPreliminaryTerminated(l) &&
-    !isPendingSignature(l)
+    l.stage === 'Uppsagt' ||
+    (l.endDate !== null &&
+      l.endDate >= now &&
+      !isPreliminaryTerminated(l) &&
+      !isPendingSignature(l))
   )
 }
 
 const isEndedLease = (l: TenfastLease, now: Date) => {
   return (
-    (l.stage === 'cancelled' || l.stage === 'archived') &&
-    l.endDate !== null &&
-    l.endDate < now
+    l.stage === 'Upphört' ||
+    ((l.stage === 'cancelled' || l.stage === 'archived') &&
+      l.endDate !== null &&
+      l.endDate < now)
   )
 }
 
 export const isPreliminaryTerminated = (lease: TenfastLease): boolean => {
   return (
+    lease.stage === 'Preliminärt uppsagt' ||
     lease.stage === 'requestedCancellation' ||
     lease.stage === 'preliminaryCancellation'
   )
 }
 
 export const isPendingSignature = (lease: TenfastLease): boolean => {
-  return lease.stage === 'signingInProgress'
+  return (
+    lease.stage === 'Inväntar signering' ||
+    lease.stage === 'Ej skickat' ||
+    lease.stage === 'signingInProgress'
+  )
 }
+// TODO END: Remove legacy stage fallbacks
