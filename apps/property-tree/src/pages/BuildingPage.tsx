@@ -16,8 +16,6 @@ const BuildingPage = () => {
     buildingCode
   )
 
-  const basePath = `/residences`
-
   return (
     <ViewLayout>
       <ObjectPageLayout
@@ -38,7 +36,6 @@ const BuildingPage = () => {
             <BuildingTabs
               building={data.building}
               staircases={data.staircases}
-              basePath={basePath}
             />
           </>
         )}

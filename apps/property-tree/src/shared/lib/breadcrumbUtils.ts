@@ -1,12 +1,14 @@
+import { paths } from '@/shared/routes'
+
 export interface BreadcrumbItem {
   label: string
   path: string
 }
 
 export const generateBreadcrumbs = (
-  property?: { id: string; name: string },
-  building?: { id: string; name: string },
-  residence?: { id: string; name: string },
+  property?: { code: string; name: string },
+  building?: { code: string; name: string },
+  residence?: { rentalId: string; name: string },
   companyId?: string
 ): BreadcrumbItem[] => {
   const breadcrumbs: BreadcrumbItem[] = []
@@ -14,28 +16,28 @@ export const generateBreadcrumbs = (
   // Always start with Properties - link to company if available
   breadcrumbs.push({
     label: 'Fastigheter',
-    path: companyId ? `/companies/${companyId}` : '/',
+    path: companyId ? paths.company(companyId) : '/',
   })
 
   // Add property breadcrumb if provided
   if (property) {
     breadcrumbs.push({
       label: property.name,
-      path: `/properties/${property.id}`,
+      path: paths.property(property.code),
     })
 
     // Add building breadcrumb if provided
     if (building) {
       breadcrumbs.push({
         label: building.name,
-        path: `/building/${building.id}`,
+        path: paths.building(building.code),
       })
 
       // Add residence breadcrumb if provided
       if (residence) {
         breadcrumbs.push({
           label: residence.name,
-          path: `/residence/${residence.id}`,
+          path: paths.residence(residence.rentalId),
         })
       }
     }

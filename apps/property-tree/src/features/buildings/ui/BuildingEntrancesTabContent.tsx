@@ -12,13 +12,11 @@ interface BuildingEntrancesTabContentProps {
     string,
     UseQueryResult<ResidenceSummary[], Error>
   >
-  basePath: string
 }
 
 export const BuildingEntrancesTabContent = ({
   isLoading,
   residenceStaircaseLookupMap,
-  basePath,
 }: BuildingEntrancesTabContentProps) => {
   const count = !isLoading
     ? Object.entries(residenceStaircaseLookupMap).filter(([, queryResult]) => {
@@ -31,7 +29,6 @@ export const BuildingEntrancesTabContent = ({
       <BuildingEntranceHierarchy
         isLoading={isLoading}
         residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-        basePath={basePath}
       />
     </TabLayout>
   )

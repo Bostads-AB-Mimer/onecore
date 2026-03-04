@@ -359,9 +359,7 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(200)
       expect(getResidenceDetailsSpy).toHaveBeenCalled()
-      expect(() =>
-        ResidenceDetailsSchema.parse(res.body.content)
-      ).not.toThrow()
+      expect(() => ResidenceDetailsSchema.parse(res.body.content)).not.toThrow()
     })
 
     it('returns 404 if no residence is found', async () => {

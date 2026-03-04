@@ -24,14 +24,12 @@ interface BuildingTabsMobileProps {
     string,
     UseQueryResult<ResidenceSummary[], Error>
   >
-  basePath: string
 }
 
 export const BuildingTabsMobile = ({
   building,
   isLoading,
   residenceStaircaseLookupMap,
-  basePath,
 }: BuildingTabsMobileProps) => {
   const { features } = useFeatureToggles()
   const accordionItems: MobileAccordionItem[] = [
@@ -43,7 +41,6 @@ export const BuildingTabsMobile = ({
         <BuildingEntrancesTabContent
           isLoading={isLoading}
           residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-          basePath={basePath}
         />
       ) : (
         <FeatureGatedContent

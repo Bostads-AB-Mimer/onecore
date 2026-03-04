@@ -47,8 +47,7 @@ export const paths = {
     generatePath(routes.building, { buildingCode }),
   staircase: (buildingCode: string, staircaseCode: string) =>
     generatePath(routes.staircase, { buildingCode, staircaseCode }),
-  residence: (rentalId: string) =>
-    generatePath(routes.residence, { rentalId }),
+  residence: (rentalId: string) => generatePath(routes.residence, { rentalId }),
   room: (rentalId: string, roomCode: string) =>
     generatePath(routes.room, { rentalId, roomCode }),
   parkingSpace: (rentalId: string) =>

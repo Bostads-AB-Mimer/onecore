@@ -11,9 +11,9 @@ import {
 } from '@/shared/ui/Breadcrumb'
 
 interface PropertyBreadcrumbProps {
-  property?: { id: string; name: string }
-  building?: { id: string; name: string }
-  residence?: { id: string; name: string }
+  property?: { code: string; name: string }
+  building?: { code: string; name: string }
+  residence?: { rentalId: string; name: string }
   companyId?: string
 }
 

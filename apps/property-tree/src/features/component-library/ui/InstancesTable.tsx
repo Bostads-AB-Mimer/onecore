@@ -3,6 +3,7 @@ import { History, ImageIcon, Unplug } from 'lucide-react'
 import type { Component } from '@/services/types'
 
 import { formatISODate } from '@/shared/lib/formatters'
+import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
@@ -38,13 +39,13 @@ export const InstancesTable = ({
     })
 
   const handleNavigateToResidence = (
-    residenceId: string | null | undefined,
+    rentalId: string | null | undefined,
     roomCode: string | null | undefined
   ) => {
-    if (residenceId) {
+    if (rentalId) {
       const url = roomCode
-        ? `/residences/${residenceId}?room=${roomCode}`
-        : `/residences/${residenceId}`
+        ? paths.room(rentalId, roomCode)
+        : paths.residence(rentalId)
       window.open(url, '_blank')
     }
   }
@@ -226,14 +227,12 @@ export const InstancesTable = ({
           return <span className="text-muted-foreground">-</span>
         }
 
-        // Use residence.id from propertyStructure for navigation (Residence.id / keybalgh)
-        // NOT structure.residenceId which is actually Residence.propertyObjectId (keycmobj)
-        const residenceId = structure.residence?.id
+        const rentalId = structure.rentalId
 
         const displayText = `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`
         const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
 
-        if (!residenceId) {
+        if (!rentalId) {
           // Fallback: show location but not clickable if residence.id is missing
           return (
             <span className="text-muted-foreground" title={tooltipText}>
@@ -245,7 +244,7 @@ export const InstancesTable = ({
         return (
           <button
             onClick={() =>
-              handleNavigateToResidence(residenceId, structure.roomCode)
+              handleNavigateToResidence(rentalId, structure.roomCode)
             }
             className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
             title={tooltipText}
