@@ -83,7 +83,7 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
 async function getContactsByFilters(
   params: LeaseSearchQueryParams
 ): Promise<ContactInfo[]> {
-  const { data, error } = await GET('/contacts/from-lease-search' as any, {
+  const { data, error } = await GET('/contacts/from-lease-search', {
     params: {
       query: params,
     },
@@ -91,8 +91,7 @@ async function getContactsByFilters(
 
   if (error) throw error
 
-  const response = data as { content?: ContactInfo[] }
-  return response.content ?? []
+  return data.content ?? []
 }
 
 async function exportLeasesToExcel(
