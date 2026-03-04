@@ -153,6 +153,38 @@ export interface paths {
       };
     };
   };
+  "/auth/roles/{roleName}/users": {
+    /**
+     * Get users by realm role
+     * @description Returns all users assigned to the given Keycloak realm role
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The name of the Keycloak realm role */
+          roleName: string;
+        };
+      };
+      responses: {
+        /** @description List of users with the given role */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KeycloakUser"][];
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "openapi": {
   };
   "/health": {
@@ -8269,6 +8301,13 @@ export interface components {
        * @default 3600
        */
       expirySeconds?: number;
+    };
+    KeycloakUser: {
+      id?: string;
+      username?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
     };
   };
   responses: never;

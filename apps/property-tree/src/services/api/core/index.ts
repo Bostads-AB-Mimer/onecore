@@ -1,3 +1,4 @@
+export * from './authService'
 export * from './buildingService'
 export * from './commentService'
 export * from './companyService'

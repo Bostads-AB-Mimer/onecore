@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
+import { useInspectors } from '../hooks/useInspectors'
+
 interface InspectorSelectionCardProps {
   inspectorName: string
   setInspectorName: (name: string) => void
@@ -29,16 +31,6 @@ interface InspectorSelectionCardProps {
   tenant?: Tenant
   layout?: 'vertical' | 'horizontal'
 }
-
-const inspectors = [
-  'Anna Andersson',
-  'Erik Eriksson',
-  'Maria Nilsson',
-  'Johan Johansson',
-]
-
-// Simulate logged in user
-const currentUser = 'Anna Andersson'
 
 export function InspectorSelectionCard({
   inspectorName,
@@ -51,13 +43,7 @@ export function InspectorSelectionCard({
   layout = 'vertical',
 }: InspectorSelectionCardProps) {
   const navigate = useNavigate()
-
-  // Set default inspector if not already set
-  useEffect(() => {
-    if (!inspectorName && currentUser) {
-      setInspectorName(currentUser)
-    }
-  }, [inspectorName, setInspectorName])
+  const { data: inspectors, isLoading: isLoadingInspectors } = useInspectors()
 
   const handleOpenTenantProfile = () => {
     if (tenant?.contactCode) {
@@ -142,7 +128,7 @@ export function InspectorSelectionCard({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Besiktigare</Label>
             <Select value={inspectorName} onValueChange={setInspectorName}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full" disabled={isLoadingInspectors}>
                 <SelectValue placeholder="Välj besiktigare">
                   {inspectorName && (
                     <div className="flex items-center gap-2">
@@ -160,21 +146,24 @@ export function InspectorSelectionCard({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {inspectors.map((inspector) => (
-                  <SelectItem key={inspector} value={inspector}>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                          {inspector
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      {inspector}
-                    </div>
-                  </SelectItem>
-                ))}
+                {inspectors?.map((user) => {
+                  const name = `${user.firstName} ${user.lastName}`
+                  return (
+                    <SelectItem key={user.id} value={name}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            {name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        {name}
+                      </div>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
