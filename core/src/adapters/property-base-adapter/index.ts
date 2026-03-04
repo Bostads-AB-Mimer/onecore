@@ -292,39 +292,6 @@ export async function getResidences(
   }
 }
 
-type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
-
-export async function getResidenceDetails(
-  residenceId: string,
-  options?: { active?: boolean }
-): Promise<
-  AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
-> {
-  try {
-    const fetchResponse = await client().GET('/residences/{id}', {
-      params: {
-        path: { id: residenceId },
-        query: { active: options?.active },
-      },
-    })
-
-    if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content }
-    }
-
-    if (fetchResponse.response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    throw new Error(
-      `Unexpected response status: ${fetchResponse.response.status}`
-    )
-  } catch (err) {
-    logger.error({ err }, '@onecore/property-adapter.getResidenceDetails')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 type GetResidenceByRentalIdResponse =
   components['schemas']['GetResidenceByRentalIdResponse']['content']
 

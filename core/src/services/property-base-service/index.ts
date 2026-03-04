@@ -51,10 +51,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Room', schemas.RoomSchema)
   registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
-  registerSchema(
-    'ResidenceByRentalIdDetails',
-    schemas.ResidenceByRentalIdSchema
-  )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
   registerSchema('RentalBlock', schemas.RentalBlockSchema)
   registerSchema(
@@ -948,7 +944,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
+   *                   $ref: '#/components/schemas/ResidenceDetails'
    *       404:
    *         description: Residence not found
    *         content:
@@ -992,9 +988,25 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const residence = getResidence.data
+    const rentalPropertyId = residence.propertyObject.rentalId
+
+    let status: schemas.ResidenceDetails['status'] = null
+    if (rentalPropertyId) {
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        rentalPropertyId,
+        {
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: false,
+          includeContacts: false,
+        }
+      )
+      status = calculateResidenceStatus(leases)
+    }
+
     ctx.status = 200
     ctx.body = {
-      content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
+      content: { ...residence, status },
       ...metadata,
     }
   })
@@ -1577,135 +1589,6 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies Array<schemas.ResidenceSearchResult>,
-        ...metadata,
-      }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Internal server error')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /residences/{residenceId}:
-   *   get:
-   *     summary: Get residence data by residenceId
-   *     tags:
-   *       - Property base Service
-   *     description: Retrieves residence data by residenceId
-   *     parameters:
-   *       - in: path
-   *         name: residenceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Id for the residence to fetch
-   *       - in: query
-   *         name: active
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved residence.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       404:
-   *         description: Residence not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Residence not found
-   *       500:
-   *         description: Internal server error. Failed to retrieve residence data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/residences/:residenceId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { residenceId } = ctx.params
-    const queryParams = schemas.GetResidenceDetailsQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { error: queryParams.error.errors, ...metadata }
-      return
-    }
-
-    const { active: rentalBlockActive } = queryParams.data
-
-    try {
-      const getResidence = await propertyBaseAdapter.getResidenceDetails(
-        residenceId,
-        { active: rentalBlockActive }
-      )
-
-      if (!getResidence.ok) {
-        if (getResidence.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'Residence not found', ...metadata }
-          return
-        }
-
-        logger.error(
-          { err: getResidence.err, metadata },
-          'Internal server error'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      if (!getResidence.data.propertyObject.rentalId) {
-        ctx.status = 200
-        ctx.body = {
-          content: schemas.ResidenceDetailsSchema.parse({
-            ...getResidence.data,
-            status: null,
-          }),
-          ...metadata,
-        }
-        return
-      }
-
-      const leases = await leasingAdapter.getLeasesForPropertyId(
-        getResidence.data.propertyObject.rentalId,
-        {
-          includeContacts: false,
-          includeTerminatedLeases: false,
-          includeUpcomingLeases: true,
-        }
-      )
-
-      const status = calculateResidenceStatus(leases)
-
-      ctx.status = 200
-      ctx.body = {
-        content: schemas.ResidenceDetailsSchema.parse({
-          ...getResidence.data,
-          status,
-        }),
         ...metadata,
       }
     } catch (error) {
