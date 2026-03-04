@@ -190,7 +190,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     }
 
     fetchLoans()
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- rentalObjectCodesKey is a stable string derived from rentalObjectCodes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rentalObjectCodesKey is a stable string derived from rentalObjectCodes
   }, [contactCode, rentalObjectCodesKey])
 
   const keysUrl = resolve('VITE_KEYS_URL', '')
@@ -219,102 +219,105 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     return rows
   }, [loans, activeLeases])
 
-  const columns = useMemo(() => [
-    {
-      key: 'loanType',
-      label: 'Lånetyp',
-      render: (row: TableRow) =>
-        row.kind === 'loan' ? (
-          formatLoanType(row.loan.loanType)
-        ) : (
-          <span className="text-muted-foreground">{row.lease.type}</span>
-        ),
-    },
-    {
-      key: 'rentalObject',
-      label: 'Hyresobjekt',
-      render: (row: TableRow) => {
-        if (row.kind === 'no-loan') return row.lease.rentalPropertyId
-        const codes = getLoanRentalObjects(row.loan)
-        if (codes.length === 0)
-          return <span className="text-muted-foreground">-</span>
-        return (
-          <div className="space-y-0.5">
-            {codes.map((code) => (
-              <div key={code} className="text-sm">
-                {code}
-              </div>
-            ))}
-          </div>
-        )
+  const columns = useMemo(
+    () => [
+      {
+        key: 'loanType',
+        label: 'Lånetyp',
+        render: (row: TableRow) =>
+          row.kind === 'loan' ? (
+            formatLoanType(row.loan.loanType)
+          ) : (
+            <span className="text-muted-foreground">{row.lease.type}</span>
+          ),
       },
-    },
-    {
-      key: 'keyCount',
-      label: 'Antal nycklar',
-      render: (row: TableRow) =>
-        row.kind === 'loan' ? (
-          <Badge variant="secondary">{row.loan.keysArray.length}</Badge>
-        ) : (
-          <Badge variant="secondary">0</Badge>
-        ),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row: TableRow) =>
-        row.kind === 'loan' ? (
-          getStatusBadge(row.loan)
-        ) : (
-          <Badge variant="success">Aktiv</Badge>
-        ),
-    },
-    {
-      key: 'createdAt',
-      label: 'Skapad',
-      render: (row: TableRow) =>
-        row.kind === 'loan' ? formatDateOrDash(row.loan.createdAt) : '-',
-    },
-    {
-      key: 'pickedUpAt',
-      label: 'Upphämtat',
-      render: (row: TableRow) =>
-        row.kind === 'loan' ? formatDateOrDash(row.loan.pickedUpAt) : '-',
-    },
-    {
-      key: 'returnedAt',
-      label: 'Återlämnat',
-      render: (row: TableRow) =>
-        row.kind === 'loan' ? formatDateOrDash(row.loan.returnedAt) : '-',
-    },
-    ...(keysUrl
-      ? [
-          {
-            key: 'actions',
-            label: '',
-            render: (row: TableRow) => {
-              const rentalObjectCode =
-                row.kind === 'loan'
-                  ? row.loan.keysArray[0]?.rentalObjectCode
-                  : row.lease.rentalPropertyId
-              if (!rentalObjectCode) return null
-              return (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation()
-                    openInKeysPortal(rentalObjectCode)
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              )
+      {
+        key: 'rentalObject',
+        label: 'Hyresobjekt',
+        render: (row: TableRow) => {
+          if (row.kind === 'no-loan') return row.lease.rentalPropertyId
+          const codes = getLoanRentalObjects(row.loan)
+          if (codes.length === 0)
+            return <span className="text-muted-foreground">-</span>
+          return (
+            <div className="space-y-0.5">
+              {codes.map((code) => (
+                <div key={code} className="text-sm">
+                  {code}
+                </div>
+              ))}
+            </div>
+          )
+        },
+      },
+      {
+        key: 'keyCount',
+        label: 'Antal nycklar',
+        render: (row: TableRow) =>
+          row.kind === 'loan' ? (
+            <Badge variant="secondary">{row.loan.keysArray.length}</Badge>
+          ) : (
+            <Badge variant="secondary">0</Badge>
+          ),
+      },
+      {
+        key: 'status',
+        label: 'Status',
+        render: (row: TableRow) =>
+          row.kind === 'loan' ? (
+            getStatusBadge(row.loan)
+          ) : (
+            <Badge variant="success">Aktiv</Badge>
+          ),
+      },
+      {
+        key: 'createdAt',
+        label: 'Skapad',
+        render: (row: TableRow) =>
+          row.kind === 'loan' ? formatDateOrDash(row.loan.createdAt) : '-',
+      },
+      {
+        key: 'pickedUpAt',
+        label: 'Upphämtat',
+        render: (row: TableRow) =>
+          row.kind === 'loan' ? formatDateOrDash(row.loan.pickedUpAt) : '-',
+      },
+      {
+        key: 'returnedAt',
+        label: 'Återlämnat',
+        render: (row: TableRow) =>
+          row.kind === 'loan' ? formatDateOrDash(row.loan.returnedAt) : '-',
+      },
+      ...(keysUrl
+        ? [
+            {
+              key: 'actions',
+              label: '',
+              render: (row: TableRow) => {
+                const rentalObjectCode =
+                  row.kind === 'loan'
+                    ? row.loan.keysArray[0]?.rentalObjectCode
+                    : row.lease.rentalPropertyId
+                if (!rentalObjectCode) return null
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation()
+                      openInKeysPortal(rentalObjectCode)
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )
+              },
             },
-          },
-        ]
-      : []),
-  ], [keysUrl])
+          ]
+        : []),
+    ],
+    [keysUrl]
+  )
 
   if (isLoading) {
     return (
