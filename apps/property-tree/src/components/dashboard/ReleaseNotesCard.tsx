@@ -25,6 +25,7 @@ import {
   RELEASE_NOTE_CATEGORY_LABELS,
 } from '@/data/release-notes'
 import type { ReleaseNote, ReleaseNoteCategory } from '@/services/types'
+import { ReleaseNotesModal } from './ReleaseNotesModal'
 
 const ITEMS_PER_PAGE = 3
 
@@ -67,9 +68,10 @@ function formatDate(dateString: string): string {
 interface ReleaseNoteItemProps {
   note: ReleaseNote
   index: number
+  onClick?: () => void
 }
 
-function ReleaseNoteItem({ note, index }: ReleaseNoteItemProps) {
+function ReleaseNoteItem({ note, index, onClick }: ReleaseNoteItemProps) {
   const Icon = categoryIcons[note.category]
 
   return (
@@ -79,7 +81,11 @@ function ReleaseNoteItem({ note, index }: ReleaseNoteItemProps) {
       exit={{ opacity: 0, y: -10 }}
       transition={{ delay: index * 0.05 }}
     >
-      <div className="flex items-start gap-4">
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-start gap-4 w-full text-left cursor-pointer rounded-lg p-2 -m-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+      >
         <div
           className={`p-2 rounded-full flex-shrink-0 ${categoryIconStyles[note.category]}`}
         >
@@ -100,7 +106,7 @@ function ReleaseNoteItem({ note, index }: ReleaseNoteItemProps) {
             {note.description}
           </p>
         </div>
-      </div>
+      </button>
     </motion.div>
   )
 }
@@ -108,6 +114,13 @@ function ReleaseNoteItem({ note, index }: ReleaseNoteItemProps) {
 export function ReleaseNotesCard() {
   const [page, setPage] = useState(0)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [scrollToNoteId, setScrollToNoteId] = useState<string | undefined>()
+
+  const openModal = (noteId?: string) => {
+    setScrollToNoteId(noteId)
+    setIsModalOpen(true)
+  }
 
   // Sort notes: pinned first, then by date
   const sortedNotes = useMemo(() => {
@@ -131,7 +144,10 @@ export function ReleaseNotesCard() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle
+          className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+          onClick={() => openModal()}
+        >
           <Newspaper className="h-5 w-5 text-primary" />
           Nyheter och uppdateringar
         </CardTitle>
@@ -167,7 +183,12 @@ export function ReleaseNotesCard() {
                   className="space-y-6"
                 >
                   {visibleNotes.map((note, index) => (
-                    <ReleaseNoteItem key={note.id} note={note} index={index} />
+                    <ReleaseNoteItem
+                      key={note.id}
+                      note={note}
+                      index={index}
+                      onClick={() => openModal(note.id)}
+                    />
                   ))}
                 </motion.div>
               </AnimatePresence>
@@ -203,10 +224,24 @@ export function ReleaseNotesCard() {
                   </button>
                 </div>
               )}
+              {/* View all link */}
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => openModal()}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Visa alla nyheter →
+                </button>
+              </div>
             </CardContent>
           </motion.div>
         )}
       </AnimatePresence>
+      <ReleaseNotesModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        scrollToNoteId={scrollToNoteId}
+      />
     </Card>
   )
 }
