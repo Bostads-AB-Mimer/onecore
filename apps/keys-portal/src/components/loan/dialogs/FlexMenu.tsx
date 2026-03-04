@@ -134,11 +134,9 @@ export function FlexMenu({
     })
   }
 
-  const getEffectiveFlexNumber = (group: KeyGroup, groupKey: string) => {
-    if (group.hasNullFlex) {
-      return flexOverrides.get(groupKey) ?? null
-    }
-    return group.currentFlexNumber
+  const getNewFlexNumber = (group: KeyGroup, groupKey: string) => {
+    if (group.hasNullFlex) return flexOverrides.get(groupKey) ?? null
+    return group.currentFlexNumber + 1
   }
 
   const handleCreate = async () => {
@@ -150,10 +148,8 @@ export function FlexMenu({
       for (const [groupKey, group] of keyGroups.entries()) {
         if (group.isAtMaxFlex || group.count === 0) continue
 
-        const effectiveFlex = getEffectiveFlexNumber(group, groupKey)
-        if (effectiveFlex === null) continue
-
-        const newFlexNumber = effectiveFlex + 1
+        const newFlexNumber = getNewFlexNumber(group, groupKey)
+        if (newFlexNumber === null) continue
 
         // Create 'count' number of keys with sequence numbers 1, 2, 3, etc.
         for (let i = 1; i <= group.count; i++) {
@@ -252,9 +248,7 @@ export function FlexMenu({
             </h3>
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {Array.from(keyGroups.entries()).map(([groupKey, group]) => {
-                const effectiveFlex = getEffectiveFlexNumber(group, groupKey)
-                const newFlexNumber =
-                  effectiveFlex !== null ? effectiveFlex + 1 : null
+                const newFlexNumber = getNewFlexNumber(group, groupKey)
 
                 return (
                   <div
@@ -284,11 +278,11 @@ export function FlexMenu({
                     {group.hasNullFlex && !group.isAtMaxFlex && (
                       <div className="space-y-2">
                         <div className="text-xs text-destructive">
-                          Flex saknas – ange nuvarande flex innan du flexar
+                          Flex saknas – ange kommande flex
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">
-                            Nuvarande flex:
+                            Kommande flex:
                           </span>
                           <Select
                             value={
@@ -304,15 +298,10 @@ export function FlexMenu({
                               <SelectValue placeholder="–" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="1">1</SelectItem>
                               <SelectItem value="2">2</SelectItem>
+                              <SelectItem value="3">3</SelectItem>
                             </SelectContent>
                           </Select>
-                          {newFlexNumber !== null && (
-                            <span className="text-xs text-muted-foreground">
-                              → Ny flex: {newFlexNumber}
-                            </span>
-                          )}
                         </div>
                       </div>
                     )}
