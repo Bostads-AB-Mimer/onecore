@@ -230,19 +230,19 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/by-rental-property-id/{rentalPropertyId}:
+   * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get leases with related entities for a specific rental property id
+   *     summary: Get leases with related entities for a specific rental object code.
    *     tags:
    *       - Lease service
    *     description: Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
    *     parameters:
    *       - in: path
-   *         name: rentalPropertyId
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: Rental roperty id of the building/residence to fetch leases for.
+   *         description: Rental object code of the building/residence to fetch leases for.
    *       - in: query
    *         name: includeUpcomingLeases
    *         schema:
@@ -288,7 +288,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/by-rental-property-id/:rentalPropertyId', async (ctx) => {
+  router.get('/leases/by-rental-object-code/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
 
@@ -305,7 +305,7 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const leases = await leasingAdapter.getLeasesByRentalObjectCode(
-        ctx.params.rentalPropertyId,
+        ctx.params.rentalObjectCode,
         queryParams.data
       )
 
