@@ -15,7 +15,7 @@ import { isCompleted } from '../constants/statuses'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
 import { InspectionsTable } from './InspectionsTable'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 
 interface InspectionsTabContentProps {
   residenceId: string
@@ -141,7 +141,7 @@ export function InspectionsTabContent({
         </TabsContent>
       </Tabs>
 
-      {leaseId && (
+      {leaseId && rentalId && (
         <CreateInspectionDialog
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
@@ -160,7 +160,6 @@ export function InspectionsTabContent({
             })
           }}
           rentalId={rentalId}
-          residenceId={residenceId}
           address={address}
           apartmentCode={apartmentCode}
           leaseId={leaseId}
