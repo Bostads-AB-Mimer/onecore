@@ -86,8 +86,10 @@ export const routes = (router: KoaRouter) => {
     const imageBuffer = Buffer.concat(chunks)
 
     if (imageBuffer.length === 0) {
-      ctx.status = 400
-      ctx.body = { error: 'Expected raw image data', ...metadata }
+      // WebDAV clients (e.g. Canon scanners) send an empty PUT first to
+      // establish auth, then follow up with the actual file data.
+      // Return 201 so the client proceeds to send the real upload.
+      ctx.status = 201
       return
     }
 
