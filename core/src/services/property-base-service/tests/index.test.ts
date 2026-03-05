@@ -17,7 +17,7 @@ import {
   RoomSchema,
   StaircaseSchema,
   MaintenanceUnitSchema,
-  ResidenceByRentalIdSchema,
+  ResidenceDetailsSchema,
   FacilityDetailsSchema,
   ResidenceSummarySchema,
   RentalBlockSchema,
@@ -359,9 +359,38 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(200)
       expect(getResidenceDetailsSpy).toHaveBeenCalled()
-      expect(() =>
-        ResidenceByRentalIdSchema.parse(res.body.content)
-      ).not.toThrow()
+      expect(() => ResidenceDetailsSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('computes status from leases when rentalId exists', async () => {
+      const residenceDetails = factory.residenceByRentalIdDetails.build({
+        propertyObject: {
+          energy: { energyClass: 1 },
+          rentalId: 'rental-123',
+          rentalInformation: null,
+          rentalBlocks: [],
+        },
+      })
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
+        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
+      jest
+        .spyOn(leasingAdapter, 'getLeasesForPropertyId')
+        .mockResolvedValueOnce([
+          {
+            leaseId: 'lease-1',
+            rentalPropertyId: 'rental-123',
+            status: LeaseStatus.Current,
+          } as any,
+        ])
+
+      const res = await request(app.callback()).get(
+        `/property/residences/by-rental-id/1234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.status).toBe('LEASED')
+      expect(() => ResidenceDetailsSchema.parse(res.body.content)).not.toThrow()
     })
 
     it('returns 404 if no residence is found', async () => {
@@ -371,62 +400,6 @@ describe('@onecore/property-service', () => {
 
       const res = await request(app.callback()).get(
         `/property/residences/by-rental-id/1234`
-      )
-
-      expect(res.status).toBe(404)
-      expect(getResidenceDetailsSpy).toHaveBeenCalled()
-    })
-  })
-
-  describe('GET /property/residences/:residenceId', () => {
-    it('returns 200 and a residence', async () => {
-      const residenceDetails = factory.residenceDetails.build()
-      const getResidenceDetailsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
-        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
-
-      const res = await request(app.callback()).get(
-        `/property/residences/${residenceDetails.id}`
-      )
-
-      expect(res.status).toBe(200)
-      expect(getResidenceDetailsSpy).toHaveBeenCalled()
-      expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
-    })
-
-    it('returns 200 and a residence with status', async () => {
-      const residenceDetails = factory.residenceDetails.build({
-        propertyObject: { rentalId: '1234' },
-      })
-      const getResidenceDetailsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
-        .mockResolvedValueOnce({ ok: true, data: residenceDetails })
-
-      const lease = factory.lease.build({ status: LeaseStatus.Current })
-      const getLeasesSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForPropertyId')
-        .mockResolvedValueOnce([lease])
-
-      const res = await request(app.callback()).get(
-        `/property/residences/${residenceDetails.id}`
-      )
-
-      expect(res.status).toBe(200)
-      expect(() => ResidenceSchema.parse(res.body.content)).not.toThrow()
-      expect(res.body.content.status).toBe('LEASED')
-
-      expect(getResidenceDetailsSpy).toHaveBeenCalled()
-      expect(getLeasesSpy).toHaveBeenCalled()
-    })
-
-    it('returns 404 if no residence is found', async () => {
-      const residence = factory.residence.build()
-      const getResidenceDetailsSpy = jest
-        .spyOn(propertyBaseAdapter, 'getResidenceDetails')
-        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
-
-      const res = await request(app.callback()).get(
-        `/property/residences/${residence.id}`
       )
 
       expect(res.status).toBe(404)

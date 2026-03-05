@@ -7,7 +7,6 @@ import {
 import { z } from 'zod'
 
 import {
-  getResidenceById,
   getResidenceSizeByRentalId,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
@@ -23,7 +22,6 @@ import {
 import {
   residencesQueryParamsSchema,
   ResidenceSchema,
-  ResidenceDetailedSchema,
   ResidenceSearchResult,
   GetResidenceByRentalIdResponse,
   ResidenceSummarySchema,
@@ -33,8 +31,6 @@ import {
   exportRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
-
-type ResidenceDetails = z.infer<typeof ResidenceDetailedSchema>
 
 /**
  * @swagger
@@ -346,31 +342,115 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await getResidenceByRentalId(ctx.params.rentalId)
       const areaSize = await getResidenceSizeByRentalId(ctx.params.rentalId)
+      const residence = result.propertyObject.residence
+      const residenceType = residence.residenceType
 
       const payload: GetResidenceByRentalIdResponse = {
         content: {
-          id: result.propertyObject.residence.id,
-          code: result.propertyObject.residence.code,
-          name: result.propertyObject.residence.name,
+          id: residence.id,
+          code: residence.code,
+          name: residence.name,
           entrance: result.staircaseCode,
-          floor: result.propertyObject.residence.floor,
+          location: residence.location,
+          floor: residence.floor,
+          partNo: residence.partNo,
+          part: residence.part,
+          deleted: Boolean(residence.deleted),
+          validityPeriod: {
+            fromDate: residence.fromDate,
+            toDate: residence.toDate,
+          },
           accessibility: {
-            elevator: Boolean(result.propertyObject.residence.elevator),
-            wheelchairAccessible: Boolean(
-              result.propertyObject.residence.wheelchairAccessible
-            ),
+            elevator: Boolean(residence.elevator),
+            wheelchairAccessible: Boolean(residence.wheelchairAccessible),
+            residenceAdapted: Boolean(residence.residenceAdapted),
           },
           features: {
-            hygieneFacility: result.propertyObject.residence.hygieneFacility,
+            hygieneFacility: residence.hygieneFacility,
+            balcony1: residence.balcony1Location
+              ? {
+                  location: residence.balcony1Location,
+                  type: residence.balcony1Type || '',
+                }
+              : undefined,
+            balcony2: residence.balcony2Location
+              ? {
+                  location: residence.balcony2Location,
+                  type: residence.balcony2Type || '',
+                }
+              : undefined,
+            patioLocation: residence.patioLocation,
+            sauna: Boolean(residence.sauna),
+            extraToilet: Boolean(residence.extraToilet),
+            sharedKitchen: Boolean(residence.sharedKitchen),
+            petAllergyFree: Boolean(residence.petAllergyFree),
+            electricAllergyIntolerance: Boolean(
+              residence.electricAllergyIntolerance
+            ),
+            smokeFree: Boolean(residence.smokeFree),
+            asbestos: Boolean(residence.asbestos),
           },
-          deleted: Boolean(result.propertyObject.residence.deleted),
           type: {
-            code: result.propertyObject.residence.residenceType.code,
-            name: result.propertyObject.residence.residenceType.name,
-            roomCount: result.propertyObject.residence.residenceType.roomCount,
-            kitchen: result.propertyObject.residence.residenceType.kitchen,
+            code: residenceType.code,
+            name: residenceType.name,
+            roomCount: residenceType.roomCount,
+            kitchen: residenceType.kitchen,
           },
-          areaSize: areaSize?.value ?? null,
+          residenceType: {
+            residenceTypeId: residenceType.id || '',
+            code: residenceType.code,
+            name: residenceType.name,
+            roomCount: residenceType.roomCount,
+            kitchen: residenceType.kitchen,
+            systemStandard: residenceType.systemStandard || 0,
+            checklistId: residenceType.checklistId,
+            componentTypeActionId: residenceType.componentTypeActionId,
+            statisticsGroupSCBId: residenceType.statisticsGroupSCBId,
+            statisticsGroup2Id: residenceType.statisticsGroup2Id,
+            statisticsGroup3Id: residenceType.statisticsGroup3Id,
+            statisticsGroup4Id: residenceType.statisticsGroup4Id,
+            timestamp: residenceType.timestamp || new Date().toISOString(),
+          },
+          rentalInformation: {
+            rentalId: result.rentalId,
+            apartmentNumber:
+              result.propertyObject.rentalInformation.apartmentNumber,
+            type: {
+              code: result.propertyObject.rentalInformation
+                .rentalInformationType.code,
+              name: result.propertyObject.rentalInformation
+                .rentalInformationType.name,
+            },
+          },
+          propertyObject: {
+            energy: {
+              energyClass: result.propertyObject.energyClass || 0,
+              energyRegistered:
+                result.propertyObject.energyRegistered || undefined,
+              energyReceived: result.propertyObject.energyReceived || undefined,
+              energyIndex: result.propertyObject.energyIndex?.toNumber(),
+            },
+            rentalId: result.rentalId,
+            rentalInformation: !result.propertyObject.rentalInformation
+              ? null
+              : {
+                  type: {
+                    code: result.propertyObject.rentalInformation
+                      .rentalInformationType.code,
+                    name: result.propertyObject.rentalInformation
+                      .rentalInformationType.name,
+                  },
+                },
+            rentalBlocks:
+              result.propertyObject.rentalBlocks?.map((rb) => ({
+                id: rb.id,
+                blockReasonId: rb.blockReasonId,
+                blockReason: rb.blockReason?.caption ?? null,
+                fromDate: rb.fromDate,
+                toDate: rb.toDate,
+                amount: rb.amount,
+              })) || [],
+          },
           building: {
             id: result.buildingId,
             code: result.buildingCode,
@@ -400,17 +480,8 @@ export const routes = (router: KoaRouter) => {
                 timestamp: result.staircase.timestamp,
               }
             : null,
-          rentalInformation: {
-            rentalId: result.rentalId,
-            apartmentNumber:
-              result.propertyObject.rentalInformation.apartmentNumber,
-            type: {
-              code: result.propertyObject.rentalInformation
-                .rentalInformationType.code,
-              name: result.propertyObject.rentalInformation
-                .rentalInformationType.name,
-            },
-          },
+          areaSize: areaSize?.value ?? null,
+          malarEnergiFacilityId: residence.comments?.[0]?.text || null,
         },
         ...metadata,
       }
@@ -964,185 +1035,6 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (err) {
       logger.error(err, 'Error fetching block reasons')
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /residences/{id}:
-   *   get:
-   *     summary: Get a residence by ID
-   *     description: Returns a residence with the specified ID
-   *     tags:
-   *       - Residences
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the residence
-   *       - in: query
-   *         name: active
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, include all blocks.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the residence
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       404:
-   *         description: Residence not found
-   *       500:
-   *         description: Internal server error
-   */
-  router.get('(.*)/residences/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const id = ctx.params.id
-    const activeParam = ctx.query.active as string | undefined
-    const active =
-      activeParam === 'true'
-        ? true
-        : activeParam === 'false'
-          ? false
-          : undefined
-
-    try {
-      const residence = await getResidenceById(id, { active })
-      if (!residence) {
-        ctx.status = 404
-        return
-      }
-      // TODO: find out why building is null in residence
-
-      const rentalId =
-        residence.propertyObject?.propertyStructures?.length > 0
-          ? residence.propertyObject.propertyStructures[0].rentalId
-          : null
-
-      // Get area size for the residence (yta)
-      const size = rentalId ? await getResidenceSizeByRentalId(rentalId) : null
-
-      const mappedResidence = {
-        id: residence.id,
-        code: residence.code,
-        name: residence.name,
-        location: residence.location,
-        floor: residence.floor,
-        partNo: residence.partNo,
-        part: residence.part,
-        deleted: Boolean(residence.deleted),
-        accessibility: {
-          wheelchairAccessible: Boolean(residence.wheelchairAccessible),
-          residenceAdapted: Boolean(residence.residenceAdapted),
-          elevator: Boolean(residence.elevator),
-        },
-        features: {
-          balcony1: residence.balcony1Location
-            ? {
-                location: residence.balcony1Location,
-                type: residence.balcony1Type || '',
-              }
-            : undefined,
-          balcony2: residence.balcony2Location
-            ? {
-                location: residence.balcony2Location,
-                type: residence.balcony2Type || '',
-              }
-            : undefined,
-          patioLocation: residence.patioLocation,
-          hygieneFacility: residence.hygieneFacility,
-          sauna: Boolean(residence.sauna),
-          extraToilet: Boolean(residence.extraToilet),
-          sharedKitchen: Boolean(residence.sharedKitchen),
-          petAllergyFree: Boolean(residence.petAllergyFree),
-          electricAllergyIntolerance: Boolean(
-            residence.electricAllergyIntolerance
-          ),
-          smokeFree: Boolean(residence.smokeFree),
-          asbestos: Boolean(residence.asbestos),
-        },
-        validityPeriod: {
-          fromDate: residence.fromDate,
-          toDate: residence.toDate,
-        },
-        residenceType: {
-          residenceTypeId: residence.residenceType?.id || '',
-          code: residence.residenceType?.code || '',
-          name: residence.residenceType?.name,
-          roomCount: residence.residenceType?.roomCount,
-          kitchen: residence.residenceType?.kitchen || 0,
-          systemStandard: residence.residenceType?.systemStandard || 0,
-          checklistId: residence.residenceType?.checklistId,
-          componentTypeActionId: residence.residenceType?.componentTypeActionId,
-          statisticsGroupSCBId: residence.residenceType?.statisticsGroupSCBId,
-          statisticsGroup2Id: residence.residenceType?.statisticsGroup2Id,
-          statisticsGroup3Id: residence.residenceType?.statisticsGroup3Id,
-          statisticsGroup4Id: residence.residenceType?.statisticsGroup4Id,
-          timestamp:
-            residence.residenceType?.timestamp || new Date().toISOString(),
-        },
-        propertyObject: {
-          energy: {
-            energyClass: residence.propertyObject?.energyClass || 0,
-            energyRegistered:
-              residence.propertyObject?.energyRegistered || undefined,
-            energyReceived:
-              residence.propertyObject?.energyReceived || undefined,
-            energyIndex: residence.propertyObject?.energyIndex?.toNumber(),
-          },
-          rentalId,
-          rentalInformation: !residence.propertyObject?.rentalInformation
-            ? null
-            : {
-                type: {
-                  code: residence.propertyObject.rentalInformation
-                    .rentalInformationType.code,
-                  name: residence.propertyObject.rentalInformation
-                    .rentalInformationType.name,
-                },
-              },
-          rentalBlocks:
-            residence.propertyObject?.rentalBlocks.map((rb) => {
-              return {
-                id: rb.id,
-                blockReasonId: rb.blockReasonId,
-                blockReason: rb.blockReason?.caption ?? null,
-                fromDate: rb.fromDate,
-                toDate: rb.toDate,
-                amount: rb.amount,
-              }
-            }) || [],
-        },
-        property: {
-          code: residence.propertyObject.propertyStructures[0].propertyCode,
-          name: residence.propertyObject.propertyStructures[0].propertyName,
-        },
-        building: {
-          code: residence.propertyObject.propertyStructures[0].buildingCode,
-          name: residence.propertyObject.propertyStructures[0].buildingName,
-        },
-        malarEnergiFacilityId: residence.comments?.[0]?.text || null,
-        size: size?.value || null,
-      } satisfies ResidenceDetails
-
-      ctx.status = 200
-      ctx.body = {
-        content: mappedResidence,
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error(err, 'Error fetching residence by ID')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

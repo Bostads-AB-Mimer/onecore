@@ -53,7 +53,7 @@ function getResultProps(item: CombinedSearchResult) {
         label: item.rentalId ?? '[rental id missing]',
         prefix: '[LGH]',
         subtitle: item.building?.name,
-        path: paths.residence(item.id),
+        path: paths.residence(item.rentalId ?? '#'),
         state: {
           buildingCode: item.building?.code || null,
           propertyCode: item.property?.code || null,

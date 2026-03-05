@@ -68,7 +68,7 @@ export function StaircasePage() {
                       key={residence.id}
                       whileHover={{ scale: 1.02 }}
                       onClick={() =>
-                        navigate(paths.residence(residence.id), {
+                        navigate(paths.residence(residence.rentalId), {
                           state: {
                             buildingCode: building?.code,
                             staircaseCode: residence.code.substring(2, 4),

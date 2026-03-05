@@ -1281,42 +1281,6 @@ export interface paths {
       };
     };
   };
-  "/residences/{id}": {
-    /**
-     * Get a residence by ID
-     * @description Returns a residence with the specified ID
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter rental blocks by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, include all blocks. */
-          active?: boolean;
-        };
-        path: {
-          /** @description The ID of the residence */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved the residence */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceDetails"];
-            };
-          };
-        };
-        /** @description Residence not found */
-        404: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
   "/buildings": {
     /**
      * Get all buildings for a specific property
@@ -2211,13 +2175,25 @@ export interface components {
       id: string;
       code: string;
       name: string | null;
+      entrance: string | null;
       location: string | null;
+      floor: string | null;
+      partNo: number | null;
+      part: string | null;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
       accessibility: {
         wheelchairAccessible: boolean;
-        residenceAdapted: boolean;
         elevator: boolean;
+        residenceAdapted: boolean;
       };
       features: {
+        hygieneFacility: string | null;
         balcony1?: {
           location: string;
           type: string;
@@ -2227,7 +2203,6 @@ export interface components {
           type: string;
         };
         patioLocation: string | null;
-        hygieneFacility: string | null;
         sauna: boolean;
         extraToilet: boolean;
         sharedKitchen: boolean;
@@ -2237,15 +2212,11 @@ export interface components {
         smokeFree: boolean;
         asbestos: boolean;
       };
-      floor: string | null;
-      partNo?: number | null;
-      part?: string | null;
-      deleted: boolean;
-      validityPeriod: {
-        /** Format: date-time */
-        fromDate: string;
-        /** Format: date-time */
-        toDate: string;
+      type: {
+        code: string;
+        name: string | null;
+        roomCount: number | null;
+        kitchen: number;
       };
       residenceType: {
         residenceTypeId: string;
@@ -2262,6 +2233,14 @@ export interface components {
         statisticsGroup4Id: string | null;
         timestamp: string;
       };
+      rentalInformation: ({
+        apartmentNumber: string | null;
+        rentalId: string | null;
+        type: {
+          code: string;
+          name: string | null;
+        };
+      }) | null;
       propertyObject: {
         energy: {
           energyClass: number;
@@ -2290,15 +2269,44 @@ export interface components {
           })[];
       };
       property: {
+        id: string | null;
         name: string | null;
         code: string | null;
       };
       building: {
+        id: string | null;
         name: string | null;
         code: string | null;
       };
+      staircase: ({
+        id: string;
+        code: string;
+        name: string | null;
+        features: {
+          floorPlan: string | null;
+          accessibleByElevator: boolean;
+        };
+        dates: {
+          /** Format: date-time */
+          from: string;
+          /** Format: date-time */
+          to: string;
+        };
+        property?: {
+          propertyId: string | null;
+          propertyName: string | null;
+          propertyCode: string | null;
+        };
+        building?: {
+          buildingId: string | null;
+          buildingName: string | null;
+          buildingCode: string | null;
+        };
+        deleted: boolean;
+        timestamp: string;
+      }) | null;
+      areaSize: number | null;
       malarEnergiFacilityId: string | null;
-      size: number | null;
     };
     ResidenceSearchResult: {
       id: string;
@@ -2581,25 +2589,67 @@ export interface components {
       estateCode: string | null;
       estate: string | null;
     };
-    ResidenceByRentalId: {
+    ResidenceDetailed: {
       id: string;
       code: string;
       name: string | null;
+      entrance: string | null;
+      location: string | null;
+      floor: string | null;
+      partNo: number | null;
+      part: string | null;
+      deleted: boolean;
+      validityPeriod: {
+        /** Format: date-time */
+        fromDate: string;
+        /** Format: date-time */
+        toDate: string;
+      };
       accessibility: {
         wheelchairAccessible: boolean;
         elevator: boolean;
+        residenceAdapted: boolean;
       };
       features: {
         hygieneFacility: string | null;
+        balcony1?: {
+          location: string;
+          type: string;
+        };
+        balcony2?: {
+          location: string;
+          type: string;
+        };
+        patioLocation: string | null;
+        sauna: boolean;
+        extraToilet: boolean;
+        sharedKitchen: boolean;
+        petAllergyFree: boolean;
+        /** @description Is the apartment checked for electric allergy intolerance? */
+        electricAllergyIntolerance: boolean;
+        smokeFree: boolean;
+        asbestos: boolean;
       };
-      entrance: string | null;
-      floor: string | null;
-      deleted: boolean;
       type: {
         code: string;
         name: string | null;
         roomCount: number | null;
         kitchen: number;
+      };
+      residenceType: {
+        residenceTypeId: string;
+        code: string;
+        name: string | null;
+        roomCount: number | null;
+        kitchen: number;
+        systemStandard: number;
+        checklistId: string | null;
+        componentTypeActionId: string | null;
+        statisticsGroupSCBId: string | null;
+        statisticsGroup2Id: string | null;
+        statisticsGroup3Id: string | null;
+        statisticsGroup4Id: string | null;
+        timestamp: string;
       };
       rentalInformation: ({
         apartmentNumber: string | null;
@@ -2609,6 +2659,33 @@ export interface components {
           name: string | null;
         };
       }) | null;
+      propertyObject: {
+        energy: {
+          energyClass: number;
+          /** Format: date-time */
+          energyRegistered?: string;
+          /** Format: date-time */
+          energyReceived?: string;
+          energyIndex?: number;
+        };
+        rentalId: string | null;
+        rentalInformation: ({
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
+        rentalBlocks: ({
+            id: string;
+            blockReasonId: string | null;
+            blockReason: string | null;
+            /** Format: date-time */
+            fromDate: string;
+            /** Format: date-time */
+            toDate: string | null;
+            amount: number | null;
+          })[];
+      };
       property: {
         id: string | null;
         name: string | null;
@@ -2647,6 +2724,7 @@ export interface components {
         timestamp: string;
       }) | null;
       areaSize: number | null;
+      malarEnergiFacilityId: string | null;
     };
     ResidenceSummary: {
       id: string;
@@ -2688,21 +2766,63 @@ export interface components {
         id: string;
         code: string;
         name: string | null;
+        entrance: string | null;
+        location: string | null;
+        floor: string | null;
+        partNo: number | null;
+        part: string | null;
+        deleted: boolean;
+        validityPeriod: {
+          /** Format: date-time */
+          fromDate: string;
+          /** Format: date-time */
+          toDate: string;
+        };
         accessibility: {
           wheelchairAccessible: boolean;
           elevator: boolean;
+          residenceAdapted: boolean;
         };
         features: {
           hygieneFacility: string | null;
+          balcony1?: {
+            location: string;
+            type: string;
+          };
+          balcony2?: {
+            location: string;
+            type: string;
+          };
+          patioLocation: string | null;
+          sauna: boolean;
+          extraToilet: boolean;
+          sharedKitchen: boolean;
+          petAllergyFree: boolean;
+          /** @description Is the apartment checked for electric allergy intolerance? */
+          electricAllergyIntolerance: boolean;
+          smokeFree: boolean;
+          asbestos: boolean;
         };
-        entrance: string | null;
-        floor: string | null;
-        deleted: boolean;
         type: {
           code: string;
           name: string | null;
           roomCount: number | null;
           kitchen: number;
+        };
+        residenceType: {
+          residenceTypeId: string;
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+          systemStandard: number;
+          checklistId: string | null;
+          componentTypeActionId: string | null;
+          statisticsGroupSCBId: string | null;
+          statisticsGroup2Id: string | null;
+          statisticsGroup3Id: string | null;
+          statisticsGroup4Id: string | null;
+          timestamp: string;
         };
         rentalInformation: ({
           apartmentNumber: string | null;
@@ -2712,6 +2832,33 @@ export interface components {
             name: string | null;
           };
         }) | null;
+        propertyObject: {
+          energy: {
+            energyClass: number;
+            /** Format: date-time */
+            energyRegistered?: string;
+            /** Format: date-time */
+            energyReceived?: string;
+            energyIndex?: number;
+          };
+          rentalId: string | null;
+          rentalInformation: ({
+            type: {
+              code: string;
+              name: string | null;
+            };
+          }) | null;
+          rentalBlocks: ({
+              id: string;
+              blockReasonId: string | null;
+              blockReason: string | null;
+              /** Format: date-time */
+              fromDate: string;
+              /** Format: date-time */
+              toDate: string | null;
+              amount: number | null;
+            })[];
+        };
         property: {
           id: string | null;
           name: string | null;
@@ -2750,6 +2897,7 @@ export interface components {
           timestamp: string;
         }) | null;
         areaSize: number | null;
+        malarEnergiFacilityId: string | null;
       };
       _links: {
         self: {

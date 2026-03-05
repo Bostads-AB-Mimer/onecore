@@ -2,6 +2,7 @@ import * as inspectionAdapter from '../../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import { mapLease } from '../../lease-service/schemas/lease'
+import { ResidenceDetailsSchema } from '../../property-base-service/schemas'
 import * as schemas from '../schemas'
 
 type FetchEnrichedInspectionResult =
@@ -47,7 +48,7 @@ export const fetchEnrichedInspection = async (
       rawInspection.residenceId
     )
     if (res.ok) {
-      residence = res.data
+      residence = ResidenceDetailsSchema.parse({ ...res.data, status: null })
     }
   }
 

@@ -15,8 +15,8 @@ export const routes = {
   property: '/fastigheter/:propertyCode', // -- byts ut mot :propertyCode
   building: '/byggnader/:buildingCode', // klar
   staircase: '/uppgangar/:buildingCode/:staircaseCode', // klar
-  residence: '/bostader/:residenceId', // -- byts ut mot :rentalId
-  room: '/bostader/:residenceId/rum/:roomCode', // roomCode klar -- byts ut :residenceId mot :rentalId
+  residence: '/bostader/:rentalId',
+  room: '/bostader/:rentalId/rum/:roomCode',
   parkingSpace: '/bilplatser/:rentalId', // klar
   maintenanceUnit: '/underhallsenheter/:code', // klar
   facility: '/lokaler/:rentalId', // klar
@@ -38,7 +38,7 @@ export type RoutePath = (typeof routes)[keyof typeof routes]
  *   paths.property('123')            →  '/fastigheter/123'
  *   paths.building('B01')            →  '/byggnader/B01'
  *   paths.staircase('B01', 'S1')     →  '/uppgangar/B01/S1'
- *   paths.room('R1', 'RM1')          →  '/bostader/R1/rum/RM1'
+ *   paths.room('rentalId', 'RM1')     →  '/bostader/rentalId/rum/RM1'
  */
 export const paths = {
   property: (propertyCode: string) =>
@@ -47,10 +47,9 @@ export const paths = {
     generatePath(routes.building, { buildingCode }),
   staircase: (buildingCode: string, staircaseCode: string) =>
     generatePath(routes.staircase, { buildingCode, staircaseCode }),
-  residence: (residenceId: string) =>
-    generatePath(routes.residence, { residenceId }),
-  room: (residenceId: string, roomCode: string) =>
-    generatePath(routes.room, { residenceId, roomCode }),
+  residence: (rentalId: string) => generatePath(routes.residence, { rentalId }),
+  room: (rentalId: string, roomCode: string) =>
+    generatePath(routes.room, { rentalId, roomCode }),
   parkingSpace: (rentalId: string) =>
     generatePath(routes.parkingSpace, { rentalId }),
   maintenanceUnit: (code: string) =>

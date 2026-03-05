@@ -50,8 +50,8 @@ const schemas = {
   ...zodToJsonSchema(types.MaintenanceUnitSchema, {
     name: 'MaintenanceUnit',
   }).definitions,
-  ...zodToJsonSchema(types.ResidenceByRentalIdSchema, {
-    name: 'ResidenceByRentalId',
+  ...zodToJsonSchema(types.ResidenceDetailedSchema, {
+    name: 'ResidenceDetailed',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(types.ResidenceSummarySchema, {

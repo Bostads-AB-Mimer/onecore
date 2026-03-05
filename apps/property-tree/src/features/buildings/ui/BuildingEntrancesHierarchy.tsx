@@ -4,6 +4,7 @@ import { ChevronRight, Home } from 'lucide-react'
 
 import { ResidenceSummary } from '@/services/types'
 
+import { paths } from '@/shared/routes'
 import {
   Accordion,
   AccordionContent,
@@ -19,13 +20,11 @@ interface BuildingEntranceHierarchyProps {
     string,
     UseQueryResult<ResidenceSummary[], Error>
   >
-  basePath: string
 }
 
 export const BuildingEntranceHierarchy = ({
   isLoading,
   residenceStaircaseLookupMap,
-  basePath,
 }: BuildingEntranceHierarchyProps) => {
   // one query per staircase
 
@@ -99,7 +98,7 @@ export const BuildingEntranceHierarchy = ({
                             {residences.map((residence) => (
                               <Link
                                 key={residence.id}
-                                to={`${basePath}/${residence.id}`}
+                                to={paths.residence(residence.rentalId)}
                                 className="block"
                               >
                                 <div className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer">

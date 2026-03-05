@@ -34,7 +34,7 @@ export function useHierarchicalSelection() {
 
   // Fetch the directly selected entity to resolve its ancestors
   const { data: residence } = useResidence(
-    onResidence ? params.residenceId : undefined
+    onResidence ? params.rentalId : undefined
   )
   const { data: building } = useBuilding(
     onBuilding ? params.buildingCode : undefined
@@ -42,7 +42,7 @@ export function useHierarchicalSelection() {
 
   // Resolve each level: use route param if directly selected,
   // otherwise fall back to navigation state → fetched data
-  const selectedResidenceId = onResidence ? (params.residenceId ?? null) : null
+  const selectedResidenceId = onResidence ? (params.rentalId ?? null) : null
 
   const selectedBuildingCode = onBuilding
     ? (params.buildingCode ?? null)

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { Lease } from '../lease-service/schemas/lease'
-import { ResidenceByRentalIdSchema } from '../property-base-service/schemas'
+import { ResidenceDetailsSchema } from '../property-base-service/schemas'
 
 /**
  * Inspection status filter constants
@@ -121,7 +121,7 @@ export const DetailedXpandInspectionSchema = z.object({
 
 export const DetailedInspectionSchema = DetailedXpandInspectionSchema.extend({
   lease: Lease.nullable(),
-  residence: ResidenceByRentalIdSchema.nullable(),
+  residence: ResidenceDetailsSchema.nullable(),
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({

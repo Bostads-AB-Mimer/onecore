@@ -169,7 +169,7 @@ export const ResidenceBasicInfo = ({
           <div>
             <p className="text-sm text-muted-foreground">Yta</p>
             <p className="font-medium">
-              {residence.size ? `${residence.size} m²` : '-'}
+              {residence.areaSize ? `${residence.areaSize} m²` : '-'}
             </p>
           </div>
           <div>

@@ -15,14 +15,9 @@ import { BuildingTabsMobile } from './BuildingTabsMobile'
 interface BuildingTabsProps {
   building: Building
   staircases: Staircase[]
-  basePath: string
 }
 
-export const BuildingTabs = ({
-  building,
-  staircases,
-  basePath,
-}: BuildingTabsProps) => {
+export const BuildingTabs = ({ building, staircases }: BuildingTabsProps) => {
   const isMobile = useIsMobile()
 
   const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
@@ -34,7 +29,6 @@ export const BuildingTabs = ({
         isLoading={isStaircasesLoading}
         building={building}
         residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-        basePath={basePath}
       />
     )
   }
@@ -52,7 +46,6 @@ export const BuildingTabs = ({
         <BuildingEntrancesTabContent
           isLoading={isStaircasesLoading}
           residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-          basePath={basePath}
         />
       </TabsContent>
 

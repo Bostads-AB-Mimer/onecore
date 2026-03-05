@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
@@ -56,17 +57,17 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
   const getPath = (result: SearchResult) => {
     switch (result.type) {
       case 'property':
-        return `/properties/${result.id}`
+        return paths.property(result.code)
       case 'building':
-        return `/buildings/${result.id}`
+        return paths.building(result.code)
       case 'residence':
-        return `/residences/${result.id}`
+        return result.rentalId ? paths.residence(result.rentalId) : '#'
       case 'parking-space':
-        return `/parking-spaces/${result.rentalId}`
+        return paths.parkingSpace(result.rentalId)
       case 'facility':
-        return `/facilities/${result.rentalId}`
+        return paths.facility(result.rentalId)
       case 'maintenance-unit':
-        return `/maintenance-units/${result.code}`
+        return paths.maintenanceUnit(result.code)
       default:
         return '#'
     }

@@ -15,7 +15,7 @@ import { Grid } from '@/shared/ui/Grid'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function RoomPage() {
-  const { roomCode, residenceId } = useParams()
+  const { roomCode, rentalId } = useParams()
   const [room, setRoom] = React.useState<Room | null>(null)
   const [components, setComponents] = React.useState<Component[]>([])
   const [issues, setIssues] = React.useState<Issue[]>([])
@@ -74,7 +74,7 @@ export function RoomPage() {
         {(room) => (
           <>
             <h1 className="text-3xl font-bold mb-2">{room.name ?? ''}</h1>
-            <p className="text-muted-foreground mb-8">Bostad {residenceId}</p>
+            <p className="text-muted-foreground mb-8">Bostad {rentalId}</p>
 
             <Grid cols={3} className="mb-8">
               <Card>
