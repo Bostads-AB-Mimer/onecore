@@ -133,6 +133,18 @@ async function extractBearerToken(ctx: Context, next: Next) {
  * Token verification (Keycloak JWKS / legacy JWT) happens in requireAuth.
  */
 export const extractToken = async (ctx: Context, next: Next) => {
+  if (ctx.path.startsWith('/scan-receipt')) {
+    const authHeader = ctx.get('Authorization')
+    logger.info(
+      {
+        hasAuthHeader: !!authHeader,
+        authType: authHeader?.split(' ')[0] || 'none',
+        path: ctx.path,
+      },
+      'Scan receipt auth debug'
+    )
+  }
+
   await extractCookieToken(ctx, async () => {
     await extractBasicAuthToken(ctx, async () => {
       await extractBearerToken(ctx, next)
