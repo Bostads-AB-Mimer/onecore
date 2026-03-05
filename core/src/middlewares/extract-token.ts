@@ -139,6 +139,9 @@ export const extractToken = async (ctx: Context, next: Next) => {
       {
         hasAuthHeader: !!authHeader,
         authType: authHeader?.split(' ')[0] || 'none',
+        contentLength: ctx.get('Content-Length') || 'none',
+        contentType: ctx.get('Content-Type') || 'none',
+        method: ctx.method,
         path: ctx.path,
       },
       'Scan receipt auth debug'
