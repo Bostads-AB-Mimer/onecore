@@ -50,7 +50,7 @@ export function InspectionsTabContent({
 
   const inspections = inspectionsQuery.data ?? []
 
-  const activeInspection = inspections.find(
+  const activeInspections = inspections.filter(
     (inspection: Inspection) => !isCompleted(inspection.status)
   )
 
@@ -95,8 +95,8 @@ export function InspectionsTabContent({
         </TabsList>
 
         <TabsContent value="active">
-          {activeInspection ? (
-            renderInspectionsTable([activeInspection])
+          {activeInspections.length > 0 ? (
+            renderInspectionsTable(activeInspections)
           ) : (
             <p className="text-slate-500 p-2">
               Ingen aktiv besiktning för denna lägenhet.
