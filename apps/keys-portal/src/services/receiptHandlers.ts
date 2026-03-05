@@ -113,6 +113,7 @@ async function assembleFromReceipt(
     keys,
     receiptType: receipt.receiptType,
     operationDate,
+    loanId: receipt.keyLoanId,
     cards: cards.length > 0 ? cards : undefined,
   }
 }
@@ -177,7 +178,7 @@ export async function assembleMaintenanceLoanReceipt(
 
   // Merge loan description with optional comment for the PDF comment box
   const description =
-    [loan.description, comment].filter(Boolean).join('\n\n') || undefined
+    [loan.notes, comment].filter(Boolean).join('\n\n') || undefined
 
   return {
     contact: loan.contact || 'Unknown',
@@ -187,6 +188,7 @@ export async function assembleMaintenanceLoanReceipt(
     keys,
     receiptType: 'LOAN',
     operationDate: new Date(),
+    loanId,
     cards: cards.length > 0 ? cards : undefined,
   }
 }

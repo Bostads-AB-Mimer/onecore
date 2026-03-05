@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
+import QRCode from 'qrcode'
 
 import type {
   ReceiptData,
@@ -61,6 +62,27 @@ const generateReceiptNumber = (type: 'loan' | 'return'): string => {
   const timestamp = format(now, 'yyyyMMdd-HHmmss')
   const prefix = type === 'loan' ? 'NYL' : 'NYÅ'
   return `${prefix}-${timestamp}`
+}
+
+/**
+ * Generates a QR code as a data URL and adds it to the top-right of every page.
+ * Only added to loan receipts so scanners can read the loan UUID.
+ * QR on every page enables batch scanning — pages are grouped by UUID.
+ */
+const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
+  const qrDataUrl = await QRCode.toDataURL(loanId, {
+    width: 200,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+  })
+  const qrSize = 25
+  const x = PAGE_W - MARGIN_X - qrSize
+  const y = MARGIN_TOP
+  const totalPages = doc.getNumberOfPages()
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page)
+    doc.addImage(qrDataUrl, 'PNG', x, y, qrSize, qrSize)
+  }
 }
 
 /* ============================================================================
@@ -845,6 +867,9 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   y = addLoanConfirmation(doc, y, data.tenants)
   addComment(doc, y, data.comment)
   await addFooter(doc, receiptId)
+  if (data.loanId) {
+    await addQrCode(doc, data.loanId)
+  }
 
   const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
     new Date(),
@@ -913,6 +938,9 @@ async function buildMaintenanceLoanDoc(
   y = addMaintenanceLoanConfirmation(doc, y)
   addComment(doc, y, data.description ?? undefined)
   await addFooter(doc, receiptId)
+  if (data.loanId) {
+    await addQrCode(doc, data.loanId)
+  }
 
   const fileName = `nyckelutlaning_${data.contact}_${format(
     new Date(),

@@ -2407,6 +2407,43 @@ export interface paths {
       };
     };
   };
+  "/scan-receipt": {
+    /**
+     * Process a scanned receipt image (single or batch)
+     * @description Receives a scanned receipt image (JPEG, PNG, BMP, or multi-page PDF).
+     * Extracts QR codes from each page, groups pages by loan UUID,
+     * and creates a receipt for each unique loan.
+     * Returns an array of results and any errors.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: byte */
+            imageData?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description All receipts created successfully */
+        201: {
+          content: never;
+        };
+        /** @description Partial success — some receipts created, some failed */
+        207: {
+          content: never;
+        };
+        /** @description Missing image data */
+        400: {
+          content: never;
+        };
+        /** @description No receipts could be created (decode/QR errors) */
+        422: {
+          content: never;
+        };
+      };
+    };
+  };
   "/signatures/send": {
     /** Send a document for digital signature via SimpleSign */
     post: {
