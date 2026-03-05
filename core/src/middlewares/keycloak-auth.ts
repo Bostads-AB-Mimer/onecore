@@ -100,6 +100,7 @@ async function verifyLegacyJwt(ctx: Context, next: Next) {
 export const requireAuth = async (ctx: Context, next: Next) => {
   if (!ctx.state.accessToken) {
     ctx.status = 401
+    ctx.set('WWW-Authenticate', 'Basic')
     ctx.body = { message: 'Authentication required' }
     return
   }
