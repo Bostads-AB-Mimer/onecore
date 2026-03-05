@@ -141,6 +141,7 @@ export const extractToken = async (ctx: Context, next: Next) => {
         authType: authHeader?.split(' ')[0] || 'none',
         contentLength: ctx.get('Content-Length') || 'none',
         contentType: ctx.get('Content-Type') || 'none',
+        expect: ctx.get('Expect') || 'none',
         method: ctx.method,
         path: ctx.path,
       },
