@@ -5,6 +5,7 @@ import { logger } from '@onecore/utilities'
 import hash from './hash'
 import { createToken } from './jwt'
 import auth from './keycloak'
+import { getUsersByRole } from './keycloak-admin-adapter'
 import { requireAuth } from '../../middlewares/keycloak-auth'
 
 /**
@@ -12,6 +13,25 @@ import { requireAuth } from '../../middlewares/keycloak-auth'
  * tags:
  *   - name: Auth
  *     description: Authentication endpoints
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     KeycloakUser:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         username:
+ *           type: string
+ *         firstName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         email:
+ *           type: string
  */
 export const routes = (router: KoaRouter) => {
   /**
@@ -273,5 +293,53 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 401
       ctx.body = { error: 'Token refresh failed' }
     }
+  })
+
+  /**
+   * @swagger
+   * /auth/roles/{roleName}/users:
+   *   get:
+   *     summary: Get users by realm role
+   *     description: Returns all users assigned to the given Keycloak realm role
+   *     tags:
+   *       - Auth
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: roleName
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The name of the Keycloak realm role
+   *     responses:
+   *       '200':
+   *         description: List of users with the given role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/KeycloakUser'
+   *       '401':
+   *         description: Unauthorized
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('(.*)/auth/roles/:roleName/users', requireAuth, async (ctx) => {
+    const { roleName } = ctx.params
+    const result = await getUsersByRole(roleName)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data }
   })
 }

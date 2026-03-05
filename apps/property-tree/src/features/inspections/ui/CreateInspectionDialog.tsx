@@ -2,10 +2,6 @@ import { useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
-import { INSPECTION_STATUS } from '../constants/statuses'
-import { INSPECTION_TYPE_LABELS } from '../constants/inspectionTypes'
-import { useCreateInspection } from '../hooks/useCreateInspection'
-
 import { Button } from '@/shared/ui/Button'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import {
@@ -25,6 +21,11 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 import { Textarea } from '@/shared/ui/Textarea'
+
+import { INSPECTION_TYPE_LABELS } from '../constants/inspectionTypes'
+import { INSPECTION_STATUS } from '../constants/statuses'
+import { useCreateInspection } from '../hooks/useCreateInspection'
+import { useInspectors } from '../hooks/useInspectors'
 
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
 
@@ -58,6 +59,7 @@ export function CreateInspectionDialog({
   roomNames,
 }: CreateInspectionDialogProps) {
   const createInspection = useCreateInspection({ rentalId })
+  const { data: inspectors, isLoading: isLoadingInspectors } = useInspectors()
   const [inspector, setInspector] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [type, setType] = useState('')
@@ -138,12 +140,25 @@ export function CreateInspectionDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="inspector">Besiktningsman</Label>
-              <Input
-                id="inspector"
-                value={inspector}
-                onChange={(e) => setInspector(e.target.value)}
-                placeholder="Namn"
-              />
+              <Select value={inspector} onValueChange={setInspector}>
+                <SelectTrigger id="inspector" disabled={isLoadingInspectors}>
+                  <SelectValue
+                    placeholder={
+                      isLoadingInspectors ? 'Laddar...' : 'Välj besiktningsman'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {inspectors?.map((user) => {
+                    const name = `${user.firstName} ${user.lastName}`
+                    return (
+                      <SelectItem key={user.id} value={name}>
+                        {name}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
