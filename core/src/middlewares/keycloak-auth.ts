@@ -100,7 +100,11 @@ async function verifyLegacyJwt(ctx: Context, next: Next) {
 export const requireAuth = async (ctx: Context, next: Next) => {
   if (!ctx.state.accessToken) {
     ctx.status = 401
-    ctx.set('WWW-Authenticate', 'Basic')
+    // Browsers set Sec-Fetch-Mode automatically; machine clients don't.
+    // Send the Basic auth challenge for non-browser clients to avoid
+    if (!ctx.get('Sec-Fetch-Mode')) {
+      ctx.set('WWW-Authenticate', 'Basic')
+    }
     ctx.body = { message: 'Authentication required' }
     return
   }
