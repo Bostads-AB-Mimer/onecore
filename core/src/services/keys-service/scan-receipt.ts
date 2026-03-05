@@ -37,8 +37,13 @@ async function sendErrorNotification(subject: string, message: string) {
 export const routes = (router: KoaRouter) => {
   // WebDAV: OPTIONS handler
   router.options('/scan-receipt(.*)', (ctx) => {
-    ctx.set('Allow', 'OPTIONS, PROPFIND, PUT')
+    ctx.set('Allow', 'OPTIONS, HEAD, PROPFIND, PUT')
     ctx.set('DAV', '1')
+    ctx.status = 200
+  })
+
+  // WebDAV: HEAD handler — scanner "test connection" and pre-upload check
+  router.head('/scan-receipt(.*)', (ctx) => {
     ctx.status = 200
   })
 
