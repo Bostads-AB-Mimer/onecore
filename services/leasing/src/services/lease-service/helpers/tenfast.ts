@@ -5,25 +5,33 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
-import { isPreliminaryTerminated } from '../adapters/tenfast/filters'
 
-const calculateLeaseStatus = (
-  startDate: Date,
-  endDate: Date | null,
-  isPreliminaryTerminated: boolean
-): LeaseStatus => {
-  // TODO: Verify this logic
-  const today = new Date()
-  if (endDate && endDate < today) return LeaseStatus.Ended
-  if (startDate >= today) return LeaseStatus.Upcoming
-  if (isPreliminaryTerminated) return LeaseStatus.PreliminaryTerminated
-  if (endDate && endDate >= today) return LeaseStatus.AboutToEnd
-  return LeaseStatus.Current
+const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+  const { stage } = lease
+
+  switch (stage) {
+    case 'Inväntar signering':
+      return LeaseStatus.PendingSignature
+    case 'Kommande':
+      return LeaseStatus.Upcoming
+    case 'Gällande':
+      return LeaseStatus.Current
+    case 'Preliminärt uppsagt':
+      return LeaseStatus.PreliminaryTerminated
+    case 'Uppsagt':
+      return LeaseStatus.AboutToEnd
+    case 'Upphört':
+      return LeaseStatus.Ended
+    case 'Ej skickat':
+      return LeaseStatus.NotSent
+    default:
+      return LeaseStatus.Current
+  }
 }
 
-function mapToOnecoreRentalObject(
+const mapToOnecoreRentalObject = (
   rentalObject: TenfastRentalObject
-): RentalObject | undefined {
+): RentalObject | undefined => {
   // Only map if we have populated fields (not just a reference)
   if (!rentalObject.postadress) {
     return undefined
@@ -69,17 +77,13 @@ function mapToOnecoreRentalObject(
 // lastDebitDate: Date | undefined // Sista betaldatum
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
-export function mapToOnecoreLease(lease: TenfastLease): Lease {
+export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
     leaseStartDate: lease.startDate,
     leaseEndDate: lease.endDate ?? undefined,
-    status: calculateLeaseStatus(
-      lease.startDate,
-      lease.endDate,
-      isPreliminaryTerminated(lease)
-    ),
+    status: calculateLeaseStatus(lease),
     noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
     noticeDate: lease.cancellation.handledAt ?? undefined,
     noticeTimeTenant: lease.uppsagningstid,
@@ -100,7 +104,7 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
   }
 }
 
-export function mapToOnecoreRentRow(row: TenfastInvoiceRow): LeaseRentRow {
+export const mapToOnecoreRentRow = (row: TenfastInvoiceRow): LeaseRentRow => {
   return {
     id: row._id,
     amount: row.amount,
