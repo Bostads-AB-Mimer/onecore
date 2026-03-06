@@ -86,6 +86,7 @@ const transformFromDbContact = (
 ): Contact => {
   const row = trimRow(rows[0])
   const protectedIdentity = row.protectedIdentity !== null
+  const deceased = row.deceased !== null
 
   const contact = {
     contactCode: row.contactCode,
@@ -116,6 +117,8 @@ const transformFromDbContact = (
     housingWaitingList: getHousingWaitingList(rows),
     storageWaitingList: getStorageWaitingList(rows),
     specialAttention: !!row.specialAttention,
+    protectedIdentity: protectedIdentity,
+    deceased: deceased,
   }
 
   return contact
@@ -434,7 +437,8 @@ const getContactQuery = () => {
         'bkkty.bkktyben as queueName',
         'bkqte.quetime as queueTime',
         'cmctc.lagsokt as protectedIdentity',
-        'cmctc.utslag as specialAttention'
+        'cmctc.utslag as specialAttention',
+        'cmctc.avliden as deceased'
       )
       .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
       .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
