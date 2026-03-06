@@ -13,9 +13,12 @@ import {
   getOngoingInspectionColumns,
   INSPECTION_STATUS,
   type InspectionTableColumn,
+  type Inspector,
   renderInspectionMobileCard,
 } from '../constants'
+import { useInspectors } from '../hooks/useInspectors'
 import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
+import { useUpdateInspector } from '../hooks/useUpdateInspector'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
 
@@ -39,13 +42,30 @@ export function InspectionsTable({
   columns,
   emptyMessage,
 }: InspectionsTableProps) {
+  const { data: inspectors } = useInspectors()
+  const { toast } = useToast()
   const [isResumeDialogOpen, setIsResumeDialogOpen] = useState(false)
   const [isProtocolDialogOpen, setIsProtocolDialogOpen] = useState(false)
   const [selectedInspectionId, setSelectedInspectionId] = useState<
     string | null
   >(null)
 
-  const { toast } = useToast()
+  const { mutate: updateInspector } = useUpdateInspector({
+    onSuccess: () => {
+      toast({
+        title: 'Besiktningsman uppdaterad',
+        description: 'Tilldelad besiktningsman har ändrats.',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte uppdatera besiktningsman.',
+        variant: 'destructive',
+      })
+    },
+  })
+
   const { startInspection, isPending } = useUpdateInspectionStatus({
     rentalId,
     onSuccess: () => {
@@ -62,6 +82,10 @@ export function InspectionsTable({
       })
     },
   })
+
+  const handleUpdateInspector = (inspectionId: string, inspector: string) => {
+    updateInspector({ inspectionId, inspector })
+  }
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
@@ -93,7 +117,10 @@ export function InspectionsTable({
     columns ||
     (isCompleted
       ? getCompletedInspectionColumns(handleInspectionClick)
-      : getOngoingInspectionColumns(handleInspectionClick))
+      : getOngoingInspectionColumns(handleInspectionClick, {
+          inspectors: inspectors as Inspector[] | undefined,
+          onUpdateInspector: handleUpdateInspector,
+        }))
 
   // Filter columns if hiddenColumns is used
   const filteredColumns =

@@ -222,12 +222,18 @@ export type CreateInspectionRequest = z.infer<
   typeof CreateInspectionRequestSchema
 >
 
-export const UpdateInspectionStatusRequestSchema = z.object({
-  status: z.enum(['Registrerad', 'Påbörjad', 'Genomförd'], {
-    required_error: 'Status is required',
-    invalid_type_error: 'Invalid status value',
-  }),
-})
+export const UpdateInspectionStatusRequestSchema = z
+  .object({
+    status: z
+      .enum(['Registrerad', 'Påbörjad', 'Genomförd'], {
+        invalid_type_error: 'Invalid status value',
+      })
+      .optional(),
+    inspector: z.string().min(1).optional(),
+  })
+  .refine((data) => data.status !== undefined || data.inspector !== undefined, {
+    message: 'At least one field (status or inspector) must be provided',
+  })
 
 export type UpdateInspectionStatusRequest = z.infer<
   typeof UpdateInspectionStatusRequestSchema

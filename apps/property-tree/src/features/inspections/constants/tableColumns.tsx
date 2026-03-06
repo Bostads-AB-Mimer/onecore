@@ -13,10 +13,23 @@ import { components } from '@/services/api/core/generated/api-types'
 import { formatISODate } from '@/shared/lib/formatters'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 
 import { getStatusConfig } from './statuses'
 
 type Inspection = components['schemas']['InspectionWithSource']
+
+export interface Inspector {
+  id: string
+  firstName: string
+  lastName: string
+}
 
 /**
  * Column configuration interface (compatible with ResponsiveTable)
@@ -46,6 +59,47 @@ function getMainPhoneNumber(inspection: Inspection): string {
 function formatMasterKeyAccess(value: string | null | undefined): string {
   if (!value) return 'Okänt'
   return value === 'Huvudnyckel' ? 'Ja' : 'Nej'
+}
+
+/**
+ * Create an inspector column with inline Select for internal inspections
+ */
+export function createInspectorColumn(
+  inspectors: Inspector[],
+  onUpdateInspector: (inspectionId: string, inspector: string) => void
+): InspectionTableColumn {
+  return {
+    key: 'inspector',
+    label: 'Tilldelad',
+    render: (inspection: Inspection) => {
+      const source = inspection.source
+      if (source === 'xpand') {
+        return inspection.inspector || 'N/A'
+      }
+
+      return (
+        <Select
+          value={inspection.inspector || ''}
+          onValueChange={(value) => onUpdateInspector(inspection.id, value)}
+        >
+          <SelectTrigger className="h-8 w-[180px] py-6">
+            <SelectValue placeholder="Välj besiktningsman" />
+          </SelectTrigger>
+          <SelectContent>
+            {inspectors.map((user) => {
+              const name = `${user.firstName} ${user.lastName}`
+              return (
+                <SelectItem key={user.id} value={name}>
+                  {name}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
+      )
+    },
+    hideOnMobile: false,
+  }
 }
 
 /**
@@ -163,10 +217,19 @@ export function createActionsColumn(
  * Get columns for ongoing inspections
  */
 export function getOngoingInspectionColumns(
-  onAction: (inspection: Inspection) => void
+  onAction: (inspection: Inspection) => void,
+  options?: {
+    inspectors?: Inspector[]
+    onUpdateInspector?: (inspectionId: string, inspector: string) => void
+  }
 ): InspectionTableColumn[] {
+  const inspectorCol =
+    options?.inspectors && options?.onUpdateInspector
+      ? createInspectorColumn(options.inspectors, options.onUpdateInspector)
+      : INSPECTION_TABLE_COLUMNS.inspector
+
   return [
-    INSPECTION_TABLE_COLUMNS.inspector,
+    inspectorCol,
     INSPECTION_TABLE_COLUMNS.type,
     INSPECTION_TABLE_COLUMNS.leaseId,
     INSPECTION_TABLE_COLUMNS.address,

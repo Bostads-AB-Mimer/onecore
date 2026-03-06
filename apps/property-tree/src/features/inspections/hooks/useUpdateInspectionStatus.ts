@@ -48,7 +48,7 @@ export const useUpdateInspectionStatus = ({
         queryClient.setQueryData<Inspection[]>(
           ['inspections', rentalId],
           previousInspections.map((i) =>
-            i.id === inspectionId ? { ...i, status } : i
+            i.id === inspectionId ? { ...i, ...(status && { status }) } : i
           )
         )
       }

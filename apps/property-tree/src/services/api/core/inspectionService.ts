@@ -119,6 +119,21 @@ export const inspectionService = {
     return response.data.content.inspection
   },
 
+  async updateInternalInspection(
+    inspectionId: string,
+    body: components['schemas']['UpdateInspectionStatusRequest']
+  ): Promise<DetailedInspection> {
+    const response = await PATCH('/inspections/internal/{inspectionId}', {
+      params: { path: { inspectionId } },
+      body,
+    })
+    if (response.error) throw response.error
+    if (!response.data.content?.inspection)
+      throw new Error('Failed to update inspection')
+
+    return response.data.content.inspection
+  },
+
   async sendProtocol(
     inspectionId: string,
     recipient: 'new-tenant' | 'tenant'

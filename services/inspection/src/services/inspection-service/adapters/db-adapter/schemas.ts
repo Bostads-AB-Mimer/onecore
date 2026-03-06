@@ -70,16 +70,26 @@ export const VALID_STATUS_TRANSITIONS: Record<string, string> = {
   Påbörjad: 'Genomförd',
 }
 
-export const UpdateInspectionStatusSchema = z.object({
-  status: z.enum(INSPECTION_STATUSES, {
-    required_error: 'Status is required',
-    invalid_type_error: 'Invalid status value',
-  }),
-})
+export const UpdateInternalInspectionSchema = z
+  .object({
+    status: z
+      .enum(INSPECTION_STATUSES, {
+        invalid_type_error: 'Invalid status value',
+      })
+      .optional(),
+    inspector: z.string().min(1).optional(),
+  })
+  .refine((data) => data.status !== undefined || data.inspector !== undefined, {
+    message: 'At least one field (status or inspector) must be provided',
+  })
 
-export type UpdateInspectionStatusParams = z.infer<
-  typeof UpdateInspectionStatusSchema
+export type UpdateInternalInspectionParams = z.infer<
+  typeof UpdateInternalInspectionSchema
 >
+
+export const UpdateInspectionStatusSchema = UpdateInternalInspectionSchema
+
+export type UpdateInspectionStatusParams = UpdateInternalInspectionParams
 
 export function validateStatusTransition(
   currentStatus: string,

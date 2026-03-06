@@ -1304,8 +1304,8 @@ export const routes = (router: KoaRouter) => {
    *   patch:
    *     tags:
    *       - Inspection Service
-   *     summary: Update inspection status
-   *     description: Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
+   *     summary: Update internal inspection
+   *     description: Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
    *     parameters:
    *       - in: path
    *         name: inspectionId
@@ -1321,7 +1321,7 @@ export const routes = (router: KoaRouter) => {
    *             $ref: '#/components/schemas/UpdateInspectionStatusRequest'
    *     responses:
    *       '200':
-   *         description: Inspection status updated successfully
+   *         description: Inspection updated successfully
    *         content:
    *           application/json:
    *             schema:

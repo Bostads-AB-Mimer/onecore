@@ -15,6 +15,7 @@ import * as xpandAdapter from './adapters/xpand-adapter'
 import * as dbAdapter from './adapters/db-adapter'
 import {
   CreateInspectionSchema,
+  UpdateInternalInspectionSchema,
   UpdateInspectionStatusSchema,
 } from './adapters/db-adapter/schemas'
 import { db } from './adapters/db'
@@ -33,7 +34,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedXpandInspectionRoom', DetailedXpandInspectionSchema)
   registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
   registerSchema('CreateInspection', CreateInspectionSchema)
-  registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)
+  registerSchema('UpdateInspectionStatus', UpdateInternalInspectionSchema)
 
   /**
    * @swagger
@@ -732,8 +733,8 @@ export const routes = (router: KoaRouter) => {
    *   patch:
    *     tags:
    *       - Inspection
-   *     summary: Update inspection status
-   *     description: Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
+   *     summary: Update internal inspection
+   *     description: Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
    *     parameters:
    *       - in: path
    *         name: inspectionId
@@ -749,7 +750,7 @@ export const routes = (router: KoaRouter) => {
    *             $ref: '#/components/schemas/UpdateInspectionStatus'
    *     responses:
    *       200:
-   *         description: Inspection status updated successfully
+   *         description: Inspection updated successfully
    *         content:
    *           application/json:
    *             schema:
@@ -801,7 +802,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
-    const validationResult = UpdateInspectionStatusSchema.safeParse(
+    const validationResult = UpdateInternalInspectionSchema.safeParse(
       ctx.request.body
     )
     if (!validationResult.success) {
@@ -815,10 +816,10 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await dbAdapter.updateInspectionStatus(
+      const result = await dbAdapter.updateInternalInspection(
         db,
         inspectionId,
-        validationResult.data.status
+        validationResult.data
       )
 
       if (!result.ok) {
@@ -842,7 +843,7 @@ export const routes = (router: KoaRouter) => {
 
         ctx.status = 500
         ctx.body = {
-          error: `Failed to update inspection status: ${result.err}`,
+          error: `Failed to update inspection: ${result.err}`,
           ...metadata,
         }
         return
@@ -856,7 +857,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error) {
-      logger.error(error, 'Error updating inspection status')
+      logger.error(error, 'Error updating inspection')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
