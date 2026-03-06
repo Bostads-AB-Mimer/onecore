@@ -4019,25 +4019,25 @@ export interface paths {
           content: {
             'application/json': {
               /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/companies/{id}': {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/companies/{organizationNumber}": {
     /**
      * Get detailed information about a specific company
-     * @description Retrieves comprehensive information about a company using its unique identifier.
+     * @description Retrieves comprehensive information about a company using its organization number.
      */
     get: {
       parameters: {
         path: {
-          /** @description The ID of the company. */
-          id: string
-        }
-      }
+          /** @description The organization number of the company. */
+          organizationNumber: string;
+        };
+      };
       responses: {
         /** @description Successfully retrieved company information */
         200: {

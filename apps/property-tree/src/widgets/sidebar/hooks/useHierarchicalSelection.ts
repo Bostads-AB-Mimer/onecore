@@ -9,7 +9,7 @@ import { useResidence } from '@/features/residences'
 import { matchesRoute, routes } from '@/shared/routes'
 
 interface LocationState {
-  companyId?: string
+  organizationNumber?: string
   propertyCode?: string
   buildingCode?: string
 }
@@ -18,7 +18,7 @@ interface SelectionState {
   selectedResidenceId: string | null
   selectedBuildingCode: string | null
   selectedPropertyCode: string | null
-  selectedCompanyId: string | null
+  selectedOrganizationNumber: string | null
 }
 
 export function useHierarchicalSelection() {
@@ -57,28 +57,30 @@ export function useHierarchicalSelection() {
 
   // Company requires a property fetch to resolve
   const { data: property } = useProperty(
-    !state.companyId && selectedPropertyCode ? selectedPropertyCode : undefined
+    !state.organizationNumber && selectedPropertyCode
+      ? selectedPropertyCode
+      : undefined
   )
   const { data: company } = useCompanyByPropertyId(
-    !state.companyId ? property?.id : undefined
+    !state.organizationNumber ? property?.id : undefined
   )
 
-  const selectedCompanyId = onCompany
-    ? (params.companyId ?? null)
-    : (state.companyId ?? company?.id ?? null)
+  const selectedOrganizationNumber = onCompany
+    ? (params.organizationNumber ?? null)
+    : (state.organizationNumber ?? company?.organizationNumber ?? null)
 
   const selectionState = useMemo(
     (): SelectionState => ({
       selectedResidenceId,
       selectedBuildingCode,
       selectedPropertyCode,
-      selectedCompanyId,
+      selectedOrganizationNumber,
     }),
     [
       selectedResidenceId,
       selectedBuildingCode,
       selectedPropertyCode,
-      selectedCompanyId,
+      selectedOrganizationNumber,
     ]
   )
 
@@ -98,8 +100,8 @@ export function useHierarchicalSelection() {
   )
 
   const isCompanyInHierarchy = useCallback(
-    (id: string) => selectedCompanyId === id,
-    [selectedCompanyId]
+    (orgNr: string) => selectedOrganizationNumber === orgNr,
+    [selectedOrganizationNumber]
   )
 
   return {
