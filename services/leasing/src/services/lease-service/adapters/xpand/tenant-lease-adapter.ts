@@ -560,6 +560,9 @@ const searchContactsPaginated = async (
  * - Have contact code starting with 'P' (persons, not organizations)
  * - Have valid national registration numbers (not organizations, not test numbers, no letters)
  * - Are not already marked as deceased
+ * - Have non-empty personnummer
+ * - Have personnummer with valid length (10-12 digits)
+ * - Are not samordningsnummer (coordination numbers with day > 31)
  *
  * @param ctx - Koa context for pagination params
  * @returns Paginated response with identity check contacts
@@ -581,6 +584,10 @@ const getContactsForIdentityCheck = async (
     .whereNot('cmctc.persorgnr', 'like', '1900%')
     .whereRaw("cmctc.persorgnr NOT LIKE '%[A-Za-z]%'")
     .whereNull('cmctc.avliden')
+    .whereNot('cmctc.persorgnr', '=', '')
+    .whereRaw('LEN(cmctc.persorgnr) >= 10')
+    .whereRaw('LEN(cmctc.persorgnr) <= 12')
+    .whereRaw('TRY_CAST(SUBSTRING(cmctc.persorgnr, 7, 2) AS INT) <= 31')
     .orderBy('cmctc.cmctckod', 'asc')
 
   return paginateKnex(query, ctx)
