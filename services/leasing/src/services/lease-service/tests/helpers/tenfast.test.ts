@@ -1,27 +1,29 @@
-import { add, sub } from 'date-fns'
+import { sub } from 'date-fns'
 import { LeaseStatus } from '@onecore/types'
 
 import { mapToOnecoreLease } from '../../helpers/tenfast'
 import * as factory from '../factories'
 
 describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
-  it('returns PendingSignature for signingInProgress stage', () => {
+  it('returns PendingSignature for Inväntar signering stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'signingInProgress',
-      signed: false,
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: null,
+      stage: 'Inväntar signering',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.PendingSignature)
   })
 
-  it('returns PreliminaryTerminated for requestedCancellation stage', () => {
+  it('returns NotSent for Ej skickat stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'requestedCancellation',
-      signed: true,
-      startDate: sub(new Date(), { days: 30 }),
-      endDate: add(new Date(), { days: 30 }),
+      stage: 'Ej skickat',
+    })
+
+    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.NotSent)
+  })
+
+  it('returns PreliminaryTerminated for Preliminärt uppsagt stage', () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'Preliminärt uppsagt',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(
@@ -29,69 +31,33 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     )
   })
 
-  it('returns PreliminaryTerminated for preliminaryCancellation stage', () => {
+  it('returns Ended for Upphört stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'preliminaryCancellation',
-      signed: true,
-      startDate: sub(new Date(), { days: 30 }),
-      endDate: add(new Date(), { days: 30 }),
-    })
-
-    expect(mapToOnecoreLease(lease).status).toBe(
-      LeaseStatus.PreliminaryTerminated
-    )
-  })
-
-  it('returns Ended for cancelled lease with past end date', () => {
-    const lease = factory.tenfastLease.build({
-      stage: 'cancelled',
-      signed: true,
-      startDate: sub(new Date(), { days: 60 }),
-      endDate: sub(new Date(), { days: 1 }),
+      stage: 'Upphört',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
   })
 
-  it('returns Ended for archived lease with past end date', () => {
+  it('returns AboutToEnd for Uppsagt stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'archived',
-      signed: true,
-      startDate: sub(new Date(), { days: 60 }),
-      endDate: sub(new Date(), { days: 1 }),
-    })
-
-    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
-  })
-
-  it('returns AboutToEnd for lease with future end date', () => {
-    const lease = factory.tenfastLease.build({
-      stage: 'cancelled',
-      signed: true,
-      startDate: sub(new Date(), { days: 30 }),
-      endDate: add(new Date(), { days: 30 }),
+      stage: 'Uppsagt',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.AboutToEnd)
   })
 
-  it('returns Upcoming for signed lease with future start date', () => {
+  it('returns Upcoming for Kommande stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'signed',
-      signed: true,
-      startDate: add(new Date(), { days: 1 }),
-      endDate: null,
+      stage: 'Kommande',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Upcoming)
   })
 
-  it('returns Current for signed lease with past start date and no end date', () => {
+  it('returns Current for Gällande stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'signed',
-      signed: true,
-      startDate: sub(new Date(), { days: 30 }),
-      endDate: null,
+      stage: 'Gällande',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Current)
@@ -106,33 +72,5 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Current)
-  })
-
-  it('prioritizes PendingSignature over other statuses', () => {
-    // A signingInProgress lease with a future end date could match AboutToEnd,
-    // but PendingSignature should take priority
-    const lease = factory.tenfastLease.build({
-      stage: 'signingInProgress',
-      signed: false,
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: add(new Date(), { days: 30 }),
-    })
-
-    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.PendingSignature)
-  })
-
-  it('prioritizes PreliminaryTerminated over AboutToEnd', () => {
-    // A requestedCancellation lease with a future end date could match AboutToEnd,
-    // but PreliminaryTerminated should take priority
-    const lease = factory.tenfastLease.build({
-      stage: 'requestedCancellation',
-      signed: true,
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: add(new Date(), { days: 30 }),
-    })
-
-    expect(mapToOnecoreLease(lease).status).toBe(
-      LeaseStatus.PreliminaryTerminated
-    )
   })
 })
