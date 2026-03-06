@@ -15,6 +15,7 @@ import {
 } from '@/services/receiptHandlers'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { useToast } from '@/hooks/use-toast'
+import { useEditKeyLoanHandlers } from '@/hooks/useEditKeyLoanHandlers'
 import type { KeyLoan, KeyLoanWithDetails, Lease } from '@/services/types'
 
 function isEnriched(
@@ -179,6 +180,15 @@ export function LoanActionMenu({
     }
   }
 
+  const { handleReceiptUpload, validateFile } = useEditKeyLoanHandlers({
+    onSuccess: async () => {
+      // Refresh local receipt state
+      const receipts = await receiptService.getByKeyLoan(loan.id)
+      setLoanReceipt(receipts.find((r) => r.receiptType === 'LOAN') || null)
+      onRefresh?.()
+    },
+  })
+
   const handleUploadClick = () => {
     fileInputRef.current?.click()
   }
@@ -187,22 +197,7 @@ export function LoanActionMenu({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.type !== 'application/pdf') {
-      toast({
-        title: 'Fel',
-        description: 'Endast PDF-filer är tillåtna',
-        variant: 'destructive',
-      })
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      return
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: 'Fel',
-        description: 'Filen är för stor (max 10 MB)',
-        variant: 'destructive',
-      })
+    if (!validateFile(file)) {
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
@@ -219,38 +214,9 @@ export function LoanActionMenu({
   const uploadFile = async (file: File) => {
     setLoading(true)
     try {
-      if (!loanReceipt) {
-        await receiptService.createWithFile(
-          {
-            keyLoanId: loan.id,
-            receiptType: 'LOAN',
-            type: 'DIGITAL',
-          },
-          file
-        )
-      } else {
-        await receiptService.uploadFile(loanReceipt.id, file)
-      }
-
-      toast({
-        title: loanReceipt?.fileId ? 'Kvittens ersatt' : 'Kvittens uppladdad',
-        description: loanReceipt?.fileId
-          ? 'Den nya kvittensen har ersatt den gamla'
-          : 'Kvittensen har laddats upp',
-      })
-
-      // Refresh receipt info
-      const receipts = await receiptService.getByKeyLoan(loan.id)
-      setLoanReceipt(receipts.find((r) => r.receiptType === 'LOAN') || null)
-      onRefresh?.()
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Kunde inte ladda upp filen'
-      toast({
-        title: 'Fel',
-        description: message,
-        variant: 'destructive',
-      })
+      await handleReceiptUpload(loan.id, file)
+    } catch {
+      // Error already handled by shared handler
     } finally {
       setLoading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
