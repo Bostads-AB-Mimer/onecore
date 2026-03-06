@@ -548,6 +548,10 @@ export default function KeyLoans() {
           onReceiptUpload={handleReceiptUpload}
           onReceiptDownload={handleReceiptDownload}
           onReceiptDelete={handleReceiptDelete}
+          onDelete={async (loanId) => {
+            const loan = keyLoans.find((l) => l.id === loanId)
+            if (loan) await handleDelete(loan)
+          }}
         />
       )}
 

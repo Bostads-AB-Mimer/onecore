@@ -18,7 +18,7 @@ import {
   PickupAvailabilityBadge,
   getLatestActiveEvent,
 } from './tables/StatusBadges'
-import type { KeyDetails } from '@/services/types'
+import type { KeyDetails, KeyLoanWithDetails } from '@/services/types'
 import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
 
 interface KeyBundleKeysListProps {
@@ -31,7 +31,7 @@ interface KeyBundleKeysListProps {
   onSelectAll?: () => void
   onDeselectAll?: () => void
   onRefresh?: () => void
-  onReturn?: (keyIds: string[], cardIds: string[]) => void
+  onReturn?: (loan: KeyLoanWithDetails) => void
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   Receipt,
 } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { X, FileText, Download, Trash2, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -32,6 +33,8 @@ type EditKeyLoanFormProps = {
   onReceiptUpload?: (loanId: string, file: File) => Promise<void>
   onReceiptDownload?: (loanId: string) => Promise<void>
   onReceiptDelete?: (loanId: string) => Promise<void>
+  onDelete?: (loanId: string) => Promise<void>
+  hideCard?: boolean
 }
 
 export function EditKeyLoanForm({
@@ -41,6 +44,8 @@ export function EditKeyLoanForm({
   onReceiptUpload,
   onReceiptDownload,
   onReceiptDelete,
+  onDelete,
+  hideCard,
 }: EditKeyLoanFormProps) {
   const [formData, setFormData] = useState<UpdateKeyLoanRequest>({
     contact: editingKeyLoan.contact || '',
@@ -63,6 +68,7 @@ export function EditKeyLoanForm({
     null
   )
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [loanReceipt, setLoanReceipt] = useState<Receipt | null>(null)
   const [loadingReceipt, setLoadingReceipt] = useState(true)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -243,6 +249,337 @@ export function EditKeyLoanForm({
     return '-'
   }
 
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      {/* Loan type and created date */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label htmlFor="loanType" className="text-xs">
+            Låntyp *
+          </Label>
+          <Select
+            value={formData.loanType}
+            onValueChange={(value: 'TENANT' | 'MAINTENANCE') =>
+              setFormData((prev) => ({ ...prev, loanType: value }))
+            }
+          >
+            <SelectTrigger id="loanType" className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="TENANT">Hyresgäst</SelectItem>
+              <SelectItem value="MAINTENANCE">Underhåll</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Skapad</Label>
+          <div className="flex items-center h-8 px-3 rounded-md border border-input bg-muted">
+            <span className="text-sm">
+              {formatDate(editingKeyLoan.createdAt)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact information - read-only */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label htmlFor="contact" className="text-xs">
+            Kontakt *
+          </Label>
+          <Input
+            id="contact"
+            className="h-8"
+            value={formData.contact}
+            readOnly
+            disabled
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="contact2" className="text-xs">
+            Kontakt 2
+          </Label>
+          <Input
+            id="contact2"
+            className="h-8"
+            value={formData.contact2}
+            readOnly
+            disabled
+          />
+        </div>
+      </div>
+
+      {/* Maintenance-specific fields */}
+      {formData.loanType === 'MAINTENANCE' && (
+        <div className="space-y-3 pt-2">
+          <h3 className="font-medium text-sm">Underhållsinformation</h3>
+
+          <div className="space-y-1">
+            <Label htmlFor="contactPerson" className="text-xs">
+              Kontaktperson (valfritt)
+            </Label>
+            <Input
+              id="contactPerson"
+              className="h-8"
+              placeholder="T.ex. Anders Svensson"
+              value={formData.contactPerson || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  contactPerson: e.target.value,
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="notes" className="text-xs">
+              Notering (valfritt)
+            </Label>
+            <Textarea
+              id="notes"
+              rows={4}
+              placeholder="T.ex. Nycklar förvaltning för renoveringsprojekt Blocket A"
+              value={formData.notes || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  notes: e.target.value,
+                }))
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Dates */}
+      <div className="space-y-3 pt-2">
+        <h3 className="font-medium text-sm">Datum</h3>
+
+        {/* pickedUpAt - editable if exists */}
+        <div className="space-y-1">
+          <Label htmlFor="pickedUpAt" className="text-xs">
+            Upphämtat
+          </Label>
+          {editingKeyLoan.pickedUpAt ? (
+            <Input
+              id="pickedUpAt"
+              type="date"
+              className="h-8"
+              value={formData.pickedUpAt}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  pickedUpAt: e.target.value,
+                }))
+              }
+            />
+          ) : (
+            <div className="flex items-center h-8 px-3 rounded-md border border-input bg-muted">
+              <span className="text-sm text-muted-foreground">
+                Ej upphämtat - ladda upp kvittens för att aktivera
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* returnedAt - only show for returned loans */}
+        {editingKeyLoan.returnedAt && (
+          <div className="space-y-1">
+            <Label htmlFor="returnedAt" className="text-xs">
+              Återlämnat
+            </Label>
+            <Input
+              id="returnedAt"
+              type="date"
+              className="h-8"
+              value={formData.returnedAt}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  returnedAt: e.target.value,
+                }))
+              }
+            />
+          </div>
+        )}
+
+        {/* availableToNextTenantFrom - only for returned loans */}
+        {editingKeyLoan.returnedAt && (
+          <div className="space-y-1">
+            <Label htmlFor="availableToNextTenantFrom" className="text-xs">
+              Tillgänglig från och med
+            </Label>
+            <Input
+              id="availableToNextTenantFrom"
+              type="date"
+              className="h-8"
+              value={formData.availableToNextTenantFrom}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  availableToNextTenantFrom: e.target.value,
+                }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              När nycklarna kan lämnas ut till nästa hyresgäst
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Receipt management */}
+      <div className="space-y-3 pt-2">
+        {loadingReceipt ? (
+          <div className="text-sm text-muted-foreground">
+            Laddar kvittens...
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {/* Show current receipt if exists and no new file selected */}
+            {loanReceipt?.fileId && !selectedReceiptFile && (
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
+                <FileText className="h-4 w-4" />
+                <span className="flex-1 text-xs">Kvittens uppladdad</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={handleDownloadReceipt}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Ladda ner
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0"
+                  onClick={handleDeleteReceipt}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            {/* File input for new upload/replace */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm whitespace-nowrap">
+                Kvittens (PDF)
+              </Label>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="text-sm flex-1"
+                onChange={handleReceiptFileChange}
+              />
+            </div>
+
+            {selectedReceiptFile && (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600 flex-1 truncate">
+                    {selectedReceiptFile.name}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedReceiptFile(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    }}
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {/* Warning when replacing existing receipt */}
+                {loanReceipt?.fileId && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
+                    <p className="font-medium text-yellow-800">
+                      Obs! Det befintliga kvittensen kommer att raderas
+                    </p>
+                  </div>
+                )}
+
+                {/* Upload button - only show if file selected */}
+                <Button
+                  type="button"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={handleUploadReceipt}
+                  disabled={isUploadingReceipt}
+                >
+                  <Upload className="h-3 w-3 mr-1" />
+                  {isUploadingReceipt
+                    ? 'Laddar upp...'
+                    : loanReceipt?.fileId
+                      ? 'Ersätt kvittens'
+                      : 'Ladda upp kvittens'}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Keys info (read-only) */}
+      <div className="space-y-1 pt-2">
+        <h3 className="font-medium text-sm">Nycklar i detta lån</h3>
+        <div className="text-sm text-muted-foreground">
+          {getKeyCount()} {getKeyCount() === 1 ? 'nyckel' : 'nycklar'}
+        </div>
+      </div>
+
+      {/* Form actions */}
+      <div className="flex justify-between pt-2">
+        {onDelete ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="text-destructive hover:text-destructive border-destructive/50"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={!!editingKeyLoan.pickedUpAt && !editingKeyLoan.returnedAt}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Ta bort
+          </Button>
+        ) : (
+          <div />
+        )}
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Avbryt
+          </Button>
+          <Button type="submit">Uppdatera</Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Ta bort nyckellån"
+        description="Är du säker på att du vill ta bort detta lån? Detta går inte att ångra."
+        confirmLabel="Ta bort"
+        onConfirm={() => {
+          setShowDeleteConfirm(false)
+          onDelete?.(editingKeyLoan.id)
+        }}
+      />
+    </form>
+  )
+
+  if (hideCard) {
+    return formContent
+  }
+
   return (
     <Card className="animate-fade-in mb-6">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -251,306 +588,7 @@ export function EditKeyLoanForm({
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>
-
-      <CardContent className="space-y-3 p-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Loan type and created date */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="loanType" className="text-xs">
-                Låntyp *
-              </Label>
-              <Select
-                value={formData.loanType}
-                onValueChange={(value: 'TENANT' | 'MAINTENANCE') =>
-                  setFormData((prev) => ({ ...prev, loanType: value }))
-                }
-              >
-                <SelectTrigger id="loanType" className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TENANT">Hyresgäst</SelectItem>
-                  <SelectItem value="MAINTENANCE">Underhåll</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Skapad</Label>
-              <div className="flex items-center h-8 px-3 rounded-md border border-input bg-muted">
-                <span className="text-sm">
-                  {formatDate(editingKeyLoan.createdAt)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact information - read-only */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="contact" className="text-xs">
-                Kontakt *
-              </Label>
-              <Input
-                id="contact"
-                className="h-8"
-                value={formData.contact}
-                readOnly
-                disabled
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="contact2" className="text-xs">
-                Kontakt 2
-              </Label>
-              <Input
-                id="contact2"
-                className="h-8"
-                value={formData.contact2}
-                readOnly
-                disabled
-              />
-            </div>
-          </div>
-
-          {/* Maintenance-specific fields */}
-          {formData.loanType === 'MAINTENANCE' && (
-            <div className="space-y-3 pt-2">
-              <h3 className="font-medium text-sm">Underhållsinformation</h3>
-
-              <div className="space-y-1">
-                <Label htmlFor="contactPerson" className="text-xs">
-                  Kontaktperson (valfritt)
-                </Label>
-                <Input
-                  id="contactPerson"
-                  className="h-8"
-                  placeholder="T.ex. Anders Svensson"
-                  value={formData.contactPerson || ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      contactPerson: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="notes" className="text-xs">
-                  Notering (valfritt)
-                </Label>
-                <Textarea
-                  id="notes"
-                  rows={4}
-                  placeholder="T.ex. Nycklar förvaltning för renoveringsprojekt Blocket A"
-                  value={formData.notes || ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      notes: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Dates */}
-          <div className="space-y-3 pt-2">
-            <h3 className="font-medium text-sm">Datum</h3>
-
-            {/* pickedUpAt - editable if exists */}
-            <div className="space-y-1">
-              <Label htmlFor="pickedUpAt" className="text-xs">
-                Upphämtat
-              </Label>
-              {editingKeyLoan.pickedUpAt ? (
-                <Input
-                  id="pickedUpAt"
-                  type="date"
-                  className="h-8"
-                  value={formData.pickedUpAt}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      pickedUpAt: e.target.value,
-                    }))
-                  }
-                />
-              ) : (
-                <div className="flex items-center h-8 px-3 rounded-md border border-input bg-muted">
-                  <span className="text-sm text-muted-foreground">
-                    Ej upphämtat - ladda upp kvittens för att aktivera
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* returnedAt - only show for returned loans */}
-            {editingKeyLoan.returnedAt && (
-              <div className="space-y-1">
-                <Label htmlFor="returnedAt" className="text-xs">
-                  Återlämnat
-                </Label>
-                <Input
-                  id="returnedAt"
-                  type="date"
-                  className="h-8"
-                  value={formData.returnedAt}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      returnedAt: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            )}
-
-            {/* availableToNextTenantFrom - only for returned loans */}
-            {editingKeyLoan.returnedAt && (
-              <div className="space-y-1">
-                <Label htmlFor="availableToNextTenantFrom" className="text-xs">
-                  Tillgänglig från och med
-                </Label>
-                <Input
-                  id="availableToNextTenantFrom"
-                  type="date"
-                  className="h-8"
-                  value={formData.availableToNextTenantFrom}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      availableToNextTenantFrom: e.target.value,
-                    }))
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  När nycklarna kan lämnas ut till nästa hyresgäst
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Receipt management */}
-          <div className="space-y-3 pt-2">
-            {loadingReceipt ? (
-              <div className="text-sm text-muted-foreground">
-                Laddar kvittens...
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Show current receipt if exists and no new file selected */}
-                {loanReceipt?.fileId && !selectedReceiptFile && (
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-sm">
-                    <FileText className="h-4 w-4" />
-                    <span className="flex-1 text-xs">Kvittens uppladdad</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={handleDownloadReceipt}
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Ladda ner
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0"
-                      onClick={handleDeleteReceipt}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-
-                {/* File input for new upload/replace */}
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm whitespace-nowrap">
-                    Kvittens (PDF)
-                  </Label>
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    className="text-sm flex-1"
-                    onChange={handleReceiptFileChange}
-                  />
-                </div>
-
-                {selectedReceiptFile && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600 flex-1 truncate">
-                        {selectedReceiptFile.name}
-                      </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedReceiptFile(null)
-                          if (fileInputRef.current)
-                            fileInputRef.current.value = ''
-                        }}
-                        variant="ghost"
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    {/* Warning when replacing existing receipt */}
-                    {loanReceipt?.fileId && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
-                        <p className="font-medium text-yellow-800">
-                          Obs! Det befintliga kvittensen kommer att raderas
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Upload button - only show if file selected */}
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={handleUploadReceipt}
-                      disabled={isUploadingReceipt}
-                    >
-                      <Upload className="h-3 w-3 mr-1" />
-                      {isUploadingReceipt
-                        ? 'Laddar upp...'
-                        : loanReceipt?.fileId
-                          ? 'Ersätt kvittens'
-                          : 'Ladda upp kvittens'}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Keys info (read-only) */}
-          <div className="space-y-1 pt-2">
-            <h3 className="font-medium text-sm">Nycklar i detta lån</h3>
-            <div className="text-sm text-muted-foreground">
-              {getKeyCount()} {getKeyCount() === 1 ? 'nyckel' : 'nycklar'}
-            </div>
-          </div>
-
-          {/* Form actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Avbryt
-            </Button>
-            <Button type="submit">Uppdatera</Button>
-          </div>
-        </form>
-      </CardContent>
+      <CardContent className="space-y-3 p-4">{formContent}</CardContent>
     </Card>
   )
 }
