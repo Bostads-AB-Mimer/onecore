@@ -8,6 +8,7 @@ export type GetLeasesFilters = {
     | 'ended'
     | 'preliminary-terminated'
     | 'pending-signature'
+    | 'not-sent'
   )[]
 }
 
@@ -18,7 +19,7 @@ const stageToStatus: Record<string, GetLeasesFilters['status'][number]> = {
   Upphört: 'ended',
   'Preliminärt uppsagt': 'preliminary-terminated',
   'Inväntar signering': 'pending-signature',
-  'Ej skickat': 'pending-signature',
+  'Ej skickat': 'not-sent',
 }
 
 export const filterByStatus = (

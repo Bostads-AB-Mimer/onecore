@@ -5,6 +5,7 @@ enum LeaseStatus {
   Ended = 3, // Upphört
   PreliminaryTerminated = 4, // Preliminärt uppsagt
   PendingSignature = 5, // Väntar på signering
+  NotSent = 6, // Ej skickat
 }
 
 enum ParkingSpaceType {
