@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-02-13-v189-1",
+    "date": "2026-02-13",
+    "title": "Buggfix i kommentar bilplatser",
+    "description": "Fixar ett problem där det inte gick att spara kommentarer på bilplatsannonser",
+    "category": "fix"
+  }
+]

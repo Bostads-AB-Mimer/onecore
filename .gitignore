@@ -65,3 +65,7 @@ lib-cov
 !.claude/commands/prereview.md
 
 CLAUDE.md
+
+# --- Private Keys ---
+*.pem
+

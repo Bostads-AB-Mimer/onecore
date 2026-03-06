@@ -2,6 +2,7 @@ import type { RentalPropertyInfo } from '@onecore/types'
 import {
   FileText,
   Home,
+  Key,
   MessageSquare,
   Receipt,
   StickyNote,
@@ -9,6 +10,7 @@ import {
 import { parseAsString, useQueryState } from 'nuqs'
 
 import {
+  TenantKeyLoans,
   TenantLeasesTabContent,
   TenantLedgerTabContent,
   TenantNotesTabContent,
@@ -83,6 +85,10 @@ export const TenantTabs = ({
           <StickyNote className="h-4 w-4" />
           <span className="hidden sm:inline">Noteringar</span>
         </TabsTrigger>
+        <TabsTrigger value="keys" className="flex items-center gap-1.5">
+          <Key className="h-4 w-4" />
+          <span className="hidden sm:inline">Nyckellån</span>
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="contracts">
@@ -114,6 +120,10 @@ export const TenantTabs = ({
 
       <TabsContent value="notes">
         <TenantNotesTabContent contactCode={contactCode} />
+      </TabsContent>
+
+      <TabsContent value="keys">
+        <TenantKeyLoans contactCode={contactCode} leases={leases} />
       </TabsContent>
     </Tabs>
   )

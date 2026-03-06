@@ -7,6 +7,7 @@ interface CreateCommentParams {
   contactCode: string
   content: string
   author: string
+  commentType?: 'Standard' | 'Sökande'
 }
 
 /**
@@ -17,10 +18,15 @@ export const useCreateTenantComment = () => {
   const queryClient = useQueryClient()
 
   return useMutation<TenantCommentRaw, Error, CreateCommentParams>({
-    mutationFn: ({ contactCode, content, author }) =>
-      commentService.createContactComment(contactCode, content, author),
+    mutationFn: ({ contactCode, content, author, commentType = 'Standard' }) =>
+      commentService.createContactComment(
+        contactCode,
+        content,
+        author,
+        commentType
+      ),
     onSuccess: (_, variables) => {
-      // Invalidate and refetch comments for this contact
+      // Invalidate ALL comment queries for this contact (all filter variants)
       queryClient.invalidateQueries({
         queryKey: ['tenant-comments', variables.contactCode],
       })

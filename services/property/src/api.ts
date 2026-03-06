@@ -17,6 +17,7 @@ import { routes as maintenanceUnitsRoutes } from './routes/maintenance-units'
 import { routes as facilitiesRoutes } from './routes/facilities'
 import { routes as documentsRoutes } from './routes/documents'
 import { routes as aiAnalysisRoutes } from './routes/ai-analysis'
+import { routes as aiScannerRoutes } from './routes/ai-scanner'
 
 import { routes as healthRoutes } from './routes/health'
 
@@ -39,6 +40,7 @@ companiesRoutes(router)
 maintenanceUnitsRoutes(router)
 facilitiesRoutes(router)
 aiAnalysisRoutes(router)
+aiScannerRoutes(router)
 healthRoutes(router)
 
 export default router

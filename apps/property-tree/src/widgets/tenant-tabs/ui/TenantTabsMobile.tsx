@@ -2,12 +2,14 @@ import type { RentalPropertyInfo } from '@onecore/types'
 import {
   FileText,
   Home,
+  Key,
   MessageSquare,
   Receipt,
   StickyNote,
 } from 'lucide-react'
 
 import {
+  TenantKeyLoans,
   TenantLeasesTabContent,
   TenantLedgerTabContent,
   TenantNotesTabContent,
@@ -87,6 +89,12 @@ export const TenantTabsMobile = ({
       icon: StickyNote,
       title: 'Noteringar',
       content: <TenantNotesTabContent contactCode={contactCode} />,
+    },
+    {
+      id: 'keys',
+      icon: Key,
+      title: 'Nyckellån',
+      content: <TenantKeyLoans contactCode={contactCode} leases={leases} />,
     },
   ]
 

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-03-03-v199-1",
+    "date": "2026-03-03",
+    "title": "Förbättring i erbjudande-processen för bilplatser",
+    "description": "Skapa erbjudande och acceptera erbjudande kontrollerar nu att sökandes kontrakt inte förändrats på ett sådant sätt att de inte längre har rätt att söka bilplatsen i fråga. Detta minskar risken för att sökande får erbjudanden som de inte längre är berättigade till, vilket förbättrar användarupplevelsen och effektiviteten i erbjudande-processen.",
+    "category": "improvement"
+  }
+]

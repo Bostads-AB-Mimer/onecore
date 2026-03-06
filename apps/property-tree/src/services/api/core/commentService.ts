@@ -9,23 +9,32 @@ import { GET, POST } from './baseApi'
 
 /**
  * Converts a note to a flattened TenantComment for UI display
- * Combines date + time into ISO datetime
+ * Combines date + time into ISO datetime, or null if date is missing
  */
 function transformNote(
   note: TenantCommentNote,
   commentKey: string,
-  index: number
+  index: number,
+  commentType?: string
 ): TenantComment {
-  // Combine date and time into ISO datetime
-  const dateTimeString = `${note.date}T${note.time}:00`
-  const isoDate = new Date(dateTimeString).toISOString()
+  let createdAt: string | null = null
+
+  if (note.date) {
+    // Use provided time or default to start of day for date-only signatures
+    const time = note.time || '00:00'
+    const dateTimeString = `${note.date}T${time}:00`
+    createdAt = new Date(dateTimeString).toISOString()
+  }
 
   return {
     id: `${commentKey}-${index}`,
     commentKey,
     text: note.text,
     author: note.author,
-    createdAt: isoDate,
+    createdAt,
+    // Track if we have the original time for display purposes
+    hasTime: !!note.time,
+    commentType: commentType as 'Standard' | 'Sökande' | undefined,
   }
 }
 
@@ -39,18 +48,24 @@ function transformComment(raw: TenantCommentRaw): TenantComment[] {
   }
 
   return raw.notes.map((note, index) =>
-    transformNote(note, raw.commentKey, index)
+    transformNote(note, raw.commentKey, index, raw.commentType)
   )
 }
 
 /**
  * Fetch all comments for a specific contact
+ * @param contactCode - The contact code to fetch comments for
+ * @param commentType - Optional filter for comment type ('Standard' or 'Sökande')
  */
 async function getCommentsByContactCode(
-  contactCode: string
+  contactCode: string,
+  commentType?: 'Standard' | 'Sökande'
 ): Promise<TenantComment[]> {
   const { data, error } = await GET('/contacts/{contactCode}/comments', {
-    params: { path: { contactCode } },
+    params: {
+      path: { contactCode },
+      query: commentType ? { commentType } : undefined,
+    },
   })
 
   if (error) {
@@ -69,17 +84,23 @@ async function getCommentsByContactCode(
 
 /**
  * Create a new comment for a specific contact
+ * @param contactCode - The contact code
+ * @param content - The comment content
+ * @param author - The author name/initials
+ * @param commentType - The type of comment ('Standard' or 'Sökande'), defaults to 'Standard'
  */
 async function createContactComment(
   contactCode: string,
   content: string,
-  author: string
+  author: string,
+  commentType: 'Standard' | 'Sökande' = 'Standard'
 ): Promise<TenantCommentRaw> {
   const { data, error } = await POST('/contacts/{contactCode}/comments', {
     params: { path: { contactCode } },
     body: {
       content,
       author,
+      commentType,
     },
   })
 

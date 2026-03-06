@@ -99,6 +99,7 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         const expiredListingOffer = await offerAdapter.create(ctx.db, {
           applicantId: applicant.id,
           expiresAt: new Date(),
+          sentAt: new Date(),
           listingId: listingWithOffer.data.id,
           status: OfferStatus.Active,
           selectedApplicants: [
@@ -193,6 +194,7 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         const expiredListingOffer = await offerAdapter.create(ctx.db, {
           applicantId: applicant.id,
           expiresAt: new Date(),
+          sentAt: new Date(),
           listingId: listingWithOffer.data.id,
           status: OfferStatus.Active,
           selectedApplicants: [
@@ -248,6 +250,7 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         const expiredOffer = await offerAdapter.create(ctx.db, {
           applicantId: applicant.id,
           expiresAt: new Date('1970-01-01'),
+          sentAt: new Date(),
           listingId: listingWithExpiredOffer.data.id,
           status: OfferStatus.Expired,
           selectedApplicants: [
@@ -261,6 +264,7 @@ describe(listingAdapter.getListingsWithApplicants, () => {
         const activeOffer = await offerAdapter.create(ctx.db, {
           applicantId: applicant.id,
           expiresAt: new Date(),
+          sentAt: new Date(),
           listingId: listingWithActiveOffer.data.id,
           status: OfferStatus.Active,
           selectedApplicants: [

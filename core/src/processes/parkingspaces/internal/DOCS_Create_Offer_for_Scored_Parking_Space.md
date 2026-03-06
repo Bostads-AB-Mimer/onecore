@@ -4,12 +4,9 @@
 
 ```mermaid
 flowchart LR
-A[Start] -->B(Get Listing)
-B --> C{Is Listing Published<br/>and Ready for Offering?}
-C --> |Yes| O
-C --> |No| D[Get Applicants incl<br/>Contracts and Queue Points]
-
-D --> F{Valid Applicant<br/>Found?}
+A[Start] --> C{Is Listing Published<br/>and Ready for Offering?}
+C --> |No| O
+C --> |Yes| F{Valid Applicant<br/>Found?}
 F --> |No| G[TODO:Re-Publish Parking Space<br/>as None Scored]
 G --> O[End]
 F --> |Yes| H[Create Offer]
@@ -46,6 +43,16 @@ sequenceDiagram
         Leasing ->>OneCore DB: Get Listing
         OneCore DB --> Leasing: Listing
         Leasing -->> Core: Listing
+
+        Core ->>Leasing: Get Rental Object
+        Leasing ->>XPand DB: Get Rental Object
+        XPand DB --> Leasing: Rental Object
+        Leasing -->> Core: Rental Object
+
+        break when Listing Is Not Published And Ready for Offering
+            Core-->User: show error message
+        end
+
         Core ->> Leasing: Get detailed Applicant data inkl Contracts and Queue Points for each Applicant
         Leasing ->> XPand DB: Get Contact
         XPand DB -->> Leasing:Contact
@@ -55,7 +62,9 @@ sequenceDiagram
         XPand SOAP -->> Leasing: Queue Points
         Leasing -->> Core:Contracts and Queue Points for each Applicant
         alt No Valid Applicant Found
-            Core ->>Leasing: TODO Re-Publish Listing in None Scored Queue
+            break when No Valid Applicant Found
+                Core-->User: show error message
+            end
         else Valid Applicant Found
             Core ->> Leasing: Create Offer
             Leasing ->> OneCore DB:Create Offer

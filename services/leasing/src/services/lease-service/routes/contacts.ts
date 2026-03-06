@@ -61,7 +61,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve contacts data.
    */
   router.get('(.*)/contacts/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q'])
+    const metadata = generateRouteMetadata(ctx, ['q', 'contactType'])
 
     if (typeof ctx.query.q !== 'string') {
       ctx.status = 400
@@ -69,8 +69,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Validate contactType parameter if provided
+    const contactType = ctx.query.contactType as string | undefined
+    if (contactType && contactType !== 'company' && contactType !== 'person') {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid contactType parameter. Must be "company" or "person"',
+        ...metadata,
+      }
+      return
+    }
+
     const result = await tenantLeaseAdapter.getContactsDataBySearchQuery(
-      ctx.query.q
+      ctx.query.q,
+      contactType as 'company' | 'person' | undefined
     )
 
     if (!result.ok) {
@@ -853,6 +865,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The contact code
    *         example: "P086890"
+   *       - in: query
+   *         name: commentType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [Standard, Sökande]
+   *         description: Filter by comment type. If omitted, returns all comment types.
    *     responses:
    *       200:
    *         description: Successfully retrieved contact comments
@@ -910,11 +929,21 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Database error
    */
+  const getContactCommentsQuerySchema = z.object({
+    commentType: z.enum(['Standard', 'Sökande']).optional(),
+  })
+
   router.get('(.*)/contacts/:contactCode/comments', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const queryResult = getContactCommentsQuerySchema.safeParse(ctx.query)
+    const commentType = queryResult.success
+      ? queryResult.data.commentType
+      : undefined
+
     const result = await contactCommentsAdapter.getContactCommentsByContactCode(
-      ctx.params.contactCode
+      ctx.params.contactCode,
+      commentType
     )
 
     if (!result.ok) {
@@ -982,6 +1011,11 @@ export const routes = (router: KoaRouter) => {
    *                 minLength: 1
    *                 maxLength: 50
    *                 example: DAVLIN
+   *               commentType:
+   *                 type: string
+   *                 enum: [Standard, Sökande]
+   *                 default: Standard
+   *                 description: Type of comment. Defaults to 'Standard' if not specified.
    *     responses:
    *       200:
    *         description: Comment updated successfully
@@ -999,12 +1033,13 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(leasing.v1.CreateContactCommentRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { content, author } = ctx.request.body
+      const { content, author, commentType } = ctx.request.body
 
       const result = await contactCommentsAdapter.upsertContactComment(
         ctx.params.contactCode,
         content,
-        author
+        author,
+        commentType
       )
 
       if (!result.ok) {

@@ -15,3 +15,8 @@ export {
   ApplicationProfileFactory as applicationProfile,
   ApplicationProfileHousingReferenceFactory as applicationProfileHousingReference,
 } from './application-profile'
+export {
+  ListingTextContentFactory as listingTextContent,
+  TextContentBlockFactory as textContentBlock,
+  LinkContentBlockFactory as linkContentBlock,
+} from './listing-text-content'

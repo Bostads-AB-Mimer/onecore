@@ -1,0 +1,51 @@
+[
+  {
+    "id": "rn-2026-01-29-1",
+    "date": "2026-01-29",
+    "title": "Ny sida för kontraktsökning",
+    "description": "Det finns nu en dedikerad vy där man kan söka fram hyreskontrakt med olika parametrar.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-01-29-2",
+    "date": "2026-01-29",
+    "title": "Ny sida för uthyrningsspärrar",
+    "description": "Uthyrningsspärrar kan nu visas, filtreras och exporteras för samtliga objekt. En ny funktion gör det möjligt att söka och filtrera uthyrningsspärrar samt exportera resultatet till Excel.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-01-29-3",
+    "date": "2026-01-29",
+    "title": "Dokumentflik för fastighetsobjekt",
+    "description": "Alla fastigheter, byggnader och lägenheter har nu en dokumentflik för enklare hantering av filer. Det går nu att ladda upp dokument kopplade till dessa objekt.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-01-29-4",
+    "date": "2026-01-29",
+    "title": "Komponenthantering i ONECore",
+    "description": "Ett nytt adminläge gör det möjligt att lägga till, ta bort och organisera komponenter enligt komponenthierarki. Stöd finns nu även för att installera och avinstallera komponenter i lägenheters utrymmen.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-01-29-5",
+    "date": "2026-01-29",
+    "title": "Stöd för kundnoteringar",
+    "description": "Det går nu att lägga in noteringar på kund direkt i ONECore. Noteringen sparas i Xpand och visas både i Xpand och ONECore. Detta är första gången ONECore skriver data tillbaka till Xpand-databasen.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-01-29-6",
+    "date": "2026-01-29",
+    "title": "API-stöd för SPAR-integration",
+    "description": "ONECore har nu de API-funktioner som Consid behöver för att komma vidare med SPAR-integration och hantering av skyddade personuppgifter.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-01-29-7",
+    "date": "2026-01-29",
+    "title": "Makulerade kontrakt visas inte längre",
+    "description": "En bugg har åtgärdats där makulerade kontrakt tidigare kunde synas i kontraktslistor för hyresobjekt.",
+    "category": "fix"
+  }
+]

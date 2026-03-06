@@ -18,7 +18,7 @@ const importProcurementInvoicesScript = async () => {
 
   const invoiceLinesResult = await importNewFiles()
   const invoiceLines = invoiceLinesResult.csvLines
-  if (invoiceLines && invoiceLines.length > 0) {
+  if (invoiceLines && invoiceLines.length > 1) {
     const csvContent = invoiceLines.join('\n')
     const dateString = new Date()
       .toISOString()

@@ -40,6 +40,15 @@ export const dashboardCards: DashboardCard[] = [
     isDisabled: false,
   },
   {
+    id: 'leases',
+    title: 'Hyreskontrakt',
+    icon: FileText,
+    description: 'Sök och hantera hyreskontrakt',
+    path: routes.leases,
+    isExternal: false,
+    isDisabled: false,
+  },
+  {
     id: 'rental',
     title: 'Uthyrning',
     icon: Home,

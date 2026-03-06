@@ -20,6 +20,7 @@ export const swaggerSpec = {
   },
   apis: [
     `${basePath}/services/auth-service/*.{ts,js}`,
+    `${basePath}/services/communication-service/*.{ts,js}`,
     `${basePath}/services/health-service/*.{ts,js}`,
     `${basePath}/services/lease-service/*.{ts,js}`,
     `${basePath}/services/property-management-service/*.{ts,js}`,
@@ -28,6 +29,7 @@ export const swaggerSpec = {
     `${basePath}/services/search-service/*.{ts,js}`,
     `${basePath}/services/inspection-service/*.{ts,js}`,
     `${basePath}/services/file-storage-service/*.{ts,js}`,
+    `${basePath}/services/keys-service/*.{ts,js}`,
   ],
 }
 

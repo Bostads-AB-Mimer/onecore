@@ -153,7 +153,9 @@ export interface Note {
 
 /**
  * Parses plain text comment into structured notes array
- * Signature pattern: YYYY-MM-DD HH:MM AUTHOR: (where AUTHOR is uppercase letters)
+ * Signature patterns:
+ * - YYYY-MM-DD HH:MM AUTHOR: (with time)
+ * - YYYY-MM-DD AUTHOR: (without time, for manually typed signatures)
  *
  * @param text - Plain text comment (already converted from RTF)
  * @returns Array of parsed notes with metadata
@@ -164,9 +166,10 @@ export const parseNotesFromText = (text: string): Note[] => {
     return []
   }
 
-  // Regex to match signature pattern: YYYY-MM-DD HH:MM AUTHOR:
+  // Regex to match signature pattern: YYYY-MM-DD [HH:MM] AUTHOR:
+  // Time is optional to support manually typed signatures like "2021-02-16 DITKAM:"
   // Author can be any non-whitespace characters (flexible length and format)
-  const signaturePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s+(\S+):/g
+  const signaturePattern = /(\d{4}-\d{2}-\d{2})\s+(?:(\d{2}:\d{2})\s+)?(\S+):/g
   const matches = Array.from(text.matchAll(signaturePattern))
 
   if (matches.length === 0) {
@@ -208,7 +211,7 @@ export const parseNotesFromText = (text: string): Note[] => {
 
     notes.push({
       date: match[1], // YYYY-MM-DD
-      time: match[2], // HH:MM
+      time: match[2] || null, // HH:MM or null if not present
       author: match[3], // Author code (variable length)
       text: content,
     })

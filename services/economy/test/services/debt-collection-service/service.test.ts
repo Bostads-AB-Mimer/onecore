@@ -9,9 +9,13 @@ import {
   CsvError,
 } from '@src/services/debt-collection-service/service'
 
-// Mock the database adapter
+// Mock the database adapters
 jest.mock('@src/services/common/adapters/xpand-db-adapter', () =>
   require('./__mocks__/xpand-db-adapter')
+)
+
+jest.mock('@src/services/common/adapters/xledger-adapter', () =>
+  require('./__mocks__/xledger-adapter')
 )
 
 // Mock the file generators
@@ -45,6 +49,12 @@ import {
 } from './__mocks__/xpand-db-adapter'
 
 import {
+  getContacts as getXledgerContacts,
+  setupDefaultMocks as setupXledgerDefaultMocks,
+  resetMocks as resetXledgerMocks,
+} from './__mocks__/xledger-adapter'
+
+import {
   createRentInvoiceCsv,
   createBalanceCorrectionCsv,
   sampleRentInvoiceData,
@@ -58,12 +68,14 @@ import generateBalanceCorrectionFile from '@src/services/debt-collection-service
 describe('Debt Collection Service', () => {
   beforeEach(() => {
     setupDefaultMocks()
+    setupXledgerDefaultMocks()
     ;(generateInkassoSergelFile as jest.Mock).mockClear()
     ;(generateBalanceCorrectionFile as jest.Mock).mockClear()
   })
 
   afterEach(() => {
     resetMocks()
+    resetXledgerMocks()
     jest.clearAllMocks()
   })
 
@@ -253,6 +265,7 @@ describe('Debt Collection Service', () => {
 
     it('should return error on missing contacts', async () => {
       getContacts.mockResolvedValueOnce([])
+      getXledgerContacts.mockResolvedValueOnce([])
 
       const result = await enrichOtherInvoices(validCsv)
 

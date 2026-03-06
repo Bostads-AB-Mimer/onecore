@@ -32,6 +32,32 @@
     "imageName": "onecore-leasing"
   },
   {
+    "name": "keys",
+    "label": "ONECore Keys Service",
+    "package": "@onecore/keys",
+    "path": "services/keys",
+    "docker": true,
+    "imageName": "onecore-keys"
+  },
+  {
+    "name": "keys-portal",
+    "label": "ONECore Keys Portal Application",
+    "package": "@onecore/keys-portal",
+    "path": "apps/keys-portal",
+    "docker": true,
+    "imageName": "onecore-keys-portal",
+    "build_args": {
+      "test": {
+        "VITE_PROPERTY_TREE_URL": "https://property-tree-test.mimer.nu",
+        "VITE_ALLIERA_BASE_URL": "https://srvmimhk21.mimerbygg.local/Alliera"
+      },
+      "release": {
+        "VITE_PROPERTY_TREE_URL": "https://property-tree.mimer.nu",
+        "VITE_ALLIERA_BASE_URL": "https://srvmimhk21.mimerbygg.local/Alliera"
+      }
+    }
+  },
+  {
     "name": "property-management",
     "label": "ONECore Property Management Service",
     "package": "@onecore/property-management",
