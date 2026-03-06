@@ -16,7 +16,7 @@ import { Button } from '@/shared/ui/Button'
 
 import { getStatusConfig } from './statuses'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 
 /**
  * Column configuration interface (compatible with ResponsiveTable)

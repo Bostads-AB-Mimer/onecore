@@ -38,8 +38,7 @@ interface CreateInspectionDialogProps {
   onClose: () => void
   onSuccess: (data: { inspector: string }) => void
   onError: () => void
-  rentalId?: string
-  residenceId: string
+  rentalId: string
   address: string
   apartmentCode: string | null
   leaseId: string
@@ -52,7 +51,6 @@ export function CreateInspectionDialog({
   onSuccess,
   onError,
   rentalId,
-  residenceId,
   address,
   apartmentCode,
   leaseId,
@@ -81,7 +79,7 @@ export function CreateInspectionDialog({
       endedAt: null,
       inspector: inspector.trim(),
       type,
-      residenceId,
+      residenceId: rentalId,
       address,
       apartmentCode,
       isFurnished,
