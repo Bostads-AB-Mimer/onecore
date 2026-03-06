@@ -82,7 +82,7 @@ export function createInspectorColumn(
           value={inspection.inspector || ''}
           onValueChange={(value) => onUpdateInspector(inspection.id, value)}
         >
-          <SelectTrigger className="h-8 w-[180px] border-0 bg-transparent shadow-none hover:bg-accent focus:ring-0">
+          <SelectTrigger className="h-8 w-[180px] py-6">
             <SelectValue placeholder="Välj besiktningsman" />
           </SelectTrigger>
           <SelectContent>

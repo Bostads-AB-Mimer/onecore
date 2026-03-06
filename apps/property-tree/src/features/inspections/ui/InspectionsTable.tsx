@@ -5,7 +5,6 @@ import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 
 import { useToast } from '@/shared/hooks/useToast'
-import { useToast } from '@/shared/hooks/useToast'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 import {
@@ -17,8 +16,8 @@ import {
   type Inspector,
   renderInspectionMobileCard,
 } from '../constants'
-import { INSPECTION_STATUS } from '../constants'
 import { useInspectors } from '../hooks/useInspectors'
+import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { useUpdateInspector } from '../hooks/useUpdateInspector'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
@@ -65,6 +64,10 @@ export function InspectionsTable({
         variant: 'destructive',
       })
     },
+  })
+
+  const { startInspection, isPending } = useUpdateInspectionStatus({
+    rentalId,
   })
 
   const handleUpdateInspector = (inspectionId: string, inspector: string) => {
