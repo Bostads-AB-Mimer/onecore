@@ -46,22 +46,23 @@ export function InspectionsTable({
   >(null)
 
   const { toast } = useToast()
-  const { startInspection, isPending } = useUpdateInspectionStatus({
-    rentalId,
-    onSuccess: () => {
-      toast({
-        title: 'Status uppdaterad',
-        description: 'Besiktningsstatus har uppdaterats.',
-      })
-    },
-    onError: () => {
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte uppdatera besiktningsstatus.',
-        variant: 'destructive',
-      })
-    },
-  })
+  const { startInspection, isPending, pendingInspectionId } =
+    useUpdateInspectionStatus({
+      rentalId,
+      onSuccess: () => {
+        toast({
+          title: 'Status uppdaterad',
+          description: 'Besiktningsstatus har uppdaterats.',
+        })
+      },
+      onError: () => {
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte uppdatera besiktningsstatus.',
+          variant: 'destructive',
+        })
+      },
+    })
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
@@ -89,11 +90,12 @@ export function InspectionsTable({
   }
 
   // Determine which columns to use
+  const loading = { isPending, pendingInspectionId }
   const tableColumns =
     columns ||
     (isCompleted
-      ? getCompletedInspectionColumns(handleInspectionClick)
-      : getOngoingInspectionColumns(handleInspectionClick))
+      ? getCompletedInspectionColumns(handleInspectionClick, loading)
+      : getOngoingInspectionColumns(handleInspectionClick, loading))
 
   // Filter columns if hiddenColumns is used
   const filteredColumns =
@@ -108,7 +110,10 @@ export function InspectionsTable({
         columns={filteredColumns}
         keyExtractor={(inspection: Inspection) => inspection.id}
         emptyMessage={emptyMessage || 'Inga besiktningar i denna kategori'}
-        mobileCardRenderer={renderInspectionMobileCard(handleInspectionClick)}
+        mobileCardRenderer={renderInspectionMobileCard(
+          handleInspectionClick,
+          loading
+        )}
       />
 
       {isResumeDialogOpen && (
