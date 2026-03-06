@@ -38,6 +38,7 @@ export const inspectionService = {
       },
     })
 
+    if (response.error) throw response.error
     if (!response.data?.content) throw new Error('No data returned from API')
 
     return {
@@ -58,6 +59,7 @@ export const inspectionService = {
         query: { statusFilter },
       },
     })
+    if (response.error) throw response.error
     if (!response.data?.content) throw new Error('No data returned from API')
 
     return response.data.content.inspections ?? []
