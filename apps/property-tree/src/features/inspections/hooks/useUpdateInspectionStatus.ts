@@ -78,5 +78,8 @@ export const useUpdateInspectionStatus = ({
     completeInspection: (inspectionId: string) =>
       mutation.mutate({ inspectionId, status: INSPECTION_STATUS.COMPLETED }),
     isPending: mutation.isPending,
+    pendingInspectionId: mutation.isPending
+      ? mutation.variables?.inspectionId
+      : undefined,
   }
 }
