@@ -23,7 +23,7 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     case 'Upphört':
       return LeaseStatus.Ended
     case 'Ej skickat':
-      return LeaseStatus.PendingSignature
+      return LeaseStatus.NotSent
     default:
       return LeaseStatus.Current
   }
