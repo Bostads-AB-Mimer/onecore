@@ -39,7 +39,12 @@ export function ResidenceNavigation({
       <SidebarMenuButton asChild tooltip={residence.name} isActive={isSelected}>
         <Link
           to={paths.residence(residence.rentalId)}
-          state={{ buildingCode, staircaseCode, propertyCode, organizationNumber }}
+          state={{
+            buildingCode,
+            staircaseCode,
+            propertyCode,
+            organizationNumber,
+          }}
         >
           <Hotel />
           <span>LGH-{toTitleCase(residence.code)}</span>
