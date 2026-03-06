@@ -222,13 +222,16 @@ export function CreateInspectionDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="masterKeyAccess">Huvudnyckelåtkomst</Label>
-            <Input
-              id="masterKeyAccess"
-              value={masterKeyAccess}
-              onChange={(e) => setMasterKeyAccess(e.target.value)}
-              placeholder="T.ex. huvudnyckel, låssmed"
-            />
+            <Label htmlFor="masterKeyAccess">Huvudnyckel</Label>
+            <Select value={masterKeyAccess} onValueChange={setMasterKeyAccess}>
+              <SelectTrigger id="masterKeyAccess">
+                <SelectValue placeholder="Välj" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Huvudnyckel">Ja</SelectItem>
+                <SelectItem value="Nej">Nej</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
