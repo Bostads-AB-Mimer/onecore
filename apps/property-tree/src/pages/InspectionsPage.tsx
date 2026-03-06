@@ -26,7 +26,7 @@ import { Pagination } from '@/shared/ui/Pagination'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 
 export default function InspectionsPage() {
   const [activeTab, setActiveTab] = useState<string>(

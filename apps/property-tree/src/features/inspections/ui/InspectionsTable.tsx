@@ -19,7 +19,7 @@ import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
 
 interface InspectionsTableProps {
