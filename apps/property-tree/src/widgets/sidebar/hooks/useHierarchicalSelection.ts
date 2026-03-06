@@ -57,7 +57,9 @@ export function useHierarchicalSelection() {
 
   // Company requires a property fetch to resolve
   const { data: property } = useProperty(
-    !state.organizationNumber && selectedPropertyCode ? selectedPropertyCode : undefined
+    !state.organizationNumber && selectedPropertyCode
+      ? selectedPropertyCode
+      : undefined
   )
   const { data: company } = useCompanyByPropertyId(
     !state.organizationNumber ? property?.id : undefined
